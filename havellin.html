@@ -491,6 +491,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
 <!-- ══════════════════════════════ ESTIMATE ══════════════════════════════ -->
 <div class="panel" id="panel-estimate">
+  <div id="est-approved-banner" style="display:none;background:#2e2e33;color:#FEF5E7;padding:12px 16px;border-radius:8px;margin-bottom:1rem;align-items:center;gap:12px;">
+    <span style="font-size:20px;">&#128274;</span>
+    <div>
+      <div style="font-weight:700;font-size:13px;">Estimate Approved &amp; Locked</div>
+      <div style="font-size:11px;opacity:.8;margin-top:2px;">This estimate has been approved and cannot be modified. To make changes, create a Change Order from the Client Dashboard.</div>
+    </div>
+  </div>
   <div class="card" style="margin-bottom:1rem;">
     <div class="grid2" style="align-items:start;gap:1.5rem;">
       <div>
@@ -1175,6 +1182,29 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end;">
       <button class="btn-s" onclick="closeChangeOrder()">Cancel</button>
       <button class="btn-p" onclick="saveChangeOrder()">Create Change Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- CO CLIENT ACCEPTANCE MODAL -->
+<div id="co-accept-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1001;align-items:center;justify-content:center;">
+  <div style="background:var(--white);border-radius:10px;padding:1.5rem;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--gray-dk);">Client Change Order Acceptance</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;" id="coa-co-ref"></div>
+      </div>
+      <button class="btn-s" onclick="closeCOAcceptModal()">&#10005;</button>
+    </div>
+    <input type="hidden" id="coa-co-id">
+    <div id="coa-summary" style="background:var(--cream);border-radius:6px;padding:12px;margin-bottom:1rem;font-size:12px;line-height:1.7;"></div>
+    <label>Client full name <span style="color:#A32D2D;font-weight:700;">*</span></label>
+    <input type="text" id="coa-client-name" placeholder="Type client's full name to accept" autocomplete="off" style="font-size:15px;">
+    <div style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5;">By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change order and the revised project total.</div>
+    <div id="coa-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1.2rem;justify-content:flex-end;">
+      <button class="btn-s" onclick="closeCOAcceptModal()">Cancel</button>
+      <button class="btn-p" onclick="acceptChangeOrder()" style="background:#2e6b10;">&#10003; I Accept This Change Order</button>
     </div>
   </div>
 </div>
@@ -2420,6 +2450,7 @@ function clearAllRooms() {
 
 
 function saveEstimateAndPreview() {
+  if (estimateApproved) { showFB('e-fb','warn','This estimate is approved and locked. Create a Change Order from the Client Dashboard to modify it.'); return; }
   var jobId = parseInt(document.getElementById('e-job').value);
   if (!jobId) { showFB('e-fb','warn','Select a job to attach this estimate to.'); return; }
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -2673,6 +2704,7 @@ function updateApprovalUI() {
   if (!currentEstimate) {
     badge.innerHTML = '';
     if (bannerWrap) bannerWrap.innerHTML = '';
+    applyEstimateLock();
     return;
   }
 
@@ -2699,6 +2731,25 @@ function updateApprovalUI() {
     if (subtitle) subtitle.textContent = 'Review the estimate below. Edit if needed, then submit for manager approval.';
     if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>TC Review</strong> — check all details before submitting.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Once submitted, only the manager PIN can approve or a new estimate revision is needed.</div></div>';
   }
+  applyEstimateLock();
+}
+
+function applyEstimateLock() {
+  var locked = estimateApproved;
+  var banner = document.getElementById('est-approved-banner');
+  if (banner) banner.style.display = locked ? 'flex' : 'none';
+  var wrap = document.getElementById('room-table-wrap');
+  if (wrap) {
+    wrap.querySelectorAll('input, select, textarea').forEach(function(el) {
+      el.disabled = locked || el.getAttribute('data-always-disabled') === '1';
+    });
+    wrap.style.pointerEvents = locked ? 'none' : '';
+    wrap.style.opacity = locked ? '0.6' : '';
+  }
+  var saveBtn = document.querySelector('button[onclick="saveEstimateAndPreview()"]');
+  if (saveBtn) { saveBtn.disabled = locked; saveBtn.style.opacity = locked ? '0.45' : ''; }
+  var resetBtn = document.querySelector('button[onclick="resetEstimate()"]');
+  if (resetBtn) { resetBtn.disabled = locked; resetBtn.style.opacity = locked ? '0.45' : ''; }
 }
 
 // ─── TC REVIEW / SUBMIT FOR APPROVAL ────────────────────────────────────────
@@ -2777,6 +2828,7 @@ function checkPin() {
       var syncJob = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
       if (syncJob) syncJobToSheets(syncJob);
     }
+    applyEstimateLock();
     renderClientEstimate();
   } else if (pin.length === 4) {
     document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN. Try again.</div>';
@@ -2877,11 +2929,19 @@ function renderJobs() {
       detailHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">' +
         '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Change Orders (' + jobCOs.length + ')</div>';
       jobCOs.forEach(function(co){
-        detailHtml += '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-bottom:4px;">' +
-          '<div><strong>CO-' + co.id.toString().slice(-6) + '</strong> · ' + co.description.substring(0,60) + (co.description.length>60?'...':'') + '</div>' +
-          '<div style="display:flex;gap:8px;align-items:center;">' +
+        var coStatus = co.clientApproved
+          ? '<span style="font-size:10px;background:#e8f5e9;color:#2e6b10;border-radius:3px;padding:1px 5px;font-weight:600;">&#10003; Accepted · ' + co.clientName + '</span>'
+          : '<span style="font-size:10px;background:#fff3e0;color:#8a5000;border-radius:3px;padding:1px 5px;font-weight:600;">&#9679; Pending Client</span>';
+        var coActions = co.clientApproved
+          ? '<button class="icon-btn" onclick="printChangeOrder(' + co.id + ')">PDF</button>'
+          : '<button class="icon-btn" onclick="openCOAcceptModal(' + co.id + ')" style="background:var(--bronze);color:#fff;border-color:var(--bronze);">Get Acceptance</button>' +
+            '<button class="icon-btn" onclick="printChangeOrder(' + co.id + ')">PDF</button>';
+        detailHtml += '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-bottom:6px;gap:8px;">' +
+          '<div style="flex:1;min-width:0;"><strong>CO-' + co.id.toString().slice(-6) + '</strong> · ' + co.description.substring(0,50) + (co.description.length>50?'...':'') +
+            '<div style="margin-top:2px;">' + coStatus + '</div></div>' +
+          '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' +
           '<span style="color:' + (co.amount>=0?'var(--bronze)':'var(--ok-tx)') + ';font-weight:600;">' + (co.amount>=0?'+':'') + '$' + Math.round(co.amount).toLocaleString() + '</span>' +
-          '<button class="icon-btn" onclick="printChangeOrder(' + co.id + ')">PDF</button>' +
+          coActions +
           '</div></div>';
       });
       detailHtml += '</div>';
@@ -3093,13 +3153,23 @@ function restoreEstimateToUI(est) {
   });
 
   calcAll();
+  applyEstimateLock();
 }
 
 // ── CHANGE ORDER ──────────────────────────────────────────────────────────────
 var changeOrders = [];
 
 function loadChangeOrders() {
-  try { var s = localStorage.getItem('havellin_co_v1'); if (s) changeOrders = JSON.parse(s); } catch(e) {}
+  try {
+    var s = localStorage.getItem('havellin_co_v1');
+    if (s) {
+      changeOrders = JSON.parse(s);
+      // Migrate old COs that predate client approval fields
+      changeOrders.forEach(function(co) {
+        if (co.clientApproved === undefined) { co.clientApproved = true; co.clientName = 'Pre-existing'; co.clientAcceptedAt = co.createdAt || ''; }
+      });
+    }
+  } catch(e) {}
 }
 
 function saveChangeOrders() {
@@ -3151,24 +3221,18 @@ function saveChangeOrder() {
     originalTotal: orig,
     newTotal: orig + amount,
     createdAt: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
-    approved: false
+    approved: false,
+    clientApproved: false,
+    clientName: '',
+    clientAcceptedAt: ''
   };
 
   changeOrders.push(co);
   saveChangeOrders();
 
-  // Update job estimate total
-  var job = jobs.find(function(j){ return j.id===jobId; });
-  if (job) {
-    job.havellinEst = co.newTotal;
-    job.totalEst = co.newTotal;
-    saveJobs();
-    syncJobToSheets(job);
-  }
-
   document.getElementById('change-order-modal').style.display = 'none';
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order created. Print PDF from Clients.');
+  showFB('e-fb', 'ok', 'Change Order created — pending client acceptance. Open the job in Client Dashboard to get client sign-off.');
 }
 
 function markDepositReceived() {
@@ -3188,6 +3252,56 @@ function markDepositReceived() {
 
 function closeChangeOrder() {
   document.getElementById('change-order-modal').style.display = 'none';
+}
+
+function openCOAcceptModal(coId) {
+  var co = changeOrders.find(function(c){ return c.id===coId; });
+  if (!co) return;
+  var job = jobs.find(function(j){ return j.id===co.jobId; });
+  document.getElementById('coa-co-id').value = coId;
+  document.getElementById('coa-co-ref').textContent = 'CO-' + co.id.toString().slice(-6) + ' · ' + (job ? job.name : '');
+  document.getElementById('coa-summary').innerHTML =
+    '<div style="margin-bottom:4px;"><strong>' + co.description + '</strong></div>' +
+    '<div style="color:var(--gray);">Reason: ' + co.reason + '</div>' +
+    '<div style="margin-top:8px;display:flex;justify-content:space-between;">' +
+      '<span>Original total</span><span>$' + Math.round(co.originalTotal).toLocaleString() + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;font-weight:700;color:' + (co.amount>=0?'var(--bronze)':'var(--ok-tx)') + ';">' +
+      '<span>Change</span><span>' + (co.amount>=0?'+':'') + '$' + Math.round(co.amount).toLocaleString() + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:6px;padding-top:6px;">' +
+      '<span>Revised total</span><span>$' + Math.round(co.newTotal).toLocaleString() + '</span></div>';
+  document.getElementById('coa-client-name').value = '';
+  document.getElementById('coa-fb').innerHTML = '';
+  document.getElementById('co-accept-modal').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('coa-client-name').focus(); }, 100);
+}
+
+function closeCOAcceptModal() {
+  document.getElementById('co-accept-modal').style.display = 'none';
+}
+
+function acceptChangeOrder() {
+  var coId = parseInt(document.getElementById('coa-co-id').value);
+  var clientName = document.getElementById('coa-client-name').value.trim();
+  if (!clientName) {
+    document.getElementById('coa-fb').innerHTML = '<div class="alert a-warn">Client name is required to accept.</div>';
+    return;
+  }
+  var co = changeOrders.find(function(c){ return c.id===coId; });
+  if (!co) return;
+  co.clientApproved = true;
+  co.clientName = clientName;
+  co.clientAcceptedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  saveChangeOrders();
+  var job = jobs.find(function(j){ return j.id===co.jobId; });
+  if (job) {
+    job.havellinEst = co.newTotal;
+    job.totalEst = co.newTotal;
+    saveJobs();
+    syncJobToSheets(job);
+  }
+  closeCOAcceptModal();
+  renderJobs();
+  showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + '. Project total updated.');
 }
 
 function printChangeOrder(coId) {
@@ -3214,10 +3328,16 @@ function printChangeOrder(coId) {
     '<tr><td style="padding:8px 12px;"><strong>' + co.description + '</strong><br><span style="color:#6B6B72;font-size:11px;">Reason: ' + co.reason + '</span></td><td style="padding:8px 12px;text-align:right;color:' + (co.amount>=0?'#A67C45':'#3B6D11') + ';font-weight:600;">' + (co.amount>=0?'+':'') + '$' + Math.round(co.amount).toLocaleString() + '</td></tr>' +
     '<tr style="background:#2e2e33;color:#FEF5E7;"><td style="padding:8px 12px;font-weight:700;">Revised Total</td><td style="padding:8px 12px;text-align:right;font-weight:700;">$' + Math.round(co.newTotal).toLocaleString() + '</td></tr>' +
     '</table>' +
-    '<div style="margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;">' +
-    '<div><div style="border-top:1px solid #ccc;margin-top:2rem;padding-top:6px;font-size:11px;color:#6B6B72;">Client Signature</div></div>' +
-    '<div><div style="border-top:1px solid #ccc;margin-top:2rem;padding-top:6px;font-size:11px;color:#6B6B72;">Havellin Representative</div></div>' +
-    '</div>' +
+    (co.clientApproved
+      ? '<div style="margin-top:2rem;background:#e8f5e9;border-radius:6px;padding:12px 16px;font-size:12px;">' +
+        '<div style="font-weight:700;color:#2e6b10;margin-bottom:4px;">&#10003; Client Accepted</div>' +
+        '<div><strong>' + co.clientName + '</strong> accepted this change order on ' + co.clientAcceptedAt + '</div>' +
+        '</div>'
+      : '<div style="margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;">' +
+        '<div><div style="border-top:1px solid #ccc;margin-top:2rem;padding-top:6px;font-size:11px;color:#6B6B72;">Client Signature &amp; Date</div></div>' +
+        '<div><div style="border-top:1px solid #ccc;margin-top:2rem;padding-top:6px;font-size:11px;color:#6B6B72;">Havellin Representative</div></div>' +
+        '</div>'
+    ) +
     '<div style="text-align:center;margin-top:2rem;font-size:10px;color:#6B6B72;">Havellin Palm Beach · 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401</div>' +
     '</div>';
 
