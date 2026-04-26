@@ -2484,8 +2484,20 @@ function saveEstimateAndPreview() {
   saveEstimateState();
   syncJobToSheets(job);
   syncEstimateToSheets(currentEstimate, false, '', '');
-  showFB('e-fb','ok','Estimate saved. Job set to Pending Approval. Go to Client Estimate tab to review and approve.');
-  setTimeout(function() { document.querySelectorAll('.nb')[2].click(); }, 1200);
+  showFB('e-fb','ok','Estimate saved. Opening Client Estimate for review…');
+  setTimeout(function() {
+    document.querySelectorAll('.nb')[2].click();
+    setTimeout(function() {
+      window._suppressEstimateAutoSave = true;
+      clearAllRooms();
+      currentEstimate = null;
+      estimateApproved = false; estimateSubmitted = false;
+      approvedBy = ''; approvedAt = '';
+      var jobSel = document.getElementById('e-job'); if (jobSel) jobSel.value = '';
+      updateApprovalUI();
+      window._suppressEstimateAutoSave = false;
+    }, 200);
+  }, 1000);
 }
 
 function populateJobSelect() {
@@ -2740,11 +2752,20 @@ function applyEstimateLock() {
   if (banner) banner.style.display = locked ? 'flex' : 'none';
   var wrap = document.getElementById('room-table-wrap');
   if (wrap) {
-    wrap.querySelectorAll('input, select, textarea').forEach(function(el) {
-      el.disabled = locked || el.getAttribute('data-always-disabled') === '1';
-    });
-    wrap.style.pointerEvents = locked ? 'none' : '';
-    wrap.style.opacity = locked ? '0.6' : '';
+    if (locked) {
+      wrap.querySelectorAll('input, select, textarea').forEach(function(el) {
+        if (!el.disabled) { el.setAttribute('data-lock-restore', '1'); el.disabled = true; }
+      });
+      wrap.style.pointerEvents = 'none';
+      wrap.style.opacity = '0.6';
+    } else {
+      wrap.querySelectorAll('[data-lock-restore]').forEach(function(el) {
+        el.disabled = false;
+        el.removeAttribute('data-lock-restore');
+      });
+      wrap.style.pointerEvents = '';
+      wrap.style.opacity = '';
+    }
   }
   var saveBtn = document.querySelector('button[onclick="saveEstimateAndPreview()"]');
   if (saveBtn) { saveBtn.disabled = locked; saveBtn.style.opacity = locked ? '0.45' : ''; }
@@ -3374,6 +3395,26 @@ function closeClientDashboard() {
   renderJobs();
 }
 
+function dashboardSubmitForApproval(jobId) {
+  var rec = estimateStore[jobId];
+  if (!rec || !rec.estimate) return;
+  currentEstimate = rec.estimate;
+  estimateApproved = rec.approved || false;
+  estimateSubmitted = rec.submitted || false;
+  approvedBy = rec.approvedBy || '';
+  approvedAt = rec.approvedAt || '';
+  submitForApproval();
+  closeClientDashboard();
+  var tabs = document.querySelectorAll('.nb');
+  tabs.forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  var ceTab = Array.from(tabs).find(function(t){ return t.textContent.trim() === 'Client Estimate'; });
+  if (ceTab) ceTab.classList.add('active');
+  var cePanel = document.getElementById('panel-client-estimate');
+  if (cePanel) cePanel.classList.add('active');
+  renderClientEstimate();
+}
+
 function getJobActuals(jobId) {
   var logs = jobLogs[jobId] || [];
   var actTC = 0, actPS = 0;
@@ -3474,10 +3515,18 @@ function renderClientDashboard(jobId) {
   if (job.re==='yes') h += '<span class="badge b-bronze" style="font-size:11px;">★ Real Estate Opportunity</span>';
   h += '</div></div>';
   h += '<div style="display:flex;gap:7px;flex-shrink:0;">';
-  var estApproved = (estimateStore[jobId] && estimateStore[jobId].approved) || job.approved;
+  var estRec = estimateStore[jobId];
+  var estApproved = (estRec && estRec.approved) || job.approved;
+  var estExists = estRec && estRec.estimate && (estRec.estimate.rooms||[]).length > 0;
+  var estSubmitted = estRec && estRec.submitted;
   h += estApproved
     ? '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">&#10003; Estimate</button>'
-    : '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">Build Estimate</button>';
+    : estExists
+      ? '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">&#9998; Edit Estimate</button>'
+      : '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">Build Estimate</button>';
+  if (estExists && !estSubmitted && !estApproved) {
+    h += '<button class="btn-s" onclick="dashboardSubmitForApproval('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">Submit for Approval</button>';
+  }
   h += '<button class="btn-s" onclick="openChangeOrder('+jobId+')">Change Order</button>';
   h += '<button class="btn-s" onclick="showEditClient('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">&#9998; Edit Client</button>';
   if (job.driveFolder) {
