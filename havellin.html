@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 11:30am</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 1:45pm</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3432,6 +3432,14 @@ function closeClientDashboard() {
   renderJobs();
 }
 
+function toggleProbatePkg(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  job.probatePkgSent = !job.probatePkgSent;
+  saveJobs();
+  renderClientDashboard(jobId);
+}
+
 function dashboardSubmitForApproval(jobId) {
   var rec = estimateStore[jobId];
   if (!rec || !rec.estimate) return;
@@ -3607,9 +3615,14 @@ function renderClientDashboard(jobId) {
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h += sectionHdr('Probate Information');
     var authOk = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
+    h += '<div style="display:flex;align-items:center;gap:12px;">';
     h += '<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:'+(authOk?'#1D9E75':'#A32D2D')+'">';
     h += dot(authOk?'#1D9E75':'#A32D2D')+(authOk?'Authorization received':'Authorization pending — blocker')+'</span>';
-    h += '</div>';
+    var pkgSent = job.probatePkgSent;
+    h += pkgSent
+      ? '<span style="font-size:11px;font-weight:600;color:#1D9E75;cursor:pointer;" onclick="event.stopPropagation();toggleProbatePkg('+jobId+')" title="Click to mark unsent">&#10003; Package Sent</span>'
+      : '<button class="btn-s" style="font-size:10px;padding:4px 10px;color:var(--bronze);border-color:var(--bronze);" onclick="event.stopPropagation();toggleProbatePkg('+jobId+')">&#128231; Send Package</button>';
+    h += '</div></div>';
     h += '<div class="d-grid4">';
     h += field('Case number', job.probateCase||'—');
     h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
