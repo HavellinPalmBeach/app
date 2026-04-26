@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 1:45pm</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 3:30pm</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4979,10 +4979,358 @@ function updateAgrPayTrack() {
   document.getElementById('agr-stripe-wrap').style.display = track === 'card' ? 'block' : 'none';
 }
 
+function renderProbateAgreement() {
+  var jobId = currentAgrJobId;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
+  if (!est) { var rec = estimateStore[jobId]; if (rec && rec.estimate) est = rec.estimate; }
+  var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
+  var dep = Math.round(havTotal * 0.50);
+  var mid = Math.round(havTotal * 0.25);
+  var fin = Math.round(havTotal * 0.25);
+  var clientName = job.name || '_______________________________________________';
+  var clientAddr = [job.addr, job.city ? job.city+', FL' : '', job.zip].filter(Boolean).join(' ') || '_______________________________________________';
+  var clientEmail = job.email || '_______________________________________________';
+  var clientPhone = job.phone || '_______________________________________________';
+  var propAddr = clientAddr;
+  var propType = job.ptype || '_______________________________________________';
+  var propSqft = job.sqft ? job.sqft+' sqft' : '_______________________________________________';
+  var probateCase = job.probateCase || '_______________________________________________';
+  var attyName = job.probateAttyName || '_______________________________________________';
+  var attyPhone = job.probateAttyPhone || '_______________________________________________';
+  var attyFirm = job.probateAttyFirm || '';
+  var hvlId = job.hvlId || '—';
+  var lettersMap = {received:'Attached', pending:'Pending', notneeded:'N/A (non-probate)'};
+  var letters = lettersMap[job.executorAuth] || 'Attached · Pending · N/A (non-probate)';
+  var today = new Date();
+  var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  var approvedStamp = (agrApproved && agrApprovedBy)
+    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+agrApprovedBy+' on '+agrApprovedAt+'</div></div>'
+    : '';
+  function pp(txt) { return '<p style="font-size:11px;line-height:1.65;margin-bottom:.5rem;">'+txt+'</p>'; }
+  function bb(txt) { return '<strong>'+txt+'</strong>'; }
+  function dRow(label,val) {
+    return '<tr><td style="padding:5px 10px;width:200px;font-size:10.5px;font-weight:600;color:var(--gray);border:0.5px solid var(--border);background:var(--tan);vertical-align:top;white-space:nowrap;">'+label+'</td><td style="padding:5px 10px;font-size:11px;border:0.5px solid var(--border);color:var(--gray-dk);">'+val+'</td></tr>';
+  }
+  function secHdr(num,title) {
+    return '<div style="margin:1.2rem 0 .6rem;"><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--bronze);padding-bottom:4px;border-bottom:1.5px solid var(--bronze);">Section '+num+' &middot; '+title+'</div></div>';
+  }
+  function subHdr(title) {
+    return '<div style="font-size:11.5px;font-weight:700;color:var(--gray-dk);margin:.7rem 0 .3rem;">'+title+'</div>';
+  }
+  var content = '';
+  // PAGE HEADER (matches screenshot: brand left, doc type right, gold rule)
+  content += '<div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid var(--bronze);padding-bottom:4px;margin-bottom:1.2rem;">';
+  content += '<span style="font-family:\'Cormorant Garamond\',serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);">Havellin Palm Beach</span>';
+  content += '<span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);">Client Engagement Agreement</span>';
+  content += '</div>';
+  content += approvedStamp;
+  // TITLE BLOCK
+  content += '<div style="text-align:center;margin-bottom:1.2rem;">';
+  content += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:500;letter-spacing:.05em;color:var(--bronze);">HAVELLIN PALM BEACH</div>';
+  content += '<div style="font-size:11px;color:var(--gray);margin:.2rem 0 .6rem;letter-spacing:.02em;">Guiding Families Through Life\'s Transitions</div>';
+  content += '<div class="ce-divider"></div>';
+  content += '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-dk);margin:.6rem 0 .25rem;">Probate &amp; Estate Services</div>';
+  content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Engagement Agreement</div>';
+  content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs all estate cleanout, probate settlement, and senior downsizing services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
+  content += '</div>';
+  content += '<div style="border:1px solid var(--bronze-lt);border-radius:4px;padding:8px 14px;margin-bottom:1rem;background:#fef9f0;">';
+  content += '<span style="font-size:11px;font-weight:700;color:var(--bronze-dk);">IMPORTANT: Read carefully. Both parties must sign before any work begins.</span>';
+  content += '</div>';
+  // SECTION 1: PARTIES
+  content += secHdr(1,'Parties');
+  content += subHdr('1.1 Service Provider');
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
+  content += dRow('Company', bb('Havellin Palm Beach, LLC'));
+  content += dRow('Primary Contact','Anthony Graziano Sr / Ashley Jerome');
+  content += dRow('Email','info@havellinpalmbeach.com');
+  content += dRow('Phone','(561) 370-4700');
+  content += dRow('Address','515 N Flagler Drive, Suite 350 &middot; West Palm Beach, FL 33401');
+  content += dRow('License / Registration','FL LLC L26000216712');
+  content += '</table>';
+  content += subHdr('1.2 Client / Authorized Party');
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
+  content += dRow('Client Full Name', bb(clientName));
+  content += dRow('Date','_______________________________________________');
+  content += dRow('Role / Authority','Personal Representative &middot; Executor &middot; POA &middot; Beneficiary &middot; Client');
+  content += dRow('Mailing Address', clientAddr);
+  content += dRow('Email', clientEmail);
+  content += dRow('Phone', clientPhone);
+  content += dRow('Estate Attorney', attyName + (attyFirm ? ' &middot; '+attyFirm : ''));
+  content += dRow('Attorney Phone', attyPhone);
+  content += dRow('Letters of Administration', letters);
+  content += '</table>';
+  content += subHdr('1.3 Property');
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
+  content += dRow('Property Address', propAddr);
+  content += dRow('Property Type', propType);
+  content += dRow('Approx. Square Footage', propSqft);
+  content += dRow('Number of Rooms','_______________________________________________');
+  content += dRow('Probate Case Number', probateCase);
+  content += dRow('Court','_______________________________________________');
+  content += '</table>';
+  // SECTION 2: SCOPE
+  content += secHdr(2,'Scope of Services');
+  content += pp('Havellin Palm Beach will provide the services checked below. Any service not checked is explicitly excluded from this Agreement. Additional services require a written Change Order signed by both parties before work begins.');
+  var svcs = [
+    [1,'Estate Cleanout (Full-Service)','Complete room-by-room asset audit, sorting, photography, and staging for disposition.'],
+    [1,'Asset Inventory &amp; Documentation','Detailed inventory of all significant assets with photographs and condition assessment.'],
+    [1,'Professional Appraisal Coordination','Engagement and coordination of certified appraisers for all required asset categories.'],
+    [0,'Sales &amp; Liquidation Management','Identification of sales channels, vendor coordination, and proceeds documentation.'],
+    [0,'Donation Coordination','Charitable donation logistics with full tax documentation for estate records.'],
+    [0,'Disposal &amp; Waste Management','Dumpster coordination, hazardous material handling, and waste vendor management.'],
+    [0,'Family Distribution Coordination','Staging, scheduling, and documented handoff of designated items to beneficiaries.'],
+    [0,'Property Preparation for Sale','Final cleaning, minor repairs, and coordination with listing agent.'],
+    [1,'Florida Probate Inventory Support','Preparation of documented inventory to support §733.604 court filing.']
+  ];
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
+  content += '<thead><tr><th style="width:32px;padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:center;font-size:9.5px;color:var(--gray);"></th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Service</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Description</th></tr></thead><tbody>';
+  svcs.forEach(function(s){
+    content += '<tr><td style="text-align:center;padding:6px 8px;border:0.5px solid var(--border);font-size:15px;">'+(s[0]?'&#9745;':'&#9744;')+'</td>';
+    content += '<td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+s[1]+'</td>';
+    content += '<td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+s[2]+'</td></tr>';
+  });
+  content += '</tbody></table>';
+  content += subHdr('2.1 Explicit Exclusions');
+  content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney); tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
+  // SECTION 3: FEES
+  content += secHdr(3,'Fees, Billing &amp; Payment Terms');
+  content += subHdr('3.1 Hourly Rate Structure');
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
+  content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Role</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Billing Rate</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Description</th></tr></thead><tbody>';
+  var feeRows = [
+    ['Transition Concierge (TC)','$150 / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'],
+    ['Property Specialist (PS)','$100 / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
+    ['Specialty Materials','Cost + 25%','Boxes, packing materials, protective supplies — itemized separately on invoice. Receipts available on request.'],
+    ['Vendor Management Fee','15% of vendor invoice','Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
+  ];
+  feeRows.forEach(function(r){
+    content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
+  });
+  content += '</tbody></table>';
+  content += subHdr('3.2 Project Estimate');
+  content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and vendor fees based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
+  content += pp(bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. If actual hours are projected to exceed the estimate by more than 15%, Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
+  content += subHdr('3.3 Payment Schedule');
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.6rem;">';
+  content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Payment</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Amount</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Timing &amp; Trigger</th></tr></thead><tbody>';
+  var payRows = [
+    ['Deposit', havTotal>0?'$'+dep.toLocaleString()+' (50% of estimate)':'50% of estimate', 'Due upon signing this Agreement — before any work begins'],
+    ['Midpoint Payment', havTotal>0?'$'+mid.toLocaleString()+' (25% of estimate)':'25% of estimate', 'Due upon completion of Phase 5 (Asset Inventory) or at project midpoint, whichever comes first'],
+    ['Final Invoice', havTotal>0?'$'+fin.toLocaleString()+' + actual variance':'25% of estimate + actual variance', 'Due within 7 days of final invoice delivery — reflects actual hours and materials vs. estimate']
+  ];
+  payRows.forEach(function(r){
+    content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[2]+'</td></tr>';
+  });
+  content += '</tbody></table>';
+  content += pp(bb('Late Payment:')+'  Invoices unpaid after 7 days accrue interest at 1.5% per month. Havellin reserves the right to suspend work on any engagement with an outstanding balance exceeding 30 days.');
+  // SECTION 4: CHANGE ORDERS
+  content += secHdr(4,'Change Orders &amp; Scope Modifications');
+  content += pp('The scope and estimate in this Agreement are based on the initial property assessment. Estate jobs frequently reveal unexpected complexity once physical work begins. The following triggers require a written Change Order signed by both parties before Havellin proceeds.');
+  content += subHdr('4.1 Change Order Triggers');
+  var triggers = [
+    'Discovery of additional rooms, storage units, outbuildings, or off-site property not included in original scope',
+    'Discovery of specialized assets requiring additional appraisal: firearms, significant art, wine collections, cryptocurrency',
+    'Hoarder conditions, biohazard materials, pest infestation, or structural issues affecting work scope',
+    'Client request to add services not included in original scope',
+    'Actual hours projected to exceed estimate by more than 15%',
+    'Discovery of contested assets, disputes among beneficiaries, or legal holds requiring work stoppage',
+    'Multi-state property requiring ancillary probate coordination not identified at intake'
+  ];
+  content += '<ul style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
+  triggers.forEach(function(t){ content += '<li style="margin-bottom:.2rem;">'+t+'</li>'; });
+  content += '</ul>';
+  content += subHdr('4.2 Change Order Documentation');
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
+  content += dRow('Change Order #','&nbsp;');
+  content += dRow('Date','&nbsp;');
+  content += dRow('Description of Change','&nbsp;<br>&nbsp;<br>&nbsp;');
+  content += dRow('Additional TC Hours','&nbsp;');
+  content += dRow('Additional PS Hours','&nbsp;');
+  content += dRow('Additional Cost Estimate','$&nbsp;');
+  content += dRow('Revised Total Estimate','$&nbsp;');
+  content += dRow('Client Approval','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
+  content += dRow('Havellin Authorization','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
+  content += '</table>';
+  // SECTION 5: AUTHORITY
+  content += secHdr(5,'Authority, Probate &amp; Legal Compliance');
+  content += subHdr('5.1 Client Representations');
+  content += pp('By signing this Agreement, the Client represents and warrants the following:');
+  var reps = [
+    'The Client has full legal authority to authorize the services described in this Agreement, including authority over the property and all assets within it.',
+    'If acting as Personal Representative or Executor, the Client has been duly appointed by the probate court and holds Letters of Administration or equivalent authority.',
+    'The Client will promptly provide Havellin with any court orders, restrictions, or legal limitations affecting the disposition of estate assets.',
+    'The Client will notify Havellin immediately of any disputes among beneficiaries, legal holds, or changes in legal status that may affect the scope of work.',
+    'All assets identified for sale, donation, or disposal have been authorized for disposition by the Personal Representative or applicable legal authority.'
+  ];
+  content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
+  reps.forEach(function(r){ content += '<li style="margin-bottom:.3rem;">'+r+'</li>'; });
+  content += '</ol>';
+  content += subHdr('5.2 Florida Probate Compliance');
+  content += pp('For probate engagements, Havellin will support — but not replace — the estate attorney in meeting Florida probate requirements. Specifically:');
+  var comp = [
+    'Havellin will prepare a documented asset inventory suitable for use in the court-required filing under Florida Statute §733.604. The estate attorney is responsible for the actual court filing.',
+    'Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory deadline from Letters of Administration issuance.',
+    'All asset sales will require written Personal Representative approval. Sales of real property require court approval unless the PR holds full authority under Florida Statute §733.613.',
+    'Havellin will maintain complete documentation of all asset dispositions for inclusion in the estate\'s final accounting.',
+    'All project files will be retained for a minimum of 7 years from project close date.'
+  ];
+  content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
+  comp.forEach(function(c){ content += '<li style="margin-bottom:.3rem;">'+c+'</li>'; });
+  content += '</ol>';
+  content += subHdr('5.3 Asset Disposition Authorization');
+  content += pp('The Client authorizes Havellin to take the following actions on behalf of the estate, subject to the written approval thresholds below:');
+  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
+  content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Action</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Approval Required</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Threshold</th></tr></thead><tbody>';
+  var authRows = [
+    ['Document and photograph assets','None required','All assets'],
+    ['Sort and stage assets for disposition','Verbal approval','All assets'],
+    ['Donate to qualifying 501(c)(3) organizations','Written PR approval','All donations'],
+    ['Arrange sale through third-party channel','Written PR approval','Any item over $500'],
+    ['Dispose / remove to dumpster','Written PR approval','Any item over $500'],
+    ['Arrange professional appraisal','Written PR approval','Any item with uncertain FMV'],
+    ['Move or deliver items to beneficiaries','Written PR approval + signed receipt from recipient','All items']
+  ];
+  authRows.forEach(function(r){
+    content += '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[0]+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[1]+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[2]+'</td></tr>';
+  });
+  content += '</tbody></table>';
+  // SECTION 6: LIABILITY
+  content += secHdr(6,'Liability, Insurance &amp; Damage Protocol');
+  content += subHdr('6.1 Havellin Insurance Coverage');
+  var cov = [
+    bb('General Liability:')+'  $1,000,000 per occurrence / $2,000,000 aggregate',
+    bb('Commercial Auto:')+'  $1,000,000 CSL on all company vehicles',
+    bb('Workers\' Compensation:')+'  Per Florida statutory requirements',
+    bb('Bailee\'s Coverage:')+'  Protection for high-value items in Havellin\'s care, custody, or control during the engagement',
+    bb('Bonding:')+'  Fidelity bond covering all team members and contractors on-site'
+  ];
+  content += '<ul style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
+  cov.forEach(function(c){ content += '<li style="margin-bottom:.2rem;">'+c+'</li>'; });
+  content += '</ul>';
+  content += subHdr('6.2 Havellin Liability Limits');
+  content += pp('Havellin\'s liability for damage to or loss of any single item is limited to the lesser of: (a) the professionally appraised fair market value of the item at the time of loss or damage, or (b) $10,000 per item, unless the Client has separately declared a higher value in writing prior to the engagement.');
+  content += pp('For items of extraordinary value (fine art, jewelry, rare collectibles valued over $10,000 per item), the Client must provide a written declaration of value prior to project start. Havellin may require additional insurance coverage or specialized handling protocols for declared high-value items.');
+  content += pp('Havellin is not liable for: pre-existing damage to property or items; loss or damage resulting from Client instructions that Havellin advised against in writing; items removed from the property by family members or third parties without Havellin\'s knowledge; or digital assets, cryptocurrencies, or financial instruments not physically present and accessible at the property.');
+  content += subHdr('6.3 Damage Incident Protocol');
+  var proto = [
+    'Havellin team member discovers or causes damage — document immediately with photographs and written description',
+    'Notify Client / Personal Representative within 24 hours of discovery',
+    'Preserve damaged item in place — do not move, repair, or dispose of without Client authorization',
+    'Submit written incident report to Anthony Graziano Sr within 24 hours',
+    'Engage insurance carrier if damage exceeds $500',
+    'Provide Client with insurance carrier contact and claim process within 48 hours'
+  ];
+  content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
+  proto.forEach(function(p2){ content += '<li style="margin-bottom:.2rem;">'+p2+'</li>'; });
+  content += '</ol>';
+  // SECTION 7: CONFIDENTIALITY
+  content += secHdr(7,'Confidentiality &amp; Privacy');
+  content += pp('All information encountered during this engagement — including but not limited to property contents, asset values, financial records, legal documents, family matters, and estate details — is strictly confidential. Havellin agrees to:');
+  var conf = [
+    'Require all team members and contractors to sign a Non-Disclosure Agreement before accessing the property',
+    'Not disclose any information about the Client, property, estate, or family to any third party without written consent, except as required by law',
+    'Not photograph, film, or post any content related to the property or estate on social media or any public platform without express written consent',
+    'Maintain all Client and estate records in secure storage with access limited to authorized Havellin personnel only',
+    'Destroy or return all Client documents upon project completion or written request'
+  ];
+  content += '<ul style="font-size:11px;line-height:1.75;margin:.3rem 0 .6rem 1.4rem;color:var(--gray-dk);">';
+  conf.forEach(function(c){ content += '<li style="margin-bottom:.2rem;">'+c+'</li>'; });
+  content += '</ul>';
+  content += pp('The Client acknowledges that Havellin may use anonymized, non-identifying project data (e.g., square footage, job type, general scope) for internal business analysis and planning purposes only.');
+  // SECTION 8: TERMINATION
+  content += secHdr(8,'Termination');
+  content += subHdr('8.1 Termination by Client');
+  content += pp('The Client may terminate this Agreement at any time with written notice. Upon termination:');
+  var termC = [
+    'Havellin will cease all work and secure the property upon receipt of written notice',
+    'The Client is responsible for all hours worked and materials used through the termination date',
+    'The deposit is non-refundable if termination occurs after project start',
+    'A final invoice reflecting actual hours and materials will be issued within 10 business days of termination',
+    'Havellin will provide the Client with all documentation completed through the termination date'
+  ];
+  content += '<ul style="font-size:11px;line-height:1.75;margin:.3rem 0 .6rem 1.4rem;color:var(--gray-dk);">';
+  termC.forEach(function(t){ content += '<li style="margin-bottom:.2rem;">'+t+'</li>'; });
+  content += '</ul>';
+  content += subHdr('8.2 Termination by Havellin');
+  content += pp('Havellin may suspend or terminate this Agreement with written notice under the following circumstances:');
+  var termH = [
+    'Non-payment of any invoice more than 30 days past due',
+    'Discovery of conditions posing a health or safety risk to Havellin personnel that the Client is unwilling or unable to remediate',
+    'Client misrepresentation of authority, scope, or material facts at intake',
+    'Court order or legal hold preventing Havellin from completing the contracted scope'
+  ];
+  content += '<ul style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
+  termH.forEach(function(t){ content += '<li style="margin-bottom:.2rem;">'+t+'</li>'; });
+  content += '</ul>';
+  // SECTION 9: DISPUTE
+  content += secHdr(9,'Dispute Resolution &amp; Governing Law');
+  content += pp('This Agreement is governed by the laws of the State of Florida. Any dispute arising from this Agreement that cannot be resolved through good-faith negotiation within 30 days shall be submitted to binding arbitration in Palm Beach County, Florida, under the rules of the American Arbitration Association. The prevailing party shall be entitled to recover reasonable attorneys\' fees and costs.');
+  content += pp('Nothing in this section prevents either party from seeking emergency injunctive relief in a court of competent jurisdiction to prevent irreparable harm.');
+  // SECTION 10: GENERAL
+  content += secHdr(10,'General Provisions');
+  var gen = [
+    ['Entire Agreement','This Agreement, together with any executed Change Orders and attached Exhibits, constitutes the entire agreement between the parties and supersedes all prior discussions, proposals, or representations.'],
+    ['Amendments','No amendment to this Agreement is valid unless in writing and signed by both parties.'],
+    ['Severability','If any provision of this Agreement is found unenforceable, the remaining provisions remain in full force and effect.'],
+    ['Assignment','Neither party may assign this Agreement without the written consent of the other party. Havellin may use qualified subcontractors to fulfill its obligations; Havellin remains responsible for their performance.'],
+    ['Independent Contractor','Havellin and its team members are independent contractors, not employees of the Client or the estate. Havellin is responsible for all applicable taxes, insurance, and employment obligations for its personnel.'],
+    ['Force Majeure','Neither party is liable for delays caused by circumstances beyond their reasonable control, including natural disasters, government orders, or public health emergencies.']
+  ];
+  gen.forEach(function(g){ content += pp(bb(g[0]+'.')+'  '+g[1]); });
+  // SIGNATURE PAGE
+  content += '<div class="ce-divider" style="margin-top:1.5rem;"></div>';
+  content += '<div style="text-align:center;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-dk);margin:.8rem 0 .4rem;">Signature Page</div>';
+  content += pp('By signing below, both parties acknowledge they have read, understood, and agreed to all terms of this Agreement. No work will begin until both signatures are obtained and the deposit has been received.');
+  // Client sig block
+  content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
+  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Client / Personal Representative</div>';
+  content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+clientName+'</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">Personal Representative &middot; Executor &middot; POA &middot; Other</div></div>';
+  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
+  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
+  content += '</div></div>';
+  // Co-signer
+  content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
+  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Co-Signer <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">(if applicable — second beneficiary or co-PR)</span></div>';
+  content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div></div>';
+  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
+  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
+  content += '</div></div>';
+  // Havellin sig block
+  content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
+  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:12px;">Havellin Palm Beach, LLC</div>';
+  content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;">';
+  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Anthony Graziano Sr</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(617) 650-6588 &middot; anthony@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
+  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Ashley Jerome</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(978) 857-5374 &middot; ashley@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
+  content += '</div></div>';
+  // Office use
+  content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;background:var(--tan);margin-bottom:12px;">';
+  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">For Office Use</div>';
+  content += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:11px;">';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Deposit Received</div><div>'+(havTotal>0?'$'+dep.toLocaleString():'$_____________')+' &nbsp; on _____________ &nbsp; via _____________</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Project ID</div><div><span style="font-family:monospace;font-weight:600;color:var(--bronze);">'+hvlId+'</span></div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Pricing Memo Attached</div><div>&#9744; Yes &nbsp;&nbsp; &#9744; No</div></div>';
+  content += '</div></div>';
+  // Footer
+  content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
+  content += 'Havellin Palm Beach, LLC &nbsp;&middot;&nbsp; FL LLC L26000216712 &nbsp;&middot;&nbsp; (561) 370-4700 &nbsp;&middot;&nbsp; agreements@havellinpalmbeach.com &nbsp;&middot;&nbsp; havellinpalmbeach.com<br>';
+  content += 'Licensed, Insured &amp; Bonded &nbsp;&middot;&nbsp; NASMM Member &nbsp;&middot;&nbsp; Confidential &nbsp;&middot;&nbsp; '+monthYear;
+  content += '</div>';
+  document.getElementById('agr-page-content').innerHTML = content;
+  updateAgrUI();
+}
+
+
 function renderAgreement() {
   var jobId = currentAgrJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  if (job.svc === 'probate') { renderProbateAgreement(); return; }
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
