@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 9:22am</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 11:30am</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -657,9 +657,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <table class="vtbl" id="collections-tbl">
           <thead><tr>
             <th style="min-width:160px;">Collection / Description</th>
-            <th style="width:130px;">Est. Value (per owner)</th>
-            <th style="width:90px;">Item Count</th>
-            <th style="width:150px;">Disposition</th>
+            <th style="width:130px;">Est. Value (owner)</th>
+            <th style="width:80px;">Qty</th>
+            <th style="width:140px;">Disposition</th>
+            <th style="width:100px;">Hours Added</th>
             <th style="width:60px;"></th>
           </tr></thead>
           <tbody id="collections-body">
@@ -671,16 +672,20 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
               <td><input type="number" id="new-col-value" placeholder="0" min="0" style="font-size:11px;"></td>
               <td><input type="number" id="new-col-qty" placeholder="0" min="0" style="font-size:11px;"></td>
               <td><select id="new-col-disp" style="font-size:11px;width:100%;">
-                <option value="appraisal">Appraisal / Dealer Bid</option>
-                <option value="ebay">eBay Drop-Off (PS)</option>
-                <option value="self">Client Self-Manages</option>
+                <option value="auction">Auction House</option>
+                <option value="appraise">Appraise</option>
+                <option value="consign">Consign</option>
+                <option value="ebay">Ebay Store</option>
+                <option value="replacements">Replacements.com</option>
+                <option value="dealer">Specialized Dealer</option>
+                <option value="other">Other</option>
               </select></td>
               <td><button class="icon-btn" onclick="addCollection()">+ Add</button></td>
             </tr>
           </tfoot>
         </table>
         <div style="margin-top:8px;padding:9px 12px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--gray);">
-          <strong style="color:var(--gray-dk);">TC Advisory (say on site):</strong> "We can't determine value without a professional. If you'd like an appraisal or dealer bid, we'll coordinate — the appraiser bills you directly and we charge a 15% coordination fee. If the collection doesn't appraise well, we can drop items at an eBay consignment store, or you can handle it yourself."
+          <strong style="color:var(--gray-dk);">TC Advisory (say on site):</strong> "We'll identify the right partner for each collection — auction houses, appraisers, and dealers typically come to the property at no charge to assess what they'll take. Our coordination and hands-on time is included in your estimate. You work directly with the partner for any sale proceeds, consignment outcome, or appraisal result."
         </div>
       </div>
 
@@ -1601,15 +1606,25 @@ function destPSHours(sqft, beds) {
   var bedAdder = Math.max(0, beds - 1) * 1;
   return base + bedAdder;
 }
-// ─── COLLECTIONS TC ADDER ─────────────────────────────────────────────────────
-function collectionsTCHours() {
-  var total = 0;
+// ─── COLLECTIONS HOURS (TC + PS) ──────────────────────────────────────────────
+// TC = on-site coordination: schedule partner, be present, follow up with client
+// PS = physical execution: stage/organize, pack accepted items, transport if offsite drop
+var COLLECTION_HOURS = {
+  auction:      {tc:2,   ps:2},  // TC: schedule + walkthrough + follow-up. PS: stage, pack accepted lots
+  appraise:     {tc:2,   ps:1},  // TC: schedule + present during appraisal + review with client. PS: organize/stage
+  consign:      {tc:1,   ps:3},  // TC: identify shop, coordinate intake. PS: pack, transport, handle shop intake
+  ebay:         {tc:0.5, ps:2},  // TC: confirm drop-off only. PS: box items, transport to store
+  replacements: {tc:1,   ps:3},  // TC: submit inquiry, confirm acceptance list. PS: careful pack + ship
+  dealer:       {tc:2,   ps:1},  // TC: research dealer, schedule visit, be present. PS: organize/stage
+  other:        {tc:1,   ps:1}   // Generic fallback
+};
+function collectionsHours() {
+  var tc = 0, ps = 0;
   collectionsData.forEach(function(c) {
-    if (c.disp === 'self') return; // client self-manages, no TC time
-    // appraisal/dealer bid: 3 hrs per collection; ebay drop-off: 1 hr TC per collection
-    total += (c.disp === 'ebay') ? 1 : 3;
+    var h = COLLECTION_HOURS[c.disp] || {tc:1, ps:1};
+    tc += h.tc; ps += h.ps;
   });
-  return total;
+  return {tc: Math.round(tc*10)/10, ps: Math.round(ps*10)/10};
 }
 
 function psRatioByVol(avgVol) {
@@ -1779,9 +1794,10 @@ function calcAll() {
   baseTCHrs = Math.round((baseTCHrs + destTC) * 10) / 10;
   basePSHrs = Math.round((basePSHrs + destPS) * 10) / 10;
 
-  // Collections TC adder
-  var colTC = collectionsTCHours();
-  baseTCHrs = Math.round((baseTCHrs + colTC) * 10) / 10;
+  // Collections TC + PS adder
+  var colHrs = collectionsHours();
+  baseTCHrs = Math.round((baseTCHrs + colHrs.tc) * 10) / 10;
+  basePSHrs = Math.round((basePSHrs + colHrs.ps) * 10) / 10;
 
   // Service type multiplier badge
   var svcBadgeEl = document.getElementById('svc-mult-badge');
@@ -2004,6 +2020,7 @@ function calcAll() {
     discountPct:discountPct,
     grandTotal:Math.round(grandTotal),
     vendors:JSON.parse(JSON.stringify(vendors)),
+    collections:JSON.parse(JSON.stringify(collectionsData)),
     rooms:includedRooms,
     rush:false, access:access, heirs:heirs,
     jobId: parseInt(document.getElementById('e-job').value) || null,
@@ -2425,6 +2442,8 @@ function clearEstimateTab() {
     if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
   }
   clearAllRooms();
+  collectionsData = [];
+  renderCollections();
   currentEstimate = null;
   estimateApproved = false;
   approvedBy = ''; approvedAt = '';
@@ -2649,6 +2668,19 @@ function renderClientEstimate() {
     '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred customer discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">This estimate is based on the initial property walkthrough. Final charges reflect actual hours worked. If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</div>' +
+
+    (function() {
+      var cols = e.collections || [];
+      if (!cols.length) return '';
+      var dispNames = {auction:'Auction House', appraise:'Appraise', consign:'Consign', ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer', other:'Other'};
+      var rows = cols.map(function(c) {
+        return '<tr><td>' + c.name + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
+      }).join('');
+      return '<div class="ce-section-hdr" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
+        '<table class="ce-tbl"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>' +
+        '<div class="ce-note">Collection partners — auction houses, appraisers, and dealers — typically visit the property at no charge to assess what they will accept. Havellin coordinates the process and the hands-on preparation time is included in the estimate above. You work directly with each partner for any sale proceeds, consignment, or appraisal outcome.</div>';
+    })() +
 
     '<div class="ce-section-hdr" style="margin-top:1rem;">Estimated Third-Party Vendor Costs</div>' +
     '<table class="ce-tbl">' +
@@ -3173,6 +3205,11 @@ function restoreEstimateToUI(est) {
     });
   });
 
+  // Restore collections
+  if (est.collections) {
+    collectionsData = JSON.parse(JSON.stringify(est.collections));
+    renderCollections();
+  }
   calcAll();
   applyEstimateLock();
 }
@@ -5915,25 +5952,30 @@ function attachRoomMedia(input, type, roomId) {
 // ─── COLLECTIONS TABLE ─────────────────────────────────────────────────────────
 var collectionsData = [];
 
+var COL_DISP_LABELS = {
+  auction:'Auction House', appraise:'Appraise', consign:'Consign',
+  ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer', other:'Other'
+};
+
 function addCollection() {
   var name = document.getElementById('new-col-name').value.trim();
   var value = document.getElementById('new-col-value').value.trim();
   var qty = document.getElementById('new-col-qty').value.trim();
   var dispEl = document.getElementById('new-col-disp');
-  var disp = dispEl ? dispEl.value : 'appraisal';
-  var dispLabels = {appraisal:'Appraisal / Dealer Bid', ebay:'eBay Drop-Off (PS)', self:'Client Self-Manages'};
+  var disp = dispEl ? dispEl.value : 'auction';
   if (!name) { alert('Please enter a collection name.'); return; }
-  var id = Date.now();
-  collectionsData.push({ id: id, name: name, value: value||'Unknown', qty: qty||'Est.', disp: disp, dispLabel: dispLabels[disp]||disp });
+  collectionsData.push({ id: Date.now(), name: name, value: value||'Unknown', qty: qty||'Est.', disp: disp, dispLabel: COL_DISP_LABELS[disp]||disp });
   document.getElementById('new-col-name').value = '';
   document.getElementById('new-col-value').value = '';
   document.getElementById('new-col-qty').value = '';
   renderCollections();
+  calcAll();
 }
 
 function removeCollection(id) {
   collectionsData = collectionsData.filter(function(c){ return c.id !== id; });
   renderCollections();
+  calcAll();
 }
 
 function renderCollections() {
@@ -5945,12 +5987,13 @@ function renderCollections() {
   }
   var h = '';
   collectionsData.forEach(function(c) {
-    var dispColors = {appraisal:'color:var(--bronze);', ebay:'color:var(--info-tx);', self:'color:var(--gray);'};
+    var h2 = COLLECTION_HOURS[c.disp] || {tc:1, ps:1};
     h += '<tr>' +
       '<td style="font-size:12px;font-weight:500;">' + c.name + '</td>' +
       '<td style="font-size:12px;">$' + (parseFloat(c.value)||0).toLocaleString() + '</td>' +
       '<td style="font-size:12px;text-align:center;">' + c.qty + '</td>' +
-      '<td style="font-size:11px;font-weight:600;' + (dispColors[c.disp]||'') + '">' + (c.dispLabel||c.disp||'—') + '</td>' +
+      '<td style="font-size:11px;font-weight:600;color:var(--bronze);">' + (COL_DISP_LABELS[c.disp]||c.disp||'—') + '</td>' +
+      '<td style="font-size:11px;color:var(--gray);">TC ' + h2.tc + 'h · PS ' + h2.ps + 'h</td>' +
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
     '</tr>';
   });
