@@ -5035,7 +5035,7 @@ function renderProbateAgreement() {
   content += '<div class="ce-divider"></div>';
   content += '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-dk);margin:.6rem 0 .25rem;">Probate &amp; Estate Services</div>';
   content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Engagement Agreement</div>';
-  content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs all estate cleanout, probate settlement, and senior downsizing services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
+  content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs all estate cleanout and probate settlement services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
   content += '</div>';
   content += '<div style="border:1px solid var(--bronze-lt);border-radius:4px;padding:8px 14px;margin-bottom:1rem;background:#fef9f0;">';
   content += '<span style="font-size:11px;font-weight:700;color:var(--bronze-dk);">IMPORTANT: Read carefully. Both parties must sign before any work begins.</span>';
@@ -5332,7 +5332,7 @@ function renderAgreement() {
   var jobId = currentAgrJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  if (job.svc === 'probate') { renderProbateAgreement(); return; }
+  if (job.svc === 'probate' || job.svc === 'cleanout' || job.svc === 'estate') { renderProbateAgreement(); return; }
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
