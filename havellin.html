@@ -4990,6 +4990,8 @@ function renderProbateAgreement() {
   var mid = Math.round(havTotal * 0.25);
   var fin = Math.round(havTotal * 0.25);
   var clientName = job.name || '_______________________________________________';
+  var estateName = job.name ? 'Estate of ' + job.name : 'Estate of _______________________________________________';
+  var executorName = job.executor || '_______________________________________________';
   var clientAddr = [job.addr, job.city ? job.city+', FL' : '', job.zip].filter(Boolean).join(' ') || '_______________________________________________';
   var clientEmail = job.email || '_______________________________________________';
   var clientPhone = job.phone || '_______________________________________________';
@@ -5051,7 +5053,7 @@ function renderProbateAgreement() {
   content += '</table>';
   content += subHdr('1.2 Client / Authorized Party');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
-  content += dRow('Client Full Name', bb(clientName));
+  content += dRow('Client Full Name', bb(estateName));
   content += dRow('Date','_______________________________________________');
   content += dRow('Role / Authority','Personal Representative &middot; Executor &middot; POA &middot; Beneficiary &middot; Client');
   content += dRow('Mailing Address', clientAddr);
@@ -5287,7 +5289,7 @@ function renderProbateAgreement() {
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Client / Personal Representative</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
-  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+clientName+'</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+executorName+'</div></div>';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">Personal Representative &middot; Executor &middot; POA &middot; Other</div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
