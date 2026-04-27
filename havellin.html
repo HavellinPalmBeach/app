@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 9:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 9:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5350,13 +5350,25 @@ function renderAgreement() {
   function b(txt) { return '<strong>'+txt+'</strong>'; }
 
   var content = '';
+  var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
 
   // ── HEADER ────────────────────────────────────────────────────────────────
-  content += '<div class="ce-logo-wrap" style="text-align:center;margin-bottom:1rem;">'+logoHTML+'</div>';
-  content += '<div class="ce-divider-thick"></div>';
-  content += '<div style="text-align:center;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gray-dk);margin-bottom:.3rem;">Client Services Agreement</div>';
-  content += '<div style="text-align:center;font-size:11px;color:var(--gray);margin-bottom:1rem;letter-spacing:.04em;">Havellin Palm Beach LLC &nbsp;·&nbsp; Estate Transition &amp; Senior Downsizing Services</div>';
+  content += '<div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid var(--bronze);padding-bottom:4px;margin-bottom:1.2rem;">';
+  content += '<span style="font-family:'Cormorant Garamond',serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);">Havellin Palm Beach</span>';
+  content += '<span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);">Client Services Agreement</span>';
+  content += '</div>';
   content += approvedStamp;
+  content += '<div style="text-align:center;margin-bottom:1.2rem;">';
+  content += '<div style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:500;letter-spacing:.05em;color:var(--bronze);">HAVELLIN PALM BEACH</div>';
+  content += '<div style="font-size:11px;color:var(--gray);margin:.2rem 0 .6rem;letter-spacing:.02em;">Guiding Families Through Life's Transitions</div>';
+  content += '<div class="ce-divider"></div>';
+  content += '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-dk);margin:.6rem 0 .25rem;">'+svcLabel+'</div>';
+  content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Services Agreement</div>';
+  content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs all services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
+  content += '</div>';
+  content += '<div style="border:1px solid var(--bronze-lt);border-radius:4px;padding:8px 14px;margin-bottom:1rem;background:#fef9f0;">';
+  content += '<span style="font-size:11px;font-weight:700;color:var(--bronze-dk);">IMPORTANT: Read carefully. Both parties must sign before any work begins.</span>';
+  content += '</div>';
 
   // ── PARTIES TABLE ─────────────────────────────────────────────────────────
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:1rem;font-size:11.5px;">';
@@ -5533,16 +5545,19 @@ function renderAgreement() {
   content += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:.5rem;">Exhibit A — Service Estimate</div>';
   content += p('[Attach the approved Service Estimate generated from the Havellin estimator app. The Estimate reference number <strong>'+hvlId+'</strong>, date, line-item breakdown, payment schedule, and total fees are incorporated into this Agreement by reference.]');
 
-  content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;border-top:1px solid var(--border);padding-top:.5rem;">Havellin Palm Beach, LLC &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401 &nbsp;·&nbsp; (561) 370-4700 &nbsp;·&nbsp; agreements@havellinpalmbeach.com &nbsp;·&nbsp; Licensed, Insured &amp; Bonded</div>';
+  content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
+  content += 'Havellin Palm Beach, LLC  &middot;  FL LLC L26000216712  &middot;  (561) 370-4700  &middot;  agreements@havellinpalmbeach.com  &middot;  havellinpalmbeach.com<br>';
+  content += 'Licensed, Insured &amp; Bonded  &middot;  NASMM Member  &middot;  Confidential  &middot;  '+monthYear;
+  content += '</div>';
 
   document.getElementById('agr-page-content').innerHTML = content;
   updateAgrUI();
 }
 
 function agrSection(title, content) {
-  return '<div style="margin-bottom:.7rem;">' +
-    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:.3rem;border-bottom:1px solid var(--border);padding-bottom:3px;">'+title+'</div>' +
-    '<div style="font-size:11px;line-height:1.55;color:var(--gray-dk);">'+content+'</div>' +
+  return '<div style="margin:1.2rem 0 .6rem 0;">' +
+    '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--bronze);padding-bottom:4px;border-bottom:1.5px solid var(--bronze);margin-bottom:.5rem;">'+title+'</div>' +
+    '<div style="font-size:11px;line-height:1.65;color:var(--gray-dk);">'+content+'</div>' +
     '</div>';
 }
 
