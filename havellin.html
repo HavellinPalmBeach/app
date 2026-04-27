@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 12:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2406,6 +2406,8 @@ function clearEstimateTab() {
   if (svcDisplay) svcDisplay.textContent = '—';
   var svcEl = document.getElementById('e-svc');
   if (svcEl) svcEl.value = '';
+  var propValEl = document.getElementById('e-propval');
+  if (propValEl) propValEl.value = '';
   var startEl = document.getElementById('e-start-date');
   if (startEl) startEl.value = '';
   var targetEl = document.getElementById('e-target-date');
@@ -2420,6 +2422,7 @@ function clearEstimateTab() {
   renderCollections();
   currentEstimate = null;
   estimateApproved = false;
+  estimateSubmitted = false;
   approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   showFB('e-fb', 'ok', 'Estimate cleared.');
@@ -2483,12 +2486,7 @@ function saveEstimateAndPreview() {
     document.querySelectorAll('.nb')[2].click();
     setTimeout(function() {
       window._suppressEstimateAutoSave = true;
-      clearAllRooms();
-      currentEstimate = null;
-      estimateApproved = false; estimateSubmitted = false;
-      approvedBy = ''; approvedAt = '';
-      var jobSel = document.getElementById('e-job'); if (jobSel) jobSel.value = '';
-      updateApprovalUI();
+      clearEstimateTab();
       window._suppressEstimateAutoSave = false;
     }, 200);
   }, 1000);
