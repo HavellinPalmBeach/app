@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 10:08pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 10:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1413,12 +1413,15 @@ function buildRoomTable() {
         '<td style="padding:3px 4px;text-align:center;">' +
           '<input type="hidden" id="note-'+id+'" value="">' +
           '<span style="display:none;" id="el-'+id+'">0.0</span>' +
-          '<div style="display:flex;gap:8px;align-items:center;justify-content:center;">' +
-          '<label id="mic-btn-'+id+'" style="cursor:pointer;display:none;" title="Voice note">' +
-            '<input type="file" accept="audio/*" capture="microphone" style="display:none;" data-rid="'+id+'" onchange="attachRoomMedia(this,\'audio\',this.getAttribute(\'data-rid\'))">' +
-            '<span style="font-size:20px;">&#127908;</span>' +
-          '</label>' +
+          '<div id="room-media-btns-'+id+'" style="display:none;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;">' +
+            '<button id="notes-btn-'+id+'" onclick="openNotesModal(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Room notes">&#128221;</button>' +
+            '<button id="mic-btn-'+id+'" onclick="startRoomTranscription(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Voice transcription">&#127908;</button>' +
+            '<label id="photo-btn-'+id+'" style="cursor:pointer;font-size:16px;color:var(--gray);line-height:1;margin:0;" title="Capture photo">' +
+              '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachRoomPhoto(this,\''+id+'\')">' +
+              '&#128247;' +
+            '</label>' +
           '</div>' +
+          '<div id="mic-status-'+id+'" style="font-size:9px;color:var(--bronze);font-style:italic;min-height:10px;max-width:88px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:1px auto 0;"></div>' +
           '<div id="cam-thumb-'+id+'" style="margin-top:3px;"></div>' +
         '</td>' +
         '</tr>';
@@ -1460,8 +1463,8 @@ function toggleRoom(id) {
     spcl.disabled = false; note.disabled = false;
     var noteTaOn = document.getElementById('note-ta-'+id);
     if (noteTaOn) { noteTaOn.disabled = false; noteTaOn.style.background = ''; }
-    var micBtnOn = document.getElementById('mic-btn-'+id);
-    if (micBtnOn) micBtnOn.style.display = 'inline-block';
+    var mediaBtnsOn = document.getElementById('room-media-btns-'+id);
+    if (mediaBtnsOn) mediaBtnsOn.style.display = 'flex';
     if (nameEl.tagName === 'SPAN') nameEl.className = 'rname';
   } else {
     row.className = 'inactive';
@@ -1471,8 +1474,9 @@ function toggleRoom(id) {
     note.disabled = true; note.value = '';
     var noteTaOff = document.getElementById('note-ta-'+id);
     if (noteTaOff) { noteTaOff.disabled = true; noteTaOff.value = ''; noteTaOff.style.background = 'var(--cream)'; }
-    var micBtnOff = document.getElementById('mic-btn-'+id);
-    if (micBtnOff) micBtnOff.style.display = 'none';
+    var mediaBtnsOff = document.getElementById('room-media-btns-'+id);
+    if (mediaBtnsOff) mediaBtnsOff.style.display = 'none';
+    if (_activeRecognitions && _activeRecognitions[id]) { try { _activeRecognitions[id].stop(); } catch(e){} }
     if (nameEl.tagName === 'SPAN') nameEl.className = 'rname dim';
   }
   calcAll();
@@ -2472,6 +2476,7 @@ function saveEstimateAndPreview() {
   syncJobToSheets(job);
   syncEstimateToSheets(currentEstimate, false, '', '');
   showFB('e-fb','ok','Estimate saved. Opening Client Estimate for review…');
+  setTimeout(function() { exportEstimateToDrive(jobId); }, 1500);
   setTimeout(function() {
     document.querySelectorAll('.nb')[2].click();
     setTimeout(function() {
@@ -3992,6 +3997,7 @@ function loadEstimateState() {
 }
 
 function loadEstimateForJob(jobId) {
+  loadMediaFromStorage(jobId);
   var rec = estimateStore[jobId];
   if (rec) {
     currentEstimate = rec.estimate || null;
@@ -4177,27 +4183,38 @@ function attachRoomPhoto(input, roomId) {
   var roomName = roomNameEl ? (roomNameEl.textContent || roomNameEl.value || roomId) : roomId;
 
   var reader = new FileReader();
-  reader.onload = function(e) {
-    var dataUrl = e.target.result;
-    var key = jobId + '_' + roomId;
-    roomPhotos[key] = { dataUrl: dataUrl, name: file.name, roomName: roomName, jobId: jobId };
+  reader.onload = function(ev) {
+    var rawDataUrl = ev.target.result;
 
-    // Show thumbnail
-    var thumb = document.getElementById('cam-thumb-' + roomId);
-    if (thumb) {
-      thumb.innerHTML = '<div style="position:relative;display:inline-block;">' +
-        '<img src="' + dataUrl + '" style="height:48px;width:64px;object-fit:cover;border-radius:4px;border:1px solid var(--border);">' +
-        '<span class="rm-photo" data-rmid="' + roomId + '" style="position:absolute;top:1px;right:2px;font-size:10px;cursor:pointer;background:rgba(0,0,0,.5);color:white;padding:1px 4px;border-radius:2px;">&#10005;</span>' +
-        '</div>';
-    }
-    // Update camera icon to show captured
-    var icon = document.getElementById('cam-icon-' + roomId);
-    if (icon) { icon.textContent = ''; icon.innerHTML = '&#9989;'; }
+    compressImage(rawDataUrl, 900, 0.72, function(dataUrl) {
+      var key = jobId + '_' + roomId;
+      // Store compressed version
+      roomPhotos[key] = { dataUrl: dataUrl, name: file.name, roomName: roomName, jobId: jobId };
+      saveMediaToStorage(jobId);
 
-    showFB('e-fb','ok','Photo captured for ' + roomName + '. Saved to Drive folder after estimate.');
+      // Show thumbnail
+      var thumb = document.getElementById('cam-thumb-' + roomId);
+      if (thumb) {
+        var uploadBadge = '<span id="up-badge-'+roomId+'" style="font-size:9px;color:var(--gray);display:block;margin-top:2px;">&#8635; uploading...</span>';
+        thumb.innerHTML = '<div style="position:relative;display:inline-block;">' +
+          '<img src="' + dataUrl + '" style="height:48px;width:64px;object-fit:cover;border-radius:4px;border:1px solid var(--border);">' +
+          '<span class="rm-photo" data-rmid="' + roomId + '" style="position:absolute;top:1px;right:2px;font-size:10px;cursor:pointer;background:rgba(0,0,0,.5);color:white;padding:1px 4px;border-radius:2px;">&#10005;</span>' +
+          '</div>' + uploadBadge;
+      }
+
+      // Auto-upload to Drive Photos subfolder
+      var job = jobs.find(function(j){ return j.id === jobId; });
+      var folderId = job && job.driveSubfolders && job.driveSubfolders['Photos'] ? job.driveSubfolders['Photos'].id : null;
+      var cleanRoom = roomName.replace(/[^a-z0-9]/gi, '_');
+      var ts = Date.now();
+      var filename = (job && job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + ts + '.jpg';
+      uploadToDrive(folderId, filename, dataUrl, function(ok) {
+        var badge = document.getElementById('up-badge-'+roomId);
+        if (badge) badge.innerHTML = ok ? '<span style="color:var(--green);">&#10003; in Drive</span>' : '<span style="color:var(--gray);">&#9632; local only</span>';
+      });
+    });
   };
   reader.readAsDataURL(file);
-  // Reset input so same file can be re-selected
   input.value = '';
 }
 
@@ -4805,32 +4822,204 @@ function syncLogToSheets(jobId, entry) {
   }).catch(function(){});
 }
 
-function createDriveJobFolder(job) {
-  if (!SHEETS_SYNC_URL || !DRIVE_FOLDER_ID) return;
-  var params = '?action=createFolder'
-    + '&hvlId='      + encodeURIComponent(job.hvlId || '')
-    + '&clientName=' + encodeURIComponent(job.name  || '')
-    + '&svc='        + encodeURIComponent(job.svc   || '');
-  fetch(SHEETS_SYNC_URL + params)
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (data.folderUrl) {
-        // Store folder URL on job
-        var j = jobs.find(function(x){ return x.id === job.id; });
-        if (j) {
-          j.driveFolder = data.folderUrl;
-          saveJobs();
-          showSyncBadge('Drive folder created \u2713');
-          // Re-render Client Dashboard to update button
-          openClientDashboard(job.id);
-        }
-      }
-    })
-    .catch(function(){ 
-      showSyncBadge('Could not create folder'); 
-      // Re-render to reset button state
-      openClientDashboard(job.id);
+// ─── MEDIA COMPRESSION ────────────────────────────────────────────────────────
+function compressImage(dataUrl, maxW, quality, cb) {
+  var img = new Image();
+  img.onload = function() {
+    var w = img.width, h = img.height;
+    if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    cb(c.toDataURL('image/jpeg', quality));
+  };
+  img.onerror = function() { cb(dataUrl); };
+  img.src = dataUrl;
+}
+
+// ─── MEDIA PERSISTENCE ────────────────────────────────────────────────────────
+function saveMediaToStorage(jobId) {
+  try {
+    var data = {};
+    Object.keys(roomPhotos).forEach(function(k) {
+      if (roomPhotos[k] && roomPhotos[k].jobId === parseInt(jobId)) data['p_'+k] = roomPhotos[k];
     });
+    localStorage.setItem('hav_media_' + jobId, JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadMediaFromStorage(jobId) {
+  try {
+    var raw = localStorage.getItem('hav_media_' + jobId);
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    Object.keys(data).forEach(function(k) {
+      if (k.startsWith('p_')) roomPhotos[k.slice(2)] = data[k];
+    });
+  } catch(e) {}
+}
+
+// ─── DRIVE UPLOAD UTILITIES ───────────────────────────────────────────────────
+function uploadToDrive(folderId, filename, dataUrl, onDone) {
+  if (!SHEETS_SYNC_URL || !folderId) { if (onDone) onDone(false); return; }
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action:'uploadFile', folderId:folderId, filename:filename, dataUrl:dataUrl})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if (onDone) onDone(d.ok, d.fileUrl); })
+  .catch(function(){ if (onDone) onDone(false); });
+}
+
+function uploadHtmlToDrive(folderId, filename, html, onDone) {
+  if (!SHEETS_SYNC_URL || !folderId) { if (onDone) onDone(false); return; }
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action:'uploadHtml', folderId:folderId, filename:filename, html:html})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if (onDone) onDone(d.ok, d.fileUrl); })
+  .catch(function(){ if (onDone) onDone(false); });
+}
+
+// ─── ESTIMATE / AGREEMENT EXPORT ─────────────────────────────────────────────
+function exportEstimateToDrive(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
+  if (!folderId) return;
+  var el = document.getElementById('client-estimate-preview');
+  if (!el) return;
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estimate – '+(job.hvlId||'')+'</title>'
+    + '<style>body{font-family:Raleway,sans-serif;padding:20px;}</style></head><body>' + el.innerHTML + '</body></html>';
+  var ts = new Date().toISOString().slice(0,10);
+  uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
+    if (ok) showSyncBadge('Estimate saved to Drive ✓');
+  });
+}
+
+var _agrExported = {};
+function exportAgreementToDrive(jobId) {
+  if (_agrExported[jobId]) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var folderId = job.driveSubfolders && job.driveSubfolders['Agreement'] ? job.driveSubfolders['Agreement'].id : null;
+  if (!folderId) return;
+  var el = document.getElementById('agr-page-content');
+  if (!el || !el.innerHTML.trim()) return;
+  _agrExported[jobId] = true;
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Agreement – '+(job.hvlId||'')+'</title>'
+    + '<style>body{font-family:Raleway,sans-serif;padding:20px;max-width:800px;margin:0 auto;}</style></head><body>' + el.innerHTML + '</body></html>';
+  var ts = new Date().toISOString().slice(0,10);
+  uploadHtmlToDrive(folderId, (job.hvlId||'AGR')+'_Agreement_'+ts+'.html', html, function(ok) {
+    if (ok) showSyncBadge('Agreement saved to Drive ✓');
+  });
+}
+
+// ─── VOICE TRANSCRIPTION ─────────────────────────────────────────────────────
+var _activeRecognitions = {};
+
+function startRoomTranscription(roomId) {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { openNotesModal(roomId); return; }
+
+  // Toggle off if already recording this room
+  if (_activeRecognitions[roomId]) {
+    _activeRecognitions[roomId].stop();
+    return;
+  }
+
+  var recog = new SR();
+  recog.continuous = true;
+  recog.interimResults = true;
+  recog.lang = 'en-US';
+
+  var statusEl = document.getElementById('mic-status-'+roomId);
+  var micBtn   = document.getElementById('mic-btn-'+roomId);
+  if (micBtn) { micBtn.innerHTML = '&#9634;'; micBtn.style.color = '#A32D2D'; micBtn.title = 'Stop recording'; }
+
+  recog.onresult = function(event) {
+    var finalText = '', interimText = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) finalText += event.results[i][0].transcript + ' ';
+      else interimText += event.results[i][0].transcript;
+    }
+    if (statusEl) statusEl.textContent = interimText || '';
+    if (finalText) {
+      var noteEl = document.getElementById('note-'+roomId);
+      if (noteEl) {
+        var existing = noteEl.value ? noteEl.value.trimRight() + ' ' : '';
+        noteEl.value = existing + finalText.trim();
+      }
+      var notesBtn = document.getElementById('notes-btn-'+roomId);
+      if (notesBtn) { notesBtn.style.color = 'var(--bronze)'; notesBtn.style.fontWeight = '600'; }
+    }
+  };
+
+  recog.onerror = function(e) {
+    delete _activeRecognitions[roomId];
+    if (micBtn) { micBtn.innerHTML = '&#127908;'; micBtn.style.color = 'var(--gray)'; micBtn.title = 'Voice transcription'; }
+    if (statusEl) statusEl.textContent = '';
+    if (e.error !== 'aborted' && e.error !== 'no-speech') showFB('e-fb','warn','Microphone: ' + e.error);
+  };
+
+  recog.onend = function() {
+    delete _activeRecognitions[roomId];
+    if (micBtn) { micBtn.innerHTML = '&#127908;'; micBtn.style.color = 'var(--gray)'; micBtn.title = 'Voice transcription'; }
+    if (statusEl) statusEl.textContent = '';
+  };
+
+  _activeRecognitions[roomId] = recog;
+  try { recog.start(); } catch(ex) {
+    delete _activeRecognitions[roomId];
+    if (micBtn) { micBtn.innerHTML = '&#127908;'; micBtn.style.color = 'var(--gray)'; micBtn.title = 'Voice transcription'; }
+    showFB('e-fb','warn','Could not start microphone.');
+  }
+}
+
+
+function createDriveJobFolder(job) {
+  if (!SHEETS_SYNC_URL) return;
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      action: 'createFolder',
+      hvlId: job.hvlId || '',
+      clientName: job.name || '',
+      svc: job.svc || '',
+      subfolders: ['Photos','Audio Notes','Estimate','Agreement','Change Orders']
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var j = jobs.find(function(x){ return x.id === job.id; });
+    if (j && data.folderUrl) {
+      j.driveFolder = data.folderUrl;
+      if (data.subfolders) j.driveSubfolders = data.subfolders;
+      saveJobs();
+      showSyncBadge('Drive folders created \u2713');
+      openClientDashboard(job.id);
+    }
+  })
+  .catch(function(){
+    // Fallback to legacy GET for older Apps Script deployments
+    var params = '?action=createFolder'
+      + '&hvlId='      + encodeURIComponent(job.hvlId || '')
+      + '&clientName=' + encodeURIComponent(job.name  || '')
+      + '&svc='        + encodeURIComponent(job.svc   || '');
+    fetch(SHEETS_SYNC_URL + params)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data.folderUrl) {
+          var j = jobs.find(function(x){ return x.id === job.id; });
+          if (j) { j.driveFolder = data.folderUrl; saveJobs(); showSyncBadge('Drive folder created \u2713'); openClientDashboard(job.id); }
+        }
+      })
+      .catch(function(){ showSyncBadge('Could not create folder'); openClientDashboard(job.id); });
+  });
 }
 
 // ─── POPULATE SELECTS FOR NEW PANELS ─────────────────────────────────────────
@@ -5276,6 +5465,7 @@ function renderProbateAgreement() {
   content += '</div>';
   document.getElementById('agr-page-content').innerHTML = content;
   updateAgrUI();
+  setTimeout(function(){ exportAgreementToDrive(currentAgrJobId); }, 1200);
 }
 
 
@@ -5533,6 +5723,7 @@ function renderAgreement() {
 
   document.getElementById('agr-page-content').innerHTML = content;
   updateAgrUI();
+  setTimeout(function(){ exportAgreementToDrive(currentAgrJobId); }, 1200);
 }
 
 function agrSection(title, content) {
