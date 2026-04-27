@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 3:30pm</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 12:00am</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -256,15 +256,26 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="panel active" id="panel-intake">
   <div class="grid2">
     <div class="card">
-      <div class="sec">Client Information</div>
-      <label>Client name <span style="color:#A32D2D;font-weight:700;">*</span></label>
+      <div class="sec">Service Type</div>
+      <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
+      <select id="i-svc" onchange="toggleIntakeFields()">
+        <option value="">Select service type</option>
+        <option value="downsizing">Downsizing</option>
+        <option value="downsizing_move">Downsizing &amp; Move Management</option>
+        <option value="cleanout">Estate Settlement</option>
+        <option value="probate">Probate Estate Settlement</option>
+      </select>
+      <div class="divider" style="margin:14px 0 10px;"></div>
+      <div id="i-client-hdr" class="sec" style="margin-bottom:6px;">Client Information</div>
+      <label id="i-name-label">Client name <span style="color:#A32D2D;font-weight:700;">*</span></label>
       <div class="row" style="margin-top:4px;">
         <div><input type="text" id="i-fname" placeholder="First name"></div>
         <div><input type="text" id="i-lname" placeholder="Last name"></div>
       </div>
+      <div id="i-deceased-note" style="display:none;font-size:11px;color:var(--gray);margin:6px 0 8px;padding:6px 10px;background:var(--tan);border-radius:4px;">Client is deceased — phone and email are optional. Collect authorized representative contact below.</div>
       <div class="row">
-        <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
-        <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email" placeholder="client@email.com"></div>
+        <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
+        <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email" placeholder="client@email.com"></div>
       </div>
       <label>Property address <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-addr" placeholder="123 Ocean Blvd, Palm Beach FL">
       <div class="row">
@@ -295,82 +306,41 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           </select>
         </div>
       </div>
+      <div id="estate-auth-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Authorized Representative <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(Executor, Personal Representative, or authorized family contact)</span></div>
+        <div class="row">
+          <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-fname" placeholder="First name"></div>
+          <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-lname" placeholder="Last name"></div>
+        </div>
+        <div class="row">
+          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
+          <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
+        </div>
+      </div>
       <div id="probate-fields" style="display:none;">
         <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Probate Information <span style="font-size:10px;font-weight:400;color:var(--gray);">(Probate only — all fields required)</span></div>
-
+        <div class="sec" style="margin-bottom:6px;">Probate Attorney <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(all fields required)</span></div>
         <div class="row">
-          <div>
-            <label>Probate case number <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234">
-          </div>
-          <div>
-            <label>Court / probate deadline</label>
-            <input type="date" id="i-probate-deadline">
-          </div>
-        </div>
-
-        <div class="sec" style="margin:10px 0 6px;font-size:11px;">Probate Attorney</div>
-        <div class="row">
-          <div>
-            <label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="text" id="i-probate-atty-fname" placeholder="First name">
-          </div>
-          <div>
-            <label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="text" id="i-probate-atty-lname" placeholder="Last name">
-          </div>
+          <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-fname" placeholder="First name"></div>
+          <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-lname" placeholder="Last name"></div>
         </div>
         <div class="row">
-          <div>
-            <label>Firm <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="text" id="i-probate-atty-firm" placeholder="Law firm name">
-          </div>
-          <div>
-            <label>Attorney phone <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="tel" id="i-probate-atty-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
-          </div>
+          <div><label>Firm <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-firm" placeholder="Law firm name"></div>
+          <div><label>Attorney phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
         </div>
         <div class="row">
-          <div>
-            <label>Attorney email <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="email" id="i-probate-atty-email" placeholder="Direct email">
-          </div>
+          <div><label>Attorney email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-probate-atty-email" placeholder="Direct email"></div>
           <div></div>
         </div>
-
-        <div class="sec" style="margin:10px 0 6px;font-size:11px;">Executor / Personal Representative</div>
+        <div class="sec" style="margin:10px 0 6px;font-size:11px;">Probate Details</div>
         <div class="row">
-          <div>
-            <label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="text" id="i-executor-fname" placeholder="First name">
-          </div>
-          <div>
-            <label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="text" id="i-executor-lname" placeholder="Last name">
-          </div>
+          <div><label>Case number <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234"></div>
+          <div><label>Court deadline</label><input type="date" id="i-probate-deadline"></div>
         </div>
         <div class="row">
-          <div>
-            <label>Executor phone <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="tel" id="i-executor-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
-          </div>
+          <div><label>Property sale required?</label><select id="i-probate-sale"><option value="">Select</option><option value="yes">Yes — property must be sold</option><option value="no">No — heirs retaining property</option><option value="maybe">Under discussion</option></select></div>
           <div></div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Executor email <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="email" id="i-executor-email" placeholder="Direct email">
-          </div>
-          <div>
-            <label>Property sale required by estate?</label>
-            <select id="i-probate-sale">
-              <option value="">Select</option>
-              <option value="yes">Yes — property must be sold</option>
-              <option value="no">No — heirs retaining property</option>
-              <option value="maybe">Under discussion</option>
-            </select>
-          </div>
         </div>
         <div class="divider"></div>
       </div>
@@ -380,17 +350,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div class="card">
       <div class="sec">Job Details</div>
       <div class="row">
-        <div>
-          <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <select id="i-svc" onchange="toggleProbateFields()">
-            <option value="">Select service type</option>
-            <option value="downsizing">Downsizing</option>
-            <option value="downsizing_move">Downsizing &amp; Move Management</option>
-            <option value="cleanout">Estate Cleanout</option>
-            <option value="probate">Probate</option>
-            <option value="prep">Prep Home for Sale</option>
-          </select>
-        </div>
         <div><label>Approx. sqft <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="number" id="i-sqft" placeholder="e.g. 4500"></div>
         <div><label>Years in home</label><input type="number" id="i-years-in-home" placeholder="e.g. 12" min="0" max="99"></div>
       </div>
@@ -818,7 +777,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="fb" onclick="setFilter('active',this)">Active</button>
         <button class="fb" onclick="setFilter('closed',this)">Closed</button>
         <button class="fb" onclick="setFilter('downsizing',this)">Downsizing</button>
-        <button class="fb" onclick="setFilter('cleanout',this)">Cleanout</button>
+        <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
         <button class="fb" onclick="setFilter('probate',this)">Probate</button>
         <button class="fb" onclick="setFilter('prep',this)">Home Prep</button>
         <button class="fb" onclick="setFilter('re',this)">RE Potential</button>
@@ -1404,7 +1363,7 @@ var PRICING_REF = {
     {l:'Estate (4,000–6,000 sqft)',min:18000,max:35000,days:'9–17 days'},
     {l:'Trophy estate (6,000+ sqft)',min:30000,max:60000,days:'14–26 days'}
   ]},
-  cleanout:{label:'Estate Cleanout',sizes:[
+  cleanout:{label:'Estate Settlement',sizes:[
     {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
     {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
     {l:'Estate (4,000–6,000 sqft) ',min:14000,max:26000,days:'8–14 days'},
@@ -1537,18 +1496,6 @@ function syncNote(roomId) {
 
 // ─── PREP FOR SALE LOGIC ──────────────────────────────────────────────────────
 function svcTypeChanged() {
-  var svc = document.getElementById('e-svc').value;
-  var prepNote = document.getElementById('prep-note');
-  var prepFields = document.getElementById('prep-fields');
-  var adjCard = document.querySelector('#panel-estimate .card:nth-child(2) .card:nth-child(2)');
-
-  if (svc === 'prep') {
-    if (prepNote) prepNote.style.display = 'block';
-    if (prepFields) prepFields.style.display = 'block';
-  } else {
-    if (prepNote) prepNote.style.display = 'none';
-    if (prepFields) prepFields.style.display = 'none';
-  }
   calcAll();
 }
 
@@ -2058,7 +2005,7 @@ function calcAll() {
 
 function updateRefBox(havellinTotal) {
   var svc = document.getElementById('e-svc').value;
-  var svcKey = (svc === 'prep') ? 'homeprep' : svc;
+  var svcKey = svc;
   var ref = PRICING_REF[svcKey];
   if (!ref) { document.getElementById('ref-box').innerHTML = '<div style="font-size:11px;color:var(--gray)">—</div>'; return; }
 
@@ -2170,12 +2117,33 @@ function updateIntakeDateMins() {
   }
 }
 
-function toggleProbateFields() {
-  var svc = document.getElementById('i-svc').value;
+function toggleProbateFields() { toggleIntakeFields(); }
+function toggleIntakeFields() {
+  var svc = document.getElementById('i-svc') ? document.getElementById('i-svc').value : '';
+  var isEstate = (svc === 'cleanout' || svc === 'probate');
+  var isProbate = (svc === 'probate');
+  // Probate-only fields
   var pf = document.getElementById('probate-fields');
-  if (pf) pf.style.display = (svc === 'probate') ? 'block' : 'none';
+  if (pf) pf.style.display = isProbate ? 'block' : 'none';
+  // Authorized rep (estate + probate)
+  var af = document.getElementById('estate-auth-fields');
+  if (af) af.style.display = isEstate ? 'block' : 'none';
+  // Downsizing destination
   var df = document.getElementById('downsizing-dest-fields');
   if (df) df.style.display = (svc === 'downsizing_move') ? 'block' : 'none';
+  // Deceased note + label swap
+  var note = document.getElementById('i-deceased-note');
+  var nameLabel = document.getElementById('i-name-label');
+  var hdr = document.getElementById('i-client-hdr');
+  var phoneReq = document.getElementById('i-phone-req');
+  var emailReq = document.getElementById('i-email-req');
+  if (note) note.style.display = isEstate ? 'block' : 'none';
+  if (nameLabel) nameLabel.innerHTML = isEstate
+    ? 'Deceased full name <span style="color:#A32D2D;font-weight:700;">*</span>'
+    : 'Client name <span style="color:#A32D2D;font-weight:700;">*</span>';
+  if (hdr) hdr.textContent = isEstate ? 'Deceased / Estate' : 'Client Information';
+  if (phoneReq) phoneReq.style.display = isEstate ? 'none' : 'inline';
+  if (emailReq) emailReq.style.display = isEstate ? 'none' : 'inline';
 }
 
 function saveIntake() {
@@ -2201,11 +2169,12 @@ function saveIntake() {
   var destBeds = (document.getElementById('i-dest-beds')||{}).value ? document.getElementById('i-dest-beds').value.trim() : '';
   var destBaths= (document.getElementById('i-dest-baths')||{}).value? document.getElementById('i-dest-baths').value.trim(): '';
 
+  var isEstate = (svc === 'cleanout' || svc === 'probate');
   var missing = [];
   if (!fname) missing.push('First name');
   if (!lname) missing.push('Last name');
-  if (!phone) missing.push('Phone');
-  if (!email) missing.push('Email');
+  if (!isEstate && !phone) missing.push('Phone');
+  if (!isEstate && !email) missing.push('Email');
   if (!addr) missing.push('Property address');
   if (!city) missing.push('City');
   if (!zip) missing.push('Zip');
@@ -2216,6 +2185,14 @@ function saveIntake() {
   if (!tc) missing.push('Assigned TC');
   if (!start) missing.push('Target start date');
 
+  // Authorized rep required for estate + probate
+  if (isEstate) {
+    if (!document.getElementById('i-executor-fname').value.trim()) missing.push('Authorized rep first name');
+    if (!document.getElementById('i-executor-lname').value.trim()) missing.push('Authorized rep last name');
+    if (!document.getElementById('i-executor-phone').value.trim()) missing.push('Authorized rep phone');
+    if (!document.getElementById('i-executor-email').value.trim()) missing.push('Authorized rep email');
+  }
+
   // Additional mandatory fields for probate
   if (svc === 'probate') {
     var probateMissing = [];
@@ -2225,10 +2202,6 @@ function saveIntake() {
     if (!document.getElementById('i-probate-atty-firm').value.trim()) probateMissing.push('Attorney firm');
     if (!document.getElementById('i-probate-atty-phone').value.trim()) probateMissing.push('Attorney phone');
     if (!document.getElementById('i-probate-atty-email').value.trim()) probateMissing.push('Attorney email');
-    if (!document.getElementById('i-executor-fname').value.trim()) probateMissing.push('Executor first name');
-    if (!document.getElementById('i-executor-lname').value.trim()) probateMissing.push('Executor last name');
-    if (!document.getElementById('i-executor-phone').value.trim()) probateMissing.push('Executor phone');
-    if (!document.getElementById('i-executor-email').value.trim()) probateMissing.push('Executor email');
     if (probateMissing.length > 0) {
       missing = missing.concat(probateMissing);
     }
@@ -2238,7 +2211,7 @@ function saveIntake() {
     showFB('i-fb','warn','Please complete: ' + missing.join(', ') + '.');
     return;
   }
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Cleanout',probate:'Probate',prep:'Prep Home for Sale',estate:'Estate Settlement',homeprep:'Prep Home for Sale'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
   var job = {
     id:Date.now(), hvlId:generateHvlId(), name:name, fname:fname, lname:lname,
     phone:document.getElementById('i-phone').value,
@@ -2349,8 +2322,7 @@ function loadJobIntoEstimate() {
   var svcEl = document.getElementById('e-svc');
   if (svcEl) svcEl.value = job.svc || '';
   var svcLabelsDisp = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',
-    cleanout:'Estate Cleanout',probate:'Probate',prep:'Prep Home for Sale',
-    estate:'Estate Settlement',homeprep:'Prep Home for Sale'};
+    cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
   var svcDisplay = document.getElementById('e-svc-display');
   if (svcDisplay) svcDisplay.textContent = svcLabelsDisp[job.svc] || job.svc || '—';
   svcTypeChanged();
@@ -2566,7 +2538,7 @@ function renderClientEstimate() {
   var e = currentEstimate;
   var job = e.job || jobs.find(function(j){ return j.id===e.jobId; }) || {};
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Cleanout',probate:'Probate',prep:'Prep Home for Sale',estate:'Estate Settlement',homeprep:'Prep Home for Sale'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
 
   // Calculated duration: max of TC-driven and PS-driven days at 7 hrs/day
   var estDays = (function() {
@@ -2912,7 +2884,6 @@ function renderJobs() {
       case 'downsizing': return j.svc==='downsizing'||j.svc==='downsizing_move';
       case 'cleanout': return j.svc==='cleanout'||j.svc==='estate';
       case 'probate': return j.svc==='probate';
-      case 'prep': return j.svc==='prep'||j.svc==='homeprep';
       case 're': return j.re==='yes';
       case 'unassigned': return !j.tc||j.tc==='';
       default: return true;
@@ -3108,8 +3079,7 @@ function restoreEstimateToUI(est) {
   var svcDisplayR = document.getElementById('e-svc-display');
   if (svcDisplayR && est.svc) {
     var svcLabelsR = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',
-      cleanout:'Estate Cleanout',probate:'Probate',prep:'Prep Home for Sale',
-      estate:'Estate Settlement',homeprep:'Prep Home for Sale'};
+      cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
     svcDisplayR.textContent = svcLabelsR[est.svc] || est.svc;
   }
   svcTypeChanged();
@@ -3528,7 +3498,7 @@ function renderClientDashboard(jobId) {
   var initials = nameParts.length >= 2 ? (nameParts[0][0]+(nameParts[nameParts.length-1][0])).toUpperCase() : job.name.slice(0,2).toUpperCase();
 
   // ── Build svcLabel
-  var svcLabelsMap = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Cleanout',probate:'Probate',prep:'Prep Home for Sale',estate:'Estate Settlement',homeprep:'Prep Home for Sale'};
+  var svcLabelsMap = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
   var svcLabel = svcLabelsMap[job.svc] || job.svc || '—';
 
   // ── Blocker checks
@@ -5074,26 +5044,8 @@ function renderProbateAgreement() {
   content += '</table>';
   // SECTION 2: SCOPE
   content += secHdr(2,'Scope of Services');
-  content += pp('Havellin Palm Beach will provide the services checked below. Any service not checked is explicitly excluded from this Agreement. Additional services require a written Change Order signed by both parties before work begins.');
-  var svcs = [
-    [1,'Estate Cleanout (Full-Service)','Complete room-by-room asset audit, sorting, photography, and staging for disposition.'],
-    [1,'Asset Inventory &amp; Documentation','Detailed inventory of all significant assets with photographs and condition assessment.'],
-    [1,'Professional Appraisal Coordination','Engagement and coordination of certified appraisers for all required asset categories.'],
-    [0,'Sales &amp; Liquidation Management','Identification of sales channels, vendor coordination, and proceeds documentation.'],
-    [0,'Donation Coordination','Charitable donation logistics with full tax documentation for estate records.'],
-    [0,'Disposal &amp; Waste Management','Dumpster coordination, hazardous material handling, and waste vendor management.'],
-    [0,'Family Distribution Coordination','Staging, scheduling, and documented handoff of designated items to beneficiaries.'],
-    [0,'Property Preparation for Sale','Final cleaning, minor repairs, and coordination with listing agent.'],
-    [1,'Florida Probate Inventory Support','Preparation of documented inventory to support §733.604 court filing.']
-  ];
-  content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
-  content += '<thead><tr><th style="width:32px;padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:center;font-size:9.5px;color:var(--gray);"></th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Service</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Description</th></tr></thead><tbody>';
-  svcs.forEach(function(s){
-    content += '<tr><td style="text-align:center;padding:6px 8px;border:0.5px solid var(--border);font-size:15px;">'+(s[0]?'&#9745;':'&#9744;')+'</td>';
-    content += '<td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+s[1]+'</td>';
-    content += '<td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+s[2]+'</td></tr>';
-  });
-  content += '</tbody></table>';
+  content += pp('Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; appraisal coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. Where applicable, property preparation for sale is included as reflected in Exhibit A.');
+  content += pp('All disposition decisions — including sale, auction, donation, or disposal of any item — require written authorization from the Personal Representative or authorized signatory prior to execution. The specific scope, estimated hours, and projected costs are detailed in Exhibit A (attached estimate), which is incorporated into this Agreement by reference.');
   content += subHdr('2.1 Explicit Exclusions');
   content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney); tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
   // SECTION 3: FEES
@@ -5348,14 +5300,13 @@ function renderAgreement() {
   var hvlId       = job.hvlId || '—';
   var startFmt    = job.start ? new Date(job.start+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '[START DATE]';
   var svcMap = {
-    cleanout:'Estate Cleanout', probate:'Estate Cleanout',
+    cleanout:'Estate Settlement', probate:'Probate Estate Settlement',
     downsizing:'Senior Downsizing',
     downsizing_move:'Senior Downsizing with Move Management',
-    prep:'Home Sale Preparation', homeprep:'Home Sale Preparation',
-    estate:'Estate Cleanout'
+    estate:'Estate Settlement'
   };
   var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
-  var smfRate  = (job.svc === 'prep' || job.svc === 'homeprep') ? '30%' : '15%';
+  var smfRate  = '15%';
 
   var dep  = Math.round(havTotal * 0.50).toLocaleString();
   var mid  = Math.round(havTotal * 0.25).toLocaleString();
@@ -5439,7 +5390,7 @@ function renderAgreement() {
     '</tbody></table></div>'+
     p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'. Rates may vary for complex or premium estates and will be identified in the Estimate.')+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
-    p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Cleanout and Senior Downsizing engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements.')+
+    p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement and Senior Downsizing engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
     p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.')+
@@ -6101,7 +6052,7 @@ function showEditClient(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var isProbate = job.svc === 'probate';
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Cleanout',probate:'Probate',prep:'Prep Home for Sale'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
 
   var m = document.getElementById('edit-client-modal');
   if (!m) {
@@ -6151,7 +6102,7 @@ function showEditClient(jobId) {
   // Job Details
   html += '<div class="sec" style="margin-top:14px;">Job Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'cleanout',l:'Estate Cleanout'},{v:'probate',l:'Probate'},{v:'prep',l:'Prep Home for Sale'}], job.svc)+'</select>', true);
+  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'}], job.svc)+'</select>', true);
   html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano Sr',l:'Anthony Graziano Sr'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
   html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Condo / apartment',l:'Condo / apartment'},{v:'Single family home',l:'Single family home'},{v:'Waterfront estate',l:'Waterfront estate'},{v:'Historic estate',l:'Historic estate'},{v:'Equestrian / ranch property',l:'Equestrian / ranch property'},{v:'Penthouse',l:'Penthouse'}], job.ptype)+'</select>', true);
@@ -6214,7 +6165,7 @@ function saveClientEdit(jobId) {
   if (!fname || !lname) { alert('First and last name are required.'); return; }
 
   var svc = document.getElementById('ec-svc').value;
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Cleanout',probate:'Probate',prep:'Prep Home for Sale'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
 
   // Update core fields
   job.fname = fname;
