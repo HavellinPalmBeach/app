@@ -4992,6 +4992,8 @@ function renderProbateAgreement() {
   var attyFirm = job.probateAttyFirm || '';
   var hvlId = job.hvlId || '—';
   var lettersMap = {received:'Attached', pending:'Pending', notneeded:'N/A (non-probate)'};
+  var svcLabelMap = {probate:'Probate Estate Settlement', cleanout:'Estate Settlement', estate:'Estate Settlement'};
+  var svcLabel = svcLabelMap[job.svc] || job.svcLabel || 'Estate Services';
   var letters = lettersMap[job.executorAuth] || 'Attached · Pending · N/A (non-probate)';
   var today = new Date();
   var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
@@ -5021,9 +5023,9 @@ function renderProbateAgreement() {
   content += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:500;letter-spacing:.05em;color:var(--bronze);">HAVELLIN PALM BEACH</div>';
   content += '<div style="font-size:11px;color:var(--gray);margin:.2rem 0 .6rem;letter-spacing:.02em;">Guiding Families Through Life\'s Transitions</div>';
   content += '<div class="ce-divider"></div>';
-  content += '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-dk);margin:.6rem 0 .25rem;">Probate &amp; Estate Services</div>';
+  content += '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-dk);margin:.6rem 0 .25rem;">'+svcLabel+'</div>';
   content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Engagement Agreement</div>';
-  content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs all estate cleanout and probate settlement services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
+  content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs '+svcLabel+' services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
   content += '</div>';
   content += '<div style="border:1px solid var(--bronze-lt);border-radius:4px;padding:8px 14px;margin-bottom:1rem;background:#fef9f0;">';
   content += '<span style="font-size:11px;font-weight:700;color:var(--bronze-dk);">IMPORTANT: Read carefully. Both parties must sign before any work begins.</span>';
