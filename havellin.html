@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 9:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 10:08pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -488,7 +488,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <div id="e-svc-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <input type="hidden" id="e-svc" value="">
-        <div id="prep-note" style="display:none;margin-top:4px;font-size:11px;color:var(--bronze);background:var(--cream);padding:6px 8px;border-radius:4px;">Prep for Sale: room scoring drives declutter/removal. Add vendor coordination days and contractor costs below.</div>
         <label>Start date</label>
         <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set in Client Intake">
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake — anchors target completion date</div>
@@ -520,25 +519,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <label>Years in home</label>
         <div id="e-years-in-home-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake — longer occupancy = higher volume/complexity</div>
-        <div id="prep-fields" style="display:none;margin-top:8px;">
-          <div class="divider"></div>
-          <div class="sec" style="margin-bottom:6px;">Vendor Coordination <span style="font-size:9px;font-weight:400;color:var(--gray);">30% GC fee applies</span></div>
-          <label>Vendor coordination days (Transition Concierge oversight only)</label>
-          <input type="number" id="e-coord-days" value="0" min="0" max="60" oninput="calcAll()">
-          <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Each day = 8 Transition Concierge hrs at standard rate.</div>
-          <label>Total contractor / vendor costs ($)</label>
-          <input type="number" id="e-vendor-total" value="0" min="0" oninput="calcAll()" placeholder="e.g. 25000">
-          <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">30% GC fee added automatically.</div>
-          <label>Professional stager?</label>
-          <select id="e-stager" onchange="stagerChanged()">
-            <option value="none">No — Ashley stages with existing furniture</option>
-            <option value="vendor">Yes — hire professional stager</option>
-          </select>
-          <div id="stager-cost-wrap" style="display:none;margin-top:6px;">
-            <label>Stager cost ($)</label>
-            <input type="number" id="e-stager-cost" value="0" min="0" oninput="calcAll()" placeholder="e.g. 3500">
-          </div>
-        </div>
       </div>
       <div>
         <div class="sec">Property Specialists</div>
@@ -727,7 +707,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
           <tr class="total-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
-        <div id="prep-summary" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--cream);border-radius:6px;border:1px solid var(--border);"></div>
         <div class="divider"></div>
         <div class="sec">Internal Margin Analysis <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(not on client document)</span></div>
         <div id="margin-panel"><div style="font-size:11px;color:var(--gray);">Score rooms to see margin analysis.</div></div>
@@ -794,7 +773,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="fb" onclick="setFilter('downsizing',this)">Downsizing</button>
         <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
         <button class="fb" onclick="setFilter('probate',this)">Probate</button>
-        <button class="fb" onclick="setFilter('prep',this)">Home Prep</button>
         <button class="fb" onclick="setFilter('re',this)">RE Potential</button>
         <button class="fb" onclick="setFilter('unassigned',this)">Unassigned TC</button>
       </div>
@@ -2204,6 +2182,7 @@ function saveIntake() {
   if (isEstate) {
     if (!document.getElementById('i-executor-fname').value.trim()) missing.push('Authorized rep first name');
     if (!document.getElementById('i-executor-lname').value.trim()) missing.push('Authorized rep last name');
+    if (!document.getElementById('i-executor-role').value) missing.push('Authorized rep role');
     if (!document.getElementById('i-executor-phone').value.trim()) missing.push('Authorized rep phone');
     if (!document.getElementById('i-executor-email').value.trim()) missing.push('Authorized rep email');
   }
@@ -6087,6 +6066,7 @@ function showEditClient(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var isProbate = job.svc === 'probate';
+  var isEstate = (job.svc === 'probate' || job.svc === 'cleanout' || job.svc === 'estate');
   var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
 
   var m = document.getElementById('edit-client-modal');
@@ -6164,15 +6144,20 @@ function showEditClient(jobId) {
   html += fld('Email', txt('atty-email', job.probateAttyEmail, 'attorney@lawfirm.com', 'email'), true);
   html += '</div>';
 
-  html += '<div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);margin:12px 0 8px;">Executor / Personal Representative</div>';
+  html += '</div>'; // end probate fields
+
+  // Authorized Representative — shown for Estate Settlement + Probate
+  html += '<div id="ec-estate-auth-fields" style="display:'+(isEstate?'block':'none')+';">';
+  html += '<div class="sec" style="margin-top:14px;">Authorized Representative</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('First Name', txt('exec-fname', job.executorFname || (job.executor ? job.executor.split(' ')[0] : ''), 'First name'), true);
   html += fld('Last Name', txt('exec-lname', job.executorLname || (job.executor ? job.executor.split(' ').slice(1).join(' ') : ''), 'Last name'), true);
+  html += fld('Role / Authority', '<select id="ec-exec-role" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select role'},{v:'Executor',l:'Executor'},{v:'Personal Representative',l:'Personal Representative'},{v:'Power of Attorney',l:'Power of Attorney'},{v:'Estate Attorney',l:'Estate Attorney'},{v:'Family Member',l:'Family Member'},{v:'Trustee',l:'Trustee'},{v:'Other',l:'Other'}], job.executorRole||'')+'</select>', true);
   html += fld('Phone', tel('exec-phone', job.executorPhone), true);
-  html += fld('Email', txt('exec-email', job.executorEmail, 'executor@email.com', 'email'), true);
+  html += fld('Email', txt('exec-email', job.executorEmail, 'rep@email.com', 'email'), true);
   html += fld('Authorization Status', '<select id="ec-exec-auth" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'pending',l:'Pending'},{v:'received',l:'Received'},{v:'notneeded',l:'Not Required'}], job.executorAuth||'pending')+'</select>', false);
   html += '</div>';
-  html += '</div>'; // end probate fields
+  html += '</div>'; // end estate auth fields
 
   // Footer
   html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
@@ -6186,9 +6171,11 @@ function showEditClient(jobId) {
 }
 
 function ecToggleProbate() {
-  var svc = document.getElementById('ec-svc');
+  var svcVal = document.getElementById('ec-svc') ? document.getElementById('ec-svc').value : '';
   var pf = document.getElementById('ec-probate-fields');
-  if (svc && pf) pf.style.display = svc.value === 'probate' ? 'block' : 'none';
+  if (pf) pf.style.display = svcVal === 'probate' ? 'block' : 'none';
+  var af = document.getElementById('ec-estate-auth-fields');
+  if (af) af.style.display = (svcVal === 'probate' || svcVal === 'cleanout' || svcVal === 'estate') ? 'block' : 'none';
 }
 
 function saveClientEdit(jobId) {
@@ -6221,12 +6208,11 @@ function saveClientEdit(jobId) {
   job.re    = document.getElementById('ec-re').value;
   job.premium = document.getElementById('ec-premium').value === 'yes';
 
-  // Probate fields
+  var isEstateEdit = (svc === 'probate' || svc === 'cleanout' || svc === 'estate');
+  // Probate-only fields (attorney + case info)
   if (svc === 'probate') {
     var attyFname = (document.getElementById('ec-atty-fname').value||'').trim();
     var attyLname = (document.getElementById('ec-atty-lname').value||'').trim();
-    var execFname = (document.getElementById('ec-exec-fname').value||'').trim();
-    var execLname = (document.getElementById('ec-exec-lname').value||'').trim();
     job.probateCase      = document.getElementById('ec-probate-case').value;
     job.probateDeadline  = document.getElementById('ec-probate-deadline').value;
     job.probateSale      = document.getElementById('ec-probate-sale').value;
@@ -6236,9 +6222,15 @@ function saveClientEdit(jobId) {
     job.probateAttyFirm  = document.getElementById('ec-atty-firm').value;
     job.probateAttyPhone = document.getElementById('ec-atty-phone').value;
     job.probateAttyEmail = document.getElementById('ec-atty-email').value;
+  }
+  // Authorized rep fields — estate settlement + probate
+  if (isEstateEdit) {
+    var execFname = (document.getElementById('ec-exec-fname').value||'').trim();
+    var execLname = (document.getElementById('ec-exec-lname').value||'').trim();
     job.executorFname    = execFname;
     job.executorLname    = execLname;
     job.executor         = (execFname + ' ' + execLname).trim();
+    job.executorRole     = document.getElementById('ec-exec-role').value;
     job.executorPhone    = document.getElementById('ec-exec-phone').value;
     job.executorEmail    = document.getElementById('ec-exec-email').value;
     job.executorAuth     = document.getElementById('ec-exec-auth').value;
