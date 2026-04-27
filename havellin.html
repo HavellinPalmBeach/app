@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 9:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.26 · 9:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -308,10 +308,25 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Authorized Representative <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(Executor, Personal Representative, or authorized family contact)</span></div>
+        <div class="sec" style="margin-bottom:6px;">Authorized Representative <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(person authorized to direct the estate)</span></div>
         <div class="row">
           <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-fname" placeholder="First name"></div>
           <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-lname" placeholder="Last name"></div>
+        </div>
+        <div class="row">
+          <div><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
+            <select id="i-executor-role">
+              <option value="">Select role</option>
+              <option value="Executor">Executor</option>
+              <option value="Personal Representative">Personal Representative</option>
+              <option value="Power of Attorney">Power of Attorney</option>
+              <option value="Estate Attorney">Estate Attorney</option>
+              <option value="Family Member">Family Member</option>
+              <option value="Trustee">Trustee</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div></div>
         </div>
         <div class="row">
           <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
@@ -2231,7 +2246,8 @@ function saveIntake() {
     probateAttyFirm: document.getElementById('i-probate-atty-firm') ? document.getElementById('i-probate-atty-firm').value : '',
     probateAttyPhone: document.getElementById('i-probate-atty-phone') ? document.getElementById('i-probate-atty-phone').value : '',
     probateAttyEmail: document.getElementById('i-probate-atty-email') ? document.getElementById('i-probate-atty-email').value : '',
-    executorFname: document.getElementById('i-executor-fname') ? document.getElementById('i-executor-fname').value.trim() : '',
+    executorRole: (document.getElementById('i-executor-role')||{}).value || '',
+  executorFname: document.getElementById('i-executor-fname') ? document.getElementById('i-executor-fname').value.trim() : '',
     executorLname: document.getElementById('i-executor-lname') ? document.getElementById('i-executor-lname').value.trim() : '',
     executor: (function(){ var f=document.getElementById('i-executor-fname'); var l=document.getElementById('i-executor-lname'); return f&&l ? (f.value.trim()+' '+l.value.trim()).trim() : ''; })(),
     executorPhone: document.getElementById('i-executor-phone') ? document.getElementById('i-executor-phone').value : '',
@@ -2304,6 +2320,7 @@ function clearIntake() {
    'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
    'i-probate-atty-phone','i-probate-atty-email',
    'i-executor-fname','i-executor-lname','i-executor-phone','i-executor-email'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var erEl = document.getElementById('i-executor-role'); if(erEl) erEl.value='';
   ['i-zip','i-src','i-svc','i-ptype','i-tc','i-start'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   ['i-dest-addr','i-dest-city','i-dest-zip','i-dest-sqft','i-dest-beds','i-dest-baths'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('i-pri').value='normal';
@@ -3616,6 +3633,7 @@ function renderClientDashboard(jobId) {
     h += field('Name', job.executor||'—');
     h += field('Phone', job.executorPhone||'—');
     h += field('Email', '<span style="font-size:11px;">'+(job.executorEmail||'—')+'</span>');
+    h += field('Role', job.executorRole||'—');
     h += field('Authorization', authOk?'<span style="color:#1D9E75;">Received</span>':'<span style="color:#A32D2D;">'+dot('#A32D2D')+'Pending</span>');
     h += '</div></div>';
     h += '</div></div>';
@@ -5025,7 +5043,7 @@ function renderProbateAgreement() {
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += dRow('Client Full Name', bb(estateName));
   content += dRow('Date','_______________________________________________');
-  content += dRow('Role / Authority','Personal Representative &middot; Executor &middot; POA &middot; Beneficiary &middot; Client');
+  content += dRow('Role / Authority', job.executorRole || 'Personal Representative &middot; Executor &middot; POA &middot; Other');
   content += dRow('Mailing Address', clientAddr);
   content += dRow('Email', clientEmail);
   content += dRow('Phone', clientPhone);
@@ -5242,7 +5260,7 @@ function renderProbateAgreement() {
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Client / Personal Representative</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+executorName+'</div></div>';
-  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">Personal Representative &middot; Executor &middot; POA &middot; Other</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">'+(job.executorRole||'Personal Representative &middot; Executor &middot; POA &middot; Other')+'</div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
   content += '</div></div>';
