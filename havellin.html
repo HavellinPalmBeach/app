@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -738,6 +738,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="btn-s" id="btn-submit-approval" onclick="submitForApproval()" style="display:none;">Submit for Approval &#8594;</button>
         <button class="btn-s" id="btn-approve" onclick="openPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-bronze" id="btn-pdf" onclick="printClientEstimate()" style="display:none;">Print / Save PDF</button>
+        <button class="btn-s" id="btn-drive-est" onclick="saveFolderEstimate()" style="display:none;">&#128193; Save to Drive</button>
         <a class="btn-bronze" id="btn-mailto-est" href="#" style="display:none;text-decoration:none;">&#9993; Email to Client</a>
       </div>
     </div>
@@ -2717,6 +2718,8 @@ function updateApprovalUI() {
   [btnApprove, btnPdf, btnEdit, btnSubmit].forEach(function(b){ if(b) b.style.display='none'; });
   var mailtoEl = document.getElementById('btn-mailto-est');
   if (mailtoEl) mailtoEl.style.display = 'none';
+  var btnDriveEst = document.getElementById('btn-drive-est');
+  if (btnDriveEst) btnDriveEst.style.display = 'none';
 
   if (!currentEstimate) {
     badge.innerHTML = '';
@@ -2729,6 +2732,7 @@ function updateApprovalUI() {
     // STATE 3: Approved — PDF unlocked
     badge.innerHTML = '<span class="badge b-approved">&#10003; Approved</span>';
     if (btnPdf) btnPdf.style.display = 'inline-block';
+    if (btnDriveEst) btnDriveEst.style.display = 'inline-block';
     if (mailtoEl) { mailtoEl.style.display = 'inline-block'; mailtoEl.href = buildEstimateMailto(); }
     if (subtitle) subtitle.textContent = 'Estimate approved. Print PDF or email to client.';
     if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Approved</strong> — ' + approvedBy + ' \u00b7 ' + approvedAt + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">PDF unlocked. Print / Save PDF to send to client.</div></div>';
@@ -4897,6 +4901,31 @@ function exportEstimateToDrive(jobId) {
   var ts = new Date().toISOString().slice(0,10);
   uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
     if (ok) showSyncBadge('Estimate saved to Drive ✓');
+    else showSyncBadge('Drive save failed — check settings', true);
+  });
+}
+
+function saveFolderEstimate() {
+  if (!currentEstimate || !currentEstimate.jobId) { showSyncBadge('No estimate loaded', true); return; }
+  var btn = document.getElementById('btn-drive-est');
+  if (btn) { btn.disabled = true; btn.textContent = '↻ Saving…'; }
+  var jobId = currentEstimate.jobId;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var folderId = job && job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
+  if (!folderId) {
+    showSyncBadge('No Drive folder — create it from Client Dashboard first', true);
+    if (btn) { btn.disabled = false; btn.textContent = '⬛ Save to Drive'; }
+    return;
+  }
+  var el = document.getElementById('ce-page-content');
+  if (!el) return;
+  var ts = new Date().toISOString().slice(0,10);
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estimate – '+(job.hvlId||'')+'</title>'
+    + '<style>body{font-family:Raleway,sans-serif;padding:20px;}</style></head><body>' + el.innerHTML + '</body></html>';
+  uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; }
+    if (ok) showSyncBadge('Estimate saved to Drive ✓');
+    else showSyncBadge('Drive save failed', true);
   });
 }
 
@@ -5857,9 +5886,6 @@ function printClientEstimate() {
   allPanels.forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
   printTarget.style.display = 'block';
   
-  // Save copy to Drive Estimate subfolder silently
-  if (currentEstimate && currentEstimate.jobId) exportEstimateToDrive(currentEstimate.jobId);
-
   // Longer delay for iPad to ensure DOM and styles are fully applied
   setTimeout(function(){
     window.print();
