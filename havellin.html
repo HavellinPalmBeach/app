@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 3:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3563,6 +3563,9 @@ function renderClientDashboard(jobId) {
   h += '<button class="btn-s" onclick="showEditClient('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">&#9998; Edit Client</button>';
   if (job.driveFolder) {
     h += '<a href="'+job.driveFolder+'" target="_blank" class="btn-s" style="text-decoration:none;color:var(--gray);" title="Open job folder in Google Drive">&#128193; Drive</a>';
+    if (!job.driveSubfolders && SHEETS_SYNC_URL) {
+      h += '<button class="btn-s" onclick="syncDriveSubfolders('+jobId+');" style="color:var(--bronze);border-color:var(--bronze);" title="Sync subfolder IDs from Drive">&#8635; Sync Folders</button>';
+    }
   } else if (SHEETS_SYNC_URL && DRIVE_FOLDER_ID) {
     h += '<button class="btn-s" onclick="var btn=this;btn.disabled=true;btn.textContent=\'Creating...\';createDriveJobFolder(jobs.find(function(j){return j.id==='+jobId+';}));" style="color:var(--gray);" title="Create Drive folder for this job">&#128193; Create Folder</button>';
   }
@@ -4220,14 +4223,21 @@ function attachRoomPhoto(input, roomId) {
 
       // Auto-upload to Drive Photos subfolder
       var job = jobs.find(function(j){ return j.id === jobId; });
-      var folderId = job && job.driveSubfolders && job.driveSubfolders['Photos'] ? job.driveSubfolders['Photos'].id : null;
-      var cleanRoom = roomName.replace(/[^a-z0-9]/gi, '_');
-      var ts = Date.now();
-      var filename = (job && job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + ts + '.jpg';
-      uploadToDrive(folderId, filename, dataUrl, function(ok) {
-        var badge = document.getElementById('up-badge-'+roomId);
-        if (badge) badge.innerHTML = ok ? '<span style="color:var(--green);">&#10003; in Drive</span>' : '<span style="color:var(--gray);">&#9632; local only</span>';
-      });
+      function _doPhotoUpload() {
+        var folderId = job && job.driveSubfolders && job.driveSubfolders['Photos'] ? job.driveSubfolders['Photos'].id : null;
+        var cleanRoom = roomName.replace(/[^a-z0-9]/gi, '_');
+        var ts = Date.now();
+        var filename = (job && job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + ts + '.jpg';
+        uploadToDrive(folderId, filename, dataUrl, function(ok) {
+          var badge = document.getElementById('up-badge-'+roomId);
+          if (badge) badge.innerHTML = ok ? '<span style="color:var(--green);">&#10003; in Drive</span>' : '<span style="color:var(--gray);">&#9632; local only</span>';
+        });
+      }
+      if (job && !job.driveSubfolders && job.driveFolder) {
+        fetchSubfolderIds(job, function(){ _doPhotoUpload(); });
+      } else {
+        _doPhotoUpload();
+      }
     });
   };
   reader.readAsDataURL(file);
@@ -4876,6 +4886,37 @@ function loadMediaFromStorage(jobId) {
 }
 
 // ─── DRIVE UPLOAD UTILITIES ───────────────────────────────────────────────────
+function fetchSubfolderIds(job, cb) {
+  if (!SHEETS_SYNC_URL || !job.driveFolder) { cb(false); return; }
+  var parts = job.driveFolder.split('/folders/');
+  var parentId = parts.length > 1 ? parts[1].split('?')[0] : null;
+  if (!parentId) { cb(false); return; }
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action:'getSubfolders', folderId: parentId})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.subfolders) {
+      job.driveSubfolders = data.subfolders;
+      saveJobs();
+      cb(true);
+    } else { cb(false); }
+  })
+  .catch(function(){ cb(false); });
+}
+
+function syncDriveSubfolders(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  showSyncBadge('Syncing folder IDs…');
+  fetchSubfolderIds(job, function(ok) {
+    if (ok) { showSyncBadge('Drive subfolders synced ✓'); openClientDashboard(jobId); }
+    else showSyncBadge('Sync failed — check Apps Script', true);
+  });
+}
+
 function uploadToDrive(folderId, filename, dataUrl, onDone) {
   if (!SHEETS_SYNC_URL || !folderId) { if (onDone) onDone(false); return; }
   fetch(SHEETS_SYNC_URL, {
@@ -4904,6 +4945,10 @@ function uploadHtmlToDrive(folderId, filename, html, onDone) {
 function exportEstimateToDrive(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  if (!job.driveSubfolders && job.driveFolder) {
+    fetchSubfolderIds(job, function(ok) { if (ok) exportEstimateToDrive(jobId); });
+    return;
+  }
   var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
   if (!folderId) return;
   var el = document.getElementById('ce-page-content');
@@ -4923,22 +4968,34 @@ function saveFolderEstimate() {
   if (btn) { btn.disabled = true; btn.textContent = '↻ Saving…'; }
   var jobId = currentEstimate.jobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  var folderId = job && job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
-  if (!folderId) {
-    showSyncBadge('No Drive folder — create it from Client Dashboard first', true);
-    if (btn) { btn.disabled = false; btn.textContent = '⬛ Save to Drive'; }
-    return;
+  if (!job) { showSyncBadge('Job not found', true); if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; } return; }
+  function _doUpload() {
+    var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
+    if (!folderId) {
+      showSyncBadge('No Drive folder — create it from Client Dashboard first', true);
+      if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; }
+      return;
+    }
+    var el = document.getElementById('ce-page-content');
+    if (!el) return;
+    var ts = new Date().toISOString().slice(0,10);
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estimate – '+(job.hvlId||'')+'</title>'
+      + '<style>body{font-family:Raleway,sans-serif;padding:20px;}</style></head><body>' + el.innerHTML + '</body></html>';
+    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
+      if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; }
+      if (ok) showSyncBadge('Estimate saved to Drive ✓');
+      else showSyncBadge('Drive save failed', true);
+    });
   }
-  var el = document.getElementById('ce-page-content');
-  if (!el) return;
-  var ts = new Date().toISOString().slice(0,10);
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estimate – '+(job.hvlId||'')+'</title>'
-    + '<style>body{font-family:Raleway,sans-serif;padding:20px;}</style></head><body>' + el.innerHTML + '</body></html>';
-  uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; }
-    if (ok) showSyncBadge('Estimate saved to Drive ✓');
-    else showSyncBadge('Drive save failed', true);
-  });
+  if (!job.driveSubfolders && job.driveFolder) {
+    showSyncBadge('Fetching folder IDs…');
+    fetchSubfolderIds(job, function(ok) {
+      if (!ok) showSyncBadge('Could not sync folder IDs', true);
+      _doUpload();
+    });
+  } else {
+    _doUpload();
+  }
 }
 
 var _agrExported = {};
@@ -4946,6 +5003,10 @@ function exportAgreementToDrive(jobId) {
   if (_agrExported[jobId]) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  if (!job.driveSubfolders && job.driveFolder) {
+    fetchSubfolderIds(job, function(ok) { if (ok) exportAgreementToDrive(jobId); });
+    return;
+  }
   var folderId = job.driveSubfolders && job.driveSubfolders['Agreement'] ? job.driveSubfolders['Agreement'].id : null;
   if (!folderId) return;
   var el = document.getElementById('agr-page-content');
