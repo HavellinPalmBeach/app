@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 12:42pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 12:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -612,14 +612,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <table class="vtbl" id="collections-tbl">
           <thead><tr>
             <th style="min-width:160px;">Collection / Description</th>
-            <th style="width:130px;">Est. Value (owner)</th>
+            <th style="width:120px;">Est. Value (owner)</th>
             <th style="width:80px;">Qty</th>
-            <th style="width:140px;">Disposition</th>
-            <th style="width:100px;">Hours Added</th>
+            <th>Disposition</th>
             <th style="width:60px;"></th>
           </tr></thead>
           <tbody id="collections-body">
-            <tr id="collections-empty-row"><td colspan="4" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>
+            <tr id="collections-empty-row"><td colspan="5" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>
           </tbody>
           <tfoot>
             <tr>
@@ -6522,13 +6521,11 @@ function renderCollections() {
   }
   var h = '';
   collectionsData.forEach(function(c) {
-    var h2 = COLLECTION_HOURS[c.disp] || {tc:1, ps:1};
     h += '<tr>' +
       '<td style="font-size:12px;font-weight:500;">' + c.name + '</td>' +
       '<td style="font-size:12px;">$' + (parseFloat(c.value)||0).toLocaleString() + '</td>' +
       '<td style="font-size:12px;text-align:center;">' + c.qty + '</td>' +
       '<td style="font-size:11px;font-weight:600;color:var(--bronze);">' + (COL_DISP_LABELS[c.disp]||c.disp||'—') + '</td>' +
-      '<td style="font-size:11px;color:var(--gray);">TC ' + h2.tc + 'h · PS ' + h2.ps + 'h</td>' +
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
     '</tr>';
   });
