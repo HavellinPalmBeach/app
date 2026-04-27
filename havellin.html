@@ -500,6 +500,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;">⚠ Required — affects estimate multiplier</div>
         <select id="e-propval" onchange="calcAll()" style="border-color:#A67C45;">
           <option value="0">Unknown / not specified</option>
+          <option value="500000">Under $1M</option>
           <option value="1750000">$1M – $2.5M</option>
           <option value="3500000">$2.5M – $5M</option>
           <option value="7500000">$5M – $10M</option>
@@ -624,7 +625,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <tr>
               <td><input type="text" id="new-col-name" placeholder="e.g. China set, coin collection, firearms..." style="font-size:11px;"></td>
               <td><input type="number" id="new-col-value" placeholder="0" min="0" style="font-size:11px;"></td>
-              <td><input type="number" id="new-col-qty" placeholder="0" min="0" style="font-size:11px;"></td>
+              <td><input type="number" id="new-col-qty" placeholder="0" min="0" style="font-size:11px;width:100%;min-width:70px;"></td>
               <td><select id="new-col-disp" style="font-size:11px;width:100%;">
                 <option value="auction">Auction House</option>
                 <option value="appraise">Appraise</option>
@@ -1334,6 +1335,7 @@ var ROOMS = [
     {name:'Furnished Patio',tc:0.55,ps:0.95},
     {name:'Outdoor Kitchen',tc:0.55,ps:0.95},
     {name:'Pool House',tc:1.35,ps:2.70},
+    {name:'Screened Porch',tc:0.45,ps:0.85},
     {name:'Shed',tc:0.70,ps:1.65}
   ]},
   {section:'Other',rooms:[
@@ -1583,6 +1585,7 @@ function psRatioByVol(avgVol) {
 // TC hour multiplier based on property value
 function propValMultiplier(propVal) {
   if (propVal <= 0)         return 1.0;   // unknown
+  if (propVal < 1000000)    return 0.90;  // Under $1M  — modest home, lower complexity
   if (propVal < 2500000)    return 1.0;   // $1M–$2.5M  — entry / golf community
   if (propVal < 5000000)    return 1.0;   // $2.5M–$5M  — entry tier
   if (propVal < 10000000)   return 1.15;  // $5M–$10M
