@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4890,7 +4890,7 @@ function exportEstimateToDrive(jobId) {
   if (!job) return;
   var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
   if (!folderId) return;
-  var el = document.getElementById('client-estimate-preview');
+  var el = document.getElementById('ce-page-content');
   if (!el) return;
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estimate – '+(job.hvlId||'')+'</title>'
     + '<style>body{font-family:Raleway,sans-serif;padding:20px;}</style></head><body>' + el.innerHTML + '</body></html>';
@@ -5857,6 +5857,9 @@ function printClientEstimate() {
   allPanels.forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
   printTarget.style.display = 'block';
   
+  // Save copy to Drive Estimate subfolder silently
+  if (currentEstimate && currentEstimate.jobId) exportEstimateToDrive(currentEstimate.jobId);
+
   // Longer delay for iPad to ensure DOM and styles are fully applied
   setTimeout(function(){
     window.print();
