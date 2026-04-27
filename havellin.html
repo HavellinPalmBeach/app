@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 1:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2015,12 +2015,24 @@ function updateRefBox(havellinTotal) {
   if (propValEl && propValEl.value) propMult = propValMultiplier(parseInt(propValEl.value)||0);
 
   var estDays = currentEstimate ? currentEstimate.days : 0;
+  var sqft = parseFloat(document.getElementById('e-sqft') ? document.getElementById('e-sqft').value : 0) || 0;
   var best;
-  if (estDays < 5) best = ref.sizes[0];
-  else if (estDays < 10) best = ref.sizes[Math.min(1, ref.sizes.length-1)];
-  else if (estDays < 22) best = ref.sizes[Math.min(2, ref.sizes.length-1)];
-  else if (estDays < 35) best = ref.sizes[Math.min(3, ref.sizes.length-1)];
-  else best = ref.sizes[ref.sizes.length-1];
+  if (sqft > 0) {
+    var idx;
+    if (sqft < 2000)  idx = 0;
+    else if (sqft < 4000)  idx = Math.min(1, ref.sizes.length-1);
+    else if (sqft < 6000)  idx = Math.min(2, ref.sizes.length-1);
+    else if (sqft < 10000) idx = Math.min(3, ref.sizes.length-1);
+    else idx = ref.sizes.length-1;
+    best = ref.sizes[idx];
+  } else {
+    // Fallback to days when sqft not captured at intake
+    if (estDays < 5)       best = ref.sizes[0];
+    else if (estDays < 10) best = ref.sizes[Math.min(1, ref.sizes.length-1)];
+    else if (estDays < 22) best = ref.sizes[Math.min(2, ref.sizes.length-1)];
+    else if (estDays < 35) best = ref.sizes[Math.min(3, ref.sizes.length-1)];
+    else                   best = ref.sizes[ref.sizes.length-1];
+  }
   if (!best) best = ref.sizes[0];
 
   // Apply property value multiplier to the reference range
