@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.28 · 10:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.28 · 11:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5458,7 +5458,7 @@ function createDriveJobFolder(job) {
       hvlId: job.hvlId || '',
       clientName: job.name || '',
       svc: job.svc || '',
-      subfolders: ['Photos','Audio Notes','Estimate','Agreement','Change Orders']
+      subfolders: ['Photos','Walkthrough Notes','Estimate','Agreement','Change Orders']
     })
   })
   .then(function(r){ return r.json(); })
@@ -6386,7 +6386,6 @@ function saveNotesModal() {
   var text = document.getElementById('notes-modal-text').value;
   var noteEl = document.getElementById('note-'+_notesRoomId);
   if (noteEl) noteEl.value = text;
-  // Update the notes button indicator
   var btn = document.getElementById('notes-btn-'+_notesRoomId);
   if (btn) {
     btn.textContent = text.trim() ? '📝 Edit' : '+ Notes';
@@ -6395,6 +6394,24 @@ function saveNotesModal() {
   }
   closeNotesModal();
   calcAll();
+  if (text.trim()) {
+    var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+    var job = jobs.find(function(j){ return j.id === jobId; });
+    if (job) {
+      var nameEl = document.getElementById('name-'+_notesRoomId);
+      var roomName = nameEl ? (nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent) : _notesRoomId;
+      var ts = new Date().toISOString().slice(0,10);
+      var filename = (job.hvlId?job.hvlId+'_':'') + _cleanName(roomName) + '_Notes_' + ts + '.txt';
+      var dataUrl = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text)));
+      function _up() {
+        var folderId = job.driveSubfolders && job.driveSubfolders['Walkthrough Notes'] ? job.driveSubfolders['Walkthrough Notes'].id : null;
+        if (!folderId) return;
+        uploadToDrive(folderId, filename, dataUrl, function(){});
+      }
+      if (!job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
+      else _up();
+    }
+  }
 }
 
 
@@ -7019,6 +7036,8 @@ function renderJobMediaPanel(job) {
   if (!jobMediaStore[jobId]) jobMediaStore[jobId] = {};
 
   // ── Room rows ──
+  var savedEst = estimateStore[jobId];
+  var estRooms = savedEst && savedEst.estimate && savedEst.estimate.rooms ? savedEst.estimate.rooms : [];
   var out = '';
   var ri = 0;
   ROOMS.forEach(function(sec) {
@@ -7042,8 +7061,11 @@ function renderJobMediaPanel(job) {
       var photoBtn = nPhoto > 0
         ? '<button onclick="openRoomPhotosModalForJob('+jobId+',\''+roomId+'\',\''+r.name+'\')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--ok-tx);font-weight:600;padding:1px;">&#128247; '+nPhoto+'</button>'
         : '<span style="color:var(--border-md);font-size:11px;">—</span>';
+      var estRoom = estRooms.find(function(er){ return er.name === r.name; });
+      var walkthroughNote = estRoom && estRoom.note ? estRoom.note : '';
       out += '<tr>';
-      out += '<td style="font-size:12px;font-weight:500;">' + r.name + '</td>';
+      out += '<td style="font-size:12px;font-weight:500;">' + r.name +
+        (walkthroughNote ? '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-top:3px;line-height:1.4;">' + walkthroughNote + '</div>' : '') + '</td>';
       out += '<td style="text-align:center;">' + (hasNote ? '<span style="font-size:10px;color:var(--bronze);font-weight:600;">&#127908; Noted</span>' : '<span style="font-size:10px;color:var(--border-md);">&#8212;</span>') + '</td>';
       out += '<td style="text-align:center;">' + photoBtn + '</td>';
       out += '<td style="text-align:center;">' + (nVideo > 0 ? '<span style="font-size:10px;color:var(--info-tx);font-weight:600;">&#127909; ' + nVideo + '</span>' : '<span style="font-size:10px;color:var(--border-md);">&#8212;</span>') + '</td>';
@@ -7055,7 +7077,6 @@ function renderJobMediaPanel(job) {
   });
 
   // ── Notable Collections ──
-  var savedEst = estimateStore[jobId];
   var cols = savedEst && savedEst.estimate && savedEst.estimate.collections ? savedEst.estimate.collections : [];
   if (cols.length > 0) {
     out += '<div style="margin-top:16px;">';
