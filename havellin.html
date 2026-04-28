@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.27 · 5:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.04.28 · 10:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -615,10 +615,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <th style="width:120px;">Est. Value (owner)</th>
             <th style="width:80px;">Qty</th>
             <th>Disposition</th>
+            <th style="width:40px;text-align:center;">&#128247;</th>
             <th style="width:60px;"></th>
           </tr></thead>
           <tbody id="collections-body">
-            <tr id="collections-empty-row"><td colspan="5" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>
+            <tr id="collections-empty-row"><td colspan="6" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>
           </tbody>
           <tfoot>
             <tr>
@@ -1135,6 +1136,21 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   </div>
 </div>
 
+<!-- PHOTO MODAL (room photos + collection asset photos) -->
+<div id="photo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1010;align-items:center;justify-content:center;">
+  <div style="background:var(--white);border-radius:10px;padding:1.5rem;max-width:640px;width:94%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <input type="hidden" id="photo-modal-room-id">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div id="photo-modal-title" style="font-size:15px;font-weight:600;color:var(--gray-dk);"></div>
+      <button onclick="closePhotoModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray);line-height:1;">&#10005;</button>
+    </div>
+    <div id="photo-modal-grid" style="min-height:80px;"></div>
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
+      <label id="photo-modal-add-label" class="btn-s" style="cursor:pointer;display:inline-block;"></label>
+    </div>
+  </div>
+</div>
+
 <!-- NOTES MODAL -->
 <div id="notes-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:var(--white);border-radius:10px;padding:1.5rem;max-width:520px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
@@ -1472,7 +1488,6 @@ function buildRoomTable() {
             '</label>' +
           '</div>' +
           '<div id="mic-status-'+id+'" style="font-size:9px;color:var(--bronze);font-style:italic;min-height:10px;max-width:88px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:1px auto 0;"></div>' +
-          '<div id="cam-thumb-'+id+'" style="margin-top:3px;"></div>' +
         '</td>' +
         '</tr>';
       ri++;
@@ -4365,72 +4380,234 @@ function buildInvoiceMailto(job, balance) {
 }
 
 
-// ─── ROOM PHOTOS ──────────────────────────────────────────────────────────────
-var roomPhotos = {};  // { jobId_roomId: { dataUrl, name, roomName } }
 
+// ─── ROOM & COLLECTION PHOTO SYSTEM ──────────────────────────────────────────
+// roomPhotos: { "jobId_roomId": [ {dataUrl, roomName, jobId, seq}, ... ] }
+var roomPhotos = {};
+// collectionPhotos: { "jobId_collId": [ {dataUrl, collName, jobId, seq}, ... ] }
+var collectionPhotos = {};
+
+function _seqStr(n) { return String(n).padStart(3,'0'); }
+function _cleanName(s) { return s.replace(/[^a-z0-9]/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); }
+
+// ── ROOM PHOTOS ───────────────────────────────────────────────────────────────
 function attachRoomPhoto(input, roomId) {
   var file = input.files[0];
   if (!file) return;
   var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
-  var roomNameEl = document.getElementById('name-' + roomId);
-  var roomName = roomNameEl ? (roomNameEl.textContent || roomNameEl.value || roomId) : roomId;
-
+  var roomNameEl = document.getElementById('name-'+roomId);
+  var roomName = roomNameEl ? (roomNameEl.textContent||roomNameEl.value||roomId) : roomId;
   var reader = new FileReader();
   reader.onload = function(ev) {
-    var rawDataUrl = ev.target.result;
-
-    compressImage(rawDataUrl, 900, 0.72, function(dataUrl) {
-      var key = jobId + '_' + roomId;
-      // Store compressed version
-      roomPhotos[key] = { dataUrl: dataUrl, name: file.name, roomName: roomName, jobId: jobId };
+    compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
+      var key = jobId+'_'+roomId;
+      if (!roomPhotos[key]) roomPhotos[key] = [];
+      var seq = roomPhotos[key].length + 1;
+      roomPhotos[key].push({dataUrl:dataUrl, roomName:roomName, jobId:jobId, seq:seq});
       saveMediaToStorage(jobId);
-
-      // Show thumbnail
-      var thumb = document.getElementById('cam-thumb-' + roomId);
-      if (thumb) {
-        var uploadBadge = '<span id="up-badge-'+roomId+'" style="font-size:9px;color:var(--gray);display:block;margin-top:2px;">&#8635; uploading...</span>';
-        thumb.innerHTML = '<div style="position:relative;display:inline-block;">' +
-          '<img src="' + dataUrl + '" style="height:48px;width:64px;object-fit:cover;border-radius:4px;border:1px solid var(--border);">' +
-          '<span class="rm-photo" data-rmid="' + roomId + '" style="position:absolute;top:1px;right:2px;font-size:10px;cursor:pointer;background:rgba(0,0,0,.5);color:white;padding:1px 4px;border-radius:2px;">&#10005;</span>' +
-          '</div>' + uploadBadge;
+      _updateRoomCameraBtn(roomId, roomPhotos[key].length);
+      if (document.getElementById('photo-modal-room-id') &&
+          document.getElementById('photo-modal-room-id').value === roomId) {
+        renderRoomPhotoGrid(roomId);
       }
-
-      // Auto-upload to Drive Photos subfolder
-      var job = jobs.find(function(j){ return j.id === jobId; });
-      function _doPhotoUpload() {
+      var job = jobs.find(function(j){ return j.id===jobId; });
+      function _up() {
         var folderId = job && job.driveSubfolders && job.driveSubfolders['Photos'] ? job.driveSubfolders['Photos'].id : null;
-        var cleanRoom = roomName.replace(/[^a-z0-9]/gi, '_');
-        var ts = Date.now();
-        var filename = (job && job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + ts + '.jpg';
-        uploadToDrive(folderId, filename, dataUrl, function(ok) {
-          var badge = document.getElementById('up-badge-'+roomId);
-          if (badge) badge.innerHTML = ok ? '<span style="color:var(--green);">&#10003; in Drive</span>' : '<span style="color:var(--gray);">&#9632; local only</span>';
-        });
+        if (!folderId) return;
+        var cleanRoom = _cleanName(roomName);
+        var filename = (job&&job.hvlId?job.hvlId+'_':'') + cleanRoom + '_' + _seqStr(seq) + '.jpg';
+        uploadToDrive(folderId, filename, dataUrl, function(){});
       }
-      if (job && !job.driveSubfolders && job.driveFolder) {
-        fetchSubfolderIds(job, function(){ _doPhotoUpload(); });
-      } else {
-        _doPhotoUpload();
-      }
+      if (job && !job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
+      else _up();
     });
   };
   reader.readAsDataURL(file);
   input.value = '';
 }
 
-function removeRoomPhoto(roomId) {
+function removeRoomPhoto(roomId, idx) {
   var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
-  var key = jobId + '_' + roomId;
-  delete roomPhotos[key];
-  var thumb = document.getElementById('cam-thumb-' + roomId);
-  if (thumb) thumb.innerHTML = '';
-  var icon = document.getElementById('cam-icon-' + roomId);
-  if (icon) { icon.textContent = ''; icon.innerHTML = '&#128247;'; }
+  var key = jobId+'_'+roomId;
+  if (roomPhotos[key]) { roomPhotos[key].splice(idx,1); saveMediaToStorage(jobId); }
+  _updateRoomCameraBtn(roomId, (roomPhotos[key]||[]).length);
+  renderRoomPhotoGrid(roomId);
+}
+
+function _updateRoomCameraBtn(roomId, count) {
+  var lbl = document.getElementById('photo-btn-'+roomId);
+  if (!lbl) return;
+  if (count > 0) {
+    lbl.innerHTML = '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachRoomPhoto(this,\''+roomId+'\')">'
+      + '<span style="font-size:13px;">&#128247;</span>'
+      + '<span style="font-size:10px;font-weight:600;color:var(--bronze);margin-left:2px;">'+count+'</span>';
+    lbl.title = 'View / add photos ('+count+' captured)';
+    lbl.onclick = function(e){ if(e.target.tagName!=='INPUT'){ e.preventDefault(); openRoomPhotosModal(roomId); } };
+  } else {
+    lbl.innerHTML = '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachRoomPhoto(this,\''+roomId+'\')">'+'&#128247;';
+    lbl.title = 'Capture photo';
+    lbl.onclick = null;
+  }
+}
+
+function openRoomPhotosModal(roomId) {
+  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+  var roomNameEl = document.getElementById('name-'+roomId);
+  var roomName = roomNameEl ? (roomNameEl.textContent||roomNameEl.value||roomId) : roomId;
+  var modal = document.getElementById('photo-modal');
+  document.getElementById('photo-modal-room-id').value = roomId;
+  document.getElementById('photo-modal-title').textContent = roomName + ' — Photos';
+  document.getElementById('photo-modal-add-label').innerHTML =
+    '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachRoomPhoto(this,\''+roomId+'\')" id="photo-modal-file-input">'
+    + '+ Add Photo';
+  renderRoomPhotoGrid(roomId);
+  modal.style.display = 'flex';
+}
+
+function renderRoomPhotoGrid(roomId) {
+  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+  var key = jobId+'_'+roomId;
+  var photos = roomPhotos[key]||[];
+  var grid = document.getElementById('photo-modal-grid');
+  if (!grid) return;
+  if (photos.length === 0) {
+    grid.innerHTML = '<div style="color:var(--gray);font-size:12px;font-style:italic;padding:20px;text-align:center;">No photos yet — tap Add Photo to capture.</div>';
+    return;
+  }
+  grid.innerHTML = photos.map(function(p,i) {
+    return '<div style="position:relative;display:inline-block;margin:4px;">'
+      +'<img src="'+p.dataUrl+'" style="height:90px;width:120px;object-fit:cover;border-radius:5px;border:1px solid var(--border);">'
+      +'<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);border-radius:0 0 5px 5px;font-size:9px;color:#fff;padding:2px 4px;text-align:center;">'+_seqStr(i+1)+'</div>'
+      +'<span onclick="removeRoomPhoto(\''+roomId+'\','+i+')" style="position:absolute;top:3px;right:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:3px;padding:1px 5px;cursor:pointer;">✕</span>'
+      +'</div>';
+  }).join('');
+}
+
+function closePhotoModal() {
+  document.getElementById('photo-modal').style.display='none';
 }
 
 function getJobPhotos(jobId) {
-  return Object.values(roomPhotos).filter(function(p){ return p.jobId === jobId; });
+  var all = [];
+  Object.keys(roomPhotos).forEach(function(k) {
+    var arr = roomPhotos[k];
+    if (Array.isArray(arr)) arr.forEach(function(p){ if(p.jobId===jobId) all.push(p); });
+  });
+  return all;
 }
+
+// ── COLLECTION PHOTOS & APPRAISALS ────────────────────────────────────────────
+function openCollectionPhotosModal(collId) {
+  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+  var coll = collectionsData.find(function(c){ return c.id===collId; });
+  var collName = coll ? coll.name : String(collId);
+  var modal = document.getElementById('photo-modal');
+  document.getElementById('photo-modal-room-id').value = 'coll_'+collId;
+  document.getElementById('photo-modal-title').textContent = collName + ' — Asset Photos & Appraisal';
+  document.getElementById('photo-modal-add-label').innerHTML =
+    '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachCollectionPhoto(this,'+collId+')" id="photo-modal-file-input">'
+    + '+ Add Photo';
+  renderCollectionPhotoGrid(collId, jobId);
+  modal.style.display = 'flex';
+}
+
+function attachCollectionPhoto(input, collId) {
+  var file = input.files[0];
+  if (!file) return;
+  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+  var coll = collectionsData.find(function(c){ return c.id===collId; });
+  var collName = coll ? coll.name : String(collId);
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
+      var key = jobId+'_coll_'+collId;
+      if (!collectionPhotos[key]) collectionPhotos[key] = [];
+      var seq = collectionPhotos[key].length + 1;
+      collectionPhotos[key].push({dataUrl:dataUrl, collName:collName, jobId:jobId, seq:seq});
+      saveMediaToStorage(jobId);
+      renderCollectionPhotoGrid(collId, jobId);
+      renderCollections();
+      var job = jobs.find(function(j){ return j.id===jobId; });
+      function _up() {
+        var folderId = job && job.driveSubfolders && job.driveSubfolders['Asset Documentation']
+          ? job.driveSubfolders['Asset Documentation'].id : null;
+        if (!folderId) return;
+        var cleanColl = _cleanName(collName);
+        var filename = (job&&job.hvlId?job.hvlId+'_':'')+'ASSET_'+cleanColl+'_'+_seqStr(seq)+'.jpg';
+        uploadToDrive(folderId, filename, dataUrl, function(){});
+      }
+      if (job && !job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
+      else _up();
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function removeCollectionPhoto(collId, idx) {
+  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+  var key = jobId+'_coll_'+collId;
+  if (collectionPhotos[key]) { collectionPhotos[key].splice(idx,1); saveMediaToStorage(jobId); }
+  renderCollectionPhotoGrid(collId, jobId);
+  renderCollections();
+}
+
+function renderCollectionPhotoGrid(collId, jobId) {
+  var key = jobId+'_coll_'+collId;
+  var photos = collectionPhotos[key]||[];
+  var grid = document.getElementById('photo-modal-grid');
+  if (!grid) return;
+  var photoHtml = photos.length === 0
+    ? '<div style="color:var(--gray);font-size:12px;font-style:italic;padding:16px 0 8px;text-align:center;">No photos yet.</div>'
+    : '<div style="margin-bottom:8px;">' + photos.map(function(p,i) {
+        return '<div style="position:relative;display:inline-block;margin:4px;">'
+          +'<img src="'+p.dataUrl+'" style="height:90px;width:120px;object-fit:cover;border-radius:5px;border:1px solid var(--border);">'
+          +'<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);border-radius:0 0 5px 5px;font-size:9px;color:#fff;padding:2px 4px;text-align:center;">'+_seqStr(i+1)+'</div>'
+          +'<span onclick="removeCollectionPhoto('+collId+','+i+')" style="position:absolute;top:3px;right:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:3px;padding:1px 5px;cursor:pointer;">✕</span>'
+          +'</div>';
+      }).join('') + '</div>';
+  var appraisalHtml = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:10px;">'
+    +'<div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:6px;">Appraisal Document</div>'
+    +'<label style="cursor:pointer;" class="btn-s">'
+    +'<input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style="display:none;" onchange="uploadAppraisalFile(this,'+collId+')">'
+    +'&#128196; Upload Appraisal</label>'
+    +'<div id="appraisal-badge-'+collId+'" style="font-size:11px;margin-top:6px;color:var(--gray);"></div>'
+    +'</div>';
+  grid.innerHTML = photoHtml + appraisalHtml;
+}
+
+function uploadAppraisalFile(input, collId) {
+  var file = input.files[0];
+  if (!file) return;
+  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+  var coll = collectionsData.find(function(c){ return c.id===collId; });
+  var collName = coll ? coll.name : String(collId);
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  var badge = document.getElementById('appraisal-badge-'+collId);
+  if (badge) badge.innerHTML = '<span style="color:var(--gray);">&#8635; uploading...</span>';
+  var ext = file.name.split('.').pop();
+  var ts = new Date().toISOString().slice(0,10);
+  var cleanColl = _cleanName(collName);
+  var filename = (job&&job.hvlId?job.hvlId+'_':'')+'APPRSL_'+cleanColl+'_'+ts+'.'+ext;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    function _up() {
+      var folderId = job && job.driveSubfolders && job.driveSubfolders['Asset Documentation']
+        ? job.driveSubfolders['Asset Documentation'].id : null;
+      if (!folderId) { if(badge) badge.innerHTML='<span style="color:var(--err-tx);">No Asset Documentation folder</span>'; return; }
+      uploadToDrive(folderId, filename, ev.target.result, function(ok) {
+        if (badge) badge.innerHTML = ok
+          ? '<span style="color:var(--ok-tx);">&#10003; '+filename+' saved to Drive</span>'
+          : '<span style="color:var(--err-tx);">Upload failed — saved locally</span>';
+      });
+    }
+    if (job && !job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
+    else _up();
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
 
 function downloadJobPhotos(jobId) {
   var photos = getJobPhotos(jobId);
@@ -5044,7 +5221,12 @@ function saveMediaToStorage(jobId) {
   try {
     var data = {};
     Object.keys(roomPhotos).forEach(function(k) {
-      if (roomPhotos[k] && roomPhotos[k].jobId === parseInt(jobId)) data['p_'+k] = roomPhotos[k];
+      var arr = roomPhotos[k];
+      if (Array.isArray(arr) && arr.length > 0 && arr[0].jobId === parseInt(jobId)) data['p_'+k] = arr;
+    });
+    Object.keys(collectionPhotos).forEach(function(k) {
+      var arr = collectionPhotos[k];
+      if (Array.isArray(arr) && arr.length > 0 && arr[0].jobId === parseInt(jobId)) data['c_'+k] = arr;
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(data));
   } catch(e) {}
@@ -5057,6 +5239,7 @@ function loadMediaFromStorage(jobId) {
     var data = JSON.parse(raw);
     Object.keys(data).forEach(function(k) {
       if (k.startsWith('p_')) roomPhotos[k.slice(2)] = data[k];
+      else if (k.startsWith('c_')) collectionPhotos[k.slice(2)] = data[k];
     });
   } catch(e) {}
 }
@@ -6792,16 +6975,22 @@ function renderCollections() {
   var tbody = document.getElementById('collections-body');
   if (!tbody) return;
   if (collectionsData.length === 0) {
-    tbody.innerHTML = '<tr id="collections-empty-row"><td colspan="4" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>';
+    tbody.innerHTML = '<tr id="collections-empty-row"><td colspan="6" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>';
     return;
   }
+  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
   var h = '';
   collectionsData.forEach(function(c) {
+    var photoCount = (collectionPhotos[jobId+'_coll_'+c.id]||[]).length;
+    var photoBtn = '<button onclick="openCollectionPhotosModal('+c.id+')" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--gray);padding:1px 3px;" title="Asset photos & appraisal">&#128247;'
+      + (photoCount > 0 ? '<span style="font-size:9px;font-weight:600;color:var(--bronze);margin-left:2px;">'+photoCount+'</span>' : '')
+      + '</button>';
     h += '<tr>' +
       '<td style="font-size:12px;font-weight:500;">' + c.name + '</td>' +
       '<td style="font-size:12px;">$' + (parseFloat(c.value)||0).toLocaleString() + '</td>' +
       '<td style="font-size:12px;text-align:center;">' + c.qty + '</td>' +
       '<td style="font-size:11px;font-weight:600;color:var(--bronze);">' + (COL_DISP_LABELS[c.disp]||c.disp||'—') + '</td>' +
+      '<td style="text-align:center;">' + photoBtn + '</td>' +
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
     '</tr>';
   });
