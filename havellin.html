@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.01 · 2:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.02 · 2:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6103,14 +6103,17 @@ function renderAgreement() {
   );
 
   // ── SECTION 10 ────────────────────────────────────────────────────────────
-  content += agrSection('10. Photography and Media Authorization',
-    p('Client authorizes Contractor to photograph and/or record video of the property, its contents, and work-in-progress and completed conditions during the engagement ("Media"). Media may be used by Contractor for marketing, promotional, and educational purposes, including social media, website, print collateral, and presentations. The following restrictions apply:')+
-    p('(a) No specific street address or unit number shall be disclosed in any published Media. General neighborhood references (e.g., "Palm Beach" or "Delray Beach area") are permitted.')+
-    p('(b) No names of Client, family members, or estate beneficiaries shall appear in published Media.')+
+  content += agrSection('10. Photography Authorization',
+    p(b('10.1 Documentation Photography.')+'  As part of the Services, Contractor will photograph and/or record video of the property, its contents, and all significant assets for the purposes of estate inventory, asset identification, condition documentation, and probate record-keeping ("Documentation Media"). Client hereby authorizes this documentation as a necessary component of the engagement. All Documentation Media is stored securely in the Client\'s designated Google Drive folder and is not used for any marketing or promotional purpose without the separate written consent described in Section 10.2 below.')+
+    '<div style="margin-top:.75rem;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--cream);">Client acknowledges and authorizes documentation photography and video as described in Section 10.1. &nbsp;&nbsp;Initials: _______</div>'+
+    p('&nbsp;')+
+    p(b('10.2 Marketing &amp; Promotional Use.')+'  Separately, Client authorizes Contractor to use Documentation Media or other media captured during the engagement for marketing, promotional, and educational purposes, including social media, website, print collateral, and presentations, subject to the following restrictions:')+
+    p('(a) No specific street address or unit number shall be disclosed in any published media.')+
+    p('(b) No names of Client, family members, or estate beneficiaries shall appear in published media.')+
     p('(c) No images or likenesses of Client, family members, or any identifiable individual shall be published without a separate written release.')+
-    p('(d) Contractor will use reasonable care to avoid publishing Media that could clearly identify a specific individual\'s residence or personal circumstances.')+
-    p('Client may revoke this authorization prospectively at any time by delivering written notice to Contractor. Revocation does not require removal of Media already published prior to receipt.')+
-    '<div style="margin-top:.5rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:11px;">&#9744; &nbsp;<strong>Client elects to OPT OUT</strong> of the Photography &amp; Media Authorization entirely. &nbsp;&nbsp;Initials: _______</div>'
+    p('(d) Contractor will use reasonable care to avoid publishing media that could clearly identify a specific individual\'s residence or personal circumstances.')+
+    p('Client may revoke this marketing authorization prospectively at any time by delivering written notice to Contractor. Revocation does not require removal of media already published prior to receipt.')+
+    '<div style="margin-top:.5rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:11px;">&#9744; &nbsp;<strong>Client elects to OPT OUT</strong> of marketing &amp; promotional use of media (Section 10.2 only). &nbsp;&nbsp;Initials: _______</div>'
   );
 
   // ── SECTION 11 ────────────────────────────────────────────────────────────
