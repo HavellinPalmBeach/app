@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 3:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 4:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -240,20 +240,20 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 </div>
 
 <div class="nav">
-  <button class="nb active" onclick="showPanel('intake',this)">Client Intake</button>
+  <button class="nb active" onclick="showPanel('jobs',this)">Client Dashboard</button>
+  <button class="nb" onclick="showPanel('intake',this)">Client Intake</button>
   <button class="nb" onclick="showPanel('estimate',this)">Estimate</button>
   <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
   <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
   <button class="nb" onclick="showPanel('job-log',this)">Job Log</button>
   <button class="nb" onclick="showPanel('invoice',this)">Final Invoice</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
-  <button class="nb" onclick="showPanel('jobs',this)">Client Dashboard</button>
 </div>
 
 <div class="main">
 
 <!-- ══════════════════════════════ INTAKE ══════════════════════════════ -->
-<div class="panel active" id="panel-intake">
+<div class="panel" id="panel-intake">
   <div class="grid2">
     <div class="card">
       <div class="sec">Service Type</div>
@@ -808,7 +808,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 </div>
 
 <!-- ══════════════════════════════ JOB MANAGEMENT ══════════════════════════════ -->
-<div class="panel" id="panel-jobs">
+<div class="panel active" id="panel-jobs">
   <!-- CLIENT LIST VIEW -->
   <div id="clients-list-view">
     <div class="grid4" style="margin-bottom:1.25rem;">
@@ -2689,7 +2689,7 @@ function saveEstimateAndPreview() {
   showFB('e-fb','ok','Estimate saved. Opening Client Estimate for review…');
   setTimeout(function() { exportEstimateToDrive(jobId); uploadWalkthroughNotesToDrive(jobId); }, 1500);
   setTimeout(function() {
-    document.querySelectorAll('.nb')[2].click();
+    document.querySelectorAll('.nb')[3].click();
     setTimeout(function() {
       window._suppressEstimateAutoSave = true;
       clearEstimateTab();
@@ -4201,7 +4201,7 @@ function goToJobLog(jobId) {
 
 
 function openEstimateForJob(id) {
-  document.querySelectorAll('.nb')[2].click(); // go to client estimate tab
+  document.querySelectorAll('.nb')[3].click(); // go to client estimate tab
   renderClientEstimate();
 }
 
