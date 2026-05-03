@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 6:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 7:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -522,6 +522,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <label>Years in home</label>
         <div id="e-years-in-home-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake — longer occupancy = higher volume/complexity</div>
+        <div id="probate-inv-badge" style="margin-top:4px;"></div>
       </div>
       <div>
         <div class="sec">Property Specialists</div>
@@ -1687,6 +1688,20 @@ function propValMultiplier(propVal) {
   return 1.85;  // $75M+ — ultra estate tier
 }
 
+// ─── PROBATE INVENTORY MULTIPLIER ────────────────────────────────────────────
+// Scores 5 factors (0–100 pts) → TC hour multiplier (1.0×–2.8×).
+// Only applied when service type is Probate.
+function probateInventoryMultiplier(sqft, years, propVal, premium, avgRoomScore) {
+  var sqftPts  = sqft < 2000 ? 5 : sqft < 3500 ? 10 : sqft < 5500 ? 15 : sqft < 8000 ? 20 : 25;
+  var yearsPts = years < 5  ? 5 : years < 10   ? 10 : years < 20   ? 15 : years < 30   ? 20 : 25;
+  var valPts   = propVal < 2000000 ? 4 : propVal < 5000000 ? 8 : propVal < 10000000 ? 12 : propVal < 25000000 ? 16 : 20;
+  var premPts  = premium ? 15 : 0;
+  var roomPts  = avgRoomScore < 2.0 ? 3 : avgRoomScore < 2.5 ? 6 : avgRoomScore < 3.5 ? 10 : 15;
+  var score = sqftPts + yearsPts + valPts + premPts + roomPts;
+  var mult = score <= 20 ? 1.00 : score <= 35 ? 1.25 : score <= 50 ? 1.50 : score <= 65 ? 1.75 : score <= 80 ? 2.10 : 2.50;
+  return {mult: mult, score: score};
+}
+
 // ─── SQFT MULTIPLIER ──────────────────────────────────────────────────────────
 // Baseline: 2,500 sqft. Applies to both TC and PS hours.
 function sqftMultiplier(sqft) {
@@ -1872,6 +1887,32 @@ function calcAll() {
   var loadedJobId = parseInt(document.getElementById('e-job').value);
   var loadedJob = jobs.find(function(j){ return j.id === loadedJobId; });
   var jobStartStr = loadedJob && loadedJob.start ? loadedJob.start : null;
+
+  // Probate inventory multiplier — TC only, fires when service type is probate
+  var probateInvBadgeEl = document.getElementById('probate-inv-badge');
+  if (svcKey === 'probate') {
+    var yih = loadedJob && loadedJob.yearsInHome ? parseFloat(loadedJob.yearsInHome) : 0;
+    var avgRoomScoreForInv = includedRoomCount > 0 ? (totalVol / includedRoomCount) : 0;
+    var invResult = probateInventoryMultiplier(sqftVal, yih, propVal, prem, avgRoomScoreForInv);
+    baseTCHrs = Math.round(baseTCHrs * invResult.mult * 10) / 10;
+    // Rebuild totals after this additional multiplier
+    adjTCheirs = heirs ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;
+    adjTC = Math.round((baseTCHrs * adjTCpct + adjTCheirs) * 10) / 10;
+    totTC = Math.round((baseTCHrs + adjTC) * 10) / 10;
+    days = Math.round(baseTCHrs / 7 * 10) / 10;
+    crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
+    if (probateInvBadgeEl) {
+      var missingFactors = [];
+      if (!yih) missingFactors.push('years in home');
+      if (!sqftVal) missingFactors.push('sqft');
+      if (!propVal) missingFactors.push('property value');
+      var missingNote = missingFactors.length ? ' <em>(missing: ' + missingFactors.join(', ') + ' — score may be low)</em>' : '';
+      probateInvBadgeEl.innerHTML = '<div class="alert a-warn" style="margin-top:4px;font-size:11px;">Probate inventory multiplier: TC hours ×' + invResult.mult.toFixed(2) + ' (score ' + invResult.score + '/100)' + missingNote + '</div>';
+    }
+  } else {
+    if (probateInvBadgeEl) probateInvBadgeEl.innerHTML = '';
+  }
+  daysNeeded = Math.ceil(baseTCHrs / 7);
 
   if (!jobStartStr) {
     if (timelineBadge) timelineBadge.innerHTML = targetDateVal
