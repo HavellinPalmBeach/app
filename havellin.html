@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 2:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 3:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -791,6 +791,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="btn-bronze" id="btn-pdf" onclick="printClientEstimate()" style="display:none;">Print / Save PDF</button>
         <button class="btn-s" id="btn-drive-est" onclick="saveFolderEstimate()" style="display:none;">&#128193; Save to Drive</button>
         <a class="btn-bronze" id="btn-mailto-est" href="#" style="display:none;text-decoration:none;">&#9993; Email to Client</a>
+        <button class="btn-s" id="btn-mark-sent" onclick="markEstimateSent()" style="display:none;">&#10003; Mark as Sent</button>
+        <button class="btn-s" id="btn-offer-discount" onclick="openDiscountModal()" style="display:none;">Offer Discount</button>
       </div>
     </div>
   </div>
@@ -1321,6 +1323,34 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   </div>
 </div>
 
+<div class="modal-overlay" id="discount-modal" style="display:none;">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-title">Offer Client Discount</div>
+    <div class="modal-sub">Client has pushed back on pricing. Set a discount to offer — rooms and scope stay fixed. This will reset to manager re-approval.</div>
+    <div style="margin:1rem 0;padding:10px 14px;background:var(--tan);border-radius:4px;font-size:12px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="color:var(--gray);">Original approved total</span>
+        <span id="dm-original" style="font-weight:600;color:var(--gray-dk);">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:var(--gray);">Revised total</span>
+        <span id="dm-revised" style="font-weight:700;color:var(--bronze);">—</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
+      <label style="font-size:12px;font-weight:600;white-space:nowrap;">Discount %</label>
+      <input type="number" id="dm-pct" min="1" max="30" step="1" value="5"
+        style="width:72px;text-align:center;font-size:18px;font-weight:700;"
+        oninput="updateDiscountModal()">
+      <span style="font-size:18px;font-weight:700;color:var(--gray-dk);">%</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-s" style="flex:1;" onclick="closeDiscountModal()">Cancel</button>
+      <button class="btn-p" style="flex:2;" onclick="applyDiscountRevision()">Apply &amp; Submit for Re-Approval</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 var jobs = [];
@@ -1329,6 +1359,7 @@ var currentFilter = 'all';
 var currentEstimate = null; // snapshot of last saved estimate
 var estimateApproved = false;
 var estimateSubmitted = false;  // TC submitted for manager approval
+var discountRevision = false;   // true when in discount-only revision re-approval flow
 var approvedBy = '';
 var approvedAt = '';
 
@@ -2917,6 +2948,10 @@ function updateApprovalUI() {
   if (mailtoEl) mailtoEl.style.display = 'none';
   var btnDriveEst = document.getElementById('btn-drive-est');
   if (btnDriveEst) btnDriveEst.style.display = 'none';
+  var btnMarkSent = document.getElementById('btn-mark-sent');
+  if (btnMarkSent) btnMarkSent.style.display = 'none';
+  var btnOfferDiscount = document.getElementById('btn-offer-discount');
+  if (btnOfferDiscount) btnOfferDiscount.style.display = 'none';
 
   if (!currentEstimate) {
     badge.innerHTML = '';
@@ -2925,21 +2960,42 @@ function updateApprovalUI() {
     return;
   }
 
+  var ceJob = jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); });
+  var sentDate = ceJob && ceJob.estimateSentDate ? ceJob.estimateSentDate : null;
+
   if (estimateApproved) {
-    // STATE 3: Approved — PDF unlocked
+    // STATE 3a: Approved, not yet sent — show Mark as Sent
+    // STATE 3b: Approved and sent — show Offer Discount
     badge.innerHTML = '<span class="badge b-approved">&#10003; Approved</span>';
     if (btnPdf) btnPdf.style.display = 'inline-block';
     if (btnDriveEst) btnDriveEst.style.display = 'inline-block';
     if (mailtoEl) { mailtoEl.style.display = 'inline-block'; mailtoEl.href = buildEstimateMailto(); }
-    if (subtitle) subtitle.textContent = 'Estimate approved. Print PDF or email to client.';
-    if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Approved</strong> — ' + approvedBy + ' \u00b7 ' + approvedAt + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">PDF unlocked. Print / Save PDF to send to client.</div></div>';
+    if (!sentDate) {
+      if (btnMarkSent) btnMarkSent.style.display = 'inline-block';
+      if (subtitle) subtitle.textContent = 'Approved. Send the estimate to the client, then mark as sent.';
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Approved</strong> · ' + approvedBy + ' · ' + approvedAt + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Print or email to client, then click <strong>Mark as Sent</strong> to record delivery.</div></div>';
+    } else {
+      if (btnOfferDiscount) btnOfferDiscount.style.display = 'inline-block';
+      if (subtitle) subtitle.textContent = 'Estimate sent ' + sentDate + '. Use Offer Discount if client pushes back.';
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">If the client requests a lower price, use <strong>Offer Discount</strong> to revise and re-submit for approval.</div></div>';
+    }
 
   } else if (estimateSubmitted) {
-    // STATE 2: Submitted — awaiting manager PIN
-    badge.innerHTML = '<span class="badge b-pending">Awaiting Manager Approval</span>';
-    if (btnApprove) btnApprove.style.display = 'inline-block';
-    if (subtitle) subtitle.textContent = 'Submitted for approval. Enter manager PIN to approve and unlock PDF.';
-    if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Awaiting manager approval</strong> — enter PIN 3010 to approve.</div></div>';
+    // STATE 2a: Discount revision awaiting re-approval
+    // STATE 2b: Original submission awaiting approval
+    if (discountRevision) {
+      badge.innerHTML = '<span class="badge b-pending">Discount Revision — Awaiting Approval</span>';
+      if (btnApprove) btnApprove.style.display = 'inline-block';
+      if (subtitle) subtitle.textContent = 'Discount revision submitted. Manager PIN required to re-approve.';
+      var prevTotal = currentEstimate.prevApprovedTotal ? Math.round(currentEstimate.prevApprovedTotal).toLocaleString() : '—';
+      var newTotal = Math.round(currentEstimate.havellinTotal).toLocaleString();
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Discount revision — awaiting manager re-approval</strong></div><div style="font-size:11px;color:var(--gray-dk);margin-top:2px;">Revised Havellin total: <strong>$' + newTotal + '</strong> (was $' + prevTotal + '). Enter manager PIN to approve.</div></div>';
+    } else {
+      badge.innerHTML = '<span class="badge b-pending">Awaiting Manager Approval</span>';
+      if (btnApprove) btnApprove.style.display = 'inline-block';
+      if (subtitle) subtitle.textContent = 'Submitted for approval. Enter manager PIN to approve and unlock PDF.';
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Awaiting manager approval</strong> — enter PIN to approve.</div></div>';
+    }
 
   } else {
     // STATE 1: TC Review — edit freely, submit when ready
@@ -2947,7 +3003,7 @@ function updateApprovalUI() {
     if (btnEdit) btnEdit.style.display = 'inline-block';
     if (btnSubmit) btnSubmit.style.display = 'inline-block';
     if (subtitle) subtitle.textContent = 'Review the estimate below. Edit if needed, then submit for manager approval.';
-    if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>TC Review</strong> — check all details before submitting.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Once submitted, only the manager PIN can approve or a new estimate revision is needed.</div></div>';
+    if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>TC Review</strong> — check all details before submitting.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Once submitted, only the manager PIN can approve.</div></div>';
   }
   applyEstimateLock();
 }
@@ -3015,10 +3071,79 @@ function submitForApproval() {
   window.open(mailtoLink, '_blank');
 }
 
+// ─── MARK AS SENT / DISCOUNT REVISION ────────────────────────────────────────
+
+function markEstimateSent() {
+  if (!currentEstimate || !currentEstimate.jobId) return;
+  var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  if (!job) return;
+  var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  job.estimateSentDate = today;
+  saveJobs();
+  syncJobToSheets(job);
+  updateApprovalUI();
+  showSyncBadge('Estimate marked as sent ✓');
+}
+
+function openDiscountModal() {
+  if (!currentEstimate) return;
+  var baseTotal = currentEstimate.havellinTotalFull || (currentEstimate.havellinTotal + (currentEstimate.discountAmt || 0));
+  document.getElementById('dm-original').textContent = '$' + Math.round(baseTotal).toLocaleString();
+  document.getElementById('dm-pct').value = currentEstimate.discountPct > 0 ? currentEstimate.discountPct : 5;
+  updateDiscountModal();
+  document.getElementById('discount-modal').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('dm-pct').focus(); document.getElementById('dm-pct').select(); }, 100);
+}
+
+function updateDiscountModal() {
+  if (!currentEstimate) return;
+  var baseTotal = currentEstimate.havellinTotalFull || (currentEstimate.havellinTotal + (currentEstimate.discountAmt || 0));
+  var pct = Math.min(30, Math.max(0, parseInt(document.getElementById('dm-pct').value) || 0));
+  var newAmt = Math.round(baseTotal * pct / 100);
+  var newTotal = Math.round(baseTotal - newAmt);
+  document.getElementById('dm-revised').textContent = '$' + newTotal.toLocaleString();
+}
+
+function closeDiscountModal() {
+  document.getElementById('discount-modal').style.display = 'none';
+}
+
+function applyDiscountRevision() {
+  if (!currentEstimate) return;
+  var pct = Math.min(30, Math.max(1, parseInt(document.getElementById('dm-pct').value) || 0));
+  if (!pct) { alert('Enter a discount % between 1 and 30.'); return; }
+  var baseTotal = currentEstimate.havellinTotalFull || (currentEstimate.havellinTotal + (currentEstimate.discountAmt || 0));
+  var newDiscountAmt = Math.round(baseTotal * pct / 100);
+  var newHavellinTotal = baseTotal - newDiscountAmt;
+  // Store previous approved total for the re-approval banner
+  currentEstimate.prevApprovedTotal = currentEstimate.havellinTotal;
+  currentEstimate.discountPct = pct;
+  currentEstimate.discountAmt = newDiscountAmt;
+  currentEstimate.havellinTotal = newHavellinTotal;
+  currentEstimate.havellinTotalFull = baseTotal;
+  // Recalculate grandTotal (havellinTotal + non-labor costs unchanged)
+  var nonLabor = (currentEstimate.grandTotal || 0) - ((currentEstimate.prevApprovedTotal || 0));
+  currentEstimate.grandTotal = newHavellinTotal + nonLabor;
+  // Reset to submitted state for re-approval
+  estimateApproved = false;
+  estimateSubmitted = true;
+  discountRevision = true;
+  // Update job status back to pending
+  var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  if (job) { job.status = 'pending'; job.approved = false; job.havellinEst = newHavellinTotal; saveJobs(); syncJobToSheets(job); }
+  saveEstimateState();
+  syncEstimateToSheets(currentEstimate, false, '', '');
+  closeDiscountModal();
+  renderClientEstimate();
+  updateApprovalUI();
+  showFB('ce-fb', 'ok', 'Discount applied. Manager PIN required to re-approve revised estimate.');
+}
+
 function editEstimateFromCE() {
   // Reset submitted state so TC can edit freely
   estimateSubmitted = false;
   estimateApproved = false;
+  discountRevision = false;
   approvedBy = ''; approvedAt = '';
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -3041,6 +3166,8 @@ function checkPin() {
   var pin = document.getElementById('pin-input').value;
   if (pin === '3010') {
     estimateApproved = true;
+    estimateSubmitted = false;
+    discountRevision = false;
     approvedBy = 'Anthony Graziano Sr';
     approvedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     // update job status
@@ -4204,6 +4331,7 @@ function saveEstimateState() {
       estimate: currentEstimate,
       approved: estimateApproved,
       submitted: estimateSubmitted,
+      discountRevision: discountRevision,
       approvedBy: approvedBy,
       approvedAt: approvedAt
     };
@@ -4260,6 +4388,7 @@ function loadEstimateForJob(jobId) {
     currentEstimate = rec.estimate || null;
     estimateApproved = rec.approved || false;
     estimateSubmitted = rec.submitted || false;
+    discountRevision = rec.discountRevision || false;
     approvedBy = rec.approvedBy || '';
     approvedAt = rec.approvedAt || '';
     return true;
@@ -4267,6 +4396,7 @@ function loadEstimateForJob(jobId) {
   currentEstimate = null;
   estimateApproved = false;
   estimateSubmitted = false;
+  discountRevision = false;
   approvedBy = ''; approvedAt = '';
   return false;
 }
