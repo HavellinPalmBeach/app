@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 3:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 3:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3876,7 +3876,9 @@ function renderClientDashboard(jobId) {
   h += '<div style="flex:1;">';
   h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:3px;">';
   h += '<div style="width:36px;height:36px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--bronze);flex-shrink:0;">'+initials+'</div>';
-  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);">'+job.name+'</div>';
+  var isEstateDash = (job.svc === 'cleanout' || job.svc === 'probate');
+  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
+  if (isEstateDash && job.executor) h += '<div style="font-size:12px;color:var(--gray);margin-top:1px;">'+job.executor+(job.executorRole?' · '+job.executorRole:'')+'</div>';
   h += '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--bronze);margin-top:1px;">'+( job.hvlId||'—')+'</div>';
   h += '</div>';
   if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-left:46px;margin-bottom:8px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
@@ -3926,8 +3928,8 @@ function renderClientDashboard(jobId) {
   h += sectionHdr('Client & Property');
   h += '<div class="d-grid4">';
   h += field('Job ID', '<span style="font-weight:600;color:var(--bronze);font-family:monospace;">'+(job.hvlId||'—')+'</span>');
-  h += field('Phone', job.phone||'—');
-  h += field('Email', '<span style="font-size:11px;">'+(job.email||'—')+'</span>');
+  h += field(isEstateDash ? 'Rep Phone' : 'Phone', isEstateDash ? (job.executorPhone||'—') : (job.phone||'—'));
+  h += field(isEstateDash ? 'Rep Email' : 'Email', '<span style="font-size:11px;">'+(isEstateDash ? (job.executorEmail||'—') : (job.email||'—'))+'</span>');
   h += field('Property type', job.ptype||'—');
   h += field('Approx. sqft', job.sqft ? job.sqft+' sqft' : '—');
   h += field('Years in home', job.yearsInHome ? job.yearsInHome + ' yrs' : '—');
@@ -3977,6 +3979,22 @@ function renderClientDashboard(jobId) {
     h += field('Role', job.executorRole||'—');
     h += field('Authorization', authOk?'<span style="color:#1D9E75;">Received</span>':'<span style="color:#A32D2D;">'+dot('#A32D2D')+'Pending</span>');
     h += '</div></div>';
+    h += '</div></div>';
+  }
+
+  // AUTHORIZED REP CARD (estate settlement / cleanout — not probate, which already shows executor above)
+  if (job.svc === 'cleanout' && job.executor) {
+    h += '<div class="card" style="margin-bottom:12px;">';
+    h += sectionHdr('Authorized Representative');
+    h += '<div class="d-grid2">';
+    h += field('Name', job.executor||'—');
+    h += field('Role / Authority', job.executorRole||'—');
+    h += field('Phone', job.executorPhone||'—');
+    h += field('Email', '<span style="font-size:11px;">'+(job.executorEmail||'—')+'</span>');
+    h += field('Letters of Administration', (function(){
+      var m = {received:'Received',pending:'Pending',notneeded:'N/A (not required)'};
+      return m[job.executorAuth] || '—';
+    })());
     h += '</div></div>';
   }
 
