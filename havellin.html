@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 1:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 1:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2734,6 +2734,18 @@ function renderClientEstimate() {
   // Property address: street + city, FL
   var propAddr = [job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—';
 
+  // Estate job: use rep name/role/phone instead of deceased client's info
+  var isEstateJob = !!(job.executor && job.executor.trim());
+  var ceClientLabel = isEstateJob ? 'Estate' : 'Client';
+  var ceClientVal   = isEstateJob ? 'Estate of ' + job.name : (job.name||'—');
+  var ceContactLabel = isEstateJob ? 'Authorized Representative' : 'Phone';
+  var ceContactVal   = isEstateJob
+    ? (job.executor + (job.executorRole ? ', ' + job.executorRole : ''))
+    : (job.phone||'—');
+  var cePhoneRow = isEstateJob
+    ? '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + (job.executorPhone||'—') + '</div></div>'
+    : '';
+
   var html =
     '<div style="text-align:center;padding:0 0 .75rem;">' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
@@ -2743,9 +2755,10 @@ function renderClientEstimate() {
     '<div class="ce-title">Service Estimate</div>' +
 
         '<div class="ce-hdr-row ce-hdr-row-1">' +
-    '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + (job.name||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">' + ceClientLabel + '</div><div class="ce-meta-val">' + ceClientVal + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
-    '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">' + ceContactLabel + '</div><div class="ce-meta-val">' + ceContactVal + '</div></div>' +
+    cePhoneRow +
     '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
     '</div>' +
