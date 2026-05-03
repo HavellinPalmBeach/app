@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.02 · 3:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 12:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2656,7 +2656,7 @@ function saveEstimateAndPreview() {
   syncJobToSheets(job);
   syncEstimateToSheets(currentEstimate, false, '', '');
   showFB('e-fb','ok','Estimate saved. Opening Client Estimate for review…');
-  setTimeout(function() { exportEstimateToDrive(jobId); }, 1500);
+  setTimeout(function() { exportEstimateToDrive(jobId); uploadWalkthroughNotesToDrive(jobId); }, 1500);
   setTimeout(function() {
     document.querySelectorAll('.nb')[2].click();
     setTimeout(function() {
@@ -4180,6 +4180,14 @@ function saveEstimateState() {
     };
   }
   try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+  // Push full estimate store to Sheets so other devices can load it
+  if (SHEETS_SYNC_URL) {
+    fetch(SHEETS_SYNC_URL, {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ type: 'saveAllEstimates', payload: estimateStore }),
+      headers: { 'Content-Type': 'text/plain' }
+    });
+  }
 }
 
 function loadEstimateState() {
@@ -4195,6 +4203,25 @@ function loadEstimateState() {
       }
     }
   } catch(e) {}
+  // Pull from Sheets for cross-device sync — same pattern as loadJobs()
+  if (SHEETS_SYNC_URL) {
+    fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data.estimates && typeof data.estimates === 'object') {
+          var added = 0;
+          Object.keys(data.estimates).forEach(function(key){
+            if (!estimateStore[key]) { estimateStore[key] = data.estimates[key]; added++; }
+          });
+          if (added > 0) {
+            try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+            rebuildDropdowns();
+            showSyncBadge('Estimates loaded from cloud ✓');
+          }
+        }
+      })
+      .catch(function(){ /* silent fail — localStorage is the fallback */ });
+  }
 }
 
 function loadEstimateForJob(jobId) {
@@ -5305,6 +5332,28 @@ function uploadHtmlToDrive(folderId, filename, html, onDone) {
 }
 
 // ─── ESTIMATE / AGREEMENT EXPORT ─────────────────────────────────────────────
+function uploadWalkthroughNotesToDrive(jobId) {
+  if (!currentEstimate || !currentEstimate.rooms) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var rooms = currentEstimate.rooms.filter(function(r){ return r.note && r.note.trim(); });
+  if (!rooms.length) return;
+  function _doUpload() {
+    var folderId = job.driveSubfolders && job.driveSubfolders['Walkthrough Notes']
+      ? job.driveSubfolders['Walkthrough Notes'].id : null;
+    if (!folderId) return;
+    var ts = new Date().toISOString().slice(0,10);
+    var lines = rooms.map(function(r){ return r.name + '\n' + r.note.trim(); });
+    var text = 'Walkthrough Notes — ' + (job.name || job.hvlId || '') + '\nDate: ' + ts + '\n\n'
+      + lines.join('\n\n---\n\n');
+    var filename = (job.hvlId ? job.hvlId + '_' : '') + 'WalkthroughNotes_' + ts + '.txt';
+    var dataUrl = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text)));
+    uploadToDrive(folderId, filename, dataUrl, function(){});
+  }
+  if (!job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _doUpload);
+  else _doUpload();
+}
+
 function exportEstimateToDrive(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
