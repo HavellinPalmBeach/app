@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 5:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -610,18 +610,18 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
       <div class="card" style="margin-top:1rem;">
         <div class="sec">Notable Collections <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(flag significant collections for auction — not room-by-room)</span></div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Flag major collections only — china, coins, guns, art, wine, books, jewelry, etc. TC advises if items lack auction value.</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:6px;">Flag major collections only — china, coins, guns, art, wine, books, jewelry, etc. TC advises if items lack auction value.</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:10px;font-style:italic;">Voice notes only at estimate. Photos available post signed agreement for documentation.</div>
         <table class="vtbl" id="collections-tbl">
           <thead><tr>
             <th style="min-width:160px;">Collection / Description</th>
             <th style="width:120px;">Est. Value (owner)</th>
             <th style="width:80px;">Qty</th>
             <th>Disposition</th>
-            <th style="width:40px;text-align:center;">&#128247;</th>
             <th style="width:60px;"></th>
           </tr></thead>
           <tbody id="collections-body">
-            <tr id="collections-empty-row"><td colspan="6" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>
+            <tr id="collections-empty-row"><td colspan="5" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>
           </tbody>
           <tfoot>
             <tr>
@@ -7235,22 +7235,17 @@ function renderCollections() {
   var tbody = document.getElementById('collections-body');
   if (!tbody) return;
   if (collectionsData.length === 0) {
-    tbody.innerHTML = '<tr id="collections-empty-row"><td colspan="6" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>';
+    tbody.innerHTML = '<tr id="collections-empty-row"><td colspan="5" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No collections flagged — add below if applicable.</td></tr>';
     return;
   }
   var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
   var h = '';
   collectionsData.forEach(function(c) {
-    var photoCount = (collectionPhotos[jobId+'_coll_'+c.id]||[]).length;
-    var photoBtn = '<button onclick="openCollectionPhotosModal('+c.id+')" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--gray);padding:1px 3px;" title="Asset photos & appraisal">&#128247;'
-      + (photoCount > 0 ? '<span style="font-size:9px;font-weight:600;color:var(--bronze);margin-left:2px;">'+photoCount+'</span>' : '')
-      + '</button>';
     h += '<tr>' +
       '<td style="font-size:12px;font-weight:500;">' + c.name + '</td>' +
       '<td style="font-size:12px;">$' + (parseFloat(c.value)||0).toLocaleString() + '</td>' +
       '<td style="font-size:12px;text-align:center;">' + c.qty + '</td>' +
       '<td style="font-size:11px;font-weight:600;color:var(--bronze);">' + (COL_DISP_LABELS[c.disp]||c.disp||'—') + '</td>' +
-      '<td style="text-align:center;">' + photoBtn + '</td>' +
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
     '</tr>';
   });
