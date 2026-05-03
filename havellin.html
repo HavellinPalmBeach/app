@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 4:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 5:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2777,13 +2777,17 @@ function renderClientEstimate() {
     '<div class="ce-title">Service Estimate</div>' +
 
         (isEstateJob
-      ? '<div class="ce-hdr-row" style="grid-template-columns:1fr 1.5fr 1.5fr 1fr 1.3fr;">' +
+      ? '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
         '<div><div class="ce-meta-label">Estate</div><div class="ce-meta-val">Estate of ' + job.name + '</div></div>' +
         '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
+        '</div>' +
+        '<div class="ce-hdr-divider"></div>' +
+        '<div class="ce-hdr-row" style="grid-template-columns:1.5fr 1fr 1.3fr;">' +
         '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + (job.executor||'—') + (job.executorRole ? ' — ' + job.executorRole : '') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + (job.executorPhone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val" style="font-size:11px;">' + (job.executorEmail||'—') + '</div></div>' +
         '</div>' +
+        '<div class="ce-hdr-divider"></div>' +
         '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
