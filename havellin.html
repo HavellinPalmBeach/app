@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 12:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 1:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3322,21 +3322,37 @@ function restoreEstimateToUI(est) {
   var crewReasonEl = document.getElementById('ps-crew-reason');
   if (crewReasonEl) crewReasonEl.value = est.psCrewReason || '';
 
-  // Restore room checkboxes and scores — match by saved index first, fall back to name
-  // Build a lookup by index and by name from saved rooms
+  // Restore room checkboxes and scores — match by saved index first, fall back to name+section
+  // Build lookups: by index, by "section:::name", and by plain name (legacy saves without section)
   var byIdx = {};
-  var byName = {};
+  var bySectionName = {};
+  var byNameFirst = {}; // plain-name fallback: first match wins (for old saves without section)
   est.rooms.forEach(function(sr) {
     if (sr.idx !== undefined) byIdx[sr.idx] = sr;
-    if (sr.name) byName[sr.name.toLowerCase().trim()] = sr;
+    var sk = ((sr.section||'') + ':::' + (sr.name||'')).toLowerCase().trim();
+    bySectionName[sk] = sr;
+    var nk = (sr.name||'').toLowerCase().trim();
+    if (!byNameFirst[nk]) byNameFirst[nk] = sr; // first occurrence wins
   });
 
   var ri = 0;
   ROOMS.forEach(function(sec) {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
-      // Try index first, then name
-      var savedRoom = byIdx[ri] || byName[(r.name||'').toLowerCase().trim()] || null;
+      // 1. Match by saved index (most reliable)
+      // 2. Fall back to section+name (handles ROOMS reorders without cross-floor bleed)
+      // 3. Last resort: plain name for very old saves that had no section field
+      var savedRoom = byIdx[ri] || null;
+      if (!savedRoom) {
+        var sk = ((sec.section||'') + ':::' + (r.name||'')).toLowerCase().trim();
+        savedRoom = bySectionName[sk] || null;
+      }
+      if (!savedRoom) {
+        var nk = (r.name||'').toLowerCase().trim();
+        var candidate = byNameFirst[nk];
+        // Only use plain-name match if the candidate has no section info (legacy save)
+        if (candidate && !candidate.section) savedRoom = candidate;
+      }
       if (savedRoom) {
         var chk = document.getElementById('chk-' + id);
         if (chk) {
