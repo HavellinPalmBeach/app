@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 5:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 6:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5517,19 +5517,28 @@ function uploadHtmlToDrive(folderId, filename, html, onDone) {
 
 // ─── ESTIMATE / AGREEMENT EXPORT ─────────────────────────────────────────────
 function uploadWalkthroughNotesToDrive(jobId) {
-  if (!currentEstimate || !currentEstimate.rooms) return;
+  if (!currentEstimate) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var rooms = currentEstimate.rooms.filter(function(r){ return r.note && r.note.trim(); });
-  if (!rooms.length) return;
+  var rooms = (currentEstimate.rooms || []).filter(function(r){ return r.note && r.note.trim(); });
+  var colls = (currentEstimate.collections || collectionsData || []).filter(function(c){ return c.note && c.note.trim(); });
+  if (!rooms.length && !colls.length) return;
   function _doUpload() {
     var folderId = job.driveSubfolders && job.driveSubfolders['Walkthrough Notes']
       ? job.driveSubfolders['Walkthrough Notes'].id : null;
     if (!folderId) return;
     var ts = new Date().toISOString().slice(0,10);
-    var lines = rooms.map(function(r){ return r.name + '\n' + r.note.trim(); });
+    var sections = [];
+    if (rooms.length) {
+      var roomLines = rooms.map(function(r){ return r.name + '\n' + r.note.trim(); });
+      sections.push('ROOM NOTES\n' + roomLines.join('\n\n---\n\n'));
+    }
+    if (colls.length) {
+      var collLines = colls.map(function(c){ return (c.name||'Collection') + '\n' + c.note.trim(); });
+      sections.push('NOTABLE COLLECTIONS NOTES\n' + collLines.join('\n\n---\n\n'));
+    }
     var text = 'Walkthrough Notes — ' + (job.name || job.hvlId || '') + '\nDate: ' + ts + '\n\n'
-      + lines.join('\n\n---\n\n');
+      + sections.join('\n\n' + '='.repeat(40) + '\n\n');
     var filename = (job.hvlId ? job.hvlId + '_' : '') + 'WalkthroughNotes_' + ts + '.txt';
     var dataUrl = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text)));
     uploadToDrive(folderId, filename, dataUrl, function(){});
@@ -7217,7 +7226,7 @@ function addCollection() {
   var dispEl = document.getElementById('new-col-disp');
   var disp = dispEl ? dispEl.value : 'auction';
   if (!name) { alert('Please enter a collection name.'); return; }
-  collectionsData.push({ id: Date.now(), name: name, value: value||'Unknown', qty: qty||'Est.', disp: disp, dispLabel: COL_DISP_LABELS[disp]||disp });
+  collectionsData.push({ id: Date.now(), name: name, value: value||'Unknown', qty: qty||'Est.', disp: disp, dispLabel: COL_DISP_LABELS[disp]||disp, note: '' });
   document.getElementById('new-col-name').value = '';
   document.getElementById('new-col-value').value = '';
   document.getElementById('new-col-qty').value = '';
@@ -7231,6 +7240,61 @@ function removeCollection(id) {
   calcAll();
 }
 
+function updateCollectionNote(collId, value) {
+  var c = collectionsData.find(function(x){ return x.id === collId; });
+  if (c) c.note = value;
+}
+
+function startCollectionTranscription(collId) {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showFB('e-fb','warn','Voice transcription not supported in this browser.'); return; }
+  var recogKey = 'coll_' + collId;
+  if (_activeRecognitions[recogKey]) {
+    _activeRecognitions[recogKey].stop();
+    return;
+  }
+  var recog = new SR();
+  recog.continuous = true;
+  recog.interimResults = true;
+  recog.lang = 'en-US';
+  var statusEl = document.getElementById('coll-mic-status-' + collId);
+  var micBtn   = document.getElementById('coll-mic-btn-' + collId);
+  if (micBtn) { micBtn.innerHTML = '&#9634;'; micBtn.style.color = '#A32D2D'; micBtn.title = 'Stop recording'; }
+  recog.onresult = function(event) {
+    var finalText = '', interimText = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) finalText += event.results[i][0].transcript + ' ';
+      else interimText += event.results[i][0].transcript;
+    }
+    if (statusEl) statusEl.textContent = interimText || '';
+    if (finalText) {
+      var noteEl = document.getElementById('coll-note-' + collId);
+      if (noteEl) {
+        var existing = noteEl.value ? noteEl.value.trimRight() + ' ' : '';
+        noteEl.value = existing + finalText.trim();
+        updateCollectionNote(collId, noteEl.value);
+      }
+    }
+  };
+  recog.onerror = function(e) {
+    delete _activeRecognitions[recogKey];
+    if (micBtn) { micBtn.innerHTML = '&#127908;'; micBtn.style.color = 'var(--gray)'; micBtn.title = 'Voice note'; }
+    if (statusEl) statusEl.textContent = '';
+    if (e.error !== 'aborted' && e.error !== 'no-speech') showFB('e-fb','warn','Microphone: ' + e.error);
+  };
+  recog.onend = function() {
+    delete _activeRecognitions[recogKey];
+    if (micBtn) { micBtn.innerHTML = '&#127908;'; micBtn.style.color = 'var(--gray)'; micBtn.title = 'Voice note'; }
+    if (statusEl) statusEl.textContent = '';
+  };
+  _activeRecognitions[recogKey] = recog;
+  try { recog.start(); } catch(ex) {
+    delete _activeRecognitions[recogKey];
+    if (micBtn) { micBtn.innerHTML = '&#127908;'; micBtn.style.color = 'var(--gray)'; micBtn.title = 'Voice note'; }
+    showFB('e-fb','warn','Could not start microphone.');
+  }
+}
+
 function renderCollections() {
   var tbody = document.getElementById('collections-body');
   if (!tbody) return;
@@ -7241,12 +7305,24 @@ function renderCollections() {
   var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
   var h = '';
   collectionsData.forEach(function(c) {
+    var noteVal = (c.note || '').replace(/"/g, '&quot;');
     h += '<tr>' +
       '<td style="font-size:12px;font-weight:500;">' + c.name + '</td>' +
       '<td style="font-size:12px;">$' + (parseFloat(c.value)||0).toLocaleString() + '</td>' +
       '<td style="font-size:12px;text-align:center;">' + c.qty + '</td>' +
       '<td style="font-size:11px;font-weight:600;color:var(--bronze);">' + (COL_DISP_LABELS[c.disp]||c.disp||'—') + '</td>' +
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
+    '</tr>' +
+    '<tr>' +
+      '<td colspan="5" style="padding:4px 8px 10px;background:var(--tan);">' +
+        '<div style="display:flex;align-items:flex-start;gap:6px;">' +
+          '<button id="coll-mic-btn-' + c.id + '" onclick="startCollectionTranscription(' + c.id + ')" title="Voice note" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--gray);padding:2px 4px;flex-shrink:0;">&#127908;</button>' +
+          '<div style="flex:1;">' +
+            '<textarea id="coll-note-' + c.id + '" rows="2" placeholder="Voice note for this collection..." oninput="updateCollectionNote(' + c.id + ',this.value)" style="width:100%;font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:inherit;background:#fff;">' + noteVal + '</textarea>' +
+            '<div id="coll-mic-status-' + c.id + '" style="font-size:10px;color:var(--bronze);font-style:italic;min-height:14px;margin-top:1px;"></div>' +
+          '</div>' +
+        '</div>' +
+      '</td>' +
     '</tr>';
   });
   tbody.innerHTML = h;
