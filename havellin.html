@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 1:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 2:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5693,8 +5693,9 @@ function renderProbateAgreement() {
   var estateName = job.name ? 'Estate of ' + job.name : 'Estate of _______________________________________________';
   var executorName = job.executor || '_______________________________________________';
   var clientAddr = [job.addr, job.city ? job.city+', FL' : '', job.zip].filter(Boolean).join(' ') || '_______________________________________________';
-  var clientEmail = job.email || '_______________________________________________';
-  var clientPhone = job.phone || '_______________________________________________';
+  // Use authorized rep's contact info, not the deceased's
+  var clientEmail = job.executorEmail || '_______________________________________________';
+  var clientPhone = job.executorPhone || '_______________________________________________';
   var propAddr = clientAddr;
   var propType = job.ptype || '_______________________________________________';
   var propSqft = job.sqft ? job.sqft+' sqft' : '_______________________________________________';
@@ -5755,9 +5756,10 @@ function renderProbateAgreement() {
   content += '</table>';
   content += subHdr('1.2 Client / Authorized Party');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
-  content += dRow('Client Full Name', bb(estateName));
-  content += dRow('Date','_______________________________________________');
+  content += dRow('Estate', bb(estateName));
+  content += dRow('Authorized Representative', bb(executorName));
   content += dRow('Role / Authority', job.executorRole || 'Personal Representative &middot; Executor &middot; POA &middot; Other');
+  content += dRow('Date','_______________________________________________');
   content += dRow('Mailing Address', clientAddr);
   content += dRow('Email', clientEmail);
   content += dRow('Phone', clientPhone);
