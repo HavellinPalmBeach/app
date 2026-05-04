@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 2:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 3:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2831,7 +2831,10 @@ function saveEstimateAndPreview() {
   syncJobToSheets(job);
   syncEstimateToSheets(currentEstimate, false, '', '');
   showFB('e-fb','ok','Estimate saved. Opening Client Estimate for review…');
-  setTimeout(function() { exportEstimateToDrive(jobId); uploadWalkthroughNotesToDrive(jobId); }, 1500);
+  // Capture estimate snapshot now — clearEstimateTab() nulls currentEstimate at t+1200ms
+  // so Drive uploads must use a local reference, not currentEstimate.
+  var _estSnapshotForDrive = currentEstimate;
+  setTimeout(function() { exportEstimateToDrive(jobId, _estSnapshotForDrive); uploadWalkthroughNotesToDrive(jobId, _estSnapshotForDrive); }, 1500);
   setTimeout(function() {
     document.querySelectorAll('.nb')[3].click();
     setTimeout(function() {
@@ -5661,12 +5664,13 @@ function uploadHtmlToDrive(folderId, filename, html, onDone) {
 }
 
 // ─── ESTIMATE / AGREEMENT EXPORT ─────────────────────────────────────────────
-function uploadWalkthroughNotesToDrive(jobId) {
-  if (!currentEstimate) return;
+function uploadWalkthroughNotesToDrive(jobId, estSnapshot) {
+  var est = estSnapshot || currentEstimate;
+  if (!est) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var rooms = (currentEstimate.rooms || []).filter(function(r){ return r.note && r.note.trim(); });
-  var colls = (currentEstimate.collections || collectionsData || []).filter(function(c){ return c.note && c.note.trim(); });
+  var rooms = (est.rooms || []).filter(function(r){ return r.note && r.note.trim(); });
+  var colls = (est.collections || collectionsData || []).filter(function(c){ return c.note && c.note.trim(); });
   if (!rooms.length && !colls.length) return;
   function _doUpload() {
     var folderId = job.driveSubfolders && job.driveSubfolders['Walkthrough Notes']
@@ -5692,7 +5696,7 @@ function uploadWalkthroughNotesToDrive(jobId) {
   else _doUpload();
 }
 
-function exportEstimateToDrive(jobId) {
+function exportEstimateToDrive(jobId, estSnapshot) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   if (!job.driveSubfolders && job.driveFolder) {
