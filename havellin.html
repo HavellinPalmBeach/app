@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 5:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5739,23 +5739,41 @@ function uploadWalkthroughNotesToDrive(jobId, estSnapshot) {
 }
 
 function exportEstimateToDrive(jobId, estSnapshot) {
+  var est = estSnapshot || currentEstimate;
+  if (!est) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  if (!job.driveSubfolders && job.driveFolder) {
-    fetchSubfolderIds(job, function(ok) { if (ok) exportEstimateToDrive(jobId); });
-    return;
+  function _doExport() {
+    var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
+    if (!folderId) return;
+    var ts = new Date().toISOString().slice(0,10);
+    var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
+    var rows = (est.rooms||[]).map(function(r){
+      return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+r.name+'</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+r.vol+'</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+r.cplx+'</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+r.tcH+' TC / '+r.csH+' PS</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+fmt(r.roomDollar)+'</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666;">'+((r.note||'').trim())+'</td></tr>';
+    }).join('');
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+      +'<title>Estimate – '+(job.hvlId||'')+'</title>'
+      +'<style>body{font-family:Arial,sans-serif;padding:24px;color:#333;}h2{margin-bottom:4px;}table{width:100%;border-collapse:collapse;}th{background:#f5f0e8;padding:6px 8px;text-align:left;font-size:12px;}</style>'
+      +'</head><body>'
+      +'<h2>Estimate — '+(job.name||'')+'</h2>'
+      +'<div style="font-size:13px;color:#888;margin-bottom:16px;">'+(job.hvlId||'')+' · '+ts+'</div>'
+      +'<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours</th><th>$</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +'<div style="margin-top:20px;font-size:14px;">'
+      +'<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; '
+      +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
+      +'</div></body></html>';
+    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok){
+      if (ok) showSyncBadge('Estimate backed up to Drive ✓');
+      else showSyncBadge('Drive backup failed — check Settings', true);
+    });
   }
-  var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
-  if (!folderId) return;
-  var el = document.getElementById('ce-page-content');
-  if (!el) return;
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estimate – '+(job.hvlId||'')+'</title>'
-    + '<style>body{font-family:Raleway,sans-serif;padding:20px;}</style></head><body>' + el.innerHTML + '</body></html>';
-  var ts = new Date().toISOString().slice(0,10);
-  uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
-    if (ok) showSyncBadge('Estimate saved to Drive ✓');
-    else showSyncBadge('Drive save failed — check settings', true);
-  });
+  if (!job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, function(ok){ if (ok) _doExport(); });
+  else _doExport();
 }
 
 function saveFolderEstimate() {
