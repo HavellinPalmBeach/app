@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 3:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 4:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3539,11 +3539,37 @@ function editEstimateForJob(jobId) {
   if (savedEstSnapshot) {
     currentEstimate = savedEstSnapshot;
     restoreEstimateToUI(savedEstSnapshot);
+    window._suppressEstimateAutoSave = false;
+  } else if (SHEETS_SYNC_URL) {
+    // No local rooms — try Sheets directly (cross-device: built on iPad, reviewing on desktop)
+    showSyncBadge('Looking for saved estimate in cloud…');
+    fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var sheetsRec = data.estimates && data.estimates[jobId];
+        var sheetsHasRooms = sheetsRec && sheetsRec.estimate && (sheetsRec.estimate.rooms||[]).length > 0;
+        if (sheetsHasRooms) {
+          estimateStore[jobId] = sheetsRec;
+          try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+          loadEstimateForJob(jobId);
+          clearAllRooms();
+          restoreEstimateToUI(currentEstimate);
+          showSyncBadge('Estimate loaded from cloud ✓');
+        } else {
+          loadJobIntoEstimate();
+          showSyncBadge('No cloud estimate found — starting fresh', true);
+        }
+        window._suppressEstimateAutoSave = false;
+        rebuildDropdowns();
+      })
+      .catch(function(){
+        loadJobIntoEstimate();
+        window._suppressEstimateAutoSave = false;
+      });
   } else {
     loadJobIntoEstimate();
+    window._suppressEstimateAutoSave = false;
   }
-
-  window._suppressEstimateAutoSave = false;
 
   // Reset approval unless already approved
   if (!estimateStore[jobId] || !estimateStore[jobId].approved) {
@@ -4516,7 +4542,8 @@ function saveEstimateState() {
       method: 'POST', mode: 'no-cors',
       body: JSON.stringify({ type: 'saveAllEstimates', payload: estimateStore }),
       headers: { 'Content-Type': 'text/plain' }
-    });
+    }).then(function(){ showSyncBadge('Estimate synced to cloud ✓'); })
+      .catch(function(){ showSyncBadge('Cloud sync failed — saved locally only', true); });
   }
 }
 
@@ -4533,7 +4560,8 @@ function loadEstimateState() {
       }
     }
   } catch(e) {}
-  // Pull from Sheets for cross-device sync — same pattern as loadJobs()
+  // Pull from Sheets for cross-device sync.
+  // Prefer Sheets when Sheets has rooms but local doesn't (e.g. built on another device).
   if (SHEETS_SYNC_URL) {
     fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
       .then(function(r){ return r.json(); })
@@ -4541,12 +4569,20 @@ function loadEstimateState() {
         if (data.estimates && typeof data.estimates === 'object') {
           var added = 0;
           Object.keys(data.estimates).forEach(function(key){
-            if (!estimateStore[key]) { estimateStore[key] = data.estimates[key]; added++; }
+            var sheetsRec = data.estimates[key];
+            var localRec  = estimateStore[key];
+            var sheetsHasRooms = sheetsRec && sheetsRec.estimate && (sheetsRec.estimate.rooms||[]).length > 0;
+            var localHasRooms  = localRec  && localRec.estimate  && (localRec.estimate.rooms||[]).length > 0;
+            // Use Sheets version if local is missing or local has no rooms but Sheets does
+            if (!localRec || (!localHasRooms && sheetsHasRooms)) {
+              estimateStore[key] = sheetsRec;
+              added++;
+            }
           });
           if (added > 0) {
             try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
             rebuildDropdowns();
-            showSyncBadge('Estimates loaded from cloud ✓');
+            showSyncBadge('Estimates synced from cloud ✓');
           }
         }
       })
