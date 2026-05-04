@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 12:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 12:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4476,7 +4476,7 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem) {
 
   // Cost rates — look up assigned TC's actual rate from contractor directory
   var psCost = Math.round(getBlendedPSCost() * 10) / 10;  // blended from actual PS slots
-  var tcCostDefault = 75;
+  var tcCostDefault = 60;
   var loadedJobId2 = document.getElementById('e-job') ? (parseInt(document.getElementById('e-job').value)||0) : 0;
   var loadedJob2 = jobs.find(function(j){ return j.id === loadedJobId2; });
   var assignedTCName = loadedJob2 ? loadedJob2.tc : null;
@@ -6706,7 +6706,7 @@ var PS_RATES = {
   'none': 0,
   'contractor_standard': 25,
   'contractor_senior': 30,
-  'aj': 60
+  'aj': 75
 };
 var PS_LABELS = {
   'none': 'Not scheduled',
@@ -6761,9 +6761,9 @@ var contractors = [];
 
 // Built-in defaults — always available
 var DEFAULT_CONTRACTORS = [
-  {id:'default-1', name:'Anthony Graziano Sr', role:'TC', phone:'(561) 370-4700', email:'anthony@havellinpalmbeach.com', rate:75, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
-  {id:'default-2', name:'Ashley Jerome', role:'TC', phone:'', email:'ashley@havellinpalmbeach.com', rate:75, status:'active', notes:'Partner, Client Relations', bio:'Ashley Jerome has spent 25 years as a trusted presence in the Palm Beach community — as a Pilates instructor at Squeeze in Royal Poinciana Plaza and as a parent at Palm Beach Day Academy. A licensed Douglas Elliman agent, Ashley brings warmth, discretion, and an intimate knowledge of Palm Beach families to every client relationship she manages.'},
-  {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:60, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
+  {id:'default-1', name:'Anthony Graziano Sr', role:'TC', phone:'(561) 370-4700', email:'anthony@havellinpalmbeach.com', rate:100, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
+  {id:'default-2', name:'Ashley Jerome', role:'TC', phone:'', email:'ashley@havellinpalmbeach.com', rate:100, status:'active', notes:'Partner, Client Relations', bio:'Ashley Jerome has spent 25 years as a trusted presence in the Palm Beach community — as a Pilates instructor at Squeeze in Royal Poinciana Plaza and as a parent at Palm Beach Day Academy. A licensed Douglas Elliman agent, Ashley brings warmth, discretion, and an intimate knowledge of Palm Beach families to every client relationship she manages.'},
+  {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:75, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
 ];
 
 function showAddContractor() {
