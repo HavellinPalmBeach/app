@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 4:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 4:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2801,7 +2801,7 @@ function saveEstimateAndPreview() {
   if (!jobId) { showFB('e-fb','warn','Select a job to attach this estimate to.'); return; }
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) { showFB('e-fb','warn','Job not found.'); return; }
-  if (!currentEstimate || currentEstimate.havellinTotal === 0) { showFB('e-fb','warn','No rooms selected — estimate is empty.'); return; }
+  if (!currentEstimate || currentEstimate.havellinTotal === 0 || !currentEstimate.rooms || currentEstimate.rooms.length === 0) { showFB('e-fb','warn','No rooms scored — check at least one room and set volume/complexity before saving.'); return; }
   var propValEl = document.getElementById('e-propval');
   if (!propValEl || !propValEl.value || propValEl.value === '0') {
     showFB('e-fb','warn','Property value is required — select the estimated value tier before saving.');
