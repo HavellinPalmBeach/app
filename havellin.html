@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.03 · 7:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 12:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -570,7 +570,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div class="toggle-wrap">
           <div class="toggle-info">
             <div class="toggle-title">Premium estate?</div>
-            <div class="toggle-sub">Activates $175 TC / $135 PS rates + 0.5 hrs/room across all rooms</div>
+            <div class="toggle-sub">Activates $200 TC / $140 PS rates + 0.5 hrs/room across all rooms</div>
           </div>
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
@@ -579,8 +579,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <table class="rate-tbl">
           <thead><tr><th>Role</th><th>Std</th><th>Premium</th><th>Active</th></tr></thead>
           <tbody>
-            <tr><td>Transition Concierge (1/job)</td><td>$150</td><td>$175</td><td><span class="active-pill" id="tc-rate-pill">$150</span></td></tr>
-            <tr><td>Property Specialist</td><td>$100</td><td>$135</td><td><span class="active-pill" id="ps-rate-pill">$100</span></td></tr>
+            <tr><td>Transition Concierge (1/job)</td><td>$165</td><td>$200</td><td><span class="active-pill" id="tc-rate-pill">$165</span></td></tr>
+            <tr><td>Property Specialist</td><td>$115</td><td>$140</td><td><span class="active-pill" id="ps-rate-pill">$115</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -1717,8 +1717,8 @@ function sqftMultiplier(sqft) {
 
 function calcAll() {
   var prem = document.getElementById('e-prem').checked;
-  var tcRate = prem ? 175 : 150;
-  var psRate = prem ? 135 : 100;
+  var tcRate = prem ? 200 : 165;
+  var psRate = prem ? 140 : 115;
   var crewSize = 2; // default
   var scheduledPS = getScheduledPSCount();
   if (scheduledPS > 0) crewSize = scheduledPS;
@@ -1731,7 +1731,7 @@ function calcAll() {
   document.getElementById('tc-rate-pill').textContent = '$' + tcRate;
   document.getElementById('ps-rate-pill').textContent = '$' + psRate;
   document.getElementById('prem-badge').innerHTML = prem ?
-    '<div class="alert a-warn" style="margin-top:6px;">Premium rates active: TC $175/hr | PS $135/hr</div>' : '';
+    '<div class="alert a-warn" style="margin-top:6px;">Premium rates active: TC $200/hr | PS $140/hr</div>' : '';
 
   // Warn if property value not set
   var propValWarnEl = document.getElementById('propval-warn');
