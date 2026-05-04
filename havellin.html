@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 12:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 2:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -264,6 +264,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="downsizing_move">Downsizing &amp; Move Management</option>
         <option value="cleanout">Estate Settlement</option>
         <option value="probate">Probate Estate Settlement</option>
+        <option value="contested_probate">Contested Probate Estate Settlement</option>
       </select>
       <div class="divider" style="margin:14px 0 10px;"></div>
       <div id="i-client-hdr" class="sec" style="margin-bottom:6px;">Client Information</div>
@@ -523,6 +524,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div id="e-years-in-home-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake — longer occupancy = higher volume/complexity</div>
         <div id="probate-inv-badge" style="margin-top:4px;"></div>
+        <div id="timeline-press-badge" style="margin-top:4px;"></div>
       </div>
       <div>
         <div class="sec">Property Specialists</div>
@@ -636,6 +638,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
                 <option value="ebay">Ebay Store</option>
                 <option value="replacements">Replacements.com</option>
                 <option value="dealer">Specialized Dealer</option>
+                <option value="firearms">Firearms — Non-NFA</option>
+                <option value="firearms_nfa">Firearms — NFA / Title II</option>
                 <option value="other">Other</option>
               </select></td>
               <td><button class="icon-btn" onclick="addCollection()">+ Add</button></td>
@@ -759,6 +763,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
+        <div id="fixed-price-panel" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
+          <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Fixed-Price Project Fee Option</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <div style="font-size:12px;color:var(--gray-dk);" id="fixed-price-label">Hourly estimate + contingency buffer</div>
+            <div style="font-size:20px;font-family:Cormorant Garamond,serif;font-weight:600;color:var(--bronze);" id="fixed-price-val">$0</div>
+          </div>
+          <div style="font-size:10px;color:var(--gray);margin-top:2px;" id="fixed-price-note"></div>
+        </div>
+        <div id="blended-rate-badge" style="margin-top:6px;"></div>
+        <div id="hours-warning-badge" style="margin-top:4px;"></div>
         <div class="divider"></div>
         <div class="sec">Internal Margin Analysis <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(not on client document)</span></div>
         <div id="margin-panel"><div style="font-size:11px;color:var(--gray);">Score rooms to see margin analysis.</div></div>
@@ -828,6 +842,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="fb" onclick="setFilter('downsizing',this)">Downsizing</button>
         <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
         <button class="fb" onclick="setFilter('probate',this)">Probate</button>
+        <button class="fb" onclick="setFilter('contested_probate',this)">Contested Probate</button>
         <button class="fb" onclick="setFilter('re',this)">RE Potential</button>
         <button class="fb" onclick="setFilter('unassigned',this)">Unassigned TC</button>
       </div>
@@ -1470,6 +1485,13 @@ var PRICING_REF = {
     {l:'Trophy estate (6,000–10,000 sqft)',min:30000,max:65000,days:'14–28 days'},
     {l:'Ultra estate (10,000+ sqft / $30M+)',min:55000,max:150000,days:'24–50 days'}
   ]},
+  contested_probate:{label:'Contested Probate',sizes:[
+    {l:'Condo / apartment (<2,000 sqft)',min:10000,max:18000,days:'5–9 days'},
+    {l:'Home (2,000–4,000 sqft)',min:17000,max:32000,days:'8–15 days'},
+    {l:'Estate (4,000–6,000 sqft)',min:26000,max:50000,days:'12–24 days'},
+    {l:'Trophy estate (6,000–10,000 sqft)',min:43000,max:95000,days:'18–40 days'},
+    {l:'Ultra estate (10,000+ sqft / $30M+)',min:80000,max:220000,days:'30–70 days'}
+  ]},
   estate:{label:'Probate',sizes:[
     {l:'Condo / apartment (<2,000 sqft)',min:7000,max:13000,days:'4–7 days'},
     {l:'Home (2,000–4,000 sqft)',min:12000,max:22000,days:'6–11 days'},
@@ -1605,7 +1627,8 @@ var SVC_MULTS = {
   downsizing:      {tc: 1.0,  ps: 1.0},
   downsizing_move: {tc: 1.0,  ps: 1.0},  // dest TC hours added separately
   cleanout:        {tc: 1.0,  ps: 1.0},
-  probate:         {tc: 1.5,  ps: 1.0},  // TC ×1.5 for legal/documentation
+  probate:           {tc: 1.5,  ps: 1.0},  // TC ×1.5 for legal/documentation
+  contested_probate: {tc: 1.8,  ps: 1.1},  // TC ×1.8 + PS ×1.1 — multiple attorneys, heirs, chain-of-custody
   prep:            {tc: 1.1,  ps: 1.2}
 };
 
@@ -1654,8 +1677,10 @@ var COLLECTION_HOURS = {
   consign:      {tc:1,   ps:3},  // TC: identify shop, coordinate intake. PS: pack, transport, handle shop intake
   ebay:         {tc:0.5, ps:2},  // TC: confirm drop-off only. PS: box items, transport to store
   replacements: {tc:1,   ps:3},  // TC: submit inquiry, confirm acceptance list. PS: careful pack + ship
-  dealer:       {tc:2,   ps:1},  // TC: research dealer, schedule visit, be present. PS: organize/stage
-  other:        {tc:1,   ps:1}   // Generic fallback
+  dealer:        {tc:2,   ps:1},    // TC: research dealer, schedule visit, be present. PS: organize/stage
+  firearms:      {tc:3,   ps:0.5}, // TC: locate FFL/dealer, coordinate legal transfer. PS: locate, organize for inspection
+  firearms_nfa:  {tc:5,   ps:0.5}, // TC: NFA specialist, Form 4/5 coordination, compliance. PS: locate, organize
+  other:         {tc:1,   ps:1}    // Generic fallback
 };
 function collectionsHours() {
   var tc = 0, ps = 0;
@@ -1686,6 +1711,29 @@ function propValMultiplier(propVal) {
   if (propVal < 35000000)   return 1.50;  // $20M–$35M
   if (propVal < 75000000)   return 1.65;  // $35M–$75M
   return 1.85;  // $75M+ — ultra estate tier
+}
+
+// ─── TIMELINE PRESSURE MULTIPLIER ────────────────────────────────────────────
+// Applies to TC hours only — tighter deadlines require more intensive coordination.
+function timelinePressureMultiplier(startDateStr, targetDateStr) {
+  if (!startDateStr || !targetDateStr) return {mult: 1.0, days: null};
+  var start  = new Date(startDateStr  + 'T12:00:00');
+  var target = new Date(targetDateStr + 'T12:00:00');
+  var days = Math.round((target - start) / 86400000);
+  if (days < 1) return {mult: 1.0, days: days};
+  if (days < 30) return {mult: 1.50, days: days, warn: true};
+  if (days < 45) return {mult: 1.32, days: days};
+  if (days < 60) return {mult: 1.20, days: days};
+  if (days < 90) return {mult: 1.12, days: days};
+  return {mult: 1.00, days: days};
+}
+
+// ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
+// Contingency buffer added on top of hourly estimate for fixed-price proposals.
+function fixedPriceBuffer(svcKey) {
+  if (svcKey === 'contested_probate') return 0.35;
+  if (svcKey === 'probate')           return 0.25;
+  return 0.20;
 }
 
 // ─── PROBATE INVENTORY MULTIPLIER ────────────────────────────────────────────
@@ -1857,7 +1905,8 @@ function calcAll() {
   var svcBadgeEl = document.getElementById('svc-mult-badge');
   if (svcBadgeEl) {
     var svcBadgeTxt = '';
-    if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate service: TC hours ×1.5 (legal documentation &amp; compliance)</div>';
+    if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate service: TC ×1.5 (legal documentation &amp; compliance)</div>';
+    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: TC ×1.8, PS ×1.1 — multiple attorneys/heirs, full chain-of-custody</div>';
     else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: destination TC hours added (' + destTC + ' hrs)</div>';
     else if (svcKey === 'prep') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Prep for Sale: TC ×1.1, PS ×1.2</div>';
     if (svcKey === 'downsizing' || svcKey === 'downsizing_move') {
@@ -1890,7 +1939,7 @@ function calcAll() {
 
   // Probate inventory multiplier — TC only, fires when service type is probate
   var probateInvBadgeEl = document.getElementById('probate-inv-badge');
-  if (svcKey === 'probate') {
+  if (svcKey === 'probate' || svcKey === 'contested_probate') {
     var yih = loadedJob && loadedJob.yearsInHome ? parseFloat(loadedJob.yearsInHome) : 0;
     var avgRoomScoreForInv = includedRoomCount > 0 ? (totalVol / includedRoomCount) : 0;
     var invResult = probateInventoryMultiplier(sqftVal, yih, propVal, prem, avgRoomScoreForInv);
@@ -1911,6 +1960,21 @@ function calcAll() {
     }
   } else {
     if (probateInvBadgeEl) probateInvBadgeEl.innerHTML = '';
+  }
+  // Timeline pressure multiplier — TC hours only, based on start→target window
+  var timelinePressBadgeEl = document.getElementById('timeline-press-badge');
+  var tlPressResult = timelinePressureMultiplier(jobStartStr, targetDateVal);
+  if (tlPressResult.mult > 1.0) {
+    baseTCHrs = Math.round(baseTCHrs * tlPressResult.mult * 10) / 10;
+    adjTCheirs = heirs ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;
+    adjTC = Math.round((baseTCHrs * adjTCpct + adjTCheirs) * 10) / 10;
+    totTC = Math.round((baseTCHrs + adjTC) * 10) / 10;
+    days = Math.round(baseTCHrs / 7 * 10) / 10;
+    crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
+    var warnTxt = tlPressResult.warn ? ' ⚠ Under 30 days — recovery value impact likely. Discuss with client.' : '';
+    if (timelinePressBadgeEl) timelinePressBadgeEl.innerHTML = '<div class="alert ' + (tlPressResult.warn ? 'a-err' : 'a-warn') + '" style="margin-top:4px;font-size:11px;">Timeline pressure: TC hours ×' + tlPressResult.mult.toFixed(2) + ' (' + tlPressResult.days + ' calendar days)' + warnTxt + '</div>';
+  } else {
+    if (timelinePressBadgeEl) timelinePressBadgeEl.innerHTML = tlPressResult.days !== null ? '<div class="alert a-ok" style="margin-top:4px;font-size:11px;">Timeline: ' + tlPressResult.days + ' days — no pressure multiplier</div>' : '';
   }
   daysNeeded = Math.ceil(baseTCHrs / 7);
 
@@ -2049,6 +2113,45 @@ function calcAll() {
     var sDiscAmt = document.getElementById('s-discount-amt');
     if (sDiscLbl) sDiscLbl.textContent = 'Preferred Customer Discount (' + discountPct + '%)';
     if (sDiscAmt) sDiscAmt.textContent = '- $' + Math.round(discountAmt).toLocaleString();
+  }
+
+  // Fixed-price project fee
+  var fpPanel = document.getElementById('fixed-price-panel');
+  var fpLabel = document.getElementById('fixed-price-label');
+  var fpVal   = document.getElementById('fixed-price-val');
+  var fpNote  = document.getElementById('fixed-price-note');
+  if (fpPanel && havellinTotalDiscounted > 0) {
+    var buf = fixedPriceBuffer(svcKey);
+    var fpFee = Math.round(havellinTotalDiscounted * (1 + buf));
+    fpPanel.style.display = 'block';
+    if (fpLabel) fpLabel.textContent = 'Havellin services total × ' + Math.round(buf * 100) + '% contingency';
+    if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
+    if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.';
+  } else if (fpPanel) {
+    fpPanel.style.display = 'none';
+  }
+
+  // Blended rate badge
+  var blendedBadgeEl = document.getElementById('blended-rate-badge');
+  if (blendedBadgeEl) {
+    var totalHrs = totTC + totPS;
+    var laborFees = tcFee + psFee - discountAmt;
+    if (totalHrs > 0 && laborFees > 0) {
+      var blendedRate = Math.round(laborFees / totalHrs);
+      var blendedColor = (blendedRate >= 95 && blendedRate <= 150) ? 'a-ok' : (blendedRate > 150 ? 'a-warn' : 'a-err');
+      blendedBadgeEl.innerHTML = '<div class="alert ' + blendedColor + '" style="margin-top:4px;font-size:11px;">Blended rate: $' + blendedRate + '/hr (' + totTC.toFixed(1) + ' TC + ' + totPS.toFixed(1) + ' PS hrs) — market range $95–$150/hr</div>';
+    } else {
+      blendedBadgeEl.innerHTML = '';
+    }
+  }
+
+  // 500+ hours warning
+  var hoursWarnEl = document.getElementById('hours-warning-badge');
+  if (hoursWarnEl) {
+    var totalBillableHrs = totTC + totPS;
+    hoursWarnEl.innerHTML = totalBillableHrs > 500
+      ? '<div class="alert a-err" style="margin-top:4px;font-size:11px;">⚠ ' + totalBillableHrs.toFixed(1) + ' total billable hours — exceeds 500-hour threshold. Consider a custom quote conversation before presenting this estimate.</div>'
+      : '';
   }
 
   updateRefBox(havellinTotalDiscounted);
@@ -2360,8 +2463,8 @@ function updateIntakeDateMins() {
 function toggleProbateFields() { toggleIntakeFields(); }
 function toggleIntakeFields() {
   var svc = document.getElementById('i-svc') ? document.getElementById('i-svc').value : '';
-  var isEstate = (svc === 'cleanout' || svc === 'probate');
-  var isProbate = (svc === 'probate');
+  var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
+  var isProbate = (svc === 'probate' || svc === 'contested_probate');
   // Probate-only fields
   var pf = document.getElementById('probate-fields');
   if (pf) pf.style.display = isProbate ? 'block' : 'none';
@@ -2409,7 +2512,7 @@ function saveIntake() {
   var destBeds = (document.getElementById('i-dest-beds')||{}).value ? document.getElementById('i-dest-beds').value.trim() : '';
   var destBaths= (document.getElementById('i-dest-baths')||{}).value? document.getElementById('i-dest-baths').value.trim(): '';
 
-  var isEstate = (svc === 'cleanout' || svc === 'probate');
+  var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
   var missing = [];
   if (!fname) missing.push('First name');
   if (!lname) missing.push('Last name');
@@ -2435,7 +2538,7 @@ function saveIntake() {
   }
 
   // Additional mandatory fields for probate
-  if (svc === 'probate') {
+  if (svc === 'probate' || svc === 'contested_probate') {
     var probateMissing = [];
     if (!document.getElementById('i-probate-case').value.trim()) probateMissing.push('Probate case number');
     if (!document.getElementById('i-probate-atty-fname').value.trim()) probateMissing.push('Attorney first name');
@@ -3261,6 +3364,7 @@ function renderJobs() {
       case 'downsizing': return j.svc==='downsizing'||j.svc==='downsizing_move';
       case 'cleanout': return j.svc==='cleanout'||j.svc==='estate';
       case 'probate': return j.svc==='probate';
+      case 'contested_probate': return j.svc==='contested_probate';
       case 're': return j.re==='yes';
       case 'unassigned': return !j.tc||j.tc==='';
       default: return true;
@@ -3924,7 +4028,7 @@ function renderClientDashboard(jobId) {
   h += '<div style="flex:1;">';
   h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:3px;">';
   h += '<div style="width:36px;height:36px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--bronze);flex-shrink:0;">'+initials+'</div>';
-  var isEstateDash = (job.svc === 'cleanout' || job.svc === 'probate');
+  var isEstateDash = (job.svc === 'cleanout' || job.svc === 'probate' || job.svc === 'contested_probate');
   h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
   if (isEstateDash && job.executor) h += '<div style="font-size:12px;color:var(--gray);margin-top:1px;">'+job.executor+(job.executorRole?' · '+job.executorRole:'')+'</div>';
   h += '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--bronze);margin-top:1px;">'+( job.hvlId||'—')+'</div>';
@@ -3988,7 +4092,7 @@ function renderClientDashboard(jobId) {
   h += '</div></div>';
 
   // PROBATE CARD (probate only)
-  if (job.svc === 'probate') {
+  if (job.svc === 'probate' || job.svc === 'contested_probate') {
     h += '<div class="card" style="margin-bottom:12px;">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h += sectionHdr('Probate Information');
@@ -4219,7 +4323,7 @@ function activateOrCycle(jobId) {
     var blockers = [];
     if (!j.agrSigned) blockers.push('Service agreement must be signed');
     if (!j.depositReceived) blockers.push('Deposit (50%) must be received');
-    if (j.svc === 'probate' && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
+    if ((j.svc === 'probate' || j.svc === 'contested_probate') && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
     if (blockers.length > 0) {
       alert('Cannot activate job — resolve first:\n\n' + blockers.map(function(b){ return '• ' + b; }).join('\n'));
       return;
@@ -4263,7 +4367,7 @@ function cycleStatus(id) {
     var blockers = [];
     if (!j.agrSigned) blockers.push('Service agreement must be signed');
     if (!j.depositReceived) blockers.push('Deposit (50%) must be received');
-    if (j.svc === 'probate' && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
+    if ((j.svc === 'probate' || j.svc === 'contested_probate') && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
     if (blockers.length > 0) {
       alert('Cannot activate job — the following must be resolved first:\n\n' + blockers.map(function(b){ return '• ' + b; }).join('\n'));
       return;
@@ -6224,7 +6328,7 @@ function renderAgreement() {
   var jobId = currentAgrJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  if (job.svc === 'probate' || job.svc === 'cleanout' || job.svc === 'estate') { renderProbateAgreement(); return; }
+  if (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate') { renderProbateAgreement(); return; }
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
@@ -7027,9 +7131,9 @@ function loadContractors() {
 function showEditClient(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var isProbate = job.svc === 'probate';
-  var isEstate = (job.svc === 'probate' || job.svc === 'cleanout' || job.svc === 'estate');
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var isProbate = (job.svc === 'probate' || job.svc === 'contested_probate');
+  var isEstate = (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate');
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',contested_probate:'Contested Probate Estate Settlement',estate:'Estate Settlement'};
 
   var m = document.getElementById('edit-client-modal');
   if (!m) {
@@ -7170,9 +7274,9 @@ function saveClientEdit(jobId) {
   job.re    = document.getElementById('ec-re').value;
   job.premium = document.getElementById('ec-premium').value === 'yes';
 
-  var isEstateEdit = (svc === 'probate' || svc === 'cleanout' || svc === 'estate');
+  var isEstateEdit = (svc === 'probate' || svc === 'contested_probate' || svc === 'cleanout' || svc === 'estate');
   // Probate-only fields (attorney + case info)
-  if (svc === 'probate') {
+  if (svc === 'probate' || svc === 'contested_probate') {
     var attyFname = (document.getElementById('ec-atty-fname').value||'').trim();
     var attyLname = (document.getElementById('ec-atty-lname').value||'').trim();
     job.probateCase      = document.getElementById('ec-probate-case').value;
@@ -7257,7 +7361,8 @@ var collectionsData = [];
 
 var COL_DISP_LABELS = {
   auction:'Auction House', appraise:'Appraise', consign:'Consign',
-  ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer', other:'Other'
+  ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer',
+  firearms:'Firearms — Non-NFA', firearms_nfa:'Firearms — NFA / Title II', other:'Other'
 };
 
 function addCollection() {
