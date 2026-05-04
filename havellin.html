@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 5:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 6:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5371,8 +5371,8 @@ function renderInvoice() {
   actPS = Math.round(actPS * 10) / 10;
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
-  var tcRate = (est ? est.tcRate : null) || (job.premium ? 175 : 125);
-  var psRate = (est ? est.psRate : null) || (job.premium ? 135 : 100);
+  var tcRate = (est ? est.tcRate : null) || (job.premium ? 200 : 165);
+  var psRate = (est ? est.psRate : null) || (job.premium ? 140 : 115);
   var pkgCost = est ? (est.pkgCost||0) : 0;
   var pkgLabel = est ? (est.pkgLabel||'None') : 'None';
   var smf = est ? (est.smf||0) : 0;
@@ -6059,6 +6059,8 @@ function renderProbateAgreement() {
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   if (!est) { var rec = estimateStore[jobId]; if (rec && rec.estimate) est = rec.estimate; }
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
+  var tcRate = est ? est.tcRate : (job.premium ? 200 : 165);
+  var psRate = est ? est.psRate : (job.premium ? 140 : 115);
   var dep = Math.round(havTotal * 0.50);
   var mid = Math.round(havTotal * 0.25);
   var fin = Math.round(havTotal * 0.25);
@@ -6161,8 +6163,8 @@ function renderProbateAgreement() {
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Role</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Billing Rate</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Description</th></tr></thead><tbody>';
   var feeRows = [
-    ['Transition Concierge (TC)','$150 / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'],
-    ['Property Specialist (PS)','$100 / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
+    ['Transition Concierge (TC)','$'+tcRate+' / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'],
+    ['Property Specialist (PS)','$'+psRate+' / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
     ['Specialty Materials','Cost + 25%','Boxes, packing materials, protective supplies — itemized separately on invoice. Receipts available on request.'],
     ['Vendor Management Fee','15% of vendor invoice','Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
   ];
@@ -6396,8 +6398,8 @@ function renderAgreement() {
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
-  var tcRate    = est ? est.tcRate  : (job.premium ? 175 : 125);
-  var psRate    = est ? est.psRate  : (job.premium ? 135 : 100);
+  var tcRate    = est ? est.tcRate  : (job.premium ? 200 : 165);
+  var psRate    = est ? est.psRate  : (job.premium ? 140 : 115);
 
   // Client fields from intake
   var clientName  = job.name  || '[CLIENT FULL LEGAL NAME]';
