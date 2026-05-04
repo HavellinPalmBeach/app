@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 4:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 5:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2830,7 +2830,13 @@ function saveEstimateAndPreview() {
   saveEstimateState();
   syncJobToSheets(job);
   syncEstimateToSheets(currentEstimate, false, '', '');
-  showFB('e-fb','ok','Estimate saved. Opening Client Estimate for review…');
+  var roomsWithNotes = (currentEstimate.rooms||[]).filter(function(r){ return r.note && r.note.trim(); }).length;
+  var saveMsg = 'Saved: ' + currentEstimate.rooms.length + ' rooms'
+    + (roomsWithNotes > 0 ? ', ' + roomsWithNotes + ' with notes' : '')
+    + ' · ' + currentEstimate.totTC.toFixed(1) + ' TC hrs · ' + currentEstimate.totPS.toFixed(1) + ' PS hrs'
+    + ' · $' + currentEstimate.havellinTotal.toLocaleString()
+    + ' · Uploading to cloud…';
+  showFB('e-fb','ok', saveMsg);
   // Capture estimate snapshot now — clearEstimateTab() nulls currentEstimate at t+1200ms
   // so Drive uploads must use a local reference, not currentEstimate.
   var _estSnapshotForDrive = currentEstimate;
