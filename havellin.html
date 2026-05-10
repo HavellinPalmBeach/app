@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.04 · 5:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.10 · 12:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1765,8 +1765,8 @@ function sqftMultiplier(sqft) {
 
 function calcAll() {
   var prem = document.getElementById('e-prem').checked;
-  var tcRate = prem ? 200 : 165;
-  var psRate = prem ? 140 : 115;
+  var tcRate = prem ? 185 : 150;
+  var psRate = prem ? 125 : 100;
   var crewSize = 2; // default
   var scheduledPS = getScheduledPSCount();
   if (scheduledPS > 0) crewSize = scheduledPS;
