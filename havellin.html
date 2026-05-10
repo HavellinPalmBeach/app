@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.10 · 12:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.10 · 12:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1779,7 +1779,7 @@ function calcAll() {
   document.getElementById('tc-rate-pill').textContent = '$' + tcRate;
   document.getElementById('ps-rate-pill').textContent = '$' + psRate;
   document.getElementById('prem-badge').innerHTML = prem ?
-    '<div class="alert a-warn" style="margin-top:6px;">Premium rates active: TC $200/hr | PS $140/hr</div>' : '';
+    '<div class="alert a-warn" style="margin-top:6px;">Premium rates active: TC $185/hr | PS $125/hr</div>' : '';
 
   // Warn if property value not set
   var propValWarnEl = document.getElementById('propval-warn');
@@ -5371,8 +5371,8 @@ function renderInvoice() {
   actPS = Math.round(actPS * 10) / 10;
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
-  var tcRate = (est ? est.tcRate : null) || (job.premium ? 175 : 125);
-  var psRate = (est ? est.psRate : null) || (job.premium ? 135 : 100);
+  var tcRate = (est ? est.tcRate : null) || (job.premium ? 185 : 150);
+  var psRate = (est ? est.psRate : null) || (job.premium ? 125 : 100);
   var pkgCost = est ? (est.pkgCost||0) : 0;
   var pkgLabel = est ? (est.pkgLabel||'None') : 'None';
   var smf = est ? (est.smf||0) : 0;
@@ -6396,8 +6396,8 @@ function renderAgreement() {
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
-  var tcRate    = est ? est.tcRate  : (job.premium ? 175 : 125);
-  var psRate    = est ? est.psRate  : (job.premium ? 135 : 100);
+  var tcRate    = est ? est.tcRate  : (job.premium ? 185 : 150);
+  var psRate    = est ? est.psRate  : (job.premium ? 125 : 100);
 
   // Client fields from intake
   var clientName  = job.name  || '[CLIENT FULL LEGAL NAME]';
@@ -6508,7 +6508,7 @@ function renderAgreement() {
     '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Midpoint Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+mid+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon Contractor\'s determination that approximately 50% of scope is complete</td></tr>' +
     '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon substantial completion, prior to final property walk-through</td></tr>' +
     '</tbody></table></div>'+
-    p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'. Rates may vary for complex or premium estates and will be identified in the Estimate.')+
+    p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.')+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
     p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement and Senior Downsizing engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
     p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
