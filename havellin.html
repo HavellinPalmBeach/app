@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.10 · 12:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.13 · 2:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6872,9 +6872,9 @@ function saveNotesModal() {
 // ─── PS SLOT HELPERS ─────────────────────────────────────────────────────────
 var PS_RATES = {
   'none': 0,
-  'contractor_standard': 25,
-  'contractor_senior': 30,
-  'aj': 75
+  'contractor_standard': 30,
+  'contractor_senior': 35,
+  'aj': 60
 };
 var PS_LABELS = {
   'none': 'Not scheduled',
@@ -6885,13 +6885,13 @@ var PS_LABELS = {
 
 function getPSCostRate(name) {
   // Handle placeholder keys
-  if (name === 'contractor_standard') return 25;
-  if (name === 'contractor_senior') return 30;
+  if (name === 'contractor_standard') return 30;
+  if (name === 'contractor_senior') return 35;
   // Look up actual rate from contractor directory by name
   var allPS = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS'; })
     .concat(contractors.filter(function(c){ return c.role==='PS'; }));
   var match = allPS.find(function(c){ return c.name === name; });
-  return match ? (match.rate || 25) : 25;
+  return match ? (match.rate || 30) : 30;
 }
 
 function getPSSlots() {
@@ -6913,7 +6913,7 @@ function getScheduledPSCount() {
 
 function getBlendedPSCost() {
   var slots = getPSSlots();
-  if (slots.length === 0) return 25;
+  if (slots.length === 0) return 30;
   var total = slots.reduce(function(s,p){ return s + p.costRate; }, 0);
   return Math.round((total / slots.length) * 10) / 10;
 }
@@ -6931,7 +6931,7 @@ var contractors = [];
 var DEFAULT_CONTRACTORS = [
   {id:'default-1', name:'Anthony Graziano Sr', role:'TC', phone:'(561) 370-4700', email:'anthony@havellinpalmbeach.com', rate:100, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
   {id:'default-2', name:'Ashley Jerome', role:'TC', phone:'', email:'ashley@havellinpalmbeach.com', rate:100, status:'active', notes:'Partner, Client Relations', bio:'Ashley Jerome has spent 25 years as a trusted presence in the Palm Beach community — as a Pilates instructor at Squeeze in Royal Poinciana Plaza and as a parent at Palm Beach Day Academy. A licensed Douglas Elliman agent, Ashley brings warmth, discretion, and an intimate knowledge of Palm Beach families to every client relationship she manages.'},
-  {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:75, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
+  {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:60, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
 ];
 
 function showAddContractor() {
