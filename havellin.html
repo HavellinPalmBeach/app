@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 6:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 8:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -246,6 +246,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
   <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
   <button class="nb" onclick="showPanel('job-log',this)">Job Log</button>
+  <button class="nb" onclick="showPanel('job-plan',this)">Job Plan</button>
   <button class="nb" onclick="showPanel('invoice',this)">Final Invoice</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
 </div>
@@ -942,6 +943,25 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div style="font-size:11px;color:var(--gray);margin-bottom:12px;">Voice notes from the walkthrough are shown per room as reference. Add photos and video to document existing conditions, asset locations, and work progress.</div>
       <div id="job-media-rooms"></div>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ JOB PLAN ══════════════════════════════ -->
+<div class="panel" id="panel-job-plan">
+  <div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;">Job Plan</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Live working plan auto-generated from the approved estimate. Internal use only.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="plan-job" onchange="loadJobPlanTab()" style="width:260px;"><option value="">Select job</option></select>
+        <button class="btn-bronze" id="btn-plan-pdf" onclick="printJobPlan()" style="display:none;">Print Job Plan</button>
+      </div>
+    </div>
+  </div>
+  <div id="job-plan-content">
+    <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job to load its plan.</div>
   </div>
 </div>
 
@@ -4473,6 +4493,7 @@ function showPanel(id, btn) {
     }
   }
   if (id==='contractors') { renderContractors(); }
+  if (id==='job-plan') { populateLogAndInvSelects(); }
   if (id==='invoice') { populateLogAndInvSelects(); }
   if (id==='agreement') { populateAgrSelect(); }
 }
@@ -5807,6 +5828,322 @@ function setRoomStatus(jobId, roomIdx, status) {
   renderProjection(jobId);
 }
 
+// ─── JOB PLAN TAB ────────────────────────────────────────────────────────────
+
+function loadJobPlanTab() {
+  var jobId = parseInt(document.getElementById('plan-job').value);
+  var content = document.getElementById('job-plan-content');
+  var printBtn = document.getElementById('btn-plan-pdf');
+  var empty = function(msg) {
+    content.innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">' + msg + '</div>';
+    if (printBtn) printBtn.style.display = 'none';
+  };
+  if (!jobId) { empty('Select a job to load its plan.'); return; }
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) { empty('Job not found.'); return; }
+  var estRec = estimateStore[jobId];
+  if (!estRec || !estRec.approved) { empty('Job Plan generates once the estimate is approved and locked.'); return; }
+  var est = estRec.estimate;
+  var svc = est.svc || job.svc || '';
+  if (svc !== 'downsizing' && svc !== 'downsizing_move') {
+    var msg = (svc === 'probate' || svc === 'contested_probate' || svc === 'estate')
+      ? 'Job Plan for this service type is not yet available — use the estate/probate workflow.'
+      : 'Job Plan is not yet available for this service type.';
+    empty(msg); return;
+  }
+  if (printBtn) printBtn.style.display = 'inline-block';
+  content.innerHTML = renderJobPlan(jobId, job, est);
+}
+
+function planChk(jobId, key, label) {
+  var done = !!((getJobPlan(jobId).tasks || {})[key]);
+  return '<label style="display:flex;align-items:flex-start;gap:8px;padding:3px 0;font-size:12px;cursor:pointer;' +
+    'color:' + (done ? 'var(--gray)' : 'var(--gray-dk)') + ';text-decoration:' + (done ? 'line-through' : 'none') + ';">' +
+    '<input type="checkbox"' + (done ? ' checked' : '') +
+    ' style="margin-top:2px;width:13px;height:13px;flex-shrink:0;accent-color:var(--gray-dk);"' +
+    ' onchange="togglePlanTask(' + jobId + ',\'' + key + '\',this.checked,this)"> ' + label + '</label>';
+}
+
+function planSubsec(title) {
+  return '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;' +
+    'color:var(--gray);margin:12px 0 4px;">' + title + '</div>';
+}
+
+function planPhaseWrap(id, title, body) {
+  return '<div style="margin-bottom:12px;">' +
+    '<div onclick="togglePhase(\'' + id + '\')" style="display:flex;justify-content:space-between;' +
+    'align-items:center;cursor:pointer;padding:10px 14px;background:var(--gray-dk);color:var(--cream);' +
+    'border-radius:5px 5px 0 0;">' +
+    '<span style="font-weight:700;font-size:13px;">' + title + '</span>' +
+    '<span id="phase-chev-' + id + '">▼</span></div>' +
+    '<div id="phase-body-' + id + '" style="padding:12px 14px 14px;border:1px solid var(--border);' +
+    'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div>';
+}
+
+function planRoomStatusBtns(jobId, roomIdx, status) {
+  var ST  = ['pending','sorting','locked','packed','complete'];
+  var CLR = {pending:'#aaa',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
+  return '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:5px 0;">' +
+    ST.map(function(s) {
+      var a = s === status;
+      return '<button onclick="setPlanRoomStatus(' + jobId + ',' + roomIdx + ',\'' + s + '\')"' +
+        ' style="padding:3px 9px;font-size:10px;font-weight:' + (a ? 700 : 400) + ';border-radius:3px;cursor:pointer;font-family:inherit;' +
+        'background:' + (a ? CLR[s] : 'var(--cream)') + ';color:' + (a ? '#fff' : 'var(--gray)') + ';' +
+        'border:1px solid ' + (a ? CLR[s] : 'var(--border-md)') + ';">' + s + '</button>';
+    }).join('') + '</div>';
+}
+
+function renderDailyCloseBlock(jobId, phase) {
+  var today = new Date().toISOString().split('T')[0];
+  var key = 'dc_p' + phase + '_' + today;
+  var snap = computeProjection(jobId);
+  var projHtml = snap
+    ? projBandHtml(snap.tcBand,'TC',snap.projTC,snap.triggerTC,snap.estTC,snap.tcPct) +
+      projBandHtml(snap.psBand,'PS',snap.projPS,snap.triggerPS,snap.estPS,snap.psPct)
+    : '<div style="font-size:12px;color:var(--gray);">No estimate data — log hours first.</div>';
+  return '<div style="background:var(--tan);border-radius:5px;padding:10px 12px;margin-top:14px;">' +
+    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-dk);margin-bottom:8px;">Daily Close</div>' +
+    projHtml +
+    '<div style="font-size:11px;color:var(--gray);margin:6px 0 4px;">Log hours in the Job Log before computing. Over the line? Stop — Change Order before the next room.</div>' +
+    planChk(jobId, key, 'Daily projection checked and signed off — ' + today) + '</div>';
+}
+
+function renderJobPlan(jobId, job, est) {
+  var plan   = getJobPlan(jobId);
+  var isMM   = est.svc === 'downsizing_move';
+  var vendors     = est.vendors     || [];
+  var collections = est.collections || [];
+  var prem   = !!est.prem;
+  var hasCOC = prem || collections.length > 0;
+  var psNames = (est.psSlots && est.psSlots.length)
+    ? est.psSlots.map(function(s){
+        return (s.label && !s.label.startsWith('contractor_')) ? s.label
+               : (s.label === 'contractor_senior' ? 'Senior PS' : 'PS Specialist');
+      }).join(', ')
+    : ((est.psCount || est.nps || 2) + ' specialists');
+  var rooms = (est.rooms || []).slice().sort(function(a,b){
+    return (b.cplx||0)-(a.cplx||0) || (b.vol||0)-(a.vol||0);
+  });
+  var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
+
+  function chks(prefix, list) {
+    return list.map(function(t,i){ return planChk(jobId, prefix+i, t); }).join('');
+  }
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  var hdr = '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:12px;">' +
+    '<div><span style="color:var(--gray);">Client</span><br><strong>' + (job.name||'—') + '</strong></div>' +
+    '<div><span style="color:var(--gray);">Service</span><br><strong>' + (job.svcLabel||est.svc||'—') + '</strong></div>' +
+    '<div><span style="color:var(--gray);">Property</span><br><strong>' +
+      ([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—') + '</strong></div>' +
+    '<div><span style="color:var(--gray);">TC</span><br><strong>' + (job.tc||'—') + '</strong></div>' +
+    '<div><span style="color:var(--gray);">PS Crew</span><br><strong>' + psNames + '</strong></div>' +
+    '<div><span style="color:var(--gray);">Target Start</span><br><strong>' + fmtDate2(job.start) + '</strong></div>' +
+    '<div><span style="color:var(--gray);">Target Completion</span><br><strong>' + fmtDate2(est.targetDate) + '</strong></div>' +
+    (isMM && job.destAddr ? '<div><span style="color:var(--gray);">New Home</span><br><strong>' +
+      [job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') +
+      (job.destSqft ? ' · '+job.destSqft+' sqft':'') + '</strong></div>' : '') +
+    '</div>' +
+    (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">⚠ Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
+    (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">⚠ Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
+    (prem       ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">⚠ Chain of custody is mandatory on this job.</div>' : '') +
+    '</div>';
+
+  // ── Phase 0 ──────────────────────────────────────────────────────────────────
+  var p0 = planSubsec('Pre-Job Client Call') +
+    planChk(jobId,'p0_call','Pre-job call placed 3–5 days before Day 1 (warm reconnection; daily rhythm set; decision authority asked directly and documented; four categories previewed; honest emotional frame; logistics confirmed)') +
+    planSubsec('Agreements & Admin') +
+    chks('p0_admin_',['Signed engagement agreement confirmed on file',
+      '50% deposit received and confirmed before any crew is scheduled',
+      'Google Drive job folder created and shared with crew',
+      'All authorized decision-makers identified, with contact info',
+      'Preferred client communication method confirmed',
+      'NDA on file for every crew member and any contractor with property access']) +
+    planSubsec('Vendor Scheduling') +
+    chks('p0_vs_',['Each estimate vendor contacted; date and arrival window confirmed',
+      'Donation organization pickup window confirmed; staging location identified',
+      'Junk/haul removal tentatively scheduled for end of job',
+      'Auction house or appraiser in-home visit scheduled — only if collections flagged']) +
+    vendors.map(function(v,i){ return planChk(jobId,'p0_vx_'+i,(v.type||'Vendor')+' — confirm date and arrival window'); }).join('') +
+    planSubsec('Crew & Materials') +
+    chks('p0_crew_',['Moving materials package confirmed and on-site for Day 1 morning',
+      'PS crew confirmed by name and briefed on address, time, parking, access, building rules',
+      'Standing job flags read aloud to the crew']) +
+    planSubsec('Property Access') +
+    chks('p0_access_',['Keys/access codes obtained and tested','Elevator reserved where applicable',
+      'Parking confirmed for crew vehicles'+(isMM?' (and moving truck for Move Management)':'')]) +
+    (isMM ? planSubsec('New Home Prep') +
+      chks('p0_nh_',['New home floor plan obtained or sketched to scale',
+        'New home measured; furniture placement plan drafted against keep list',
+        'Furniture placement plan reviewed with and approved by client before move day',
+        'Moving company confirmed: date, window, crew size, contact',
+        'HOA/building move-out rules confirmed at origin; move-in rules at destination']) : '');
+
+  // ── Phase 1 ──────────────────────────────────────────────────────────────────
+  var p1rooms = rooms.map(function(r) {
+    var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
+    return '<div id="plan-room-block-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
+      '<div><strong style="font-size:12px;">'+r.name+'</strong>' +
+      '<span style="font-size:10px;color:var(--gray);margin-left:8px;">Vol '+r.vol+' · Cplx '+r.cplx+' · '+r.tcH.toFixed(1)+' TC / '+r.psH.toFixed(1)+' PS hrs</span></div>' +
+      '<span style="font-size:11px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';">'+status.toUpperCase()+'</span></div>' +
+      '<div id="plan-room-status-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status)+'</div>' +
+      (r.note ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin:4px 0 6px;">Note: '+r.note+'</div>' : '') +
+      chks('p1_r'+r.idx+'_',['Room sort complete: every item routed to keep/sell/donate/dispose',
+        'Keep items tagged by destination room'+(isMM?' (measured vs floor plan)':''),
+        'Sell items inventoried, photographed, staged — chain of custody opened',
+        'Donate items staged at designated point',
+        'Dispose items staged; photographed where condition could be questioned',
+        'Maybe box revisited once and emptied before leaving the room',
+        'Special-items flag addressed: high-value items set aside for TC review',
+        'Room photographed before and after; room notes updated',
+        'Room marked DECISION-LOCKED (set room status to locked above)']) +
+      '</div>';
+  }).join('');
+
+  var p1colls = collections.length > 0
+    ? planSubsec('Collections') +
+      collections.map(function(c,ci){
+        return '<div style="border-left:3px solid var(--bronze);padding:6px 10px;margin-bottom:8px;background:var(--tan);border-radius:0 4px 4px 0;">' +
+          '<div style="font-size:12px;font-weight:600;">'+c.name+'</div>' +
+          '<div style="font-size:11px;color:var(--gray);">Owner value: '+(c.value||'—')+' · Disposition: '+(c.dispLabel||c.disp||'—')+'</div>' +
+          chks('p1_col_'+c.id+'_',['Appropriate vendor contacted and briefed',
+            'In-home assessment or pickup scheduled',
+            'Collection inventoried and photographed before vendor handling',
+            'Disposition confirmed with client in writing']) + '</div>';
+      }).join('') : '';
+
+  var p1 = planSubsec('Daily Opening (each day)') +
+    chks('p1_open_',['Crew on-site and briefed on today\'s room sequence',
+      'Client or named decision-maker present or confirmed reachable',
+      'Sort supplies staged (keep/sell/donate/dispose tags); one Maybe box per planned room',
+      'Today\'s time-box targets stated to the client']) +
+    planSubsec('Rooms — Sort & Lock (ordered by complexity)') + p1rooms +
+    (hasCOC ? planSubsec('Chain of Custody'+(prem?' — Mandatory (Premium Estate)':'')) +
+      chks('p1_coc_',['Photograph high-value item in place before it moves',
+        'Logged: description, client\'s stated value, condition, photo reference',
+        'Client acknowledgment of the room\'s inventory before items leave it',
+        'Vendor handoff documented; TC physically present for valuables pickup']) : '') +
+    p1colls + renderDailyCloseBlock(jobId,1);
+
+  // ── Phase 2 ──────────────────────────────────────────────────────────────────
+  var p2 = planSubsec('Daily Opening') +
+    chks('p2_open_',['Crew briefed on today\'s pack priority (which decision-locked rooms, which categories)',
+      'Materials inventory checked; resupply ordered before running out',
+      'Any decisions pending from Phase 1 resolved before that room is packed']) +
+    planSubsec('Packing by Category') +
+    chks('p2_pack_',['Fragile (china/glass/crystal): wrapped, boxed, labeled by destination room',
+      'Art and mirrors: wrapped, edge-protected, staged upright',
+      'Jewelry and high-value smalls: TC personally oversees; documented and photographed',
+      'Clothing: packed per keep list or routed to donation',
+      'Books and media: packed or donated; boxes to liftable weight',
+      'Kitchen: packed to the keep list',
+      'Furniture: tagged keep/sell/donate/dispose; keep items measured vs floor plan'+(isMM?'':' where applicable'),
+      'Garage and outdoor: sorted and staged']) +
+    planSubsec('Vendor Coordination') +
+    chks('p2_vend_',['Each scheduled vendor confirmed day before arrival; items staged and accessible',
+      'Auction/consignment pickups: items inventoried and chain-of-custody documented',
+      'Donation pickup: items staged near access point; receipt captured']) +
+    vendors.map(function(v,i){ return planChk(jobId,'p2_vx_'+i,(v.type||'Vendor')+' — confirm day before; stage items and ensure access'); }).join('') +
+    renderDailyCloseBlock(jobId,2);
+
+  // ── Phase 3 (MM only) ─────────────────────────────────────────────────────────
+  var p3 = isMM ? planPhaseWrap('p3','Phase 3 — Move Day',
+    planSubsec('Pre-Move') +
+    chks('p3_pre_',['Moving company arrival confirmed; ETA logged','TC on-site before movers arrive',
+      'Walkthrough with moving crew lead: loading sequence set, fragile/high-value identified',
+      'Elevator reserved and parking secured for the truck at origin']) +
+    planSubsec('Origin — Loading') +
+    chks('p3_orig_',['Fragile/high-value: TC directly oversees loading, does not leave the area',
+      'Furniture loaded by sequence (largest/heaviest first)','Packed boxes loaded',
+      'Every room walked by the TC before truck departs (attic, garage, closets, outdoor)',
+      'Origin final walkthrough complete and photographed']) +
+    planSubsec('Destination — Unload & Settle-In') +
+    chks('p3_dest_',['TC at new home ahead of the truck where possible',
+      'Movers directed strictly per the approved floor plan',
+      'Fragile items: TC oversees unloading','Furniture placed per plan',
+      'Essential areas unpacked first: bedroom, bathroom, kitchen',
+      'Electronics set up if in scope',
+      'Client walkthrough of new home; approval confirmed and noted',
+      'Moving company final sign-off; any damage photographed and reported same day'])) : '';
+
+  // ── Phase 4 ──────────────────────────────────────────────────────────────────
+  var p4prep = (est.prepEnabled && est.prepItems && est.prepItems.length)
+    ? planSubsec('Home Prep') +
+      chks('p4_prep_',['Each prep vendor scheduled and confirmed',
+        'Each prep item completed with TC sign-off','Final cleaning complete',
+        'Property photographed in final condition, inside and out']) +
+      est.prepItems.map(function(p,i){ return planChk(jobId,'p4_prepi_'+i,(p.type||'Prep item')+' — scheduled, completed, and signed off'); }).join('')
+    : '';
+  var p4re = (job.re === 'yes')
+    ? planSubsec('Real Estate Handoff') +
+      chks('p4_re_',['Property confirmed showing-ready with TC sign-off',
+        'Real estate relationship disclosed in writing; client consents to introduction',
+        'Warm introduction to Team Ashley &amp; Anthony made']) : '';
+
+  var p4 = p4prep +
+    planSubsec('Financial Close') +
+    chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
+      'All vendor invoices collected and filed in the job folder',
+      'Materials costs totaled and itemized (cost + 25% materials handling)',
+      'All Change Orders finalized and signed',
+      'Final invoice generated from job log; reviewed; sent to client']) +
+    p4re +
+    planSubsec('Job Complete') +
+    chks('p4_done_',['Client satisfaction confirmed by phone (a call, not a text)',
+      'Google review requested only after satisfaction confirmed','Referral ask made',
+      'Job folder complete and archived in Drive; 7-year retention applies',
+      'Move documented for NASMM SMM-C tracking']);
+
+  return hdr +
+    planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
+    planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
+    planPhaseWrap('p2','Phase 2 — Pack & Prepare', p2) +
+    p3 +
+    planPhaseWrap('p4','Phase 4 — Close-Out', p4);
+}
+
+function togglePhase(id) {
+  var body = document.getElementById('phase-body-' + id);
+  var chev = document.getElementById('phase-chev-' + id);
+  if (!body) return;
+  var collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  if (chev) chev.textContent = collapsed ? '▼' : '▶';
+}
+
+function togglePlanTask(jobId, key, checked, el) {
+  var plan = getJobPlan(jobId);
+  if (!plan.tasks) plan.tasks = {};
+  plan.tasks[key] = checked;
+  saveJobPlan(jobId);
+  var label = el ? el.parentElement : null;
+  while (label && label.tagName !== 'LABEL') label = label.parentElement;
+  if (label) { label.style.color = checked ? 'var(--gray)' : 'var(--gray-dk)'; label.style.textDecoration = checked ? 'line-through' : 'none'; }
+}
+
+function setPlanRoomStatus(jobId, roomIdx, status) {
+  setRoomStatus(jobId, roomIdx, status);
+  var wrap = document.getElementById('plan-room-status-' + roomIdx);
+  if (wrap) wrap.innerHTML = planRoomStatusBtns(jobId, roomIdx, status);
+  var badge = document.querySelector('#plan-room-block-' + roomIdx + ' span[style*="font-weight:700"]');
+  var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
+  if (badge) { badge.textContent = status.toUpperCase(); badge.style.color = CLR[status]||'var(--gray)'; }
+}
+
+function printJobPlan() {
+  var pt = document.getElementById('print-target');
+  var content = document.getElementById('job-plan-content');
+  if (!pt || !content) return;
+  pt.innerHTML = '<div style="padding:20px;font-family:Raleway,sans-serif;">' +
+    '<h2 style="font-family:\'Cormorant Garamond\',serif;color:#3c3228;margin-bottom:4px;">Havellin Palm Beach — Job Plan</h2>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:16px;">Internal working document · ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>' +
+    content.innerHTML + '</div>';
+  window.print();
+  pt.innerHTML = '';
+}
+
 function syncLogToSheets(jobId, entry) {
   if (!SHEETS_SYNC_URL) return;
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -6152,18 +6489,22 @@ function createDriveJobFolder(job) {
 
 // ─── POPULATE SELECTS FOR NEW PANELS ─────────────────────────────────────────
 function populateLogAndInvSelects() {
-  var selLog = document.getElementById('log-job');
-  var selInv = document.getElementById('inv-job');
-  var curLog = selLog.value, curInv = selInv.value;
-  selLog.innerHTML = '<option value="">Select job</option>';
-  selInv.innerHTML = '<option value="">Select job</option>';
+  var selLog  = document.getElementById('log-job');
+  var selInv  = document.getElementById('inv-job');
+  var selPlan = document.getElementById('plan-job');
+  var curLog = selLog.value, curInv = selInv.value, curPlan = selPlan ? selPlan.value : '';
+  selLog.innerHTML  = '<option value="">Select job</option>';
+  selInv.innerHTML  = '<option value="">Select job</option>';
+  if (selPlan) selPlan.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
     var opt = '<option value="'+j.id+'">'+j.name+' — '+j.svcLabel+'</option>';
-    selLog.innerHTML += opt;
-    selInv.innerHTML += opt;
+    selLog.innerHTML  += opt;
+    selInv.innerHTML  += opt;
+    if (selPlan) selPlan.innerHTML += opt;
   });
-  if (curLog) selLog.value = curLog;
-  if (curInv) selInv.value = curInv;
+  if (curLog)  selLog.value  = curLog;
+  if (curInv)  selInv.value  = curInv;
+  if (selPlan && curPlan) selPlan.value = curPlan;
 }
 
 function populateIntakeTCDropdown() {
