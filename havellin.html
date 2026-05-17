@@ -4553,10 +4553,22 @@ function saveEstimateState() {
   }
 }
 
+// Legacy normalizer: estimates saved before the csH→psH rename store PS hours
+// under the key csH. Copy to psH and remove csH so all readers use psH uniformly.
+function normalizeLegacyRoomKeys(rec) {
+  if (!rec || !rec.estimate || !Array.isArray(rec.estimate.rooms)) return;
+  rec.estimate.rooms.forEach(function(r) {
+    if ('csH' in r && !('psH' in r)) { r.psH = r.csH; delete r.csH; }
+  });
+}
+
 function loadEstimateState() {
   try {
     var s = localStorage.getItem('havellin_est_v4');
-    if (s) estimateStore = JSON.parse(s);
+    if (s) {
+      estimateStore = JSON.parse(s);
+      Object.keys(estimateStore).forEach(function(k) { normalizeLegacyRoomKeys(estimateStore[k]); });
+    }
     // Also migrate any old single estimate
     var old = localStorage.getItem('havellin_est_v3');
     if (old) {
@@ -4581,6 +4593,7 @@ function loadEstimateState() {
             var localHasRooms  = localRec  && localRec.estimate  && (localRec.estimate.rooms||[]).length > 0;
             // Use Sheets version if local is missing or local has no rooms but Sheets does
             if (!localRec || (!localHasRooms && sheetsHasRooms)) {
+              normalizeLegacyRoomKeys(sheetsRec);
               estimateStore[key] = sheetsRec;
               added++;
             }
