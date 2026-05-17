@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 4:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 5:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3204,6 +3204,8 @@ function submitForApproval() {
     showFB('e-fb','warn','No estimate to submit.');
     return;
   }
+  var unscoredRooms = (currentEstimate.rooms||[]).filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
+  if (unscoredRooms.length > 0) { showFB('e-fb','warn','Cannot submit — every included room needs a volume and complexity score (1–5): ' + unscoredRooms.map(function(r){ return r.name; }).join(', ')); return; }
   estimateSubmitted = true;
   saveEstimateState();
   updateApprovalUI();
@@ -3327,6 +3329,8 @@ function closePinModal() {
 function checkPin() {
   var pin = document.getElementById('pin-input').value;
   if (pin === '3010') {
+    var unscoredRooms = (currentEstimate && currentEstimate.rooms||[]).filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
+    if (unscoredRooms.length > 0) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — unscored rooms: ' + unscoredRooms.map(function(r){ return r.name; }).join(', ') + '</div>'; return; }
     estimateApproved = true;
     estimateSubmitted = false;
     discountRevision = false;
