@@ -3555,6 +3555,7 @@ function editEstimateForJob(jobId) {
         var sheetsRec = data.estimates && data.estimates[jobId];
         var sheetsHasRooms = sheetsRec && sheetsRec.estimate && (sheetsRec.estimate.rooms||[]).length > 0;
         if (sheetsHasRooms) {
+          normalizeLegacyRoomKeys(sheetsRec);
           estimateStore[jobId] = sheetsRec;
           try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
           loadEstimateForJob(jobId);
