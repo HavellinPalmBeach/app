@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.10 · 12:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1831,7 +1831,7 @@ function calcAll() {
         psEl.textContent = psH.toFixed(1) + ' PS';
         psEl.className = 'calc on';
         psEl.style.color = 'var(--gray)';
-        includedRooms.push({idx:ri,name:roomName,vol:vol,cplx:cplx,spcl:spcl,mult:r.mult,elapsed:elapsed,tcH:tcH,csH:psH,roomDollar:roomDollar,note:note,section:sec.section});
+        includedRooms.push({idx:ri,name:roomName,vol:vol,cplx:cplx,spcl:spcl,mult:r.mult,elapsed:elapsed,tcH:tcH,psH:psH,roomDollar:roomDollar,note:note,section:sec.section});
       } else {
         ['el-','tc-','ps-'].forEach(function(p){
           var el=document.getElementById(p+id);
@@ -5752,7 +5752,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+r.name+'</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+r.vol+'</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+r.cplx+'</td>'
-        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+r.tcH+' TC / '+r.csH+' PS</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+r.tcH+' TC / '+r.psH+' PS</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+fmt(r.roomDollar)+'</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666;">'+((r.note||'').trim())+'</td></tr>';
     }).join('');
