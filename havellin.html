@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 6:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -921,6 +921,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div class="empty-state">No entries yet for this job.</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- FORWARD PROJECTION — shown when a job with an approved estimate is selected -->
+  <div id="projection-card" style="display:none;margin-top:1rem;">
+    <div class="card">
+      <div class="sec">Forward Variance Projection</div>
+      <div id="projection-room-status"></div>
+      <div id="projection-output" style="margin-top:10px;"></div>
     </div>
   </div>
 
@@ -5141,6 +5150,7 @@ function loadJobLog() {
     document.getElementById('log-entry-card').style.display = 'none';
     document.getElementById('log-summary-card').style.display = 'none';
     document.getElementById('log-history-card').style.display = 'none';
+    document.getElementById('projection-card').style.display = 'none';
     document.getElementById('log-job-info').innerHTML = '';
     var mc = document.getElementById('job-media-card'); if(mc) mc.style.display='none';
     return;
@@ -5150,6 +5160,7 @@ function loadJobLog() {
   document.getElementById('log-entry-card').style.display = 'block';
   document.getElementById('log-summary-card').style.display = 'block';
   document.getElementById('log-history-card').style.display = 'block';
+  document.getElementById('projection-card').style.display = 'block';
 
   // Rebuild team rows with fresh directory data
   buildLogTeamRows();
@@ -5207,6 +5218,7 @@ function loadJobLog() {
 
   updateLogSummary(jobId);
   renderLogHistory(jobId);
+  renderProjection(jobId);
 }
 
 function saveLogEntry() {
@@ -5240,6 +5252,7 @@ function saveLogEntry() {
   clearLogEntry();
   updateLogSummary(jobId);
   renderLogHistory(jobId);
+  renderProjection(jobId);
   showFB('log-fb','ok','Hours entry saved.');
 }
 
@@ -5258,6 +5271,7 @@ function deleteLogEntry(jobId, entryId) {
   saveLogData();
   updateLogSummary(jobId);
   renderLogHistory(jobId);
+  renderProjection(jobId);
 }
 
 function updateLogSummary(jobId) {
@@ -5614,6 +5628,183 @@ function saveLogData() {
 }
 function loadLogData() {
   try { var s=localStorage.getItem('havellin_logs_v3'); if(s) jobLogs=JSON.parse(s); } catch(e) {}
+}
+
+// ─── JOB PLAN PERSISTENCE ────────────────────────────────────────────────────
+var jobPlanStore = {};
+
+function getJobPlan(jobId) {
+  if (!jobPlanStore[jobId]) jobPlanStore[jobId] = { rooms: {} };
+  return jobPlanStore[jobId];
+}
+function saveJobPlan(jobId) {
+  try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
+}
+function loadJobPlanData() {
+  try { var s = localStorage.getItem('havellin_jobplan_v1'); if(s) jobPlanStore = JSON.parse(s); } catch(e) {}
+}
+
+// ─── PROJECTION ENGINE ───────────────────────────────────────────────────────
+// Noise floor: combined actual hours before any projection is trusted.
+// One crew-day = 7 hours, representing meaningful on-site data.
+var PROJ_CREW_DAY = 7;
+
+// TC% counts a room once locked (sort/decision done).
+// PS% counts a room once packed (physical packing done).
+var TC_DONE_STATUSES = { locked:1, packed:1, complete:1 };
+var PS_DONE_STATUSES = { packed:1, complete:1 };
+
+function computeProjection(jobId) {
+  var estRec = estimateStore[jobId];
+  var est = estRec ? estRec.estimate
+           : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
+  if (!est || !est.rooms || !est.rooms.length) return null;
+
+  var plan = getJobPlan(jobId);
+  var logs = jobLogs[jobId] || [];
+
+  var actTC = 0, actPS = 0;
+  logs.forEach(function(entry) {
+    entry.members.forEach(function(m) {
+      if (m.role === 'TC') actTC += m.hours; else actPS += m.hours;
+    });
+  });
+  actTC = Math.round(actTC * 10) / 10;
+  actPS = Math.round(actPS * 10) / 10;
+
+  var estTC = est.totTC, estPS = est.totPS;
+  var rooms = est.rooms;
+  var totalTCHrs = 0, totalPSHrs = 0, doneTCHrs = 0, donePSHrs = 0;
+  var invalidRooms = [];
+
+  rooms.forEach(function(r) {
+    var tcH = Number(r.tcH), psH = Number(r.psH);
+    if (!Number.isFinite(tcH) || !Number.isFinite(psH)) {
+      invalidRooms.push(r.name || ('Room ' + r.idx));
+      return;
+    }
+    totalTCHrs += tcH;
+    totalPSHrs += psH;
+    var s = (plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
+    if (TC_DONE_STATUSES[s]) doneTCHrs += tcH;
+    if (PS_DONE_STATUSES[s]) donePSHrs += psH;
+  });
+
+  var tcPct = totalTCHrs > 0 ? doneTCHrs / totalTCHrs : 0;
+  var psPct = totalPSHrs > 0 ? donePSHrs / totalPSHrs : 0;
+  var actTotal = actTC + actPS;
+  var aboveFloor = actTotal >= PROJ_CREW_DAY;
+
+  var projTC = tcPct > 0 ? Math.round((actTC / tcPct) * 10) / 10 : null;
+  var projPS = psPct > 0 ? Math.round((actPS / psPct) * 10) / 10 : null;
+  var triggerTC = Math.round(estTC * 1.15 * 10) / 10;
+  var triggerPS = Math.round(estPS * 1.15 * 10) / 10;
+
+  function bandFor(proj, estHrs, pct) {
+    if (!aboveFloor) return 'preliminary';
+    if (pct === 0 || proj === null) return 'nodata';
+    var tier1 = (pct >= 0.15 && proj >= estHrs * 1.40);
+    var tier2 = (pct >= 0.35 && proj >  estHrs * 1.15);
+    if (tier1 || tier2) return 'red';
+    if (proj > estHrs * 1.05) return 'amber';
+    return 'green';
+  }
+
+  var tcBand = bandFor(projTC, estTC, tcPct);
+  var psBand = bandFor(projPS, estPS, psPct);
+  var rank   = { preliminary:0, nodata:0, green:1, amber:2, red:3 };
+  var headlineBand = rank[tcBand] >= rank[psBand] ? tcBand : psBand;
+
+  var snap = {
+    headlineBand:headlineBand, tcBand:tcBand, psBand:psBand,
+    projTC:projTC, projPS:projPS, triggerTC:triggerTC, triggerPS:triggerPS,
+    estTC:estTC, estPS:estPS, tcPct:tcPct, psPct:psPct,
+    actTC:actTC, actPS:actPS, actTotal:actTotal, aboveFloor:aboveFloor,
+    invalidRooms:invalidRooms, ts:Date.now()
+  };
+  plan.lastProjection = snap;
+  saveJobPlan(jobId);
+  return snap;
+}
+
+function projBandHtml(band, label, proj, trigger, est, pct) {
+  var pctStr = Math.round(pct * 100) + '%';
+  var projStr = proj !== null ? proj.toFixed(1) : '—';
+  var colors = { green:'var(--ok-tx)', amber:'var(--warn-tx)', red:'var(--err-tx)', preliminary:'var(--gray)', nodata:'var(--gray)' };
+  var color  = colors[band] || 'var(--gray)';
+  var msg;
+  if (band === 'preliminary') {
+    msg = 'Preliminary — insufficient data (' + label + ').';
+  } else if (band === 'nodata') {
+    msg = label + ': Insufficient data — complete at least one room.';
+  } else if (band === 'green') {
+    msg = 'On track. Projected ' + label + ': ' + projStr + ' hrs vs ' + est.toFixed(1) + ' estimated (' + pctStr + ' complete).';
+  } else if (band === 'amber') {
+    msg = 'Trending over. Projected ' + label + ': ' + projStr + ' vs trigger ' + trigger.toFixed(1) + ' (' + pctStr + ' complete). Tighten scope or prepare the client. (Not yet a mandatory stop — monitoring.)';
+  } else {
+    msg = 'STOP. Projected ' + label + ' ' + projStr + ' hrs exceeds Change Order threshold ' + trigger.toFixed(1) + ' hrs (' + pctStr + ' complete). No further scope work until a signed Change Order.';
+  }
+  return '<div style="padding:7px 10px;border-radius:4px;font-size:12px;background:var(--tan);margin-bottom:6px;">' +
+    '<span style="font-weight:700;color:' + color + ';">[' + band.toUpperCase() + '] </span>' + msg + '</div>';
+}
+
+function renderProjection(jobId) {
+  var card = document.getElementById('projection-card');
+  var out  = document.getElementById('projection-output');
+  var statusWrap = document.getElementById('projection-room-status');
+  if (!card || !out) return;
+
+  // Build temporary room-status controls
+  var estRec = estimateStore[jobId];
+  var est = estRec ? estRec.estimate
+           : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
+  if (!est || !est.rooms || !est.rooms.length) {
+    out.innerHTML = '<div style="font-size:12px;color:var(--gray);">No approved estimate found for this job — projection unavailable.</div>';
+    statusWrap.innerHTML = '';
+    return;
+  }
+
+  var plan = getJobPlan(jobId);
+  var STATUSES = ['pending','sorting','locked','packed','complete'];
+  var statusRows = est.rooms.map(function(r) {
+    var cur = (plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
+    var opts = STATUSES.map(function(s) {
+      return '<option value="' + s + '"' + (s === cur ? ' selected' : '') + '>' + s + '</option>';
+    }).join('');
+    return '<tr><td style="padding:4px 8px;font-size:12px;">' + r.name + '</td>' +
+      '<td style="padding:4px 8px;font-size:11px;color:var(--gray);">' + r.tcH.toFixed(1) + ' TC / ' + r.psH.toFixed(1) + ' PS</td>' +
+      '<td style="padding:4px 8px;"><select style="font-size:11px;padding:2px 4px;width:auto;" onchange="setRoomStatus(' + jobId + ',' + r.idx + ',this.value)">' + opts + '</select></td></tr>';
+  }).join('');
+  statusWrap.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:6px;">Room Status — Task 2 Testing Control</div>' +
+    '<table style="width:100%;border-collapse:collapse;">' + statusRows + '</table>';
+
+  var snap = computeProjection(jobId);
+  if (!snap) { out.innerHTML = '<div style="font-size:12px;color:var(--gray);">No estimate data for projection.</div>'; return; }
+
+  var headlineColor = { green:'var(--ok-tx)', amber:'var(--warn-tx)', red:'var(--err-tx)', preliminary:'var(--gray)', nodata:'var(--gray)' }[snap.headlineBand] || 'var(--gray)';
+  var headlineLabel = snap.headlineBand === 'red' ? '⛔ STOP — Change Order Required'
+    : snap.headlineBand === 'amber' ? '⚠ Trending Over — Monitor Closely'
+    : snap.headlineBand === 'green' ? '✓ On Track'
+    : 'Preliminary';
+
+  var warningNote = snap.invalidRooms.length
+    ? '<div class="alert a-warn" style="margin-bottom:8px;font-size:11px;">Data warning: non-finite hours on ' + snap.invalidRooms.join(', ') + ' — excluded from projection.</div>'
+    : '';
+
+  out.innerHTML = warningNote +
+    '<div style="font-weight:700;font-size:13px;color:' + headlineColor + ';margin-bottom:8px;">' + headlineLabel + '</div>' +
+    projBandHtml(snap.tcBand, 'TC', snap.projTC, snap.triggerTC, snap.estTC, snap.tcPct) +
+    projBandHtml(snap.psBand, 'PS', snap.projPS, snap.triggerPS, snap.estPS, snap.psPct) +
+    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Actual: ' + snap.actTC.toFixed(1) + ' TC + ' + snap.actPS.toFixed(1) + ' PS = ' + snap.actTotal.toFixed(1) + ' total hrs' +
+    (snap.aboveFloor ? '' : ' — below ' + PROJ_CREW_DAY + '-hr noise floor') + '</div>';
+}
+
+function setRoomStatus(jobId, roomIdx, status) {
+  var plan = getJobPlan(jobId);
+  if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
+  plan.rooms[roomIdx].status = status;
+  saveJobPlan(jobId);
+  renderProjection(jobId);
 }
 
 function syncLogToSheets(jobId, entry) {
@@ -7717,6 +7908,7 @@ function captureJobMedia(input) {
 loadJobs();
 loadEstimateState();
 loadLogData();
+loadJobPlanData();
 loadContractors();
 loadChangeOrders();
 // Clear stale single-slot estimate if no jobs exist
