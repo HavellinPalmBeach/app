@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 12:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 1:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -245,7 +245,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('estimate',this)">Estimate</button>
   <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
   <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
-  <button class="nb" onclick="showPanel('job-log',this)">Job Log</button>
   <button class="nb" onclick="showPanel('job-plan',this)">Job Plan</button>
   <button class="nb" onclick="showPanel('invoice',this)">Final Invoice</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
@@ -867,85 +866,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <div id="client-dashboard-view" style="display:none;"></div>
 </div>
 
-<!-- ══════════════════════════════ JOB LOG ══════════════════════════════ -->
-<div class="panel" id="panel-job-log">
-  <div class="grid2" style="gap:1rem;align-items:start;">
-    <div>
-      <div class="card" style="margin-bottom:1rem;">
-        <div class="sec">Select Job</div>
-        <label>Job</label>
-        <select id="log-job" onchange="loadJobLog()"><option value="">Select job</option></select>
-        <div id="log-job-info" style="margin-top:10px;"></div>
-      </div>
-
-      <div class="card" id="log-entry-card" style="display:none;">
-        <div class="sec">Log Daily Hours</div>
-        <label>Date</label>
-        <input type="date" id="log-date">
-        <label>Activity summary</label>
-        <input type="text" id="log-activity" placeholder="e.g. Primary suite sorting, kitchen packing, garage clearout">
-
-        <div style="margin-top:14px;">
-          <div class="sec">Team Members &amp; Hours</div>
-          <div id="log-team-rows"></div>
-        </div>
-
-        <div style="margin-top:1rem;display:flex;gap:8px;">
-          <button class="btn-s" onclick="clearLogEntry()">Clear</button>
-          <button class="btn-p" onclick="saveLogEntry()">Save Hours Entry →</button>
-        </div>
-        <div id="log-fb"></div>
-      </div>
-    </div>
-
-    <div>
-      <div class="card" id="log-summary-card" style="display:none;">
-        <div class="sec">Hours Summary vs. Estimate</div>
-        <table class="stbl" id="log-summary-table">
-          <tr><td class="muted">Estimated Transition Concierge hours</td><td class="num" id="ls-est-tc">—</td></tr>
-          <tr><td class="muted">Actual Transition Concierge hours logged</td><td class="num" id="ls-act-tc">0.0</td></tr>
-          <tr><td class="muted" id="ls-tc-pct-label">Transition Concierge variance</td><td class="num" id="ls-tc-pct">—</td></tr>
-          <tr style="height:8px;"><td colspan="2"></td></tr>
-          <tr><td class="muted">Estimated Property Specialist hours</td><td class="num" id="ls-est-ps">—</td></tr>
-          <tr><td class="muted">Actual Property Specialist hours logged</td><td class="num" id="ls-act-ps">0.0</td></tr>
-          <tr><td class="muted" id="ls-ps-pct-label">Property Specialist variance</td><td class="num" id="ls-ps-pct">—</td></tr>
-        </table>
-        <div id="log-overage-alert" style="margin-top:8px;"></div>
-        <div style="margin-top:10px;font-size:11px;color:var(--gray);">
-          Working days logged: <strong id="ls-days">0</strong> &nbsp;|&nbsp; Entries: <strong id="ls-entries">0</strong>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:1rem;padding:0;overflow:hidden;" id="log-history-card" style="display:none;">
-        <div style="padding:.9rem 1.1rem .5rem;"><div class="sec" style="margin-bottom:0;">Hours Log History</div></div>
-        <div id="log-history-wrap">
-          <div class="empty-state">No entries yet for this job.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- FORWARD PROJECTION — shown when a job with an approved estimate is selected -->
-  <div id="projection-card" style="display:none;margin-top:1rem;">
-    <div class="card">
-      <div class="sec">Forward Variance Projection</div>
-      <div id="projection-room-status"></div>
-      <div id="projection-output" style="margin-top:10px;"></div>
-    </div>
-  </div>
-
-  <!-- JOB DOCUMENTATION — active jobs only -->
-  <div id="job-media-card" style="display:none;margin-top:1.25rem;padding:0 0;">
-    <div class="card">
-      <div class="sec">Job Documentation — Photos &amp; Video
-        <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;"> · Active jobs only · Agreement must be signed</span>
-      </div>
-      <div style="font-size:11px;color:var(--gray);margin-bottom:12px;">Voice notes from the walkthrough are shown per room as reference. Add photos and video to document existing conditions, asset locations, and work progress.</div>
-      <div id="job-media-rooms"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ══════════════════════════════ JOB PLAN ══════════════════════════════ -->
 <div class="panel" id="panel-job-plan">
   <div class="card" style="margin-bottom:1rem;">
@@ -960,6 +880,80 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
     </div>
   </div>
+
+  <!-- Hidden log-job input — synced to plan-job by loadJobPlanTab; read by saveLogEntry -->
+  <input type="hidden" id="log-job">
+
+  <!-- Log hours + summary + projection + history — shown once a job is loaded -->
+  <div id="plan-log-section" style="display:none;">
+    <div class="grid2" style="gap:1rem;align-items:start;margin-bottom:1rem;">
+      <div>
+        <div class="card" id="log-entry-card">
+          <div class="sec">Log Daily Hours</div>
+          <label>Date</label>
+          <input type="date" id="log-date">
+          <label>Activity summary</label>
+          <input type="text" id="log-activity" placeholder="e.g. Primary suite sorting, kitchen packing, garage clearout">
+          <div style="margin-top:14px;">
+            <div class="sec">Team Members &amp; Hours</div>
+            <div id="log-team-rows"></div>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:8px;">
+            <button class="btn-s" onclick="clearLogEntry()">Clear</button>
+            <button class="btn-p" onclick="saveLogEntry()">Save Hours Entry →</button>
+          </div>
+          <div id="log-fb"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card" id="log-summary-card">
+          <div class="sec">Hours Summary vs. Estimate</div>
+          <table class="stbl" id="log-summary-table">
+            <tr><td class="muted">Estimated Transition Concierge hours</td><td class="num" id="ls-est-tc">—</td></tr>
+            <tr><td class="muted">Actual Transition Concierge hours logged</td><td class="num" id="ls-act-tc">0.0</td></tr>
+            <tr><td class="muted" id="ls-tc-pct-label">Transition Concierge variance</td><td class="num" id="ls-tc-pct">—</td></tr>
+            <tr style="height:8px;"><td colspan="2"></td></tr>
+            <tr><td class="muted">Estimated Property Specialist hours</td><td class="num" id="ls-est-ps">—</td></tr>
+            <tr><td class="muted">Actual Property Specialist hours logged</td><td class="num" id="ls-act-ps">0.0</td></tr>
+            <tr><td class="muted" id="ls-ps-pct-label">Property Specialist variance</td><td class="num" id="ls-ps-pct">—</td></tr>
+          </table>
+          <div id="log-overage-alert" style="margin-top:8px;"></div>
+          <div style="margin-top:10px;font-size:11px;color:var(--gray);">
+            Working days logged: <strong id="ls-days">0</strong> &nbsp;|&nbsp; Entries: <strong id="ls-entries">0</strong>
+          </div>
+        </div>
+
+        <div id="projection-card" style="margin-top:1rem;">
+          <div class="card">
+            <div class="sec">Forward Variance Projection</div>
+            <div id="projection-room-status"></div>
+            <div id="projection-output" style="margin-top:10px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem;padding:0;overflow:hidden;" id="log-history-card">
+      <div style="padding:.9rem 1.1rem .5rem;display:flex;align-items:center;justify-content:space-between;">
+        <div class="sec" style="margin-bottom:0;">Hours Log</div>
+        <button class="btn-s" onclick="toggleLogHistory()" id="log-history-toggle">+ View hours log</button>
+      </div>
+      <div id="log-history-wrap" style="display:none;">
+        <div class="empty-state">No entries yet for this job.</div>
+      </div>
+    </div>
+
+    <div id="job-media-card" style="display:none;margin-bottom:1rem;padding:0 0;">
+      <div class="card">
+        <div class="sec">Job Documentation — Photos &amp; Video
+          <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;"> · Active jobs only · Agreement must be signed</span>
+        </div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:12px;">Voice notes from the walkthrough are shown per room as reference. Add photos and video to document existing conditions, asset locations, and work progress.</div>
+        <div id="job-media-rooms"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="job-plan-content">
     <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job to load its plan.</div>
   </div>
@@ -4411,13 +4405,14 @@ function goToJobLog(jobId) {
     var tabs = document.querySelectorAll('.nb');
     tabs.forEach(function(t){ t.classList.remove('active'); });
     document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-    var logTab = Array.from(tabs).find(function(t){ return t.textContent.trim()==='Job Log'; });
-    if (logTab) logTab.click();
+    var planTab = Array.from(tabs).find(function(t){ return t.textContent.trim()==='Job Plan'; });
+    if (planTab) planTab.click();
     setTimeout(function(){
       populateLogAndInvSelects();
       buildLogTeamRows();
-      var logSel = document.getElementById('log-job');
-      if (logSel) { logSel.value = jobId; loadJobLog(); }
+      rebuildDropdowns();
+      var planSel = document.getElementById('plan-job');
+      if (planSel) { planSel.value = jobId; loadJobPlanTab(); }
     }, 100);
   }, 50);
 }
@@ -4482,18 +4477,16 @@ function showPanel(id, btn) {
     }
   }
   if (id==='client-estimate') renderClientEstimate();
-  if (id==='job-log') {
+  if (id==='contractors') { renderContractors(); }
+  if (id==='job-plan') {
     populateLogAndInvSelects();
     buildLogTeamRows();
     rebuildDropdowns();
-    // Auto-set date to today
     var logDateEl = document.getElementById('log-date');
     if (logDateEl && !logDateEl.value) {
       logDateEl.value = new Date().toISOString().split('T')[0];
     }
   }
-  if (id==='contractors') { renderContractors(); }
-  if (id==='job-plan') { populateLogAndInvSelects(); }
   if (id==='invoice') { populateLogAndInvSelects(); }
   if (id==='agreement') { populateAgrSelect(); }
 }
@@ -5164,88 +5157,6 @@ function buildLogTeamRows() {
 }
 
 
-function loadJobLog() {
-  var jobId = parseInt(document.getElementById('log-job').value);
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) {
-    document.getElementById('log-entry-card').style.display = 'none';
-    document.getElementById('log-summary-card').style.display = 'none';
-    document.getElementById('log-history-card').style.display = 'none';
-    document.getElementById('projection-card').style.display = 'none';
-    document.getElementById('log-job-info').innerHTML = '';
-    var mc = document.getElementById('job-media-card'); if(mc) mc.style.display='none';
-    return;
-  }
-  renderJobMediaPanel(job);
-
-  document.getElementById('log-entry-card').style.display = 'block';
-  document.getElementById('log-summary-card').style.display = 'block';
-  document.getElementById('log-history-card').style.display = 'block';
-  var estRecForProj = estimateStore[jobId];
-  var svcForProj = job.svc || '';
-  var showProj = estRecForProj && estRecForProj.approved &&
-    (svcForProj === 'downsizing' || svcForProj === 'downsizing_move');
-  document.getElementById('projection-card').style.display = showProj ? 'block' : 'none';
-
-  // Rebuild team rows with fresh directory data
-  buildLogTeamRows();
-
-  // Auto-set today's date
-  var logDate = document.getElementById('log-date');
-  if (logDate && !logDate.value) logDate.value = new Date().toISOString().split('T')[0];
-
-  // Auto-select TC from job assignment
-  var tcSel = document.getElementById('log-m0-name');
-  if (job.tc && tcSel) {
-    for (var i = 0; i < tcSel.options.length; i++) {
-      if (tcSel.options[i].text === job.tc) { tcSel.selectedIndex = i; break; }
-    }
-  }
-
-  // Show job info badge
-  document.getElementById('log-job-info').innerHTML =
-    '<div style="background:var(--tan);border-radius:5px;padding:9px 12px;font-size:12px;">' +
-    '<strong>' + job.name + '</strong>' +
-    '<br><span style="color:var(--gray);">TC: ' + (job.tc||'Unassigned') + ' · Status: ' + job.status + '</span>' +
-    '</div>';
-  // Pre-fill PS slots from saved estimate if available
-  var jobEstimate = null;
-  // Find most recent estimate for this job
-  if (typeof savedEstimates !== 'undefined') {
-    jobEstimate = savedEstimates.find(function(e){ return e.jobId === job.id; });
-  }
-  if (!jobEstimate && currentEstimate && currentEstimate.jobId === job.id) {
-    jobEstimate = currentEstimate;
-  }
-  if (jobEstimate && jobEstimate.psSlots) {
-    jobEstimate.psSlots.forEach(function(slot, idx) {
-      var psSel = document.getElementById('log-m' + (idx+1) + '-name');
-      if (psSel && slot.label) {
-        for (var i = 0; i < psSel.options.length; i++) {
-          if (psSel.options[i].text.indexOf(slot.label.split(' ')[0]) >= 0) {
-            psSel.selectedIndex = i; break;
-          }
-        }
-      }
-    });
-  }
-
-  // Set today's date
-  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
-
-  // Job info strip
-  document.getElementById('log-job-info').innerHTML =
-    '<div style="background:var(--tan);border-radius:5px;padding:9px 12px;font-size:12px;">' +
-    '<strong>' + job.name + '</strong> · ' + job.svcLabel +
-    (job.addr ? ' · ' + job.addr.split(',')[0] : '') +
-    '<br><span style="color:var(--gray);">TC: ' + (job.tc||'Unassigned') + ' · Status: ' + job.status + '</span>' +
-    '</div>';
-
-  updateLogSummary(jobId);
-  renderLogHistory(jobId);
-  renderProjection(jobId);
-}
-
 function saveLogEntry() {
   var jobId = parseInt(document.getElementById('log-job').value);
   if (!jobId) { showFB('log-fb','warn','Select a job first.'); return; }
@@ -5313,8 +5224,9 @@ function updateLogSummary(jobId) {
   actTC = Math.round(actTC * 10) / 10;
   actPS = Math.round(actPS * 10) / 10;
 
-  var estTC = currentEstimate && currentEstimate.jobId === jobId ? currentEstimate.totTC : (job && job.estTC || null);
-  var estPS = currentEstimate && currentEstimate.jobId === jobId ? currentEstimate.totPS : (job && job.estPS || null);
+  var estRec = estimateStore[jobId];
+  var estTC = (estRec && estRec.estimate && estRec.estimate.totTC) || (job && job.estTC || null);
+  var estPS = (estRec && estRec.estimate && estRec.estimate.totPS) || (job && job.estPS || null);
 
   document.getElementById('ls-act-tc').textContent = actTC.toFixed(1) + ' hrs';
   document.getElementById('ls-act-ps').textContent = actPS.toFixed(1) + ' hrs';
@@ -5392,6 +5304,27 @@ function renderLogHistory(jobId) {
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
+  var btn = document.getElementById('log-history-toggle');
+  if (btn) {
+    var total = (jobLogs[jobId] || []).length;
+    var isOpen = wrap.style.display !== 'none';
+    btn.textContent = isOpen ? '− Hide hours log' : '+ View hours log (' + total + ' entries)';
+  }
+}
+
+function toggleLogHistory() {
+  var wrap = document.getElementById('log-history-wrap');
+  var btn = document.getElementById('log-history-toggle');
+  if (!wrap || !btn) return;
+  var logs = jobLogs[parseInt((document.getElementById('log-job')||{}).value)] || [];
+  var count = logs.length;
+  if (wrap.style.display === 'none') {
+    wrap.style.display = '';
+    btn.textContent = '− Hide hours log';
+  } else {
+    wrap.style.display = 'none';
+    btn.textContent = '+ View hours log (' + count + ' entries)';
+  }
 }
 
 // ─── FINAL INVOICE ────────────────────────────────────────────────────────────
@@ -5837,14 +5770,28 @@ function loadJobPlanTab() {
     content.innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">' + msg + '</div>';
     if (printBtn) printBtn.style.display = 'none';
   };
-  if (!jobId) { empty('Select a job to load its plan.'); return; }
+  if (!jobId) {
+    var ls = document.getElementById('plan-log-section');
+    if (ls) ls.style.display = 'none';
+    empty('Select a job to load its plan.'); return;
+  }
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) { empty('Job not found.'); return; }
+  if (!job) {
+    var ls2 = document.getElementById('plan-log-section');
+    if (ls2) ls2.style.display = 'none';
+    empty('Job not found.'); return;
+  }
   var estRec = estimateStore[jobId];
-  if (!estRec || !estRec.approved) { empty('Job Plan generates once the estimate is approved and locked.'); return; }
+  if (!estRec || !estRec.approved) {
+    var ls3 = document.getElementById('plan-log-section');
+    if (ls3) ls3.style.display = 'none';
+    empty('Job Plan generates once the estimate is approved and locked.'); return;
+  }
   var est = estRec.estimate;
   var svc = est.svc || job.svc || '';
   if (svc !== 'downsizing' && svc !== 'downsizing_move') {
+    var ls4 = document.getElementById('plan-log-section');
+    if (ls4) ls4.style.display = 'none';
     var msg = (svc === 'probate' || svc === 'contested_probate' || svc === 'estate')
       ? 'Job Plan for this service type is not yet available — use the estate/probate workflow.'
       : 'Job Plan is not yet available for this service type.';
@@ -5852,6 +5799,36 @@ function loadJobPlanTab() {
   }
   if (printBtn) printBtn.style.display = 'inline-block';
   content.innerHTML = renderJobPlan(jobId, job, est);
+
+  // Show log section and wire log-job hidden input to this job
+  var logSection = document.getElementById('plan-log-section');
+  if (logSection) logSection.style.display = 'block';
+  var logJobEl = document.getElementById('log-job');
+  if (logJobEl) logJobEl.value = jobId;
+
+  // Build team rows and dropdowns for the entry form
+  buildLogTeamRows();
+  rebuildDropdowns();
+
+  // Auto-set date
+  var logDateEl = document.getElementById('log-date');
+  if (logDateEl && !logDateEl.value) {
+    logDateEl.value = new Date().toISOString().split('T')[0];
+  }
+
+  // Auto-select TC from job assignment
+  var tcSel = document.getElementById('log-m0-name');
+  if (job.tc && tcSel) {
+    for (var i = 0; i < tcSel.options.length; i++) {
+      if (tcSel.options[i].text === job.tc) { tcSel.selectedIndex = i; break; }
+    }
+  }
+
+  // Update log summary, history, and projection
+  updateLogSummary(jobId);
+  renderLogHistory(jobId);
+  renderProjection(jobId);
+  renderJobMediaPanel(job);
 }
 
 function planChk(jobId, key, label) {
@@ -5903,7 +5880,7 @@ function renderDailyCloseBlock(jobId, phase) {
   return '<div style="background:var(--tan);border-radius:5px;padding:10px 12px;margin-top:14px;">' +
     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-dk);margin-bottom:8px;">Daily Close</div>' +
     projHtml +
-    '<div style="font-size:11px;color:var(--gray);margin:6px 0 4px;">Log hours in the Job Log before computing. Over the line? Stop — Change Order before the next room.</div>' +
+    '<div style="font-size:11px;color:var(--gray);margin:6px 0 4px;">Log today\'s hours above before reviewing the projection. Over the line? Stop — Change Order before the next room.</div>' +
     planChk(jobId, key, 'Daily projection checked and signed off — ' + today) + '</div>';
 }
 
@@ -6491,17 +6468,14 @@ function populateLogAndInvSelects() {
   var selLog  = document.getElementById('log-job');
   var selInv  = document.getElementById('inv-job');
   var selPlan = document.getElementById('plan-job');
-  var curLog = selLog.value, curInv = selInv.value, curPlan = selPlan ? selPlan.value : '';
-  selLog.innerHTML  = '<option value="">Select job</option>';
+  var curLog = selLog ? selLog.value : '', curInv = selInv.value, curPlan = selPlan ? selPlan.value : '';
   selInv.innerHTML  = '<option value="">Select job</option>';
   if (selPlan) selPlan.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
     var opt = '<option value="'+j.id+'">'+j.name+' — '+j.svcLabel+'</option>';
-    selLog.innerHTML  += opt;
     selInv.innerHTML  += opt;
     if (selPlan) selPlan.innerHTML += opt;
   });
-  if (curLog)  selLog.value  = curLog;
   if (curInv)  selInv.value  = curInv;
   if (selPlan && curPlan) selPlan.value = curPlan;
 }
