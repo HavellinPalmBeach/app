@@ -4943,7 +4943,7 @@ function attachJobPlanPhoto(input, jobId, roomIdx, label) {
   var file = input.files[0];
   if (!file) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active' || !job.agreementSigned) return;
+  if (!job || job.status !== 'active' || !job.agrSigned) return;
   var estRec = estimateStore[jobId];
   var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
   var room = estRooms.find(function(r){ return r.idx === roomIdx; });
@@ -4972,7 +4972,7 @@ function attachJobPlanCollectionPhoto(input, jobId, collId) {
   var file = input.files[0];
   if (!file) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active' || !job.agreementSigned) return;
+  if (!job || job.status !== 'active' || !job.agrSigned) return;
   var estRec = estimateStore[jobId];
   var colls = estRec && estRec.estimate && estRec.estimate.collections ? estRec.estimate.collections : [];
   var coll = colls.find(function(c){ return c.id === collId; });
@@ -6138,10 +6138,11 @@ function renderJobPlan(jobId, job, est) {
       + 'Workflow playbook for this service type is in development. Hours logging, the forward variance projection, and photo documentation are fully active for this job.'
       + '</div>';
     standaloneDocs = placeholder
-      + (rooms.length > 0
+      + ((rooms.length > 0 || collections.length > 0)
         ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
           + '<div class="sec" style="margin-bottom:10px;">Room Documentation</div>'
-          + docRooms + docColls
+          + (rooms.length > 0 ? docRooms : '<div style="font-size:11px;color:var(--gray);font-style:italic;">No rooms scored on this estimate — per-room photo capture renders when rooms are added.</div>')
+          + docColls
           + '</div>'
         : '');
     return hdr + standaloneDocs;
