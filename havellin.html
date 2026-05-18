@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 1:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 2:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -524,11 +524,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div id="e-years-in-home-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake — longer occupancy = higher volume/complexity</div>
         <div id="probate-inv-badge" style="margin-top:4px;"></div>
-        <div id="timeline-press-badge" style="margin-top:4px;"></div>
       </div>
       <div>
         <div class="sec">Property Specialists</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Assign Property Specialists for this job. Cost rates snapshot at estimate save. Standard crew is 2 PS. Adding a 3rd or 4th PS shortens job duration — billing is total PS hours regardless of crew size.</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set from the estimate's PS hours and the client's completion window (floor 2, cap 4). You can manually add specialists above the required minimum. Billing is total PS hours regardless of crew size — adding PS only shortens duration, it does not change the quote.</div>
         <div id="ps-slots">
           <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
             <select id="ps-slot-0" onchange="calcAll()" style="font-size:12px;"><option value="contractor_standard">Contractor — Standard</option></select>
@@ -1736,19 +1735,50 @@ function propValMultiplier(propVal) {
   return 1.85;  // $75M+ — ultra estate tier
 }
 
-// ─── TIMELINE PRESSURE MULTIPLIER ────────────────────────────────────────────
-// Applies to TC hours only — tighter deadlines require more intensive coordination.
-function timelinePressureMultiplier(startDateStr, targetDateStr) {
-  if (!startDateStr || !targetDateStr) return {mult: 1.0, days: null};
-  var start  = new Date(startDateStr  + 'T12:00:00');
+// ─── WORKING-DAYS HELPER ─────────────────────────────────────────────────────
+// Counts weekdays (Mon–Fri) inclusive between two dates. Start is clamped to
+// today if it is in the past. Returns 0 if dates are missing or target < start.
+function workingDaysBetween(startDateStr, targetDateStr) {
+  if (!startDateStr || !targetDateStr) return 0;
+  var today = new Date(); today.setHours(0,0,0,0);
+  var start = new Date(startDateStr + 'T12:00:00');
+  if (start < today) start = today;
   var target = new Date(targetDateStr + 'T12:00:00');
-  var days = Math.round((target - start) / 86400000);
-  if (days < 1) return {mult: 1.0, days: days};
-  if (days < 30) return {mult: 1.50, days: days, warn: true};
-  if (days < 45) return {mult: 1.32, days: days};
-  if (days < 60) return {mult: 1.20, days: days};
-  if (days < 90) return {mult: 1.12, days: days};
-  return {mult: 1.00, days: days};
+  if (target < start) return 0;
+  var n = 0, d = new Date(start);
+  while (d <= target) {
+    var dow = d.getDay();
+    if (dow !== 0 && dow !== 6) n++;
+    d.setDate(d.getDate() + 1);
+  }
+  return n;
+}
+
+// ─── REQUIRED CREW ───────────────────────────────────────────────────────────
+// Timeline is a STAFFING problem, not a pricing one. Same hours, same quote —
+// just spread across more PS to hit the client's completion date.
+//   PS needed = ceil(total PS hrs / (working days in window * 7))
+// Floor 2 (1 PS can't move furniture solo), cap 4 (1-TC supervision ceiling).
+// Infeasible — hard "renegotiate" flag, no auto-fix — when EITHER:
+//   • PS needed > 4 (beyond a single TC's crew), OR
+//   • the TC alone can't finish in the window (ceil(totTC/7) > working days);
+//     adding PS cannot fix a TC bottleneck — that is a 2nd-TC job, out of scope.
+function computeRequiredCrew(totPS, totTC, workingDays) {
+  if (!workingDays || workingDays < 1) {
+    return {requiredPS: 2, psNeeded: 2, tcDays: Math.ceil(totTC / 7),
+            infeasible: false, tcBound: false, workingDays: 0};
+  }
+  var psNeeded = Math.max(2, Math.ceil(totPS / (workingDays * 7)));
+  var tcDays   = Math.ceil(totTC / 7);
+  var tcBound  = tcDays > workingDays;
+  return {
+    requiredPS: Math.min(psNeeded, 4),
+    psNeeded:   psNeeded,
+    tcDays:     tcDays,
+    tcBound:    tcBound,
+    infeasible: psNeeded > 4 || tcBound,
+    workingDays: workingDays
+  };
 }
 
 // ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
@@ -1953,7 +1983,6 @@ function calcAll() {
   // Timeline check — crew recommendation based on dates
   var targetDateVal = document.getElementById('e-target-date').value;
   var timelineBadge = document.getElementById('timeline-badge');
-  var recommendedPS = 2;
   var daysNeeded = Math.ceil(baseTCHrs / 7);
 
   var loadedJobId = parseInt(document.getElementById('e-job').value);
@@ -1984,60 +2013,14 @@ function calcAll() {
   } else {
     if (probateInvBadgeEl) probateInvBadgeEl.innerHTML = '';
   }
-  // Timeline pressure multiplier — TC hours only, based on start→target window
-  var timelinePressBadgeEl = document.getElementById('timeline-press-badge');
-  var tlPressResult = timelinePressureMultiplier(jobStartStr, targetDateVal);
-  if (tlPressResult.mult > 1.0) {
-    baseTCHrs = Math.round(baseTCHrs * tlPressResult.mult * 10) / 10;
-    adjTCheirs = heirs ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;
-    adjTC = Math.round((baseTCHrs * adjTCpct + adjTCheirs) * 10) / 10;
-    totTC = Math.round((baseTCHrs + adjTC) * 10) / 10;
-    days = Math.round(baseTCHrs / 7 * 10) / 10;
-    crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
-    var warnTxt = tlPressResult.warn ? ' ⚠ Under 30 days — recovery value impact likely. Discuss with client.' : '';
-    if (timelinePressBadgeEl) timelinePressBadgeEl.innerHTML = '<div class="alert ' + (tlPressResult.warn ? 'a-err' : 'a-warn') + '" style="margin-top:4px;font-size:11px;">Timeline pressure: TC hours ×' + tlPressResult.mult.toFixed(2) + ' (' + tlPressResult.days + ' calendar days)' + warnTxt + '</div>';
-  } else {
-    if (timelinePressBadgeEl) timelinePressBadgeEl.innerHTML = tlPressResult.days !== null ? '<div class="alert a-ok" style="margin-top:4px;font-size:11px;">Timeline: ' + tlPressResult.days + ' days — no pressure multiplier</div>' : '';
-  }
+  // Timeline is handled as a STAFFING problem in the crew/timeline status badge
+  // below (after totTC is finalized) — there is no TC-hours pressure multiplier.
+  // Hours and the quote are unaffected by the calendar; the completion date is
+  // met by sizing the PS crew, not by inflating the price.
   daysNeeded = Math.ceil(baseTCHrs / 7);
 
-  if (!jobStartStr) {
-    if (timelineBadge) timelineBadge.innerHTML = targetDateVal
-      ? '<div class="alert a-warn" style="margin-top:0;">No start date set in intake — set a start date to enable timeline check.</div>'
-      : '';
-  } else if (targetDateVal && daysNeeded > 0) {
-    var today = new Date(); today.setHours(0,0,0,0);
-    var baseDate = new Date(jobStartStr + 'T12:00:00');
-    if (baseDate < today) baseDate = today;
-    var targetDate = new Date(targetDateVal + 'T12:00:00');
-
-    if (targetDate < baseDate) {
-      if (timelineBadge) timelineBadge.innerHTML = '<div class="alert a-err" style="margin-top:0;">Target completion date is before the job start date.</div>';
-    } else {
-      var workingDays = 0;
-      var d = new Date(baseDate);
-      while (d <= targetDate) {
-        var dow = d.getDay();
-        if (dow !== 0 && dow !== 6) workingDays++;
-        d.setDate(d.getDate() + 1);
-      }
-      if (workingDays >= daysNeeded) {
-        var slack = workingDays - daysNeeded;
-        if (timelineBadge) timelineBadge.innerHTML = '<div class="alert a-ok" style="margin-top:0;"><strong>Timeline OK</strong> — ' + workingDays + ' working days available, ' + daysNeeded + ' needed.' + (slack > 0 ? ' ' + slack + ' day(s) buffer.' : ' No buffer — on-time execution required.') + '</div>';
-      } else {
-        recommendedPS = Math.min(Math.ceil(2 * daysNeeded / workingDays), 5);
-        var achievable = Math.ceil(daysNeeded / (recommendedPS / 2));
-        var psExtra = recommendedPS - 2;
-        if (recommendedPS <= 5) {
-          if (timelineBadge) timelineBadge.innerHTML = '<div class="alert a-warn" style="margin-top:0;"><strong>Timeline tight — ' + workingDays + ' working days available, ' + daysNeeded + ' needed.</strong> Add ' + psExtra + ' specialist' + (psExtra > 1 ? 's' : '') + ' (total ' + recommendedPS + ') → est. ' + achievable + ' days.</div>';
-        } else {
-          if (timelineBadge) timelineBadge.innerHTML = '<div class="alert a-err" style="margin-top:0;"><strong>Timeline not achievable.</strong> Even 5 specialists may not hit this date. Discuss with client or adjust scope.</div>';
-        }
-      }
-    }
-  } else {
-    if (timelineBadge) timelineBadge.innerHTML = '';
-  }
+  // Crew/timeline status is computed AFTER totTC is finalized — see the
+  // "CREW / TIMELINE STATUS" block further down in calcAll().
   var tcFee = Math.round(totTC * tcRate);
   var psFee = Math.round(totPS * psRate);
   var pkgCost = parseInt(document.getElementById('e-pkg').value) || 0;
@@ -2066,6 +2049,47 @@ function calcAll() {
     var coordTCHrs = Math.round(coordDays * 8 * propMult * 10) / 10;
     totTC = Math.round((totTC + coordTCHrs) * 10) / 10;
     tcFee = Math.round(totTC * tcRate);
+  }
+
+  // ─── CREW / TIMELINE STATUS ────────────────────────────────────────────────
+  // Drives required PS from the estimate's PS hours and the client's window.
+  // Enforces the crew FLOOR (bump up to required) but never reduces a manual
+  // upgrade. totTC here is final (prep + coordination already added above).
+  var crew = computeRequiredCrew(totPS, totTC, workingDaysBetween(jobStartStr, targetDateVal));
+  if (timelineBadge) {
+    if (!jobStartStr || !targetDateVal) {
+      timelineBadge.innerHTML = (!jobStartStr && targetDateVal)
+        ? '<div class="alert a-warn" style="margin-top:0;">No start date set in intake — set one to size the crew to the timeline.</div>'
+        : ((jobStartStr && !targetDateVal)
+          ? '<div class="alert a-warn" style="margin-top:0;">No target completion date — set one in intake to size the crew to the timeline.</div>'
+          : '');
+    } else if (crew.workingDays < 1) {
+      timelineBadge.innerHTML = '<div class="alert a-err" style="margin-top:0;">Target completion date is on or before the job start date — check the intake dates.</div>';
+    } else if (crew.infeasible) {
+      var why = crew.tcBound
+        ? 'The Transition Concierge alone needs ' + crew.tcDays + ' working days but the client window is only ' + crew.workingDays + '. Adding Property Specialists cannot fix a TC bottleneck.'
+        : 'This job needs ' + crew.psNeeded + ' PS to finish in ' + crew.workingDays + ' working days — beyond the 1 TC + 4 PS ceiling.';
+      timelineBadge.innerHTML = '<div class="alert a-err" style="margin-top:0;"><strong>Timeline not achievable.</strong> ' + why + ' Renegotiate the completion date or reduce scope with the client.</div>';
+    } else {
+      // Enforce the crew floor on the PS dropdowns.
+      var curPS = getScheduledPSCount();
+      if (curPS < crew.requiredPS) {
+        for (var psi = 0; psi < 4; psi++) {
+          var slotEl = document.getElementById('ps-slot-' + psi);
+          if (slotEl && psi < crew.requiredPS && (slotEl.value === 'none' || !slotEl.value)) {
+            slotEl.value = 'contractor_standard';
+          }
+        }
+        crewSize = crew.requiredPS;
+        crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
+      }
+      var assigned = Math.max(getScheduledPSCount(), crew.requiredPS);
+      var cmsg = crew.requiredPS <= 2
+        ? 'Standard crew (2 PS) hits the ' + crew.workingDays + '-working-day window.'
+        : '<strong>' + crew.requiredPS + ' PS required</strong> to hit the ' + crew.workingDays + '-working-day window (auto-set). Same hours, same quote — spread across more specialists for speed.';
+      if (assigned > crew.requiredPS) cmsg += ' Currently ' + assigned + ' PS assigned (manual upgrade kept).';
+      timelineBadge.innerHTML = '<div class="alert ' + (crew.requiredPS >= 4 ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">' + cmsg + '</div>';
+    }
   }
 
   var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
