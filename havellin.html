@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 2:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 2:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -519,7 +519,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div id="e-sqft-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <input type="hidden" id="e-sqft" value="">
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
-        <div id="sqft-mult-badge" style="margin-top:4px;"></div>
         <label>Years in home</label>
         <div id="e-years-in-home-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake — longer occupancy = higher volume/complexity</div>
@@ -1906,18 +1905,6 @@ function calcAll() {
   var sqftMult = sqftMultiplier(sqftVal);
   baseTCHrs = Math.round(baseTCHrs * sqftMult * 10) / 10;
   basePSHrs = Math.round(basePSHrs * sqftMult * 10) / 10;
-  var sqftBadgeEl = document.getElementById('sqft-mult-badge');
-  if (sqftBadgeEl) {
-    if (sqftVal > 0 && sqftMult !== 1.0) {
-      var sqftDir = sqftMult > 1.0 ? 'a-warn' : 'a-info';
-      var sqftSign = sqftMult > 1.0 ? '+' : '';
-      sqftBadgeEl.innerHTML = '<div class="alert ' + sqftDir + '" style="margin-top:4px;">Sqft multiplier: ' + sqftMult.toFixed(2) + '× (' + sqftVal.toLocaleString() + ' sqft) — ' + sqftSign + Math.round((sqftMult - 1) * 100) + '% on all hours</div>';
-    } else if (sqftVal > 0) {
-      sqftBadgeEl.innerHTML = '<div class="alert a-ok" style="margin-top:4px;">Sqft: ' + sqftVal.toLocaleString() + ' sqft — baseline rate (1.00×)</div>';
-    } else {
-      sqftBadgeEl.innerHTML = '<div class="alert a-warn" style="margin-top:4px;font-size:11px;">⚠ Square footage not captured at intake — update the job record to enable sqft adjustment</div>';
-    }
-  }
 
   // Service type multiplier
   var svcKey = document.getElementById('e-svc') ? document.getElementById('e-svc').value : 'cleanout';
