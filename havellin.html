@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 4:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 5:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4864,21 +4864,31 @@ function _photoStatusHtml(ref, jobId) {
   return '';
 }
 
+function _photoCountForSlot(jobId, roomIdx, label) {
+  return (_photoRefs[jobId] || []).filter(function(r){
+    return r.roomIdx === roomIdx && r.label === label && !r.collId && r.status === 'uploaded';
+  }).length;
+}
+
 function _renderRoomPhotoControls(jobId, roomIdx, label) {
   var stableId = jobId + '_r' + roomIdx + '_' + label;
   var ref = _getPhotoRef(jobId, stableId);
   var btnText = label === 'before' ? 'Before' : 'After';
   var captured = ref && ref.status === 'uploaded';
   var failed = ref && ref.status === 'failed';
+  var count = _photoCountForSlot(jobId, roomIdx, label);
   var borderCol = captured ? 'var(--ok-tx)' : (failed ? '#c0392b' : 'var(--border-md)');
   var bgCol = captured ? '#f0faf0' : (failed ? '#fff5f5' : 'var(--cream)');
   var txCol = captured ? 'var(--ok-tx)' : (failed ? '#c0392b' : 'var(--gray-dk)');
+  var badge = count > 0
+    ? ' <span id="photo-cnt-' + jobId + '-r' + roomIdx + '-' + label + '" style="background:var(--ok-tx);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:1px;">' + count + '</span>'
+    : '<span id="photo-cnt-' + jobId + '-r' + roomIdx + '-' + label + '"></span>';
   return '<div style="display:inline-flex;align-items:center;gap:5px;margin-right:6px;margin-bottom:4px;">'
     + '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
     + 'border-radius:4px;border:1px solid ' + borderCol + ';font-size:11px;background:' + bgCol + ';color:' + txCol + ';">'
     + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
     + 'onchange="attachJobPlanPhoto(this,' + jobId + ',' + roomIdx + ',\'' + label + '\')">'
-    + '&#128247; ' + btnText + '</label>'
+    + '&#128247; ' + btnText + badge + '</label>'
     + '<span id="photo-st-' + jobId + '-r' + roomIdx + '-' + label + '" style="font-size:10px;">'
     + _photoStatusHtml(ref, jobId)
     + '</span></div>';
@@ -4889,6 +4899,17 @@ function _updatePhotoStatusEl(jobId, roomIdx, label) {
   var ref = _getPhotoRef(jobId, stableId);
   var el = document.getElementById('photo-st-' + jobId + '-r' + roomIdx + '-' + label);
   if (el) el.innerHTML = _photoStatusHtml(ref, jobId);
+  var cntEl = document.getElementById('photo-cnt-' + jobId + '-r' + roomIdx + '-' + label);
+  if (cntEl) {
+    var count = _photoCountForSlot(jobId, roomIdx, label);
+    if (count > 0) {
+      cntEl.textContent = count;
+      cntEl.style.cssText = 'background:var(--ok-tx);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:1px;';
+    } else {
+      cntEl.textContent = '';
+      cntEl.style.cssText = '';
+    }
+  }
   var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.roomIdx === roomIdx && !r.collId; });
   var anyFailed = refs.some(function(r){ return r.status === 'failed'; });
   var flagEl = document.getElementById('photo-fail-flag-' + jobId + '-r' + roomIdx);
