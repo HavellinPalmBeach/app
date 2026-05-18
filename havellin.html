@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 4:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 4:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4943,7 +4943,7 @@ function attachJobPlanPhoto(input, jobId, roomIdx, label) {
   var file = input.files[0];
   if (!file) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active' || !job.agrSigned) return;
+  if (!job || job.status !== 'active') return;
   var estRec = estimateStore[jobId];
   var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
   var room = estRooms.find(function(r){ return r.idx === roomIdx; });
@@ -4972,7 +4972,7 @@ function attachJobPlanCollectionPhoto(input, jobId, collId) {
   var file = input.files[0];
   if (!file) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active' || !job.agrSigned) return;
+  if (!job || job.status !== 'active') return;
   var estRec = estimateStore[jobId];
   var colls = estRec && estRec.estimate && estRec.estimate.collections ? estRec.estimate.collections : [];
   var coll = colls.find(function(c){ return c.id === collId; });
