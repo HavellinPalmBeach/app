@@ -941,15 +941,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
     </div>
 
-    <div id="job-media-card" style="display:none;margin-bottom:1rem;padding:0 0;">
-      <div class="card">
-        <div class="sec">Job Documentation — Photos &amp; Video
-          <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;"> · Active jobs only · Agreement must be signed</span>
-        </div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:12px;">Voice notes from the walkthrough are shown per room as reference. Add photos and video to document existing conditions, asset locations, and work progress.</div>
-        <div id="job-media-rooms"></div>
-      </div>
-    </div>
   </div>
 
   <div id="job-plan-content">
@@ -1173,21 +1164,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div>
       <div class="sec">Property Specialists (PS)</div>
       <div id="ps-list"><div class="empty-state">No PS contractors added yet.</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- PHOTO MODAL (room photos + collection asset photos) -->
-<div id="photo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1010;align-items:center;justify-content:center;">
-  <div style="background:var(--white);border-radius:10px;padding:1.5rem;max-width:640px;width:94%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
-    <input type="hidden" id="photo-modal-room-id">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-      <div id="photo-modal-title" style="font-size:15px;font-weight:600;color:var(--gray-dk);"></div>
-      <button onclick="closePhotoModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray);line-height:1;">&#10005;</button>
-    </div>
-    <div id="photo-modal-grid" style="min-height:80px;"></div>
-    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
-      <label id="photo-modal-add-label" class="btn-s" style="cursor:pointer;display:inline-block;"></label>
     </div>
   </div>
 </div>
@@ -4829,11 +4805,12 @@ function buildInvoiceMailto(job, balance) {
 
 
 
-// ─── ROOM & COLLECTION PHOTO SYSTEM ──────────────────────────────────────────
-// roomPhotos: { "jobId_roomId": [ {dataUrl, roomName, jobId, seq}, ... ] }
-var roomPhotos = {};
-// collectionPhotos: { "jobId_collId": [ {dataUrl, collName, jobId, seq}, ... ] }
-var collectionPhotos = {};
+// ─── DRIVE-PRIMARY PHOTO SYSTEM ───────────────────────────────────────────────
+// References only stored in localStorage — no image data ever persisted.
+// PhotoRef: { stableId, roomIdx, label, collId, filename, driveFileUrl, status, ts }
+// _photoRetryData holds compressed dataUrl in-memory only for failed uploads.
+var _photoRefs = {};
+var _photoRetryData = {};
 
 function _seqStr(n) { return String(n).padStart(3,'0'); }
 function _cleanName(s) { return s.replace(/[^a-z0-9]/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); }
@@ -5799,15 +5776,6 @@ function loadJobPlanTab() {
     empty('Job Plan generates once the estimate is approved and locked.'); return;
   }
   var est = estRec.estimate;
-  var svc = est.svc || job.svc || '';
-  if (svc !== 'downsizing' && svc !== 'downsizing_move') {
-    var ls4 = document.getElementById('plan-log-section');
-    if (ls4) ls4.style.display = 'none';
-    var msg = (svc === 'probate' || svc === 'contested_probate' || svc === 'estate')
-      ? 'Job Plan for this service type is not yet available — use the estate/probate workflow.'
-      : 'Job Plan is not yet available for this service type.';
-    empty(msg); return;
-  }
   if (printBtn) printBtn.style.display = 'inline-block';
   content.innerHTML = renderJobPlan(jobId, job, est);
 
@@ -5820,6 +5788,9 @@ function loadJobPlanTab() {
   // Build team rows and dropdowns for the entry form
   buildLogTeamRows();
   rebuildDropdowns();
+
+  // Load photo references for this job
+  loadPhotoRefs(jobId);
 
   // Auto-set date
   var logDateEl = document.getElementById('log-date');
@@ -5835,11 +5806,24 @@ function loadJobPlanTab() {
     }
   }
 
+  // Auto-select PS crew from estimate assignment
+  var psSlots = est.psSlots || [];
+  for (var psi = 0; psi < 4; psi++) {
+    var psSlot = psSlots[psi];
+    var psSel = document.getElementById('log-m' + (psi + 1) + '-name');
+    if (!psSel || !psSlot) continue;
+    var slotLabel = psSlot.label || '';
+    if (slotLabel && !slotLabel.startsWith('contractor_')) {
+      for (var opi = 0; opi < psSel.options.length; opi++) {
+        if (psSel.options[opi].text === slotLabel) { psSel.selectedIndex = opi; break; }
+      }
+    }
+  }
+
   // Update log summary, history, and projection
   updateLogSummary(jobId);
   renderLogHistory(jobId);
   renderProjection(jobId);
-  renderJobMediaPanel(job);
 }
 
 function planChk(jobId, key, label) {
