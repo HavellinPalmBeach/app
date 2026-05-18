@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 5:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 6:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5811,6 +5811,73 @@ function setRoomStatus(jobId, roomIdx, status) {
   renderProjection(jobId);
 }
 
+function setCollStatus(jobId, collId, status) {
+  var plan = getJobPlan(jobId);
+  if (!plan.collections) plan.collections = {};
+  if (!plan.collections[collId]) plan.collections[collId] = {};
+  plan.collections[collId].status = status;
+  saveJobPlan(jobId);
+  var btns = document.getElementById('coll-status-btns-' + collId);
+  if (btns) btns.innerHTML = planCollectionStatusBtns(jobId, collId, status);
+  var badge = document.getElementById('coll-status-badge-' + collId);
+  var CCLR = {pending:'var(--gray)',scheduled:'var(--bronze)',documented:'#2563a8','handed-off':'var(--ok-tx)'};
+  if (badge) { badge.textContent = status.toUpperCase(); badge.style.color = CCLR[status] || 'var(--gray)'; }
+}
+
+function planCollectionStatusBtns(jobId, collId, status) {
+  var ST  = ['pending','scheduled','documented','handed-off'];
+  var CLR = {pending:'#aaa',scheduled:'var(--bronze)',documented:'#2563a8','handed-off':'var(--ok-tx)'};
+  return ST.map(function(s) {
+    var a = s === status;
+    return '<button onclick="setCollStatus(' + jobId + ',\'' + collId + '\',\'' + s + '\')"'
+      + ' style="padding:3px 9px;font-size:10px;font-weight:' + (a ? 700 : 400) + ';border-radius:3px;cursor:pointer;font-family:inherit;'
+      + 'background:' + (a ? CLR[s] : 'var(--cream)') + ';color:' + (a ? '#fff' : 'var(--gray)') + ';'
+      + 'border:1px solid ' + (a ? CLR[s] : 'var(--border-md)') + ';">' + s + '</button>';
+  }).join(' ');
+}
+
+function renderCollectionsCard(jobId, collections, plan) {
+  if (!collections || collections.length === 0) return '';
+  var rows = collections.map(function(c) {
+    var status = (plan.collections && plan.collections[c.id] && plan.collections[c.id].status) || 'pending';
+    var CCLR = {pending:'var(--gray)',scheduled:'var(--bronze)',documented:'#2563a8','handed-off':'var(--ok-tx)'};
+    return '<div style="border:1px solid var(--border-md);border-radius:5px;padding:12px 14px;margin-bottom:10px;">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">'
+      + '<div>'
+      + '<div style="font-size:13px;font-weight:700;">' + c.name + '</div>'
+      + '<div style="font-size:11px;color:var(--gray);margin-top:2px;">'
+      + 'Owner value: ' + (c.value || '—') + ' &nbsp;·&nbsp; Disposition: ' + (c.dispLabel || c.disp || '—')
+      + (c.note ? ' &nbsp;·&nbsp; <em>' + c.note + '</em>' : '')
+      + '</div>'
+      + '</div>'
+      + '<span id="coll-status-badge-' + c.id + '" style="font-size:11px;font-weight:700;white-space:nowrap;color:' + (CCLR[status]||'var(--gray)') + ';">' + status.toUpperCase() + '</span>'
+      + '</div>'
+      + '<div id="coll-status-btns-' + c.id + '" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">'
+      + planCollectionStatusBtns(jobId, c.id, status)
+      + '</div>'
+      + '<div style="margin-bottom:8px;">'
+      + planChk(jobId, 'coll_' + c.id + '_0', 'Appropriate specialist or vendor identified and contacted')
+      + planChk(jobId, 'coll_' + c.id + '_1', 'In-home assessment or pickup visit scheduled — date confirmed')
+      + planChk(jobId, 'coll_' + c.id + '_2', 'Collection fully inventoried and photographed before any items move')
+      + planChk(jobId, 'coll_' + c.id + '_3', 'Disposition confirmed with client in writing before handoff')
+      + planChk(jobId, 'coll_' + c.id + '_4', 'Chain of custody documented — TC present for pickup; receipt captured')
+      + '</div>'
+      + _renderCollPhotoCapture(jobId, c.id)
+      + '</div>';
+  }).join('');
+
+  return '<div style="border:2px solid var(--bronze);border-radius:6px;margin-bottom:14px;overflow:hidden;">'
+    + '<div style="background:var(--bronze);color:var(--cream);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">'
+    + '<div>'
+    + '<span style="font-weight:700;font-size:13px;">Notable Collections — Inventory &amp; Specialist Scheduling</span>'
+    + '<span style="font-size:11px;opacity:.85;margin-left:10px;">Handle before room-by-room sorting begins</span>'
+    + '</div>'
+    + '<span style="font-size:11px;opacity:.75;">' + collections.length + ' collection' + (collections.length > 1 ? 's' : '') + '</span>'
+    + '</div>'
+    + '<div style="padding:12px 14px;background:var(--white);">' + rows + '</div>'
+    + '</div>';
+}
+
 // ─── JOB PLAN TAB ────────────────────────────────────────────────────────────
 
 function loadJobPlanTab() {
@@ -6048,20 +6115,7 @@ function renderJobPlan(jobId, job, est) {
       '</div>';
   }).join('');
 
-  var p1colls = collections.length > 0
-    ? planSubsec('Collections') +
-      collections.map(function(c,ci){
-        return '<div style="border-left:3px solid var(--bronze);padding:6px 10px;margin-bottom:8px;background:var(--tan);border-radius:0 4px 4px 0;">' +
-          '<div style="font-size:12px;font-weight:600;">'+c.name+'</div>' +
-          '<div style="font-size:11px;color:var(--gray);">Owner value: '+(c.value||'—')+' · Disposition: '+(c.dispLabel||c.disp||'—')+'</div>' +
-          chks('p1_col_'+c.id+'_',['Appropriate vendor contacted and briefed',
-            'In-home assessment or pickup scheduled',
-            'Collection inventoried and photographed before vendor handling',
-            'Disposition confirmed with client in writing']) +
-          _renderCollPhotoCapture(jobId, c.id) + '</div>';
-      }).join('') : '';
-
-  var p1 = planSubsec('Daily Opening (each day)') +
+  var p1 =planSubsec('Daily Opening (each day)') +
     chks('p1_open_',['Crew on-site and briefed on today\'s room sequence',
       'Client or named decision-maker present or confirmed reachable',
       'Sort supplies staged (keep/sell/donate/dispose tags); one Maybe box per planned room',
@@ -6072,7 +6126,7 @@ function renderJobPlan(jobId, job, est) {
         'Logged: description, client\'s stated value, condition, photo reference',
         'Client acknowledgment of the room\'s inventory before items leave it',
         'Vendor handoff documented; TC physically present for valuables pickup']) : '') +
-    p1colls + renderDailyCloseBlock(jobId,1);
+    renderDailyCloseBlock(jobId,1);
 
   // ── Phase 2 ──────────────────────────────────────────────────────────────────
   var p2 = planSubsec('Daily Opening') +
@@ -6160,30 +6214,21 @@ function renderJobPlan(jobId, job, est) {
         + _renderRoomPhotoControls(jobId, r.idx, 'after')
         + '</div></div>';
     }).join('');
-    var docColls = collections.length > 0
-      ? planSubsec('Notable Collections — Asset Documentation') +
-        collections.map(function(c) {
-          return '<div style="border-left:3px solid var(--bronze);padding:6px 10px;margin-bottom:8px;background:var(--tan);border-radius:0 4px 4px 0;">'
-            + '<div style="font-size:12px;font-weight:600;">'+c.name+'</div>'
-            + '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">Owner value: '+(c.value||'—')+' · Disposition: '+(c.dispLabel||c.disp||'—')+'</div>'
-            + _renderCollPhotoCapture(jobId, c.id) + '</div>';
-        }).join('')
-      : '';
     var placeholder = '<div style="border:1px solid var(--border);border-radius:5px;padding:16px;margin-bottom:12px;background:var(--white);font-size:12px;color:var(--gray);line-height:1.6;">'
       + 'Workflow playbook for this service type is in development. Hours logging, the forward variance projection, and photo documentation are fully active for this job.'
       + '</div>';
     standaloneDocs = placeholder
-      + ((rooms.length > 0 || collections.length > 0)
+      + (rooms.length > 0
         ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
           + '<div class="sec" style="margin-bottom:10px;">Room Documentation</div>'
-          + (rooms.length > 0 ? docRooms : '<div style="font-size:11px;color:var(--gray);font-style:italic;">No rooms scored on this estimate — per-room photo capture renders when rooms are added.</div>')
-          + docColls
+          + docRooms
           + '</div>'
         : '');
-    return hdr + standaloneDocs;
+    return hdr + renderCollectionsCard(jobId, collections, plan) + standaloneDocs;
   }
 
   return hdr +
+    renderCollectionsCard(jobId, collections, plan) +
     planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
     planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
     planPhaseWrap('p2','Phase 2 — Pack & Prepare', p2) +
