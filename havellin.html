@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 12:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 12:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5725,6 +5725,14 @@ function computeProjection(jobId) {
   var triggerTC = Math.round(estTC * 1.15 * 10) / 10;
   var triggerPS = Math.round(estPS * 1.15 * 10) / 10;
 
+  // Whole-job percent-complete: room hours earned divided by adjusted total.
+  // On zero-adjustment jobs estTC === totalTCHrs so wholePctTC === tcPct.
+  // On adjusted jobs this aligns the gate's basis with the adjusted trigger.
+  var totalAdjTC = estTC > 0 ? estTC : totalTCHrs;
+  var totalAdjPS = estPS > 0 ? estPS : totalPSHrs;
+  var wholePctTC = totalAdjTC > 0 ? doneTCHrs / totalAdjTC : 0;
+  var wholePctPS = totalAdjPS > 0 ? donePSHrs / totalAdjPS : 0;
+
   function bandFor(proj, estHrs, pct) {
     if (!aboveFloor) return 'preliminary';
     if (pct === 0 || proj === null) return 'nodata';
@@ -5735,8 +5743,8 @@ function computeProjection(jobId) {
     return 'green';
   }
 
-  var tcBand = bandFor(projTC, estTC, tcPct);
-  var psBand = bandFor(projPS, estPS, psPct);
+  var tcBand = bandFor(projTC, estTC, wholePctTC);
+  var psBand = bandFor(projPS, estPS, wholePctPS);
   var rank   = { preliminary:0, nodata:0, green:1, amber:2, red:3 };
   var headlineBand = rank[tcBand] >= rank[psBand] ? tcBand : psBand;
 
