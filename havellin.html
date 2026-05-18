@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 6:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 6:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5866,16 +5866,8 @@ function renderCollectionsCard(jobId, collections, plan) {
       + '</div>';
   }).join('');
 
-  return '<div style="border:2px solid var(--bronze);border-radius:6px;margin-bottom:14px;overflow:hidden;">'
-    + '<div style="background:var(--bronze);color:var(--cream);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<div>'
-    + '<span style="font-weight:700;font-size:13px;">Notable Collections — Inventory &amp; Specialist Scheduling</span>'
-    + '<span style="font-size:11px;opacity:.85;margin-left:10px;">Handle before room-by-room sorting begins</span>'
-    + '</div>'
-    + '<span style="font-size:11px;opacity:.75;">' + collections.length + ' collection' + (collections.length > 1 ? 's' : '') + '</span>'
-    + '</div>'
-    + '<div style="padding:12px 14px;background:var(--white);">' + rows + '</div>'
-    + '</div>';
+  var subtitle = '<span style="font-size:11px;font-weight:400;opacity:.8;margin-left:10px;">Complete before room-by-room sorting · ' + collections.length + ' collection' + (collections.length > 1 ? 's' : '') + '</span>';
+  return planPhaseWrap('pc', 'Collections — Specialist Scheduling &amp; Inventory' + subtitle, rows);
 }
 
 // ─── JOB PLAN TAB ────────────────────────────────────────────────────────────
@@ -6217,19 +6209,18 @@ function renderJobPlan(jobId, job, est) {
     var placeholder = '<div style="border:1px solid var(--border);border-radius:5px;padding:16px;margin-bottom:12px;background:var(--white);font-size:12px;color:var(--gray);line-height:1.6;">'
       + 'Workflow playbook for this service type is in development. Hours logging, the forward variance projection, and photo documentation are fully active for this job.'
       + '</div>';
-    standaloneDocs = placeholder
-      + (rooms.length > 0
-        ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
-          + '<div class="sec" style="margin-bottom:10px;">Room Documentation</div>'
-          + docRooms
-          + '</div>'
-        : '');
-    return hdr + renderCollectionsCard(jobId, collections, plan) + standaloneDocs;
+    var roomDocsCard = rooms.length > 0
+      ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+        + '<div class="sec" style="margin-bottom:10px;">Room Documentation</div>'
+        + docRooms
+        + '</div>'
+      : '';
+    return hdr + placeholder + renderCollectionsCard(jobId, collections, plan) + roomDocsCard;
   }
 
   return hdr +
-    renderCollectionsCard(jobId, collections, plan) +
     planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
+    renderCollectionsCard(jobId, collections, plan) +
     planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
     planPhaseWrap('p2','Phase 2 — Pack & Prepare', p2) +
     p3 +
