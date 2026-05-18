@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 2:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 4:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4627,7 +4627,6 @@ function loadEstimateState() {
 }
 
 function loadEstimateForJob(jobId) {
-  loadMediaFromStorage(jobId);
   var rec = estimateStore[jobId];
   if (rec) {
     currentEstimate = rec.estimate || null;
@@ -4815,207 +4814,252 @@ var _photoRetryData = {};
 function _seqStr(n) { return String(n).padStart(3,'0'); }
 function _cleanName(s) { return s.replace(/[^a-z0-9]/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); }
 
-// ── ROOM PHOTOS ───────────────────────────────────────────────────────────────
-function attachRoomPhoto(input, roomId) {
-  var file = input.files[0];
-  if (!file) return;
-  var jobId = _photoModalJobId || (document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0);
-  var roomNameEl = document.getElementById('name-'+roomId);
-  var roomName = roomNameEl ? (roomNameEl.textContent||roomNameEl.value||roomId) : roomId;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
-      var key = jobId+'_'+roomId;
-      if (!roomPhotos[key]) roomPhotos[key] = [];
-      var seq = roomPhotos[key].length + 1;
-      roomPhotos[key].push({dataUrl:dataUrl, roomName:roomName, jobId:jobId, seq:seq});
-      saveMediaToStorage(jobId);
-      _updateRoomCameraBtn(roomId, roomPhotos[key].length);
-      if (document.getElementById('photo-modal-room-id') &&
-          document.getElementById('photo-modal-room-id').value === roomId) {
-        renderRoomPhotoGrid(roomId);
-      }
-      var job = jobs.find(function(j){ return j.id===jobId; });
-      function _up() {
-        var folderId = job && job.driveSubfolders && job.driveSubfolders['Photos'] ? job.driveSubfolders['Photos'].id : null;
-        if (!folderId) return;
-        var cleanRoom = _cleanName(roomName);
-        var filename = (job&&job.hvlId?job.hvlId+'_':'') + cleanRoom + '_' + _seqStr(seq) + '.jpg';
-        uploadToDrive(folderId, filename, dataUrl, function(){});
-      }
-      if (job && !job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
-      else _up();
+function loadPhotoRefs(jobId) {
+  try {
+    var raw = localStorage.getItem('hav_media_' + jobId);
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    if (Array.isArray(data)) { _photoRefs[jobId] = data; }
+    // Legacy object format: discard (pre-launch; no production photo data)
+  } catch(e) {}
+}
+
+function savePhotoRefs(jobId) {
+  try {
+    var refs = (_photoRefs[jobId] || []).map(function(r) {
+      return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId,
+               filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
+    localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
+  } catch(e) {}
 }
 
-function removeRoomPhoto(roomId, idx) {
-  var jobId = _photoModalJobId || (document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0);
-  var key = jobId+'_'+roomId;
-  if (roomPhotos[key]) { roomPhotos[key].splice(idx,1); saveMediaToStorage(jobId); }
-  _updateRoomCameraBtn(roomId, (roomPhotos[key]||[]).length);
-  renderRoomPhotoGrid(roomId);
+function _getPhotoRef(jobId, stableId) {
+  return (_photoRefs[jobId] || []).find(function(r){ return r.stableId === stableId; });
 }
 
-function _updateRoomCameraBtn(roomId, count) {
-  var lbl = document.getElementById('photo-btn-'+roomId);
-  if (!lbl) return;
-  if (count > 0) {
-    lbl.innerHTML = '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachRoomPhoto(this,\''+roomId+'\')">'
-      + '<span style="font-size:13px;">&#128247;</span>'
-      + '<span style="font-size:10px;font-weight:600;color:var(--bronze);margin-left:2px;">'+count+'</span>';
-    lbl.title = 'View / add photos ('+count+' captured)';
-    lbl.onclick = function(e){ if(e.target.tagName!=='INPUT'){ e.preventDefault(); openRoomPhotosModal(roomId); } };
-  } else {
-    lbl.innerHTML = '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachRoomPhoto(this,\''+roomId+'\')">'+'&#128247;';
-    lbl.title = 'Capture photo';
-    lbl.onclick = null;
+function _setPhotoRef(jobId, ref) {
+  if (!_photoRefs[jobId]) _photoRefs[jobId] = [];
+  var idx = -1;
+  for (var i = 0; i < _photoRefs[jobId].length; i++) {
+    if (_photoRefs[jobId][i].stableId === ref.stableId) { idx = i; break; }
+  }
+  if (idx >= 0) _photoRefs[jobId][idx] = ref;
+  else _photoRefs[jobId].push(ref);
+}
+
+function _photoStatusHtml(ref, jobId) {
+  if (!ref) return '';
+  if (ref.status === 'uploaded') {
+    return '<span style="color:var(--ok-tx);font-size:10px;font-weight:600;">&#10003; Saved</span>';
+  }
+  if (ref.status === 'uploading') {
+    return '<span style="color:var(--gray);font-size:10px;">Uploading…</span>';
+  }
+  if (ref.status === 'failed') {
+    return '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Not saved —</span>'
+      + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + ref.stableId + '\')"'
+      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>';
+  }
+  return '';
+}
+
+function _renderRoomPhotoControls(jobId, roomIdx, label) {
+  var stableId = jobId + '_r' + roomIdx + '_' + label;
+  var ref = _getPhotoRef(jobId, stableId);
+  var btnText = label === 'before' ? 'Before' : 'After';
+  var captured = ref && ref.status === 'uploaded';
+  var failed = ref && ref.status === 'failed';
+  var borderCol = captured ? 'var(--ok-tx)' : (failed ? '#c0392b' : 'var(--border-md)');
+  var bgCol = captured ? '#f0faf0' : (failed ? '#fff5f5' : 'var(--cream)');
+  var txCol = captured ? 'var(--ok-tx)' : (failed ? '#c0392b' : 'var(--gray-dk)');
+  return '<div style="display:inline-flex;align-items:center;gap:5px;margin-right:6px;margin-bottom:4px;">'
+    + '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
+    + 'border-radius:4px;border:1px solid ' + borderCol + ';font-size:11px;background:' + bgCol + ';color:' + txCol + ';">'
+    + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
+    + 'onchange="attachJobPlanPhoto(this,' + jobId + ',' + roomIdx + ',\'' + label + '\')">'
+    + '&#128247; ' + btnText + '</label>'
+    + '<span id="photo-st-' + jobId + '-r' + roomIdx + '-' + label + '" style="font-size:10px;">'
+    + _photoStatusHtml(ref, jobId)
+    + '</span></div>';
+}
+
+function _updatePhotoStatusEl(jobId, roomIdx, label) {
+  var stableId = jobId + '_r' + roomIdx + '_' + label;
+  var ref = _getPhotoRef(jobId, stableId);
+  var el = document.getElementById('photo-st-' + jobId + '-r' + roomIdx + '-' + label);
+  if (el) el.innerHTML = _photoStatusHtml(ref, jobId);
+  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.roomIdx === roomIdx && !r.collId; });
+  var anyFailed = refs.some(function(r){ return r.status === 'failed'; });
+  var flagEl = document.getElementById('photo-fail-flag-' + jobId + '-r' + roomIdx);
+  if (flagEl) {
+    flagEl.style.display = anyFailed ? '' : 'none';
+    flagEl.innerHTML = anyFailed ? '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Photo not saved — see Retry below</span>' : '';
   }
 }
 
-var _photoModalJobId = 0;
-
-function openRoomPhotosModalForJob(jobId, roomId, roomName) {
-  _photoModalJobId = jobId;
-  _openRoomPhotosModal(roomId, roomName);
-}
-
-function openRoomPhotosModal(roomId) {
-  var jobId = _photoModalJobId || (document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0);
-  var roomNameEl = document.getElementById('name-'+roomId);
-  var roomName = roomNameEl ? (roomNameEl.textContent||roomNameEl.value||roomId) : roomId;
-  _openRoomPhotosModal(roomId, roomName);
-}
-
-function _openRoomPhotosModal(roomId, roomName) {
-  var modal = document.getElementById('photo-modal');
-  document.getElementById('photo-modal-room-id').value = roomId;
-  document.getElementById('photo-modal-title').textContent = roomName + ' — Photos';
-  document.getElementById('photo-modal-add-label').innerHTML =
-    '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachRoomPhoto(this,\''+roomId+'\')" id="photo-modal-file-input">'
-    + '+ Add Photo';
-  renderRoomPhotoGrid(roomId);
-  modal.style.display = 'flex';
-}
-
-function renderRoomPhotoGrid(roomId) {
-  var jobId = _photoModalJobId || (document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0);
-  var key = jobId+'_'+roomId;
-  var photos = roomPhotos[key]||[];
-  var grid = document.getElementById('photo-modal-grid');
-  if (!grid) return;
-  if (photos.length === 0) {
-    grid.innerHTML = '<div style="color:var(--gray);font-size:12px;font-style:italic;padding:20px;text-align:center;">No photos yet — tap Add Photo to capture.</div>';
-    return;
-  }
-  grid.innerHTML = photos.map(function(p,i) {
-    return '<div style="position:relative;display:inline-block;margin:4px;">'
-      +'<img src="'+p.dataUrl+'" style="height:90px;width:120px;object-fit:cover;border-radius:5px;border:1px solid var(--border);">'
-      +'<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);border-radius:0 0 5px 5px;font-size:9px;color:#fff;padding:2px 4px;text-align:center;">'+_seqStr(i+1)+'</div>'
-      +'<span onclick="removeRoomPhoto(\''+roomId+'\','+i+')" style="position:absolute;top:3px;right:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:3px;padding:1px 5px;cursor:pointer;">✕</span>'
-      +'</div>';
-  }).join('');
-}
-
-function closePhotoModal() {
-  document.getElementById('photo-modal').style.display='none';
-}
-
-function getJobPhotos(jobId) {
-  var all = [];
-  Object.keys(roomPhotos).forEach(function(k) {
-    var arr = roomPhotos[k];
-    if (Array.isArray(arr)) arr.forEach(function(p){ if(p.jobId===jobId) all.push(p); });
+function _renderCollPhotoCapture(jobId, collId) {
+  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId); });
+  var nUploaded = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
+  var failedRefs = refs.filter(function(r){ return r.status === 'failed'; });
+  var statusHtml = nUploaded > 0 ? '<span style="color:var(--ok-tx);font-size:10px;font-weight:600;">&#10003; ' + nUploaded + ' saved</span> ' : '';
+  failedRefs.forEach(function(r) {
+    statusHtml += '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Not saved</span>'
+      + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')"'
+      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button> ';
   });
-  return all;
+  return '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    + '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
+    + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);">'
+    + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
+    + 'onchange="attachJobPlanCollectionPhoto(this,' + jobId + ',' + collId + ')">'
+    + '&#128247; Capture Asset Photo</label>'
+    + '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
+    + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);">'
+    + '<input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style="display:none;" '
+    + 'onchange="uploadAppraisalFile(this,' + collId + ',' + jobId + ')">'
+    + '&#128196; Upload Appraisal</label>'
+    + '<span id="photo-coll-status-' + jobId + '-' + collId + '">' + statusHtml + '</span>'
+    + '<span id="appraisal-badge-' + collId + '" style="font-size:10px;"></span>'
+    + '</div>';
 }
 
-// ── COLLECTION PHOTOS & APPRAISALS ────────────────────────────────────────────
-function openCollectionPhotosModal(collId) {
-  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
-  var coll = collectionsData.find(function(c){ return c.id===collId; });
-  var collName = coll ? coll.name : String(collId);
-  var modal = document.getElementById('photo-modal');
-  document.getElementById('photo-modal-room-id').value = 'coll_'+collId;
-  document.getElementById('photo-modal-title').textContent = collName + ' — Asset Photos & Appraisal';
-  document.getElementById('photo-modal-add-label').innerHTML =
-    '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachCollectionPhoto(this,'+collId+')" id="photo-modal-file-input">'
-    + '+ Add Photo';
-  renderCollectionPhotoGrid(collId, jobId);
-  modal.style.display = 'flex';
+function _updateCollPhotoStatus(jobId, collId) {
+  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId); });
+  var nUploaded = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
+  var failedRefs = refs.filter(function(r){ return r.status === 'failed'; });
+  var el = document.getElementById('photo-coll-status-' + jobId + '-' + collId);
+  if (!el) return;
+  var html = nUploaded > 0 ? '<span style="color:var(--ok-tx);font-size:10px;font-weight:600;">&#10003; ' + nUploaded + ' saved to Drive</span> ' : '';
+  failedRefs.forEach(function(r) {
+    html += '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Not saved</span>'
+      + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')"'
+      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button> ';
+  });
+  el.innerHTML = html;
 }
 
-function attachCollectionPhoto(input, collId) {
+function attachJobPlanPhoto(input, jobId, roomIdx, label) {
   var file = input.files[0];
   if (!file) return;
-  var jobId = _photoModalJobId || (document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0);
-  var coll = collectionsData.find(function(c){ return c.id===collId; });
-  var collName = coll ? coll.name : String(collId);
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || job.status !== 'active' || !job.agreementSigned) return;
+  var estRec = estimateStore[jobId];
+  var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  var room = estRooms.find(function(r){ return r.idx === roomIdx; });
+  var roomName = room ? room.name : ('Room' + roomIdx);
+  var stableId = jobId + '_r' + roomIdx + '_' + label;
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
-      var key = jobId+'_coll_'+collId;
-      if (!collectionPhotos[key]) collectionPhotos[key] = [];
-      var seq = collectionPhotos[key].length + 1;
-      collectionPhotos[key].push({dataUrl:dataUrl, collName:collName, jobId:jobId, seq:seq});
-      saveMediaToStorage(jobId);
-      renderCollectionPhotoGrid(collId, jobId);
-      renderCollections();
-      var job = jobs.find(function(j){ return j.id===jobId; });
-      function _up() {
-        var folderId = job && job.driveSubfolders && job.driveSubfolders['Asset Documentation']
-          ? job.driveSubfolders['Asset Documentation'].id : null;
-        if (!folderId) return;
-        var cleanColl = _cleanName(collName);
-        var filename = (job&&job.hvlId?job.hvlId+'_':'')+'ASSET_'+cleanColl+'_'+_seqStr(seq)+'.jpg';
-        uploadToDrive(folderId, filename, dataUrl, function(){});
-      }
-      if (job && !job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
-      else _up();
+      var filename = (job.hvlId ? job.hvlId + '_' : '') + _cleanName(roomName) + '_' + label + '_' + Date.now() + '.jpg';
+      var ref = { stableId:stableId, roomIdx:roomIdx, label:label, collId:null,
+                  filename:filename, driveFileUrl:null, status:'uploading', ts:Date.now() };
+      _setPhotoRef(jobId, ref);
+      savePhotoRefs(jobId);
+      _photoRetryData[stableId] = dataUrl;
+      _updatePhotoStatusEl(jobId, roomIdx, label);
+      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Photos', function() {
+        _updatePhotoStatusEl(jobId, roomIdx, label);
+      });
     });
   };
   reader.readAsDataURL(file);
   input.value = '';
 }
 
-function removeCollectionPhoto(collId, idx) {
-  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
-  var key = jobId+'_coll_'+collId;
-  if (collectionPhotos[key]) { collectionPhotos[key].splice(idx,1); saveMediaToStorage(jobId); }
-  renderCollectionPhotoGrid(collId, jobId);
-  renderCollections();
-}
-
-function renderCollectionPhotoGrid(collId, jobId) {
-  var key = jobId+'_coll_'+collId;
-  var photos = collectionPhotos[key]||[];
-  var grid = document.getElementById('photo-modal-grid');
-  if (!grid) return;
-  var photoHtml = photos.length === 0
-    ? '<div style="color:var(--gray);font-size:12px;font-style:italic;padding:16px 0 8px;text-align:center;">No photos yet.</div>'
-    : '<div style="margin-bottom:8px;">' + photos.map(function(p,i) {
-        return '<div style="position:relative;display:inline-block;margin:4px;">'
-          +'<img src="'+p.dataUrl+'" style="height:90px;width:120px;object-fit:cover;border-radius:5px;border:1px solid var(--border);">'
-          +'<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);border-radius:0 0 5px 5px;font-size:9px;color:#fff;padding:2px 4px;text-align:center;">'+_seqStr(i+1)+'</div>'
-          +'<span onclick="removeCollectionPhoto('+collId+','+i+')" style="position:absolute;top:3px;right:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:3px;padding:1px 5px;cursor:pointer;">✕</span>'
-          +'</div>';
-      }).join('') + '</div>';
-  var appraisalHtml = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:10px;">'
-    +'<div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:6px;">Appraisal Document</div>'
-    +'<label style="cursor:pointer;" class="btn-s">'
-    +'<input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style="display:none;" onchange="uploadAppraisalFile(this,'+collId+')">'
-    +'&#128196; Upload Appraisal</label>'
-    +'<div id="appraisal-badge-'+collId+'" style="font-size:11px;margin-top:6px;color:var(--gray);"></div>'
-    +'</div>';
-  grid.innerHTML = photoHtml + appraisalHtml;
-}
-
-function uploadAppraisalFile(input, collId) {
+function attachJobPlanCollectionPhoto(input, jobId, collId) {
   var file = input.files[0];
   if (!file) return;
-  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || job.status !== 'active' || !job.agreementSigned) return;
+  var estRec = estimateStore[jobId];
+  var colls = estRec && estRec.estimate && estRec.estimate.collections ? estRec.estimate.collections : [];
+  var coll = colls.find(function(c){ return c.id === collId; });
+  var collName = coll ? coll.name : ('Collection' + collId);
+  var ts = Date.now();
+  var stableId = jobId + '_c' + collId + '_' + ts;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
+      var filename = (job.hvlId ? job.hvlId + '_' : '') + 'ASSET_' + _cleanName(collName) + '_' + ts + '.jpg';
+      var ref = { stableId:stableId, roomIdx:null, label:'collection', collId:String(collId),
+                  filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
+      _setPhotoRef(jobId, ref);
+      savePhotoRefs(jobId);
+      _photoRetryData[stableId] = dataUrl;
+      _updateCollPhotoStatus(jobId, collId);
+      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Asset Documentation', function() {
+        _updateCollPhotoStatus(jobId, collId);
+      });
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpdate) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  function _fail() {
+    var r = _getPhotoRef(jobId, stableId);
+    if (r) { r.status = 'failed'; _setPhotoRef(jobId, r); savePhotoRefs(jobId); }
+    if (onUpdate) onUpdate();
+  }
+  if (!job) { _fail(); return; }
+  function _upload(folderId) {
+    uploadToDrive(folderId, filename, dataUrl, function(ok, fileUrl) {
+      var ref = _getPhotoRef(jobId, stableId);
+      if (!ref) return;
+      if (ok) {
+        ref.status = 'uploaded'; ref.driveFileUrl = fileUrl || null;
+        delete _photoRetryData[stableId];
+      } else {
+        ref.status = 'failed';
+      }
+      _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
+      if (onUpdate) onUpdate();
+    });
+  }
+  var folderId = job.driveSubfolders && job.driveSubfolders[subfolderName]
+    ? job.driveSubfolders[subfolderName].id : null;
+  if (folderId) { _upload(folderId); return; }
+  if (job.driveFolder) {
+    fetchSubfolderIds(job, function() {
+      var fid = job.driveSubfolders && job.driveSubfolders[subfolderName]
+        ? job.driveSubfolders[subfolderName].id : null;
+      if (fid) _upload(fid);
+      else _fail();
+    });
+  } else {
+    _fail();
+  }
+}
+
+function retryPhotoUpload(jobId, stableId) {
+  var dataUrl = _photoRetryData[stableId];
+  if (!dataUrl) return;
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref) return;
+  ref.status = 'uploading';
+  _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
+  var subfolder = ref.collId ? 'Asset Documentation' : 'Photos';
+  if (ref.collId) {
+    _updateCollPhotoStatus(jobId, ref.collId);
+    _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
+      _updateCollPhotoStatus(jobId, ref.collId);
+    });
+  } else {
+    _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
+    _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
+      _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
+    });
+  }
+}
+
+function uploadAppraisalFile(input, collId, jobIdOverride) {
+  var file = input.files[0];
+  if (!file) return;
+  var jobId = jobIdOverride || (document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0);
   var coll = collectionsData.find(function(c){ return c.id===collId; });
   var collName = coll ? coll.name : String(collId);
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -5042,22 +5086,6 @@ function uploadAppraisalFile(input, collId) {
   };
   reader.readAsDataURL(file);
   input.value = '';
-}
-
-
-function downloadJobPhotos(jobId) {
-  var photos = getJobPhotos(jobId);
-  if (photos.length === 0) { alert('No photos captured for this job yet.'); return; }
-  // Download each photo as a file
-  photos.forEach(function(p, i) {
-    var a = document.createElement('a');
-    a.href = p.dataUrl;
-    a.download = (p.roomName || 'Room').replace(/[^a-z0-9]/gi,'_') + '_' + (i+1) + '.jpg';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  });
-  showFB('e-fb','ok', photos.length + ' photo(s) downloaded. Upload to the client Drive folder.');
 }
 
 // ─── GOOGLE SHEETS SYNC ───────────────────────────────────────────────────────
@@ -5881,7 +5909,9 @@ function renderDailyCloseBlock(jobId, phase) {
 
 function renderJobPlan(jobId, job, est) {
   var plan   = getJobPlan(jobId);
-  var isMM   = est.svc === 'downsizing_move';
+  var svc    = est.svc || job.svc || '';
+  var isMM   = svc === 'downsizing_move';
+  var isDownsizing = svc === 'downsizing' || svc === 'downsizing_move';
   var vendors     = est.vendors     || [];
   var collections = est.collections || [];
   var prem   = !!est.prem;
@@ -5916,9 +5946,10 @@ function renderJobPlan(jobId, job, est) {
       [job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') +
       (job.destSqft ? ' · '+job.destSqft+' sqft':'') + '</strong></div>' : '') +
     '</div>' +
-    (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">⚠ Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
-    (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">⚠ Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
-    (prem       ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">⚠ Chain of custody is mandatory on this job.</div>' : '') +
+    (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
+    (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
+    (prem       ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
+    (job.driveFolder ? '<div style="margin-top:8px;font-size:11px;"><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; View all photos in Drive</a></div>' : '') +
     '</div>';
 
   // ── Phase 0 ──────────────────────────────────────────────────────────────────
@@ -5954,13 +5985,15 @@ function renderJobPlan(jobId, job, est) {
   // ── Phase 1 ──────────────────────────────────────────────────────────────────
   var p1rooms = rooms.map(function(r) {
     var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
+    var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
     return '<div id="plan-room-block-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
       '<div><strong style="font-size:12px;">'+r.name+'</strong>' +
       '<span style="font-size:10px;color:var(--gray);margin-left:8px;">Vol '+r.vol+' · Cplx '+r.cplx+' · '+r.tcH.toFixed(1)+' TC / '+r.psH.toFixed(1)+' PS hrs</span></div>' +
       '<span style="font-size:11px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';">'+status.toUpperCase()+'</span></div>' +
       '<div id="plan-room-status-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status)+'</div>' +
-      (r.note ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin:4px 0 6px;">Note: '+r.note+'</div>' : '') +
+      (r.note ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin:4px 0 6px;">&#128203; '+r.note+'</div>' : '') +
+      (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin:2px 0 6px;">&#127908; Voice note from walkthrough</div>' : '') +
       chks('p1_r'+r.idx+'_',['Room sort complete: every item routed to keep/sell/donate/dispose',
         'Keep items tagged by destination room'+(isMM?' (measured vs floor plan)':''),
         'Sell items inventoried, photographed, staged — chain of custody opened',
@@ -5970,6 +6003,13 @@ function renderJobPlan(jobId, job, est) {
         'Special-items flag addressed: high-value items set aside for TC review',
         'Room photographed before and after; room notes updated',
         'Room marked DECISION-LOCKED (set room status to locked above)']) +
+      '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-md);">' +
+      '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-bottom:4px;"></div>' +
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--gray);margin-bottom:5px;">Room Photos</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:0;">' +
+      _renderRoomPhotoControls(jobId, r.idx, 'before') +
+      _renderRoomPhotoControls(jobId, r.idx, 'after') +
+      '</div></div>' +
       '</div>';
   }).join('');
 
@@ -5982,7 +6022,8 @@ function renderJobPlan(jobId, job, est) {
           chks('p1_col_'+c.id+'_',['Appropriate vendor contacted and briefed',
             'In-home assessment or pickup scheduled',
             'Collection inventoried and photographed before vendor handling',
-            'Disposition confirmed with client in writing']) + '</div>';
+            'Disposition confirmed with client in writing']) +
+          _renderCollPhotoCapture(jobId, c.id) + '</div>';
       }).join('') : '';
 
   var p1 = planSubsec('Daily Opening (each day)') +
@@ -6067,6 +6108,45 @@ function renderJobPlan(jobId, job, est) {
       'Job folder complete and archived in Drive; 7-year retention applies',
       'Move documented for NASMM SMM-C tracking']);
 
+  // For non-downsizing service types: render standalone Room Documentation instead of phase playbook
+  var standaloneDocs = '';
+  if (!isDownsizing) {
+    var docRooms = rooms.map(function(r) {
+      var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
+      return '<div style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<strong style="font-size:12px;">'+r.name+'</strong>'
+        + (hasAudioNote ? '<span style="font-size:10px;color:var(--bronze);">&#127908; Voice note</span>' : '')
+        + (r.note ? '<span style="font-size:10px;color:var(--gray);font-style:italic;">'+r.note+'</span>' : '')
+        + '</div>'
+        + '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-bottom:4px;"></div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:0;">'
+        + _renderRoomPhotoControls(jobId, r.idx, 'before')
+        + _renderRoomPhotoControls(jobId, r.idx, 'after')
+        + '</div></div>';
+    }).join('');
+    var docColls = collections.length > 0
+      ? planSubsec('Notable Collections — Asset Documentation') +
+        collections.map(function(c) {
+          return '<div style="border-left:3px solid var(--bronze);padding:6px 10px;margin-bottom:8px;background:var(--tan);border-radius:0 4px 4px 0;">'
+            + '<div style="font-size:12px;font-weight:600;">'+c.name+'</div>'
+            + '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">Owner value: '+(c.value||'—')+' · Disposition: '+(c.dispLabel||c.disp||'—')+'</div>'
+            + _renderCollPhotoCapture(jobId, c.id) + '</div>';
+        }).join('')
+      : '';
+    var placeholder = '<div style="border:1px solid var(--border);border-radius:5px;padding:16px;margin-bottom:12px;background:var(--white);font-size:12px;color:var(--gray);line-height:1.6;">'
+      + 'Workflow playbook for this service type is in development. Hours logging, the forward variance projection, and photo documentation are fully active for this job.'
+      + '</div>';
+    standaloneDocs = placeholder
+      + (rooms.length > 0
+        ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+          + '<div class="sec" style="margin-bottom:10px;">Room Documentation</div>'
+          + docRooms + docColls
+          + '</div>'
+        : '');
+    return hdr + standaloneDocs;
+  }
+
   return hdr +
     planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
     planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
@@ -6140,33 +6220,7 @@ function compressImage(dataUrl, maxW, quality, cb) {
   img.src = dataUrl;
 }
 
-// ─── MEDIA PERSISTENCE ────────────────────────────────────────────────────────
-function saveMediaToStorage(jobId) {
-  try {
-    var data = {};
-    Object.keys(roomPhotos).forEach(function(k) {
-      var arr = roomPhotos[k];
-      if (Array.isArray(arr) && arr.length > 0 && arr[0].jobId === parseInt(jobId)) data['p_'+k] = arr;
-    });
-    Object.keys(collectionPhotos).forEach(function(k) {
-      var arr = collectionPhotos[k];
-      if (Array.isArray(arr) && arr.length > 0 && arr[0].jobId === parseInt(jobId)) data['c_'+k] = arr;
-    });
-    localStorage.setItem('hav_media_' + jobId, JSON.stringify(data));
-  } catch(e) {}
-}
 
-function loadMediaFromStorage(jobId) {
-  try {
-    var raw = localStorage.getItem('hav_media_' + jobId);
-    if (!raw) return;
-    var data = JSON.parse(raw);
-    Object.keys(data).forEach(function(k) {
-      if (k.startsWith('p_')) roomPhotos[k.slice(2)] = data[k];
-      else if (k.startsWith('c_')) collectionPhotos[k.slice(2)] = data[k];
-    });
-  } catch(e) {}
-}
 
 // ─── DRIVE UPLOAD UTILITIES ───────────────────────────────────────────────────
 function fetchSubfolderIds(job, cb) {
@@ -8058,160 +8112,6 @@ function renderCollections() {
   tbody.innerHTML = h;
 }
 
-
-// ─── JOB DOCUMENTATION (photos + video, active jobs only) ────────────────────
-var jobMediaStore = {};  // { jobId: { roomId: [{type,dataUrl,name,ts}] } }
-
-function renderJobMediaPanel(job) {
-  var card = document.getElementById('job-media-card');
-  if (!card) return;
-  if (!job || job.status !== 'active') { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  var jobId = job.id;
-  _photoModalJobId = jobId;
-  loadMediaFromStorage(jobId);
-  if (!jobMediaStore[jobId]) jobMediaStore[jobId] = {};
-
-  // ── Room rows ──
-  var savedEst = estimateStore[jobId];
-  var estRooms = savedEst && savedEst.estimate && savedEst.estimate.rooms ? savedEst.estimate.rooms : [];
-  var out = '';
-  var ri = 0;
-  ROOMS.forEach(function(sec) {
-    out += '<div style="margin-bottom:12px;">';
-    out += '<div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);padding:5px 8px;background:var(--tan);border-radius:4px;margin-bottom:6px;">' + sec.section + '</div>';
-    out += '<table class="rtable"><thead><tr>';
-    out += '<th style="min-width:160px;">Room</th>';
-    out += '<th style="width:100px;">Voice Note</th>';
-    out += '<th style="width:60px;text-align:center;">Photos</th>';
-    out += '<th style="width:60px;text-align:center;">Video</th>';
-    out += '<th style="width:80px;text-align:center;">Capture</th>';
-    out += '</tr></thead><tbody>';
-    sec.rooms.forEach(function(r) {
-      var roomId = 'jr' + ri;
-      var audioKey = jobId + '_r' + ri + '_audio';
-      var hasNote = roomMedia[audioKey] && roomMedia[audioKey].length > 0;
-      var photoArr = roomPhotos[jobId+'_'+roomId] || [];
-      var nPhoto = photoArr.length;
-      var items = (jobMediaStore[jobId] && jobMediaStore[jobId][roomId]) || [];
-      var nVideo = items.filter(function(m){ return m.type==='video'; }).length;
-      var photoBtn = nPhoto > 0
-        ? '<button onclick="openRoomPhotosModalForJob('+jobId+',\''+roomId+'\',\''+r.name+'\')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--ok-tx);font-weight:600;padding:1px;">&#128247; '+nPhoto+'</button>'
-        : '<span style="color:var(--border-md);font-size:11px;">—</span>';
-      var estRoom = estRooms.find(function(er){ return er.name === r.name; });
-      var walkthroughNote = estRoom && estRoom.note ? estRoom.note : '';
-      out += '<tr>';
-      out += '<td style="font-size:12px;font-weight:500;">' + r.name +
-        (walkthroughNote ? '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-top:3px;line-height:1.4;">' + walkthroughNote + '</div>' : '') + '</td>';
-      out += '<td style="text-align:center;">' + (hasNote ? '<span style="font-size:10px;color:var(--bronze);font-weight:600;">&#127908; Noted</span>' : '<span style="font-size:10px;color:var(--border-md);">&#8212;</span>') + '</td>';
-      out += '<td style="text-align:center;">' + photoBtn + '</td>';
-      out += '<td style="text-align:center;">' + (nVideo > 0 ? '<span style="font-size:10px;color:var(--info-tx);font-weight:600;">&#127909; ' + nVideo + '</span>' : '<span style="font-size:10px;color:var(--border-md);">&#8212;</span>') + '</td>';
-      out += '<td style="text-align:center;" id="jmediacell-' + jobId + '-' + roomId + '"></td>';
-      out += '</tr>';
-      ri++;
-    });
-    out += '</tbody></table></div>';
-  });
-
-  // ── Notable Collections ──
-  var cols = savedEst && savedEst.estimate && savedEst.estimate.collections ? savedEst.estimate.collections : [];
-  if (cols.length > 0) {
-    out += '<div style="margin-top:16px;">';
-    out += '<div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);padding:5px 8px;background:var(--tan);border-radius:4px;margin-bottom:6px;">Notable Collections — Asset Documentation</div>';
-    out += '<table class="rtable"><thead><tr><th>Collection</th><th style="width:80px;text-align:center;">Photos</th><th style="width:110px;">Appraisal</th><th style="width:80px;text-align:center;">Capture</th></tr></thead><tbody>';
-    cols.forEach(function(c) {
-      var photoArr = collectionPhotos[jobId+'_coll_'+c.id] || [];
-      var nPhoto = photoArr.length;
-      var photoBtn = nPhoto > 0
-        ? '<button onclick="openCollectionPhotosModalForJob('+jobId+','+c.id+')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--ok-tx);font-weight:600;padding:1px;">&#128247; '+nPhoto+'</button>'
-        : '<span style="color:var(--border-md);font-size:11px;">—</span>';
-      out += '<tr>';
-      out += '<td style="font-size:12px;font-weight:500;">'+c.name+'</td>';
-      out += '<td style="text-align:center;">'+photoBtn+'</td>';
-      out += '<td style="text-align:center;" id="apprsl-badge-'+c.id+'"><span style="font-size:10px;color:var(--border-md);">—</span></td>';
-      out += '<td style="text-align:center;" id="jcollcell-'+jobId+'-'+c.id+'"></td>';
-      out += '</tr>';
-    });
-    out += '</tbody></table></div>';
-  }
-
-  document.getElementById('job-media-rooms').innerHTML = out;
-
-  // Inject room capture buttons via DOM
-  ri = 0;
-  ROOMS.forEach(function(sec) {
-    sec.rooms.forEach(function(r) {
-      var roomId = 'jr' + ri;
-      var cell = document.getElementById('jmediacell-'+jobId+'-'+roomId);
-      if (!cell) { ri++; return; }
-      // Photo
-      var lblP = document.createElement('label');
-      lblP.title = 'Add photo'; lblP.style.cssText = 'cursor:pointer;margin-right:8px;font-size:18px;';
-      var inpP = document.createElement('input');
-      inpP.type='file'; inpP.accept='image/*'; inpP.setAttribute('capture','environment'); inpP.style.display='none';
-      inpP.addEventListener('change', function(){ _photoModalJobId=jobId; attachRoomPhoto(this, roomId); });
-      lblP.appendChild(inpP); lblP.appendChild(document.createTextNode('📷'));
-      // Video
-      var lblV = document.createElement('label');
-      lblV.title = 'Add video'; lblV.style.cssText = 'cursor:pointer;font-size:18px;';
-      var inpV = document.createElement('input');
-      inpV.type='file'; inpV.accept='video/*'; inpV.setAttribute('capture','environment'); inpV.style.display='none';
-      inpV.setAttribute('data-jobid', jobId); inpV.setAttribute('data-roomid', roomId); inpV.setAttribute('data-mtype','video');
-      inpV.addEventListener('change', function(){ captureJobMedia(this); });
-      lblV.appendChild(inpV); lblV.appendChild(document.createTextNode('🎥'));
-      cell.appendChild(lblP); cell.appendChild(lblV);
-      ri++;
-    });
-  });
-
-  // Inject collection capture buttons via DOM
-  cols.forEach(function(c) {
-    var cell = document.getElementById('jcollcell-'+jobId+'-'+c.id);
-    if (!cell) return;
-    var lbl = document.createElement('label');
-    lbl.title = 'Add asset photo'; lbl.style.cssText = 'cursor:pointer;font-size:18px;margin-right:6px;';
-    var inp = document.createElement('input');
-    inp.type='file'; inp.accept='image/*'; inp.setAttribute('capture','environment'); inp.style.display='none';
-    inp.addEventListener('change', function(){ _photoModalJobId=jobId; attachCollectionPhoto(this, c.id); });
-    lbl.appendChild(inp); lbl.appendChild(document.createTextNode('📷'));
-    var lblA = document.createElement('label');
-    lblA.title = 'Upload appraisal'; lblA.style.cssText = 'cursor:pointer;font-size:18px;';
-    var inpA = document.createElement('input');
-    inpA.type='file'; inpA.accept='.pdf,.jpg,.jpeg,.png,.heic,.doc,.docx'; inpA.style.display='none';
-    inpA.addEventListener('change', function(){ _photoModalJobId=jobId; uploadAppraisalFile(this, c.id); });
-    lblA.appendChild(inpA); lblA.appendChild(document.createTextNode('📄'));
-    cell.appendChild(lbl); cell.appendChild(lblA);
-  });
-}
-
-function openCollectionPhotosModalForJob(jobId, collId) {
-  _photoModalJobId = jobId;
-  openCollectionPhotosModal(collId);
-}
-
-function captureJobMedia(input) {
-  var type = input.getAttribute('data-mtype') || 'photo';
-  var file = input.files[0];
-  if (!file) return;
-  var jobId = parseInt(input.getAttribute('data-jobid'));
-  var roomId = input.getAttribute('data-roomid');
-  if (!jobMediaStore[jobId]) jobMediaStore[jobId] = {};
-  if (!jobMediaStore[jobId][roomId]) jobMediaStore[jobId][roomId] = [];
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    jobMediaStore[jobId][roomId].push({
-      type: type,
-      dataUrl: e.target.result,
-      name: file.name,
-      ts: new Date().toLocaleString()
-    });
-    // Re-render to update counts
-    var job = jobs.find(function(j){ return j.id === jobId; });
-    if (job) renderJobMediaPanel(job);
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
-}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 loadJobs();
