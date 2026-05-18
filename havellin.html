@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 5:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4864,22 +4864,34 @@ function _photoStatusHtml(ref, jobId) {
   return '';
 }
 
-function _photoCountForSlot(jobId, roomIdx, label) {
+function _slotRefs(jobId, roomIdx, label) {
   return (_photoRefs[jobId] || []).filter(function(r){
-    return r.roomIdx === roomIdx && r.label === label && !r.collId && r.status === 'uploaded';
-  }).length;
+    return r.roomIdx === roomIdx && r.label === label && !r.collId;
+  });
+}
+
+function _slotStatusHtml(jobId, roomIdx, label) {
+  var refs = _slotRefs(jobId, roomIdx, label);
+  var uploading = refs.filter(function(r){ return r.status === 'uploading'; }).length;
+  var failedRefs = refs.filter(function(r){ return r.status === 'failed'; });
+  var html = '';
+  if (uploading > 0) html += '<span style="color:var(--gray);font-size:10px;">Uploading…</span> ';
+  failedRefs.forEach(function(r) {
+    html += '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; shot ' + r.seq + ' not saved</span>'
+      + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')"'
+      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;margin-left:3px;">Retry</button> ';
+  });
+  return html;
 }
 
 function _renderRoomPhotoControls(jobId, roomIdx, label) {
-  var stableId = jobId + '_r' + roomIdx + '_' + label;
-  var ref = _getPhotoRef(jobId, stableId);
   var btnText = label === 'before' ? 'Before' : 'After';
-  var captured = ref && ref.status === 'uploaded';
-  var failed = ref && ref.status === 'failed';
-  var count = _photoCountForSlot(jobId, roomIdx, label);
-  var borderCol = captured ? 'var(--ok-tx)' : (failed ? '#c0392b' : 'var(--border-md)');
-  var bgCol = captured ? '#f0faf0' : (failed ? '#fff5f5' : 'var(--cream)');
-  var txCol = captured ? 'var(--ok-tx)' : (failed ? '#c0392b' : 'var(--gray-dk)');
+  var refs = _slotRefs(jobId, roomIdx, label);
+  var count = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
+  var hasFailed = refs.some(function(r){ return r.status === 'failed'; });
+  var borderCol = count > 0 ? 'var(--ok-tx)' : (hasFailed ? '#c0392b' : 'var(--border-md)');
+  var bgCol = count > 0 ? '#f0faf0' : (hasFailed ? '#fff5f5' : 'var(--cream)');
+  var txCol = count > 0 ? 'var(--ok-tx)' : (hasFailed ? '#c0392b' : 'var(--gray-dk)');
   var badge = count > 0
     ? ' <span id="photo-cnt-' + jobId + '-r' + roomIdx + '-' + label + '" style="background:var(--ok-tx);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:1px;">' + count + '</span>'
     : '<span id="photo-cnt-' + jobId + '-r' + roomIdx + '-' + label + '"></span>';
@@ -4890,18 +4902,17 @@ function _renderRoomPhotoControls(jobId, roomIdx, label) {
     + 'onchange="attachJobPlanPhoto(this,' + jobId + ',' + roomIdx + ',\'' + label + '\')">'
     + '&#128247; ' + btnText + badge + '</label>'
     + '<span id="photo-st-' + jobId + '-r' + roomIdx + '-' + label + '" style="font-size:10px;">'
-    + _photoStatusHtml(ref, jobId)
+    + _slotStatusHtml(jobId, roomIdx, label)
     + '</span></div>';
 }
 
 function _updatePhotoStatusEl(jobId, roomIdx, label) {
-  var stableId = jobId + '_r' + roomIdx + '_' + label;
-  var ref = _getPhotoRef(jobId, stableId);
   var el = document.getElementById('photo-st-' + jobId + '-r' + roomIdx + '-' + label);
-  if (el) el.innerHTML = _photoStatusHtml(ref, jobId);
+  if (el) el.innerHTML = _slotStatusHtml(jobId, roomIdx, label);
+  var refs = _slotRefs(jobId, roomIdx, label);
+  var count = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
   var cntEl = document.getElementById('photo-cnt-' + jobId + '-r' + roomIdx + '-' + label);
   if (cntEl) {
-    var count = _photoCountForSlot(jobId, roomIdx, label);
     if (count > 0) {
       cntEl.textContent = count;
       cntEl.style.cssText = 'background:var(--ok-tx);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:1px;';
@@ -4910,8 +4921,8 @@ function _updatePhotoStatusEl(jobId, roomIdx, label) {
       cntEl.style.cssText = '';
     }
   }
-  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.roomIdx === roomIdx && !r.collId; });
-  var anyFailed = refs.some(function(r){ return r.status === 'failed'; });
+  var allRefs = (_photoRefs[jobId] || []).filter(function(r){ return r.roomIdx === roomIdx && !r.collId; });
+  var anyFailed = allRefs.some(function(r){ return r.status === 'failed'; });
   var flagEl = document.getElementById('photo-fail-flag-' + jobId + '-r' + roomIdx);
   if (flagEl) {
     flagEl.style.display = anyFailed ? '' : 'none';
@@ -4969,12 +4980,15 @@ function attachJobPlanPhoto(input, jobId, roomIdx, label) {
   var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
   var room = estRooms.find(function(r){ return r.idx === roomIdx; });
   var roomName = room ? room.name : ('Room' + roomIdx);
-  var stableId = jobId + '_r' + roomIdx + '_' + label;
+  // Sequence number = total existing shots for this room+label + 1
+  var seq = _slotRefs(jobId, roomIdx, label).length + 1;
+  var stableId = jobId + '_r' + roomIdx + '_' + label + '_' + seq;
+  var cleanRoom = _cleanName(roomName);
+  var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + label + '_' + seq + '.jpg';
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
-      var filename = (job.hvlId ? job.hvlId + '_' : '') + _cleanName(roomName) + '_' + label + '_' + Date.now() + '.jpg';
-      var ref = { stableId:stableId, roomIdx:roomIdx, label:label, collId:null,
+      var ref = { stableId:stableId, roomIdx:roomIdx, label:label, seq:seq, collId:null,
                   filename:filename, driveFileUrl:null, status:'uploading', ts:Date.now() };
       _setPhotoRef(jobId, ref);
       savePhotoRefs(jobId);
