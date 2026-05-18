@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.17 · 8:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 12:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5181,7 +5181,11 @@ function loadJobLog() {
   document.getElementById('log-entry-card').style.display = 'block';
   document.getElementById('log-summary-card').style.display = 'block';
   document.getElementById('log-history-card').style.display = 'block';
-  document.getElementById('projection-card').style.display = 'block';
+  var estRecForProj = estimateStore[jobId];
+  var svcForProj = job.svc || '';
+  var showProj = estRecForProj && estRecForProj.approved &&
+    (svcForProj === 'downsizing' || svcForProj === 'downsizing_move');
+  document.getElementById('projection-card').style.display = showProj ? 'block' : 'none';
 
   // Rebuild team rows with fresh directory data
   buildLogTeamRows();
@@ -5775,7 +5779,8 @@ function renderProjection(jobId) {
   var statusWrap = document.getElementById('projection-room-status');
   if (!card || !out) return;
 
-  // Build temporary room-status controls
+  if (statusWrap) statusWrap.innerHTML = ''; // room status UI lives in Job Plan tab now
+
   var estRec = estimateStore[jobId];
   var est = estRec ? estRec.estimate
            : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
@@ -5784,20 +5789,6 @@ function renderProjection(jobId) {
     statusWrap.innerHTML = '';
     return;
   }
-
-  var plan = getJobPlan(jobId);
-  var STATUSES = ['pending','sorting','locked','packed','complete'];
-  var statusRows = est.rooms.map(function(r) {
-    var cur = (plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
-    var opts = STATUSES.map(function(s) {
-      return '<option value="' + s + '"' + (s === cur ? ' selected' : '') + '>' + s + '</option>';
-    }).join('');
-    return '<tr><td style="padding:4px 8px;font-size:12px;">' + r.name + '</td>' +
-      '<td style="padding:4px 8px;font-size:11px;color:var(--gray);">' + r.tcH.toFixed(1) + ' TC / ' + r.psH.toFixed(1) + ' PS</td>' +
-      '<td style="padding:4px 8px;"><select style="font-size:11px;padding:2px 4px;width:auto;" onchange="setRoomStatus(' + jobId + ',' + r.idx + ',this.value)">' + opts + '</select></td></tr>';
-  }).join('');
-  statusWrap.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:6px;">Room Status — Task 2 Testing Control</div>' +
-    '<table style="width:100%;border-collapse:collapse;">' + statusRows + '</table>';
 
   var snap = computeProjection(jobId);
   if (!snap) { out.innerHTML = '<div style="font-size:12px;color:var(--gray);">No estimate data for projection.</div>'; return; }
