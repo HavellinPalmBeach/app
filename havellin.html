@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 11:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 12:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3695,6 +3695,11 @@ function restoreEstimateToUI(est) {
     if (!byNameFirst[nk]) byNameFirst[nk] = sr; // first occurrence wins
   });
 
+  // Suppress auto-save during the restore loop — each toggleRoom() fires calcAll()
+  // which would overwrite estimateStore with a partially-restored state. One clean
+  // save happens at the end via the final calcAll() below.
+  window._suppressEstimateAutoSave = true;
+
   var ri = 0;
   ROOMS.forEach(function(sec) {
     sec.rooms.forEach(function(r) {
@@ -3758,7 +3763,8 @@ function restoreEstimateToUI(est) {
   if (prepContentR) prepContentR.style.display = est.prepEnabled ? 'block' : 'none';
   renderPrepItems();
 
-  calcAll();
+  window._suppressEstimateAutoSave = false;
+  calcAll(); // one clean save with fully-restored state
   applyEstimateLock();
 }
 
