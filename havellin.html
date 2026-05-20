@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 12:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 1:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2247,18 +2247,26 @@ function calcAll() {
     prepCost: prepCost, prepFee: prepFee, prepTCHrs: prepTCHrs
   };
 
-  // Auto-save estimate per job whenever rooms are scored
-  // Skip during restore operations to prevent overwriting good data
+  // Auto-save estimate per job whenever rooms are scored.
+  // Guards:
+  //   1. Suppress flag — set during restore loop and clearEstimateTab sequences
+  //   2. Never overwrite a valid estimate (has rooms) with an empty-rooms state —
+  //      prevents mid-restore or mid-clear calcAll calls from wiping saved data
   if (!window._suppressEstimateAutoSave && currentEstimate && currentEstimate.jobId) {
-    if (!estimateStore[currentEstimate.jobId] || !estimateStore[currentEstimate.jobId].approved) {
-      estimateStore[currentEstimate.jobId] = {
-        estimate: currentEstimate,
-        approved: estimateApproved,
-        submitted: estimateSubmitted,
-        approvedBy: approvedBy,
-        approvedAt: approvedAt
-      };
-      try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+    var _existingRec = estimateStore[currentEstimate.jobId];
+    var _existingHasRooms = _existingRec && _existingRec.estimate && (_existingRec.estimate.rooms || []).length > 0;
+    var _newHasRooms = currentEstimate.rooms && currentEstimate.rooms.length > 0;
+    if (!_existingRec || !_existingRec.approved) {
+      if (!_existingHasRooms || _newHasRooms) {
+        estimateStore[currentEstimate.jobId] = {
+          estimate: currentEstimate,
+          approved: estimateApproved,
+          submitted: estimateSubmitted,
+          approvedBy: approvedBy,
+          approvedAt: approvedAt
+        };
+        try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+      }
     }
   }
 }
