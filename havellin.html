@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 12:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 12:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3036,6 +3036,7 @@ function renderClientEstimate() {
       (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
       (combinedSMF > 0 ? '<tr><td>Service Management Fee — Vendor &amp; home prep coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(combinedSMF) + '</td></tr>' : '')
     : '') +
+    (e.prepEnabled && e.prepTCHrs > 0 ? '<tr><td colspan="4" style="font-size:11px;color:var(--gray);font-style:italic;padding:4px 10px;">Includes ' + e.prepTCHrs.toFixed(1) + ' TC hrs for home prep vendor coordination — factored into Transition Concierge total above.</td></tr>' : '') +
     '</tbody>' +
     (e.svcType === 'prep' && e.gcFee > 0 ?
       '<tr><td>Vendor / contractor costs</td><td>' + fmt(e.vendorTotal || 0) + ' est.</td><td>Pass-through</td><td class="r">' + fmt(e.vendorTotal || 0) + '</td></tr>' +
@@ -3064,7 +3065,6 @@ function renderClientEstimate() {
 
     '<div class="ce-section-hdr" style="margin-top:1rem;">Estimated Third-Party Vendor Costs</div>' +
     '<table class="ce-tbl">' +
-    '<thead><tr><th>Vendor / Service</th><th class="r">Estimated Cost</th></tr></thead>' +
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
     '</table>' +
@@ -3075,10 +3075,9 @@ function renderClientEstimate() {
         return '<tr><td>' + p.type + '</td><td class="r">' + fmt(p.cost) + '</td></tr>';
       }).join('');
       return '<div class="ce-section-hdr" style="margin-top:1rem;">Home Prep for Sale</div>' +
-        '<table class="ce-tbl"><thead><tr><th>Prep Item / Vendor</th><th class="r">Est. Cost</th></tr></thead>' +
+        '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody>' +
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
-        (e.prepTCHrs > 0 ? '<tr class="subtotal"><td>TC prep coordination (' + e.prepTCHrs.toFixed(1) + ' hrs — included in TC fee above)</td><td class="r"></td></tr>' : '') +
         '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">Service Management Fee (15%) is included in the Havellin Services section above.</td></tr>' +
         '</table>';
     })() : '') +
