@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.18 · 6:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 11:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3006,20 +3006,37 @@ function renderClientEstimate() {
   var approvedBlock = (estimateApproved && approvedBy) ?
     '<div class="approved-stamp"><div class="approved-stamp-text">\u2713 Approved for Release</div><div class="approved-stamp-sub">Approved by ' + approvedBy + ' on ' + approvedAt + '</div></div>' : '';
 
+  var _svcSubHdr = {
+    downsizing: 'Onsite Downsizing Services',
+    downsizing_move: 'Onsite Downsizing Services',
+    estate: 'Onsite Estate Settlement Services',
+    cleanout: 'Onsite Estate Settlement Services',
+    probate: 'Onsite Probate Estate Settlement Services',
+    contested_probate: 'Onsite Contested Probate Estate Services'
+  };
+  var onsiteLabel = _svcSubHdr[e.svc] || 'Onsite Services';
+  var _subHdrStyle = 'padding:6px 10px;font-size:11px;font-weight:600;color:var(--bronze);text-transform:uppercase;letter-spacing:.05em;';
+  var combinedSMF = (e.smf || 0) + (e.prepFee || 0);
+  var hasMaterialsSection = e.pkgCost > 0 || combinedSMF > 0;
+
   html +=
-    '<div class="ce-section-hdr">Havellin Palm Beach Services</div>' +
+    '<div class="ce-section-hdr">Havellin Services</div>' +
     '<table class="ce-tbl">' +
-    '<thead><tr><th>Service</th><th>Hours</th><th>Rate</th><th class="r">Subtotal</th></tr></thead>' +
+    '<thead><tr><th>Description</th><th>Hours</th><th>Rate</th><th class="r">Subtotal</th></tr></thead>' +
     '<tbody>' +
+    '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
     '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + e.totTC.toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
     '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + e.totPS.toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
     (e.svc === 'downsizing_move' && (e.destTC||0) > 0 ?
-      '<tr style="background:#f7f4ee;"><td colspan="4" style="padding:6px 10px;font-size:11px;font-weight:600;color:var(--bronze);text-transform:uppercase;letter-spacing:.05em;">Move Management — Destination Setup</td></tr>' +
+      '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
       '<tr style="background:#f7f4ee;"><td style="padding-left:18px;">Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt((e.destTC||0) * e.tcRate) + '</td></tr>' +
       '<tr style="background:#f7f4ee;"><td style="padding-left:18px;">Property Specialists — Unpacking, placement &amp; new home setup</td><td>' + (e.destPS||0).toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt((e.destPS||0) * e.psRate) + '</td></tr>'
     : '') +
-    (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
-    (e.smf > 0 ? '<tr><td>Service Management Fee — Third-party vendor coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(e.smf) + '</td></tr>' : '') +
+    (hasMaterialsSection ?
+      '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
+      (e.pkgCost > 0 ? '<tr style="background:#f7f4ee;"><td style="padding-left:18px;">Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
+      (combinedSMF > 0 ? '<tr style="background:#f7f4ee;"><td style="padding-left:18px;">Service Management Fee — Vendor &amp; home prep coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(combinedSMF) + '</td></tr>' : '')
+    : '') +
     '</tbody>' +
     (e.svcType === 'prep' && e.gcFee > 0 ?
       '<tr><td>Vendor / contractor costs</td><td>' + fmt(e.vendorTotal || 0) + ' est.</td><td>Pass-through</td><td class="r">' + fmt(e.vendorTotal || 0) + '</td></tr>' +
@@ -3052,18 +3069,18 @@ function renderClientEstimate() {
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note">Third-party vendor costs are estimates only. Actual invoices are billed directly to the client at cost. Havellin does not mark up vendor costs — the 15% Service Management Fee above covers Havellin\'s coordination time only.</div>' +
+    '<div class="ce-note">Third-party vendor costs are estimates only. Actual invoices are billed directly to the client at cost. Havellin does not mark up vendor costs — the 15% Service Management Fee is included in the Havellin Services section above.</div>' +
 
     (e.prepEnabled && e.prepItems && e.prepItems.length > 0 ? (function() {
       var rows = e.prepItems.filter(function(p){ return p.cost > 0; }).map(function(p) {
-        return '<tr><td>' + p.type + '</td><td class="r">' + fmt(p.cost) + '</td><td class="r">' + fmt(Math.round(p.cost*0.15)) + '</td></tr>';
+        return '<tr><td>' + p.type + '</td><td class="r">' + fmt(p.cost) + '</td></tr>';
       }).join('');
       return '<div class="ce-section-hdr" style="margin-top:1rem;">Home Prep for Sale</div>' +
-        '<table class="ce-tbl"><thead><tr><th>Prep Item / Vendor</th><th class="r">Est. Cost</th><th class="r">15% SMF</th></tr></thead>' +
+        '<table class="ce-tbl"><thead><tr><th>Prep Item / Vendor</th><th class="r">Est. Cost</th></tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
-        '<tr class="subtotal"><td>Service Management Fee (Havellin)</td><td class="r"></td><td class="r">' + fmt(e.prepFee) + '</td></tr>' +
-        '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td><td class="r"></td></tr>' +
-        (e.prepTCHrs > 0 ? '<tr class="subtotal"><td>TC prep coordination (' + e.prepTCHrs.toFixed(1) + ' hrs — included in TC fee above)</td><td class="r" colspan="2"></td></tr>' : '') +
+        '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
+        (e.prepTCHrs > 0 ? '<tr class="subtotal"><td>TC prep coordination (' + e.prepTCHrs.toFixed(1) + ' hrs — included in TC fee above)</td><td class="r"></td></tr>' : '') +
+        '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">Service Management Fee (15%) is included in the Havellin Services section above.</td></tr>' +
         '</table>';
     })() : '') +
 
@@ -3087,8 +3104,7 @@ function renderClientEstimate() {
     '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
     '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
     '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
-    '<li>A 15% Service Management Fee applies to all third-party vendors coordinated by Havellin.</li>' +
-    (e.prepEnabled && e.prepCost > 0 ? '<li>A 15% Service Management Fee applies to all home prep vendors coordinated by Havellin.</li>' : '') +
+    '<li>A 15% Service Management Fee applies to all third-party vendors and home prep vendors coordinated by Havellin.</li>' +
     '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>' +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     '<li>Havellin Palm Beach is licensed, insured, and bonded.</li>' +
