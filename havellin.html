@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.20 · 1:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.28 · 2:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -366,10 +366,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div class="card">
       <div class="sec">Job Details</div>
       <div class="row">
-        <div><label>Approx. sqft <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="number" id="i-sqft" placeholder="e.g. 4500"></div>
-        <div><label>Years in home</label><input type="number" id="i-years-in-home" placeholder="e.g. 12" min="0" max="99"></div>
-      </div>
-      <div class="row">
         <div>
           <label>Property type <span style="color:#A32D2D;font-weight:700;">*</span></label>
           <select id="i-ptype">
@@ -391,6 +387,26 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           </select>
         </div>
       </div>
+      <div class="row">
+        <div><label>Approx. sqft <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="number" id="i-sqft" placeholder="e.g. 4500"></div>
+        <div><label>Years in home</label><input type="number" id="i-years-in-home" placeholder="e.g. 12" min="0" max="99"></div>
+      </div>
+      <div class="row">
+        <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30"></div>
+        <div><label>Bathrooms</label><input type="number" id="i-baths" placeholder="e.g. 3" min="0" max="30" step="0.5"></div>
+      </div>
+      <label>Approximate home value</label>
+      <select id="i-home-value">
+        <option value="0">Unknown / not specified</option>
+        <option value="500000">Under $1M</option>
+        <option value="1750000">$1M – $2.5M</option>
+        <option value="3500000">$2.5M – $5M</option>
+        <option value="7500000">$5M – $10M</option>
+        <option value="14000000">$10M – $20M</option>
+        <option value="27500000">$20M – $35M</option>
+        <option value="52500000">$35M – $75M</option>
+        <option value="100000000">$75M+</option>
+      </select>
       <div class="row">
         <div>
           <label>Walkthrough / site visit date <span style="color:#A32D2D;font-weight:700;">*</span></label>
@@ -2519,6 +2535,9 @@ function saveIntake() {
   var city = (document.getElementById('i-city')||{}).value ? document.getElementById('i-city').value.trim() : '';
   var zip = document.getElementById('i-zip').value.trim();
   var sqft = document.getElementById('i-sqft').value.trim();
+  var beds = (document.getElementById('i-beds')||{}).value ? document.getElementById('i-beds').value.trim() : '';
+  var baths = (document.getElementById('i-baths')||{}).value ? document.getElementById('i-baths').value.trim() : '';
+  var propVal = (document.getElementById('i-home-value')||{}).value || '';
   var ptype = document.getElementById('i-ptype').value;
   var src = document.getElementById('i-src').value;
   var start = document.getElementById('i-start').value;
@@ -2606,6 +2625,7 @@ function saveIntake() {
     svc:svc, svcLabel:svcLabels[svc],
     sqft:document.getElementById('i-sqft').value,
     yearsInHome:document.getElementById('i-years-in-home').value,
+    beds:beds, baths:baths, propVal:propVal,
     ptype:document.getElementById('i-ptype').value,
     tc:tc,
     walkthrough:document.getElementById('i-walkthrough').value,
@@ -2645,14 +2665,14 @@ function saveIntake() {
 }
 
 function clearIntakeForm() {
-  ['i-fname','i-lname','i-name','i-phone','i-email','i-addr','i-city','i-zip','i-sqft','i-notes',
+  ['i-fname','i-lname','i-name','i-phone','i-email','i-addr','i-city','i-zip','i-sqft','i-beds','i-baths','i-notes',
    'i-walkthrough','i-start','i-completion',
    'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
    'i-probate-atty-phone','i-probate-atty-email',
    'i-executor-fname','i-executor-lname','i-executor-phone','i-executor-email'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  ['i-svc','i-ptype','i-src','i-tc','i-pri','i-probate-sale','i-site-visit-by'].forEach(function(id){
+  ['i-svc','i-ptype','i-src','i-tc','i-pri','i-probate-sale','i-site-visit-by','i-home-value'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('i-pri').value = 'normal';
@@ -2663,12 +2683,12 @@ function clearIntakeForm() {
   document.getElementById('i-fb').innerHTML = '';
 }
 function clearIntake() {
-  ['i-fname','i-lname','i-phone','i-email','i-addr','i-city','i-notes','i-sqft','i-years-in-home',
+  ['i-fname','i-lname','i-phone','i-email','i-addr','i-city','i-notes','i-sqft','i-years-in-home','i-beds','i-baths',
    'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
    'i-probate-atty-phone','i-probate-atty-email',
    'i-executor-fname','i-executor-lname','i-executor-phone','i-executor-email'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   var erEl = document.getElementById('i-executor-role'); if(erEl) erEl.value='';
-  ['i-zip','i-src','i-svc','i-ptype','i-tc','i-start'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  ['i-zip','i-src','i-svc','i-ptype','i-tc','i-start','i-home-value'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   ['i-dest-addr','i-dest-city','i-dest-zip','i-dest-sqft','i-dest-beds','i-dest-baths'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('i-pri').value='normal';
   document.getElementById('i-re').value='unknown';
@@ -2704,6 +2724,10 @@ function loadJobIntoEstimate() {
     // If existing target date is now before start, clear it
     if (targetDateEl.value && job.start && targetDateEl.value < job.start) targetDateEl.value = '';
   }
+
+  // Auto-populate property value from job intake
+  var ePropValEl = document.getElementById('e-propval');
+  if (ePropValEl && job.propVal) ePropValEl.value = job.propVal;
 
   // Auto-populate sqft from job intake
   var eSqftEl = document.getElementById('e-sqft');
@@ -4165,6 +4189,8 @@ function renderClientDashboard(jobId) {
   h += field('Property type', job.ptype||'—');
   h += field('Approx. sqft', job.sqft ? job.sqft+' sqft' : '—');
   h += field('Years in home', job.yearsInHome ? job.yearsInHome + ' yrs' : '—');
+  h += field('Beds / Baths', (job.beds||job.baths) ? ((job.beds||'—')+' bd / '+(job.baths||'—')+' ba') : '—');
+  h += field('Approx. home value', (job.propVal && job.propVal !== '0') ? ({'500000':'Under $1M','1750000':'$1M – $2.5M','3500000':'$2.5M – $5M','7500000':'$5M – $10M','14000000':'$10M – $20M','27500000':'$20M – $35M','52500000':'$35M – $75M','100000000':'$75M+'}[String(job.propVal)] || formatPropVal(parseInt(job.propVal))) : '—');
   h += field('Referral source', job.src||'—');
   h += field('Transition Concierge', job.tc||'<span style="color:#A32D2D;">Unassigned</span>');
   h += field('Premium estate', job.premium?'Yes':'No');
