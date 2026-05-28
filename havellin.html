@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.28 · 2:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.28 · 3:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -514,30 +514,26 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <input type="date" id="e-target-date" onchange="calcAll()">
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Pre-filled from Client Intake — editable here</div>
         <div id="timeline-badge" style="margin-top:4px;"></div>
-        <label>Estimated property value <span style="color:#A32D2D;font-weight:700;">*</span></label>
-        <div style="background:#FEF5E7;border:2px solid #A67C45;border-radius:6px;padding:8px 10px;margin-bottom:4px;">
-        <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;">⚠ Required — affects estimate multiplier</div>
-        <select id="e-propval" onchange="calcAll()" style="border-color:#A67C45;">
-          <option value="0">Unknown / not specified</option>
-          <option value="500000">Under $1M</option>
-          <option value="1750000">$1M – $2.5M</option>
-          <option value="3500000">$2.5M – $5M</option>
-          <option value="7500000">$5M – $10M</option>
-          <option value="14000000">$10M – $20M</option>
-          <option value="27500000">$20M – $35M</option>
-          <option value="52500000">$35M – $75M</option>
-          <option value="100000000">$75M+</option>
-        </select>
+        <!-- Property value, square footage, and years in home are captured at Client Intake
+             and applied to the estimate behind the scenes — kept here (hidden) so calcAll still reads them. -->
+        <div style="display:none;">
+          <select id="e-propval" onchange="calcAll()">
+            <option value="0">Unknown / not specified</option>
+            <option value="500000">Under $1M</option>
+            <option value="1750000">$1M – $2.5M</option>
+            <option value="3500000">$2.5M – $5M</option>
+            <option value="7500000">$5M – $10M</option>
+            <option value="14000000">$10M – $20M</option>
+            <option value="27500000">$20M – $35M</option>
+            <option value="52500000">$35M – $75M</option>
+            <option value="100000000">$75M+</option>
+          </select>
+          <div id="propval-warn"></div>
+          <div id="prop-mult-badge"></div>
+          <div id="e-sqft-display">—</div>
+          <input type="hidden" id="e-sqft" value="">
+          <div id="e-years-in-home-display">—</div>
         </div>
-        <div id="propval-warn" style="margin-top:4px;"></div>
-        <div id="prop-mult-badge"></div>
-        <label>Property square footage</label>
-        <div id="e-sqft-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
-        <input type="hidden" id="e-sqft" value="">
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
-        <label>Years in home</label>
-        <div id="e-years-in-home-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake — longer occupancy = higher volume/complexity</div>
         <div id="probate-inv-badge" style="margin-top:4px;"></div>
       </div>
       <div>
@@ -1418,17 +1414,7 @@ var ROOMS = [
     {name:'Safe Room',tc:0.85,ps:0.65},
     {name:'Wine Cellar',tc:1.05,ps:1.35}
   ]},
-  {section:'First Floor — Bedrooms & Bathrooms',rooms:[
-    {name:'Primary Suite',tc:0.75,ps:1.20},
-    {name:'Primary Bath',tc:0.55,ps:0.80},
-    {name:'Bedroom 2',tc:0.55,ps:0.80},
-    {name:'Bathroom 2',tc:0.22,ps:0.35},
-    {name:'Bedroom 3',tc:0.55,ps:0.80},
-    {name:'Bathroom 3',tc:0.22,ps:0.35},
-    {name:'Bedroom 4',tc:0.55,ps:0.80},
-    {name:'Bathroom 4',tc:0.22,ps:0.35}
-  ]},
-  {section:'Second Floor — Bedrooms & Bathrooms',rooms:[
+  {section:'Bedrooms & Bathrooms',rooms:[
     {name:'Primary Suite',tc:0.75,ps:1.20},
     {name:'Primary Bath',tc:0.55,ps:0.80},
     {name:'Bedroom 2',tc:0.55,ps:0.80},
@@ -2848,10 +2834,7 @@ function saveEstimateAndPreview() {
   if (unscoredRooms.length > 0) { showFB('e-fb','warn','Every included room needs a volume and complexity score (1–5): ' + unscoredRooms.map(function(r){ return r.name; }).join(', ')); return; }
   var propValEl = document.getElementById('e-propval');
   if (!propValEl || !propValEl.value || propValEl.value === '0') {
-    showFB('e-fb','warn','Property value is required — select the estimated value tier before saving.');
-    propValEl.focus();
-    propValEl.style.borderColor = '#A32D2D';
-    setTimeout(function(){ propValEl.style.borderColor = ''; }, 3000);
+    showFB('e-fb','warn','Property value is required — set the approximate home value in Client Intake for this client, then reopen the estimate.');
     return;
   }
   var svc = document.getElementById('e-svc').value;
