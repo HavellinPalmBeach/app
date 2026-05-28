@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.28 · 3:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.28 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1390,29 +1390,32 @@ var approvedAt = '';
 
 // ─── ROOM DATA ────────────────────────────────────────────────────────────────
 var ROOMS = [
-  {section:'First Floor — Entry & Living',rooms:[
+  {section:'Entry & Living',rooms:[
     {name:'Entryway / Foyer',tc:0.22,ps:0.30},
     {name:'Living Room',tc:0.75,ps:1.20},
     {name:'Formal Sitting Room',tc:0.60,ps:0.90},
     {name:'Dining Room',tc:0.55,ps:1.00},
     {name:'Family Room / Great Room',tc:0.70,ps:1.10},
     {name:'Media Room',tc:0.65,ps:1.00},
-    {name:'Sunroom',tc:0.55,ps:0.80}
+    {name:'Sunroom',tc:0.55,ps:0.80},
+    {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
-  {section:'First Floor — Kitchen & Utility',rooms:[
+  {section:'Kitchen & Utility',rooms:[
     {name:'Kitchen',tc:1.05,ps:1.80},
     {name:"Butler's Pantry",tc:0.70,ps:1.25},
     {name:'Laundry Room',tc:0.22,ps:0.35},
     {name:'Mudroom / Utility Entry',tc:0.22,ps:0.35},
-    {name:'Half Bath',tc:0.22,ps:0.30}
+    {name:'Half Bath',tc:0.22,ps:0.30},
+    {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
-  {section:'First Floor — Work & Specialty',rooms:[
+  {section:'Work & Specialty',rooms:[
     {name:'Art Studio',tc:0.85,ps:1.20},
     {name:'Home Gym',tc:0.55,ps:0.95},
     {name:'Home Office',tc:0.85,ps:1.10},
     {name:'Library',tc:1.00,ps:1.20},
     {name:'Safe Room',tc:0.85,ps:0.65},
-    {name:'Wine Cellar',tc:1.05,ps:1.35}
+    {name:'Wine Cellar',tc:1.05,ps:1.35},
+    {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
   {section:'Bedrooms & Bathrooms',rooms:[
     {name:'Primary Suite',tc:0.75,ps:1.20},
@@ -1426,19 +1429,22 @@ var ROOMS = [
     {name:'Bedroom 5',tc:0.55,ps:0.80},
     {name:'Bedroom 6',tc:0.55,ps:0.80},
     {name:'Additional Bedroom(s)',tc:0.55,ps:0.80},
-    {name:'Additional Bathroom(s)',tc:0.22,ps:0.35}
+    {name:'Additional Bathroom(s)',tc:0.22,ps:0.35},
+    {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
-  {section:'Second Floor — Other',rooms:[
+  {section:'Bonus & Flex Rooms',rooms:[
     {name:'Bonus Room',tc:0.70,ps:0.95},
-    {name:'Second Floor Office',tc:0.85,ps:1.10},
-    {name:'Second Floor Sitting Room',tc:0.60,ps:0.90}
+    {name:'Additional Office',tc:0.85,ps:1.10},
+    {name:'Additional Sitting Room',tc:0.60,ps:0.90},
+    {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
   {section:'Garage & Storage',rooms:[
     {name:'Garage (1-car)',tc:0.70,ps:1.65},
     {name:'Garage (2-car)',tc:0.85,ps:2.25},
     {name:'Garage (3+ car)',tc:1.05,ps:3.00},
     {name:'Storage Room / Oversized Closets',tc:0.70,ps:1.45},
-    {name:'Mechanical / Utility Room',tc:0.22,ps:0.35}
+    {name:'Mechanical / Utility Room',tc:0.22,ps:0.35},
+    {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
   {section:'Exterior & Auxiliary',rooms:[
     {name:'Balcony',tc:0.30,ps:0.55},
@@ -1448,12 +1454,8 @@ var ROOMS = [
     {name:'Outdoor Kitchen',tc:0.55,ps:0.95},
     {name:'Pool House',tc:1.35,ps:2.70},
     {name:'Screened Porch',tc:0.45,ps:0.85},
-    {name:'Shed',tc:0.70,ps:1.65}
-  ]},
-  {section:'Other',rooms:[
-    {name:'Other Room 1',tc:0.70,ps:1.05,custom:true},
-    {name:'Other Room 2',tc:0.70,ps:1.05,custom:true},
-    {name:'Other Room 3',tc:0.70,ps:1.05,custom:true}
+    {name:'Shed',tc:0.70,ps:1.65},
+    {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]}
 ];
 
