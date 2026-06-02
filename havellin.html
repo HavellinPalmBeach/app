@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 6:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 7:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6635,7 +6635,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       +'<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; '
       +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
       +'</div></body></html>';
-    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok){
+    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate.html', html, function(ok){
       if (ok) showSyncBadge('Estimate backed up to Drive ✓');
       else showSyncBadge('Drive backup failed — check Settings', true);
     });
@@ -6676,9 +6676,8 @@ function saveFolderEstimate() {
     }
     var el = document.getElementById('ce-page-content');
     if (!el) { _reset(); return; }
-    var ts = new Date().toISOString().slice(0,10);
     var html = _exportDoc('Estimate – '+(job.hvlId||''), el.innerHTML, '');
-    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
+    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate.html', html, function(ok) {
       _reset();
       if (ok) showSyncBadge('Estimate saved to Drive ✓');
       else showSyncBadge('Drive save failed', true);
@@ -6694,11 +6693,10 @@ function exportAgreementToDrive(jobId) {
   var el = document.getElementById('agr-page-content');
   if (!el || !el.innerHTML.trim()) return;
   var html = _exportDoc('Agreement – '+(job.hvlId||''), el.innerHTML, '.ce-page{max-width:800px;margin:0 auto;}');
-  var ts = new Date().toISOString().slice(0,10);
   resolveSubfolderId(job, 'Agreement', function(folderId) {
     if (!folderId) return;
     _agrExported[jobId] = true;
-    uploadHtmlToDrive(folderId, (job.hvlId||'AGR')+'_Agreement_'+ts+'.html', html, function(ok) {
+    uploadHtmlToDrive(folderId, (job.hvlId||'AGR')+'_Agreement.html', html, function(ok) {
       if (ok) showSyncBadge('Agreement saved to Drive ✓');
     });
   });
