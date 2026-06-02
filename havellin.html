@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 4:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 5:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6438,10 +6438,36 @@ function compressImage(dataUrl, maxW, quality, cb) {
 
 
 // ─── DRIVE UPLOAD UTILITIES ───────────────────────────────────────────────────
+// Normalize the many shapes a backend might return into { name: {id} }:
+//   { name: {id} } | { name: "id" } | [{name,id|folderId|fileId}] | {name:"id"}
+function _normalizeSubfolders(raw) {
+  if (!raw) return null;
+  var out = {};
+  if (Array.isArray(raw)) {
+    raw.forEach(function(f){
+      if (!f) return;
+      var nm = f.name || f.title || f.folderName;
+      var id = f.id || f.folderId || f.fileId;
+      if (nm && id) out[nm] = { id: id };
+    });
+  } else if (typeof raw === 'object') {
+    Object.keys(raw).forEach(function(nm){
+      var v = raw[nm];
+      if (v == null) return;
+      if (typeof v === 'string') out[nm] = { id: v };
+      else if (typeof v === 'object') {
+        var id = v.id || v.folderId || v.fileId;
+        out[nm] = id ? { id: id } : v;
+      }
+    });
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 function fetchSubfolderIds(job, cb) {
   if (!SHEETS_SYNC_URL || !job.driveFolder) { cb(false); return; }
   var parts = job.driveFolder.split('/folders/');
-  var parentId = parts.length > 1 ? parts[1].split('?')[0] : null;
+  var parentId = parts.length > 1 ? parts[1].split('?')[0] : (/^[\w-]{20,}$/.test(job.driveFolder) ? job.driveFolder : null);
   if (!parentId) { cb(false); return; }
   fetch(SHEETS_SYNC_URL, {
     method: 'POST',
@@ -6450,13 +6476,17 @@ function fetchSubfolderIds(job, cb) {
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
-    if (data.subfolders) {
-      job.driveSubfolders = data.subfolders;
+    var norm = _normalizeSubfolders(data && (data.subfolders || data.folders || data.children || data.items));
+    if (norm) {
+      job.driveSubfolders = norm;
       saveJobs();
       cb(true);
-    } else { cb(false); }
+    } else {
+      console.warn('[Drive] getSubfolders returned no readable subfolders. Raw response:', data);
+      cb(false);
+    }
   })
-  .catch(function(){ cb(false); });
+  .catch(function(e){ console.warn('[Drive] getSubfolders request failed:', e); cb(false); });
 }
 
 // Resolve a named subfolder's id, (re)fetching from Drive when it isn't
