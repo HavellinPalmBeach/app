@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.05.28 · 3:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 2:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1111,6 +1111,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <label>Stripe Secret Key — via Apps Script URL</label>
     <input type="text" id="set-stripe-script" placeholder="https://script.google.com/macros/s/...">
 
+    <div class="sec" style="margin-top:14px;">Walkthrough Notes</div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+      <input type="checkbox" id="set-require-notes" style="width:auto;margin:0;">
+      <span>Require a walkthrough note on every room &amp; collection before submitting for approval</span>
+    </label>
+    <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Off by default: missing notes show a one-click-override warning. On: missing notes block submit until added.</div>
+
     <div style="display:flex;gap:8px;margin-top:1.25rem;">
       <button class="btn-s" style="flex:1;" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
       <button class="btn-p" style="flex:1;" onclick="saveSettings()">Save Settings</button>
@@ -1183,7 +1190,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <!-- NOTES MODAL -->
 <div id="notes-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:var(--white);border-radius:10px;padding:1.5rem;max-width:520px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-    <div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;" id="notes-modal-title">Room Notes</div>
+    <div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;" id="notes-modal-title">Walkthrough Note</div>
     <div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Record key details — contents, condition, valuable items, family instructions, access issues.</div>
     <textarea id="notes-modal-text" style="width:100%;height:180px;font-size:13px;line-height:1.6;padding:10px;border:1px solid var(--border);border-radius:6px;resize:vertical;font-family:Arial,sans-serif;" placeholder="e.g. Large art collection — 12 framed pieces, some appear valuable. Family wants art appraiser before disposal. Heavy armoire needs 3 people. Key in lockbox code 4521."></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
@@ -1537,8 +1544,8 @@ function buildRoomTable() {
           '<input type="hidden" id="note-'+id+'" value="">' +
           '<span style="display:none;" id="el-'+id+'">0.0</span>' +
           '<div id="room-media-btns-'+id+'" style="display:none;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;">' +
-            '<button id="notes-btn-'+id+'" onclick="openNotesModal(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Room notes">&#128221;</button>' +
-            '<button id="mic-btn-'+id+'" onclick="startRoomTranscription(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Voice transcription">&#127908;</button>' +
+            '<button id="notes-btn-'+id+'" onclick="openNotesModal(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Walkthrough note">&#128221;</button>' +
+            '<button id="mic-btn-'+id+'" onclick="startRoomTranscription(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Walkthrough note (voice)">&#127908;</button>' +
           '</div>' +
           '<div id="mic-status-'+id+'" style="font-size:9px;color:var(--bronze);font-style:italic;min-height:10px;max-width:88px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:1px auto 0;"></div>' +
         '</td>' +
@@ -2215,6 +2222,14 @@ function calcAll() {
 
   // store snapshot
   var prevJobId = currentEstimate ? currentEstimate.jobId : null;
+  // Preserve the immutable lock snapshot across recalcs. calcAll reassigns
+  // currentEstimate wholesale, so locked walkthrough data must be carried over.
+  var prevLocked = (currentEstimate && currentEstimate.lockedRooms) ? {
+    rooms: currentEstimate.lockedRooms,
+    collections: currentEstimate.lockedCollections,
+    at: currentEstimate.lockedAt,
+    by: currentEstimate.lockedBy
+  } : null;
   currentEstimate = {
     tcRate:tcRate, psRate:psRate, nps:crewSize, prem:prem,
     propVal:propVal, propMult:propMult, avgVol:Math.round(totalVol/(includedRoomCount||1)*10)/10, psRatio:0,
@@ -2250,6 +2265,23 @@ function calcAll() {
     prepEnabled: prepEnabled, prepItems: JSON.parse(JSON.stringify(prepItems)),
     prepCost: prepCost, prepFee: prepFee, prepTCHrs: prepTCHrs
   };
+
+  // Re-attach the immutable lock snapshot. Prefer the in-session value (same
+  // job); otherwise recover it from the persisted store so a locked estimate
+  // reloaded on another device keeps its frozen walkthrough notes.
+  var _jid = currentEstimate.jobId;
+  var _storedLocked = (_jid && estimateStore[_jid] && estimateStore[_jid].estimate) ? estimateStore[_jid].estimate : null;
+  if (prevLocked && prevJobId === _jid) {
+    currentEstimate.lockedRooms = prevLocked.rooms;
+    currentEstimate.lockedCollections = prevLocked.collections;
+    currentEstimate.lockedAt = prevLocked.at;
+    currentEstimate.lockedBy = prevLocked.by;
+  } else if (_storedLocked && _storedLocked.lockedRooms) {
+    currentEstimate.lockedRooms = _storedLocked.lockedRooms;
+    currentEstimate.lockedCollections = _storedLocked.lockedCollections;
+    currentEstimate.lockedAt = _storedLocked.lockedAt;
+    currentEstimate.lockedBy = _storedLocked.lockedBy;
+  }
 
   // Auto-save estimate per job whenever rooms are scored.
   // Guards:
@@ -3247,6 +3279,21 @@ function submitForApproval() {
   }
   var unscoredRooms = (currentEstimate.rooms||[]).filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
   if (unscoredRooms.length > 0) { showFB('e-fb','warn','Cannot submit — every included room needs a volume and complexity score (1–5): ' + unscoredRooms.map(function(r){ return r.name; }).join(', ')); return; }
+
+  // Walkthrough-note check. Rooms and collections with no note are flagged.
+  // Soft-required by default (one-click override); a Settings toggle promotes
+  // this to a hard block.
+  var noteMissing = (currentEstimate.rooms||[]).filter(function(r){ return !(r.note && r.note.trim()); }).map(function(r){ return r.name; })
+    .concat((currentEstimate.collections||[]).filter(function(c){ return !(c.note && c.note.trim()); }).map(function(c){ return (c.name||'Collection') + ' (collection)'; }));
+  if (noteMissing.length > 0) {
+    var list = noteMissing.join(', ');
+    if (REQUIRE_WALKTHROUGH_NOTES) {
+      showFB('e-fb','warn','Cannot submit — walkthrough notes required and missing for: ' + list + '. Add notes or turn off the requirement in Settings.');
+      return;
+    }
+    if (!confirm('No walkthrough note for: ' + list + '.\n\nContinue anyway?')) return;
+  }
+
   estimateSubmitted = true;
   saveEstimateState();
   updateApprovalUI();
@@ -3367,6 +3414,42 @@ function openPinModal() {
 function closePinModal() {
   document.getElementById('pin-modal').style.display = 'none';
 }
+
+// Snapshot an immutable copy of each included room's walkthrough data at lock
+// time. Transcripts, scores and estimated hours are frozen here so later room
+// edits never rewrite history — a change order is the path to revise.
+function buildLockSnapshot(est, lockedBy) {
+  if (!est) return;
+  var ts = new Date().toISOString();
+  est.lockedAt = ts;
+  est.lockedBy = lockedBy || '';
+  est.lockedRooms = (est.rooms || []).map(function(r){
+    return {
+      name: r.name,
+      section: r.section || '',
+      note: (r.note || '').trim(),
+      vol: r.vol,
+      cplx: r.cplx,
+      special_items: !!r.spcl,
+      estimated_tc_hours: r.tcH,
+      estimated_ps_hours: r.psH,
+      locked_at: ts,
+      locked_by: lockedBy || ''
+    };
+  });
+  est.lockedCollections = (est.collections || []).map(function(c){
+    return {
+      name: c.name,
+      note: (c.note || '').trim(),
+      value: c.value,
+      qty: c.qty,
+      disposition: c.dispLabel || c.disp || '',
+      locked_at: ts,
+      locked_by: lockedBy || ''
+    };
+  });
+}
+
 function checkPin() {
   var pin = document.getElementById('pin-input').value;
   if (pin === '3010') {
@@ -3377,6 +3460,11 @@ function checkPin() {
     discountRevision = false;
     approvedBy = 'Anthony Graziano Sr';
     approvedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    // Freeze walkthrough notes + room scores at lock. Never overwrite an
+    // existing snapshot (a re-approval keeps the original lock record).
+    if (currentEstimate && !currentEstimate.lockedRooms) {
+      buildLockSnapshot(currentEstimate, approvedBy);
+    }
     // update job status
     if (currentEstimate && currentEstimate.jobId) {
       var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
@@ -3391,6 +3479,11 @@ function checkPin() {
     }
     applyEstimateLock();
     renderClientEstimate();
+    // Write the frozen walkthrough notes to Drive as the searchable corpus.
+    if (currentEstimate && currentEstimate.jobId) {
+      var _lockedEst = currentEstimate, _lockedJobId = currentEstimate.jobId;
+      setTimeout(function(){ uploadWalkthroughNotesToDrive(_lockedJobId, _lockedEst); }, 400);
+    }
   } else if (pin.length === 4) {
     document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN. Try again.</div>';
     document.getElementById('pin-input').value = '';
@@ -6390,33 +6483,71 @@ function uploadHtmlToDrive(folderId, filename, html, onDone) {
 }
 
 // ─── ESTIMATE / AGREEMENT EXPORT ─────────────────────────────────────────────
+// Drive-safe filename fragment: alphanumerics/_/- only, trimmed and capped.
+function _sanitizeFilePart(s) {
+  return String(s == null ? '' : s).replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50) || 'unnamed';
+}
+
+// Writes the walkthrough corpus to the job's "Walkthrough Notes" Drive folder:
+// one .txt per room-with-a-note, one .txt per collection-with-a-note, and a
+// single estimate-level JSON sidecar carrying the full lockedRooms dataset.
+// Prefers the immutable lock snapshot; falls back to live rooms for drafts.
 function uploadWalkthroughNotesToDrive(jobId, estSnapshot) {
   var est = estSnapshot || currentEstimate;
   if (!est) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var rooms = (est.rooms || []).filter(function(r){ return r.note && r.note.trim(); });
-  var colls = (est.collections || collectionsData || []).filter(function(c){ return c.note && c.note.trim(); });
-  if (!rooms.length && !colls.length) return;
+
+  var locked = est.lockedRooms || null;
+  var srcRooms = locked || est.rooms || [];
+  var srcColls = est.lockedCollections || est.collections || collectionsData || [];
+  var rooms = srcRooms.filter(function(r){ return r.note && r.note.trim(); });
+  var colls = srcColls.filter(function(c){ return c.note && c.note.trim(); });
+  // Nothing to write — and not locked, so don't even emit an empty sidecar.
+  if (!rooms.length && !colls.length && !locked) return;
+
+  var hvl = job.hvlId ? job.hvlId : ('job' + jobId);
+  function _txtUrl(text) { return 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text))); }
+
   function _doUpload() {
     var folderId = job.driveSubfolders && job.driveSubfolders['Walkthrough Notes']
       ? job.driveSubfolders['Walkthrough Notes'].id : null;
     if (!folderId) return;
     var ts = new Date().toISOString().slice(0,10);
-    var sections = [];
-    if (rooms.length) {
-      var roomLines = rooms.map(function(r){ return r.name + '\n' + r.note.trim(); });
-      sections.push('ROOM NOTES\n' + roomLines.join('\n\n---\n\n'));
-    }
-    if (colls.length) {
-      var collLines = colls.map(function(c){ return (c.name||'Collection') + '\n' + c.note.trim(); });
-      sections.push('NOTABLE COLLECTIONS NOTES\n' + collLines.join('\n\n---\n\n'));
-    }
-    var text = 'Walkthrough Notes — ' + (job.name || job.hvlId || '') + '\nDate: ' + ts + '\n\n'
-      + sections.join('\n\n' + '='.repeat(40) + '\n\n');
-    var filename = (job.hvlId ? job.hvlId + '_' : '') + 'WalkthroughNotes_' + ts + '.txt';
-    var dataUrl = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text)));
-    uploadToDrive(folderId, filename, dataUrl, function(){});
+
+    // One file per room. Deterministic name (section + index disambiguate
+    // same-named rooms) so a re-lock overwrites rather than proliferates.
+    rooms.forEach(function(r, i){
+      var fname = hvl + '_' + _sanitizeFilePart(r.section) + '_' + _sanitizeFilePart(r.name) + '_' + (i+1) + '.txt';
+      var body = (r.name || 'Room') + (r.section ? ' (' + r.section + ')' : '') + '\n'
+        + 'HVL: ' + hvl + '  ·  ' + (r.locked_at ? 'Locked: ' + r.locked_at : 'Draft: ' + ts) + '\n\n'
+        + r.note.trim() + '\n';
+      uploadToDrive(folderId, fname, _txtUrl(body), function(){});
+    });
+
+    // One file per collection. Same folder with a collection_ prefix — the
+    // Drive integration exposes no nested-subfolder create action.
+    colls.forEach(function(c, i){
+      var fname = hvl + '_collection_' + _sanitizeFilePart(c.name) + '_' + (i+1) + '.txt';
+      var body = (c.name || 'Collection') + '\n'
+        + 'HVL: ' + hvl + '  ·  ' + (c.locked_at ? 'Locked: ' + c.locked_at : 'Draft: ' + ts) + '\n\n'
+        + c.note.trim() + '\n';
+      uploadToDrive(folderId, fname, _txtUrl(body), function(){});
+    });
+
+    // Estimate-level structured sidecar — the searchable dataset that compounds.
+    var sidecar = {
+      hvlId: hvl,
+      jobId: jobId,
+      jobName: job.name || '',
+      lockedAt: est.lockedAt || null,
+      lockedBy: est.lockedBy || null,
+      lockedRooms: est.lockedRooms || null,
+      lockedCollections: est.lockedCollections || null,
+      generatedAt: new Date().toISOString()
+    };
+    var jsonUrl = 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sidecar, null, 2))));
+    uploadToDrive(folderId, hvl + '_walkthrough.json', jsonUrl, function(){});
   }
   if (!job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _doUpload);
   else _doUpload();
@@ -6446,7 +6577,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       +'</head><body>'
       +'<h2>Estimate — '+(job.name||'')+'</h2>'
       +'<div style="font-size:13px;color:#888;margin-bottom:16px;">'+(job.hvlId||'')+' · '+ts+'</div>'
-      +'<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours</th><th>$</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +'<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+'</tbody></table>'
       +'<div style="margin-top:20px;font-size:14px;">'
       +'<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; '
       +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
@@ -6667,6 +6798,9 @@ var STRIPE_SCRIPT_URL = '';
 
 var DRIVE_FOLDER_ID = '';
 var SHEETS_SYNC_URL = '';
+// When true, a missing walkthrough note hard-blocks submit-for-approval
+// instead of showing a one-click-override warning. Off by default.
+var REQUIRE_WALKTHROUGH_NOTES = false;
 
 function openSettings() {
   document.getElementById('settings-modal').style.display = 'flex';
@@ -6674,6 +6808,8 @@ function openSettings() {
   document.getElementById('set-stripe-script').value = STRIPE_SCRIPT_URL;
   document.getElementById('set-sheets-url').value    = SHEETS_SYNC_URL;
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
+  var reqEl = document.getElementById('set-require-notes');
+  if (reqEl) reqEl.checked = REQUIRE_WALKTHROUGH_NOTES;
 }
 
 function saveSettings() {
@@ -6681,11 +6817,14 @@ function saveSettings() {
   STRIPE_SCRIPT_URL  = document.getElementById('set-stripe-script').value.trim();
   SHEETS_SYNC_URL    = document.getElementById('set-sheets-url').value.trim();
   DRIVE_FOLDER_ID    = document.getElementById('set-drive-id').value.trim();
+  var reqEl = document.getElementById('set-require-notes');
+  REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
   try {
     localStorage.setItem('hav_stripe_pk',     STRIPE_PK);
     localStorage.setItem('hav_stripe_script', STRIPE_SCRIPT_URL);
     localStorage.setItem('hav_sheets_url',    SHEETS_SYNC_URL);
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
+    localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
   } catch(e) {}
   document.getElementById('settings-modal').style.display = 'none';
   showSyncBadge('Settings saved \u2713');
@@ -6697,6 +6836,7 @@ function loadSettings() {
     STRIPE_SCRIPT_URL = localStorage.getItem('hav_stripe_script') || '';
     SHEETS_SYNC_URL   = localStorage.getItem('hav_sheets_url')    || localStorage.getItem('havellin_sheets_url') || '';
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
+    REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';
   } catch(e) {}
 }
 
@@ -7509,7 +7649,7 @@ function openNotesModal(id) {
   var rowEl = document.getElementById('row-'+id);
   var nameEl = document.getElementById('name-'+id);
   var roomName = nameEl ? (nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent) : id;
-  document.getElementById('notes-modal-title').textContent = 'Notes — ' + roomName;
+  document.getElementById('notes-modal-title').textContent = 'Walkthrough note — ' + roomName;
   document.getElementById('notes-modal-text').value = noteEl ? noteEl.value : '';
   document.getElementById('notes-modal').style.display = 'flex';
   setTimeout(function(){ document.getElementById('notes-modal-text').focus(); }, 100);
@@ -7527,7 +7667,7 @@ function saveNotesModal() {
   if (noteEl) noteEl.value = text;
   var btn = document.getElementById('notes-btn-'+_notesRoomId);
   if (btn) {
-    btn.textContent = text.trim() ? '📝 Edit' : '+ Notes';
+    btn.textContent = text.trim() ? '📝 Walkthrough' : '+ Walkthrough note';
     btn.style.color = text.trim() ? 'var(--bronze)' : '';
     btn.style.fontWeight = text.trim() ? '600' : '';
   }
