@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 8:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 8:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -908,7 +908,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <div class="sec">Team Members &amp; Hours</div>
             <div id="log-team-rows"></div>
           </div>
-          <div id="log-alloc-wrap" style="display:none;margin-top:14px;"></div>
           <div style="margin-top:1rem;display:flex;gap:8px;">
             <button class="btn-s" onclick="clearLogEntry()">Clear</button>
             <button class="btn-p" onclick="saveLogEntry()">Save Hours Entry →</button>
@@ -5301,7 +5300,6 @@ function showSyncBadge(msg, isErr) {
 
 // ─── JOB LOG ──────────────────────────────────────────────────────────────────
 var jobLogs = {}; // keyed by job.id
-var _curLogAllocRooms = []; // room list backing the daily-hours allocation table
 var invApproved = false;
 var invApprovedBy = '';
 var invApprovedAt = '';
@@ -5329,7 +5327,7 @@ function buildLogTeamRows() {
         tcNames.map(function(n){ return '<option>'+n+'</option>'; }).join('') +
       '</select>' +
     '</div>' +
-    '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" oninput="refreshLogAlloc()" style="margin-top:4px;text-align:right;"></div>' +
+    '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
   '</div>';
 
   // PS rows 1-4
@@ -5344,180 +5342,11 @@ function buildLogTeamRows() {
           '<option value="Contractor TBD">Contractor TBD</option>' +
         '</select>' +
       '</div>' +
-      '<div><label style="margin:0;">Hours</label><input type="number" id="log-m'+i+'-hrs" min="0" max="24" step="0.5" placeholder="0.0" oninput="refreshLogAlloc()" style="margin-top:4px;text-align:right;"></div>' +
+      '<div><label style="margin:0;">Hours</label><input type="number" id="log-m'+i+'-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
     '</div>';
   }
 
   document.getElementById('log-team-rows').innerHTML = html;
-}
-
-// ─── DAILY HOURS — ROUGH PER-ROOM ALLOCATION (Update 2B) ─────────────────────
-// Optional. Splits a logged day's TC/PS hours across the estimate's rooms at
-// 0.5 increments. Left blank → the day is excluded from reconciliation rather
-// than guessed.
-
-// Sum the day's TC (slot 0) and PS (slots 1-4) hours from the entry form.
-function _logDayTotals() {
-  var tc = 0, ps = 0;
-  for (var i = 0; i <= 4; i++) {
-    var el = document.getElementById('log-m'+i+'-hrs');
-    var h = el ? (parseFloat(el.value) || 0) : 0;
-    if (i === 0) tc += h; else ps += h;
-  }
-  return { tc: Math.round(tc*10)/10, ps: Math.round(ps*10)/10 };
-}
-
-// Room list for a job's allocation table — prefers the immutable lock snapshot.
-function _logAllocRoomsFor(jobId) {
-  var rec = estimateStore[jobId];
-  var est = rec ? rec.estimate : null;
-  if (!est) return [];
-  var rooms = (est.lockedRooms && est.lockedRooms.length) ? est.lockedRooms : (est.rooms || []);
-  return rooms.map(function(r, i){
-    return {
-      idx: (r.idx != null ? r.idx : i),
-      name: r.name || ('Room ' + (i+1)),
-      section: r.section || '',
-      estTc: Number(r.estimated_tc_hours != null ? r.estimated_tc_hours : r.tcH) || 0,
-      estPs: Number(r.estimated_ps_hours != null ? r.estimated_ps_hours : r.psH) || 0
-    };
-  });
-}
-
-// Build the allocation table once when a job loads (rooms don't change mid-entry).
-function buildLogAllocRows(jobId) {
-  var wrap = document.getElementById('log-alloc-wrap');
-  if (!wrap) return;
-  _curLogAllocRooms = _logAllocRoomsFor(jobId);
-  if (!_curLogAllocRooms.length) { wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
-  var cell = 'padding:4px 6px;';
-  var inp = function(id){ return '<input type="number" id="'+id+'" min="0" step="0.5" placeholder="0" oninput="updateLogAllocValidation()" style="width:58px;text-align:right;">'; };
-  var rows = _curLogAllocRooms.map(function(r){
-    return '<tr>' +
-      '<td style="'+cell+'font-size:12px;">' + r.name + (r.section ? ' <span style="color:var(--gray);font-size:10px;">· '+r.section+'</span>' : '') + '</td>' +
-      '<td style="'+cell+'text-align:right;">' + inp('log-alloc-'+r.idx+'-tc') + '</td>' +
-      '<td style="'+cell+'text-align:right;">' + inp('log-alloc-'+r.idx+'-ps') + '</td>' +
-    '</tr>';
-  }).join('');
-  rows += '<tr style="border-top:1px solid var(--border);">' +
-    '<td style="'+cell+'font-size:12px;font-style:italic;color:var(--gray);">Overhead / non-room</td>' +
-    '<td style="'+cell+'text-align:right;">' + inp('log-alloc-oh-tc') + '</td>' +
-    '<td style="'+cell+'text-align:right;">' + inp('log-alloc-oh-ps') + '</td>' +
-  '</tr>';
-  wrap.innerHTML =
-    '<div class="sec" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
-      '<span>Room allocation <span style="font-weight:400;color:var(--gray);font-size:10px;text-transform:none;letter-spacing:0;">(rough · optional)</span></span>' +
-      '<button class="btn-s" type="button" onclick="distributeLogAlloc()" style="font-size:10px;padding:3px 8px;">Distribute</button>' +
-    '</div>' +
-    '<div style="font-size:11px;color:var(--gray);margin-bottom:6px;">Split the day’s hours across rooms at 0.5 increments. Leave blank to exclude this day from reconciliation.</div>' +
-    '<table style="width:100%;border-collapse:collapse;">' +
-      '<thead><tr>' +
-        '<th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);padding:4px 6px;">Room</th>' +
-        '<th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);padding:4px 6px;">TC</th>' +
-        '<th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);padding:4px 6px;">PS</th>' +
-      '</tr></thead><tbody>' + rows + '</tbody></table>' +
-    '<div id="log-alloc-validation" style="font-size:11px;margin-top:6px;"></div>';
-  wrap.style.display = 'none';
-}
-
-// Show the section once the day has hours; refresh its totals/validation.
-function refreshLogAlloc() {
-  var wrap = document.getElementById('log-alloc-wrap');
-  if (!wrap) return;
-  var t = _logDayTotals();
-  if ((t.tc > 0 || t.ps > 0) && _curLogAllocRooms.length) {
-    wrap.style.display = 'block';
-    updateLogAllocValidation();
-  } else {
-    wrap.style.display = 'none';
-  }
-}
-
-// Sum what's currently allocated across rooms + overhead.
-function _sumLogAlloc() {
-  var tc = 0, ps = 0;
-  _curLogAllocRooms.forEach(function(r){
-    var a = document.getElementById('log-alloc-'+r.idx+'-tc');
-    var b = document.getElementById('log-alloc-'+r.idx+'-ps');
-    tc += a ? (parseFloat(a.value)||0) : 0;
-    ps += b ? (parseFloat(b.value)||0) : 0;
-  });
-  var oht = document.getElementById('log-alloc-oh-tc');
-  var ohp = document.getElementById('log-alloc-oh-ps');
-  tc += oht ? (parseFloat(oht.value)||0) : 0;
-  ps += ohp ? (parseFloat(ohp.value)||0) : 0;
-  return { tc: Math.round(tc*10)/10, ps: Math.round(ps*10)/10 };
-}
-
-// Amber if allocations are off the day's totals by more than ±0.5; green if matched.
-function updateLogAllocValidation() {
-  var box = document.getElementById('log-alloc-validation');
-  if (!box) return;
-  var t = _logDayTotals(), s = _sumLogAlloc();
-  function line(label, allocated, target) {
-    var diff = Math.round((allocated - target)*10)/10;
-    var ok = Math.abs(diff) <= 0.5;
-    var color = ok ? 'var(--ok-tx)' : '#B8860B';
-    var tail = ok ? ' ✓' : ' — off by ' + (diff>0?'+':'') + diff.toFixed(1);
-    return '<div style="color:'+color+';font-weight:600;">' + label + ': ' + allocated.toFixed(1) + ' / ' + target.toFixed(1) + ' hrs' + tail + '</div>';
-  }
-  box.innerHTML = line('TC', s.tc, t.tc) + line('PS', s.ps, t.ps);
-}
-
-// Redistribute helper: spread the day's totals across rooms proportional to
-// estimated hours (rounded to 0.5), with any remainder landing in Overhead so
-// the allocation sums exactly to the day's totals.
-function distributeLogAlloc() {
-  var t = _logDayTotals();
-  if ((t.tc <= 0 && t.ps <= 0) || !_curLogAllocRooms.length) return;
-  ['tc','ps'].forEach(function(role){
-    var total = t[role];
-    var estKey = role === 'tc' ? 'estTc' : 'estPs';
-    var totalEst = _curLogAllocRooms.reduce(function(a,r){ return a + (r[estKey]||0); }, 0);
-    var assigned = 0;
-    _curLogAllocRooms.forEach(function(r){
-      var share = totalEst > 0 ? (r[estKey]||0)/totalEst*total : total/_curLogAllocRooms.length;
-      var rounded = Math.round(share*2)/2;
-      var el = document.getElementById('log-alloc-'+r.idx+'-'+role);
-      if (el) el.value = rounded ? rounded : '';
-      assigned += rounded;
-    });
-    var rem = Math.round((total - assigned)*2)/2;
-    var oh = document.getElementById('log-alloc-oh-'+role);
-    if (oh) oh.value = rem ? rem : '';
-  });
-  updateLogAllocValidation();
-}
-
-// Gather the allocation for saving; null when nothing was entered (unset → excluded).
-function collectLogAlloc() {
-  var wrap = document.getElementById('log-alloc-wrap');
-  if (!wrap || wrap.style.display === 'none' || !_curLogAllocRooms.length) return null;
-  var rooms = [];
-  _curLogAllocRooms.forEach(function(r){
-    var a = document.getElementById('log-alloc-'+r.idx+'-tc');
-    var b = document.getElementById('log-alloc-'+r.idx+'-ps');
-    var tc = a ? (parseFloat(a.value)||0) : 0;
-    var ps = b ? (parseFloat(b.value)||0) : 0;
-    if (tc > 0 || ps > 0) rooms.push({ idx: r.idx, name: r.name, section: r.section, tc: tc, ps: ps });
-  });
-  var oht = document.getElementById('log-alloc-oh-tc');
-  var ohp = document.getElementById('log-alloc-oh-ps');
-  var ohTc = oht ? (parseFloat(oht.value)||0) : 0;
-  var ohPs = ohp ? (parseFloat(ohp.value)||0) : 0;
-  if (!rooms.length && ohTc === 0 && ohPs === 0) return null;
-  return { rooms: rooms, overhead: { tc: ohTc, ps: ohPs }, ts: new Date().toISOString() };
-}
-
-// Clear the allocation inputs and hide the section.
-function clearLogAlloc() {
-  _curLogAllocRooms.forEach(function(r){
-    var a = document.getElementById('log-alloc-'+r.idx+'-tc'); if (a) a.value = '';
-    var b = document.getElementById('log-alloc-'+r.idx+'-ps'); if (b) b.value = '';
-  });
-  var oht = document.getElementById('log-alloc-oh-tc'); if (oht) oht.value = '';
-  var ohp = document.getElementById('log-alloc-oh-ps'); if (ohp) ohp.value = '';
-  var wrap = document.getElementById('log-alloc-wrap'); if (wrap) wrap.style.display = 'none';
 }
 
 
@@ -5539,15 +5368,12 @@ function saveLogEntry() {
 
   if (members.length === 0) { showFB('log-fb','warn','Enter at least one team member with hours.'); return; }
 
-  var alloc = collectLogAlloc();
-
   if (!jobLogs[jobId]) jobLogs[jobId] = [];
   jobLogs[jobId].push({
     id: Date.now(),
     date: date,
     activity: activity,
-    members: members,
-    alloc: alloc
+    members: members
   });
 
   saveLogData();
@@ -5566,7 +5392,6 @@ function clearLogEntry() {
     document.getElementById('log-m'+i+'-hrs').value = '';
     if (i > 0) document.getElementById('log-m'+i+'-name').value = '';
   }
-  clearLogAlloc();
 }
 
 function deleteLogEntry(jobId, entryId) {
@@ -6227,7 +6052,6 @@ function loadJobPlanTab() {
 
   // Build team rows and dropdowns for the entry form
   buildLogTeamRows();
-  buildLogAllocRows(jobId);
   rebuildDropdowns();
 
   // Load photo references for this job
