@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 2:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 4:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2950,6 +2950,16 @@ function fmtCEDate(d) {
   try { return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); } catch(e) { return d; }
 }
 
+// 50/25/25 payment split. The final payment absorbs rounding so the three
+// payments always sum exactly to the total — prevents the ±$1 drift that
+// independent Math.round() on each share would otherwise produce.
+function paymentSplit(total) {
+  var t = Math.round(total || 0);
+  var deposit = Math.round(t * 0.5);
+  var midpoint = Math.round(t * 0.25);
+  return { deposit: deposit, midpoint: midpoint, final: t - deposit - midpoint, total: t };
+}
+
 function renderClientEstimate() {
   if (!currentEstimate) {
     document.getElementById('ce-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Save an estimate first to preview the client document.</div>';
@@ -2957,6 +2967,7 @@ function renderClientEstimate() {
     return;
   }
   var e = currentEstimate;
+  var _eSplit = paymentSplit(e.havellinTotal);
   var job = e.job || jobs.find(function(j){ return j.id===e.jobId; }) || {};
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
@@ -3141,9 +3152,9 @@ function renderClientEstimate() {
 
     '<div style="margin-top:1.5rem;page-break-before:always;"><div class="ce-section-hdr">Payment Schedule</div>' +
     '<table class="pay-tbl">' +
-    '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(e.havellinTotal * 0.5) + '</td></tr>' +
-    '<tr><td><strong>25% Midpoint</strong> — Due at project midpoint</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(e.havellinTotal * 0.25) + '</td></tr>' +
-    '<tr><td><strong>25% Final</strong> — Due upon completion</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(e.havellinTotal * 0.25) + '</td></tr>' +
+    '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
+    '<tr><td><strong>25% Midpoint</strong> — Due at project midpoint</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
+    '<tr><td><strong>25% Final</strong> — Due upon completion</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
     '</table></div>' +
 
     '<div class="ce-terms" style="margin-top:1.5rem;"><div class="ce-terms-title">Terms &amp; Conditions</div>' +
@@ -4343,9 +4354,8 @@ function renderClientDashboard(jobId) {
   h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">Payment Schedule</div>';
   var hav = est ? est.havellinTotal : (job.havellinEst||0);
   var tot = job.totalEst || hav;
-  var dep = Math.round(hav * 0.5);
-  var mid = Math.round(hav * 0.25);
-  var fin2 = hav - dep - mid;
+  var _split = paymentSplit(hav);
+  var dep = _split.deposit, mid = _split.midpoint, fin2 = _split.final;
   h += '<div class="fin-r"><span class="fin-l">Havellin estimate</span><span class="fin-v">'+(hav?fmtMoney(hav):'—')+'</span></div>';
   h += '<div class="fin-r"><span class="fin-l">Total incl. vendors</span><span class="fin-v">'+(tot?fmtMoney(tot):'—')+'</span></div>';
   h += '<div class="fin-r"><span class="fin-l">First invoice — deposit (50%)</span><span class="fin-v" style="display:flex;align-items:center;gap:4px;">';
@@ -5616,8 +5626,9 @@ function renderInvoice() {
 
   // Payments already made are based on the ORIGINAL ESTIMATE, not actual hours
   var estHavellinTotal = (est && est.havellinTotal) ? est.havellinTotal : havellinTotal;
-  var deposit = Math.round(estHavellinTotal * 0.5);
-  var midpoint = Math.round(estHavellinTotal * 0.25);
+  var _split = paymentSplit(estHavellinTotal);
+  var deposit = _split.deposit;
+  var midpoint = _split.midpoint;
   var alreadyPaid = deposit + midpoint;
   // Balance due = actual final total minus what client already paid
   var balanceDue = havellinTotal - alreadyPaid;
@@ -6448,6 +6459,17 @@ function fetchSubfolderIds(job, cb) {
   .catch(function(){ cb(false); });
 }
 
+// Resolve a named subfolder's id, (re)fetching from Drive when it isn't
+// already known. Fixes the case where driveSubfolders exists but is missing
+// the requested key (e.g. a job folder created before that subfolder was added).
+function resolveSubfolderId(job, name, cb) {
+  function pick(){ return job.driveSubfolders && job.driveSubfolders[name] ? job.driveSubfolders[name].id : null; }
+  var id = pick();
+  if (id) { cb(id); return; }
+  if (job.driveFolder) { fetchSubfolderIds(job, function(){ cb(pick()); }); }
+  else { cb(null); }
+}
+
 function syncDriveSubfolders(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
@@ -6509,9 +6531,7 @@ function uploadWalkthroughNotesToDrive(jobId, estSnapshot) {
   var hvl = job.hvlId ? job.hvlId : ('job' + jobId);
   function _txtUrl(text) { return 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text))); }
 
-  function _doUpload() {
-    var folderId = job.driveSubfolders && job.driveSubfolders['Walkthrough Notes']
-      ? job.driveSubfolders['Walkthrough Notes'].id : null;
+  function _doUpload(folderId) {
     if (!folderId) return;
     var ts = new Date().toISOString().slice(0,10);
 
@@ -6549,8 +6569,7 @@ function uploadWalkthroughNotesToDrive(jobId, estSnapshot) {
     var jsonUrl = 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sidecar, null, 2))));
     uploadToDrive(folderId, hvl + '_walkthrough.json', jsonUrl, function(){});
   }
-  if (!job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _doUpload);
-  else _doUpload();
+  resolveSubfolderId(job, 'Walkthrough Notes', _doUpload);
 }
 
 function exportEstimateToDrive(jobId, estSnapshot) {
@@ -6558,8 +6577,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
   if (!est) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  function _doExport() {
-    var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
+  function _doExport(folderId) {
     if (!folderId) return;
     var ts = new Date().toISOString().slice(0,10);
     var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
@@ -6587,44 +6605,37 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       else showSyncBadge('Drive backup failed — check Settings', true);
     });
   }
-  if (!job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, function(ok){ if (ok) _doExport(); });
-  else _doExport();
+  resolveSubfolderId(job, 'Estimate', _doExport);
 }
 
 function saveFolderEstimate() {
   if (!currentEstimate || !currentEstimate.jobId) { showSyncBadge('No estimate loaded', true); return; }
   var btn = document.getElementById('btn-drive-est');
+  function _reset(){ if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; } }
   if (btn) { btn.disabled = true; btn.textContent = '↻ Saving…'; }
   var jobId = currentEstimate.jobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) { showSyncBadge('Job not found', true); if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; } return; }
-  function _doUpload() {
-    var folderId = job.driveSubfolders && job.driveSubfolders['Estimate'] ? job.driveSubfolders['Estimate'].id : null;
+  if (!job) { showSyncBadge('Job not found', true); _reset(); return; }
+  showSyncBadge('Locating Drive folder…');
+  resolveSubfolderId(job, 'Estimate', function(folderId) {
     if (!folderId) {
-      showSyncBadge('No Drive folder — create it from Client Dashboard first', true);
-      if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; }
+      showSyncBadge(job.driveFolder
+        ? 'Estimate subfolder not found — run “Sync Folders” on the Client Dashboard'
+        : 'No Drive folder — create it from Client Dashboard first', true);
+      _reset();
       return;
     }
     var el = document.getElementById('ce-page-content');
-    if (!el) return;
+    if (!el) { _reset(); return; }
     var ts = new Date().toISOString().slice(0,10);
     var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estimate – '+(job.hvlId||'')+'</title>'
       + '<style>body{font-family:Raleway,sans-serif;padding:20px;}</style></head><body>' + el.innerHTML + '</body></html>';
     uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate_'+ts+'.html', html, function(ok) {
-      if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; }
+      _reset();
       if (ok) showSyncBadge('Estimate saved to Drive ✓');
       else showSyncBadge('Drive save failed', true);
     });
-  }
-  if (!job.driveSubfolders && job.driveFolder) {
-    showSyncBadge('Fetching folder IDs…');
-    fetchSubfolderIds(job, function(ok) {
-      if (!ok) showSyncBadge('Could not sync folder IDs', true);
-      _doUpload();
-    });
-  } else {
-    _doUpload();
-  }
+  });
 }
 
 var _agrExported = {};
@@ -6865,9 +6876,10 @@ function loadAgreement() {
 function updateAgrAmounts(job) {
   var est = (currentEstimate && currentEstimate.jobId === job.id) ? currentEstimate : null;
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
-  document.getElementById('agr-deposit-amt').textContent = '$' + Math.round(havTotal * 0.5).toLocaleString();
-  document.getElementById('agr-mid-amt').textContent = '$' + Math.round(havTotal * 0.25).toLocaleString();
-  document.getElementById('agr-final-amt').textContent = '$' + Math.round(havTotal * 0.25).toLocaleString();
+  var _split = paymentSplit(havTotal);
+  document.getElementById('agr-deposit-amt').textContent = '$' + _split.deposit.toLocaleString();
+  document.getElementById('agr-mid-amt').textContent = '$' + _split.midpoint.toLocaleString();
+  document.getElementById('agr-final-amt').textContent = '$' + _split.final.toLocaleString();
 }
 
 function updateAgrPayTrack() {
@@ -6884,9 +6896,8 @@ function renderProbateAgreement() {
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   if (!est) { var rec = estimateStore[jobId]; if (rec && rec.estimate) est = rec.estimate; }
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
-  var dep = Math.round(havTotal * 0.50);
-  var mid = Math.round(havTotal * 0.25);
-  var fin = Math.round(havTotal * 0.25);
+  var _split = paymentSplit(havTotal);
+  var dep = _split.deposit, mid = _split.midpoint, fin = _split.final;
   var clientName = job.name || '_______________________________________________';
   var estateName = job.name ? 'Estate of ' + job.name : 'Estate of _______________________________________________';
   var executorName = job.executor || '_______________________________________________';
@@ -7241,9 +7252,10 @@ function renderAgreement() {
   var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
   var smfRate  = '15%';
 
-  var dep  = Math.round(havTotal * 0.50).toLocaleString();
-  var mid  = Math.round(havTotal * 0.25).toLocaleString();
-  var fin  = Math.round(havTotal * 0.25).toLocaleString();
+  var _split = paymentSplit(havTotal);
+  var dep  = _split.deposit.toLocaleString();
+  var mid  = _split.midpoint.toLocaleString();
+  var fin  = _split.final.toLocaleString();
 
   var today     = new Date();
   var monthName = today.toLocaleDateString('en-US',{month:'long'});
@@ -7555,7 +7567,8 @@ function copyStripeLink(type) {
   var job = jobs.find(function(j){ return j.id===currentAgrJobId; });
   var est = (currentEstimate && currentEstimate.jobId === (job&&job.id)) ? currentEstimate : null;
   var havTotal = est ? est.havellinTotal : ((job&&job.havellinEst) || 0);
-  var amounts = {deposit:Math.round(havTotal*0.5), midpoint:Math.round(havTotal*0.25), final:Math.round(havTotal*0.25)};
+  var _split = paymentSplit(havTotal);
+  var amounts = {deposit:_split.deposit, midpoint:_split.midpoint, final:_split.final};
   var msg = 'Stripe not yet connected. When connected, this will copy a $'+amounts[type].toLocaleString()+' payment link to your clipboard.';
   if (STRIPE_SCRIPT_URL) {
     msg = 'Payment link for $'+amounts[type].toLocaleString()+' — connect Stripe API to auto-generate.';
