@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 9:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 9:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3352,28 +3352,46 @@ function submitForApproval() {
   saveEstimateState();
   updateApprovalUI();
 
-  // Build notification email to Anthony
-  var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; }) || {};
-  var total = currentEstimate.havellinTotal ? '$' + Math.round(currentEstimate.havellinTotal).toLocaleString() : 'see estimate';
-  var subject = encodeURIComponent('Havellin — Estimate Ready for Approval: ' + (job.name||'Client'));
-  var body = encodeURIComponent([
+  notifyManagerForApproval(currentEstimate, null);
+}
+
+// Manager approval is remote: the TC submits, the manager gets an email, then
+// opens the app on their own device (estimate state syncs via Sheets), selects
+// the client, and enters their PIN. This drafts that notification. When `disc`
+// is provided ({original, pct, revised}) the email frames it as a discount
+// re-approval request.
+var MANAGER_APPROVAL_EMAIL = 'anthony@havellinpalmbeach.com';
+function notifyManagerForApproval(est, disc) {
+  if (!est) return;
+  var job = jobs.find(function(j){ return j.id === est.jobId; }) || {};
+  var tc = assignedTCContact(job);
+  var total = est.havellinTotal ? '$' + Math.round(est.havellinTotal).toLocaleString() : 'see estimate';
+  var isDisc = !!disc;
+  var subject = encodeURIComponent('Havellin — ' + (isDisc ? 'Discount Approval Needed: ' : 'Estimate Ready for Approval: ') + (job.name||'Client'));
+  var lines = [
     'Hi Anthony,',
     '',
-    'An estimate is ready for your approval:',
+    isDisc
+      ? (tc.name + ' has offered a client discount that needs your approval:')
+      : 'An estimate is ready for your approval:',
     '',
     'Client: ' + (job.name||'—'),
     'Property: ' + (job.addr||'—'),
-    'Service: ' + (job.svcLabel||'—'),
-    'Havellin total: ' + total,
-    '',
-    'Open the Havellin app, go to Client Estimate tab, select this job and enter your manager PIN to approve.',
-    '',
-    'Ashley Jerome',
-    'Havellin Palm Beach'
-  ].join('\n'));
-
-  var mailtoLink = 'mailto:anthony@havellinpalmbeach.com?subject=' + subject + '&body=' + body;
-  // Open the notification email
+    'Service: ' + (job.svcLabel||'—')
+  ];
+  if (isDisc) {
+    lines.push('Original Havellin total: $' + Math.round(disc.original).toLocaleString());
+    lines.push('Proposed discount: ' + disc.pct + '%');
+    lines.push('Revised Havellin total: $' + Math.round(disc.revised).toLocaleString());
+  } else {
+    lines.push('Havellin total: ' + total);
+  }
+  lines.push('');
+  lines.push('Open the Havellin app, go to the Client Estimate tab, select this job, and enter your manager PIN to approve.');
+  lines.push('');
+  lines.push(tc.name);
+  lines.push('Havellin Palm Beach');
+  var mailtoLink = 'mailto:' + MANAGER_APPROVAL_EMAIL + '?subject=' + subject + '&body=' + encodeURIComponent(lines.join('\n'));
   window.open(mailtoLink, '_blank');
 }
 
@@ -3442,7 +3460,8 @@ function applyDiscountRevision() {
   closeDiscountModal();
   renderClientEstimate();
   updateApprovalUI();
-  showFB('ce-fb', 'ok', 'Discount applied. Manager PIN required to re-approve revised estimate.');
+  notifyManagerForApproval(currentEstimate, { original: baseTotal, pct: pct, revised: newHavellinTotal });
+  showFB('ce-fb', 'ok', 'Discount applied. Manager notified by email — they will re-approve from their device with their PIN.');
 }
 
 function editEstimateFromCE() {
