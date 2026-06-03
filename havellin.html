@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 9:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 10:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3560,6 +3560,14 @@ function checkPin() {
     }
     applyEstimateLock();
     renderClientEstimate();
+    // Refresh the Drive copy to the APPROVED figures. The estimate is first
+    // exported to Drive at save time; a later discount revision changes the
+    // totals but not the Drive file, so re-export here on approval. The Apps
+    // Script overwrites by filename, so this replaces the stale copy in place.
+    if (currentEstimate && currentEstimate.jobId) {
+      var _apprEst = currentEstimate, _apprJobId = currentEstimate.jobId;
+      setTimeout(function(){ exportEstimateToDrive(_apprJobId, _apprEst); }, 200);
+    }
     // Write the frozen walkthrough notes to Drive as the searchable corpus.
     if (currentEstimate && currentEstimate.jobId) {
       var _lockedEst = currentEstimate, _lockedJobId = currentEstimate.jobId;
