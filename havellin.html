@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 6:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 7:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2908,6 +2908,18 @@ function saveEstimateAndPreview() {
       window._suppressEstimateAutoSave = true;
       clearEstimateTab();
       window._suppressEstimateAutoSave = false;
+      // clearEstimateTab() nulls currentEstimate to reset the estimator form.
+      // Reload the just-saved estimate into the Client Estimate preview so it
+      // lands in TC Review state with the Submit-for-Approval / Edit buttons.
+      var rec = estimateStore[jobId];
+      if (rec && rec.estimate) {
+        currentEstimate = rec.estimate;
+        estimateApproved = rec.approved || false;
+        estimateSubmitted = rec.submitted || false;
+        approvedBy = rec.approvedBy || '';
+        approvedAt = rec.approvedAt || '';
+        renderClientEstimate();
+      }
     }, 200);
   }, 1000);
 }
@@ -3415,6 +3427,14 @@ function editEstimateFromCE() {
   estimateApproved = false;
   discountRevision = false;
   approvedBy = ''; approvedAt = '';
+  // Clear the frozen walkthrough lock snapshot so re-approval rebuilds it against
+  // the edited scope (otherwise the approved document keeps stale provenance).
+  if (currentEstimate) {
+    delete currentEstimate.lockedRooms;
+    delete currentEstimate.lockedCollections;
+    delete currentEstimate.lockedAt;
+    delete currentEstimate.lockedBy;
+  }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
   if (currentEstimate && currentEstimate.jobId) {
@@ -6904,8 +6924,11 @@ var currentAgrJobId = null;
 function loadAgreement() {
   var jobId = parseInt(document.getElementById('agr-job').value);
   currentAgrJobId = jobId || null;
-  agrApproved = false;
   var job = jobs.find(function(j){ return j.id === jobId; });
+  // Restore persisted agreement approval from the job record (was a volatile global before)
+  agrApproved   = job ? !!job.agrApproved : false;
+  agrApprovedBy = job ? (job.agrApprovedBy || '') : '';
+  agrApprovedAt = job ? (job.agrApprovedAt || '') : '';
   if (!job) {
     document.getElementById('agr-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job with an approved estimate to generate the agreement.</div>';
     document.getElementById('agr-payment-card').style.display = 'none';
@@ -7563,14 +7586,19 @@ function updateAgrUI() {
     btnPdf.style.display='none'; banner.innerHTML=''; return;
   }
 
-  btnApprove.style.display = agrApproved ? 'none' : 'inline-block';
-  btnStripe.style.display = agrApproved ? 'inline-block' : 'none';
-  btnPdf.style.display = agrApproved ? 'inline-block' : 'none';
+  var estApproved = !!(estimateStore[currentAgrJobId] && estimateStore[currentAgrJobId].approved);
 
   if (agrApproved) {
+    btnApprove.style.display='none'; btnStripe.style.display='inline-block'; btnPdf.style.display='inline-block';
     badge.innerHTML = '<span class="badge b-approved">✓ Approved</span>';
     banner.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Agreement approved</strong> — '+agrApprovedBy+' · '+agrApprovedAt+'</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Print/Save PDF to send to client.</div></div>';
+  } else if (!estApproved) {
+    // Block agreement approval until the underlying estimate is approved
+    btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none';
+    badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';
+    banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>The estimate for this job must be approved first.</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Approve the estimate on the Client Estimate tab before approving and sending the agreement.</div></div>';
   } else {
+    btnApprove.style.display='inline-block'; btnStripe.style.display='none'; btnPdf.style.display='none';
     badge.innerHTML = '<span class="badge b-pending">Pending Approval</span>';
     banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Review the agreement below</strong>, then enter manager PIN to approve and unlock sending options.</div></div>';
   }
@@ -7586,9 +7614,21 @@ function openAgrPinModal() {
 function checkAgrPin() {
   var pin = document.getElementById('agr-pin-input').value;
   if (pin === '3010') {
+    // Defense in depth: never approve an agreement whose estimate isn't approved
+    var estApproved = !!(estimateStore[currentAgrJobId] && estimateStore[currentAgrJobId].approved);
+    if (!estApproved) {
+      document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">Approve the estimate for this job first.</div>';
+      return;
+    }
     agrApproved = true;
     agrApprovedBy = 'Anthony Graziano';
     agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    // Persist to the job record so approval survives reloads and job switches
+    var job = jobs.find(function(j){ return j.id === currentAgrJobId; });
+    if (job) {
+      job.agrApproved = true; job.agrApprovedBy = agrApprovedBy; job.agrApprovedAt = agrApprovedAt;
+      saveJobs(); syncJobToSheets(job);
+    }
     document.getElementById('agr-pin-modal').style.display = 'none';
     renderAgreement();
   } else if (pin.length === 4) {
