@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.02 · 8:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3084,6 +3084,25 @@ function renderClientEstimate() {
     '<table class="ce-tbl">' +
     '<tbody>' +
     '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
+    (function() {
+      var _volL = {1:'Sparse',2:'Light',3:'Standard',4:'Dense',5:'Extreme'};
+      var _cplxL = {1:'Simple',2:'Moderate',3:'Standard',4:'High',5:'Specialist'};
+      var rooms = e.rooms || [];
+      if (!rooms.length) return '';
+      var rows = rooms.map(function(r) {
+        return '<tr><td style="padding:4px 10px;font-size:11.5px;color:var(--gray-dk);">' + r.name + '</td>'
+          + '<td style="padding:4px 10px;font-size:11.5px;color:var(--gray);text-align:center;">' + (_volL[r.vol] || r.vol) + '</td>'
+          + '<td style="padding:4px 10px;font-size:11.5px;color:var(--gray);text-align:center;">' + (_cplxL[r.cplx] || r.cplx) + '</td></tr>';
+      }).join('');
+      return '<tr><td colspan="4" style="padding:0;">'
+        + '<table style="width:100%;border-collapse:collapse;border-top:1px solid var(--border);">'
+        + '<thead><tr style="background:#fdfaf4;">'
+        + '<th style="padding:4px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);text-align:left;">Room / Space</th>'
+        + '<th style="padding:4px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);text-align:center;width:90px;">Volume</th>'
+        + '<th style="padding:4px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);text-align:center;width:100px;">Complexity</th>'
+        + '</tr></thead><tbody>' + rows + '</tbody>'
+        + '</table></td></tr>';
+    })() +
     '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + e.totTC.toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
     '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + e.totPS.toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
     (e.svc === 'downsizing_move' && (e.destTC||0) > 0 ?
@@ -7023,7 +7042,14 @@ function renderProbateAgreement() {
   content += dRow('Property Address', propAddr);
   content += dRow('Property Type', propType);
   content += dRow('Approx. Square Footage', propSqft);
-  content += dRow('Number of Rooms','_______________________________________________');
+  content += (function() {
+    var _volL = {1:'Sparse',2:'Light',3:'Standard',4:'Dense',5:'Extreme'};
+    var _cplxL = {1:'Simple',2:'Moderate',3:'Standard',4:'High',5:'Specialist'};
+    var rooms = est ? (est.rooms || []) : [];
+    if (!rooms.length) return dRow('Rooms &amp; Spaces Included','_______________________________________________');
+    var roomNames = rooms.map(function(r){ return r.name; }).join(', ');
+    return dRow('Rooms &amp; Spaces Included (' + rooms.length + ')', roomNames);
+  })();
   content += dRow('Probate Case Number', probateCase);
   content += dRow('Court','_______________________________________________');
   content += '</table>';
@@ -7355,6 +7381,12 @@ function renderAgreement() {
   content += pRow('Service Type', svcLabel);
   content += pRow('Estimated Start Date', startFmt);
   content += pRow('Job Reference', '<span style="font-family:monospace;font-weight:600;color:var(--bronze);">'+hvlId+'</span>');
+  content += (function() {
+    var rooms = est ? (est.rooms || []) : [];
+    if (!rooms.length) return pRow('Rooms &amp; Spaces Included', '—');
+    var roomNames = rooms.map(function(r){ return r.name; }).join(', ');
+    return pRow('Rooms &amp; Spaces Included (' + rooms.length + ')', roomNames);
+  })();
   content += '</table>';
   content += '<p style="font-size:11px;color:var(--gray);margin-bottom:1rem;">Contractor and Client may be referred to individually as a "Party" and collectively as the "Parties." The Parties agree as follows:</p>';
   content += '<div class="ce-divider"></div>';
