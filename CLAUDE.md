@@ -15,3 +15,8 @@
 - Single-file app: `havellin.html` — all CSS, JS, HTML in one file
 - Hosted on GitHub Pages from `main` branch
 - No build process
+
+## Backlog / don't forget
+- Warm up the **estimate email language** — add a personal touch tying back to the
+  in-home walkthrough (e.g. "It was a pleasure meeting you and walking through your
+  home..."). `buildEstimateMailto()` in `havellin.html`. Not yet executed.
