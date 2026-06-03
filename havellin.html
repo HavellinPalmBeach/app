@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 10:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 10:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3272,10 +3272,14 @@ function updateApprovalUI() {
   } else if (estimateSubmitted) {
     // STATE 2a: Discount revision awaiting re-approval
     // STATE 2b: Original submission awaiting approval
+    // Pending approval locks the estimator, so expose an Edit button as the
+    // TC's deliberate path back to draft (otherwise a submitted estimate is
+    // trapped until a manager acts).
+    if (btnEdit) btnEdit.style.display = 'inline-block';
     if (discountRevision) {
       badge.innerHTML = '<span class="badge b-pending">Discount Revision — Awaiting Approval</span>';
       if (btnApprove) btnApprove.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = 'Discount revision submitted. Manager PIN required to re-approve.';
+      if (subtitle) subtitle.textContent = 'Discount revision submitted. Manager PIN required to re-approve. Use Edit Estimate to make further changes.';
       var prevTotal = currentEstimate.prevApprovedTotal ? Math.round(currentEstimate.prevApprovedTotal).toLocaleString() : '—';
       var newTotal = Math.round(currentEstimate.havellinTotal).toLocaleString();
       if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Discount revision — awaiting manager re-approval</strong></div><div style="font-size:11px;color:var(--gray-dk);margin-top:2px;">Revised Havellin total: <strong>$' + newTotal + '</strong> (was $' + prevTotal + '). Enter manager PIN to approve.</div></div>';
@@ -3298,25 +3302,37 @@ function updateApprovalUI() {
 }
 
 function applyEstimateLock() {
-  var locked = estimateApproved;
+  // Lock the estimator whenever the estimate is approved OR has been submitted
+  // for approval (including a discount revision awaiting re-approval). In both
+  // states the TC must not be able to silently alter scope or discount under a
+  // manager who is reviewing it — the only way back to editing is the explicit
+  // "Edit Estimate" button, which resets to TC Review (draft) state.
+  var locked = estimateApproved || estimateSubmitted;
   var banner = document.getElementById('est-approved-banner');
   if (banner) banner.style.display = locked ? 'flex' : 'none';
-  var wrap = document.getElementById('room-table-wrap');
-  if (wrap) {
+  // Lock the ENTIRE estimator input area, not just the room table — the
+  // discount, property value, adjustments and prep fields live outside the
+  // room table and must freeze too. The job selector stays enabled so the user
+  // can still switch between jobs while a submitted estimate is locked.
+  var panel = document.getElementById('panel-estimate');
+  if (panel) {
     if (locked) {
-      wrap.querySelectorAll('input, select, textarea').forEach(function(el) {
+      panel.querySelectorAll('input, select, textarea, button').forEach(function(el) {
+        if (el.id === 'e-job') return;                 // keep job switching
+        if (el.classList && el.classList.contains('nb')) return; // never the nav
         if (!el.disabled) { el.setAttribute('data-lock-restore', '1'); el.disabled = true; }
       });
-      wrap.style.pointerEvents = 'none';
-      wrap.style.opacity = '0.6';
     } else {
-      wrap.querySelectorAll('[data-lock-restore]').forEach(function(el) {
+      panel.querySelectorAll('[data-lock-restore]').forEach(function(el) {
         el.disabled = false;
         el.removeAttribute('data-lock-restore');
       });
-      wrap.style.pointerEvents = '';
-      wrap.style.opacity = '';
     }
+  }
+  var wrap = document.getElementById('room-table-wrap');
+  if (wrap) {
+    wrap.style.pointerEvents = locked ? 'none' : '';
+    wrap.style.opacity = locked ? '0.6' : '';
   }
   var saveBtn = document.querySelector('button[onclick="saveEstimateAndPreview()"]');
   if (saveBtn) { saveBtn.disabled = locked; saveBtn.style.opacity = locked ? '0.45' : ''; }
@@ -4688,6 +4704,9 @@ function showPanel(id, btn) {
     } else {
       calcAll();
     }
+    // Enforce the approval/submission lock on the estimator itself — otherwise a
+    // submitted or approved estimate appears fully editable when reopened here.
+    applyEstimateLock();
   }
   if (id==='client-estimate') renderClientEstimate();
   if (id==='contractors') { renderContractors(); }
