@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 4:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 4:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4676,17 +4676,13 @@ function loadJobs() {
     fetch(SHEETS_SYNC_URL + '?action=loadJobs')
       .then(function(r){ return r.json(); })
       .then(function(data){
-        if (data.jobs && Array.isArray(data.jobs) && data.jobs.length > 0) {
-          // Use Sheets data if it has more jobs or more recent updates
-          var sheetsMax = Math.max.apply(null, data.jobs.map(function(j){ return j.id||0; }));
-          var localMax  = jobs.length > 0 ? Math.max.apply(null, jobs.map(function(j){ return j.id||0; })) : 0;
-          if (sheetsMax > localMax || data.jobs.length > jobs.length) {
-            jobs = data.jobs;
-            try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-            document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
-            rebuildDropdowns();
-            showSyncBadge('Loaded ' + jobs.length + ' jobs from Sheets \u2713');
-          }
+        if (data.jobs && Array.isArray(data.jobs) && !data.error) {
+          // Sheets is the source of truth \u2014 always overwrite local (handles deletions)
+          jobs = data.jobs;
+          try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
+          document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
+          rebuildDropdowns();
+          showSyncBadge('Loaded ' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' from Sheets \u2713');
         }
       })
       .catch(function(){ /* silent fail — localStorage is the fallback */ });
