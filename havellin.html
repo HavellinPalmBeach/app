@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 8:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 9:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -273,7 +273,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div><input type="text" id="i-fname" placeholder="First name"></div>
         <div><input type="text" id="i-lname" placeholder="Last name"></div>
       </div>
-      <div id="i-deceased-note" style="display:none;font-size:11px;color:var(--gray);margin:6px 0 8px;padding:6px 10px;background:var(--tan);border-radius:4px;">Client is deceased — phone and email are optional. Collect authorized representative contact below.</div>
+      <div id="i-deceased-note" style="display:none;font-size:11px;color:var(--gray);margin:6px 0 8px;padding:6px 10px;background:var(--tan);border-radius:4px;">Client is deceased — phone and email are disabled. Collect the authorized representative's contact below; that is where client documents will be sent.</div>
       <div class="row">
         <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
         <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email" placeholder="client@email.com"></div>
@@ -2551,6 +2551,18 @@ function toggleIntakeFields() {
   if (hdr) hdr.textContent = isEstate ? 'Deceased / Estate' : 'Client Information';
   if (phoneReq) phoneReq.style.display = isEstate ? 'none' : 'inline';
   if (emailReq) emailReq.style.display = isEstate ? 'none' : 'inline';
+  // Deceased clients have no phone/email — block those fields entirely and route
+  // contact collection to the authorized representative below.
+  var phoneEl = document.getElementById('i-phone');
+  var emailEl = document.getElementById('i-email');
+  [phoneEl, emailEl].forEach(function(el){
+    if (!el) return;
+    el.disabled = isEstate;
+    if (isEstate) { el.value = ''; el.placeholder = 'N/A — deceased; use rep contact below'; el.style.opacity = '0.5'; }
+    else { el.style.opacity = ''; }
+  });
+  if (phoneEl && !isEstate) phoneEl.placeholder = '(561) 555-0100';
+  if (emailEl && !isEstate) emailEl.placeholder = 'client@email.com';
 }
 
 function saveIntake() {
@@ -4910,16 +4922,42 @@ function bestClientEmail(job) {
       || (job.probateAttyEmail && job.probateAttyEmail.trim())
       || '';
 }
+// First name of whoever the email is actually going to, so the greeting matches
+// the recipient (the executor or attorney on an estate job, not the deceased).
+function bestClientGreetingName(job) {
+  if (!job) return 'there';
+  if (job.email && job.email.trim()) return job.fname || firstName(job.name);
+  if (job.executorEmail && job.executorEmail.trim()) return job.executorFname || firstName(job.executor);
+  if (job.probateAttyEmail && job.probateAttyEmail.trim()) return job.probateAttyFname || firstName(job.probateAttyName);
+  return 'there';
+}
+// The assigned Transition Concierge's contact, for the email signature ("from").
+// Falls back to the firm's managing partner if the job has no TC assigned or
+// the assigned name has no matching contractor record.
+function assignedTCContact(job) {
+  var fallback = { name:'Anthony Graziano', phone:'(561) 370-4700', email:'anthony@havellinpalmbeach.com' };
+  if (!job || !job.tc) return fallback;
+  var all = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : [])
+    .concat(typeof contractors !== 'undefined' ? contractors : []);
+  var tc = all.find(function(c){ return c.name === job.tc; });
+  if (!tc) return fallback;
+  return {
+    name: tc.name,
+    phone: tc.phone || fallback.phone,
+    email: tc.email || fallback.email
+  };
+}
 function firstName(name) { return name ? name.split(' ')[0] : 'there'; }
 
 function buildEstimateMailto() {
   if (!currentEstimate) return '#';
   var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; }) || {};
   var to = encodeURIComponent(bestClientEmail(job));
+  var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - Service Estimate for ' + (job.name||'Your Property'));
   var total = currentEstimate.havellinTotal ? '$' + Math.round(currentEstimate.havellinTotal).toLocaleString() : 'see attached';
   var body = mailtoBody([
-    'Dear ' + firstName(job.name) + ',',
+    'Dear ' + bestClientGreetingName(job) + ',',
     '',
     'Thank you for the opportunity to meet with you. Your Havellin Palm Beach service estimate for ' + (job.addr||'your property') + ' is ready for your review.',
     '',
@@ -4930,10 +4968,10 @@ function buildEstimateMailto() {
     'Please review and reach out with any questions. Once ready to proceed, I will send the service agreement for your signature.',
     '',
     'Warm regards,',
-    'Anthony Graziano',
+    tc.name,
     'Havellin Palm Beach',
-    '(561) 370-4700',
-    'anthony@havellinpalmbeach.com'
+    tc.phone,
+    tc.email
   ]);
   return 'mailto:' + to + '?subject=' + subject + '&body=' + body;
 }
@@ -4943,9 +4981,10 @@ function buildAgreementMailto() {
   var jobId = selEl ? parseInt(selEl.value)||0 : 0;
   var job = jobs.find(function(j){ return j.id===jobId; }) || {};
   var to = encodeURIComponent(bestClientEmail(job));
+  var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - Service Agreement for ' + (job.name||'Your Property'));
   var body = mailtoBody([
-    'Dear ' + firstName(job.name) + ',',
+    'Dear ' + bestClientGreetingName(job) + ',',
     '',
     'Your Havellin Palm Beach Service Agreement for ' + (job.addr||'your property') + ' is ready for your review and signature.',
     '',
@@ -4956,10 +4995,10 @@ function buildAgreementMailto() {
     'Payment instructions are included in the agreement. Please do not hesitate to reach out with any questions.',
     '',
     'Warm regards,',
-    'Anthony Graziano',
+    tc.name,
     'Havellin Palm Beach',
-    '(561) 370-4700',
-    'anthony@havellinpalmbeach.com'
+    tc.phone,
+    tc.email
   ]);
   return 'mailto:' + to + '?subject=' + subject + '&body=' + body;
 }
@@ -4967,10 +5006,11 @@ function buildAgreementMailto() {
 function buildInvoiceMailto(job, balance) {
   if (!job) return '#';
   var to = encodeURIComponent(bestClientEmail(job));
+  var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - Final Invoice for ' + (job.name||'Your Property'));
   var bal = balance ? '$' + Math.round(balance).toLocaleString() : 'see attached';
   var body = mailtoBody([
-    'Dear ' + firstName(job.name) + ',',
+    'Dear ' + bestClientGreetingName(job) + ',',
     '',
     'Please find attached your final invoice for Havellin Palm Beach services at ' + (job.addr||'your property') + '.',
     '',
@@ -4980,10 +5020,10 @@ function buildInvoiceMailto(job, balance) {
     'Thank you for trusting Havellin Palm Beach with this transition. It has been our honor to serve your family.',
     '',
     'Warm regards,',
-    'Anthony Graziano',
+    tc.name,
     'Havellin Palm Beach',
-    '(561) 370-4700',
-    'anthony@havellinpalmbeach.com'
+    tc.phone,
+    tc.email
   ]);
   return 'mailto:' + to + '?subject=' + subject + '&body=' + body;
 }
