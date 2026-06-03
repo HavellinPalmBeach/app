@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 9:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 9:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4955,13 +4955,24 @@ function buildEstimateMailto() {
   var to = encodeURIComponent(bestClientEmail(job));
   var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - Service Estimate for ' + (job.name||'Your Property'));
-  var total = currentEstimate.havellinTotal ? '$' + Math.round(currentEstimate.havellinTotal).toLocaleString() : 'see attached';
+  var e = currentEstimate;
+  var money = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
+  // Mirror the estimate document's "Total Estimated Project Cost" breakdown so
+  // the email reflects ALL projected costs — Havellin services plus pass-through
+  // third-party and home-prep vendor estimates — not just the Havellin fee.
+  var costLines = ['Havellin Services: ' + money(e.havellinTotal)];
+  if ((e.vendorCost||0) > 0) costLines.push('Estimated Third-Party Vendors (billed at cost): ' + money(e.vendorCost));
+  if (e.prepEnabled && (e.prepCost||0) > 0) costLines.push('Estimated Home Prep Vendors (billed at cost): ' + money(e.prepCost));
+  var grand = e.grandTotal || e.havellinTotal || 0;
   var body = mailtoBody([
     'Dear ' + bestClientGreetingName(job) + ',',
     '',
     'Thank you for the opportunity to meet with you. Your Havellin Palm Beach service estimate for ' + (job.addr||'your property') + ' is ready for your review.',
+    ''
+  ].concat(costLines).concat([
+    'Total Estimated Project Cost: ' + money(grand),
     '',
-    'Estimated total: ' + total,
+    'Third-party vendor and home-prep costs are estimates billed directly to you at cost — Havellin does not mark them up. Full details are in the attached estimate.',
     '',
     '** Please attach the estimate PDF before sending — use the "Print / Save PDF" button in the app to generate it. **',
     '',
@@ -4972,7 +4983,7 @@ function buildEstimateMailto() {
     'Havellin Palm Beach',
     tc.phone,
     tc.email
-  ]);
+  ]));
   return 'mailto:' + to + '?subject=' + subject + '&body=' + body;
 }
 
