@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 4:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 5:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2988,7 +2988,7 @@ function renderClientEstimate() {
   var prepEmail = preparer ? (preparer.email || '—') : '—';
 
   // Property address: street + city, FL
-  var propAddr = [job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—';
+  var propAddr = esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—');
 
   // Estate job: show estate name + rep contact instead of deceased client's info
   var isEstateJob = !!(job.executor && job.executor.trim());
@@ -3003,12 +3003,12 @@ function renderClientEstimate() {
 
         (isEstateJob
       ? '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
-        '<div><div class="ce-meta-label">Estate</div><div class="ce-meta-val">Estate of ' + job.name + '</div></div>' +
+        '<div><div class="ce-meta-label">Estate</div><div class="ce-meta-val">Estate of ' + esc(job.name) + '</div></div>' +
         '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
         '</div>' +
         '<div class="ce-hdr-divider"></div>' +
         '<div class="ce-hdr-row" style="grid-template-columns:1.5fr 1fr 1.3fr;">' +
-        '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + (job.executor||'—') + (job.executorRole ? ' — ' + job.executorRole : '') + '</div></div>' +
+        '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + esc(job.executor||'—') + (job.executorRole ? ' — ' + esc(job.executorRole) : '') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + (job.executorPhone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val" style="font-size:11px;">' + (job.executorEmail||'—') + '</div></div>' +
         '</div>' +
@@ -3018,7 +3018,7 @@ function renderClientEstimate() {
         '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
         '</div>'
       : '<div class="ce-hdr-row ce-hdr-row-1">' +
-        '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + (job.name||'—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
         '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
@@ -3058,8 +3058,8 @@ function renderClientEstimate() {
     '<div class="ce-divider"></div>';
 
   var vendorRows = '';
-  e.vendors.forEach(function(v) {
-    if (v.cost > 0) vendorRows += '<tr><td>' + v.type + '</td><td class="r">' + fmt(v.cost) + '</td></tr>';
+  (e.vendors||[]).forEach(function(v) {
+    if (v.cost > 0) vendorRows += '<tr><td>' + esc(v.type) + '</td><td class="r">' + fmt(v.cost) + '</td></tr>';
   });
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
 
@@ -3088,11 +3088,11 @@ function renderClientEstimate() {
       var rooms = e.rooms || [];
       if (!rooms.length) return '';
       return '<tr><td colspan="4" style="padding:5px 10px;font-size:11.5px;color:var(--gray-dk);">'
-        + '<strong>Confirmed Spaces</strong> — ' + rooms.map(function(r){ return r.name; }).join(', ')
+        + '<strong>Confirmed Spaces</strong> — ' + rooms.map(function(r){ return esc(r.name); }).join(', ')
         + '</td></tr>';
     })() +
-    '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + e.totTC.toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
-    '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + e.totPS.toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
+    '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + (e.totTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
+    '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + (e.totPS||0).toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
     (e.svc === 'downsizing_move' && (e.destTC||0) > 0 ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
       '<tr><td>Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt((e.destTC||0) * e.tcRate) + '</td></tr>' +
@@ -3122,7 +3122,7 @@ function renderClientEstimate() {
       if (!cols.length) return '';
       var dispNames = {auction:'Auction House', appraise:'Appraise', consign:'Consign', ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer', other:'Other'};
       var rows = cols.map(function(c) {
-        return '<tr><td>' + c.name + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
+        return '<tr><td>' + esc(c.name) + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
       }).join('');
       return '<div class="ce-section-hdr" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
         '<table class="ce-tbl"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
@@ -3330,7 +3330,7 @@ function submitForApproval() {
     'Service: ' + (job.svcLabel||'—'),
     'Havellin total: ' + total,
     '',
-    'Open the Havellin app, go to Client Estimate tab, select this job and enter your PIN (3010) to approve.',
+    'Open the Havellin app, go to Client Estimate tab, select this job and enter your manager PIN to approve.',
     '',
     'Ashley Jerome',
     'Havellin Palm Beach'
@@ -4583,6 +4583,12 @@ function cycleStatus(id) {
 function removeJob(id) {
   if (!confirm('Remove this job?')) return;
   jobs = jobs.filter(function(j){ return j.id!==id; });
+  // Clean up all related per-job data so it doesn't orphan or get re-pushed to Sheets
+  try { delete estimateStore[id]; localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+  try { if (typeof jobLogs === 'object' && jobLogs) { delete jobLogs[id]; localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } } catch(e) {}
+  try { if (typeof jobPlanStore === 'object' && jobPlanStore) { delete jobPlanStore[id]; localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } } catch(e) {}
+  try { if (Array.isArray(changeOrders)) { changeOrders = changeOrders.filter(function(co){ return co.jobId !== id; }); localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } } catch(e) {}
+  try { localStorage.removeItem('hav_media_' + id); } catch(e) {}
   saveJobs(); renderJobs();
 }
 
@@ -4629,6 +4635,10 @@ function showPanel(id, btn) {
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+// Escape user-entered text before interpolating into document HTML, so names/
+// addresses/room names containing & < > " ' don't corrupt or inject into the
+// rendered estimate, agreement, or invoice.
+function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 function formatPropVal(v) {
   if (!v) return 'Not specified';
   if (v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
@@ -4732,13 +4742,15 @@ function loadEstimateState() {
       estimateStore = JSON.parse(s);
       Object.keys(estimateStore).forEach(function(k) { normalizeLegacyRoomKeys(estimateStore[k]); });
     }
-    // Also migrate any old single estimate
+    // Also migrate any old single estimate, then remove the legacy key so it
+    // can't re-clobber a newer v4 record on every subsequent load.
     var old = localStorage.getItem('havellin_est_v3');
     if (old) {
       var d = JSON.parse(old);
-      if (d.estimate && d.estimate.jobId) {
+      if (d.estimate && d.estimate.jobId && !estimateStore[d.estimate.jobId]) {
         estimateStore[d.estimate.jobId] = d;
       }
+      localStorage.removeItem('havellin_est_v3');
     }
   } catch(e) {}
   // Pull from Sheets for cross-device sync.
@@ -5584,10 +5596,11 @@ function renderInvoice() {
       stagerCost = parseFloat(document.getElementById('e-stager-cost').value) || 0;
       stagerGcFee = Math.round(stagerCost * 0.30);
     }
-    // Coord days = TC only, no PS
-    var coordTCHrs = Math.round(coordDays * 8 * propMult * 10) / 10;
-    totTC = Math.round((totTC + coordTCHrs) * 10) / 10;
-    tcFee = Math.round(totTC * tcRate);
+    // Coord days = TC only, no PS. propMult/baseTC come from the saved estimate, not undefined globals.
+    var _propMult = (est && est.propMult) ? est.propMult : 1.0;
+    var coordTCHrs = Math.round(coordDays * 8 * _propMult * 10) / 10;
+    var _invTotTC = Math.round((actTC + coordTCHrs) * 10) / 10;
+    tcFee = Math.round(_invTotTC * tcRate);
   }
 
   var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
@@ -5657,12 +5670,12 @@ function renderInvoice() {
     var t = teamMap[name];
     var rate = t.role === 'TC' ? tcRate : psRate;
     var fee = Math.round(t.hours * rate);
-    return '<tr><td>' + name + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + t.hours.toFixed(1) + '</td><td style="text-align:right;">$' + rate + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(fee) + '</td></tr>';
+    return '<tr><td>' + esc(name) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + t.hours.toFixed(1) + '</td><td style="text-align:right;">$' + rate + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(fee) + '</td></tr>';
   }).join('');
 
   // Vendor rows
   var vendorRows = vendors.filter(function(v){ return v.cost>0; }).map(function(v){
-    return '<tr><td>' + v.type + '</td><td style="text-align:right;">' + fmt(v.cost) + '</td></tr>';
+    return '<tr><td>' + esc(v.type) + '</td><td style="text-align:right;">' + fmt(v.cost) + '</td></tr>';
   }).join('') || '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors</td></tr>';
 
   var approvedStamp = (invApproved && invApprovedBy) ?
@@ -5672,10 +5685,10 @@ function renderInvoice() {
     '<div class="ce-divider-thick"></div>' +
     '<div class="ce-title">Final Invoice</div>' +
     '<div class="ce-meta">' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + job.name + '</div></div>' +
+    '<div class="ce-meta-item"><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name) + '</div></div>' +
     '<div class="ce-meta-item"><div class="ce-meta-label">Invoice date</div><div class="ce-meta-val">' + today + '</div></div>' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + (job.addr||'—') + '</div></div>' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + job.svcLabel + '</div></div>' +
+    '<div class="ce-meta-item"><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc(job.addr||'—') + '</div></div>' +
+    '<div class="ce-meta-item"><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(job.svcLabel) + '</div></div>' +
     '<div class="ce-meta-item"><div class="ce-meta-label">Transition Concierge</div><div class="ce-meta-val">' + (job.tc||'—') + '</div></div>' +
     '<div class="ce-meta-item"><div class="ce-meta-label">Working days</div><div class="ce-meta-val">' + [...new Set(logs.map(function(e){ return e.date; }))].length + '</div></div>' +
     '</div>' +
@@ -6944,25 +6957,26 @@ function renderProbateAgreement() {
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
   var _split = paymentSplit(havTotal);
   var dep = _split.deposit, mid = _split.midpoint, fin = _split.final;
-  var clientName = job.name || '_______________________________________________';
-  var estateName = job.name ? 'Estate of ' + job.name : 'Estate of _______________________________________________';
-  var executorName = job.executor || '_______________________________________________';
-  var clientAddr = [job.addr, job.city ? job.city+', FL' : '', job.zip].filter(Boolean).join(' ') || '_______________________________________________';
+  var _blank = '_______________________________________________';
+  var clientName = esc(job.name || _blank);
+  var estateName = job.name ? 'Estate of ' + esc(job.name) : 'Estate of ' + _blank;
+  var executorName = esc(job.executor || _blank);
+  var clientAddr = esc([job.addr, job.city ? job.city+', FL' : '', job.zip].filter(Boolean).join(' ') || _blank);
   // Use authorized rep's contact info, not the deceased's
-  var clientEmail = job.executorEmail || '_______________________________________________';
-  var clientPhone = job.executorPhone || '_______________________________________________';
+  var clientEmail = esc(job.executorEmail || _blank);
+  var clientPhone = esc(job.executorPhone || _blank);
   var propAddr = clientAddr;
-  var propType = job.ptype || '_______________________________________________';
-  var propSqft = job.sqft ? job.sqft+' sqft' : '_______________________________________________';
-  var probateCase = job.probateCase || '_______________________________________________';
-  var attyName = job.probateAttyName || '_______________________________________________';
-  var attyPhone = job.probateAttyPhone || '_______________________________________________';
-  var attyFirm = job.probateAttyFirm || '';
+  var propType = esc(job.ptype || _blank);
+  var propSqft = job.sqft ? esc(job.sqft+' sqft') : _blank;
+  var probateCase = esc(job.probateCase || _blank);
+  var attyName = esc(job.probateAttyName || _blank);
+  var attyPhone = esc(job.probateAttyPhone || _blank);
+  var attyFirm = esc(job.probateAttyFirm || '');
   var hvlId = job.hvlId || '—';
   var lettersMap = {received:'Attached', pending:'Pending', notneeded:'N/A (non-probate)'};
   var svcLabelMap = {probate:'Probate Estate Settlement', cleanout:'Estate Settlement', estate:'Estate Settlement'};
-  var svcLabel = svcLabelMap[job.svc] || job.svcLabel || 'Estate Services';
-  var letters = lettersMap[job.executorAuth] || 'Attached · Pending · N/A (non-probate)';
+  var svcLabel = svcLabelMap[job.svc] || esc(job.svcLabel) || 'Estate Services';
+  var letters = lettersMap[job.executorAuth] || 'Pending';
   var today = new Date();
   var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   var approvedStamp = (agrApproved && agrApprovedBy)
@@ -7013,7 +7027,7 @@ function renderProbateAgreement() {
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += dRow('Estate', bb(estateName));
   content += dRow('Authorized Representative', bb(executorName));
-  content += dRow('Role / Authority', job.executorRole || 'Personal Representative &middot; Executor &middot; POA &middot; Other');
+  content += dRow('Role / Authority', esc(job.executorRole) || 'Personal Representative &middot; Executor &middot; POA &middot; Other');
   content += dRow('Date','_______________________________________________');
   content += dRow('Mailing Address', clientAddr);
   content += dRow('Email', clientEmail);
@@ -7032,7 +7046,7 @@ function renderProbateAgreement() {
     var _cplxL = {1:'Simple',2:'Moderate',3:'Standard',4:'High',5:'Specialist'};
     var rooms = est ? (est.rooms || []) : [];
     if (!rooms.length) return dRow('Rooms &amp; Spaces Included','_______________________________________________');
-    var roomNames = rooms.map(function(r){ return r.name; }).join(', ');
+    var roomNames = rooms.map(function(r){ return esc(r.name); }).join(', ');
     return dRow('Rooms &amp; Spaces Included (' + rooms.length + ')', roomNames);
   })();
   content += dRow('Probate Case Number', probateCase);
@@ -7238,7 +7252,7 @@ function renderProbateAgreement() {
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Client / Personal Representative</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+executorName+'</div></div>';
-  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">'+(job.executorRole||'Personal Representative &middot; Executor &middot; POA &middot; Other')+'</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">'+(esc(job.executorRole)||'Personal Representative &middot; Executor &middot; POA &middot; Other')+'</div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
   content += '</div></div>';
@@ -7289,11 +7303,11 @@ function renderAgreement() {
   var psRate    = est ? est.psRate  : (job.premium ? 125 : 100);
 
   // Client fields from intake
-  var clientName  = job.name  || '[CLIENT FULL LEGAL NAME]';
-  var clientAddr  = [job.addr, job.city ? job.city + ', FL' : '', job.zip].filter(Boolean).join(' ') || '[CLIENT ADDRESS]';
-  var clientEmail = job.email || '[CLIENT EMAIL]';
-  var clientPhone = job.phone || '[CLIENT PHONE]';
-  var propAddr    = [job.addr, job.city ? job.city + ', FL' : '', job.zip].filter(Boolean).join(' ') || '[PROPERTY ADDRESS]';
+  var clientName  = esc(job.name  || '[CLIENT FULL LEGAL NAME]');
+  var clientAddr  = esc([job.addr, job.city ? job.city + ', FL' : '', job.zip].filter(Boolean).join(' ') || '[CLIENT ADDRESS]');
+  var clientEmail = esc(job.email || '[CLIENT EMAIL]');
+  var clientPhone = esc(job.phone || '[CLIENT PHONE]');
+  var propAddr    = esc([job.addr, job.city ? job.city + ', FL' : '', job.zip].filter(Boolean).join(' ') || '[PROPERTY ADDRESS]');
   var hvlId       = job.hvlId || '—';
   var startFmt    = job.start ? new Date(job.start+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '[START DATE]';
   var svcMap = {
@@ -7369,7 +7383,7 @@ function renderAgreement() {
   content += (function() {
     var rooms = est ? (est.rooms || []) : [];
     if (!rooms.length) return pRow('Rooms &amp; Spaces Included', '—');
-    var roomNames = rooms.map(function(r){ return r.name; }).join(', ');
+    var roomNames = rooms.map(function(r){ return esc(r.name); }).join(', ');
     return pRow('Rooms &amp; Spaces Included (' + rooms.length + ')', roomNames);
   })();
   content += '</table>';
