@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 11:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 11:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2899,12 +2899,15 @@ function saveEstimateAndPreview() {
   if (ref) ref.sizes.forEach(function(s){ if (currentEstimate.havellinTotal>=s.min && currentEstimate.havellinTotal<=s.max) inRange=true; });
   job.havellinEst = currentEstimate.havellinTotal;
   job.totalEst = currentEstimate.grandTotal;
-  // Reset to TC Review state on each new save
+  // Reset to TC Review state on each new save. Saving an estimate does NOT mean
+  // it has been submitted — the job stays out of "Pending Approval" until the TC
+  // actually clicks Submit for Approval. Don't regress a job already further
+  // along (active/closed); only a non-pending early-stage job drops to 'new'.
   estimateSubmitted = false;
   estimateApproved = false;
   approvedBy = ''; approvedAt = '';
   job.inRange = inRange;
-  job.status = 'pending';
+  if (job.status === 'pending' || !job.status || job.status === 'new') job.status = 'new';
   job.approved = false;
   estimateApproved = false;
   currentEstimate.jobId = jobId;
@@ -3366,6 +3369,9 @@ function submitForApproval() {
 
   estimateSubmitted = true;
   saveEstimateState();
+  // Now it's genuinely awaiting manager approval — reflect that on the job.
+  var subJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  if (subJob) { subJob.status = 'pending'; subJob.approved = false; saveJobs(); syncJobToSheets(subJob); }
   updateApprovalUI();
 
   notifyManagerForApproval(currentEstimate, null);
@@ -3388,6 +3394,14 @@ var DEPT_EMAILS = {
   billing:    'billing@havellinpalmbeach.com'
 };
 var MANAGER_APPROVAL_EMAIL = DEPT_EMAILS.estimates;
+// Open a pre-filled notification email to one of the department groups. Used
+// for every internal hand-off email so routing stays in one place.
+function notifyDept(deptEmail, subject, bodyLines) {
+  if (!deptEmail) return;
+  var mailtoLink = 'mailto:' + deptEmail + '?subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(bodyLines.join('\n'));
+  window.open(mailtoLink, '_blank');
+}
 function notifyManagerForApproval(est, disc) {
   if (!est) return;
   var job = jobs.find(function(j){ return j.id === est.jobId; }) || {};
@@ -3504,6 +3518,12 @@ function editEstimateFromCE() {
     delete currentEstimate.lockedCollections;
     delete currentEstimate.lockedAt;
     delete currentEstimate.lockedBy;
+  }
+  // Editing pulls the estimate back to draft, so drop the job out of
+  // "Pending Approval" too (unless it's already further along).
+  if (currentEstimate && currentEstimate.jobId) {
+    var edJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+    if (edJob && edJob.status === 'pending') { edJob.status = 'new'; edJob.approved = false; saveJobs(); syncJobToSheets(edJob); }
   }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -5910,6 +5930,26 @@ function checkInvPin() {
     invApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     document.getElementById('inv-pin-modal').style.display = 'none';
     renderInvoice();
+    // Notify the billing group that an approved invoice is ready to send.
+    var invJob = jobs.find(function(j){ return j.id === currentInvJobId; });
+    if (invJob) {
+      var invTc = assignedTCContact(invJob);
+      notifyDept(DEPT_EMAILS.billing,
+        'Havellin — Invoice Approved & Ready to Send: ' + (invJob.name||'Client'),
+        [
+          'An invoice has been approved and is ready to send to the client:',
+          '',
+          'Client: ' + (invJob.name||'—'),
+          'Property: ' + (invJob.addr||'—'),
+          'Service: ' + (invJob.svcLabel||'—'),
+          'Approved by: ' + invApprovedBy + ' on ' + invApprovedAt,
+          '',
+          'Open the Havellin app, go to the Final Invoice tab, and use Print / Save PDF or Email to Client to send it.',
+          '',
+          invTc.name,
+          'Havellin Palm Beach'
+        ]);
+    }
   } else if (pin.length === 4) {
     document.getElementById('inv-pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN.</div>';
     document.getElementById('inv-pin-input').value = '';
@@ -7763,6 +7803,25 @@ function checkAgrPin() {
     }
     document.getElementById('agr-pin-modal').style.display = 'none';
     renderAgreement();
+    // Notify the agreements group that a signature-ready agreement exists.
+    if (job) {
+      var agrTc = assignedTCContact(job);
+      notifyDept(DEPT_EMAILS.agreements,
+        'Havellin — Agreement Approved & Ready to Send: ' + (job.name||'Client'),
+        [
+          'An agreement has been approved and is ready to send to the client for signature:',
+          '',
+          'Client: ' + (job.name||'—'),
+          'Property: ' + (job.addr||'—'),
+          'Service: ' + (job.svcLabel||'—'),
+          'Approved by: ' + agrApprovedBy + ' on ' + agrApprovedAt,
+          '',
+          'Open the Havellin app, go to the Agreement tab, and use Print / Save PDF to send it for signature.',
+          '',
+          agrTc.name,
+          'Havellin Palm Beach'
+        ]);
+    }
   } else if (pin.length === 4) {
     document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN.</div>';
     document.getElementById('agr-pin-input').value = '';
