@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 7:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 7:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4681,15 +4681,8 @@ function generateHvlId() {
 function saveJobs() {
   try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
   document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
-  // Push to Sheets for cross-device sync
-  if (SHEETS_SYNC_URL) {
-    fetch(SHEETS_SYNC_URL, {
-      method: 'POST', mode: 'no-cors',
-      body: JSON.stringify({ type: 'saveAllJobs', payload: jobs }),
-      headers: { 'Content-Type': 'text/plain' }
-    }).then(function(){ showSyncBadge('Synced \u2713'); })
-      .catch(function(){ showSyncBadge('Sync failed \u2014 saved locally', true); });
-  }
+  // Push to Sheets for cross-device sync (verified write)
+  postSyncBadge({ type: 'saveAllJobs', payload: jobs }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
 }
 
 function loadJobs() {
@@ -4735,15 +4728,8 @@ function saveEstimateState() {
     };
   }
   try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
-  // Push full estimate store to Sheets so other devices can load it
-  if (SHEETS_SYNC_URL) {
-    fetch(SHEETS_SYNC_URL, {
-      method: 'POST', mode: 'no-cors',
-      body: JSON.stringify({ type: 'saveAllEstimates', payload: estimateStore }),
-      headers: { 'Content-Type': 'text/plain' }
-    }).then(function(){ showSyncBadge('Estimate synced to cloud ✓'); })
-      .catch(function(){ showSyncBadge('Cloud sync failed — saved locally only', true); });
-  }
+  // Push full estimate store to Sheets so other devices can load it (verified write)
+  postSyncBadge({ type: 'saveAllEstimates', payload: estimateStore }, 'Estimate synced to cloud ✓', 'Cloud sync failed — saved locally only');
 }
 
 // Legacy normalizer: estimates saved before the csH→psH rename store PS hours
@@ -5303,15 +5289,31 @@ function uploadAppraisalFile(input, collId, jobIdOverride) {
 
 // ─── GOOGLE SHEETS SYNC ───────────────────────────────────────────────────────
 
+// POST to the Sheets backend and actually read the JSON response so we can
+// confirm the write succeeded. Uses text/plain to avoid a CORS preflight; the
+// Apps Script web app returns Access-Control-Allow-Origin:* so cors can read it.
+function postSync(body) {
+  return fetch(SHEETS_SYNC_URL, {
+    method: 'POST', mode: 'cors', redirect: 'follow',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'text/plain' }
+  }).then(function(r){ return r.json(); });
+}
+
+// Fire a verified write and show an honest badge based on the real response.
+function postSyncBadge(body, okMsg, failMsg) {
+  if (!SHEETS_SYNC_URL) return;
+  postSync(body)
+    .then(function(res){
+      if (res && res.ok) showSyncBadge(okMsg);
+      else showSyncBadge(failMsg + (res && res.error ? ' \u2014 ' + res.error : ''), true);
+    })
+    .catch(function(){ showSyncBadge(failMsg, true); });
+}
+
 function syncToSheets(type, payload) {
   if (!SHEETS_SYNC_URL) return;
-  fetch(SHEETS_SYNC_URL, {
-    method: 'POST', mode: 'no-cors',
-    body: JSON.stringify({ type: type, payload: payload }),
-    headers: { 'Content-Type': 'text/plain' }
-  })
-  .then(function(){ showSyncBadge('Synced \u2713'); })
-  .catch(function(){ showSyncBadge('Sync failed \u2014 saved locally', true); });
+  postSyncBadge({ type: type, payload: payload }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
 }
 
 function syncJobToSheets(job) {
