@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 8:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 8:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4900,12 +4900,22 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem) {
 
 // --- MAILTO HELPERS ---
 function mailtoBody(lines) { return encodeURIComponent(lines.join('\n')); }
+// Pick the best recipient for client-facing email. On estate/probate jobs the
+// named client may be deceased (no client email), so fall back to the
+// authorized representative (executor), then the attorney.
+function bestClientEmail(job) {
+  if (!job) return '';
+  return (job.email && job.email.trim())
+      || (job.executorEmail && job.executorEmail.trim())
+      || (job.probateAttyEmail && job.probateAttyEmail.trim())
+      || '';
+}
 function firstName(name) { return name ? name.split(' ')[0] : 'there'; }
 
 function buildEstimateMailto() {
   if (!currentEstimate) return '#';
   var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; }) || {};
-  var to = encodeURIComponent(job.email || '');
+  var to = encodeURIComponent(bestClientEmail(job));
   var subject = encodeURIComponent('Havellin Palm Beach - Service Estimate for ' + (job.name||'Your Property'));
   var total = currentEstimate.havellinTotal ? '$' + Math.round(currentEstimate.havellinTotal).toLocaleString() : 'see attached';
   var body = mailtoBody([
@@ -4932,7 +4942,7 @@ function buildAgreementMailto() {
   var selEl = document.getElementById('agr-job-select');
   var jobId = selEl ? parseInt(selEl.value)||0 : 0;
   var job = jobs.find(function(j){ return j.id===jobId; }) || {};
-  var to = encodeURIComponent(job.email || '');
+  var to = encodeURIComponent(bestClientEmail(job));
   var subject = encodeURIComponent('Havellin Palm Beach - Service Agreement for ' + (job.name||'Your Property'));
   var body = mailtoBody([
     'Dear ' + firstName(job.name) + ',',
@@ -4956,7 +4966,7 @@ function buildAgreementMailto() {
 
 function buildInvoiceMailto(job, balance) {
   if (!job) return '#';
-  var to = encodeURIComponent(job.email || '');
+  var to = encodeURIComponent(bestClientEmail(job));
   var subject = encodeURIComponent('Havellin Palm Beach - Final Invoice for ' + (job.name||'Your Property'));
   var bal = balance ? '$' + Math.round(balance).toLocaleString() : 'see attached';
   var body = mailtoBody([
