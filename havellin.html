@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 8:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 8:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2025,6 +2025,16 @@ function calcAll() {
     tcFee = Math.round(totTC * tcRate);
   }
 
+  // Round billable hours UP to the next whole hour. The estimator computes to
+  // the tenth, but that implies a precision the walkthrough can't deliver and
+  // invites clients to debate six-minute increments. Rounding up bakes in a
+  // small buffer and presents a cleaner number. Fees are recomputed off the
+  // rounded hours so hours × rate always reconciles on the client estimate.
+  totTC = Math.ceil(totTC);
+  totPS = Math.ceil(totPS);
+  tcFee = Math.round(totTC * tcRate);
+  psFee = Math.round(totPS * psRate);
+
   // ─── CREW / TIMELINE STATUS ────────────────────────────────────────────────
   // Drives required PS from the estimate's PS hours and the client's window.
   // Enforces the crew FLOOR (bump up to required) but never reduces a manual
@@ -3105,8 +3115,8 @@ function renderClientEstimate() {
         + '<strong>Confirmed Spaces</strong> — ' + rooms.map(function(r){ return esc(r.name); }).join(', ')
         + '</td></tr>';
     })() +
-    '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + (e.totTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
-    '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + (e.totPS||0).toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
+    '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + Math.ceil(e.totTC||0) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
+    '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + Math.ceil(e.totPS||0) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
     (e.svc === 'downsizing_move' && (e.destTC||0) > 0 ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
       '<tr><td>Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt((e.destTC||0) * e.tcRate) + '</td></tr>' +
