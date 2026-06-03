@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 10:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 11:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3376,7 +3376,18 @@ function submitForApproval() {
 // the client, and enters their PIN. This drafts that notification. When `disc`
 // is provided ({original, pct, revised}) the email frames it as a discount
 // re-approval request.
-var MANAGER_APPROVAL_EMAIL = 'anthony@havellinpalmbeach.com';
+// Department distribution groups. These are Google Group addresses so people
+// can be added/removed on the Google side without touching the app. Route
+// internal notifications by function:
+//   estimates  — estimate submissions & discount re-approvals
+//   agreements — agreement approvals / signature workflow
+//   billing    — invoices, deposits, payment links, anything money-related
+var DEPT_EMAILS = {
+  estimates:  'estimates@havellinpalmbeach.com',
+  agreements: 'agreements@havellinpalmbeach.com',
+  billing:    'billing@havellinpalmbeach.com'
+};
+var MANAGER_APPROVAL_EMAIL = DEPT_EMAILS.estimates;
 function notifyManagerForApproval(est, disc) {
   if (!est) return;
   var job = jobs.find(function(j){ return j.id === est.jobId; }) || {};
