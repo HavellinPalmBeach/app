@@ -118,7 +118,7 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jtbl td{font-size:12px;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .jtbl tr:hover td{background:#fdfaf4;}
 .sdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;}
-.s-new{background:var(--bronze-lt);}.s-active{background:var(--sage-dk);}.s-closed{background:var(--gray);}.s-pending{background:#e09020;}
+.s-new{background:var(--bronze-lt);}.s-active{background:var(--sage-dk);}.s-closed{background:var(--gray);}.s-pending{background:#e09020;}.s-lost{background:#B0413E;}
 .avatar{width:26px;height:26px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--gray);border:1px solid var(--border-md);}
 .filter-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;}
 .fb{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:5px 12px;border:1px solid var(--border-md);border-radius:4px;background:none;cursor:pointer;color:var(--gray);font-family:'Raleway',sans-serif;}
@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.03 · 11:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.04 · 10:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -849,6 +849,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="fb" onclick="setFilter('pending',this)">Pending Approval</button>
         <button class="fb" onclick="setFilter('active',this)">Active</button>
         <button class="fb" onclick="setFilter('closed',this)">Closed</button>
+        <button class="fb" onclick="setFilter('lost',this)">Lost</button>
         <button class="fb" onclick="setFilter('downsizing',this)">Downsizing</button>
         <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
         <button class="fb" onclick="setFilter('probate',this)">Probate</button>
@@ -1379,6 +1380,44 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;gap:8px;">
       <button class="btn-s" style="flex:1;" onclick="closeDiscountModal()">Cancel</button>
       <button class="btn-p" style="flex:2;" onclick="applyDiscountRevision()">Apply &amp; Submit for Re-Approval</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="closeout-modal" style="display:none;">
+  <div class="modal-box" style="width:400px;">
+    <div class="modal-title">Close Out Client</div>
+    <div class="modal-sub" id="closeout-sub">Mark this prospect as <strong>Lost</strong> with a reason. The record is archived — never erased — so we keep a win/loss history.</div>
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Why was this lost?</label>
+    <select id="closeout-reason" style="width:100%;margin-bottom:10px;">
+      <option value="">— Select a reason —</option>
+      <option value="price">Price / estimate too high</option>
+      <option value="timing">Timing — client not ready yet</option>
+      <option value="competitor">Went with a competitor</option>
+      <option value="scope">Scope changed / no longer needed</option>
+      <option value="unresponsive">Unresponsive / went cold</option>
+      <option value="other">Other</option>
+    </select>
+    <textarea id="closeout-note" placeholder="Optional note (e.g. competitor name, price gap)…" style="width:100%;min-height:56px;margin-bottom:1rem;"></textarea>
+    <div id="closeout-fb" style="margin-bottom:10px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-s" style="flex:1;" onclick="closeCloseoutModal()">Cancel</button>
+      <button class="btn-p" style="flex:2;" onclick="confirmMarkLost()">Mark as Lost</button>
+    </div>
+    <div style="border-top:1px solid var(--tan);margin-top:1rem;padding-top:0.85rem;text-align:center;">
+      <button onclick="requestDeleteJob()" style="background:none;border:none;color:#B0413E;font-size:11px;cursor:pointer;text-decoration:underline;font-family:Raleway,sans-serif;">Delete entry permanently (test / mistake) — manager PIN</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delete-pin-modal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-title">Confirm Deletion</div>
+    <div class="modal-sub">Permanent deletion removes this client from the app <em>and</em> the spreadsheet. Use only for test or mistaken entries. Enter the manager PIN to confirm.</div>
+    <input type="password" class="pin-input" id="delete-pin-input" maxlength="4" placeholder="••••" oninput="if(this.value.length===4) checkDeletePin()">
+    <div id="delete-pin-fb" style="margin-top:10px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeDeletePinModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -3646,20 +3685,23 @@ function renderJobs() {
       case 'pending': return j.status==='pending';
       case 'active': return j.status==='active';
       case 'closed': return j.status==='closed';
-      case 'downsizing': return j.svc==='downsizing'||j.svc==='downsizing_move';
-      case 'cleanout': return j.svc==='cleanout'||j.svc==='estate';
-      case 'probate': return j.svc==='probate';
-      case 'contested_probate': return j.svc==='contested_probate';
-      case 're': return j.re==='yes';
-      case 'unassigned': return !j.tc||j.tc==='';
-      default: return true;
+      case 'lost': return j.status==='lost';
+      case 'downsizing': return j.status!=='lost' && (j.svc==='downsizing'||j.svc==='downsizing_move');
+      case 'cleanout': return j.status!=='lost' && (j.svc==='cleanout'||j.svc==='estate');
+      case 'probate': return j.status!=='lost' && j.svc==='probate';
+      case 'contested_probate': return j.status!=='lost' && j.svc==='contested_probate';
+      case 're': return j.status!=='lost' && j.re==='yes';
+      case 'unassigned': return j.status!=='lost' && (!j.tc||j.tc==='');
+      // 'all' = active ledger; Lost clients are archived out of the main view
+      // (still in the data — see the dedicated "Lost" filter).
+      default: return j.status!=='lost';
     }
   });
 
   var active = jobs.filter(function(j){ return j.status==='active'; }).length;
   var pending = jobs.filter(function(j){ return j.status==='pending'; }).length;
-  var pipe = jobs.filter(function(j){ return j.havellinEst; }).reduce(function(a,j){ return a+j.havellinEst; },0);
-  var reCount = jobs.filter(function(j){ return j.re==='yes'; }).length;
+  var pipe = jobs.filter(function(j){ return j.havellinEst && j.status!=='lost'; }).reduce(function(a,j){ return a+j.havellinEst; },0);
+  var reCount = jobs.filter(function(j){ return j.re==='yes' && j.status!=='lost'; }).length;
   document.getElementById('m-tot').textContent = jobs.length;
   document.getElementById('m-act').textContent = active + (pending > 0 ? ' (+'+pending+' pending)' : '');
   document.getElementById('m-pip').textContent = pipe > 0 ? '$' + Math.round(pipe).toLocaleString() : '—';
@@ -3671,8 +3713,8 @@ function renderJobs() {
     return;
   }
 
-  var sdot = {new:'s-new',pending:'s-pending',active:'s-active',closed:'s-closed'};
-  var slabel = {new:'New',pending:'Pending Approval',active:'Active',closed:'Closed'};
+  var sdot = {new:'s-new',pending:'s-pending',active:'s-active',closed:'s-closed',lost:'s-lost'};
+  var slabel = {new:'New',pending:'Pending Approval',active:'Active',closed:'Closed',lost:'Lost'};
   var pbadge = {high:'<span class="badge b-warn" style="margin-left:4px">High</span>',urgent:'<span class="badge" style="background:var(--err-bg);color:var(--err-tx);margin-left:4px">Urgent</span>'};
 
   var html = '';
@@ -3690,7 +3732,7 @@ function renderJobs() {
     // action buttons vary by status
     var actions = '<button class="icon-btn" onclick="cycleStatus('+j.id+')">Status</button>';
     actions = '<button class="btn-bronze" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();openClientDashboard('+j.id+')">Open →</button>';
-    actions += ' <button class="icon-btn del" onclick="event.stopPropagation();removeJob('+j.id+')">✕</button>';
+    actions += ' <button class="icon-btn del" title="Close out / mark lost" onclick="event.stopPropagation();openCloseoutModal('+j.id+')">✕</button>';
 
     // Drive button now in dashboard
 
@@ -4306,8 +4348,8 @@ function renderClientDashboard(jobId) {
   var cos = changeOrders.filter(function(c){ return c.jobId===jobId; });
 
   // ── Status badge colours
-  var statusColors = {new:'#888780',pending:'#A67C45',active:'#1D9E75',closed:'#3C3489'};
-  var statusLabels = {new:'New',pending:'Pending Approval',active:'Active',closed:'Closed'};
+  var statusColors = {new:'#888780',pending:'#A67C45',active:'#1D9E75',closed:'#3C3489',lost:'#B0413E'};
+  var statusLabels = {new:'New',pending:'Pending Approval',active:'Active',closed:'Closed',lost:'Lost'};
 
   // ── RE commission calc
   var reComm = null;
@@ -4698,8 +4740,76 @@ function cycleStatus(id) {
   saveJobs(); syncJobToSheets(j); renderJobs();
 }
 
-function removeJob(id) {
-  if (!confirm('Remove this job?')) return;
+// ─── CLOSE OUT / LOST / DELETE ──────────────────────────────────────────────
+// Loss reasons must stay in sync with the <select> in the close-out modal so
+// the stored code always maps back to a human label for reporting.
+var LOSS_REASONS = {
+  price:        'Price / estimate too high',
+  timing:       'Timing — client not ready yet',
+  competitor:   'Went with a competitor',
+  scope:        'Scope changed / no longer needed',
+  unresponsive: 'Unresponsive / went cold',
+  other:        'Other'
+};
+var closeoutJobId = 0;
+
+function openCloseoutModal(id) {
+  var j = jobs.find(function(x){ return x.id===id; });
+  if (!j) return;
+  closeoutJobId = id;
+  var sub = document.getElementById('closeout-sub');
+  if (sub) sub.innerHTML = 'Mark <strong>' + (j.name||'this client') + '</strong> as Lost with a reason. The record is archived — never erased — so we keep a win/loss history.';
+  var rs = document.getElementById('closeout-reason'); if (rs) rs.value = j.lostReason || '';
+  var nt = document.getElementById('closeout-note'); if (nt) nt.value = j.lostNote || '';
+  var fb = document.getElementById('closeout-fb'); if (fb) fb.innerHTML = '';
+  document.getElementById('closeout-modal').style.display = 'flex';
+}
+function closeCloseoutModal() {
+  document.getElementById('closeout-modal').style.display = 'none';
+  closeoutJobId = 0;
+}
+function confirmMarkLost() {
+  var j = jobs.find(function(x){ return x.id===closeoutJobId; });
+  if (!j) { closeCloseoutModal(); return; }
+  var reason = document.getElementById('closeout-reason').value;
+  if (!reason) { document.getElementById('closeout-fb').innerHTML = '<span style="color:var(--err-tx);font-size:12px;">Please select a reason.</span>'; return; }
+  j.status = 'lost';
+  j.lostReason = reason;
+  j.lostReasonLabel = LOSS_REASONS[reason] || reason;
+  j.lostNote = (document.getElementById('closeout-note').value || '').trim();
+  j.lostAt = new Date().toISOString();
+  // Snapshot the estimate at time of loss so win/loss reporting has the dollar figure.
+  j.lostEst = j.havellinEst || 0;
+  saveJobs(); syncJobToSheets(j);
+  closeCloseoutModal();
+  renderJobs();
+}
+
+function requestDeleteJob() {
+  if (!closeoutJobId) return;
+  document.getElementById('closeout-modal').style.display = 'none';
+  var fb = document.getElementById('delete-pin-fb'); if (fb) fb.innerHTML = '';
+  var inp = document.getElementById('delete-pin-input'); if (inp) inp.value = '';
+  document.getElementById('delete-pin-modal').style.display = 'flex';
+  if (inp) inp.focus();
+}
+function closeDeletePinModal() {
+  document.getElementById('delete-pin-modal').style.display = 'none';
+  closeoutJobId = 0;
+}
+function checkDeletePin() {
+  var inp = document.getElementById('delete-pin-input');
+  if (inp.value !== '3010') {
+    document.getElementById('delete-pin-fb').innerHTML = '<span style="color:var(--err-tx);font-size:12px;">Incorrect PIN.</span>';
+    inp.value = '';
+    return;
+  }
+  document.getElementById('delete-pin-modal').style.display = 'none';
+  hardDeleteJob(closeoutJobId);
+  closeoutJobId = 0;
+}
+
+function hardDeleteJob(id) {
   jobs = jobs.filter(function(j){ return j.id!==id; });
   // Clean up all related per-job data so it doesn't orphan or get re-pushed to Sheets
   try { delete estimateStore[id]; localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
@@ -4707,7 +4817,12 @@ function removeJob(id) {
   try { if (typeof jobPlanStore === 'object' && jobPlanStore) { delete jobPlanStore[id]; localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } } catch(e) {}
   try { if (Array.isArray(changeOrders)) { changeOrders = changeOrders.filter(function(co){ return co.jobId !== id; }); localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } } catch(e) {}
   try { localStorage.removeItem('hav_media_' + id); } catch(e) {}
-  saveJobs(); renderJobs();
+  saveJobs();
+  // Sheets is the source of truth and overwrites local on load, so the row must
+  // also be removed there or it will reappear on next sync. Requires a matching
+  // 'deleteJob' handler in the Apps Script backend.
+  if (SHEETS_SYNC_URL) postSyncBadge({ type: 'deleteJob', payload: { id: id } }, 'Deleted from cloud ✓', 'Removed locally — also delete the row in the spreadsheet');
+  renderJobs();
 }
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
