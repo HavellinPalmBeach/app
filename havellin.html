@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.04 · 10:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.04 · 11:00am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -248,6 +248,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('job-plan',this)">Job Plan</button>
   <button class="nb" onclick="showPanel('invoice',this)">Final Invoice</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
+  <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
 </div>
 
 <div class="main">
@@ -1266,6 +1267,21 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <button class="btn-p" onclick="acceptChangeOrder()" style="background:#2e6b10;">&#10003; I Accept This Change Order</button>
     </div>
   </div>
+</div>
+<div class="panel" id="panel-winloss">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
+    <div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Win / Loss Report</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:2px;">All prospects, outcomes, and lost-business analysis.</div>
+    </div>
+    <button class="btn-s" onclick="renderWinLoss()">↺ Refresh</button>
+  </div>
+  <!-- Summary metrics row -->
+  <div class="grid4" style="margin-bottom:1.5rem;" id="wl-metrics"></div>
+  <!-- Loss-reason breakdown -->
+  <div style="margin-bottom:1.5rem;" id="wl-reason-wrap"></div>
+  <!-- Full lost-clients table -->
+  <div id="wl-table-wrap"></div>
 </div>
 </div><!-- /main -->
 
@@ -4740,6 +4756,100 @@ function cycleStatus(id) {
   saveJobs(); syncJobToSheets(j); renderJobs();
 }
 
+// ─── WIN / LOSS REPORT ───────────────────────────────────────────────────────
+function renderWinLoss() {
+  var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
+  var won  = jobs.filter(function(j){ return j.status==='active'||j.status==='closed'; });
+  var lost = jobs.filter(function(j){ return j.status==='lost'; });
+  var total = won.length + lost.length;
+  var convRate = total > 0 ? Math.round(won.length / total * 100) : 0;
+  var lostRev = lost.reduce(function(a,j){ return a + (j.lostEst||j.havellinEst||0); }, 0);
+  var wonRev  = won.reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
+
+  // ── Metrics row ──
+  var mEl = document.getElementById('wl-metrics');
+  if (mEl) mEl.innerHTML =
+    '<div class="metric-card"><div class="metric-label">Won</div><div class="metric-val" style="color:var(--sage-dk);">' + won.length + '</div></div>' +
+    '<div class="metric-card"><div class="metric-label">Lost</div><div class="metric-val" style="color:#B0413E;">' + lost.length + '</div></div>' +
+    '<div class="metric-card"><div class="metric-label">Conversion Rate</div><div class="metric-val">' + convRate + '%</div></div>' +
+    '<div class="metric-card"><div class="metric-label">Lost Revenue</div><div class="metric-val" style="color:#B0413E;">' + fmt(lostRev) + '</div></div>';
+
+  // ── Loss-reason breakdown ──
+  var rEl = document.getElementById('wl-reason-wrap');
+  if (rEl) {
+    if (lost.length === 0) {
+      rEl.innerHTML = '';
+    } else {
+      var counts = {};
+      var revenue = {};
+      lost.forEach(function(j){
+        var r = j.lostReasonLabel || j.lostReason || 'Unknown';
+        counts[r] = (counts[r]||0) + 1;
+        revenue[r] = (revenue[r]||0) + (j.lostEst||j.havellinEst||0);
+      });
+      var rows = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
+      var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;font-weight:500;margin-bottom:.6rem;">Loss Reasons</div>';
+      h += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+      h += '<thead><tr style="background:var(--tan);">';
+      h += '<th style="padding:7px 10px;text-align:left;">Reason</th>';
+      h += '<th style="padding:7px 10px;text-align:center;">Count</th>';
+      h += '<th style="padding:7px 10px;text-align:center;">% of Lost</th>';
+      h += '<th style="padding:7px 10px;text-align:right;">Est. Revenue Lost</th>';
+      h += '</tr></thead><tbody>';
+      rows.forEach(function(r, i){
+        var bg = i%2===0 ? 'var(--cream)' : 'var(--white)';
+        h += '<tr style="background:'+bg+';">';
+        h += '<td style="padding:7px 10px;">'+r+'</td>';
+        h += '<td style="padding:7px 10px;text-align:center;font-weight:700;">'+counts[r]+'</td>';
+        h += '<td style="padding:7px 10px;text-align:center;">' + Math.round(counts[r]/lost.length*100) + '%</td>';
+        h += '<td style="padding:7px 10px;text-align:right;color:#B0413E;">'+fmt(revenue[r])+'</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+      rEl.innerHTML = h;
+    }
+  }
+
+  // ── Lost clients table ──
+  var tEl = document.getElementById('wl-table-wrap');
+  if (tEl) {
+    if (lost.length === 0) {
+      tEl.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:1rem 0;">No lost prospects yet — that\'s a good sign.</div>';
+    } else {
+      var sorted = lost.slice().sort(function(a,b){ return (b.lostAt||'').localeCompare(a.lostAt||''); });
+      var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;font-weight:500;margin-bottom:.6rem;">Lost Prospects</div>';
+      h += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+      h += '<thead><tr style="background:var(--tan);">';
+      h += '<th style="padding:7px 10px;text-align:left;">Client</th>';
+      h += '<th style="padding:7px 10px;text-align:left;">Property</th>';
+      h += '<th style="padding:7px 10px;text-align:left;">Service</th>';
+      h += '<th style="padding:7px 10px;text-align:left;">TC</th>';
+      h += '<th style="padding:7px 10px;text-align:right;">Estimate</th>';
+      h += '<th style="padding:7px 10px;text-align:left;">Reason</th>';
+      h += '<th style="padding:7px 10px;text-align:left;">Note</th>';
+      h += '<th style="padding:7px 10px;text-align:left;">Date Lost</th>';
+      h += '</tr></thead><tbody>';
+      var svcLabel = {downsizing:'Downsizing',downsizing_move:'Downsizing + Move',estate:'Estate Settlement',cleanout:'Estate Cleanout',probate:'Probate',contested_probate:'Contested Probate'};
+      sorted.forEach(function(j, i){
+        var bg = i%2===0 ? 'var(--cream)' : 'var(--white)';
+        var dateLost = j.lostAt ? new Date(j.lostAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+        h += '<tr style="background:'+bg+';">';
+        h += '<td style="padding:7px 10px;font-weight:600;">'+(j.name||'—')+'</td>';
+        h += '<td style="padding:7px 10px;">'+(j.addr||'—')+'</td>';
+        h += '<td style="padding:7px 10px;">'+(svcLabel[j.svc]||j.svc||'—')+'</td>';
+        h += '<td style="padding:7px 10px;">'+(j.tc||'—')+'</td>';
+        h += '<td style="padding:7px 10px;text-align:right;color:#B0413E;">'+(j.lostEst||j.havellinEst ? fmt(j.lostEst||j.havellinEst) : '—')+'</td>';
+        h += '<td style="padding:7px 10px;">'+(j.lostReasonLabel||j.lostReason||'—')+'</td>';
+        h += '<td style="padding:7px 10px;color:var(--gray);">'+(j.lostNote||'—')+'</td>';
+        h += '<td style="padding:7px 10px;">' + dateLost + '</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+      tEl.innerHTML = h;
+    }
+  }
+}
+
 // ─── CLOSE OUT / LOST / DELETE ──────────────────────────────────────────────
 // Loss reasons must stay in sync with the <select> in the close-out modal so
 // the stored code always maps back to a human label for reporting.
@@ -4856,6 +4966,7 @@ function showPanel(id, btn) {
   }
   if (id==='client-estimate') renderClientEstimate();
   if (id==='contractors') { renderContractors(); }
+  if (id==='winloss') renderWinLoss();
   if (id==='job-plan') {
     populateLogAndInvSelects();
     buildLogTeamRows();
