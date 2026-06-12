@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.12 · 4:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.12 · 5:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6432,7 +6432,8 @@ function loadJobPlanTab() {
     empty('Job not found.'); return;
   }
   var estRec = estimateStore[jobId];
-  if (!estRec || !estRec.approved) {
+  var isApproved = (estRec && estRec.approved) || job.approved;
+  if (!estRec || !isApproved) {
     var ls3 = document.getElementById('plan-log-section');
     if (ls3) ls3.style.display = 'none';
     empty('Job Plan generates once the estimate is approved and locked.'); return;
