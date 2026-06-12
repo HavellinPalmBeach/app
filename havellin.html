@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.12 · 3:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.12 · 4:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5069,8 +5069,11 @@ function loadEstimateState() {
             var localRec  = estimateStore[key];
             var sheetsHasRooms = sheetsRec && sheetsRec.estimate && (sheetsRec.estimate.rooms||[]).length > 0;
             var localHasRooms  = localRec  && localRec.estimate  && (localRec.estimate.rooms||[]).length > 0;
-            // Use Sheets version if local is missing or local has no rooms but Sheets does
-            if (!localRec || (!localHasRooms && sheetsHasRooms)) {
+            var sheetsApproved = sheetsRec && sheetsRec.approved;
+            var localApproved  = localRec  && localRec.approved;
+            // Use Sheets version if local is missing, local has no rooms but Sheets does,
+            // or Sheets is approved but local isn't (cross-device approval sync).
+            if (!localRec || (!localHasRooms && sheetsHasRooms) || (sheetsApproved && !localApproved)) {
               normalizeLegacyRoomKeys(sheetsRec);
               estimateStore[key] = sheetsRec;
               added++;
