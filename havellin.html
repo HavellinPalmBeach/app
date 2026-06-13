@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:23pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:27pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1106,7 +1106,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
     <label>Vendor Directory — Apps Script URL</label>
     <input type="text" id="set-vendor-url" placeholder="https://script.google.com/macros/s/...">
-    <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Separate web app bound to the Vendor Directory sheet only — populates vendor pickers. Kept apart from job data so directory editors can't reach jobs.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+      <button type="button" class="btn-s" onclick="loadVendorDirectory()">Reload directory</button>
+      <span id="vendor-dir-status" style="font-size:11px;color:var(--gray);"></span>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Separate web app bound to the Vendor Directory sheet only — populates vendor pickers. Kept apart from job data so directory editors can't reach jobs.</div>
 
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
 
@@ -5853,7 +5857,8 @@ var vendorDirectory = [];
 function loadVendorDirectory() {
   try { var s = localStorage.getItem('hav_vendor_dir'); if (s) vendorDirectory = JSON.parse(s); } catch(e) {}
   try { var u = localStorage.getItem('hav_vendor_url') || ''; if (u) VENDOR_SYNC_URL = u; } catch(e) {}
-  if (!VENDOR_SYNC_URL) return;
+  if (!VENDOR_SYNC_URL) { setVendorDirStatus('No URL set yet', false); return; }
+  setVendorDirStatus('Loading…', false);
   fetch(VENDOR_SYNC_URL + '?action=loadVendors')
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -5861,11 +5866,23 @@ function loadVendorDirectory() {
         vendorDirectory = data.vendors;
         try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
         showSyncBadge('Loaded ' + vendorDirectory.length + ' vendor' + (vendorDirectory.length !== 1 ? 's' : '') + ' from directory ✓');
+        setVendorDirStatus('✓ ' + vendorDirectory.length + ' vendors loaded', false);
       } else {
-        showSyncBadge('Vendor directory: ' + ((data && data.error) ? data.error : 'no vendors returned'), true);
+        var err = (data && data.error) ? data.error : 'no vendors returned';
+        showSyncBadge('Vendor directory: ' + err, true);
+        setVendorDirStatus('Error: ' + err, true);
       }
     })
-    .catch(function(){ showSyncBadge('Vendor directory load failed — check the URL and that the web app is deployed for “Anyone”', true); });
+    .catch(function(){
+      showSyncBadge('Vendor directory load failed — check the URL / sharing', true);
+      setVendorDirStatus('Load failed — confirm the web app is shared to “Anyone” and you used the /exec URL', true);
+    });
+}
+function setVendorDirStatus(msg, isErr) {
+  var el = document.getElementById('vendor-dir-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isErr ? 'var(--err-tx)' : (vendorDirectory.length ? 'var(--ok-tx)' : 'var(--gray)');
 }
 
 
@@ -7480,6 +7497,7 @@ function openSettings() {
   document.getElementById('set-sheets-url').value    = SHEETS_SYNC_URL;
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
   var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
+  setVendorDirStatus(VENDOR_SYNC_URL ? (vendorDirectory.length ? ('✓ ' + vendorDirectory.length + ' vendors loaded') : 'URL set — click Reload directory to load') : 'No URL set yet', false);
   var reqEl = document.getElementById('set-require-notes');
   if (reqEl) reqEl.checked = REQUIRE_WALKTHROUGH_NOTES;
 }
