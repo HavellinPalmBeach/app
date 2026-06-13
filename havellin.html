@@ -4617,9 +4617,9 @@ function renderClientDashboard(jobId) {
   h += '<div class="card" style="margin-bottom:12px;">';
   h += sectionHdr('Documents');
   var docs = [
-    {name:'Service Estimate', meta: est ? (fmtMoney(est.havellinTotal)+' · '+(job.estimateSentDate||'Not yet sent')) : 'No estimate built yet', status: est ? (job.estimateSentDate?'Sent':'Approved') : 'Pending', color: est ? (job.estimateSentDate?'#1D9E75':'#BA7517') : '#888780', showPdf: !!est, showEmail: !!est},
-    {name:'Service Agreement', meta: job.agrSigned ? 'Signed' : 'Awaiting client signature', status: job.agrSigned?'Signed':'Not signed', color: job.agrSigned?'#1D9E75':'#A32D2D', showPdf:true, showEmail:true},
-    {name:'First Invoice — Deposit (50%)', meta: hav ? fmtMoney(dep)+' due on signing' : '—', status: job.depositReceived?'Received':( job.agrSigned?'Send now':'Pending'), color: job.depositReceived?'#1D9E75':(job.agrSigned?'#BA7517':'#888780'), showPdf: !!hav, showEmail: !!hav},
+    {name:'Service Estimate', meta: est ? (fmtMoney(est.havellinTotal)+' · '+(job.estimateSentDate||'Not yet sent')) : 'No estimate built yet', status: est ? (job.estimateSentDate?'Sent':'Approved') : 'Pending', color: est ? (job.estimateSentDate?'#1D9E75':'#BA7517') : '#888780', showPdf: !!est, showEmail: !!est, docType:'estimate'},
+    {name:'Service Agreement', meta: job.agrSigned ? 'Signed' : 'Awaiting client signature', status: job.agrSigned?'Signed':'Not signed', color: job.agrSigned?'#1D9E75':'#A32D2D', showPdf:true, showEmail:true, docType:'agreement'},
+    {name:'First Invoice — Deposit (50%)', meta: hav ? fmtMoney(dep)+' due on signing' : '—', status: job.depositReceived?'Received':( job.agrSigned?'Send now':'Pending'), color: job.depositReceived?'#1D9E75':(job.agrSigned?'#BA7517':'#888780'), showPdf: !!hav, showEmail: !!hav, docType:'invoice'},
     {name:'Midpoint Invoice (25%)', meta: hav ? fmtMoney(mid)+' due at midpoint' : '—', status:'Pending', color:'#888780', showPdf:false, showEmail:false},
     {name:'Final Invoice', meta:'Balance of actual hours on completion', status:'Not generated', color:'#888780', showPdf:false, showEmail:false},
   ];
@@ -4632,8 +4632,8 @@ function renderClientDashboard(jobId) {
     h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">'+d.name+'</div><div style="font-size:11px;color:var(--gray);margin-top:1px;">'+d.meta+'</div></div>';
     h += '<div style="display:flex;gap:6px;align-items:center;">';
     if (d.status) h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:'+d.color+'22;color:'+d.color+';font-weight:500;">'+d.status+'</span>';
-    if (d.showPdf) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;">PDF</button>';
-    if (d.showEmail) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;">&#9993; Email</button>';
+    if (d.showPdf) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;" onclick="docPdf('+jobId+',\''+d.docType+'\')">PDF</button>';
+    if (d.showEmail) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;" onclick="docEmail('+jobId+',\''+d.docType+'\')">&#9993; Email</button>';
     if (d.newBtn) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;" onclick="openChangeOrder('+jobId+')">+ New</button>';
     h += '</div></div>';
   });
@@ -4731,6 +4731,58 @@ function goToJobLog(jobId) {
 function openEstimateForJob(id) {
   document.querySelectorAll('.nb')[3].click(); // go to client estimate tab
   renderClientEstimate();
+}
+
+// Navigate to a tab with the right job loaded, then trigger PDF or email.
+function docPdf(jobId, docType) {
+  var navBtns = document.querySelectorAll('.nb');
+  function navToPanel(panelId, btnIdx) {
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+    navBtns.forEach(function(b){ b.classList.remove('active'); });
+    document.getElementById('panel-' + panelId).classList.add('active');
+    if (navBtns[btnIdx]) navBtns[btnIdx].classList.add('active');
+  }
+  if (docType === 'estimate') {
+    var rec = estimateStore[jobId];
+    if (rec) { currentEstimate = rec.estimate; }
+    navToPanel('client-estimate', 3);
+    setTimeout(function(){ renderClientEstimate(); setTimeout(printClientEstimate, 200); }, 150);
+  } else if (docType === 'agreement') {
+    var sel2 = document.getElementById('agr-job');
+    if (sel2) { sel2.value = jobId; loadAgreement(); }
+    navToPanel('agreement', 4);
+  } else if (docType === 'invoice') {
+    var sel3 = document.getElementById('inv-job');
+    if (sel3) { sel3.value = jobId; loadInvoice(); }
+    navToPanel('invoice', 6);
+    setTimeout(function(){ printInvoice(); }, 400);
+  }
+}
+
+function docEmail(jobId, docType) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  if (docType === 'estimate') {
+    var rec = estimateStore[jobId];
+    if (rec) { currentEstimate = rec.estimate; }
+    window.location.href = buildEstimateMailto();
+  } else if (docType === 'agreement') {
+    // Navigate to Agreement tab — email is sent after approval from there
+    var navBtns2 = document.querySelectorAll('.nb');
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+    navBtns2.forEach(function(b){ b.classList.remove('active'); });
+    document.getElementById('panel-agreement').classList.add('active');
+    if (navBtns2[4]) navBtns2[4].classList.add('active');
+    var sel4 = document.getElementById('agr-job');
+    if (sel4) { sel4.value = jobId; loadAgreement(); }
+  } else if (docType === 'invoice') {
+    var rec2 = estimateStore[jobId];
+    var est = rec2 ? rec2.estimate : null;
+    var hav = est ? est.havellinTotal : (job.havellinEst || 0);
+    var paid = Math.round(hav * 0.75);
+    var balance = Math.max(0, hav - paid);
+    window.location.href = buildInvoiceMailto(job, balance);
+  }
 }
 
 function cycleStatus(id) {
