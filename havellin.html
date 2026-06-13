@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 3:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 4:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3050,6 +3050,62 @@ function paymentSplit(total) {
   return { deposit: deposit, midpoint: midpoint, final: t - deposit - midpoint, total: t };
 }
 
+// Client-facing "Proposed Plan" — a light, service-specific summary of how the
+// work will actually run, with dynamic notes for site conditions, third-party
+// vendors, notable collections, and home prep. Renders as a full-width row right
+// under Confirmed Spaces so the client sees what we're doing before the hours and
+// pricing that follow. The full internal phase playbook lives in the Job Plan tab;
+// this is the trimmed, client-readable version of it.
+function proposedPlanRow(e) {
+  function andList(a) {
+    if (a.length <= 1) return a.join('');
+    if (a.length === 2) return a[0] + ' and ' + a[1];
+    return a.slice(0, -1).join(', ') + ', and ' + a[a.length - 1];
+  }
+
+  var narratives = {
+    downsizing: 'We work alongside you room by room — sorting every item into keep, sell, donate, and dispose, then packing and organizing what stays. Your Transition Concierge directs the plan and manages every vendor while Property Specialists handle the hands-on sorting, packing, and heavy lifting; the hours below reflect that careful, decision-by-decision pace.',
+    downsizing_move: 'We work alongside you room by room — sorting into keep, sell, donate, and dispose, then packing what stays for the move. On move day your Transition Concierge supervises the crew at both the current and new home and directs placement room by room, so you arrive to an organized home rather than a wall of boxes.',
+    home_cleanout: 'We clear the home in an orderly sequence, sorting contents room by room and routing everything to the right destination — haul-away, donation, consignment or sale, and secure shredding. Anything of value is set aside and reviewed with you before the home is emptied, and your Transition Concierge coordinates every vendor and pickup along the way.',
+    cleanout: 'We settle the estate room by room — inventorying contents, documenting and setting aside items of value, and routing the remainder to sale, donation, or disposal. High-value items are photographed and tracked under chain of custody, and your Transition Concierge keeps the representative and any other heirs informed throughout.',
+    probate: 'We settle the estate room by room under the documentation standards probate requires — a full inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records the court and counsel may request and keeps all parties informed.',
+    contested_probate: 'We settle the estate room by room under heightened documentation standards — a full inventory, photographs, and chain-of-custody tracking for every item of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge keeps meticulous, neutral records and takes direction only from the authorized representative.'
+  };
+  narratives.estate = narratives.cleanout;
+  var narrative = narratives[e.svc] || 'We work through the property room by room — sorting and routing every item to the right destination while your Transition Concierge manages the plan and all vendor coordination and Property Specialists handle the hands-on work. The hours below reflect that careful, methodical pace.';
+
+  var notes = [];
+
+  if (e.access) {
+    notes.push(['Site conditions', 'Stairs or no elevator at the property — the extra handling time this requires is included in the hours below.']);
+  }
+
+  var vTypes = (e.vendors || []).filter(function(v){ return v.cost > 0; }).map(function(v){ return esc(v.type); });
+  vTypes = vTypes.filter(function(t, i){ return vTypes.indexOf(t) === i; });
+  if (vTypes.length) {
+    notes.push(['Third-party coordination', 'We coordinate every outside vendor on your behalf — ' + andList(vTypes) + ' — scheduling each pickup, supervising on-site, and verifying the work. These are billed to you directly at cost and summarized below.']);
+  }
+
+  if ((e.collections || []).length) {
+    notes.push(['Notable collections', 'Items of value are addressed in the disposition plan below — appraisal, auction, and consignment partners assess on-site at no charge, and any proceeds pass directly to you.']);
+  }
+
+  if (e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
+    notes.push(['Home prep for sale', 'We manage the work needed to get the property show-ready, coordinating and overseeing each vendor — detailed below.']);
+  }
+
+  var notesHtml = notes.map(function(n){
+    return '<div style="margin-top:5px;font-size:11.5px;color:var(--gray-dk);line-height:1.5;">' +
+      '<span style="color:var(--bronze);font-weight:700;">' + n[0] + ':</span> ' + n[1] + '</div>';
+  }).join('');
+
+  return '<tr><td colspan="4" style="padding:11px 14px;background:var(--cream);border-left:3px solid var(--bronze);">' +
+    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin-bottom:5px;">Proposed Plan</div>' +
+    '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + narrative + '</div>' +
+    notesHtml +
+    '</td></tr>';
+}
+
 function renderClientEstimate() {
   if (!currentEstimate) {
     document.getElementById('ce-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Save an estimate first to preview the client document.</div>';
@@ -3182,6 +3238,7 @@ function renderClientEstimate() {
         + '<strong>Confirmed Spaces</strong> — ' + rooms.map(function(r){ return esc(r.name); }).join(', ')
         + '</td></tr>';
     })() +
+    proposedPlanRow(e) +
     '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + Math.ceil(e.totTC||0) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
     '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + Math.ceil(e.totPS||0) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
     (e.svc === 'downsizing_move' && (e.destTC||0) > 0 ?
@@ -3248,7 +3305,7 @@ function renderClientEstimate() {
     '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
     '</tbody></table></div>' +
 
-    '<div style="margin-top:1.5rem;page-break-before:always;"><div class="ce-section-hdr">Payment Schedule</div>' +
+    '<div style="margin-top:1.5rem;"><div class="ce-section-hdr">Payment Schedule</div>' +
     '<table class="pay-tbl">' +
     '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
     '<tr><td><strong>25% Midpoint</strong> — Due at project midpoint</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
