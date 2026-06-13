@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 5:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 5:28pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9063,7 +9063,7 @@ function renderCollections() {
   var costDisps = {appraise:1, firearms:1};
   if (collectionsData.some(function(c){ return costDisps[c.disp]; })) {
     h += '<tr><td colspan="5" style="padding:8px 10px;background:var(--warn-bg);border-left:3px solid var(--bronze);font-size:11px;color:var(--warn-tx);line-height:1.5;">' +
-      '<strong>&#8595; Don’t forget the cost.</strong> Appraisal and firearms transfers are paid services, not sales — add the provider (appraiser / licensed FFL) as a line under <strong>Third-Party Vendors</strong> below, billed at cost + 15% SMF.' +
+      '&#8595; Add the appraiser / FFL under <strong>Third-Party Vendors</strong> below.' +
       '</td></tr>';
   }
   tbody.innerHTML = h;
