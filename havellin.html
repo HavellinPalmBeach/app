@@ -3962,6 +3962,9 @@ function restoreEstimateToUI(est) {
     if (sqftDispEl) sqftDispEl.textContent = jobForStart.sqft ? parseInt(jobForStart.sqft).toLocaleString() + ' sqft' : '— (not set in intake)';
     var yihDispEl = document.getElementById('e-years-in-home-display');
     if (yihDispEl) yihDispEl.textContent = jobForStart.yearsInHome ? jobForStart.yearsInHome + ' years' : '— (not set in intake)';
+    // Restore prepared-by: prefer the saved value on the estimate, fall back to the job's TC
+    var prepByEl = document.getElementById('e-prepared-by');
+    if (prepByEl) prepByEl.value = est.preparedBy || jobForStart.siteVisitBy || jobForStart.tc || '';
   }
 
 
