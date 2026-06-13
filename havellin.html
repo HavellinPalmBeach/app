@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.12 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 10:55am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -708,7 +708,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
         <div id="prep-content" style="display:none;">
           <table class="vtbl">
-            <thead><tr><th>Prep Item / Vendor</th><th>Est. Cost</th><th>15% SMF</th><th></th></tr></thead>
+            <thead><tr><th>Prep Item / Vendor</th><th>Est. Cost</th><th>30% GC Fee</th><th></th></tr></thead>
             <tbody id="prep-body"></tbody>
             <tfoot>
               <tr>
@@ -763,7 +763,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
           <tr><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
           <tr><td class="muted">Vendor SMF (15%)</td><td class="num" id="s-smf">$0</td></tr>
-          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home prep SMF (15%)</td><td class="num" id="s-prep-fee">$0</td></tr>
+          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home prep GC fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Customer Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
@@ -2489,7 +2489,7 @@ function togglePrepSection() {
 }
 
 document.getElementById('new-prep-cost').addEventListener('input', function() {
-  document.getElementById('new-prep-fee').textContent = '$' + Math.round((parseFloat(this.value)||0) * 0.15).toLocaleString();
+  document.getElementById('new-prep-fee').textContent = '$' + Math.round((parseFloat(this.value)||0) * 0.30).toLocaleString();
 });
 
 function addPrepItem() {
@@ -2510,7 +2510,7 @@ function renderPrepItems() {
   prepItems.forEach(function(p,i) {
     html += '<tr><td><strong>'+p.type+'</strong></td>' +
       '<td><input type="number" value="'+p.cost+'" oninput="updatePrepCost('+i+',this.value)" style="width:100%;"></td>' +
-      '<td>$'+Math.round(p.cost*0.15).toLocaleString()+'</td>' +
+      '<td>$'+Math.round(p.cost*0.30).toLocaleString()+'</td>' +
       '<td><button class="icon-btn del" onclick="removePrepItem('+i+')">✕</button></td></tr>';
   });
   var tbody = document.getElementById('prep-body');
@@ -2522,7 +2522,7 @@ function updatePrepCost(i, val) { prepItems[i].cost = parseFloat(val)||0; render
 
 function calcPrepTotals() {
   var totalCost = prepItems.reduce(function(a,p){ return a+p.cost; }, 0);
-  var totalFee = Math.round(totalCost * 0.15);
+  var totalFee = Math.round(totalCost * 0.30);
   var tcHrs = getPrepTCHrs();
   var c = document.getElementById('prep-total-cost');
   var f = document.getElementById('prep-total-fee');
@@ -2534,7 +2534,7 @@ function calcPrepTotals() {
 }
 
 function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost; }, 0); }
-function getPrepFee()  { return Math.round(getPrepCost() * 0.15); }
+function getPrepFee()  { return Math.round(getPrepCost() * 0.30); }
 function toggleMoveHours() {
   document.getElementById('move-hours-wrap').style.display = document.getElementById('adj-move').checked ? 'block' : 'none';
   calcAll();
@@ -3168,7 +3168,8 @@ function renderClientEstimate() {
     (hasMaterialsSection ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
       (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
-      (combinedSMF > 0 ? '<tr><td>Service Management Fee — Vendor &amp; home prep coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(combinedSMF) + '</td></tr>' : '')
+      ((e.smf||0) > 0 ? '<tr><td>Service Management Fee — Vendor coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(e.smf) + '</td></tr>' : '') +
+      ((e.prepFee||0) > 0 ? '<tr><td>Home Prep for Sale — GC management fee (30%)</td><td>—</td><td>30% of prep vendors</td><td class="r">' + fmt(e.prepFee) + '</td></tr>' : '')
     : '') +
     (e.prepEnabled && e.prepTCHrs > 0 ? '<tr><td colspan="4" style="font-size:11px;color:var(--gray);font-style:italic;padding:4px 10px;">Includes ' + e.prepTCHrs.toFixed(1) + ' TC hrs for home prep vendor coordination — factored into Transition Concierge total above.</td></tr>' : '') +
     '</tbody>' +
@@ -3236,7 +3237,7 @@ function renderClientEstimate() {
     '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
     '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
     '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
-    '<li>A 15% Service Management Fee applies to all third-party vendors and home prep vendors coordinated by Havellin.</li>' +
+    '<li>A 15% Service Management Fee applies to third-party vendors coordinated by Havellin for downsizing, estate, and probate engagements. A 30% GC management fee applies to vendors coordinated for Home Prep for Sale engagements, reflecting Havellin\'s role as general contractor.</li>' +
     '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>' +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     '<li>Havellin Palm Beach is licensed, insured, and bonded.</li>' +
@@ -6047,6 +6048,7 @@ function renderInvoice() {
     '<tbody>' + teamRows + '</tbody>' +
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
+    (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC management fee (30%)</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Customer Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
@@ -7451,7 +7453,8 @@ function renderProbateAgreement() {
     ['Transition Concierge (TC)','$150 / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'],
     ['Property Specialist (PS)','$100 / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
     ['Specialty Materials','Cost + 25%','Boxes, packing materials, protective supplies — itemized separately on invoice. Receipts available on request.'],
-    ['Vendor Management Fee','15% of vendor invoice','Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
+    ['Vendor Management Fee','15% of vendor invoice','Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin for downsizing and estate engagements.'],
+    ['Home Prep GC Fee','30% of vendor invoice','Applied to all third-party vendor invoices coordinated by Havellin for Home Prep for Sale engagements, reflecting Havellin\'s role as general contractor.']
   ];
   feeRows.forEach(function(r){
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
