@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 7:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6791,11 +6791,18 @@ function vendorPickerOptions(selId) {
   return html;
 }
 function _vendorRefLine(rec) {
-  if (!rec || !rec.vendorName) return '';
-  var bits = [esc(rec.vendorName)];
-  if (rec.phone)   bits.push(esc(rec.phone));
-  if (rec.pricing) bits.push(esc(rec.pricing));
-  return '<div style="font-size:10px;color:var(--gray);margin-top:4px;">' + bits.join(' · ') + '</div>';
+  if (!rec || (!rec.vendorId && !rec.vendorName)) return '';
+  var v = lookupVendorById(rec.vendorId) || {};
+  var name = v.vendor_name || rec.vendorName || '';
+  if (!name) return '';
+  var bits = [name];
+  var phone = v.phone || rec.phone;            if (phone) bits.push(phone);
+  if (v.license_cert)                          bits.push(v.license_cert);
+  var price = v.pricing_structure || rec.pricing; if (price) bits.push(price);
+  return '<div style="font-size:10px;color:var(--gray);margin-top:4px;line-height:1.4;">' +
+    bits.map(esc).join(' · ') +
+    (v.notes ? '<br><em>' + esc(v.notes) + '</em>' : '') +
+    '</div>';
 }
 function renderVendorSourcing(jobId, job, est) {
   var svcLines = est.vendors || [];
@@ -7297,9 +7304,18 @@ function _subfolderId(job, name) {
   return (typeof sf === 'string') ? sf : (sf.id || null);
 }
 function resolveSubfolderId(job, name, cb) {
-  var id = _subfolderId(job, name);
+  // Aliases keep older jobs working after a folder rename (Estimate → Estimates).
+  var ALIASES = { 'Estimates': ['Estimate'], 'Estimate': ['Estimates'] };
+  function look() {
+    var id = _subfolderId(job, name);
+    if (!id && ALIASES[name]) {
+      for (var i = 0; i < ALIASES[name].length && !id; i++) id = _subfolderId(job, ALIASES[name][i]);
+    }
+    return id;
+  }
+  var id = look();
   if (id) { cb(id); return; }
-  if (job.driveFolder) { fetchSubfolderIds(job, function(){ cb(_subfolderId(job, name)); }); }
+  if (job.driveFolder) { fetchSubfolderIds(job, function(){ cb(look()); }); }
   else { cb(null); }
 }
 
@@ -7438,7 +7454,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       else showSyncBadge('Drive backup failed — check Settings', true);
     });
   }
-  resolveSubfolderId(job, 'Estimate', _doExport);
+  resolveSubfolderId(job, 'Estimates', _doExport);
 }
 
 // Build a self-contained HTML document for Drive export. Inlines the app's
@@ -7460,7 +7476,7 @@ function saveFolderEstimate() {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) { showSyncBadge('Job not found', true); _reset(); return; }
   showSyncBadge('Locating Drive folder…');
-  resolveSubfolderId(job, 'Estimate', function(folderId) {
+  resolveSubfolderId(job, 'Estimates', function(folderId) {
     if (!folderId) {
       var found = job.driveSubfolders ? Object.keys(job.driveSubfolders) : [];
       console.warn('[Drive] Estimate subfolder unresolved. driveFolder=', job.driveFolder, ' subfolders=', job.driveSubfolders);
@@ -7573,7 +7589,7 @@ function createDriveJobFolder(job) {
       hvlId: job.hvlId || '',
       clientName: job.name || '',
       svc: job.svc || '',
-      subfolders: ['Photos','Walkthrough Notes','Estimate','Agreement','Change Orders','Asset Documentation']
+      subfolders: ['Photos','Walkthrough Notes','Estimates','Agreement','Change Orders','Asset Documentation','Invoice']
     })
   })
   .then(function(r){ return r.json(); })
