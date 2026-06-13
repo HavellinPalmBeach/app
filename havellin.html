@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 11:18am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 11:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -361,15 +361,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div></div>
         </div>
         <div class="divider"></div>
-      </div>
-      <div id="home-cleanout-fields" style="display:none;">
-        <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Cleanout Complexity</div>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-          <input type="checkbox" id="i-hoarding" style="width:auto;margin:0;">
-          <span>Hoarding conditions — heavy accumulation, obstructed pathways (ICD Level 3+)</span>
-        </label>
-        <div style="font-size:11px;color:var(--gray);margin:6px 0 0;padding:6px 10px;background:var(--tan);border-radius:4px;">Havellin sorts and clears. Biohazard remediation (pest, mold, bodily fluids) is subcontracted to a licensed partner or declined — never performed in-house. This flag escalates to Anthony Sr before pricing.</div>
       </div>
       <label>Notes</label>
       <textarea id="i-notes" placeholder="Family situation, urgency, special collections, access issues, etc."></textarea>
@@ -1605,7 +1596,7 @@ function buildRoomTable() {
         '<td>' + (r.custom ?
           '<input type="text" id="name-'+id+'" value="'+r.name+'" style="width:140px;font-size:11px;" oninput="calcAll()">' :
           '<span class="rname dim" id="name-'+id+'">' + r.name + '</span>') + '</td>' +
-        '<td><input type="number" id="vol-'+id+'" min="1" max="5" value="" disabled oninput="calcAll()"></td>' +
+        '<td><input type="number" id="vol-'+id+'" min="1" max="5" value="" disabled oninput="onVolInput(\''+id+'\')"></td>' +
         '<td><input type="number" id="cplx-'+id+'" min="1" max="5" value="" disabled oninput="calcAll()"></td>' +
         '<td style="text-align:center;"><input type="checkbox" id="spcl-'+id+'" disabled onchange="calcAll()"></td>' +
         '<td class="calc" id="tc-'+id+'" style="text-align:center;font-size:12px;">—</td>' +
@@ -1687,6 +1678,17 @@ function syncNote(roomId) {
 // ─── CALC ENGINE ──────────────────────────────────────────────────────────────
 
 // ─── PREP FOR SALE LOGIC ──────────────────────────────────────────────────────
+// When a room's Volume is scored 5 (Extreme — floor-to-ceiling, hoarder-level density),
+// the contents can't be assumed disposable: every box still has to be opened and sorted,
+// so handling Complexity rises with it. Auto-set Complexity to 5 when Volume hits 5; the
+// estimator can still adjust it down afterward if a room is genuinely simple-but-packed.
+function onVolInput(id) {
+  var vol = document.getElementById('vol-' + id);
+  var cplx = document.getElementById('cplx-' + id);
+  if (vol && cplx && parseInt(vol.value, 10) === 5) cplx.value = 5;
+  calcAll();
+}
+
 function svcTypeChanged() {
   calcAll();
 }
@@ -2606,9 +2608,6 @@ function toggleIntakeFields() {
   // Downsizing destination
   var df = document.getElementById('downsizing-dest-fields');
   if (df) df.style.display = (svc === 'downsizing_move') ? 'block' : 'none';
-  // Home Cleanout complexity (hoarding flag) — living client, no relocation
-  var hcf = document.getElementById('home-cleanout-fields');
-  if (hcf) hcf.style.display = (svc === 'home_cleanout') ? 'block' : 'none';
   // Deceased note + label swap
   var note = document.getElementById('i-deceased-note');
   var nameLabel = document.getElementById('i-name-label');
@@ -2661,8 +2660,6 @@ function saveIntake() {
   var destSqft = (document.getElementById('i-dest-sqft')||{}).value ? document.getElementById('i-dest-sqft').value.trim() : '';
   var destBeds = (document.getElementById('i-dest-beds')||{}).value ? document.getElementById('i-dest-beds').value.trim() : '';
   var destBaths= (document.getElementById('i-dest-baths')||{}).value? document.getElementById('i-dest-baths').value.trim(): '';
-  // Home Cleanout hoarding complexity flag (only meaningful when svc === 'home_cleanout')
-  var hoarding = (document.getElementById('i-hoarding')||{}).checked || false;
 
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
   var missing = [];
@@ -2737,7 +2734,7 @@ function saveIntake() {
     executorAuth: document.getElementById('i-executor-auth') ? document.getElementById('i-executor-auth').value : 'pending',
     depositReceived: false,
     agrSigned: false,
-    svc:svc, svcLabel:svcLabels[svc], hoarding:hoarding,
+    svc:svc, svcLabel:svcLabels[svc],
     sqft:document.getElementById('i-sqft').value,
     yearsInHome:document.getElementById('i-years-in-home').value,
     beds:beds, baths:baths, propVal:propVal,
@@ -6613,7 +6610,6 @@ function renderJobPlan(jobId, job, est) {
     '</div>' +
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
-    (job.hoarding ? '<div class="alert a-err" style="margin-top:6px;font-size:11px;">&#9888; Hoarding conditions flagged. Havellin sorts and clears; biohazard remediation is subcontracted to a licensed partner or declined. Escalate to Anthony Sr before Day 1.</div>' : '') +
     (prem       ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
     (job.driveFolder ? '<div style="margin-top:8px;font-size:11px;"><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; View all photos in Drive</a></div>' : '') +
     '</div>';
