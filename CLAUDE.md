@@ -6,10 +6,18 @@
   Use the current date and approximate ET time.
   Format: `YYYY.MM.DD · H:MMpm ET`
 
+## Git identity — set this at the start of every session
+```
+git config user.email noreply@anthropic.com && git config user.name Claude
+```
+Do NOT pass `--author` on commits — let the repo config set both author and committer.
+If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
+
 ## Branches
-- Feature branch: `claude/pricing-app-continued-U6cuL`
-- After every feature branch commit: merge to `main` and push both branches
-  so GitHub Pages (https://havellinpalmbeach.github.io/app/havellin.html) stays current
+- Active feature branch: `claude/zen-ride-v4x393`
+- Push to `main` after every commit so GitHub Pages stays current:
+  `git push origin claude/zen-ride-v4x393:main`
+- Keep the feature branch in sync with main after each push.
 
 ## App
 - Single-file app: `havellin.html` — all CSS, JS, HTML in one file
