@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 3:41pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 3:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -887,7 +887,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="font-size:11px;color:var(--gray);margin-top:2px;">Live working plan auto-generated from the approved estimate. Internal use only.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <select id="plan-job" onchange="loadJobPlanTab()" style="width:260px;"><option value="">Select job</option></select>
+        <select id="plan-job" onchange="loadJobPlanTab()" style="min-width:320px;max-width:520px;width:auto;"><option value="">Select job</option></select>
         <button class="btn-bronze" id="btn-plan-pdf" onclick="printJobPlan()" style="display:none;">Print Job Plan</button>
       </div>
     </div>
@@ -5482,14 +5482,14 @@ function _renderCollPhotoCapture(jobId, collId) {
       + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')"'
       + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button> ';
   });
-  return '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-    + '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
-    + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);">'
+  var btnStyle = 'cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;'
+    + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);line-height:1.4;';
+  return '<div style="margin-top:6px;display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;">'
+    + '<label style="' + btnStyle + '">'
     + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
     + 'onchange="attachJobPlanCollectionPhoto(this,' + jobId + ',' + collId + ')">'
     + '&#128247; Capture Asset Photo</label>'
-    + '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
-    + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);">'
+    + '<label style="' + btnStyle + '">'
     + '<input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style="display:none;" '
     + 'onchange="uploadAppraisalFile(this,' + collId + ',' + jobId + ')">'
     + '&#128196; Upload Appraisal</label>'
@@ -6662,27 +6662,29 @@ function renderJobPlan(jobId, job, est) {
         'HOA/building move-out rules confirmed at origin; move-in rules at destination']) : '');
 
   // ── Phase 1 ──────────────────────────────────────────────────────────────────
-  // Room cards: status + photos only — no per-room process checklist
-  var p1rooms = rooms.map(function(r) {
-    var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
-    var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
-    return '<div id="plan-room-block-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">' +
-      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
-      '<div><strong style="font-size:12px;">'+r.name+'</strong>' +
-      '<span style="font-size:10px;color:var(--gray);margin-left:8px;">Vol '+r.vol+' · Cplx '+r.cplx+' · '+r.tcH.toFixed(1)+' TC / '+r.psH.toFixed(1)+' PS hrs</span></div>' +
-      '<span style="font-size:11px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';">'+status.toUpperCase()+'</span></div>' +
-      '<div id="plan-room-status-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status)+'</div>' +
-      (r.note ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin:4px 0 6px;">&#128203; '+r.note+'</div>' : '') +
-      (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin:2px 0 6px;">&#127908; Voice note from walkthrough</div>' : '') +
-      '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-md);">' +
-      '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-bottom:4px;"></div>' +
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--gray);margin-bottom:5px;">Room Photos</div>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:0;">' +
-      _renderRoomPhotoControls(jobId, r.idx, 'before') +
-      _renderRoomPhotoControls(jobId, r.idx, 'after') +
-      '</div></div>' +
-      '</div>';
-  }).join('');
+  // Compact room grid: 3 per row. Status buttons + photos only — no per-room checklists.
+  // The highlighted status button already shows current status; no separate badge needed.
+  var p1rooms = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;">' +
+    rooms.map(function(r) {
+      var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
+      var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
+      return '<div id="plan-room-block-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
+        '<strong style="font-size:12px;line-height:1.3;">'+r.name+'</strong>' +
+        '<span id="plan-room-badge-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--gray);margin-bottom:5px;">Vol '+r.vol+' · Cplx '+r.cplx+' · '+r.tcH.toFixed(1)+'TC / '+r.psH.toFixed(1)+'PS hrs</div>' +
+        (r.note ? '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-bottom:4px;">&#128203; '+r.note+'</div>' : '') +
+        (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin-bottom:4px;">&#127908; Voice note</div>' : '') +
+        '<div id="plan-room-status-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status)+'</div>' +
+        '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-top:4px;"></div>' +
+        '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
+        _renderRoomPhotoControls(jobId, r.idx, 'before') +
+        _renderRoomPhotoControls(jobId, r.idx, 'after') +
+        '</div>' +
+        '</div>';
+    }).join('') +
+    '</div>';
 
   // Phase 1 house-level gates
   var p1gates = isCleanout ? [
@@ -6853,7 +6855,7 @@ function setPlanRoomStatus(jobId, roomIdx, status) {
   setRoomStatus(jobId, roomIdx, status);
   var wrap = document.getElementById('plan-room-status-' + roomIdx);
   if (wrap) wrap.innerHTML = planRoomStatusBtns(jobId, roomIdx, status);
-  var badge = document.querySelector('#plan-room-block-' + roomIdx + ' span[style*="font-weight:700"]');
+  var badge = document.getElementById('plan-room-badge-' + roomIdx);
   var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
   if (badge) { badge.textContent = status.toUpperCase(); badge.style.color = CLR[status]||'var(--gray)'; }
 }
