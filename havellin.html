@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 4:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 5:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -647,8 +647,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
                 <option value="ebay">Ebay Store</option>
                 <option value="replacements">Replacements.com</option>
                 <option value="dealer">Specialized Dealer</option>
-                <option value="firearms">Firearms — Non-NFA</option>
-                <option value="firearms_nfa">Firearms — NFA / Title II</option>
+                <option value="firearms">Firearms — Licensed FFL</option>
                 <option value="other">Other</option>
               </select></td>
               <td><button class="icon-btn" onclick="addCollection()">+ Add</button></td>
@@ -679,7 +678,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <tfoot>
               <tr>
                 <td><select id="new-vendor-type" style="width:100%;"><option value="">Add vendor...</option>
-                  <option>Appraiser(s)</option><option>Auction House</option><option>Dumpster Rental</option>
+                  <option>Appraiser(s)</option><option>Firearms / FFL Transfer</option><option>Auction House</option><option>Dumpster Rental</option>
                   <option>Estate Sale Company</option><option>Junk Removal / Hauling</option>
                   <option>Moving Company</option><option>Professional Cleaning</option>
                   <option>Specialty Vendor (art handler, etc.)</option>
@@ -1760,8 +1759,7 @@ var COLLECTION_HOURS = {
   ebay:         {tc:0.5, ps:2},  // TC: confirm drop-off only. PS: box items, transport to store
   replacements: {tc:1,   ps:3},  // TC: submit inquiry, confirm acceptance list. PS: careful pack + ship
   dealer:        {tc:2,   ps:1},    // TC: research dealer, schedule visit, be present. PS: organize/stage
-  firearms:      {tc:3,   ps:0.5}, // TC: locate FFL/dealer, coordinate legal transfer. PS: locate, organize for inspection
-  firearms_nfa:  {tc:5,   ps:0.5}, // TC: NFA specialist, Form 4/5 coordination, compliance. PS: locate, organize
+  firearms:      {tc:3,   ps:0.5}, // TC: coordinate licensed FFL transfer/sale, be present. PS: locate, organize for inspection
   other:         {tc:1,   ps:1}    // Generic fallback
 };
 function collectionsHours() {
@@ -3050,6 +3048,20 @@ function paymentSplit(total) {
   return { deposit: deposit, midpoint: midpoint, final: t - deposit - midpoint, total: t };
 }
 
+// Disposition-aware note for notable collections: sale channels (auction, consign,
+// ebay, replacements, dealer) yield proceeds to the client; paid services (appraise,
+// firearms transfer) are billed at the provider's cost. Returns the clause(s) that
+// apply to the dispositions actually present, appended to a lead sentence by callers.
+function collectionsDispositionNote(cols) {
+  var saleDisps = {auction:1, consign:1, ebay:1, replacements:1, dealer:1};
+  var costDisps = {appraise:1, firearms:1};
+  var hasSale = (cols || []).some(function(c){ return saleDisps[c.disp]; });
+  var hasCost = (cols || []).some(function(c){ return costDisps[c.disp]; });
+  var sale = ' For items sold through auction, consignment, or a dealer, Havellin takes no commission — proceeds go to you, less any fees the partner charges.';
+  var cost = ' Professional services such as appraisal or licensed firearms transfer are billed at the provider’s cost, shown under third-party vendor costs.';
+  return (hasSale ? sale : '') + (hasCost ? cost : '');
+}
+
 // Client-facing "Proposed Plan" — a light, service-specific summary of how the
 // work will actually run, with dynamic notes for site conditions, third-party
 // vendors, notable collections, and home prep. Renders as a full-width row right
@@ -3087,7 +3099,7 @@ function proposedPlanRow(e) {
   }
 
   if ((e.collections || []).length) {
-    notes.push(['Notable collections', 'Items of value are matched to the right appraisal, auction, or consignment partner and handled through the disposition plan below. Havellin takes no commission — sale proceeds go to you, less any fees the partner charges.']);
+    notes.push(['Notable collections', 'Items of value are matched to the right partner and handled through the disposition plan below.' + collectionsDispositionNote(e.collections)]);
   }
 
   if (e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
@@ -3268,14 +3280,14 @@ function renderClientEstimate() {
     (function() {
       var cols = e.collections || [];
       if (!cols.length) return '';
-      var dispNames = {auction:'Auction House', appraise:'Appraise', consign:'Consign', ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer', other:'Other'};
+      var dispNames = COL_DISP_LABELS;
       var rows = cols.map(function(c) {
         return '<tr><td>' + esc(c.name) + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
       }).join('');
       return '<div class="ce-section-hdr" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
         '<table class="ce-tbl"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
         '<tbody>' + rows + '</tbody></table>' +
-        '<div class="ce-note">Collection partners — auction houses, appraisers, and dealers — typically visit the property at no charge to assess what they will accept. Havellin coordinates the entire process on your behalf; our hands-on time and coordination are included in the estimate above. Any sale, consignment, or auction proceeds are passed directly to you — Havellin does not take a percentage of any proceeds.</div>';
+        '<div class="ce-note">Havellin identifies the right partner for each item and coordinates the entire process on your behalf — our hands-on time and coordination are included in the estimate above.' + collectionsDispositionNote(cols) + '</div>';
     })() +
 
     '<div class="ce-section-hdr" style="margin-top:1rem;">Estimated Third-Party Vendor Costs</div>' +
@@ -8937,7 +8949,7 @@ var collectionsData = [];
 var COL_DISP_LABELS = {
   auction:'Auction House', appraise:'Appraise', consign:'Consign',
   ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer',
-  firearms:'Firearms — Non-NFA', firearms_nfa:'Firearms — NFA / Title II', other:'Other'
+  firearms:'Firearms — Licensed FFL', other:'Other'
 };
 
 function addCollection() {
@@ -9046,6 +9058,14 @@ function renderCollections() {
       '</td>' +
     '</tr>';
   });
+  // Cost-bearing dispositions (appraisal, firearms transfer) are paid services, not
+  // sales — nudge the TC to capture the provider cost in the vendor table below.
+  var costDisps = {appraise:1, firearms:1};
+  if (collectionsData.some(function(c){ return costDisps[c.disp]; })) {
+    h += '<tr><td colspan="5" style="padding:8px 10px;background:var(--warn-bg);border-left:3px solid var(--bronze);font-size:11px;color:var(--warn-tx);line-height:1.5;">' +
+      '<strong>&#8595; Don’t forget the cost.</strong> Appraisal and firearms transfers are paid services, not sales — add the provider (appraiser / licensed FFL) as a line under <strong>Third-Party Vendors</strong> below, billed at cost + 15% SMF.' +
+      '</td></tr>';
+  }
   tbody.innerHTML = h;
 }
 
