@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 3:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 3:41pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6214,6 +6214,16 @@ function getJobPlan(jobId) {
 function saveJobPlan(jobId) {
   try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
 }
+function savePlanNote(jobId, key, val) {
+  var plan = getJobPlan(jobId);
+  if (!plan.notes) plan.notes = {};
+  plan.notes[key] = val;
+  saveJobPlan(jobId);
+}
+function getPlanNote(jobId, key) {
+  var plan = getJobPlan(jobId);
+  return (plan.notes && plan.notes[key]) || '';
+}
 function loadJobPlanData() {
   try { var s = localStorage.getItem('havellin_jobplan_v1'); if(s) jobPlanStore = JSON.parse(s); } catch(e) {}
 }
@@ -6617,8 +6627,13 @@ function renderJobPlan(jobId, job, est) {
     '</div>';
 
   // ── Phase 0 ──────────────────────────────────────────────────────────────────
+  var p0CallNote = getPlanNote(jobId, 'p0_call_notes');
   var p0 = planSubsec('Pre-Job Client Call') +
     planChk(jobId,'p0_call','Pre-job call placed 3–5 days before Day 1 (warm reconnection; daily rhythm set; decision authority asked directly and documented; four categories previewed; honest emotional frame; logistics confirmed)') +
+    '<div style="margin:6px 0 10px;">' +
+    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:4px;">Pre-Job Call Notes</div>' +
+    '<textarea id="p0-call-notes-'+jobId+'" rows="4" style="width:100%;font-size:12px;padding:7px 9px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;" placeholder="Emotional tone, family dynamics, anything the client mentioned that isn\'t in a checkbox..." oninput="savePlanNote('+jobId+',\'p0_call_notes\',this.value)">'+p0CallNote+'</textarea>' +
+    '</div>' +
     planSubsec('Agreements & Admin') +
     chks('p0_admin_',['Signed engagement agreement confirmed on file',
       '50% deposit received and confirmed before any crew is scheduled',
@@ -6647,6 +6662,7 @@ function renderJobPlan(jobId, job, est) {
         'HOA/building move-out rules confirmed at origin; move-in rules at destination']) : '');
 
   // ── Phase 1 ──────────────────────────────────────────────────────────────────
+  // Room cards: status + photos only — no per-room process checklist
   var p1rooms = rooms.map(function(r) {
     var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
     var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
@@ -6658,28 +6674,6 @@ function renderJobPlan(jobId, job, est) {
       '<div id="plan-room-status-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status)+'</div>' +
       (r.note ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin:4px 0 6px;">&#128203; '+r.note+'</div>' : '') +
       (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin:2px 0 6px;">&#127908; Voice note from walkthrough</div>' : '') +
-      chks('p1_r'+r.idx+'_', isCleanout ? [
-        'Room sort complete: every item routed to a disposition stream (haul / donate / sale-consignment / shred)',
-        'Retained items identified and confirmed with client; set aside and labeled — these are the exception, not the default',
-        'Sale / consignment items inventoried and photographed; chain of custody opened',
-        'Donation items staged at designated point',
-        'Haul items staged; photographed where condition or value could be questioned',
-        'Documents staged for shredding or retention per client direction',
-        'Maybe box revisited once and emptied before leaving the room',
-        'Special-items flag addressed: high-value items set aside for TC review',
-        'Room photographed before and after; room notes updated',
-        'Room marked DECISION-LOCKED (set room status to locked above)'
-      ] : [
-        'Room sort complete: every item routed to keep/sell/donate/dispose',
-        'Keep items tagged by destination room'+(isMM?' (measured vs floor plan)':''),
-        'Sell items inventoried, photographed, staged — chain of custody opened',
-        'Donate items staged at designated point',
-        'Dispose items staged; photographed where condition could be questioned',
-        'Maybe box revisited once and emptied before leaving the room',
-        'Special-items flag addressed: high-value items set aside for TC review',
-        'Room photographed before and after; room notes updated',
-        'Room marked DECISION-LOCKED (set room status to locked above)'
-      ]) +
       '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-md);">' +
       '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-bottom:4px;"></div>' +
       '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--gray);margin-bottom:5px;">Room Photos</div>' +
@@ -6690,17 +6684,22 @@ function renderJobPlan(jobId, job, est) {
       '</div>';
   }).join('');
 
-  var p1 = planSubsec('Daily Opening (each day)') +
-    (isCleanout
-      ? chks('p1_open_',['Crew on-site and briefed on today\'s room sequence',
-          'Client or named decision-maker present or confirmed reachable',
-          'Stream staging areas confirmed (haul, donate, sale/consignment, shred, retain)',
-          'Today\'s time-box targets stated to the client'])
-      : chks('p1_open_',['Crew on-site and briefed on today\'s room sequence',
-          'Client or named decision-maker present or confirmed reachable',
-          'Sort supplies staged (keep/sell/donate/dispose tags); one Maybe box per planned room',
-          'Today\'s time-box targets stated to the client'])) +
-    planSubsec('Rooms — Sort & Lock (ordered by complexity)') + p1rooms +
+  // Phase 1 house-level gates
+  var p1gates = isCleanout ? [
+    'All rooms sorted and decision-locked — every item routed to a disposition stream',
+    'Retained items list confirmed with client in writing before Phase 2',
+    'Sale / consignment items inventoried, photographed, chain of custody opened',
+    'High-value items reviewed by TC, documented, and set aside'
+  ] : [
+    'All rooms decision-locked — every item routed to keep / sell / donate / dispose',
+    'Keep list confirmed with client before Phase 2 begins'+(isMM?' (measured against floor plan)':''),
+    'Sell items inventoried, photographed, chain of custody opened',
+    'High-value items reviewed by TC, documented, and set aside'
+  ];
+
+  var p1 = planSubsec('Rooms — Sort & Lock (ordered by complexity)') + p1rooms +
+    planSubsec('Phase Gates') +
+    chks('p1_gate_', p1gates) +
     (hasCOC ? planSubsec('Chain of Custody'+(prem?' — Mandatory (Premium Estate)':'')) +
       chks('p1_coc_',['Photograph high-value item in place before it moves',
         'Logged: description, client\'s stated value, condition, photo reference',
@@ -6709,65 +6708,45 @@ function renderJobPlan(jobId, job, est) {
     renderDailyCloseBlock(jobId,1);
 
   // ── Phase 2 ──────────────────────────────────────────────────────────────────
-  var p2 = planSubsec('Daily Opening') +
+  var p2vendorGates = vendors.map(function(v,i){
+    return planChk(jobId,'p2_vx_'+i,(v.type||'Vendor')+' — confirmed day before; items staged and accessible');
+  }).join('');
+
+  var p2 = planSubsec('Phase Gates') +
     (isCleanout
-      ? chks('p2_open_',['Crew briefed on today\'s staging priority (which decision-locked rooms, which streams)',
-          'Materials inventory checked; resupply ordered before running out',
-          'Any decisions pending from Phase 1 resolved before that room is staged'])
-      : chks('p2_open_',['Crew briefed on today\'s pack priority (which decision-locked rooms, which categories)',
-          'Materials inventory checked; resupply ordered before running out',
-          'Any decisions pending from Phase 1 resolved before that room is packed'])) +
-    (isCleanout
-      ? planSubsec('Stage by Stream') +
-        chks('p2_pack_',['Haul items consolidated and staged near exit; weight and volume estimated for hauler',
-          'Donation items staged at designated point; ready for pickup',
-          'Sale / consignment items: inventoried, photographed, staged for vendor pickup — chain of custody documented',
-          'Shred items boxed and staged; shredding vendor confirmed if mobile shred scheduled',
-          'Retained items only: fragile or valuable pieces boxed, labeled, and set aside for client',
-          'Art and high-value smalls: TC personally oversees; documented and photographed',
-          'Furniture: disposition stream confirmed (haul, donate, or consignment); staged accordingly',
-          'Garage and outdoor: disposition streamed and staged'])
-      : planSubsec('Packing by Category') +
-        chks('p2_pack_',['Fragile (china/glass/crystal): wrapped, boxed, labeled by destination room',
-          'Art and mirrors: wrapped, edge-protected, staged upright',
-          'Jewelry and high-value smalls: TC personally oversees; documented and photographed',
-          'Clothing: packed per keep list or routed to donation',
-          'Books and media: packed or donated; boxes to liftable weight',
-          'Kitchen: packed to the keep list',
-          'Furniture: tagged keep/sell/donate/dispose; keep items measured vs floor plan'+(isMM?'':' where applicable'),
-          'Garage and outdoor: sorted and staged'])) +
-    planSubsec('Vendor Coordination') +
-    (isCleanout
-      ? chks('p2_vend_',['Each scheduled vendor confirmed day before arrival; items staged and accessible',
-          'Hauler / junk removal: items staged near exit; access confirmed',
-          'Auction / consignment pickups: items inventoried and chain-of-custody documented',
-          'Donation pickup: items staged near access point; receipt captured',
-          'Shredding vendor (if scheduled): boxes staged and accessible'])
-      : chks('p2_vend_',['Each scheduled vendor confirmed day before arrival; items staged and accessible',
-          'Auction/consignment pickups: items inventoried and chain-of-custody documented',
-          'Donation pickup: items staged near access point; receipt captured'])) +
-    vendors.map(function(v,i){ return planChk(jobId,'p2_vx_'+i,(v.type||'Vendor')+' — confirm day before; stage items and ensure access'); }).join('') +
+      ? chks('p2_gate_',[
+          'All disposition streams cleared: haul staged or removed, donation staged, consignment picked up, shred staged',
+          'Donation receipt captured',
+          'Sale / consignment chain-of-custody closed for all pickups',
+          'Shredding completed or vendor confirmed on schedule',
+          'Only retained items remain — boxed, labeled, and ready for client'])
+      : chks('p2_gate_',[
+          'All keep items packed and labeled by destination room'+(isMM?' (checked against floor plan)':''),
+          'Sell items: all vendor pickups completed, chain-of-custody closed',
+          'Donation pickup completed; receipt captured',
+          'Dispose items cleared',
+          'Property ready for '+(isMM?'move day':'close-out')])) +
+    (vendors.length ? planSubsec('Vendor Confirmations') + p2vendorGates : '') +
     renderDailyCloseBlock(jobId,2);
 
   // ── Phase 3 (MM only) ─────────────────────────────────────────────────────────
   var p3 = isMM ? planPhaseWrap('p3','Phase 3 — Move Day',
     planSubsec('Pre-Move') +
-    chks('p3_pre_',['Moving company arrival confirmed; ETA logged','TC on-site before movers arrive',
-      'Walkthrough with moving crew lead: loading sequence set, fragile/high-value identified',
-      'Elevator reserved and parking secured for the truck at origin']) +
-    planSubsec('Origin — Loading') +
-    chks('p3_orig_',['Fragile/high-value: TC directly oversees loading, does not leave the area',
-      'Furniture loaded by sequence (largest/heaviest first)','Packed boxes loaded',
-      'Every room walked by the TC before truck departs (attic, garage, closets, outdoor)',
+    chks('p3_pre_',['Moving company arrival confirmed; ETA logged',
+      'TC on-site before movers arrive',
+      'Moving crew briefed: fragile and high-value items pointed out; floor plan shared']) +
+    planSubsec('Origin') +
+    chks('p3_orig_',['TC present and supervising throughout loading',
+      'Fragile and high-value items: TC directly oversees — does not leave the area',
+      'Every room, closet, attic, garage, and outdoor space walked before truck departs',
       'Origin final walkthrough complete and photographed']) +
-    planSubsec('Destination — Unload & Settle-In') +
+    planSubsec('Destination') +
     chks('p3_dest_',['TC at new home ahead of the truck where possible',
-      'Movers directed strictly per the approved floor plan',
-      'Fragile items: TC oversees unloading','Furniture placed per plan',
-      'Essential areas unpacked first: bedroom, bathroom, kitchen',
-      'Electronics set up if in scope',
+      'Movers directed per the approved floor plan',
+      'Fragile and high-value items: TC oversees unloading',
       'Client walkthrough of new home; approval confirmed and noted',
-      'Moving company final sign-off; any damage photographed and reported same day'])) : '';
+      'Any damage photographed and reported same day',
+      'Moving company final sign-off'])) : '';
 
   // ── Phase 4 ──────────────────────────────────────────────────────────────────
   var p4prep = (est.prepEnabled && est.prepItems && est.prepItems.length)
