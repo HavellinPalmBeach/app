@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.12 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 11:18am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -263,6 +263,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="">Select service type</option>
         <option value="downsizing">Downsizing</option>
         <option value="downsizing_move">Downsizing &amp; Move Management</option>
+        <option value="home_cleanout">Home Cleanout</option>
         <option value="cleanout">Estate Settlement</option>
         <option value="probate">Probate Estate Settlement</option>
         <option value="contested_probate">Contested Probate Estate Settlement</option>
@@ -360,6 +361,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div></div>
         </div>
         <div class="divider"></div>
+      </div>
+      <div id="home-cleanout-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Cleanout Complexity</div>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
+          <input type="checkbox" id="i-hoarding" style="width:auto;margin:0;">
+          <span>Hoarding conditions — heavy accumulation, obstructed pathways (ICD Level 3+)</span>
+        </label>
+        <div style="font-size:11px;color:var(--gray);margin:6px 0 0;padding:6px 10px;background:var(--tan);border-radius:4px;">Havellin sorts and clears. Biohazard remediation (pest, mold, bodily fluids) is subcontracted to a licensed partner or declined — never performed in-house. This flag escalates to Anthony Sr before pricing.</div>
       </div>
       <label>Notes</label>
       <textarea id="i-notes" placeholder="Family situation, urgency, special collections, access issues, etc."></textarea>
@@ -849,6 +859,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="fb" onclick="setFilter('closed',this)">Closed</button>
         <button class="fb" onclick="setFilter('lost',this)">Lost</button>
         <button class="fb" onclick="setFilter('downsizing',this)">Downsizing</button>
+        <button class="fb" onclick="setFilter('home_cleanout',this)">Home Cleanout</button>
         <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
         <button class="fb" onclick="setFilter('probate',this)">Probate</button>
         <button class="fb" onclick="setFilter('contested_probate',this)">Contested Probate</button>
@@ -1531,6 +1542,13 @@ var PRICING_REF = {
     {l:'Estate (4,000–6,000 sqft)',min:18000,max:35000,days:'9–17 days'},
     {l:'Trophy estate (6,000+ sqft)',min:30000,max:60000,days:'14–26 days'}
   ]},
+  home_cleanout:{label:'Home Cleanout',sizes:[
+    {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
+    {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
+    {l:'Estate (4,000–6,000 sqft) ',min:14000,max:26000,days:'8–14 days'},
+    {l:'Trophy estate (6,000–10,000 sqft) ',min:22000,max:50000,days:'12–24 days'},
+    {l:'Ultra estate (10,000+ sqft / $30M+)',min:40000,max:120000,days:'20–45 days'}
+  ]},
   cleanout:{label:'Estate Settlement',sizes:[
     {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
     {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
@@ -1686,6 +1704,7 @@ function stagerChanged() {
 var SVC_MULTS = {
   downsizing:      {tc: 1.0,  ps: 1.0},
   downsizing_move: {tc: 1.0,  ps: 1.0},  // dest TC hours added separately
+  home_cleanout:   {tc: 1.0,  ps: 1.0},  // living-client clear-out — volume-heavy; no keep-pile PS reduction
   cleanout:        {tc: 1.0,  ps: 1.0},
   probate:           {tc: 1.5,  ps: 1.0},  // TC ×1.5 for legal/documentation
   contested_probate: {tc: 1.8,  ps: 1.1},  // TC ×1.8 + PS ×1.1 — multiple attorneys, heirs, chain-of-custody
@@ -2587,6 +2606,9 @@ function toggleIntakeFields() {
   // Downsizing destination
   var df = document.getElementById('downsizing-dest-fields');
   if (df) df.style.display = (svc === 'downsizing_move') ? 'block' : 'none';
+  // Home Cleanout complexity (hoarding flag) — living client, no relocation
+  var hcf = document.getElementById('home-cleanout-fields');
+  if (hcf) hcf.style.display = (svc === 'home_cleanout') ? 'block' : 'none';
   // Deceased note + label swap
   var note = document.getElementById('i-deceased-note');
   var nameLabel = document.getElementById('i-name-label');
@@ -2639,6 +2661,8 @@ function saveIntake() {
   var destSqft = (document.getElementById('i-dest-sqft')||{}).value ? document.getElementById('i-dest-sqft').value.trim() : '';
   var destBeds = (document.getElementById('i-dest-beds')||{}).value ? document.getElementById('i-dest-beds').value.trim() : '';
   var destBaths= (document.getElementById('i-dest-baths')||{}).value? document.getElementById('i-dest-baths').value.trim(): '';
+  // Home Cleanout hoarding complexity flag (only meaningful when svc === 'home_cleanout')
+  var hoarding = (document.getElementById('i-hoarding')||{}).checked || false;
 
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
   var missing = [];
@@ -2683,7 +2707,7 @@ function saveIntake() {
     showFB('i-fb','warn','Please complete: ' + missing.join(', ') + '.');
     return;
   }
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
   var job = {
     id:Date.now(), hvlId:generateHvlId(), name:name, fname:fname, lname:lname,
     phone:document.getElementById('i-phone').value,
@@ -2713,7 +2737,7 @@ function saveIntake() {
     executorAuth: document.getElementById('i-executor-auth') ? document.getElementById('i-executor-auth').value : 'pending',
     depositReceived: false,
     agrSigned: false,
-    svc:svc, svcLabel:svcLabels[svc],
+    svc:svc, svcLabel:svcLabels[svc], hoarding:hoarding,
     sqft:document.getElementById('i-sqft').value,
     yearsInHome:document.getElementById('i-years-in-home').value,
     beds:beds, baths:baths, propVal:propVal,
@@ -2797,6 +2821,7 @@ function loadJobIntoEstimate() {
   var svcEl = document.getElementById('e-svc');
   if (svcEl) svcEl.value = job.svc || '';
   var svcLabelsDisp = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',
+    home_cleanout:'Home Cleanout',
     cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
   var svcDisplay = document.getElementById('e-svc-display');
   if (svcDisplay) svcDisplay.textContent = svcLabelsDisp[job.svc] || job.svc || '—';
@@ -3037,7 +3062,7 @@ function renderClientEstimate() {
   var _eSplit = paymentSplit(e.havellinTotal);
   var job = e.job || jobs.find(function(j){ return j.id===e.jobId; }) || {};
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
 
   // Calculated duration: max of TC-driven and PS-driven days at 7 hrs/day
   var estDays = (function() {
@@ -3136,6 +3161,7 @@ function renderClientEstimate() {
   var _svcSubHdr = {
     downsizing: 'Onsite Downsizing Services',
     downsizing_move: 'Onsite Downsizing Services',
+    home_cleanout: 'Onsite Home Cleanout Services',
     estate: 'Onsite Estate Settlement Services',
     cleanout: 'Onsite Estate Settlement Services',
     probate: 'Onsite Probate Estate Settlement Services',
@@ -3676,6 +3702,7 @@ function renderJobs() {
       case 'closed': return j.status==='closed';
       case 'lost': return j.status==='lost';
       case 'downsizing': return j.status!=='lost' && (j.svc==='downsizing'||j.svc==='downsizing_move');
+      case 'home_cleanout': return j.status!=='lost' && j.svc==='home_cleanout';
       case 'cleanout': return j.status!=='lost' && (j.svc==='cleanout'||j.svc==='estate');
       case 'probate': return j.status!=='lost' && j.svc==='probate';
       case 'contested_probate': return j.status!=='lost' && j.svc==='contested_probate';
@@ -4354,7 +4381,7 @@ function renderClientDashboard(jobId) {
   var initials = nameParts.length >= 2 ? (nameParts[0][0]+(nameParts[nameParts.length-1][0])).toUpperCase() : job.name.slice(0,2).toUpperCase();
 
   // ── Build svcLabel
-  var svcLabelsMap = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabelsMap = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
   var svcLabel = svcLabelsMap[job.svc] || job.svc || '—';
 
   // ── Blocker checks
@@ -4799,7 +4826,7 @@ function renderWinLoss() {
       h += '<th style="padding:7px 10px;text-align:left;">Note</th>';
       h += '<th style="padding:7px 10px;text-align:left;">Date Lost</th>';
       h += '</tr></thead><tbody>';
-      var svcLabel = {downsizing:'Downsizing',downsizing_move:'Downsizing + Move',estate:'Estate Settlement',cleanout:'Estate Cleanout',probate:'Probate',contested_probate:'Contested Probate'};
+      var svcLabel = {downsizing:'Downsizing',downsizing_move:'Downsizing + Move',home_cleanout:'Home Cleanout',estate:'Estate Settlement',cleanout:'Estate Cleanout',probate:'Probate',contested_probate:'Contested Probate'};
       sorted.forEach(function(j, i){
         var bg = i%2===0 ? 'var(--cream)' : 'var(--white)';
         var dateLost = j.lostAt ? new Date(j.lostAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
@@ -6547,6 +6574,9 @@ function renderJobPlan(jobId, job, est) {
   var svc    = est.svc || job.svc || '';
   var isMM   = svc === 'downsizing_move';
   var isDownsizing = svc === 'downsizing' || svc === 'downsizing_move';
+  // Home Cleanout is a living-client, client-present sort-and-clear job, so it runs the
+  // core playbook (Phases 0–2, 4). Only the Move Management relocation phases stay off.
+  var hasPlaybook = isDownsizing || svc === 'home_cleanout';
   var vendors     = est.vendors     || [];
   var collections = est.collections || [];
   var prem   = !!est.prem;
@@ -6583,6 +6613,7 @@ function renderJobPlan(jobId, job, est) {
     '</div>' +
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
+    (job.hoarding ? '<div class="alert a-err" style="margin-top:6px;font-size:11px;">&#9888; Hoarding conditions flagged. Havellin sorts and clears; biohazard remediation is subcontracted to a licensed partner or declined. Escalate to Anthony Sr before Day 1.</div>' : '') +
     (prem       ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
     (job.driveFolder ? '<div style="margin-top:8px;font-size:11px;"><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; View all photos in Drive</a></div>' : '') +
     '</div>';
@@ -6730,9 +6761,9 @@ function renderJobPlan(jobId, job, est) {
       'Job folder complete and archived in Drive; 7-year retention applies',
       'Move documented for NASMM SMM-C tracking']);
 
-  // For non-downsizing service types: render standalone Room Documentation instead of phase playbook
+  // For service types without the core playbook: render standalone Room Documentation instead
   var standaloneDocs = '';
-  if (!isDownsizing) {
+  if (!hasPlaybook) {
     var docRooms = rooms.map(function(r) {
       var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
       return '<div style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">'
@@ -8528,7 +8559,7 @@ function showEditClient(jobId) {
   if (!job) return;
   var isProbate = (job.svc === 'probate' || job.svc === 'contested_probate');
   var isEstate = (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate');
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',contested_probate:'Contested Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',contested_probate:'Contested Probate Estate Settlement',estate:'Estate Settlement'};
 
   var m = document.getElementById('edit-client-modal');
   if (!m) {
@@ -8578,7 +8609,7 @@ function showEditClient(jobId) {
   // Job Details
   html += '<div class="sec" style="margin-top:14px;">Job Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'}], job.svc)+'</select>', true);
+  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'}], job.svc)+'</select>', true);
   html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano Sr',l:'Anthony Graziano Sr'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
   html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Condo / apartment',l:'Condo / apartment'},{v:'Single family home',l:'Single family home'},{v:'Waterfront estate',l:'Waterfront estate'},{v:'Historic estate',l:'Historic estate'},{v:'Equestrian / ranch property',l:'Equestrian / ranch property'},{v:'Penthouse',l:'Penthouse'}], job.ptype)+'</select>', true);
@@ -8648,7 +8679,7 @@ function saveClientEdit(jobId) {
   if (!fname || !lname) { alert('First and last name are required.'); return; }
 
   var svc = document.getElementById('ec-svc').value;
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
 
   // Update core fields
   job.fname = fname;
