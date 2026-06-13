@@ -6048,6 +6048,7 @@ function renderInvoice() {
     '<tbody>' + teamRows + '</tbody>' +
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
+    (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC management fee (30%)</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Customer Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
@@ -7452,7 +7453,8 @@ function renderProbateAgreement() {
     ['Transition Concierge (TC)','$150 / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'],
     ['Property Specialist (PS)','$100 / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
     ['Specialty Materials','Cost + 25%','Boxes, packing materials, protective supplies — itemized separately on invoice. Receipts available on request.'],
-    ['Vendor Management Fee','15% of vendor invoice','Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
+    ['Vendor Management Fee','15% of vendor invoice','Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin for downsizing and estate engagements.'],
+    ['Home Prep GC Fee','30% of vendor invoice','Applied to all third-party vendor invoices coordinated by Havellin for Home Prep for Sale engagements, reflecting Havellin\'s role as general contractor.']
   ];
   feeRows.forEach(function(r){
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
