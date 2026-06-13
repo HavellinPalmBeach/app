@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 4:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 4:43pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3087,7 +3087,7 @@ function proposedPlanRow(e) {
   }
 
   if ((e.collections || []).length) {
-    notes.push(['Notable collections', 'Items of value are addressed in the disposition plan below — appraisal, auction, and consignment partners assess on-site at no charge, and any proceeds pass directly to you.']);
+    notes.push(['Notable collections', 'Items of value are matched to the right appraisal, auction, or consignment partner and handled through the disposition plan below. Havellin takes no commission — sale proceeds go to you, less any fees the partner charges.']);
   }
 
   if (e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
@@ -3099,9 +3099,16 @@ function proposedPlanRow(e) {
       '<span style="color:var(--bronze);font-weight:700;">' + n[0] + ':</span> ' + n[1] + '</div>';
   }).join('');
 
+  // Confirmed Spaces now lives inside this box, directly under the narrative.
+  var rooms = (e.rooms || []).map(function(r){ return esc(r.name); });
+  var spacesLine = rooms.length
+    ? '<div style="margin-top:7px;font-size:11.5px;color:var(--gray-dk);line-height:1.5;"><span style="color:var(--bronze);font-weight:700;">Confirmed Spaces:</span> ' + rooms.join(', ') + '</div>'
+    : '';
+
   return '<tr><td colspan="4" style="padding:11px 14px;background:var(--cream);border-left:3px solid var(--bronze);">' +
     '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin-bottom:5px;">Proposed Plan</div>' +
     '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + narrative + '</div>' +
+    spacesLine +
     notesHtml +
     '</td></tr>';
 }
@@ -3231,13 +3238,6 @@ function renderClientEstimate() {
     '<table class="ce-tbl">' +
     '<tbody>' +
     '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
-    (function() {
-      var rooms = e.rooms || [];
-      if (!rooms.length) return '';
-      return '<tr><td colspan="4" style="padding:5px 10px;font-size:11.5px;color:var(--gray-dk);">'
-        + '<strong>Confirmed Spaces</strong> — ' + rooms.map(function(r){ return esc(r.name); }).join(', ')
-        + '</td></tr>';
-    })() +
     proposedPlanRow(e) +
     '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + Math.ceil(e.totTC||0) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
     '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + Math.ceil(e.totPS||0) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
