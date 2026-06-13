@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 4:43pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 4:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3105,7 +3105,7 @@ function proposedPlanRow(e) {
     ? '<div style="margin-top:7px;font-size:11.5px;color:var(--gray-dk);line-height:1.5;"><span style="color:var(--bronze);font-weight:700;">Confirmed Spaces:</span> ' + rooms.join(', ') + '</div>'
     : '';
 
-  return '<tr><td colspan="4" style="padding:11px 14px;background:var(--cream);border-left:3px solid var(--bronze);">' +
+  return '<tr><td colspan="4" style="padding:11px 14px;background:var(--cream);">' +
     '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin-bottom:5px;">Proposed Plan</div>' +
     '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + narrative + '</div>' +
     spacesLine +
@@ -3237,8 +3237,8 @@ function renderClientEstimate() {
     '<div class="ce-section-hdr">Havellin Services</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' +
-    '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
     proposedPlanRow(e) +
+    '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
     '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + Math.ceil(e.totTC||0) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
     '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + Math.ceil(e.totPS||0) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
     (e.svc === 'downsizing_move' && (e.destTC||0) > 0 ?
