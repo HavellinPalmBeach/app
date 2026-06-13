@@ -3937,6 +3937,10 @@ function restoreEstimateToUI(est) {
   var premEl = document.getElementById('e-prem');
   if (premEl) premEl.checked = est.prem || false;
 
+  // Restore moving materials package
+  var pkgEl = document.getElementById('e-pkg');
+  if (pkgEl && est.pkgCost != null) pkgEl.value = est.pkgCost;
+
   // Restore discount
   var discEl = document.getElementById('e-discount');
   if (discEl) discEl.value = est.discountPct || 0;
