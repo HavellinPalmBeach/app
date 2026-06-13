@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 7:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 7:31pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6924,6 +6924,115 @@ function setCollVendorStatus(jobId, collId, val) {
   job.collSourcing[collId].status = val; saveJobs();
 }
 
+// ── PHASE 4: VENDOR SCORECARD (post-job write-back to the directory) ───────────
+// Rate each vendor used on this job; the rolling average of the last N ratings is
+// written back to the directory's Performance Score (plus Last Used and a dated
+// note in a Performance Log column). Per-job ratings live on the job (synced); the
+// directory just caches the computed average. Averaging happens here in the app,
+// which already holds every job's ratings.
+var VENDOR_RATING_WINDOW = 5;
+
+function _assignedVendorsForJob(job) {
+  var seen = {}, out = [];
+  function add(rec){
+    if (rec && rec.vendorId && !seen[rec.vendorId]) {
+      seen[rec.vendorId] = 1;
+      out.push({ vendorId: rec.vendorId, name: rec.vendorName || (lookupVendorById(rec.vendorId)||{}).vendor_name || 'Vendor' });
+    }
+  }
+  Object.keys(job.vendorSourcing||{}).forEach(function(k){ add(job.vendorSourcing[k]); });
+  Object.keys(job.collSourcing||{}).forEach(function(k){ add(job.collSourcing[k]); });
+  return out;
+}
+function computeVendorAvg(vendorId) {
+  var entries = [];
+  jobs.forEach(function(j){
+    var r = j.vendorRatings && j.vendorRatings[vendorId];
+    if (r && r.rating > 0) entries.push({ rating: r.rating, when: j.created || j.start || '' });
+  });
+  entries.sort(function(a,b){ return String(b.when).localeCompare(String(a.when)); });
+  var recent = entries.slice(0, VENDOR_RATING_WINDOW);
+  if (!recent.length) return { avg: 0, count: 0 };
+  var sum = recent.reduce(function(a,e){ return a + e.rating; }, 0);
+  return { avg: Math.round((sum/recent.length)*10)/10, count: recent.length };
+}
+function renderVendorScorecard(jobId, job) {
+  var vlist = _assignedVendorsForJob(job);
+  if (!vlist.length) {
+    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendors were assigned in Phase 0 sourcing.</div>';
+  }
+  var ratings = job.vendorRatings || {};
+  var rows = vlist.map(function(v){
+    var rec = ratings[v.vendorId] || {};
+    var cur = rec.rating || 0;
+    var stars = [1,2,3,4,5].map(function(n){
+      return '<span onclick="setVendorRating(' + jobId + ',\'' + esc(String(v.vendorId)) + '\',' + n + ')" ' +
+        'style="cursor:pointer;font-size:20px;line-height:1;color:' + (n <= cur ? 'var(--bronze)' : 'var(--border-md)') + ';">★</span>';
+    }).join('');
+    var agg = computeVendorAvg(v.vendorId);
+    var aggTxt = agg.count ? ('Rolling avg ' + agg.avg + ' (' + agg.count + ' job' + (agg.count!==1?'s':'') + ')') : 'No ratings yet';
+    return '<div style="border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:6px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<strong style="font-size:12px;">' + esc(v.name) + '</strong>' +
+        '<span style="font-size:11px;color:var(--gray);">' + aggTxt + '</span>' +
+      '</div>' +
+      '<div style="margin-top:4px;">' + stars + '</div>' +
+      '<input type="text" value="' + esc(rec.note || '') + '" placeholder="Close-out note (on time? quality? issues?)" ' +
+        'onchange="setVendorRatingNote(' + jobId + ',\'' + esc(String(v.vendorId)) + '\',this.value)" ' +
+        'style="width:100%;font-size:12px;margin-top:6px;box-sizing:border-box;">' +
+    '</div>';
+  }).join('');
+  return rows +
+    '<button class="btn-s" style="margin-top:8px;" onclick="writeVendorScores(' + jobId + ')">Write scores to vendor directory &rarr;</button>' +
+    '<span id="scorecard-status-' + jobId + '" style="font-size:11px;margin-left:8px;color:var(--gray);"></span>';
+}
+function _ratingJob(jobId, vendorId) {
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  if (!job) return null;
+  if (!job.vendorRatings) job.vendorRatings = {};
+  if (!job.vendorRatings[vendorId]) job.vendorRatings[vendorId] = {};
+  return job;
+}
+function setVendorRating(jobId, vendorId, n) {
+  var job = _ratingJob(jobId, vendorId); if (!job) return;
+  job.vendorRatings[vendorId].rating = n;
+  job.vendorRatings[vendorId].name = (lookupVendorById(vendorId)||{}).vendor_name || job.vendorRatings[vendorId].name || '';
+  saveJobs();
+  var el = document.getElementById('scorecard-' + jobId);
+  if (el) el.innerHTML = renderVendorScorecard(jobId, job);
+}
+function setVendorRatingNote(jobId, vendorId, note) {
+  var job = _ratingJob(jobId, vendorId); if (!job) return;
+  job.vendorRatings[vendorId].note = note; saveJobs();
+}
+function writeVendorScores(jobId) {
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  var status = document.getElementById('scorecard-status-' + jobId);
+  function say(msg, err){ if (status){ status.textContent = msg; status.style.color = err ? 'var(--err-tx)' : 'var(--ok-tx)'; } }
+  if (!job || !job.vendorRatings) { say('Rate a vendor first.', true); return; }
+  if (!VENDOR_SYNC_URL) { say('Set the Vendor Directory URL in Settings first.', true); return; }
+  var today = new Date().toISOString().slice(0,10);
+  var ids = Object.keys(job.vendorRatings).filter(function(id){ return job.vendorRatings[id].rating > 0; });
+  if (!ids.length) { say('Rate at least one vendor first.', true); return; }
+  if (status) { status.textContent = 'Writing…'; status.style.color = 'var(--gray)'; }
+  var done = 0, failed = 0, pending = ids.length;
+  ids.forEach(function(id){
+    var v = lookupVendorById(id) || {};
+    var rec = job.vendorRatings[id];
+    var agg = computeVendorAvg(id);
+    var payload = {
+      _row: v._row, vendor_name: v.vendor_name || rec.name || '',
+      performance_score: agg.avg, jobs_rated: agg.count, last_used: today,
+      note: (rec.note ? rec.note + ' ' : '') + (rec.rating ? '(★' + rec.rating + ')' : '')
+    };
+    fetch(VENDOR_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:'rateVendor', payload: payload }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (d && d.ok) done++; else failed++; })
+      .catch(function(){ failed++; })
+      .then(function(){ if (--pending === 0) say('Updated ' + done + ' in directory' + (failed?(' · ' + failed + ' failed'):'') + ' ✓', failed>0); });
+  });
+}
+
 function renderJobPlan(jobId, job, est) {
   var plan   = getJobPlan(jobId);
   var svc    = est.svc || job.svc || '';
@@ -7129,6 +7238,8 @@ function renderJobPlan(jobId, job, est) {
           'All Change Orders finalized and signed',
           'Final invoice generated from job log; reviewed; sent to client'])) +
     p4re +
+    planSubsec('Vendor Scorecard') +
+    '<div id="scorecard-' + jobId + '">' + renderVendorScorecard(jobId, job) + '</div>' +
     planSubsec('Job Complete') +
     (isCleanout
       ? chks('p4_done_',['Home confirmed empty: every room, closet, attic, garage, and outdoor space walked and verified',
