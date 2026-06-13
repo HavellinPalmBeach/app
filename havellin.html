@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 5:28pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:14pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1103,6 +1103,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <label>Google Drive — Jobs Folder ID</label>
     <input type="text" id="set-drive-id" placeholder="e.g. 1aBcDeFgHiJkLmNoPqRsTuVwXyZ">
     <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Folder ID from your "Havellin Jobs" Drive folder URL. Subfolders are auto-created per job.</div>
+
+    <label>Vendor Directory — Apps Script URL</label>
+    <input type="text" id="set-vendor-url" placeholder="https://script.google.com/macros/s/...">
+    <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Separate web app bound to the Vendor Directory sheet only — populates vendor pickers. Kept apart from job data so directory editors can't reach jobs.</div>
 
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
 
@@ -5841,6 +5845,27 @@ function showSyncBadge(msg, isErr) {
   setTimeout(function(){ el.style.display = 'none'; }, 4000);
 }
 
+// ── VENDOR DIRECTORY (separate Sheet + web app; read-only) ────────────────────
+// Lives in its own spreadsheet/web app so directory editors can never touch the
+// jobs/estimates sheet. The app reads it to populate vendor pickers; the sheet
+// stays the source of truth. Cached locally so it survives offline / failed loads.
+var vendorDirectory = [];
+function loadVendorDirectory() {
+  try { var s = localStorage.getItem('hav_vendor_dir'); if (s) vendorDirectory = JSON.parse(s); } catch(e) {}
+  try { var u = localStorage.getItem('hav_vendor_url') || ''; if (u) VENDOR_SYNC_URL = u; } catch(e) {}
+  if (!VENDOR_SYNC_URL) return;
+  fetch(VENDOR_SYNC_URL + '?action=loadVendors')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && Array.isArray(data.vendors) && !data.error) {
+        vendorDirectory = data.vendors;
+        try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
+        showSyncBadge('Loaded ' + vendorDirectory.length + ' vendor' + (vendorDirectory.length !== 1 ? 's' : '') + ' from directory ✓');
+      }
+    })
+    .catch(function(){ /* silent — cached copy is the fallback */ });
+}
+
 
 // ─── JOB LOG ──────────────────────────────────────────────────────────────────
 var jobLogs = {}; // keyed by job.id
@@ -7441,6 +7466,7 @@ var STRIPE_SCRIPT_URL = '';
 
 var DRIVE_FOLDER_ID = '';
 var SHEETS_SYNC_URL = '';
+var VENDOR_SYNC_URL = '';   // separate web app — vendor directory sheet only
 // When true, a missing walkthrough note hard-blocks submit-for-approval
 // instead of showing a one-click-override warning. Off by default.
 var REQUIRE_WALKTHROUGH_NOTES = false;
@@ -7451,6 +7477,7 @@ function openSettings() {
   document.getElementById('set-stripe-script').value = STRIPE_SCRIPT_URL;
   document.getElementById('set-sheets-url').value    = SHEETS_SYNC_URL;
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
+  var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
   var reqEl = document.getElementById('set-require-notes');
   if (reqEl) reqEl.checked = REQUIRE_WALKTHROUGH_NOTES;
 }
@@ -7460,6 +7487,7 @@ function saveSettings() {
   STRIPE_SCRIPT_URL  = document.getElementById('set-stripe-script').value.trim();
   SHEETS_SYNC_URL    = document.getElementById('set-sheets-url').value.trim();
   DRIVE_FOLDER_ID    = document.getElementById('set-drive-id').value.trim();
+  var vUrlEl2 = document.getElementById('set-vendor-url'); if (vUrlEl2) VENDOR_SYNC_URL = vUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
   try {
@@ -7467,6 +7495,7 @@ function saveSettings() {
     localStorage.setItem('hav_stripe_script', STRIPE_SCRIPT_URL);
     localStorage.setItem('hav_sheets_url',    SHEETS_SYNC_URL);
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
+    localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
   } catch(e) {}
   document.getElementById('settings-modal').style.display = 'none';
@@ -7479,6 +7508,7 @@ function loadSettings() {
     STRIPE_SCRIPT_URL = localStorage.getItem('hav_stripe_script') || '';
     SHEETS_SYNC_URL   = localStorage.getItem('hav_sheets_url')    || localStorage.getItem('havellin_sheets_url') || '';
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
+    VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';
   } catch(e) {}
 }
@@ -9085,6 +9115,7 @@ if (jobs.length === 0) {
   try { localStorage.removeItem('havellin_est_v3'); localStorage.removeItem('havellin_est_v4'); } catch(e) {}
 }
 loadSettings();
+loadVendorDirectory();
 buildRoomTable();
 renderVendors();
 rebuildDropdowns();
