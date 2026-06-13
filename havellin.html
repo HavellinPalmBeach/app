@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:27pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:51pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6749,6 +6749,169 @@ function renderDailyCloseBlock(jobId, phase) {
     planChk(jobId, key, 'Daily projection checked and signed off — ' + today) + '</div>';
 }
 
+// ── PHASE 0: VENDOR & PARTNER SOURCING ────────────────────────────────────────
+// Pre-job sourcing only: assign the actual company from the vendor directory and
+// pin the cost — for service vendors (movers, dumpster, cleaners) AND collection
+// partners (appraiser, auction house, FFL). Execution (status, photos, inventory,
+// chain of custody) stays in the Collections section. Stored on the job so it
+// rides the existing jobs sync; no directory write-back here.
+function vendorStatusOptions(sel) {
+  var opts = ['To contact','Quote requested','Quote received','Confirmed'];
+  return '<option value="">— status —</option>' + opts.map(function(o){
+    return '<option value="' + o + '"' + (sel === o ? ' selected' : '') + '>' + o + '</option>';
+  }).join('');
+}
+function vendorIdOf(v) { return v && (v._row != null ? v._row : v.vendor_name); }
+function lookupVendorById(id) {
+  if (id == null || id === '') return null;
+  for (var i = 0; i < vendorDirectory.length; i++) {
+    if (String(vendorIdOf(vendorDirectory[i])) === String(id)) return vendorDirectory[i];
+  }
+  return null;
+}
+// Directory options grouped by category, sorted by rank within each category.
+function vendorPickerOptions(selId) {
+  var html = '<option value="">— select from directory —</option>';
+  if (!vendorDirectory.length) return html;
+  var byCat = {};
+  vendorDirectory.forEach(function(v){
+    var c = v.category || v.category_group || 'Other';
+    (byCat[c] = byCat[c] || []).push(v);
+  });
+  Object.keys(byCat).sort().forEach(function(cat){
+    var list = byCat[cat].slice().sort(function(a,b){ return (parseFloat(a.rank)||99)-(parseFloat(b.rank)||99); });
+    html += '<optgroup label="' + esc(cat) + '">';
+    list.forEach(function(v){
+      var id = vendorIdOf(v);
+      var label = (v.vendor_name||'Vendor') + (v.rank ? ' (#' + v.rank + ')' : '');
+      html += '<option value="' + esc(String(id)) + '"' + (String(selId)===String(id)?' selected':'') + '>' + esc(label) + '</option>';
+    });
+    html += '</optgroup>';
+  });
+  return html;
+}
+function _vendorRefLine(rec) {
+  if (!rec || !rec.vendorName) return '';
+  var bits = [esc(rec.vendorName)];
+  if (rec.phone)   bits.push(esc(rec.phone));
+  if (rec.pricing) bits.push(esc(rec.pricing));
+  return '<div style="font-size:10px;color:var(--gray);margin-top:4px;">' + bits.join(' · ') + '</div>';
+}
+function renderVendorSourcing(jobId, job, est) {
+  var svcLines = est.vendors || [];
+  var colls    = est.collections || [];
+  if (!svcLines.length && !colls.length) {
+    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No third-party vendors or collections on this estimate.</div>';
+  }
+  var html = '';
+  if (!vendorDirectory.length) {
+    html += '<div style="font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-bottom:8px;">Vendor directory not loaded — set the Vendor Directory URL in Settings to pick vendors. You can still type a quote.</div>';
+  }
+  var src  = job.vendorSourcing || {};
+  var csrc = job.collSourcing   || {};
+
+  if (svcLines.length) {
+    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:2px 0 6px;">Service Vendors</div>';
+    html += svcLines.map(function(v, i){
+      var rec = src[i] || {};
+      var budget = v.cost || 0;
+      var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
+      var over = quote !== '' && budget > 0 && Number(quote) > budget;
+      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+          '<strong style="font-size:12px;">' + esc(v.type||'Vendor') + '</strong>' +
+          '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
+          '<select onchange="setJobVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setJobVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
+          '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
+          '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + '">' +
+          (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
+        '</div>' + _vendorRefLine(rec) +
+      '</div>';
+    }).join('');
+  }
+
+  if (colls.length) {
+    var costDisp = { appraise:1, firearms:1 };
+    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">Collection Partners</div>';
+    html += colls.map(function(c){
+      var rec = csrc[c.id] || {};
+      var isCost = !!costDisp[c.disp];
+      var fee = (rec.fee != null && rec.fee !== '') ? rec.fee : '';
+      var feeLabel = isCost ? 'Fee $' : 'Cost $';
+      var hint = isCost ? '' : '<span style="font-size:10px;color:var(--gray);">commission netted from proceeds — usually $0 up front</span>';
+      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+          '<strong style="font-size:12px;">' + esc(c.name||'Collection') + '</strong>' +
+          '<span style="font-size:11px;color:var(--bronze);font-weight:600;">' + esc(c.dispLabel||c.disp||'—') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
+          '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setCollVendorStatus(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
+          '<span style="font-size:12px;color:var(--gray);">' + feeLabel + '</span>' +
+          '<input type="number" value="' + esc(String(fee)) + '" min="0" onchange="setCollFee(' + jobId + ',\'' + c.id + '\',this.value)" style="width:90px;font-size:12px;">' +
+        '</div>' + (hint ? '<div style="margin-top:4px;">' + hint + '</div>' : '') + _vendorRefLine(rec) +
+      '</div>';
+    }).join('');
+    html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Assign the partner here; photos, inventory, and chain of custody stay in the Collections section below.</div>';
+  }
+  return html;
+}
+function refreshVendorSourcing(jobId) {
+  var el = document.getElementById('vendor-sourcing-' + jobId);
+  if (!el) return;
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  var estRec = estimateStore[jobId];
+  var est = estRec ? estRec.estimate : (currentEstimate && currentEstimate.jobId===jobId ? currentEstimate : null);
+  if (job && est) el.innerHTML = renderVendorSourcing(jobId, job, est);
+}
+function _svcJob(jobId, i) {
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  if (!job) return null;
+  if (!job.vendorSourcing) job.vendorSourcing = {};
+  if (!job.vendorSourcing[i]) job.vendorSourcing[i] = {};
+  return job;
+}
+function setJobVendor(jobId, i, val) {
+  var job = _svcJob(jobId, i); if (!job) return;
+  var rec = job.vendorSourcing[i], v = lookupVendorById(val);
+  rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
+  rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  saveJobs(); refreshVendorSourcing(jobId);
+}
+function setJobVendorQuote(jobId, i, val) {
+  var job = _svcJob(jobId, i); if (!job) return;
+  job.vendorSourcing[i].quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+}
+function setJobVendorStatus(jobId, i, val) {
+  var job = _svcJob(jobId, i); if (!job) return;
+  job.vendorSourcing[i].status = val; saveJobs();
+}
+function _collJob(jobId, collId) {
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  if (!job) return null;
+  if (!job.collSourcing) job.collSourcing = {};
+  if (!job.collSourcing[collId]) job.collSourcing[collId] = {};
+  return job;
+}
+function setCollVendor(jobId, collId, val) {
+  var job = _collJob(jobId, collId); if (!job) return;
+  var rec = job.collSourcing[collId], v = lookupVendorById(val);
+  rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
+  rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  saveJobs(); refreshVendorSourcing(jobId);
+}
+function setCollFee(jobId, collId, val) {
+  var job = _collJob(jobId, collId); if (!job) return;
+  job.collSourcing[collId].fee = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+}
+function setCollVendorStatus(jobId, collId, val) {
+  var job = _collJob(jobId, collId); if (!job) return;
+  job.collSourcing[collId].status = val; saveJobs();
+}
+
 function renderJobPlan(jobId, job, est) {
   var plan   = getJobPlan(jobId);
   var svc    = est.svc || job.svc || '';
@@ -6818,7 +6981,8 @@ function renderJobPlan(jobId, job, est) {
       'Donation organization pickup window confirmed; staging location identified',
       'Junk/haul removal tentatively scheduled for end of job',
       'Auction house or appraiser in-home visit scheduled — only if collections flagged']) +
-    vendors.map(function(v,i){ return planChk(jobId,'p0_vx_'+i,(v.type||'Vendor')+' — confirm date and arrival window'); }).join('') +
+    planSubsec('Vendor &amp; Partner Sourcing') +
+    '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>' +
     planSubsec('Crew & Materials') +
     chks('p0_crew_',['Moving materials package confirmed and on-site for Day 1 morning',
       'PS crew confirmed by name and briefed on address, time, parking, access, building rules',
