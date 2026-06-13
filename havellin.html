@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:14pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 6:23pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5861,9 +5861,11 @@ function loadVendorDirectory() {
         vendorDirectory = data.vendors;
         try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
         showSyncBadge('Loaded ' + vendorDirectory.length + ' vendor' + (vendorDirectory.length !== 1 ? 's' : '') + ' from directory ✓');
+      } else {
+        showSyncBadge('Vendor directory: ' + ((data && data.error) ? data.error : 'no vendors returned'), true);
       }
     })
-    .catch(function(){ /* silent — cached copy is the fallback */ });
+    .catch(function(){ showSyncBadge('Vendor directory load failed — check the URL and that the web app is deployed for “Anyone”', true); });
 }
 
 
@@ -7500,6 +7502,7 @@ function saveSettings() {
   } catch(e) {}
   document.getElementById('settings-modal').style.display = 'none';
   showSyncBadge('Settings saved \u2713');
+  loadVendorDirectory();   // pull the directory right away when the URL is set/changed
 }
 
 function loadSettings() {
