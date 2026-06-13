@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 11:45am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 3:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -683,6 +683,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
                   <option>Estate Sale Company</option><option>Junk Removal / Hauling</option>
                   <option>Moving Company</option><option>Professional Cleaning</option>
                   <option>Specialty Vendor (art handler, etc.)</option>
+                  <option>Document Shredding</option>
                   <option>Handyman / General Repairs</option><option>Pest Inspection / Treatment</option>
                 </select></td>
                 <td><input type="number" id="new-vendor-cost" placeholder="0" style="width:100%;"></td>
@@ -6569,11 +6570,12 @@ function renderDailyCloseBlock(jobId, phase) {
 function renderJobPlan(jobId, job, est) {
   var plan   = getJobPlan(jobId);
   var svc    = est.svc || job.svc || '';
-  var isMM   = svc === 'downsizing_move';
+  var isMM         = svc === 'downsizing_move';
   var isDownsizing = svc === 'downsizing' || svc === 'downsizing_move';
-  // Home Cleanout is a living-client, client-present sort-and-clear job, so it runs the
-  // core playbook (Phases 0–2, 4). Only the Move Management relocation phases stay off.
-  var hasPlaybook = isDownsizing || svc === 'home_cleanout';
+  var isCleanout   = svc === 'home_cleanout';
+  // Downsizing and Home Cleanout share the core sort-and-disposition playbook.
+  // Estate/Probate/Contested have no playbook yet — they fall through to room-docs-only.
+  var hasPlaybook  = isDownsizing || isCleanout;
   var vendors     = est.vendors     || [];
   var collections = est.collections || [];
   var prem   = !!est.prem;
@@ -6656,7 +6658,19 @@ function renderJobPlan(jobId, job, est) {
       '<div id="plan-room-status-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status)+'</div>' +
       (r.note ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin:4px 0 6px;">&#128203; '+r.note+'</div>' : '') +
       (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin:2px 0 6px;">&#127908; Voice note from walkthrough</div>' : '') +
-      chks('p1_r'+r.idx+'_',['Room sort complete: every item routed to keep/sell/donate/dispose',
+      chks('p1_r'+r.idx+'_', isCleanout ? [
+        'Room sort complete: every item routed to a disposition stream (haul / donate / sale-consignment / shred)',
+        'Retained items identified and confirmed with client; set aside and labeled — these are the exception, not the default',
+        'Sale / consignment items inventoried and photographed; chain of custody opened',
+        'Donation items staged at designated point',
+        'Haul items staged; photographed where condition or value could be questioned',
+        'Documents staged for shredding or retention per client direction',
+        'Maybe box revisited once and emptied before leaving the room',
+        'Special-items flag addressed: high-value items set aside for TC review',
+        'Room photographed before and after; room notes updated',
+        'Room marked DECISION-LOCKED (set room status to locked above)'
+      ] : [
+        'Room sort complete: every item routed to keep/sell/donate/dispose',
         'Keep items tagged by destination room'+(isMM?' (measured vs floor plan)':''),
         'Sell items inventoried, photographed, staged — chain of custody opened',
         'Donate items staged at designated point',
@@ -6664,7 +6678,8 @@ function renderJobPlan(jobId, job, est) {
         'Maybe box revisited once and emptied before leaving the room',
         'Special-items flag addressed: high-value items set aside for TC review',
         'Room photographed before and after; room notes updated',
-        'Room marked DECISION-LOCKED (set room status to locked above)']) +
+        'Room marked DECISION-LOCKED (set room status to locked above)'
+      ]) +
       '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-md);">' +
       '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-bottom:4px;"></div>' +
       '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--gray);margin-bottom:5px;">Room Photos</div>' +
@@ -6675,11 +6690,16 @@ function renderJobPlan(jobId, job, est) {
       '</div>';
   }).join('');
 
-  var p1 =planSubsec('Daily Opening (each day)') +
-    chks('p1_open_',['Crew on-site and briefed on today\'s room sequence',
-      'Client or named decision-maker present or confirmed reachable',
-      'Sort supplies staged (keep/sell/donate/dispose tags); one Maybe box per planned room',
-      'Today\'s time-box targets stated to the client']) +
+  var p1 = planSubsec('Daily Opening (each day)') +
+    (isCleanout
+      ? chks('p1_open_',['Crew on-site and briefed on today\'s room sequence',
+          'Client or named decision-maker present or confirmed reachable',
+          'Stream staging areas confirmed (haul, donate, sale/consignment, shred, retain)',
+          'Today\'s time-box targets stated to the client'])
+      : chks('p1_open_',['Crew on-site and briefed on today\'s room sequence',
+          'Client or named decision-maker present or confirmed reachable',
+          'Sort supplies staged (keep/sell/donate/dispose tags); one Maybe box per planned room',
+          'Today\'s time-box targets stated to the client'])) +
     planSubsec('Rooms — Sort & Lock (ordered by complexity)') + p1rooms +
     (hasCOC ? planSubsec('Chain of Custody'+(prem?' — Mandatory (Premium Estate)':'')) +
       chks('p1_coc_',['Photograph high-value item in place before it moves',
@@ -6690,22 +6710,42 @@ function renderJobPlan(jobId, job, est) {
 
   // ── Phase 2 ──────────────────────────────────────────────────────────────────
   var p2 = planSubsec('Daily Opening') +
-    chks('p2_open_',['Crew briefed on today\'s pack priority (which decision-locked rooms, which categories)',
-      'Materials inventory checked; resupply ordered before running out',
-      'Any decisions pending from Phase 1 resolved before that room is packed']) +
-    planSubsec('Packing by Category') +
-    chks('p2_pack_',['Fragile (china/glass/crystal): wrapped, boxed, labeled by destination room',
-      'Art and mirrors: wrapped, edge-protected, staged upright',
-      'Jewelry and high-value smalls: TC personally oversees; documented and photographed',
-      'Clothing: packed per keep list or routed to donation',
-      'Books and media: packed or donated; boxes to liftable weight',
-      'Kitchen: packed to the keep list',
-      'Furniture: tagged keep/sell/donate/dispose; keep items measured vs floor plan'+(isMM?'':' where applicable'),
-      'Garage and outdoor: sorted and staged']) +
+    (isCleanout
+      ? chks('p2_open_',['Crew briefed on today\'s staging priority (which decision-locked rooms, which streams)',
+          'Materials inventory checked; resupply ordered before running out',
+          'Any decisions pending from Phase 1 resolved before that room is staged'])
+      : chks('p2_open_',['Crew briefed on today\'s pack priority (which decision-locked rooms, which categories)',
+          'Materials inventory checked; resupply ordered before running out',
+          'Any decisions pending from Phase 1 resolved before that room is packed'])) +
+    (isCleanout
+      ? planSubsec('Stage by Stream') +
+        chks('p2_pack_',['Haul items consolidated and staged near exit; weight and volume estimated for hauler',
+          'Donation items staged at designated point; ready for pickup',
+          'Sale / consignment items: inventoried, photographed, staged for vendor pickup — chain of custody documented',
+          'Shred items boxed and staged; shredding vendor confirmed if mobile shred scheduled',
+          'Retained items only: fragile or valuable pieces boxed, labeled, and set aside for client',
+          'Art and high-value smalls: TC personally oversees; documented and photographed',
+          'Furniture: disposition stream confirmed (haul, donate, or consignment); staged accordingly',
+          'Garage and outdoor: disposition streamed and staged'])
+      : planSubsec('Packing by Category') +
+        chks('p2_pack_',['Fragile (china/glass/crystal): wrapped, boxed, labeled by destination room',
+          'Art and mirrors: wrapped, edge-protected, staged upright',
+          'Jewelry and high-value smalls: TC personally oversees; documented and photographed',
+          'Clothing: packed per keep list or routed to donation',
+          'Books and media: packed or donated; boxes to liftable weight',
+          'Kitchen: packed to the keep list',
+          'Furniture: tagged keep/sell/donate/dispose; keep items measured vs floor plan'+(isMM?'':' where applicable'),
+          'Garage and outdoor: sorted and staged'])) +
     planSubsec('Vendor Coordination') +
-    chks('p2_vend_',['Each scheduled vendor confirmed day before arrival; items staged and accessible',
-      'Auction/consignment pickups: items inventoried and chain-of-custody documented',
-      'Donation pickup: items staged near access point; receipt captured']) +
+    (isCleanout
+      ? chks('p2_vend_',['Each scheduled vendor confirmed day before arrival; items staged and accessible',
+          'Hauler / junk removal: items staged near exit; access confirmed',
+          'Auction / consignment pickups: items inventoried and chain-of-custody documented',
+          'Donation pickup: items staged near access point; receipt captured',
+          'Shredding vendor (if scheduled): boxes staged and accessible'])
+      : chks('p2_vend_',['Each scheduled vendor confirmed day before arrival; items staged and accessible',
+          'Auction/consignment pickups: items inventoried and chain-of-custody documented',
+          'Donation pickup: items staged near access point; receipt captured'])) +
     vendors.map(function(v,i){ return planChk(jobId,'p2_vx_'+i,(v.type||'Vendor')+' — confirm day before; stage items and ensure access'); }).join('') +
     renderDailyCloseBlock(jobId,2);
 
@@ -6745,17 +6785,33 @@ function renderJobPlan(jobId, job, est) {
 
   var p4 = p4prep +
     planSubsec('Financial Close') +
-    chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
-      'All vendor invoices collected and filed in the job folder',
-      'Materials costs totaled and itemized (cost + 25% materials handling)',
-      'All Change Orders finalized and signed',
-      'Final invoice generated from job log; reviewed; sent to client']) +
+    (isCleanout
+      ? chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
+          'All vendor invoices collected and filed in the job folder',
+          'Sale / consignment proceeds reconciled: amounts received confirmed and documented',
+          'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received',
+          'Donation receipts collected and filed (for client\'s tax records)',
+          'Materials costs totaled and itemized (cost + 25% materials handling)',
+          'All Change Orders finalized and signed',
+          'Final invoice generated from job log; reviewed; sent to client'])
+      : chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
+          'All vendor invoices collected and filed in the job folder',
+          'Materials costs totaled and itemized (cost + 25% materials handling)',
+          'All Change Orders finalized and signed',
+          'Final invoice generated from job log; reviewed; sent to client'])) +
     p4re +
     planSubsec('Job Complete') +
-    chks('p4_done_',['Client satisfaction confirmed by phone (a call, not a text)',
-      'Google review requested only after satisfaction confirmed','Referral ask made',
-      'Job folder complete and archived in Drive; 7-year retention applies',
-      'Move documented for NASMM SMM-C tracking']);
+    (isCleanout
+      ? chks('p4_done_',['Home confirmed empty: every room, closet, attic, garage, and outdoor space walked and verified',
+          'Property confirmed broom-clean; final photographs taken inside and out',
+          'Client satisfaction confirmed by phone (a call, not a text)',
+          'Google review requested only after satisfaction confirmed','Referral ask made',
+          'Job folder complete and archived in Drive; 7-year retention applies',
+          'Move documented for NASMM SMM-C tracking'])
+      : chks('p4_done_',['Client satisfaction confirmed by phone (a call, not a text)',
+          'Google review requested only after satisfaction confirmed','Referral ask made',
+          'Job folder complete and archived in Drive; 7-year retention applies',
+          'Move documented for NASMM SMM-C tracking']));
 
   // For service types without the core playbook: render standalone Room Documentation instead
   var standaloneDocs = '';
