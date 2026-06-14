@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6722,14 +6722,29 @@ function checkInvPin() {
 
 function printInvoice() {
   if (invRequiresApproval && !invApproved) { alert('This final invoice is outside the ±15% tolerance and needs manager approval before printing.'); return; }
-  // Temporarily make invoice panel the active one for printing
-  document.querySelectorAll('.panel').forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
-  document.getElementById('panel-invoice').classList.add('active');
-  window.print();
-  // Restore
+  // @media print hides every .panel and shows only #print-target, so the invoice has
+  // to be rendered into #print-target (same approach as the estimate/agreement) —
+  // otherwise the printout is a blank page.
+  var job = jobs.find(function(j){ return j.id === currentInvJobId; }) || {};
+  var stageWord = currentInvStage === 'deposit' ? 'Deposit' : (currentInvStage === 'midpoint' ? 'Midpoint' : 'Final');
+  var filename = (job.name ? job.name.split(' ').pop() : 'Client') + '-' + (job.hvlId || 'Invoice') + '-' + stageWord;
+  var originalTitle = document.title;
+  document.title = filename;
+  var content = document.getElementById('inv-page-content').innerHTML;
+  var printTarget = document.getElementById('print-target');
+  printTarget.innerHTML = '<div class="ce-page">' + content + '</div>';
+  var allPanels = document.querySelectorAll('.panel');
+  allPanels.forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
+  printTarget.style.display = 'block';
   setTimeout(function(){
-    document.querySelectorAll('.panel').forEach(function(p){ if(p.dataset.wasActive==='1') p.classList.add('active'); else p.classList.remove('active'); });
-  }, 500);
+    window.print();
+    setTimeout(function(){
+      printTarget.style.display = 'none';
+      printTarget.innerHTML = '';
+      allPanels.forEach(function(p){ if(p.dataset.wasActive==='1') p.classList.add('active'); });
+      document.title = originalTitle;
+    }, 500);
+  }, 300);
 }
 
 // ─── LOG PERSISTENCE ──────────────────────────────────────────────────────────
