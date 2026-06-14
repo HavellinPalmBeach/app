@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8369,7 +8369,7 @@ function populateLogAndInvSelects() {
   selInv.innerHTML  = '<option value="">Select job</option>';
   if (selPlan) selPlan.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
-    var opt = '<option value="'+j.id+'">'+j.name+' — '+j.svcLabel+'</option>';
+    var opt = '<option value="'+j.id+'">'+esc(j.name||('Job '+j.id))+(j.hvlId?' · '+esc(j.hvlId):'')+'</option>';
     selInv.innerHTML  += opt;
     if (selPlan) selPlan.innerHTML += opt;
   });
@@ -8392,7 +8392,7 @@ function populateAgrSelect() {
   var cur = sel.value;
   sel.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
-    sel.innerHTML += '<option value="'+j.id+'">'+j.name+' — '+j.svcLabel+'</option>';
+    sel.innerHTML += '<option value="'+j.id+'">'+esc(j.name||('Job '+j.id))+(j.hvlId?' · '+esc(j.hvlId):'')+'</option>';
   });
   if (cur) sel.value = cur;
 }
