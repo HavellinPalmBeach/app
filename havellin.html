@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6582,15 +6582,21 @@ function renderInvoice() {
       ? 'Labor remains on the original estimate until the final invoice (hours are still being logged). Vendor and home-prep fees are calculated on the actual quotes recorded in the Job Plan.'
       : 'Deposit is based on the original estimate. Vendor and home-prep fees are trued to actuals at the midpoint and final invoices.') + '</div>';
 
-  var advancePayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Schedule</div>' +
-    '<table class="pay-tbl">' +
-    '<tr><td colspan="2">Project total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td class="r">' + fmt(advBasis) + '</td></tr>' +
-    (stage === 'midpoint'
-      ? '<tr><td colspan="2">Cumulative due through midpoint (75%)</td><td class="r">' + fmt(midCumTarget) + '</td></tr>' +
-        '<tr><td colspan="2" style="color:var(--ok-tx);">Less: 50% deposit already invoiced</td><td class="r" style="color:var(--ok-tx);">(' + fmt(depositAmt) + ')</td></tr>'
-      : '') +
-    _amtDueBox(stage === 'deposit' ? 'Deposit Due Now (50%)' : 'Midpoint Payment Due Now', stageAmtDue) +
-    '</table></div>';
+  // Lean payment area — the Project Total already appears in the summary above, so the
+  // deposit just shows the amount due (with the schedule as a one-line note); the
+  // midpoint shows what's already collected, the amount due now, and the note.
+  var advancePayment = (stage === 'deposit')
+    ? '<div style="margin-top:1rem;"><table class="pay-tbl">' +
+        _amtDueBox('Deposit Due Now (50%)', stageAmtDue) +
+      '</table>' +
+      '<div class="ce-note" style="margin-top:.5rem;">Payment schedule: 50% deposit now · 25% at project midpoint · 25% on completion.</div>' +
+      '</div>'
+    : '<div style="margin-top:1rem;"><table class="pay-tbl">' +
+        '<tr><td colspan="2" style="color:var(--ok-tx);">50% deposit — already collected</td><td class="r" style="color:var(--ok-tx);">(' + fmt(depositAmt) + ')</td></tr>' +
+        _amtDueBox('Midpoint Payment Due Now (25%)', stageAmtDue) +
+      '</table>' +
+      '<div class="ce-note" style="margin-top:.5rem;">Remaining 25% due upon completion.</div>' +
+      '</div>';
 
   // Third-party vendor costs (movers, hauling, etc.) are billed to the client directly
   // by each vendor — they are NOT charged on Havellin's invoice. Havellin's coordination
