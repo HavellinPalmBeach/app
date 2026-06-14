@@ -140,11 +140,11 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <h3>Payment Schedule</h3>
   <table>
     <tr><th>Milestone</th><th>Amount</th><th>Timing</th></tr>
-    <tr><td>Deposit</td><td>50% of Havellin Services Total</td><td>Due upon signing</td></tr>
-    <tr><td>Midpoint</td><td>25% of Havellin Services Total</td><td>Due at project midpoint</td></tr>
-    <tr><td>Final</td><td>25% + actual hours variance</td><td>Within 7 days of final invoice</td></tr>
+    <tr><td>Deposit</td><td>50% of estimate</td><td>Due upon signing (estimate basis — no actuals yet)</td></tr>
+    <tr><td>Midpoint</td><td>Brings cumulative to 75%, with vendor &amp; home-prep fees trued to actual Job Plan quotes</td><td>Due at project midpoint</td></tr>
+    <tr><td>Final</td><td>Balance — labor trued to logged hours, fees on actuals, plus any approved Change Orders</td><td>Within 7 days of final invoice</td></tr>
   </table>
-  <p style="font-size:11px;color:#888780;">Third-party vendor invoices are billed separately and directly to client at cost.</p>
+  <p style="font-size:11px;color:#888780;">Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 15% SMF / 30% GC fee is calculated on the actual quotes logged in the Job Plan (Phase 0 sourcing) and trued up from the midpoint invoice onward; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoice tab via the Stage selector.</p>
 
   <h2>8. Client Dashboard</h2>
   <p><strong>Tab: Clients</strong> → select job card. Shows full job status, action checklist, Drive folder link, and all management actions.</p>
@@ -183,7 +183,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <p><strong>Tab: Log Hours</strong> → select job. Log each working session: date, team member, role (TC / PS / Specialty), hours, task description. Hours accumulate against the estimate. Log daily — do not batch at end of job.</p>
 
   <h2>11. Final Invoice</h2>
-  <p><strong>Tab: Final Invoice</strong> → select job. Auto-generates from logged hours vs. estimate. Shows actual TC and PS hours, advance payments applied, balance due, and any approved Change Orders. Manager enters PIN to approve and unlock. Stripe final payment invoice fires automatically to client on approval. Payment due within 7 days.</p>
+  <p><strong>Tab: Final Invoice</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
 
   <h2>12. Drive Folder Reference</h2>
   <table>

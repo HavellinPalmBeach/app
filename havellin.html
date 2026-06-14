@@ -236,7 +236,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 1:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -979,8 +979,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Job:</label>
-        <select id="inv-job" onchange="loadInvoice()" style="width:280px;">
+        <select id="inv-job" onchange="loadInvoice()" style="width:240px;">
           <option value="">Select job</option>
+        </select>
+        <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Stage:</label>
+        <select id="inv-stage" onchange="setInvStage(this.value)" style="width:170px;">
+          <option value="deposit">Deposit (50%)</option>
+          <option value="midpoint">Midpoint (25%)</option>
+          <option value="final" selected>Final (balance)</option>
         </select>
         <span id="inv-approval-badge"></span>
         <button class="btn-s" id="btn-inv-approve" onclick="openInvPinModal()" style="display:none;">Manager Approval</button>
@@ -5936,6 +5942,44 @@ var invApproved = false;
 var invApprovedBy = '';
 var invApprovedAt = '';
 var currentInvJobId = null;
+var currentInvStage = 'final'; // 'deposit' | 'midpoint' | 'final'
+
+// Resolve actual vendor / prep costs from the Job Plan sourcing (vendorSourcing /
+// prepSourcing), falling back to the estimate amount per line when no actual quote
+// has been logged yet. Each line carries isEstimate so the invoice can tag stale
+// numbers. Fees are recomputed on the resolved totals: 15% SMF on third-party
+// vendors, 30% GC / Site Management Fee on home-prep vendors.
+function getVendorActuals(job, est) {
+  job = job || {}; est = est || {};
+  var vsrc = job.vendorSourcing || {};
+  var psrc = job.prepSourcing || {};
+  var vendors = est.vendors || [];
+  var prepItems = (est.prepEnabled && est.prepItems) ? est.prepItems : [];
+
+  function resolve(lines, src) {
+    var out = [], total = 0, anyEst = false;
+    lines.forEach(function(line, i) {
+      var rec = src[i] || {};
+      var hasActual = (rec.quote != null && rec.quote !== '');
+      var budget = line.cost || 0;
+      if (!hasActual && !(budget > 0)) return; // skip empty rows
+      var amount = hasActual ? Number(rec.quote) : budget;
+      if (!hasActual) anyEst = true;
+      total += amount;
+      out.push({ label: line.type, amount: amount, isEstimate: !hasActual, vendorName: rec.vendorName || '' });
+    });
+    return { lines: out, total: Math.round(total), anyEst: anyEst };
+  }
+
+  var tp = resolve(vendors, vsrc);
+  var pr = resolve(prepItems, psrc);
+  return {
+    thirdParty: tp.lines, thirdPartyTotal: tp.total, thirdPartyAnyEst: tp.anyEst,
+    smf: Math.round(tp.total * 0.15),
+    prep: pr.lines, prepTotal: pr.total, prepAnyEst: pr.anyEst,
+    prepFee: Math.round(pr.total * 0.30)
+  };
+}
 
 var TC_NAMES = ['Anthony Graziano Sr', 'Ashley Jerome', 'Anthony Graziano Jr', 'Contractor — TC 1', 'Contractor — TC 2'];
 var PS_NAMES = ['Anthony Graziano Jr', 'Contractor — PS 1', 'Contractor — PS 2', 'Contractor — PS 3', 'Contractor — PS 4', 'Contractor — PS 5', 'Other'];
@@ -6160,6 +6204,12 @@ function loadInvoice() {
   renderInvoice();
 }
 
+function setInvStage(v) {
+  currentInvStage = v || 'final';
+  invApproved = false; // re-approval required per stage document
+  renderInvoice();
+}
+
 function renderInvoice() {
   var jobId = currentInvJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -6190,13 +6240,26 @@ function renderInvoice() {
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var tcRate = (est ? est.tcRate : null) || (job.premium ? 185 : 150);
   var psRate = (est ? est.psRate : null) || (job.premium ? 125 : 100);
+
+  // Preparer (Transition Concierge) contact — used by the signature/bio footer.
+  var _allInvC = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
+  var preparer = _allInvC.find(function(c){ return c.name === ((est && est.preparedBy) || job.tc); });
+  var prepName = preparer ? preparer.name : ((est && est.preparedBy) || job.tc || '—');
   var pkgCost = est ? (est.pkgCost||0) : 0;
   var pkgLabel = est ? (est.pkgLabel||'None') : 'None';
-  var smf = est ? (est.smf||0) : 0;
-  var vendorCost = est ? (est.vendorCost||0) : 0;
+  var stage = currentInvStage || 'final';
   var vendors = est ? (est.vendors||[]) : [];
-  var prepCost = est ? (est.prepCost||0) : 0;
-  var prepFee  = est ? (est.prepFee||0)  : 0;
+
+  // Resolved actuals from the Job Plan sourcing (fall back to estimate per line).
+  var act = getVendorActuals(job, est);
+  // Estimate-basis fees (used only for the deposit, before any actuals exist).
+  var smfEst = est ? (est.smf||0) : 0;
+  var prepFeeEst = est ? (est.prepFee||0) : 0;
+  // Actuals-basis fees (used from the midpoint on, once vendors are locked).
+  var smf = act.smf;
+  var prepFee = act.prepFee;
+  var vendorCost = act.thirdPartyTotal;
+  var prepCost = act.prepTotal;
 
   var tcFee = Math.round(actTC * tcRate);
   var psFee = Math.round(actPS * psRate);
@@ -6215,29 +6278,48 @@ function renderInvoice() {
     tcFee = Math.round(_invTotTC * tcRate);
   }
 
-  var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
-
   // Discount from saved estimate only — never from live estimator form fields
   var discountPct = est ? (est.discountPct || 0) : 0;
+  function _netLabor(g){ return g - Math.round(g * discountPct / 100); }
+  var materials  = pkgCost;
+  var legacyFees = gcFee + stagerGcFee;
+  var estLaborNet = _netLabor(est ? ((est.tcFee||0)+(est.psFee||0)) : (tcFee + psFee));
+  var actLaborNet = _netLabor(tcFee + psFee);
   var laborBase = tcFee + psFee;
   var discountAmt = Math.round(laborBase * discountPct / 100);
-  var havellinTotalDiscounted = havellinTotal - discountAmt;
-  var grandTotal = havellinTotalDiscounted + vendorCost + vendorTotal + stagerCost + prepCost;
 
   // Accepted change orders for this job — shown as addendum line items on the invoice
   var jobCOs = (changeOrders || []).filter(function(co){ return co.jobId === jobId && co.clientApproved; });
   var coTotal = jobCOs.reduce(function(sum, co){ return sum + ((co.newTotal || 0) - (co.prevTotal || 0)); }, 0);
   coTotal = Math.round(coTotal);
 
-  // Advance payments (deposit + midpoint) are based on the original estimate, not actual hours
+  // ── STAGE RECONCILIATION (cumulative-target model) ──────────────────────────
+  // "Best-known total" uses actuals for any component already known at that stage:
+  // fees are trued from the midpoint on (vendors locked in the Job Plan); labor is
+  // trued at the final (hours fully logged). Each invoice bills the difference
+  // between its cumulative target and what earlier invoices already collected, so
+  // the final naturally reconciles everything.
+  var totalDepositBasis = estLaborNet + materials + smfEst + prepFeeEst + legacyFees;
+  var totalMidBasis     = estLaborNet + materials + smf    + prepFee    + legacyFees;
+  var totalFinalBasis   = actLaborNet + materials + smf    + prepFee    + legacyFees + coTotal;
+
+  var depositAmt   = Math.round(0.5 * totalDepositBasis);
+  var midCumTarget = Math.round(0.75 * totalMidBasis);
+  var midpointAmt  = midCumTarget - depositAmt;
+  var finalDue     = Math.round(totalFinalBasis) - depositAmt - midpointAmt;
+
+  // Legacy aliases consumed by the final-invoice body below.
+  var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
+  var havellinTotalDiscounted = totalFinalBasis - coTotal; // actual Havellin services (pre-CO)
+  var grandTotal = havellinTotalDiscounted + vendorCost + prepCost;
   var estHavellinTotal = (est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted;
-  var _split = paymentSplit(estHavellinTotal);
-  var deposit = _split.deposit;
-  var midpoint = _split.midpoint;
+  var deposit = depositAmt;
+  var midpoint = midpointAmt;
   var alreadyPaid = deposit + midpoint;
-  // Balance due = discounted actual total + any approved COs − advance payments already received
-  var balanceDue = havellinTotalDiscounted + coTotal - alreadyPaid;
+  var balanceDue = finalDue;
   var overUnder = havellinTotalDiscounted - estHavellinTotal;
+  var stageAmtDue = stage === 'deposit' ? depositAmt : (stage === 'midpoint' ? midpointAmt : finalDue);
+  var stageTitle = stage === 'deposit' ? 'Deposit Invoice' : (stage === 'midpoint' ? 'Midpoint Invoice' : 'Final Invoice');
 
   // Logo (same as client estimate)
   var logoB64 = document.querySelector('#ce-page-content img') ?
@@ -6261,17 +6343,116 @@ function renderInvoice() {
     return '<tr><td>' + esc(name) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + t.hours.toFixed(1) + '</td><td style="text-align:right;">$' + rate + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(fee) + '</td></tr>';
   }).join('');
 
-  // Vendor rows
-  var vendorRows = vendors.filter(function(v){ return v.cost>0; }).map(function(v){
-    return '<tr><td>' + esc(v.type) + '</td><td style="text-align:right;">' + fmt(v.cost) + '</td></tr>';
-  }).join('') || '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors</td></tr>';
+  // Vendor / prep rows — resolved actuals, with an "est." tag on any line still
+  // falling back to the estimate (no quote logged in the Job Plan yet).
+  var _estTag = ' <span style="font-size:9px;color:var(--warn-tx);font-weight:600;">est.</span>';
+  function _actualRow(line){
+    return '<tr><td>' + esc(line.label||'—') + (line.isEstimate ? _estTag : '') +
+      (line.vendorName ? ' <span style="color:var(--gray);font-size:11px;">· ' + esc(line.vendorName) + '</span>' : '') +
+      '</td><td style="text-align:right;">' + fmt(line.amount) + '</td></tr>';
+  }
+  var vendorRows = act.thirdParty.map(_actualRow).join('') ||
+    '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors</td></tr>';
+  var prepRows = act.prep.map(_actualRow).join('');
 
   var approvedStamp = (invApproved && invApprovedBy) ?
     '<div class="approved-stamp"><div class="approved-stamp-text">✓ Approved for Release</div><div class="approved-stamp-sub">Approved by ' + invApprovedBy + ' on ' + invApprovedAt + '</div></div>' : '';
 
+  function _amtDueBox(label, amt){
+    return '<tr style="background:var(--gray-dk);color:white;"><td style="padding:10px 14px;font-size:15px;font-weight:600;border-radius:4px 0 0 4px;"><strong>' + label + '</strong></td><td style="background:var(--gray-dk);"></td><td style="padding:10px 14px;text-align:right;font-family:Cormorant Garamond,serif;font-size:22px;font-weight:600;color:#C9A06A;border-radius:0 4px 4px 0;">' + (amt < 0 ? '<span style="color:#90d060;">Credit: ' + fmt(Math.abs(amt)) + '</span>' : fmt(amt)) + '</td></tr>';
+  }
+
+  // Vendor / prep costs — shown in every stage (informational; paid directly by client).
+  var vendorSection =
+    '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendor Costs (at cost — paid directly by client)</div>' +
+    '<table class="ce-tbl"><thead><tr><th>Vendor / Service</th><th style="text-align:right;">Amount</th></tr></thead>' +
+    '<tbody>' + vendorRows + '</tbody>' +
+    '<tr class="subtotal"><td>Third-Party Total</td><td style="text-align:right;">' + fmt(vendorCost) + '</td></tr>' +
+    '</table>' +
+    (act.prep.length ?
+      '<div class="ce-section-hdr" style="margin-top:1rem;">Home Prep for Sale — Vendor Costs (at cost — paid directly by client)</div>' +
+      '<table class="ce-tbl"><thead><tr><th>Prep Item / Vendor</th><th style="text-align:right;">Amount</th></tr></thead>' +
+      '<tbody>' + prepRows + '</tbody>' +
+      '<tr class="subtotal"><td>Prep Vendor Total</td><td style="text-align:right;">' + fmt(prepCost) + '</td></tr>' +
+      '</table>' : '');
+
+  // FINAL stage — labor trued to logged hours, fees on actuals.
+  var finalServices =
+    '<div class="ce-section-hdr">Havellin Services — Actual Hours</div>' +
+    '<table class="ce-tbl">' +
+    '<thead><tr><th>Team Member</th><th style="text-align:center;">Role</th><th style="text-align:center;">Hours</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Amount</th></tr></thead>' +
+    '<tbody>' + teamRows + '</tbody>' +
+    (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
+    (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
+    (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (30%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
+    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Customer Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
+    '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
+    '</table>' +
+    '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>';
+
+  var coSection = (jobCOs.length > 0 ?
+    '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
+    '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Description</th><th style="text-align:right;">Delta</th></tr></thead><tbody>' +
+    jobCOs.map(function(co) {
+      var delta = (co.newTotal||0) - (co.prevTotal||0);
+      return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') + '</td><td style="text-align:right;font-weight:600;">' + (delta >= 0 ? '+' : '') + fmt(delta) + '</td></tr>';
+    }).join('') +
+    '<tr class="subtotal"><td colspan="2">Change Order Total</td><td style="text-align:right;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' +
+    '</tbody></table>' : '');
+
+  var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
+    '<table class="pay-tbl">' +
+    '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(estHavellinTotal) + '</strong></td></tr>' +
+    '<tr><td>50% deposit — paid upon acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--ok-tx);">(' + fmt(deposit) + ')</td></tr>' +
+    '<tr><td>25% midpoint — fees trued to actuals</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--ok-tx);">(' + fmt(midpoint) + ')</td></tr>' +
+    '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Subtotal payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
+    '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
+    (overUnder > 0 ?
+      '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Job ran over estimate by ' + fmt(overUnder) + ' — client was notified per T&amp;Cs</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(overUnder) + '</td></tr>' :
+      (overUnder < 0 ?
+        '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Job came in under estimate by ' + fmt(Math.abs(overUnder)) + ' — credit applied</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(overUnder)) + ')</td></tr>' :
+        '')) +
+    (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' : '') +
+    _amtDueBox('Balance Due Upon Completion', balanceDue) +
+    '</table>' +
+    '<div class="ce-note" style="margin-top:0;">The deposit is calculated on the original estimate; the midpoint trues vendor &amp; home-prep fees to actuals; this final balance also trues labor to actual hours logged. Vendor invoices are billed directly to the client.</div>' +
+    '</div>';
+
+  // ADVANCE stages (deposit / midpoint) — labor on estimate; fees on actuals from midpoint.
+  var advSmf  = (stage === 'deposit') ? smfEst : smf;
+  var advPrep = (stage === 'deposit') ? prepFeeEst : prepFee;
+  var advBasis = (stage === 'deposit') ? totalDepositBasis : totalMidBasis;
+  var advanceServices =
+    '<div class="ce-section-hdr">Project Summary' + (stage === 'midpoint' ? ' — Fees Trued to Actuals' : ' — Estimate Basis') + '</div>' +
+    '<table class="ce-tbl"><tbody>' +
+    '<tr><td>Havellin labor (estimate' + (discountPct > 0 ? ', net of ' + discountPct + '% discount' : '') + ')</td><td style="text-align:right;">' + fmt(estLaborNet) + '</td></tr>' +
+    (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
+    (advSmf > 0 ? '<tr><td>Service Management Fee (15% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
+    (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
+    (legacyFees > 0 ? '<tr><td>GC / Site Management Fee</td><td style="text-align:right;">' + fmt(legacyFees) + '</td></tr>' : '') +
+    '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
+    '</table>' +
+    '<div class="ce-note">' + (stage === 'midpoint'
+      ? 'Labor remains on the original estimate until the final invoice (hours are still being logged). Vendor and home-prep fees are calculated on the actual quotes recorded in the Job Plan.'
+      : 'Deposit is based on the original estimate. Vendor and home-prep fees are trued to actuals at the midpoint and final invoices.') + '</div>';
+
+  var advancePayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Schedule</div>' +
+    '<table class="pay-tbl">' +
+    '<tr><td colspan="2">Project total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td class="r">' + fmt(advBasis) + '</td></tr>' +
+    (stage === 'midpoint'
+      ? '<tr><td colspan="2">Cumulative due through midpoint (75%)</td><td class="r">' + fmt(midCumTarget) + '</td></tr>' +
+        '<tr><td colspan="2" style="color:var(--ok-tx);">Less: 50% deposit already invoiced</td><td class="r" style="color:var(--ok-tx);">(' + fmt(depositAmt) + ')</td></tr>'
+      : '') +
+    _amtDueBox(stage === 'deposit' ? 'Deposit Due Now (50%)' : 'Midpoint Payment Due Now', stageAmtDue) +
+    '</table></div>';
+
+  var bodyHtml = (stage === 'final')
+    ? (finalServices + vendorSection + coSection + finalPayment)
+    : (advanceServices + vendorSection + advancePayment);
+
   var html = '<div class="ce-logo-wrap" style="text-align:center;margin-bottom:1.5rem;">' + logoHTML + '</div>' +
     '<div class="ce-divider-thick"></div>' +
-    '<div class="ce-title">Final Invoice</div>' +
+    '<div class="ce-title">' + stageTitle + '</div>' +
     '<div class="ce-meta">' +
     '<div class="ce-meta-item"><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name) + '</div></div>' +
     '<div class="ce-meta-item"><div class="ce-meta-label">Invoice date</div><div class="ce-meta-val">' + today + '</div></div>' +
@@ -6282,52 +6463,7 @@ function renderInvoice() {
     '</div>' +
     '<div class="ce-divider"></div>' +
 
-    '<div class="ce-section-hdr">Havellin Services — Actual Hours</div>' +
-    '<table class="ce-tbl">' +
-    '<thead><tr><th>Team Member</th><th style="text-align:center;">Role</th><th style="text-align:center;">Hours</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Amount</th></tr></thead>' +
-    '<tbody>' + teamRows + '</tbody>' +
-    (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
-    (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
-    (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (30%)</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
-    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Customer Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
-    '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
-    '</table>' +
-    '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>' +
-
-    '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendor Costs (at cost)</div>' +
-    '<table class="ce-tbl"><thead><tr><th>Vendor / Service</th><th style="text-align:right;">Amount</th></tr></thead>' +
-    '<tbody>' + vendorRows + '</tbody>' +
-    '<tr class="subtotal"><td>Third-Party Total</td><td style="text-align:right;">' + fmt(vendorCost) + '</td></tr>' +
-    '</table>' +
-
-    (jobCOs.length > 0 ?
-      '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
-      '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Description</th><th style="text-align:right;">Delta</th></tr></thead><tbody>' +
-      jobCOs.map(function(co) {
-        var delta = (co.newTotal||0) - (co.prevTotal||0);
-        return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') + '</td><td style="text-align:right;font-weight:600;">' + (delta >= 0 ? '+' : '') + fmt(delta) + '</td></tr>';
-      }).join('') +
-      '<tr class="subtotal"><td colspan="2">Change Order Total</td><td style="text-align:right;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' +
-      '</tbody></table>'
-    : '') +
-
-    '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
-    '<table class="pay-tbl">' +
-    '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(estHavellinTotal) + '</strong></td></tr>' +
-    '<tr><td>50% deposit — paid upon acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--ok-tx);">(' + fmt(deposit) + ')</td></tr>' +
-    '<tr><td>25% midpoint — paid at project midpoint</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--ok-tx);">(' + fmt(midpoint) + ')</td></tr>' +
-    '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Subtotal payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
-    '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
-    (overUnder > 0 ?
-      '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Job ran over estimate by ' + fmt(overUnder) + ' — client was notified per T&amp;Cs</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(overUnder) + '</td></tr>' :
-      (overUnder < 0 ?
-        '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Job came in under estimate by ' + fmt(Math.abs(overUnder)) + ' — credit applied</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(overUnder)) + ')</td></tr>' :
-        '')) +
-    (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' : '') +
-    '<tr style="background:var(--gray-dk);color:white;"><td style="padding:10px 14px;font-size:15px;font-weight:600;border-radius:4px 0 0 4px;"><strong>Balance Due Upon Completion</strong></td><td style="background:var(--gray-dk);"></td><td style="padding:10px 14px;text-align:right;font-family:Cormorant Garamond,serif;font-size:22px;font-weight:600;color:#C9A06A;border-radius:0 4px 4px 0;">' + (balanceDue < 0 ? '<span style="color:#90d060;">Credit: ' + fmt(Math.abs(balanceDue)) + '</span>' : fmt(balanceDue)) + '</td></tr>' +
-    '</table>' +
-    '<div class="ce-note" style="margin-top:0;">Advance payments (deposit &amp; midpoint) are calculated on the original estimate. Final balance reflects actual hours worked plus any approved change orders. Third-party vendor invoices are billed separately and directly to the client.</div>' +
-    '</div>' +
+    bodyHtml +
 
     (preparer && preparer.bio ?
     '<div class="ce-divider"></div>' +
@@ -6857,7 +6993,9 @@ function _vendorRefLine(rec) {
 function renderVendorSourcing(jobId, job, est) {
   var svcLines = est.vendors || [];
   var colls    = est.collections || [];
-  if (!svcLines.length && !colls.length) {
+  var prepLines = (est.prepEnabled && est.prepItems) ? est.prepItems : [];
+  var hasPrep = prepLines.some(function(p){ return p.cost > 0; });
+  if (!svcLines.length && !colls.length && !hasPrep) {
     return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No third-party vendors or collections on this estimate.</div>';
   }
   var html = '';
@@ -6865,6 +7003,7 @@ function renderVendorSourcing(jobId, job, est) {
     html += '<div style="font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-bottom:8px;">Vendor directory not loaded — set the Vendor Directory URL in Settings to pick vendors. You can still type a quote.</div>';
   }
   var src  = job.vendorSourcing || {};
+  var psrc = job.prepSourcing   || {};
   var csrc = job.collSourcing   || {};
 
   if (svcLines.length) {
@@ -6888,6 +7027,31 @@ function renderVendorSourcing(jobId, job, est) {
         '</div>' + _vendorRefLine(rec) +
       '</div>';
     }).join('');
+  }
+
+  if (hasPrep) {
+    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">Home Prep for Sale</div>';
+    html += prepLines.map(function(p, i){
+      if (!(p.cost > 0)) return '';
+      var rec = psrc[i] || {};
+      var budget = p.cost || 0;
+      var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
+      var over = quote !== '' && budget > 0 && Number(quote) > budget;
+      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+          '<strong style="font-size:12px;">' + esc(p.type||'Prep item') + '</strong>' +
+          '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
+          '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setPrepVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
+          '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
+          '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setPrepVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + '">' +
+          (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
+        '</div>' + _vendorRefLine(rec) +
+      '</div>';
+    }).join('');
+    html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Prep vendors are paid directly by the client; Havellin\'s 30% GC / Site Management Fee is calculated on these actuals at invoicing.</div>';
   }
 
   if (colls.length) {
@@ -6945,6 +7109,28 @@ function setJobVendorQuote(jobId, i, val) {
 function setJobVendorStatus(jobId, i, val) {
   var job = _svcJob(jobId, i); if (!job) return;
   job.vendorSourcing[i].status = val; saveJobs();
+}
+function _prepJob(jobId, i) {
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  if (!job) return null;
+  if (!job.prepSourcing) job.prepSourcing = {};
+  if (!job.prepSourcing[i]) job.prepSourcing[i] = {};
+  return job;
+}
+function setPrepVendor(jobId, i, val) {
+  var job = _prepJob(jobId, i); if (!job) return;
+  var rec = job.prepSourcing[i], v = lookupVendorById(val);
+  rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
+  rec.contact = v ? (v.primary_contact||'') : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  saveJobs(); refreshVendorSourcing(jobId);
+}
+function setPrepVendorQuote(jobId, i, val) {
+  var job = _prepJob(jobId, i); if (!job) return;
+  job.prepSourcing[i].quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+}
+function setPrepVendorStatus(jobId, i, val) {
+  var job = _prepJob(jobId, i); if (!job) return;
+  job.prepSourcing[i].status = val; saveJobs();
 }
 function _collJob(jobId, collId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
