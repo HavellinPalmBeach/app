@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3223,17 +3223,18 @@ function renderClientEstimate() {
   // Estate job: show estate name + rep contact instead of deceased client's info
   var isEstateJob = !!(job.executor && job.executor.trim());
 
+  var _estDate = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   var html =
-    '<div style="position:relative;text-align:center;padding:0 0 .75rem;">' +
-    '<div style="position:absolute;left:0;top:0;text-align:left;">' +
-    '<div class="ce-meta-label">Job ID</div>' +
-    '<div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'\u2014') + '</div>' +
-    '</div>' +
+    '<div style="text-align:center;padding:0 0 .75rem;">' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
     '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Guiding Families Through Life\u2019s Transitions</div>' +
     '</div>' +
     '<div class="ce-divider-thick"></div>' +
     '<div class="ce-title">Service Estimate</div>' +
+    '<div style="display:flex;justify-content:center;gap:2.5rem;margin:.35rem 0 .75rem;text-align:center;">' +
+    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'\u2014') + '</div></div>' +
+    '<div><div class="ce-meta-label">Date</div><div class="ce-meta-val">' + _estDate + '</div></div>' +
+    '</div>' +
 
         (isEstateJob
       ? '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
@@ -6619,26 +6620,22 @@ function renderInvoice() {
     : '');
 
   var html =
-    // Branded header — matches the Service Estimate (Job ID · wordmark · tagline).
-    '<div style="position:relative;text-align:center;padding:0 0 .75rem;">' +
-    '<div style="position:absolute;left:0;top:0;text-align:left;">' +
-    '<div class="ce-meta-label">Job ID</div>' +
-    '<div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div>' +
-    '</div>' +
+    // Branded header — wordmark · tagline (Job ID + date sit centered under the title).
+    '<div style="text-align:center;padding:0 0 .75rem;">' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
     '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Guiding Families Through Life’s Transitions</div>' +
     '</div>' +
     '<div class="ce-divider-thick"></div>' +
     '<div class="ce-title">' + stageTitle + '</div>' +
+    '<div style="display:flex;justify-content:center;gap:2.5rem;margin:.35rem 0 .75rem;text-align:center;">' +
+    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Invoice Date</div><div class="ce-meta-val">' + today + '</div></div>' +
+    '</div>' +
     '<div class="ce-hdr-row ce-hdr-row-1">' +
     '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—') + '</div></div>' +
     '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(job.svcLabel||'—') + '</div></div>' +
-    '</div>' +
-    '<div class="ce-hdr-divider"></div>' +
-    '<div class="ce-hdr-row" style="grid-template-columns:1fr;">' +
-    '<div><div class="ce-meta-label">Invoice Date</div><div class="ce-meta-val">' + today + '</div></div>' +
     '</div>' +
     '<div class="ce-divider"></div>' +
     contactLine +
