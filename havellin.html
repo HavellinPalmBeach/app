@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 7:31pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 8:13pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -808,6 +808,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="font-size:11px;color:var(--gray);margin-top:2px;" id="ce-subtitle">Review the estimate below. Edit if needed, then submit for manager approval.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
+        <select id="ce-job" onchange="loadClientEstimateFromSelect()" style="width:230px;font-size:12px;"><option value="">Select job</option></select>
         <span id="approval-status-badge"></span>
         <button class="btn-s" id="btn-edit-est" onclick="editEstimateFromCE()" style="display:none;">&#9998; Edit Estimate</button>
         <button class="btn-s" id="btn-submit-approval" onclick="submitForApproval()" style="display:none;">Submit for Approval &#8594;</button>
@@ -826,7 +828,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
   <div id="client-estimate-preview">
     <div class="ce-page" id="ce-page-content">
-      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Save an estimate first to preview the client document.</div>
+      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Estimate tab.</div>
     </div>
   </div>
 </div>
@@ -3133,9 +3135,42 @@ function proposedPlanRow(e) {
     '</td></tr>';
 }
 
+// Job picker for the Client Estimate tab — mirrors the Agreement / Job Plan /
+// Invoice tabs so you can jump back to any saved estimate (to view, print, etc.).
+function populateClientEstimateSelect() {
+  var sel = document.getElementById('ce-job');
+  if (!sel) return;
+  var opts = '<option value="">Select job</option>';
+  jobs.forEach(function(j){
+    var rec = estimateStore[j.id];
+    if (rec && rec.estimate && rec.estimate.rooms && rec.estimate.rooms.length) {
+      opts += '<option value="' + j.id + '">' + esc(j.name || ('Job ' + j.id)) + (j.hvlId ? ' · ' + esc(j.hvlId) : '') + '</option>';
+    }
+  });
+  sel.innerHTML = opts;
+  // Reflect the loaded estimate if its job still resolves; otherwise leave unselected.
+  if (currentEstimate && currentEstimate.jobId && jobs.find(function(j){ return j.id===currentEstimate.jobId; })) {
+    sel.value = String(currentEstimate.jobId);
+  } else {
+    sel.value = '';
+  }
+}
+function loadClientEstimateFromSelect() {
+  var sel = document.getElementById('ce-job');
+  var jobId = sel ? parseInt(sel.value)||0 : 0;
+  if (!jobId) {
+    currentEstimate = null; estimateApproved = false; estimateSubmitted = false;
+    renderClientEstimate();
+    return;
+  }
+  loadEstimateForJob(jobId);
+  renderClientEstimate();
+}
+
 function renderClientEstimate() {
-  if (!currentEstimate) {
-    document.getElementById('ce-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Save an estimate first to preview the client document.</div>';
+  var _ceJob = currentEstimate && (currentEstimate.job || jobs.find(function(j){ return j.id===currentEstimate.jobId; }));
+  if (!currentEstimate || !_ceJob) {
+    document.getElementById('ce-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Estimate tab.</div>';
     updateApprovalUI();
     return;
   }
@@ -5095,7 +5130,7 @@ function showPanel(id, btn) {
     // submitted or approved estimate appears fully editable when reopened here.
     applyEstimateLock();
   }
-  if (id==='client-estimate') renderClientEstimate();
+  if (id==='client-estimate') { populateClientEstimateSelect(); renderClientEstimate(); }
   if (id==='contractors') { renderContractors(); }
   if (id==='winloss') renderWinLoss();
   if (id==='job-plan') {
