@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5178,7 +5178,7 @@ function showPanel(id, btn) {
       logDateEl.value = new Date().toISOString().split('T')[0];
     }
   }
-  if (id==='invoice') { populateLogAndInvSelects(); }
+  if (id==='invoice') { populateLogAndInvSelects(); loadInvoice(); }
   if (id==='agreement') { populateAgrSelect(); }
 }
 
@@ -6323,10 +6323,23 @@ function toggleLogHistory() {
 }
 
 // ─── FINAL INVOICE ────────────────────────────────────────────────────────────
+// Default to the earliest stage not yet handled: deposit (until the deposit is
+// received) → midpoint (until the midpoint invoice is sent) → final.
+function defaultInvStage(job) {
+  if (!job) return 'deposit';
+  if (!job.depositReceived) return 'deposit';
+  if (!job.midpointInvoiceSent) return 'midpoint';
+  return 'final';
+}
+
 function loadInvoice() {
   var jobId = parseInt(document.getElementById('inv-job').value);
   currentInvJobId = jobId || null;
   invApproved = false;
+  var job = jobs.find(function(j){ return j.id === currentInvJobId; });
+  currentInvStage = defaultInvStage(job);
+  var stageSel = document.getElementById('inv-stage');
+  if (stageSel) stageSel.value = currentInvStage;
   renderInvoice();
 }
 
