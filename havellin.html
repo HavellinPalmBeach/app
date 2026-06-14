@@ -236,7 +236,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 2:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 2:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -899,6 +899,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
     </div>
   </div>
+
+  <!-- Client info header — rendered at the top of the Job Plan (above Log Hours) -->
+  <div id="job-plan-header"></div>
 
   <!-- Hidden log-job input — synced to plan-job by loadJobPlanTab; read by saveLogEntry -->
   <input type="hidden" id="log-job">
@@ -6069,25 +6072,27 @@ function buildLogTeamRows() {
     '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
   '</div>';
 
-  // PS rows 1-4 (slot index = i-1). Locked slots are fixed; empty slots stay addable.
+  // PS rows 1-4 (slot index = i-1) in a responsive 2-column grid to save space.
+  // Locked slots are fixed; empty slots stay addable.
+  var psCells = '';
   for (var i = 1; i <= 4; i++) {
-    var isLast = i === 4;
     var slot = i - 1;
     var p = crew && crew.ps[slot] ? crew.ps[slot] : null;
     var psName = p ? p.name : '';
     var psLocked = !!(p && p.locked);
-    html += '<div style="' + (isLast ? lastRowStyle : rowStyle) + '">' +
-      '<div>' +
-        '<label style="margin:0;color:var(--gray);">Property Specialist ' + i + (psLocked ? lockTag : '') + '</label>' +
-        '<select id="log-m'+i+'-name"' + (psLocked ? ' disabled' : '') + ' onchange="setCrewPS(' + jobId + ',' + slot + ',this.value)" style="margin-top:4px;">' +
+    psCells += '<div style="padding-bottom:8px;border-bottom:1px solid var(--border);">' +
+      '<label style="margin:0;color:var(--gray);">Property Specialist ' + i + (psLocked ? lockTag : '') + '</label>' +
+      '<div style="display:grid;grid-template-columns:1fr 70px;gap:6px;align-items:end;margin-top:4px;">' +
+        '<select id="log-m'+i+'-name"' + (psLocked ? ' disabled' : '') + ' onchange="setCrewPS(' + jobId + ',' + slot + ',this.value)">' +
           '<option value="">Not on site</option>' +
           optList(psNames, psName) +
           '<option value="Contractor TBD"' + (psName==='Contractor TBD'?' selected':'') + '>Contractor TBD</option>' +
         '</select>' +
+        '<input type="number" id="log-m'+i+'-hrs" title="Hours" min="0" max="24" step="0.5" placeholder="hrs" style="text-align:right;">' +
       '</div>' +
-      '<div><label style="margin:0;">Hours</label><input type="number" id="log-m'+i+'-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
     '</div>';
   }
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px 16px;margin-top:8px;">' + psCells + '</div>';
 
   document.getElementById('log-team-rows').innerHTML = html;
 }
@@ -6846,6 +6851,7 @@ function loadJobPlanTab() {
   var printBtn = document.getElementById('btn-plan-pdf');
   var empty = function(msg) {
     content.innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">' + msg + '</div>';
+    var hdrEl = document.getElementById('job-plan-header'); if (hdrEl) hdrEl.innerHTML = '';
     if (printBtn) printBtn.style.display = 'none';
   };
   if (!jobId) {
@@ -6929,7 +6935,7 @@ function planChk(jobId, key, label) {
 // Wrap checklist items in a responsive 2-column grid (collapses to 1 column when
 // the panel is narrow, e.g. iPad portrait) to save vertical space.
 function chkGrid(inner) {
-  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 16px;">' + inner + '</div>';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 16px;align-items:start;">' + inner + '</div>';
 }
 
 function planSubsec(title) {
@@ -7371,6 +7377,11 @@ function renderJobPlan(jobId, job, est) {
     (job.driveFolder ? '<div style="margin-top:8px;font-size:11px;"><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; View all photos in Drive</a></div>' : '') +
     '</div>';
 
+  // Client info renders at the top of the Job Plan tab (above Log Hours), not inline
+  // with the phase content below.
+  var _jpHeader = document.getElementById('job-plan-header');
+  if (_jpHeader) _jpHeader.innerHTML = hdr;
+
   // ── Phase 0 ──────────────────────────────────────────────────────────────────
   var p0CallNote = getPlanNote(jobId, 'p0_call_notes');
   var p0 = planSubsec('Pre-Job Client Call') +
@@ -7576,11 +7587,10 @@ function renderJobPlan(jobId, job, est) {
         + '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>'
         + '</div>'
       : '';
-    return hdr + placeholder + sourcingCard + roomDocsCard;
+    return placeholder + sourcingCard + roomDocsCard;
   }
 
-  return hdr +
-    planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
+  return planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
     planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
     planPhaseWrap('p2','Phase 2 — Pack & Prepare', p2) +
     p3 +
@@ -7619,10 +7629,12 @@ function printJobPlan() {
   var pt = document.getElementById('print-target');
   var content = document.getElementById('job-plan-content');
   if (!pt || !content) return;
+  var hdrEl = document.getElementById('job-plan-header');
+  var hdrHTML = hdrEl ? hdrEl.innerHTML : '';
   pt.innerHTML = '<div style="padding:20px;font-family:Raleway,sans-serif;">' +
     '<h2 style="font-family:\'Cormorant Garamond\',serif;color:#3c3228;margin-bottom:4px;">Havellin Palm Beach — Job Plan</h2>' +
     '<div style="font-size:11px;color:#888;margin-bottom:16px;">Internal working document · ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>' +
-    content.innerHTML + '</div>';
+    hdrHTML + content.innerHTML + '</div>';
   window.print();
   pt.innerHTML = '';
 }
