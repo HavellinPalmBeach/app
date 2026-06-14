@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7103,7 +7103,7 @@ function renderVendorSourcing(jobId, job, est) {
       var budget = v.cost || 0;
       var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
       var over = quote !== '' && budget > 0 && Number(quote) > budget;
-      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
         '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
           '<strong style="font-size:12px;">' + esc(v.type||'Vendor') + '</strong>' +
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
