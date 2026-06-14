@@ -32,6 +32,11 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+/* Job Plan checklist grid — fixed column count so every phase is consistent and a
+   lone item stays within its column instead of stretching across the page. */
+.chk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 18px;align-items:start;}
+@media (max-width:900px){.chk-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:600px){.chk-grid{grid-template-columns:1fr;}}
 .card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.3rem;}
 .metric-card{background:var(--tan);border-radius:6px;padding:.9rem 1.1rem;}
 .metric-label{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
@@ -236,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 2:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6092,7 +6097,7 @@ function buildLogTeamRows() {
       '</div>' +
     '</div>';
   }
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px 16px;margin-top:8px;">' + psCells + '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin-top:8px;">' + psCells + '</div>';
 
   document.getElementById('log-team-rows').innerHTML = html;
 }
@@ -6925,7 +6930,7 @@ function loadJobPlanTab() {
 
 function planChk(jobId, key, label) {
   var done = !!((getJobPlan(jobId).tasks || {})[key]);
-  return '<label style="display:flex;align-items:flex-start;gap:8px;padding:3px 0;font-size:12px;cursor:pointer;' +
+  return '<label style="display:flex;align-items:flex-start;gap:8px;margin:0;padding:3px 0;font-size:12px;cursor:pointer;' +
     'color:' + (done ? 'var(--gray)' : 'var(--gray-dk)') + ';text-decoration:' + (done ? 'line-through' : 'none') + ';">' +
     '<input type="checkbox"' + (done ? ' checked' : '') +
     ' style="margin-top:2px;width:13px;height:13px;flex-shrink:0;accent-color:var(--gray-dk);"' +
@@ -6935,7 +6940,7 @@ function planChk(jobId, key, label) {
 // Wrap checklist items in a responsive 2-column grid (collapses to 1 column when
 // the panel is narrow, e.g. iPad portrait) to save vertical space.
 function chkGrid(inner) {
-  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 16px;align-items:start;">' + inner + '</div>';
+  return '<div class="chk-grid">' + inner + '</div>';
 }
 
 function planSubsec(title) {
@@ -7357,24 +7362,26 @@ function renderJobPlan(jobId, job, est) {
   }
 
   // ── Header ──────────────────────────────────────────────────────────────────
-  var hdr = '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:12px;">' +
-    '<div><span style="color:var(--gray);">Client</span><br><strong>' + (job.name||'—') + '</strong></div>' +
-    '<div><span style="color:var(--gray);">Service</span><br><strong>' + (job.svcLabel||est.svc||'—') + '</strong></div>' +
-    '<div><span style="color:var(--gray);">Property</span><br><strong>' +
-      ([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—') + '</strong></div>' +
-    '<div><span style="color:var(--gray);">TC</span><br><strong>' + (job.tc||'—') + '</strong></div>' +
-    '<div><span style="color:var(--gray);">PS Crew</span><br><strong>' + psNames + '</strong></div>' +
-    '<div><span style="color:var(--gray);">Target Start</span><br><strong>' + fmtDate2(job.start) + '</strong></div>' +
-    '<div><span style="color:var(--gray);">Projected Completion</span><br><strong>' + (job.start && est.totTC ? fmtDate2(addWorkingDays(job.start, Math.ceil(est.totTC / 7))) : '—') + '</strong></div>' +
-    (isMM && job.destAddr ? '<div><span style="color:var(--gray);">New Home</span><br><strong>' +
-      [job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') +
-      (job.destSqft ? ' · '+job.destSqft+' sqft':'') + '</strong></div>' : '') +
+  // Compact, single-line-wrapping header. Crew (TC/PS) intentionally omitted — it's
+  // assigned/locked in the Log Hours rows below, not pinned here.
+  var _hdrBits = [
+    ['Client', esc(job.name||'—')],
+    ['Service', esc(job.svcLabel||est.svc||'—')],
+    ['Property', esc([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—')],
+    ['Target Start', fmtDate2(job.start)],
+    ['Projected', (job.start && est.totTC ? fmtDate2(addWorkingDays(job.start, Math.ceil(est.totTC / 7))) : '—')]
+  ];
+  if (isMM && job.destAddr) {
+    _hdrBits.push(['New Home', esc([job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') + (job.destSqft ? ' · '+job.destSqft+' sqft':''))]);
+  }
+  var hdr = '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
+    '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
+    _hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
+    (job.driveFolder ? '<span><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Photos in Drive</a></span>' : '') +
     '</div>' +
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
     (prem       ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
-    (job.driveFolder ? '<div style="margin-top:8px;font-size:11px;"><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; View all photos in Drive</a></div>' : '') +
     '</div>';
 
   // Client info renders at the top of the Job Plan tab (above Log Hours), not inline
