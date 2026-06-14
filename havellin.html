@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5898,8 +5898,16 @@ function showSyncBadge(msg, isErr) {
   el.textContent = msg;
   el.style.color = isErr ? 'var(--err-tx)' : 'var(--ok-tx)';
   el.style.background = isErr ? 'var(--err-bg)' : 'var(--ok-bg)';
+  // Float as a fixed toast so it's visible wherever you are on the page — e.g.
+  // deep in the Job Plan on the iPad — not just up in the header.
+  el.style.position = 'fixed';
+  el.style.bottom = '16px';
+  el.style.right = '16px';
+  el.style.zIndex = '9999';
+  el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.18)';
   el.style.display = 'inline-block';
-  setTimeout(function(){ el.style.display = 'none'; }, 4000);
+  clearTimeout(el._hideT);
+  el._hideT = setTimeout(function(){ el.style.display = 'none'; }, 4000);
 }
 
 // ── VENDOR DIRECTORY (separate Sheet + web app; read-only) ────────────────────
