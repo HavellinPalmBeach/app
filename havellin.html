@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -820,7 +820,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
-        <select id="ce-job" onchange="loadClientEstimateFromSelect()" style="width:230px;font-size:12px;"><option value="">Select job</option></select>
+        <select id="ce-job" onchange="loadClientEstimateFromSelect()" style="width:340px;font-size:12px;"><option value="">Select job</option></select>
         <span id="approval-status-badge"></span>
         <button class="btn-s" id="btn-edit-est" onclick="editEstimateFromCE()" style="display:none;">&#9998; Edit Estimate</button>
         <button class="btn-s" id="btn-submit-approval" onclick="submitForApproval()" style="display:none;">Submit for Approval &#8594;</button>
@@ -985,18 +985,18 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="font-size:13px;font-weight:600;">Invoices</div>
         <div style="font-size:11px;color:var(--gray);margin-top:2px;">Pick a stage — deposit, midpoint, or final. Approve with PIN to unlock PDF.</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex:1;flex-wrap:wrap;">
-        <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Job:</label>
-        <select id="inv-job" onchange="loadInvoice()" style="flex:1;min-width:280px;max-width:440px;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
+        <select id="inv-job" onchange="loadInvoice()" style="width:340px;font-size:12px;">
           <option value="">Select job</option>
         </select>
-        <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Stage:</label>
-        <select id="inv-stage" onchange="setInvStage(this.value)" style="width:170px;">
+        <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">STAGE</span>
+        <select id="inv-stage" onchange="setInvStage(this.value)" style="width:150px;font-size:12px;">
           <option value="deposit">Deposit (50%)</option>
           <option value="midpoint">Midpoint (25%)</option>
           <option value="final" selected>Final (balance)</option>
         </select>
-        <span id="inv-approval-badge" style="margin-left:auto;"></span>
+        <span id="inv-approval-badge"></span>
         <button class="btn-s" id="btn-inv-approve" onclick="openInvPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-bronze" id="btn-inv-pdf" onclick="printInvoice()" style="display:none;">Print / Save PDF</button>
         <a class="btn-s" id="btn-mailto-inv" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
@@ -1038,8 +1038,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="font-size:11px;color:var(--gray);margin-top:2px;">Pre-filled from job and estimate data. Approve with PIN, then print or email to client.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Job:</label>
-        <select id="agr-job" onchange="loadAgreement()" style="width:260px;"><option value="">Select job</option></select>
+        <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
+        <select id="agr-job" onchange="loadAgreement()" style="width:340px;font-size:12px;"><option value="">Select job</option></select>
         <span id="agr-approval-badge"></span>
         <button class="btn-s" id="btn-agr-approve" onclick="openAgrPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-s" id="btn-agr-stripe" onclick="generateStripeLink()" style="display:none;">Generate Payment Link</button>
