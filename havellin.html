@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7534,7 +7534,7 @@ function renderJobPlan(jobId, job, est) {
     rooms.map(function(r) {
       var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
       var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
-      return '<div id="plan-room-block-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;">' +
+      return '<div id="plan-room-block-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
         '<strong style="font-size:12px;line-height:1.3;">'+r.name+'</strong>' +
         '<span id="plan-room-badge-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
