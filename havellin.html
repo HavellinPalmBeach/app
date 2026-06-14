@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6360,6 +6360,8 @@ function renderInvoice() {
   var _allInvC = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
   var preparer = _allInvC.find(function(c){ return c.name === ((est && est.preparedBy) || job.tc); });
   var prepName = preparer ? preparer.name : ((est && est.preparedBy) || job.tc || '—');
+  var prepPhone = preparer ? (preparer.phone || '—') : '—';
+  var prepEmail = preparer ? (preparer.email || '—') : '—';
   var pkgCost = est ? (est.pkgCost||0) : 0;
   var pkgLabel = est ? (est.pkgLabel||'None') : 'None';
   var stage = currentInvStage || 'final';
@@ -6414,7 +6416,10 @@ function renderInvoice() {
   // trued at the final (hours fully logged). Each invoice bills the difference
   // between its cumulative target and what earlier invoices already collected, so
   // the final naturally reconciles everything.
-  var totalDepositBasis = estLaborNet + materials + smfEst + prepFeeEst + legacyFees;
+  // Anchor the deposit to the approved estimate total so it always reconciles to the
+  // exact number the client saw and accepted (falls back to the component sum).
+  var totalDepositBasis = (est && est.havellinTotal) ? est.havellinTotal
+                        : (estLaborNet + materials + smfEst + prepFeeEst + legacyFees);
   var totalMidBasis     = estLaborNet + materials + smf    + prepFee    + legacyFees;
   var totalFinalBasis   = actLaborNet + materials + smf    + prepFee    + legacyFees + coTotal;
 
@@ -6561,11 +6566,44 @@ function renderInvoice() {
     _amtDueBox(stage === 'deposit' ? 'Deposit Due Now (50%)' : 'Midpoint Payment Due Now', stageAmtDue) +
     '</table></div>';
 
+  // Third-party vendor costs (movers, hauling, etc.) are billed to the client directly
+  // by each vendor — they are NOT charged on Havellin's invoice. Havellin's coordination
+  // fee (the 15% SMF, and 30% prep GC fee) stays in the services section above.
+  var vendorNote = (vendorCost > 0 || act.prep.length)
+    ? '<div class="ce-note" style="margin-top:1rem;">Third-party vendor costs (movers, hauling, donation, cleaning, etc.) are billed to you directly by each vendor and are not included on this invoice. Havellin\'s coordination fee is the Service Management Fee shown above.</div>'
+    : '';
   var bodyHtml = (stage === 'final')
-    ? (finalServices + vendorSection + coSection + finalPayment)
-    : (advanceServices + vendorSection + advancePayment);
+    ? (finalServices + coSection + finalPayment + vendorNote)
+    : (advanceServices + advancePayment + vendorNote);
 
-  var html = '<div class="ce-logo-wrap" style="text-align:center;margin-bottom:1.5rem;">' + logoHTML + '</div>' +
+  // Contact line + Transition Concierge bio — placed at the top (matching the
+  // Service Estimate) so every Havellin document leads with the same branding.
+  var contactLine =
+    '<div style="font-size:12px;color:var(--gray);text-align:center;">Questions about this invoice? Contact <strong style="color:var(--gray-dk);">' + prepName + '</strong>' +
+    (prepPhone !== '—' ? ' &nbsp;·&nbsp; ' + prepPhone : '') +
+    (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + prepEmail + '" style="color:var(--bronze);text-decoration:none;">' + prepEmail + '</a>' : '') +
+    '</div>';
+  var bioBlock = (preparer && preparer.bio ?
+    '<div style="display:flex;align-items:flex-start;gap:1.2rem;padding:.75rem 0 0;margin-top:.5rem;border-top:1px solid var(--border);">' +
+    '<div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:var(--tan);border:2px solid var(--bronze);display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;font-size:18px;font-weight:600;color:var(--bronze);">' +
+      (prepName ? prepName.split(' ').map(function(n){return n[0];}).join('') : 'TC') + '</div>' +
+    '<div>' +
+    '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:2px;">Your Transition Concierge</div>' +
+    '<div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;">' + prepName + '</div>' +
+    '<div style="font-size:12px;color:var(--gray);line-height:1.55;">' + preparer.bio + '</div>' +
+    '</div></div>'
+    : '');
+
+  var html =
+    // Branded header — matches the Service Estimate (Job ID · wordmark · tagline).
+    '<div style="position:relative;text-align:center;padding:0 0 .75rem;">' +
+    '<div style="position:absolute;left:0;top:0;text-align:left;">' +
+    '<div class="ce-meta-label">Job ID</div>' +
+    '<div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div>' +
+    '</div>' +
+    '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
+    '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Guiding Families Through Life’s Transitions</div>' +
+    '</div>' +
     '<div class="ce-divider-thick"></div>' +
     '<div class="ce-title">' + stageTitle + '</div>' +
     '<div class="ce-meta">' +
@@ -6577,27 +6615,12 @@ function renderInvoice() {
     '<div class="ce-meta-item"><div class="ce-meta-label">Working days</div><div class="ce-meta-val">' + [...new Set(logs.map(function(e){ return e.date; }))].length + '</div></div>' +
     '</div>' +
     '<div class="ce-divider"></div>' +
+    contactLine +
+    bioBlock +
+    '<div class="ce-divider"></div>' +
 
     bodyHtml +
 
-    (preparer && preparer.bio ?
-    '<div class="ce-divider"></div>' +
-    '<div style="display:flex;align-items:flex-start;gap:1.2rem;padding:1rem 0;">' +
-    '<div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:var(--tan);border:2px solid var(--bronze);display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;font-size:18px;font-weight:600;color:var(--bronze);">' +
-      (prepName ? prepName.split(' ').map(function(n){return n[0];}).join('') : 'TC') + '</div>' +
-    '<div>' +
-    '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:2px;">Your Transition Concierge</div>' +
-    '<div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;">' + prepName + '</div>' +
-    '<div style="font-size:12px;color:var(--gray);line-height:1.55;">' + preparer.bio + '</div>' +
-    '</div></div>'
-    : '') +
-    '<div class="ce-divider"></div>' +
-    '<div class="sig-grid">' +
-    '<div><div class="sig-line"></div><div class="sig-label">Client Signature</div></div>' +
-    '<div><div class="sig-line"></div><div class="sig-label">Date</div></div>' +
-    '<div style="margin-top:1.5rem;"><div class="sig-line"></div><div class="sig-label">Havellin Representative</div></div>' +
-    '<div style="margin-top:1.5rem;"><div class="sig-line"></div><div class="sig-label">Date</div></div>' +
-    '</div>' +
     '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; (561) 370-4700<br>Licensed, Insured &amp; Bonded</div>';
 
   content.innerHTML = html;
