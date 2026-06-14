@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7067,6 +7067,9 @@ function vendorPickerOptions(selId) {
   });
   return html;
 }
+// Filled sourcing fields stay white (the default is cream, white only on focus),
+// so it's obvious at a glance which vendor/status/quote have been set.
+function _fldBg(set) { return set ? 'background:var(--white);' : ''; }
 function _vendorRefLine(rec) {
   if (!rec || (!rec.vendorId && !rec.vendorName)) return '';
   var v = lookupVendorById(rec.vendorId) || {};
@@ -7135,10 +7138,10 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setJobVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
-          '<select onchange="setJobVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
+          '<select onchange="setJobVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setJobVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
-          '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + '">' +
+          '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
           (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
         '</div>' + _vendorRefLine(rec) +
       '</div>';
@@ -7157,10 +7160,10 @@ function renderVendorSourcing(jobId, job, est) {
     return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
       '<div style="font-size:12px;font-weight:600;">' + cat.label + '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-        '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
-        '<select onchange="setLogisticsStatus(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
+        '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+        '<select onchange="setLogisticsStatus(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
         '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
-        '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setLogisticsQuote(' + jobId + ',\'' + cat.key + '\',this.value)" style="width:90px;font-size:12px;">' +
+        '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setLogisticsQuote(' + jobId + ',\'' + cat.key + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(quote !== '') + '">' +
       '</div>' + _vendorRefLine(rec) +
     '</div>';
   }).join('');
@@ -7180,10 +7183,10 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
-          '<select onchange="setPrepVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
+          '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setPrepVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
-          '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setPrepVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + '">' +
+          '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setPrepVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
           (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
         '</div>' + _vendorRefLine(rec) +
       '</div>';
@@ -7212,9 +7215,9 @@ function renderVendorSourcing(jobId, job, est) {
           '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">' + feeLabel + '</span>' +
-          '<input type="number" value="' + esc(String(fee)) + '" min="0" onchange="setCollFee(' + jobId + ',\'' + c.id + '\',this.value)" style="width:90px;font-size:12px;">' +
+          '<input type="number" value="' + esc(String(fee)) + '" min="0" onchange="setCollFee(' + jobId + ',\'' + c.id + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(fee !== '') + '">' +
         '</div>' +
         '<div id="coll-status-btns-' + c.id + '" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">' + planCollectionStatusBtns(jobId, c.id, cstatus) + '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin-top:6px;">' +
@@ -7257,7 +7260,7 @@ function setJobVendorQuote(jobId, i, val) {
 }
 function setJobVendorStatus(jobId, i, val) {
   var job = _svcJob(jobId, i); if (!job) return;
-  job.vendorSourcing[i].status = val; saveJobs();
+  job.vendorSourcing[i].status = val; saveJobs(); refreshVendorSourcing(jobId);
 }
 function _prepJob(jobId, i) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -7279,7 +7282,7 @@ function setPrepVendorQuote(jobId, i, val) {
 }
 function setPrepVendorStatus(jobId, i, val) {
   var job = _prepJob(jobId, i); if (!job) return;
-  job.prepSourcing[i].status = val; saveJobs();
+  job.prepSourcing[i].status = val; saveJobs(); refreshVendorSourcing(jobId);
 }
 function _collJob(jobId, collId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -7301,7 +7304,7 @@ function setCollFee(jobId, collId, val) {
 }
 function setCollVendorStatus(jobId, collId, val) {
   var job = _collJob(jobId, collId); if (!job) return;
-  job.collSourcing[collId].status = val; saveJobs();
+  job.collSourcing[collId].status = val; saveJobs(); refreshVendorSourcing(jobId);
 }
 function _logiJob(jobId, key) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -7323,7 +7326,7 @@ function setLogisticsQuote(jobId, key, val) {
 }
 function setLogisticsStatus(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
-  job.logisticsSourcing[key].status = val; saveJobs();
+  job.logisticsSourcing[key].status = val; saveJobs(); refreshVendorSourcing(jobId);
 }
 
 // ── PHASE 4: VENDOR SCORECARD (post-job write-back to the directory) ───────────
