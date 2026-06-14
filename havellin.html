@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6505,7 +6505,9 @@ function renderInvoice() {
     '<div class="approved-stamp"><div class="approved-stamp-text">✓ Approved for Release</div><div class="approved-stamp-sub">Approved by ' + invApprovedBy + ' on ' + invApprovedAt + '</div></div>' : '';
 
   function _amtDueBox(label, amt){
-    return '<tr style="background:var(--gray-dk);color:white;"><td style="padding:10px 14px;font-size:15px;font-weight:600;border-radius:4px 0 0 4px;"><strong>' + label + '</strong></td><td style="background:var(--gray-dk);"></td><td style="padding:10px 14px;text-align:right;font-family:Cormorant Garamond,serif;font-size:22px;font-weight:600;color:#C9A06A;border-radius:0 4px 4px 0;">' + (amt < 0 ? '<span style="color:#90d060;">Credit: ' + fmt(Math.abs(amt)) + '</span>' : fmt(amt)) + '</td></tr>';
+    // Set the dark background on every cell (not just the row) so the box renders solid
+    // even when it's the first row in the table — .pay-tbl tr:first-child td forces tan.
+    return '<tr style="background:var(--gray-dk);color:white;"><td style="background:var(--gray-dk);padding:10px 14px;font-size:15px;font-weight:600;border-radius:4px 0 0 4px;color:#fff;"><strong>' + label + '</strong></td><td style="background:var(--gray-dk);"></td><td style="background:var(--gray-dk);padding:10px 14px;text-align:right;font-family:Cormorant Garamond,serif;font-size:22px;font-weight:600;color:#C9A06A;border-radius:0 4px 4px 0;">' + (amt < 0 ? '<span style="color:#90d060;">Credit: ' + fmt(Math.abs(amt)) + '</span>' : fmt(amt)) + '</td></tr>';
   }
 
   // Vendor / prep costs — shown in every stage (informational; paid directly by client).
@@ -6561,7 +6563,6 @@ function renderInvoice() {
     (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
-    '<div class="ce-note" style="margin-top:0;">The deposit is calculated on the original estimate; the midpoint trues vendor &amp; home-prep fees to actuals; this final balance also trues labor to actual hours logged. Vendor invoices are billed directly to the client.</div>' +
     '</div>';
 
   // ADVANCE stages (deposit / midpoint) — labor on estimate; fees on actuals from midpoint.
