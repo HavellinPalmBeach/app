@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -257,7 +257,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
   <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
   <button class="nb" onclick="showPanel('job-plan',this)">Job Plan</button>
-  <button class="nb" onclick="showPanel('invoice',this)">Final Invoice</button>
+  <button class="nb" onclick="showPanel('invoice',this)">Invoices</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
   <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
 </div>
@@ -982,8 +982,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <div class="card" style="margin-bottom:1rem;">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
-        <div style="font-size:13px;font-weight:600;">Final Invoice</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Based on actual hours logged. Approve with PIN to unlock PDF.</div>
+        <div style="font-size:13px;font-weight:600;">Invoices</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Pick a stage — deposit, midpoint, or final. Approve with PIN to unlock PDF.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Job:</label>
@@ -1008,7 +1008,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
   <div id="invoice-preview">
     <div id="inv-page-content" style="max-width:780px;margin:0 auto;background:white;padding:2.5rem;">
-      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job with logged hours to generate the final invoice.</div>
+      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job and stage to generate an invoice.</div>
     </div>
   </div>
 </div>
@@ -5512,16 +5512,19 @@ function buildAgreementMailto() {
   return 'mailto:' + to + '?cc=' + cc + '&subject=' + subject + '&body=' + body;
 }
 
-function buildInvoiceMailto(job, balance) {
+function buildInvoiceMailto(job, balance, stage) {
   if (!job) return '#';
+  stage = stage || 'final';
+  var stageWord  = stage === 'deposit' ? 'deposit' : (stage === 'midpoint' ? 'midpoint' : 'final');
+  var stageTitle = stageWord.charAt(0).toUpperCase() + stageWord.slice(1);
   var to = encodeURIComponent(bestClientEmail(job));
   var tc = assignedTCContact(job);
-  var subject = encodeURIComponent('Havellin Palm Beach - Final Invoice for ' + (job.name||'Your Property'));
+  var subject = encodeURIComponent('Havellin Palm Beach - ' + stageTitle + ' Invoice for ' + (job.name||'Your Property'));
   var bal = balance ? '$' + Math.round(balance).toLocaleString() : 'see attached';
   var body = mailtoBody([
     'Dear ' + bestClientGreetingName(job) + ',',
     '',
-    'Please find attached your final invoice for Havellin Palm Beach services at ' + (job.addr||'your property') + '.',
+    'Please find attached your ' + stageWord + ' invoice for Havellin Palm Beach services at ' + (job.addr||'your property') + '.',
     '',
     'Balance due: ' + bal,
     'Payment is due within 7 calendar days.',
@@ -6321,7 +6324,7 @@ function renderInvoice() {
   var banner = document.getElementById('inv-banner-wrap');
 
   if (!job) {
-    content.innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job with logged hours to generate the final invoice.</div>';
+    content.innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job and stage to generate an invoice.</div>';
     btnApprove.style.display = 'none'; btnPdf.style.display = 'none';
     badge.innerHTML = ''; banner.innerHTML = '';
     return;
