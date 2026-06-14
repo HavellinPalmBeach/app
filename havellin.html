@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -826,8 +826,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="btn-s" id="btn-submit-approval" onclick="submitForApproval()" style="display:none;">Submit for Approval &#8594;</button>
         <button class="btn-s" id="btn-approve" onclick="openPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-bronze" id="btn-pdf" onclick="printClientEstimate()" style="display:none;">Print / Save PDF</button>
-        <button class="btn-s" id="btn-drive-est" onclick="saveFolderEstimate()" style="display:none;">&#128193; Save to Drive</button>
         <a class="btn-bronze" id="btn-mailto-est" href="#" style="display:none;text-decoration:none;">&#9993; Email to Client</a>
+        <button class="btn-s" id="btn-drive-est" onclick="saveFolderEstimate()" style="display:none;">&#128193; Save to Drive</button>
         <button class="btn-s" id="btn-mark-sent" onclick="markEstimateSent()" style="display:none;">&#10003; Mark as Sent</button>
         <button class="btn-s" id="btn-offer-discount" onclick="openDiscountModal()" style="display:none;">Offer Discount</button>
       </div>
@@ -999,7 +999,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <span id="inv-approval-badge"></span>
         <button class="btn-s" id="btn-inv-approve" onclick="openInvPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-bronze" id="btn-inv-pdf" onclick="printInvoice()" style="display:none;">Print / Save PDF</button>
-        <a class="btn-s" id="btn-mailto-inv" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
+        <a class="btn-bronze" id="btn-mailto-inv" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
       </div>
     </div>
   </div>
@@ -1043,8 +1043,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <span id="agr-approval-badge"></span>
         <button class="btn-s" id="btn-agr-approve" onclick="openAgrPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-s" id="btn-agr-stripe" onclick="generateStripeLink()" style="display:none;">Generate Payment Link</button>
-        <button class="btn-s" id="btn-agr-pdf" onclick="printAgreement()" style="display:none;">Print / Save PDF</button>
-        <a class="btn-s" id="btn-mailto-agr" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
+        <button class="btn-bronze" id="btn-agr-pdf" onclick="printAgreement()" style="display:none;">Print / Save PDF</button>
+        <a class="btn-bronze" id="btn-mailto-agr" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
         <button class="btn-s" id="btn-deposit-received" onclick="markDepositReceived()" style="display:none;background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-tx);">&#10003; Mark Deposit Received</button>
       </div>
     </div>
