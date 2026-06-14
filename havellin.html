@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7718,8 +7718,8 @@ function renderJobPlan(jobId, job, est) {
     }).join('') +
     '</div>';
 
-  var p2 = planSubsec('Rooms — Pack &amp; Complete') + p2rooms +
-    planSubsec('Midpoint Invoice (25%)') + midpointGateHtml(jobId, _midAmt) +
+  var p2 = planSubsec('Midpoint Invoice (25%)') + midpointGateHtml(jobId, _midAmt) +
+    planSubsec('Rooms — Pack &amp; Complete') + p2rooms +
     planSubsec('Phase Gates') +
     (isCleanout
       ? chks('p2_gate_',[
