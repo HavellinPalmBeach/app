@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 10:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3299,7 +3299,10 @@ function renderClientEstimate() {
 
   var vendorRows = '';
   (e.vendors||[]).forEach(function(v) {
-    if (v.cost > 0) vendorRows += '<tr><td>' + esc(v.type) + '</td><td class="r">' + fmt(v.cost) + '</td></tr>';
+    // Show every engaged vendor, even at $0 — an auction house or estate-sale company
+    // is collected/proceeds-based, but the client should still see they're engaged.
+    var amt = v.cost > 0 ? fmt(v.cost) : '<span style="color:var(--gray);font-style:italic;">No direct cost</span>';
+    vendorRows += '<tr><td>' + esc(v.type) + '</td><td class="r">' + amt + '</td></tr>';
   });
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
 
@@ -3377,7 +3380,7 @@ function renderClientEstimate() {
         '<tbody>' + rows + '</tbody></table>';
     })() +
 
-    '<div class="ce-section-hdr" style="margin-top:1rem;">Estimated Third-Party Vendor Costs</div>' +
+    '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendors Engaged</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
