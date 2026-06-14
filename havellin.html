@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2762,6 +2762,8 @@ function saveIntake() {
     probateSale: document.getElementById('i-probate-sale') ? document.getElementById('i-probate-sale').value : '',
     executorAuth: document.getElementById('i-executor-auth') ? document.getElementById('i-executor-auth').value : 'pending',
     depositReceived: false,
+    midpointInvoiceSent: false,
+    midpointReceived: false,
     agrSigned: false,
     svc:svc, svcLabel:svcLabels[svc],
     sqft:document.getElementById('i-sqft').value,
@@ -7455,6 +7457,56 @@ function writeVendorScores(jobId) {
   });
 }
 
+// Deep-link from the Job Plan into the Invoices tab, preset to a job + stage so the
+// TC doesn't have to hunt for it.
+function openInvoiceFor(jobId, stage) {
+  stage = stage || 'midpoint';
+  var navBtn = document.querySelector('.nb[onclick*="\'invoice\'"]');
+  if (navBtn) showPanel('invoice', navBtn);
+  var jobSel = document.getElementById('inv-job');
+  if (jobSel) jobSel.value = String(jobId);
+  loadInvoice();
+  var stageSel = document.getElementById('inv-stage');
+  if (stageSel) stageSel.value = stage;
+  setInvStage(stage);
+}
+function setMidpointSent(jobId, checked) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  job.midpointInvoiceSent = !!checked;
+  saveJobs(); syncJobToSheets(job);
+  loadJobPlanTab(); // re-render so the banner / close-out flag update
+}
+function setMidpointReceived(jobId, checked) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  job.midpointReceived = !!checked;
+  saveJobs(); syncJobToSheets(job);
+  loadJobPlanTab();
+}
+// Phase 2 billing gate: confirm the midpoint invoice went out (and was collected),
+// with a one-click jump to generate it.
+function midpointGateHtml(jobId, midAmt) {
+  var job = jobs.find(function(j){ return j.id === jobId; }) || {};
+  var sent = !!job.midpointInvoiceSent;
+  var recd = !!job.midpointReceived;
+  var amtStr = midAmt ? '$' + Math.round(midAmt).toLocaleString() : '—';
+  return '<div style="border:1px solid var(--border-md);border-radius:5px;padding:10px 12px;background:var(--white);">' +
+    '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">' +
+      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;margin:0;cursor:pointer;font-weight:600;">' +
+        '<input type="checkbox" style="width:auto;margin:0;" ' + (sent?'checked':'') + ' onchange="setMidpointSent(' + jobId + ',this.checked)"> ' +
+        'Midpoint invoice (25% = ' + amtStr + ') sent to client</label>' +
+      '<button onclick="openInvoiceFor(' + jobId + ',\'midpoint\')" class="btn-s" style="font-size:11px;">Generate midpoint invoice &rarr;</button>' +
+    '</div>' +
+    '<div style="margin-top:8px;">' +
+      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;margin:0;cursor:pointer;color:' + (recd?'var(--ok-tx)':'var(--gray-dk)') + ';">' +
+        '<input type="checkbox" style="width:auto;margin:0;" ' + (recd?'checked':'') + ' onchange="setMidpointReceived(' + jobId + ',this.checked)"> ' +
+        'Midpoint payment received</label>' +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Send this the moment all rooms lock — collection takes time, and you don\'t want to finish the job with 50% outstanding.</div>' +
+  '</div>';
+}
+
 function renderJobPlan(jobId, job, est) {
   var plan   = getJobPlan(jobId);
   var svc    = est.svc || job.svc || '';
@@ -7478,6 +7530,23 @@ function renderJobPlan(jobId, job, est) {
     return (b.cplx||0)-(a.cplx||0) || (b.vol||0)-(a.vol||0);
   });
   var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
+
+  // Midpoint billing: "all rooms locked" = Phase 1 complete = the contractual midpoint,
+  // and the moment to send the 25% invoice (collection takes time).
+  var _hav = est.havellinTotal || job.havellinEst || 0;
+  var _midAmt = paymentSplit(_hav).midpoint;
+  var _midAmtStr = _midAmt ? '$' + Math.round(_midAmt).toLocaleString() : '';
+  var _allLocked = rooms.length > 0 && rooms.every(function(r){
+    var st = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
+    return st === 'locked' || st === 'packed' || st === 'complete';
+  });
+  var _midBanner = (hasPlaybook && _allLocked && !job.midpointInvoiceSent)
+    ? '<div class="alert a-err" style="margin-bottom:12px;font-size:12.5px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">' +
+        '<span>&#9888; <strong>All rooms are locked — you&rsquo;re at the project midpoint.</strong> The 25% midpoint invoice' +
+        (_midAmtStr ? ' (' + _midAmtStr + ')' : '') + ' hasn&rsquo;t been sent. Don&rsquo;t finish the job with money outstanding.</span>' +
+        '<button onclick="openInvoiceFor(' + jobId + ',\'midpoint\')" class="btn-bronze" style="font-size:11px;">Generate midpoint invoice &rarr;</button>' +
+      '</div>'
+    : '';
 
   function chks(prefix, list) { // 2-column grid wrapper around positional checklist items
     return chkGrid(list.map(function(t,i){ return planChk(jobId, prefix+i, t); }).join(''));
@@ -7616,6 +7685,7 @@ function renderJobPlan(jobId, job, est) {
     '</div>';
 
   var p2 = planSubsec('Rooms — Pack &amp; Complete') + p2rooms +
+    planSubsec('Midpoint Invoice (25%)') + midpointGateHtml(jobId, _midAmt) +
     planSubsec('Phase Gates') +
     (isCleanout
       ? chks('p2_gate_',[
@@ -7666,7 +7736,13 @@ function renderJobPlan(jobId, job, est) {
         'Real estate relationship disclosed in writing; client consents to introduction',
         'Warm introduction to Team Ashley &amp; Anthony made']) : '';
 
-  var p4 = p4prep +
+  var _midCloseFlag = (hasPlaybook && !job.midpointReceived)
+    ? '<div class="alert a-err" style="margin-bottom:10px;font-size:11.5px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">' +
+        '<span>&#9888; Midpoint payment (25%' + (_midAmtStr ? ' = ' + _midAmtStr : '') + ') is not marked received. Collect it before closing out.</span>' +
+        '<button onclick="openInvoiceFor(' + jobId + ',\'midpoint\')" class="btn-s" style="font-size:10px;">Open midpoint invoice</button>' +
+      '</div>'
+    : '';
+  var p4 = _midCloseFlag + p4prep +
     planSubsec('Financial Close') +
     (isCleanout
       ? chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
@@ -7731,7 +7807,8 @@ function renderJobPlan(jobId, job, est) {
     return placeholder + sourcingCard + roomDocsCard;
   }
 
-  return planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
+  return _midBanner +
+    planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
     planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
     planPhaseWrap('p2','Phase 2 — Pack & Prepare', p2) +
     p3 +
