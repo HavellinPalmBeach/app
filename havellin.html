@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -985,9 +985,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="font-size:13px;font-weight:600;">Invoices</div>
         <div style="font-size:11px;color:var(--gray);margin-top:2px;">Pick a stage — deposit, midpoint, or final. Approve with PIN to unlock PDF.</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;flex:1;flex-wrap:wrap;">
         <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Job:</label>
-        <select id="inv-job" onchange="loadInvoice()" style="width:240px;">
+        <select id="inv-job" onchange="loadInvoice()" style="flex:1;min-width:280px;max-width:440px;">
           <option value="">Select job</option>
         </select>
         <label style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Stage:</label>
@@ -996,7 +996,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option value="midpoint">Midpoint (25%)</option>
           <option value="final" selected>Final (balance)</option>
         </select>
-        <span id="inv-approval-badge"></span>
+        <span id="inv-approval-badge" style="margin-left:auto;"></span>
         <button class="btn-s" id="btn-inv-approve" onclick="openInvPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-bronze" id="btn-inv-pdf" onclick="printInvoice()" style="display:none;">Print / Save PDF</button>
         <a class="btn-s" id="btn-mailto-inv" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
@@ -6672,10 +6672,9 @@ function renderInvoice() {
   }
 
   if (!invRequiresApproval) {
+    // The small "No approval required" badge says it all — no need for a full banner.
     badge.innerHTML = '<span class="badge b-approved">No approval required</span>';
-    banner.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>' +
-      (stage === 'final' ? 'Final is within ±15% of the estimate' : (stage === 'deposit' ? 'Deposit' : 'Midpoint') + ' invoice — formulaic from the approved estimate') +
-      '</strong> — no manager approval required. Review and send.</div></div>';
+    banner.innerHTML = '';
   } else {
     var _vpct = Math.round(_variancePct * 100);
     var _dir = overUnder >= 0 ? 'over' : 'under';
