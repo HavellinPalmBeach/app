@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 10:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 10:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -513,6 +513,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <select id="e-job" onchange="loadJobIntoEstimate()" style="flex:1;"><option value="">Select job</option></select>
           <button class="btn-s" onclick="clearEstimateTab()" title="Clear all rooms and reset estimate">Clear</button>
         </div>
+        <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
         <label>Estimate prepared by <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <select id="e-prepared-by">
           <option value="">Select TC</option>
@@ -2852,6 +2853,25 @@ function loadJobIntoEstimate() {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return;
 
+  // Home reference strip — beds/baths/sqft from intake, for glancing at during the
+  // walkthrough so you can sanity-check the rooms you've ticked against the property.
+  var refEl = document.getElementById('e-job-ref');
+  if (refEl) {
+    var _num = function(v){ var n = parseFloat(v); return isNaN(n) ? null : n; };
+    var refBits = [];
+    if (_num(job.beds)  != null) refBits.push('<strong>' + esc(job.beds)  + '</strong> bd');
+    if (_num(job.baths) != null) refBits.push('<strong>' + esc(job.baths) + '</strong> ba');
+    if (_num(job.sqft)  != null) refBits.push('<strong>' + _num(job.sqft).toLocaleString() + '</strong> sqft');
+    if (_num(job.yearsInHome) != null) refBits.push('<strong>' + esc(job.yearsInHome) + '</strong> yrs in home');
+    if (_num(job.propVal) != null) refBits.push('Property value <strong>$' + _num(job.propVal).toLocaleString() + '</strong>');
+    if (refBits.length) {
+      refEl.innerHTML = '<span style="text-transform:uppercase;font-size:10px;letter-spacing:.05em;color:var(--gray);margin-right:8px;">Home</span>' + refBits.join(' &nbsp;·&nbsp; ');
+      refEl.style.display = '';
+    } else {
+      refEl.innerHTML = ''; refEl.style.display = 'none';
+    }
+  }
+
   // Load service type and dates
   var svcEl = document.getElementById('e-svc');
   if (svcEl) svcEl.value = job.svc || '';
@@ -2919,6 +2939,8 @@ function loadJobIntoEstimate() {
 
 function clearEstimateTab() {
   document.getElementById('e-job').value = '';
+  var refEl = document.getElementById('e-job-ref');
+  if (refEl) { refEl.innerHTML = ''; refEl.style.display = 'none'; }
   var svcDisplay = document.getElementById('e-svc-display');
   if (svcDisplay) svcDisplay.textContent = '—';
   var svcEl = document.getElementById('e-svc');
