@@ -230,7 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 8:13pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 1:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5660,12 +5660,7 @@ function _renderCollPhotoCapture(jobId, collId) {
     + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
     + 'onchange="attachJobPlanCollectionPhoto(this,' + jobId + ',' + collId + ')">'
     + '&#128247; Capture Asset Photo</label>'
-    + '<label style="' + btnStyle + '">'
-    + '<input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style="display:none;" '
-    + 'onchange="uploadAppraisalFile(this,' + collId + ',' + jobId + ')">'
-    + '&#128196; Upload Appraisal</label>'
     + '<span id="photo-coll-status-' + jobId + '-' + collId + '">' + statusHtml + '</span>'
-    + '<span id="appraisal-badge-' + collId + '" style="font-size:10px;"></span>'
     + '</div>';
 }
 
@@ -6618,39 +6613,9 @@ function planCollectionStatusBtns(jobId, collId, status) {
   }).join(' ');
 }
 
-function renderCollectionsCard(jobId, collections, plan) {
-  if (!collections || collections.length === 0) return '';
-  var rows = collections.map(function(c) {
-    var status = (plan.collections && plan.collections[c.id] && plan.collections[c.id].status) || 'pending';
-    var CCLR = {pending:'var(--gray)',scheduled:'var(--bronze)',documented:'#2563a8','handed-off':'var(--ok-tx)'};
-    return '<div style="border:1px solid var(--border-md);border-radius:5px;padding:12px 14px;margin-bottom:10px;">'
-      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">'
-      + '<div>'
-      + '<div style="font-size:13px;font-weight:700;">' + c.name + '</div>'
-      + '<div style="font-size:11px;color:var(--gray);margin-top:2px;">'
-      + 'Owner value: ' + (c.value || '—') + ' &nbsp;·&nbsp; Disposition: ' + (c.dispLabel || c.disp || '—')
-      + (c.note ? ' &nbsp;·&nbsp; <em>' + c.note + '</em>' : '')
-      + '</div>'
-      + '</div>'
-      + '<span id="coll-status-badge-' + c.id + '" style="font-size:11px;font-weight:700;white-space:nowrap;color:' + (CCLR[status]||'var(--gray)') + ';">' + status.toUpperCase() + '</span>'
-      + '</div>'
-      + '<div id="coll-status-btns-' + c.id + '" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">'
-      + planCollectionStatusBtns(jobId, c.id, status)
-      + '</div>'
-      + '<div style="margin-bottom:8px;">'
-      + planChk(jobId, 'coll_' + c.id + '_0', 'Appropriate specialist or vendor identified and contacted')
-      + planChk(jobId, 'coll_' + c.id + '_1', 'In-home assessment or pickup visit scheduled — date confirmed')
-      + planChk(jobId, 'coll_' + c.id + '_2', 'Collection fully inventoried and photographed before any items move')
-      + planChk(jobId, 'coll_' + c.id + '_3', 'Disposition confirmed with client in writing before handoff')
-      + planChk(jobId, 'coll_' + c.id + '_4', 'Chain of custody documented — TC present for pickup; receipt captured')
-      + '</div>'
-      + _renderCollPhotoCapture(jobId, c.id)
-      + '</div>';
-  }).join('');
-
-  var subtitle = '<span style="font-size:11px;font-weight:400;opacity:.8;margin-left:10px;">Complete before room-by-room sorting · ' + collections.length + ' collection' + (collections.length > 1 ? 's' : '') + '</span>';
-  return planPhaseWrap('pc', 'Collections — Specialist Scheduling &amp; Inventory' + subtitle, rows);
-}
+// Collections are managed inline within Phase 0 → Vendor & Partner Sourcing
+// (renderVendorSourcing). The standalone collections card was removed to avoid
+// duplicating the Collection Partners rows.
 
 // ─── JOB PLAN TAB ────────────────────────────────────────────────────────────
 
@@ -6738,6 +6703,12 @@ function planChk(jobId, key, label) {
     '<input type="checkbox"' + (done ? ' checked' : '') +
     ' style="margin-top:2px;width:13px;height:13px;flex-shrink:0;accent-color:var(--gray-dk);"' +
     ' onchange="togglePlanTask(' + jobId + ',\'' + key + '\',this.checked,this)"> ' + label + '</label>';
+}
+
+// Wrap checklist items in a responsive 2-column grid (collapses to 1 column when
+// the panel is narrow, e.g. iPad portrait) to save vertical space.
+function chkGrid(inner) {
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 16px;">' + inner + '</div>';
 }
 
 function planSubsec(title) {
@@ -6881,28 +6852,40 @@ function renderVendorSourcing(jobId, job, est) {
   }
 
   if (colls.length) {
+    var plan = getJobPlan(jobId);
     var costDisp = { appraise:1, firearms:1 };
-    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">Collection Partners</div>';
+    var CCLR = {pending:'var(--gray)',scheduled:'var(--bronze)',documented:'#2563a8','handed-off':'var(--ok-tx)'};
+    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">Collection Partners <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— assign partner, track handoff &amp; chain of custody</span></div>';
     html += colls.map(function(c){
       var rec = csrc[c.id] || {};
       var isCost = !!costDisp[c.disp];
       var fee = (rec.fee != null && rec.fee !== '') ? rec.fee : '';
       var feeLabel = isCost ? 'Fee $' : 'Cost $';
       var hint = isCost ? '' : '<span style="font-size:10px;color:var(--gray);">commission netted from proceeds — usually $0 up front</span>';
+      var cstatus = (plan.collections && plan.collections[c.id] && plan.collections[c.id].status) || 'pending';
       return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
           '<strong style="font-size:12px;">' + esc(c.name||'Collection') + '</strong>' +
-          '<span style="font-size:11px;color:var(--bronze);font-weight:600;">' + esc(c.dispLabel||c.disp||'—') + '</span>' +
+          '<span style="display:flex;align-items:baseline;gap:8px;white-space:nowrap;">' +
+            '<span style="font-size:11px;color:var(--bronze);font-weight:600;">' + esc(c.dispLabel||c.disp||'—') + '</span>' +
+            '<span id="coll-status-badge-' + c.id + '" style="font-size:10px;font-weight:700;color:' + (CCLR[cstatus]||'var(--gray)') + ';">' + cstatus.toUpperCase() + '</span>' +
+          '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
           '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
-          '<select onchange="setCollVendorStatus(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">' + feeLabel + '</span>' +
           '<input type="number" value="' + esc(String(fee)) + '" min="0" onchange="setCollFee(' + jobId + ',\'' + c.id + '\',this.value)" style="width:90px;font-size:12px;">' +
-        '</div>' + (hint ? '<div style="margin-top:4px;">' + hint + '</div>' : '') + _vendorRefLine(rec) +
+        '</div>' +
+        '<div id="coll-status-btns-' + c.id + '" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">' + planCollectionStatusBtns(jobId, c.id, cstatus) + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin-top:6px;">' +
+          planChk(jobId, 'coll_' + c.id + '_2', 'Inventoried &amp; photographed before items move') +
+          planChk(jobId, 'coll_' + c.id + '_3', 'Disposition confirmed with client in writing') +
+          planChk(jobId, 'coll_' + c.id + '_4', 'Chain of custody documented — TC present; receipt captured') +
+        '</div>' +
+        (hint ? '<div style="margin-top:4px;">' + hint + '</div>' : '') + _vendorRefLine(rec) +
+        _renderCollPhotoCapture(jobId, c.id) +
       '</div>';
     }).join('');
-    html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Assign the partner here; photos, inventory, and chain of custody stay in the Collections section below.</div>';
   }
   return html;
 }
@@ -7092,8 +7075,8 @@ function renderJobPlan(jobId, job, est) {
   });
   var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
 
-  function chks(prefix, list) {
-    return list.map(function(t,i){ return planChk(jobId, prefix+i, t); }).join('');
+  function chks(prefix, list) { // 2-column grid wrapper around positional checklist items
+    return chkGrid(list.map(function(t,i){ return planChk(jobId, prefix+i, t); }).join(''));
   }
 
   // ── Header ──────────────────────────────────────────────────────────────────
@@ -7126,17 +7109,19 @@ function renderJobPlan(jobId, job, est) {
     '<textarea id="p0-call-notes-'+jobId+'" rows="4" style="width:100%;font-size:12px;padding:7px 9px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;" placeholder="Emotional tone, family dynamics, anything the client mentioned that isn\'t in a checkbox..." oninput="savePlanNote('+jobId+',\'p0_call_notes\',this.value)">'+p0CallNote+'</textarea>' +
     '</div>' +
     planSubsec('Agreements & Admin') +
-    chks('p0_admin_',['Signed engagement agreement confirmed on file',
-      '50% deposit received and confirmed before any crew is scheduled',
-      'Google Drive job folder created and shared with crew',
-      'All authorized decision-makers identified, with contact info',
-      'Preferred client communication method confirmed',
-      'NDA on file for every crew member and any contractor with property access']) +
-    planSubsec('Vendor Scheduling') +
-    chks('p0_vs_',['Each estimate vendor contacted; date and arrival window confirmed',
-      'Donation organization pickup window confirmed; staging location identified',
-      'Junk/haul removal tentatively scheduled for end of job',
-      'Auction house or appraiser in-home visit scheduled — only if collections flagged']) +
+    // Note: index keys are intentionally non-contiguous (skip _2 Drive folder and
+    // _5 NDA, both removed) so existing saved checkbox state stays mapped correctly.
+    chkGrid(
+      planChk(jobId,'p0_admin_0','Signed engagement agreement confirmed on file') +
+      planChk(jobId,'p0_admin_1','50% deposit received and confirmed before any crew is scheduled') +
+      planChk(jobId,'p0_admin_3','All authorized decision-makers identified, with contact info') +
+      planChk(jobId,'p0_admin_4','Preferred client communication method confirmed')
+    ) +
+    planSubsec('End-of-Job Logistics') +
+    chkGrid(
+      planChk(jobId,'p0_vs_1','Donation organization pickup window confirmed; staging location identified') +
+      planChk(jobId,'p0_vs_2','Junk/haul removal tentatively scheduled for end of job')
+    ) +
     planSubsec('Vendor &amp; Partner Sourcing') +
     '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>' +
     planSubsec('Crew & Materials') +
@@ -7314,12 +7299,17 @@ function renderJobPlan(jobId, job, est) {
         + docRooms
         + '</div>'
       : '';
-    return hdr + placeholder + renderCollectionsCard(jobId, collections, plan) + roomDocsCard;
+    var sourcingCard = (collections.length || (est.vendors||[]).length)
+      ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+        + '<div class="sec" style="margin-bottom:10px;">Vendor &amp; Partner Sourcing</div>'
+        + '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>'
+        + '</div>'
+      : '';
+    return hdr + placeholder + sourcingCard + roomDocsCard;
   }
 
   return hdr +
     planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
-    renderCollectionsCard(jobId, collections, plan) +
     planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
     planPhaseWrap('p2','Phase 2 — Pack & Prepare', p2) +
     p3 +
