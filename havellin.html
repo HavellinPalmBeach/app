@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6659,6 +6659,9 @@ function getJobPlan(jobId) {
 }
 function saveJobPlan(jobId) {
   try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
+  // Push to Sheets so the Job Plan (call notes, checkboxes, room status) follows
+  // you across devices, the same way jobs and estimates do.
+  postSyncBadge({ type: 'saveAllJobPlans', payload: jobPlanStore }, 'Plan synced ✓', 'Plan sync failed — saved locally');
 }
 function savePlanNote(jobId, key, val) {
   var plan = getJobPlan(jobId);
@@ -6671,7 +6674,22 @@ function getPlanNote(jobId, key) {
   return (plan.notes && plan.notes[key]) || '';
 }
 function loadJobPlanData() {
+  // localStorage first for instant render…
   try { var s = localStorage.getItem('havellin_jobplan_v1'); if(s) jobPlanStore = JSON.parse(s); } catch(e) {}
+  // …then pull the latest from Sheets (Sheets is source of truth across devices).
+  // Guarded on data.jobPlans so the app is safe before the Apps Script handler is
+  // added — an unsupported action just leaves local data untouched.
+  if (SHEETS_SYNC_URL) {
+    fetch(SHEETS_SYNC_URL + '?action=loadJobPlans')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data && data.jobPlans && typeof data.jobPlans === 'object' && !data.error) {
+          jobPlanStore = data.jobPlans;
+          try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
+        }
+      })
+      .catch(function(){ /* silent — localStorage is the fallback */ });
+  }
 }
 
 // ─── PROJECTION ENGINE ───────────────────────────────────────────────────────
@@ -7128,7 +7146,7 @@ function renderVendorSourcing(jobId, job, est) {
   html += logiCats.map(function(cat){
     var rec = lsrc[cat.key] || {};
     var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
-    return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+    return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
       '<div style="font-size:12px;font-weight:600;">' + cat.label + '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
         '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
@@ -7148,7 +7166,7 @@ function renderVendorSourcing(jobId, job, est) {
       var budget = p.cost || 0;
       var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
       var over = quote !== '' && budget > 0 && Number(quote) > budget;
-      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
         '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
           '<strong style="font-size:12px;">' + esc(p.type||'Prep item') + '</strong>' +
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
@@ -7177,7 +7195,7 @@ function renderVendorSourcing(jobId, job, est) {
       var feeLabel = isCost ? 'Fee $' : 'Cost $';
       var hint = isCost ? '' : '<span style="font-size:10px;color:var(--gray);">commission netted from proceeds — usually $0 up front</span>';
       var cstatus = (plan.collections && plan.collections[c.id] && plan.collections[c.id].status) || 'pending';
-      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+      return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
         '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
           '<strong style="font-size:12px;">' + esc(c.name||'Collection') + '</strong>' +
           '<span style="display:flex;align-items:baseline;gap:8px;white-space:nowrap;">' +
