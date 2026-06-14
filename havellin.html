@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3313,18 +3313,29 @@ function renderClientEstimate() {
   var prepGcFee = e.prepFee || 0;
   var hasMaterialsSection = e.pkgCost > 0 || vendorSMF > 0 || prepGcFee > 0;
 
+  // Move-management destination hours are folded into totTC/totPS (and tcFee/psFee),
+  // so show the on-site rows NET of destination — otherwise the destination labor is
+  // displayed twice and the line items don't reconcile to the Havellin Services Total.
+  var _isMove = (e.svc === 'downsizing_move' && (e.destTC||0) > 0);
+  var _destTcFee = _isMove ? Math.round((e.destTC||0) * e.tcRate) : 0;
+  var _destPsFee = _isMove ? Math.round((e.destPS||0) * e.psRate) : 0;
+  var _onsiteTcHrs = Math.ceil(e.totTC||0) - (_isMove ? (e.destTC||0) : 0);
+  var _onsitePsHrs = Math.ceil(e.totPS||0) - (_isMove ? (e.destPS||0) : 0);
+  var _onsiteTcFee = (e.tcFee||0) - _destTcFee;
+  var _onsitePsFee = (e.psFee||0) - _destPsFee;
+
   html +=
     '<div class="ce-section-hdr">Havellin Services</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' +
     proposedPlanRow(e) +
     '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
-    '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + Math.ceil(e.totTC||0) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(e.tcFee) + '</td></tr>' +
-    '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + Math.ceil(e.totPS||0) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(e.psFee) + '</td></tr>' +
-    (e.svc === 'downsizing_move' && (e.destTC||0) > 0 ?
+    '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
+    '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + _onsitePsHrs + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_onsitePsFee) + '</td></tr>' +
+    (_isMove ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
-      '<tr><td>Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt((e.destTC||0) * e.tcRate) + '</td></tr>' +
-      '<tr><td>Property Specialists — Unpacking, placement &amp; new home setup</td><td>' + (e.destPS||0).toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt((e.destPS||0) * e.psRate) + '</td></tr>'
+      '<tr><td>Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_destTcFee) + '</td></tr>' +
+      '<tr><td>Property Specialists — Unpacking, placement &amp; new home setup</td><td>' + (e.destPS||0).toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_destPsFee) + '</td></tr>'
     : '') +
     (hasMaterialsSection ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
