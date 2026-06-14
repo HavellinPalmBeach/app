@@ -236,7 +236,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 1:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 2:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5979,10 +5979,76 @@ function getVendorActuals(job, est) {
 var TC_NAMES = ['Anthony Graziano Sr', 'Ashley Jerome', 'Anthony Graziano Jr', 'Contractor — TC 1', 'Contractor — TC 2'];
 var PS_NAMES = ['Anthony Graziano Jr', 'Contractor — PS 1', 'Contractor — PS 2', 'Contractor — PS 3', 'Contractor — PS 4', 'Contractor — PS 5', 'Other'];
 
+// ─── JOB CREW (lock-in) ───────────────────────────────────────────────────────
+// The crew (TC + property specialists) is seeded from the estimate the first time
+// it's needed, stays editable in the Log Hours rows until the first hours are
+// saved, then each assigned role locks per-slot. Empty PS slots stay open so a
+// crew member can be added later (and that slot locks on its own first save).
+function seedCrewFromEstimate(job, est) {
+  var TIERS = { contractor_standard:1, contractor_senior:1, aj:1, none:1 };
+  var crew = { tc: { name: (est && est.preparedBy) || job.tc || '', locked: false }, ps: [] };
+  var slots = (est && est.psSlots) ? est.psSlots : [];
+  slots.forEach(function(s) {
+    var isTier = !!TIERS[s.type];
+    crew.ps.push({
+      name: isTier ? (s.type === 'aj' ? 'Anthony Graziano Jr' : '') : (s.type || ''),
+      tier: isTier ? s.type : '',
+      costRate: s.costRate || 0,
+      locked: false
+    });
+  });
+  while (crew.ps.length < 2) crew.ps.push({ name:'', tier:'', costRate:0, locked:false });
+  return crew;
+}
+
+function getJobCrew(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return null;
+  if (!job.crew || !job.crew.tc || !Array.isArray(job.crew.ps)) {
+    var rec = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
+    var est = rec ? rec.estimate : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
+    job.crew = seedCrewFromEstimate(job, est);
+  }
+  return job.crew;
+}
+
+function setCrewTC(jobId, name) {
+  var crew = getJobCrew(jobId); if (!crew || crew.tc.locked) return;
+  crew.tc.name = name; saveJobs();
+}
+function setCrewPS(jobId, slot, name) {
+  var crew = getJobCrew(jobId); if (!crew) return;
+  while (crew.ps.length <= slot) crew.ps.push({ name:'', tier:'', costRate:0, locked:false });
+  if (crew.ps[slot].locked) return;
+  crew.ps[slot].name = name;
+  crew.ps[slot].costRate = name ? getPSCostRate(name) : crew.ps[slot].costRate;
+  saveJobs();
+}
+// Lock every currently-assigned (named) role; empty slots stay open. Called on
+// the first hours save and on each subsequent save (so a later-filled slot locks).
+function lockAssignedCrew(jobId) {
+  var crew = getJobCrew(jobId); if (!crew) return;
+  if (crew.tc.name && !crew.tc.locked) crew.tc.locked = true;
+  crew.ps.forEach(function(p){ if (p.name && !p.locked) p.locked = true; });
+  saveJobs();
+}
+
 function buildLogTeamRows() {
   // Build TC and PS name options from live contractor directory
   var tcNames = getAllActiveTC().map(function(c){ return c.name; });
   var psNames = getAllActivePS().map(function(c){ return c.name; });
+
+  // Crew is seeded from the estimate; names persist across saves and lock per-slot
+  // once their first hours are logged.
+  var jobId = parseInt((document.getElementById('log-job')||{}).value) || 0;
+  var crew = jobId ? getJobCrew(jobId) : null;
+  var lockTag = ' <span style="font-size:9px;color:var(--ok-tx);font-weight:700;">🔒 locked for job</span>';
+  function optList(names, sel) {
+    var html = names.map(function(n){ return '<option' + (n===sel?' selected':'') + '>' + n + '</option>'; }).join('');
+    // Preserve a previously-assigned name that's no longer in the active list.
+    if (sel && names.indexOf(sel) < 0 && sel !== 'Contractor TBD') html += '<option selected>' + sel + '</option>';
+    return html;
+  }
 
   var rowStyle = 'display:grid;grid-template-columns:2fr 80px;gap:8px;align-items:end;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);';
   var lastRowStyle = 'display:grid;grid-template-columns:2fr 80px;gap:8px;align-items:end;margin-bottom:0;';
@@ -5990,27 +6056,33 @@ function buildLogTeamRows() {
   var html = '';
 
   // TC row (always present)
+  var tcName = crew ? crew.tc.name : '';
+  var tcLocked = !!(crew && crew.tc.locked);
   html += '<div style="' + rowStyle + '">' +
     '<div>' +
-      '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge</label>' +
-      '<select id="log-m0-name" style="margin-top:4px;">' +
+      '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge' + (tcLocked ? lockTag : '') + '</label>' +
+      '<select id="log-m0-name"' + (tcLocked ? ' disabled' : '') + ' onchange="setCrewTC(' + jobId + ',this.value)" style="margin-top:4px;">' +
         '<option value="">Select TC</option>' +
-        tcNames.map(function(n){ return '<option>'+n+'</option>'; }).join('') +
+        optList(tcNames, tcName) +
       '</select>' +
     '</div>' +
     '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
   '</div>';
 
-  // PS rows 1-4
+  // PS rows 1-4 (slot index = i-1). Locked slots are fixed; empty slots stay addable.
   for (var i = 1; i <= 4; i++) {
     var isLast = i === 4;
+    var slot = i - 1;
+    var p = crew && crew.ps[slot] ? crew.ps[slot] : null;
+    var psName = p ? p.name : '';
+    var psLocked = !!(p && p.locked);
     html += '<div style="' + (isLast ? lastRowStyle : rowStyle) + '">' +
       '<div>' +
-        '<label style="margin:0;color:var(--gray);">Property Specialist ' + i + '</label>' +
-        '<select id="log-m'+i+'-name" style="margin-top:4px;">' +
+        '<label style="margin:0;color:var(--gray);">Property Specialist ' + i + (psLocked ? lockTag : '') + '</label>' +
+        '<select id="log-m'+i+'-name"' + (psLocked ? ' disabled' : '') + ' onchange="setCrewPS(' + jobId + ',' + slot + ',this.value)" style="margin-top:4px;">' +
           '<option value="">Not on site</option>' +
-          psNames.map(function(n){ return '<option>'+n+'</option>'; }).join('') +
-          '<option value="Contractor TBD">Contractor TBD</option>' +
+          optList(psNames, psName) +
+          '<option value="Contractor TBD"' + (psName==='Contractor TBD'?' selected':'') + '>Contractor TBD</option>' +
         '</select>' +
       '</div>' +
       '<div><label style="margin:0;">Hours</label><input type="number" id="log-m'+i+'-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
@@ -6049,7 +6121,9 @@ function saveLogEntry() {
 
   saveLogData();
   syncLogToSheets(jobId, jobLogs[jobId][jobLogs[jobId].length-1]);
-  clearLogEntry();
+  lockAssignedCrew(jobId);   // first save locks every assigned role for the whole job
+  clearLogEntry();           // clears hours/date/activity — keeps crew names
+  buildLogTeamRows();        // re-render so locked roles show fixed; crew names persist
   updateLogSummary(jobId);
   renderLogHistory(jobId);
   renderProjection(jobId);
@@ -6057,11 +6131,12 @@ function saveLogEntry() {
 }
 
 function clearLogEntry() {
+  // Crew names persist (they live on job.crew); only hours/date/activity reset.
   document.getElementById('log-activity').value = '';
   document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
   for (var i = 0; i <= 4; i++) {
-    document.getElementById('log-m'+i+'-hrs').value = '';
-    if (i > 0) document.getElementById('log-m'+i+'-name').value = '';
+    var hrsEl = document.getElementById('log-m'+i+'-hrs');
+    if (hrsEl) hrsEl.value = '';
   }
 }
 
