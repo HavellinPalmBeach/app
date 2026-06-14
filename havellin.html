@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 10:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 11:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3424,7 +3424,7 @@ function renderClientEstimate() {
     '<div style="margin-top:1rem;"><div class="ce-section-hdr">Total Estimated Project Cost</div>' +
     '<table class="ce-tbl"><tbody>' +
     '<tr><td>Havellin Services</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
-    '<tr><td>Est. Third-Party Vendors</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
+    '<tr><td>Est. Third-Party Vendors (at cost)</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
     (e.prepEnabled && e.prepCost > 0 ? '<tr><td>Est. Home Prep Vendors (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' : '') +
     '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
     '</tbody></table></div>' +
