@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5980,8 +5980,9 @@ function getVendorActuals(job, est) {
   // End-of-job logistics vendors are added at job time (no estimate budget); their
   // actual quotes are third-party costs subject to the 15% SMF.
   var lsrc = job.logisticsSourcing || {};
-  if (typeof LOGISTICS_CATEGORIES !== 'undefined') {
-    LOGISTICS_CATEGORIES.forEach(function(cat){
+  if (typeof logisticsCatsFor === 'function') {
+    // Only count logistics categories not already covered by an estimate vendor.
+    logisticsCatsFor(vendors).forEach(function(cat){
       var rec = lsrc[cat.key];
       var q = (rec && rec.quote != null && rec.quote !== '') ? Number(rec.quote) : 0;
       if (q > 0) { tp.lines.push({ label: cat.label, amount: q, isEstimate: false, vendorName: rec.vendorName || '' }); tp.total += q; }
@@ -7062,13 +7063,24 @@ function _vendorRefLine(rec) {
 // Standard end-of-job logistics vendor categories — always offered in the Job Plan
 // sourcing so the crew can assign a hauler/dumpster/cleaner/etc. once the actual
 // volume is known mid-job (self-haul needs no vendor). Keyed for stable storage.
+// `est` lists the estimate vendor-type label(s) that cover this category — if one
+// was already added on the estimate it shows under Service Vendors instead, and the
+// logistics row is suppressed to avoid duplication / double-counting.
 var LOGISTICS_CATEGORIES = [
-  {key:'donation', label:'Donation Organization'},
-  {key:'junk',     label:'Junk Removal / Hauling'},
-  {key:'dumpster', label:'Dumpster Rental'},
-  {key:'cleaning', label:'Move-Out / Final Cleaning'},
-  {key:'shred',    label:'Document Shredding'}
+  {key:'donation', label:'Donation Organization', est:[]},
+  {key:'junk',     label:'Junk Removal / Hauling', est:['Junk Removal / Hauling']},
+  {key:'dumpster', label:'Dumpster Rental', est:['Dumpster Rental']},
+  {key:'cleaning', label:'Move-Out / Final Cleaning', est:['Professional Cleaning']},
+  {key:'shred',    label:'Document Shredding', est:['Document Shredding']}
 ];
+
+// Logistics categories not already covered by an estimate service vendor.
+function logisticsCatsFor(svcLines) {
+  var types = (svcLines || []).map(function(v){ return v.type; });
+  return LOGISTICS_CATEGORIES.filter(function(cat){
+    return !(cat.est || []).some(function(t){ return types.indexOf(t) >= 0; });
+  });
+}
 
 function renderVendorSourcing(jobId, job, est) {
   var svcLines = est.vendors || [];
@@ -7107,10 +7119,13 @@ function renderVendorSourcing(jobId, job, est) {
     }).join('');
   }
 
-  // End-of-Job Logistics — standard categories, always offered. Assign only what
-  // this job needs; quotes flow into the invoice's third-party actuals (15% SMF).
+  // End-of-Job Logistics — standard categories, minus any already added on the
+  // estimate (those live under Service Vendors). Assign only what this job needs;
+  // quotes flow into the invoice's third-party actuals (15% SMF).
+  var logiCats = logisticsCatsFor(svcLines);
+  if (logiCats.length) {
   html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">End-of-Job Logistics <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— assign only what this job needs; self-haul (van to dump/donation) needs no vendor</span></div>';
-  html += LOGISTICS_CATEGORIES.map(function(cat){
+  html += logiCats.map(function(cat){
     var rec = lsrc[cat.key] || {};
     var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
     return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
@@ -7123,6 +7138,7 @@ function renderVendorSourcing(jobId, job, est) {
       '</div>' + _vendorRefLine(rec) +
     '</div>';
   }).join('');
+  }
 
   if (hasPrep) {
     html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">Home Prep for Sale</div>';
