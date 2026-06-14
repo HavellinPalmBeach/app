@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 8:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6378,7 +6378,12 @@ function renderInvoice() {
   actTC = Math.round(actTC * 10) / 10;
   actPS = Math.round(actPS * 10) / 10;
 
-  var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
+  // Read the saved per-job estimate (synced, navigation-independent) — NOT the live
+  // estimator's currentEstimate, which is only populated after visiting the Estimate tab.
+  // Falling back to currentEstimate only if there's no saved record yet.
+  var _invEstRec = estimateStore[jobId];
+  var est = (_invEstRec && _invEstRec.estimate) ? _invEstRec.estimate
+          : ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
   var tcRate = (est ? est.tcRate : null) || (job.premium ? 185 : 150);
   var psRate = (est ? est.psRate : null) || (job.premium ? 125 : 100);
 
