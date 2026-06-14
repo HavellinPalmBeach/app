@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6998,8 +6998,13 @@ function planPhaseWrap(id, title, body) {
     'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div>';
 }
 
-function planRoomStatusBtns(jobId, roomIdx, status) {
-  var ST  = ['pending','sorting','locked','packed','complete'];
+// Room lifecycle is split across phases so the crew can't quietly drive a room to
+// "complete" from Phase 1 and skip Phase 2 (and the midpoint invoice). Phase 1 caps
+// at "locked" (decisions final); Phase 2 owns "packed → complete" (execution).
+function planRoomStatusBtns(jobId, roomIdx, status, phaseKey) {
+  var ST  = phaseKey === 'p1' ? ['pending','sorting','locked']
+          : phaseKey === 'p2' ? ['locked','packed','complete']
+          : ['pending','sorting','locked','packed','complete'];
   var CLR = {pending:'#aaa',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
   return '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:5px 0;">' +
     ST.map(function(s) {
@@ -7534,15 +7539,15 @@ function renderJobPlan(jobId, job, est) {
     rooms.map(function(r) {
       var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
       var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
-      return '<div id="plan-room-block-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
+      return '<div id="plan-room-block-p1-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
         '<strong style="font-size:12px;line-height:1.3;">'+r.name+'</strong>' +
-        '<span id="plan-room-badge-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
+        '<span id="plan-room-badge-p1-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
         '</div>' +
         '<div style="font-size:10px;color:var(--gray);margin-bottom:5px;">Vol '+r.vol+' · Cplx '+r.cplx+' · '+r.tcH.toFixed(1)+'TC / '+r.psH.toFixed(1)+'PS hrs</div>' +
         (r.note ? '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-bottom:4px;">&#128203; '+r.note+'</div>' : '') +
         (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin-bottom:4px;">&#127908; Voice note</div>' : '') +
-        '<div id="plan-room-status-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status)+'</div>' +
+        '<div id="plan-room-status-p1-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status,'p1')+'</div>' +
         '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-top:4px;"></div>' +
         '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
         _renderRoomPhotoControls(jobId, r.idx, 'before') +
@@ -7580,7 +7585,23 @@ function renderJobPlan(jobId, job, est) {
     return planChk(jobId,'p2_vx_'+i,(v.type||'Vendor')+' — confirmed day before; items staged and accessible');
   }).join('');
 
-  var p2 = planSubsec('Phase Gates') +
+  // Phase 2 room grid: same rooms, but only packed/complete are available here —
+  // the crew has to come to Phase 2 to advance a room past "locked".
+  var p2rooms = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;">' +
+    rooms.map(function(r) {
+      var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
+      return '<div id="plan-room-block-p2-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
+        '<strong style="font-size:12px;line-height:1.3;">'+r.name+'</strong>' +
+        '<span id="plan-room-badge-p2-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
+        '</div>' +
+        '<div id="plan-room-status-p2-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status,'p2')+'</div>' +
+        '</div>';
+    }).join('') +
+    '</div>';
+
+  var p2 = planSubsec('Rooms — Pack &amp; Complete') + p2rooms +
+    planSubsec('Phase Gates') +
     (isCleanout
       ? chks('p2_gate_',[
           'All disposition streams cleared: haul staged or removed, donation staged, consignment picked up, shred staged',
@@ -7723,11 +7744,14 @@ function togglePlanTask(jobId, key, checked, el) {
 
 function setPlanRoomStatus(jobId, roomIdx, status) {
   setRoomStatus(jobId, roomIdx, status);
-  var wrap = document.getElementById('plan-room-status-' + roomIdx);
-  if (wrap) wrap.innerHTML = planRoomStatusBtns(jobId, roomIdx, status);
-  var badge = document.getElementById('plan-room-badge-' + roomIdx);
   var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
-  if (badge) { badge.textContent = status.toUpperCase(); badge.style.color = CLR[status]||'var(--gray)'; }
+  // A room shows in both the Phase 1 and Phase 2 grids — keep both in sync.
+  ['p1','p2'].forEach(function(pk) {
+    var wrap = document.getElementById('plan-room-status-' + pk + '-' + roomIdx);
+    if (wrap) wrap.innerHTML = planRoomStatusBtns(jobId, roomIdx, status, pk);
+    var badge = document.getElementById('plan-room-badge-' + pk + '-' + roomIdx);
+    if (badge) { badge.textContent = status.toUpperCase(); badge.style.color = CLR[status]||'var(--gray)'; }
+  });
 }
 
 function printJobPlan() {
