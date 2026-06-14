@@ -185,13 +185,19 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .approval-banner.approved{background:var(--ok-bg);border-color:var(--sage-dk);}
 
 @media print {
+  /* Half-inch margin on every printed page edge — guarantees a footer on page 1
+     and a header on page 2 so text never hugs the paper edge. Requires the print
+     dialog's "Default" margins (not "None", which zeroes @page in Chrome). */
+  @page{margin:.5in;}
   .hdr,.nav,.ce-controls,.approval-banner{display:none!important;}
   .main{padding:0!important;max-width:100%!important;}
   .panel{display:none!important;}
   #print-target{display:block!important;}
   .approved-stamp{display:none!important;}
   body{background:white;margin:0;padding:0;}
-  .ce-page{padding:.6in .65in;max-width:100%;font-size:10px;line-height:1.4;}
+  /* Light page padding only — the @page margin above supplies the real edge gap,
+     so the page-1 header rides up a little rather than sitting an inch down. */
+  .ce-page{padding:.1in .15in;max-width:100%;font-size:10px;line-height:1.4;}
   /* Force background colors to print */
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
   .ce-brand{font-size:30px;}
@@ -230,7 +236,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 8:13pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3202,7 +3208,11 @@ function renderClientEstimate() {
   var isEstateJob = !!(job.executor && job.executor.trim());
 
   var html =
-    '<div style="text-align:center;padding:0 0 .75rem;">' +
+    '<div style="position:relative;text-align:center;padding:0 0 .75rem;">' +
+    '<div style="position:absolute;left:0;top:0;text-align:left;">' +
+    '<div class="ce-meta-label">Job ID</div>' +
+    '<div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'\u2014') + '</div>' +
+    '</div>' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
     '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Guiding Families Through Life\u2019s Transitions</div>' +
     '</div>' +
@@ -3221,16 +3231,14 @@ function renderClientEstimate() {
         '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val" style="font-size:11px;">' + (job.executorEmail||'—') + '</div></div>' +
         '</div>' +
         '<div class="ce-hdr-divider"></div>' +
-        '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
+        '<div class="ce-hdr-row" style="grid-template-columns:1fr;">' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
         '</div>'
       : '<div class="ce-hdr-row ce-hdr-row-1">' +
         '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
         '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
         '</div>'
     ) +
 
@@ -3328,9 +3336,8 @@ function renderClientEstimate() {
         return '<tr><td>' + esc(c.name) + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
       }).join('');
       return '<div class="ce-section-hdr" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
-        '<table class="ce-tbl"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
-        '<tbody>' + rows + '</tbody></table>' +
-        '<div class="ce-note">Havellin identifies the right partner for each item and coordinates the entire process on your behalf — our hands-on time and coordination are included in the estimate above.' + collectionsDispositionNote(cols) + '</div>';
+        '<table class="ce-tbl" style="margin-bottom:1.25rem;"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>';
     })() +
 
     '<div class="ce-section-hdr" style="margin-top:1rem;">Estimated Third-Party Vendor Costs</div>' +
