@@ -185,13 +185,19 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .approval-banner.approved{background:var(--ok-bg);border-color:var(--sage-dk);}
 
 @media print {
+  /* Half-inch margin on every printed page edge — guarantees a footer on page 1
+     and a header on page 2 so text never hugs the paper edge. Requires the print
+     dialog's "Default" margins (not "None", which zeroes @page in Chrome). */
+  @page{margin:.5in;}
   .hdr,.nav,.ce-controls,.approval-banner{display:none!important;}
   .main{padding:0!important;max-width:100%!important;}
   .panel{display:none!important;}
   #print-target{display:block!important;}
   .approved-stamp{display:none!important;}
   body{background:white;margin:0;padding:0;}
-  .ce-page{padding:.6in .65in;max-width:100%;font-size:10px;line-height:1.4;}
+  /* Light page padding only — the @page margin above supplies the real edge gap,
+     so the page-1 header rides up a little rather than sitting an inch down. */
+  .ce-page{padding:.1in .15in;max-width:100%;font-size:10px;line-height:1.4;}
   /* Force background colors to print */
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
   .ce-brand{font-size:30px;}
@@ -230,7 +236,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.13 · 8:13pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 4:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -709,7 +715,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
         <div id="prep-content" style="display:none;">
           <table class="vtbl">
-            <thead><tr><th>Prep Item / Vendor</th><th>Est. Cost</th><th>15% SMF</th><th></th></tr></thead>
+            <thead><tr><th>Prep Item / Vendor</th><th>Est. Cost</th><th>30% GC Fee</th><th></th></tr></thead>
             <tbody id="prep-body"></tbody>
             <tfoot>
               <tr>
@@ -764,7 +770,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
           <tr><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
           <tr><td class="muted">Vendor SMF (15%)</td><td class="num" id="s-smf">$0</td></tr>
-          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home prep SMF (15%)</td><td class="num" id="s-prep-fee">$0</td></tr>
+          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Customer Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
@@ -2188,7 +2194,7 @@ function calcAll() {
         '<table style="width:100%;font-size:11px;border-collapse:collapse;">' +
         (coordDays > 0 ? '<tr><td style="padding:4px 0;">Transition Concierge coordination (' + coordDays + ' days × 8hrs)</td><td style="text-align:right;">' + fmt(coordDays*8*tcRate) + '</td></tr>' : '') +
         (vendorTotal > 0 ? '<tr><td style="padding:4px 0;">Contractor / vendor costs</td><td style="text-align:right;">' + fmt(vendorTotal) + '</td></tr>' : '') +
-        (vendorTotal > 0 ? '<tr><td style="padding:4px 0;color:var(--bronze);">GC management fee (30%)</td><td style="text-align:right;color:var(--bronze);">' + fmt(gcFee) + '</td></tr>' : '') +
+        (vendorTotal > 0 ? '<tr><td style="padding:4px 0;color:var(--bronze);">GC / Site Management Fee (30%)</td><td style="text-align:right;color:var(--bronze);">' + fmt(gcFee) + '</td></tr>' : '') +
         (stagerCost > 0 ? '<tr><td style="padding:4px 0;">Professional stager</td><td style="text-align:right;">' + fmt(stagerCost) + '</td></tr>' : '') +
         (stagerGcFee > 0 ? '<tr><td style="padding:4px 0;color:var(--bronze);">Stager GC fee (30%)</td><td style="text-align:right;color:var(--bronze);">' + fmt(stagerGcFee) + '</td></tr>' : '') +
         '</table>';
@@ -2519,7 +2525,7 @@ function togglePrepSection() {
 }
 
 document.getElementById('new-prep-cost').addEventListener('input', function() {
-  document.getElementById('new-prep-fee').textContent = '$' + Math.round((parseFloat(this.value)||0) * 0.15).toLocaleString();
+  document.getElementById('new-prep-fee').textContent = '$' + Math.round((parseFloat(this.value)||0) * 0.30).toLocaleString();
 });
 
 function addPrepItem() {
@@ -2540,7 +2546,7 @@ function renderPrepItems() {
   prepItems.forEach(function(p,i) {
     html += '<tr><td><strong>'+p.type+'</strong></td>' +
       '<td><input type="number" value="'+p.cost+'" oninput="updatePrepCost('+i+',this.value)" style="width:100%;"></td>' +
-      '<td>$'+Math.round(p.cost*0.15).toLocaleString()+'</td>' +
+      '<td>$'+Math.round(p.cost*0.30).toLocaleString()+'</td>' +
       '<td><button class="icon-btn del" onclick="removePrepItem('+i+')">✕</button></td></tr>';
   });
   var tbody = document.getElementById('prep-body');
@@ -2552,7 +2558,7 @@ function updatePrepCost(i, val) { prepItems[i].cost = parseFloat(val)||0; render
 
 function calcPrepTotals() {
   var totalCost = prepItems.reduce(function(a,p){ return a+p.cost; }, 0);
-  var totalFee = Math.round(totalCost * 0.15);
+  var totalFee = Math.round(totalCost * 0.30);
   var tcHrs = getPrepTCHrs();
   var c = document.getElementById('prep-total-cost');
   var f = document.getElementById('prep-total-fee');
@@ -2564,7 +2570,7 @@ function calcPrepTotals() {
 }
 
 function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost; }, 0); }
-function getPrepFee()  { return Math.round(getPrepCost() * 0.15); }
+function getPrepFee()  { return Math.round(getPrepCost() * 0.30); }
 function toggleMoveHours() {
   document.getElementById('move-hours-wrap').style.display = document.getElementById('adj-move').checked ? 'block' : 'none';
   calcAll();
@@ -3105,7 +3111,7 @@ function proposedPlanRow(e) {
   var vTypes = (e.vendors || []).filter(function(v){ return v.cost > 0; }).map(function(v){ return esc(v.type); });
   vTypes = vTypes.filter(function(t, i){ return vTypes.indexOf(t) === i; });
   if (vTypes.length) {
-    notes.push(['Third-party coordination', 'We coordinate every outside vendor on your behalf — ' + andList(vTypes) + ' — scheduling each pickup, supervising on-site, and verifying the work. These are billed to you directly at cost and summarized below.']);
+    notes.push(['Third-party coordination', 'We coordinate every outside vendor on your behalf — ' + andList(vTypes) + ' — scheduling each pickup, supervising on-site, and verifying the work. Third-party vendor costs are estimates only; actual invoices are billed directly to you at cost.']);
   }
 
   if ((e.collections || []).length) {
@@ -3202,7 +3208,11 @@ function renderClientEstimate() {
   var isEstateJob = !!(job.executor && job.executor.trim());
 
   var html =
-    '<div style="text-align:center;padding:0 0 .75rem;">' +
+    '<div style="position:relative;text-align:center;padding:0 0 .75rem;">' +
+    '<div style="position:absolute;left:0;top:0;text-align:left;">' +
+    '<div class="ce-meta-label">Job ID</div>' +
+    '<div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'\u2014') + '</div>' +
+    '</div>' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
     '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Guiding Families Through Life\u2019s Transitions</div>' +
     '</div>' +
@@ -3221,16 +3231,14 @@ function renderClientEstimate() {
         '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val" style="font-size:11px;">' + (job.executorEmail||'—') + '</div></div>' +
         '</div>' +
         '<div class="ce-hdr-divider"></div>' +
-        '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
+        '<div class="ce-hdr-row" style="grid-template-columns:1fr;">' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
         '</div>'
       : '<div class="ce-hdr-row ce-hdr-row-1">' +
         '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
         '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
         '</div>'
     ) +
 
@@ -3285,8 +3293,9 @@ function renderClientEstimate() {
   };
   var onsiteLabel = _svcSubHdr[e.svc] || 'Onsite Services';
   var _subHdrStyle = 'padding:6px 10px;font-size:11px;font-weight:600;color:var(--bronze);text-transform:uppercase;letter-spacing:.05em;';
-  var combinedSMF = (e.smf || 0) + (e.prepFee || 0);
-  var hasMaterialsSection = e.pkgCost > 0 || combinedSMF > 0;
+  var vendorSMF = e.smf || 0;
+  var prepGcFee = e.prepFee || 0;
+  var hasMaterialsSection = e.pkgCost > 0 || vendorSMF > 0 || prepGcFee > 0;
 
   html +=
     '<div class="ce-section-hdr">Havellin Services</div>' +
@@ -3304,13 +3313,14 @@ function renderClientEstimate() {
     (hasMaterialsSection ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
       (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
-      (combinedSMF > 0 ? '<tr><td>Service Management Fee — Vendor &amp; home prep coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(combinedSMF) + '</td></tr>' : '')
+      (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
+      (prepGcFee > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)</td><td>—</td><td>30% of prep vendors</td><td class="r">' + fmt(prepGcFee) + '</td></tr>' : '')
     : '') +
     (e.prepEnabled && e.prepTCHrs > 0 ? '<tr><td colspan="4" style="font-size:11px;color:var(--gray);font-style:italic;padding:4px 10px;">Includes ' + e.prepTCHrs.toFixed(1) + ' TC hrs for home prep vendor coordination — factored into Transition Concierge total above.</td></tr>' : '') +
     '</tbody>' +
     (e.svcType === 'prep' && e.gcFee > 0 ?
       '<tr><td>Vendor / contractor costs</td><td>' + fmt(e.vendorTotal || 0) + ' est.</td><td>Pass-through</td><td class="r">' + fmt(e.vendorTotal || 0) + '</td></tr>' +
-      '<tr><td>General contractor management fee (30%)</td><td></td><td></td><td class="r">' + fmt(e.gcFee) + '</td></tr>' +
+      '<tr><td>GC / Site Management Fee (30%)</td><td></td><td></td><td class="r">' + fmt(e.gcFee) + '</td></tr>' +
       (e.stagerCost > 0 ? '<tr><td>Professional staging</td><td>' + fmt(e.stagerCost) + ' est.</td><td>Pass-through + 30% GC fee</td><td class="r">' + fmt(e.stagerCost + (e.stagerGcFee||0)) + '</td></tr>' : '') : '') +
     (e.discountPct > 0 ?
       '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt)) + '</td></tr>' +
@@ -3328,9 +3338,8 @@ function renderClientEstimate() {
         return '<tr><td>' + esc(c.name) + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
       }).join('');
       return '<div class="ce-section-hdr" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
-        '<table class="ce-tbl"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
-        '<tbody>' + rows + '</tbody></table>' +
-        '<div class="ce-note">Havellin identifies the right partner for each item and coordinates the entire process on your behalf — our hands-on time and coordination are included in the estimate above.' + collectionsDispositionNote(cols) + '</div>';
+        '<table class="ce-tbl" style="margin-bottom:1.25rem;"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>';
     })() +
 
     '<div class="ce-section-hdr" style="margin-top:1rem;">Estimated Third-Party Vendor Costs</div>' +
@@ -3338,7 +3347,7 @@ function renderClientEstimate() {
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note">Third-party vendor costs are estimates only. Actual invoices are billed directly to the client at cost. Havellin does not mark up vendor costs — the 15% Service Management Fee is included in the Havellin Services section above.</div>' +
+    '<div style="margin-bottom:1.25rem;"></div>' +
 
     (e.prepEnabled && e.prepItems && e.prepItems.length > 0 ? (function() {
       var rows = e.prepItems.filter(function(p){ return p.cost > 0; }).map(function(p) {
@@ -3348,7 +3357,7 @@ function renderClientEstimate() {
         '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody>' +
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
-        '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">Service Management Fee (15%) is included in the Havellin Services section above.</td></tr>' +
+        '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">GC / Site Management Fee (30%) is included in the Havellin Services section above.</td></tr>' +
         '</table>';
     })() : '') +
 
@@ -3372,7 +3381,7 @@ function renderClientEstimate() {
     '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
     '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
     '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
-    '<li>A 15% Service Management Fee applies to all third-party vendors and home prep vendors coordinated by Havellin.</li>' +
+    '<li>A 15% Service Management Fee applies to all third-party vendors coordinated by Havellin. Home Prep for Sale vendors are subject to a 30% GC / Site Management Fee in lieu of the Service Management Fee.</li>' +
     '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>' +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     '<li>Havellin Palm Beach is licensed, insured, and bonded.</li>' +
@@ -6279,6 +6288,7 @@ function renderInvoice() {
     '<tbody>' + teamRows + '</tbody>' +
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
+    (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (30%)</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Customer Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
