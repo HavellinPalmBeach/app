@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 6:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6617,13 +6617,15 @@ function renderInvoice() {
     '</div>' +
     '<div class="ce-divider-thick"></div>' +
     '<div class="ce-title">' + stageTitle + '</div>' +
-    '<div class="ce-meta">' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name) + '</div></div>' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Invoice date</div><div class="ce-meta-val">' + today + '</div></div>' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc(job.addr||'—') + '</div></div>' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(job.svcLabel) + '</div></div>' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Transition Concierge</div><div class="ce-meta-val">' + (job.tc||'—') + '</div></div>' +
-    '<div class="ce-meta-item"><div class="ce-meta-label">Working days</div><div class="ce-meta-val">' + [...new Set(logs.map(function(e){ return e.date; }))].length + '</div></div>' +
+    '<div class="ce-hdr-row ce-hdr-row-1">' +
+    '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(job.svcLabel||'—') + '</div></div>' +
+    '</div>' +
+    '<div class="ce-hdr-divider"></div>' +
+    '<div class="ce-hdr-row" style="grid-template-columns:1fr;">' +
+    '<div><div class="ce-meta-label">Invoice Date</div><div class="ce-meta-val">' + today + '</div></div>' +
     '</div>' +
     '<div class="ce-divider"></div>' +
     contactLine +
