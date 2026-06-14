@@ -190,10 +190,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .approval-banner.approved{background:var(--ok-bg);border-color:var(--sage-dk);}
 
 @media print {
-  /* Half-inch margin on every printed page edge — guarantees a footer on page 1
-     and a header on page 2 so text never hugs the paper edge. Requires the print
-     dialog's "Default" margins (not "None", which zeroes @page in Chrome). */
-  @page{margin:.5in;}
+  /* Printed page margins: 1in top, 0.5in bottom/sides — keeps content off the paper
+     edges on every page, including across page breaks. Requires the print dialog's
+     "Default" margins (selecting "None" zeroes @page in Chrome). */
+  @page{margin:1in .5in .5in .5in;}
   .hdr,.nav,.ce-controls,.approval-banner{display:none!important;}
   .main{padding:0!important;max-width:100%!important;}
   .panel{display:none!important;}
@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 11:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 12:05am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
