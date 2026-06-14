@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5976,6 +5976,18 @@ function getVendorActuals(job, est) {
 
   var tp = resolve(vendors, vsrc);
   var pr = resolve(prepItems, psrc);
+
+  // End-of-job logistics vendors are added at job time (no estimate budget); their
+  // actual quotes are third-party costs subject to the 15% SMF.
+  var lsrc = job.logisticsSourcing || {};
+  if (typeof LOGISTICS_CATEGORIES !== 'undefined') {
+    LOGISTICS_CATEGORIES.forEach(function(cat){
+      var rec = lsrc[cat.key];
+      var q = (rec && rec.quote != null && rec.quote !== '') ? Number(rec.quote) : 0;
+      if (q > 0) { tp.lines.push({ label: cat.label, amount: q, isEstimate: false, vendorName: rec.vendorName || '' }); tp.total += q; }
+    });
+  }
+
   return {
     thirdParty: tp.lines, thirdPartyTotal: tp.total, thirdPartyAnyEst: tp.anyEst,
     smf: Math.round(tp.total * 0.15),
@@ -7047,14 +7059,22 @@ function _vendorRefLine(rec) {
     (v.notes ? '<br><span style="color:var(--gray);font-weight:400;font-style:italic;">' + esc(v.notes) + '</span>' : '') +
     '</div>';
 }
+// Standard end-of-job logistics vendor categories — always offered in the Job Plan
+// sourcing so the crew can assign a hauler/dumpster/cleaner/etc. once the actual
+// volume is known mid-job (self-haul needs no vendor). Keyed for stable storage.
+var LOGISTICS_CATEGORIES = [
+  {key:'donation', label:'Donation Organization'},
+  {key:'junk',     label:'Junk Removal / Hauling'},
+  {key:'dumpster', label:'Dumpster Rental'},
+  {key:'cleaning', label:'Move-Out / Final Cleaning'},
+  {key:'shred',    label:'Document Shredding'}
+];
+
 function renderVendorSourcing(jobId, job, est) {
   var svcLines = est.vendors || [];
   var colls    = est.collections || [];
   var prepLines = (est.prepEnabled && est.prepItems) ? est.prepItems : [];
   var hasPrep = prepLines.some(function(p){ return p.cost > 0; });
-  if (!svcLines.length && !colls.length && !hasPrep) {
-    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No third-party vendors or collections on this estimate.</div>';
-  }
   var html = '';
   if (!vendorDirectory.length) {
     html += '<div style="font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-bottom:8px;">Vendor directory not loaded — set the Vendor Directory URL in Settings to pick vendors. You can still type a quote.</div>';
@@ -7062,6 +7082,7 @@ function renderVendorSourcing(jobId, job, est) {
   var src  = job.vendorSourcing || {};
   var psrc = job.prepSourcing   || {};
   var csrc = job.collSourcing   || {};
+  var lsrc = job.logisticsSourcing || {};
 
   if (svcLines.length) {
     html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:2px 0 6px;">Service Vendors</div>';
@@ -7085,6 +7106,23 @@ function renderVendorSourcing(jobId, job, est) {
       '</div>';
     }).join('');
   }
+
+  // End-of-Job Logistics — standard categories, always offered. Assign only what
+  // this job needs; quotes flow into the invoice's third-party actuals (15% SMF).
+  html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">End-of-Job Logistics <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— assign only what this job needs; self-haul (van to dump/donation) needs no vendor</span></div>';
+  html += LOGISTICS_CATEGORIES.map(function(cat){
+    var rec = lsrc[cat.key] || {};
+    var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
+    return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;">' +
+      '<div style="font-size:12px;font-weight:600;">' + cat.label + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
+        '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+        '<select onchange="setLogisticsStatus(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;">' + vendorStatusOptions(rec.status) + '</select>' +
+        '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
+        '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setLogisticsQuote(' + jobId + ',\'' + cat.key + '\',this.value)" style="width:90px;font-size:12px;">' +
+      '</div>' + _vendorRefLine(rec) +
+    '</div>';
+  }).join('');
 
   if (hasPrep) {
     html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">Home Prep for Sale</div>';
@@ -7222,6 +7260,28 @@ function setCollFee(jobId, collId, val) {
 function setCollVendorStatus(jobId, collId, val) {
   var job = _collJob(jobId, collId); if (!job) return;
   job.collSourcing[collId].status = val; saveJobs();
+}
+function _logiJob(jobId, key) {
+  var job = jobs.find(function(j){ return j.id===jobId; });
+  if (!job) return null;
+  if (!job.logisticsSourcing) job.logisticsSourcing = {};
+  if (!job.logisticsSourcing[key]) job.logisticsSourcing[key] = {};
+  return job;
+}
+function setLogisticsVendor(jobId, key, val) {
+  var job = _logiJob(jobId, key); if (!job) return;
+  var rec = job.logisticsSourcing[key], v = lookupVendorById(val);
+  rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
+  rec.contact = v ? (v.primary_contact||'') : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  saveJobs(); refreshVendorSourcing(jobId);
+}
+function setLogisticsQuote(jobId, key, val) {
+  var job = _logiJob(jobId, key); if (!job) return;
+  job.logisticsSourcing[key].quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+}
+function setLogisticsStatus(jobId, key, val) {
+  var job = _logiJob(jobId, key); if (!job) return;
+  job.logisticsSourcing[key].status = val; saveJobs();
 }
 
 // ── PHASE 4: VENDOR SCORECARD (post-job write-back to the directory) ───────────
@@ -7406,11 +7466,6 @@ function renderJobPlan(jobId, job, est) {
       planChk(jobId,'p0_admin_3','All authorized decision-makers identified, with contact info') +
       planChk(jobId,'p0_admin_4','Preferred client communication method confirmed')
     ) +
-    planSubsec('End-of-Job Logistics') +
-    chkGrid(
-      planChk(jobId,'p0_vs_1','Donation organization pickup window confirmed; staging location identified') +
-      planChk(jobId,'p0_vs_2','Junk/haul removal tentatively scheduled for end of job')
-    ) +
     planSubsec('Vendor &amp; Partner Sourcing') +
     '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>' +
     planSubsec('Crew & Materials') +
@@ -7588,12 +7643,10 @@ function renderJobPlan(jobId, job, est) {
         + docRooms
         + '</div>'
       : '';
-    var sourcingCard = (collections.length || (est.vendors||[]).length)
-      ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+    var sourcingCard = '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
         + '<div class="sec" style="margin-bottom:10px;">Vendor &amp; Partner Sourcing</div>'
         + '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>'
-        + '</div>'
-      : '';
+        + '</div>';
     return placeholder + sourcingCard + roomDocsCard;
   }
 
