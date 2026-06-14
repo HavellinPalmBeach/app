@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 9:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2490,12 +2490,19 @@ function renderVendors() {
   vendors.forEach(function(v,i) {
     html += '<tr><td><strong>' + v.type + '</strong></td>' +
       '<td><input type="number" value="' + v.cost + '" oninput="updateVendorCost('+i+',this.value)" style="width:100%;"></td>' +
-      '<td>$' + Math.round(v.cost*0.15).toLocaleString() + '</td>' +
+      '<td id="vendor-smf-'+i+'">$' + Math.round(v.cost*0.15).toLocaleString() + '</td>' +
       '<td><button class="icon-btn del" onclick="removeVendor('+i+')">✕</button></td></tr>';
   });
   document.getElementById('vendor-body').innerHTML = html || '<tr><td colspan="4" style="color:var(--gray);font-size:11px;padding:10px;">No vendors added</td></tr>';
 }
-function updateVendorCost(i, val) { vendors[i].cost = parseFloat(val)||0; renderVendors(); calcAll(); }
+function updateVendorCost(i, val) {
+  // Don't re-render the table on each keystroke — that recreates the input and steals
+  // focus (the "one digit at a time" bug). Update the model, the row's SMF cell, and totals.
+  vendors[i].cost = parseFloat(val)||0;
+  var smfCell = document.getElementById('vendor-smf-'+i);
+  if (smfCell) smfCell.textContent = '$' + Math.round(vendors[i].cost*0.15).toLocaleString();
+  calcAll();
+}
 function calcVendorTotals() {
   var totalSMF = vendors.reduce(function(a,v){ return a + Math.round(v.cost*0.15); }, 0);
   var totalCost = vendors.reduce(function(a,v){ return a + v.cost; }, 0);
