@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 5:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5660,12 +5660,21 @@ function _updatePhotoStatusEl(jobId, roomIdx, label) {
       cntEl.style.cssText = '';
     }
   }
+  var warnHtml = '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Photo not saved — see Retry below</span>';
+  // Label-specific flag (Phase 1 'before' card / Phase 2 'after' card live separately).
+  var labelFailed = refs.some(function(r){ return r.status === 'failed'; });
+  var lblFlag = document.getElementById('photo-fail-flag-' + jobId + '-r' + roomIdx + '-' + label);
+  if (lblFlag) {
+    lblFlag.style.display = labelFailed ? '' : 'none';
+    lblFlag.innerHTML = labelFailed ? warnHtml : '';
+  }
+  // Legacy combined flag (standalone Room Documentation card has both photos in one).
   var allRefs = (_photoRefs[jobId] || []).filter(function(r){ return r.roomIdx === roomIdx && !r.collId; });
   var anyFailed = allRefs.some(function(r){ return r.status === 'failed'; });
   var flagEl = document.getElementById('photo-fail-flag-' + jobId + '-r' + roomIdx);
   if (flagEl) {
     flagEl.style.display = anyFailed ? '' : 'none';
-    flagEl.innerHTML = anyFailed ? '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Photo not saved — see Retry below</span>' : '';
+    flagEl.innerHTML = anyFailed ? warnHtml : '';
   }
 }
 
@@ -7538,7 +7547,7 @@ function renderJobPlan(jobId, job, est) {
   // ── Phase 1 ──────────────────────────────────────────────────────────────────
   // Compact room grid: 3 per row. Status buttons + photos only — no per-room checklists.
   // The highlighted status button already shows current status; no separate badge needed.
-  var p1rooms = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;">' +
+  var p1rooms = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px;">' +
     rooms.map(function(r) {
       var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
       var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
@@ -7551,10 +7560,9 @@ function renderJobPlan(jobId, job, est) {
         (r.note ? '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-bottom:4px;">&#128203; '+r.note+'</div>' : '') +
         (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin-bottom:4px;">&#127908; Voice note</div>' : '') +
         '<div id="plan-room-status-p1-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status,'p1')+'</div>' +
-        '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-top:4px;"></div>' +
+        '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'-before" style="display:none;margin-top:4px;"></div>' +
         '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
         _renderRoomPhotoControls(jobId, r.idx, 'before') +
-        _renderRoomPhotoControls(jobId, r.idx, 'after') +
         '</div>' +
         '</div>';
     }).join('') +
@@ -7590,7 +7598,7 @@ function renderJobPlan(jobId, job, est) {
 
   // Phase 2 room grid: same rooms, but only packed/complete are available here —
   // the crew has to come to Phase 2 to advance a room past "locked".
-  var p2rooms = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;">' +
+  var p2rooms = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px;">' +
     rooms.map(function(r) {
       var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
       return '<div id="plan-room-block-p2-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
@@ -7599,6 +7607,10 @@ function renderJobPlan(jobId, job, est) {
         '<span id="plan-room-badge-p2-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
         '</div>' +
         '<div id="plan-room-status-p2-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status,'p2')+'</div>' +
+        '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'-after" style="display:none;margin-top:4px;"></div>' +
+        '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
+        _renderRoomPhotoControls(jobId, r.idx, 'after') +
+        '</div>' +
         '</div>';
     }).join('') +
     '</div>';
