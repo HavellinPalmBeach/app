@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 7:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5980,6 +5980,7 @@ var invApprovedBy = '';
 var invApprovedAt = '';
 var currentInvJobId = null;
 var currentInvStage = 'final'; // 'deposit' | 'midpoint' | 'final'
+var invRequiresApproval = false; // set per-render: only a final outside ±15% needs PIN
 
 // Resolve actual vendor / prep costs from the Job Plan sourcing (vendorSourcing /
 // prepSourcing), falling back to the estimate amount per line when no actual quote
@@ -6648,13 +6649,34 @@ function renderInvoice() {
 
   content.innerHTML = html;
 
-  // Approval UI
-  btnApprove.style.display = invApproved ? 'none' : 'inline-block';
-  btnPdf.style.display = invApproved ? 'inline-block' : 'none';
-  badge.innerHTML = invApproved ? '<span class="badge b-approved">✓ Approved</span>' : '<span class="badge b-pending">Pending Approval</span>';
-  banner.innerHTML = invApproved ?
-    '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Invoice approved</strong> — ' + invApprovedBy + ' · ' + invApprovedAt + '</div></div>' :
-    '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Review invoice below</strong>, then enter manager PIN to approve and unlock PDF.</div></div>';
+  // Approval UI — deposit & midpoint are formulaic from the approved estimate, so no
+  // manager PIN. The final needs PIN only when it diverges from the estimate by more
+  // than ±15% (change orders excluded — they're separately client-approved).
+  var _variancePct = estHavellinTotal > 0 ? Math.abs(overUnder) / estHavellinTotal : 0;
+  invRequiresApproval = (stage === 'final') && (_variancePct > 0.15);
+  var unlocked = !invRequiresApproval || invApproved;
+  var mailEl = document.getElementById('btn-mailto-inv');
+
+  btnApprove.style.display = (invRequiresApproval && !invApproved) ? 'inline-block' : 'none';
+  btnPdf.style.display = unlocked ? 'inline-block' : 'none';
+  if (mailEl) {
+    mailEl.style.display = unlocked ? 'inline-block' : 'none';
+    if (unlocked) mailEl.href = buildInvoiceMailto(job, stageAmtDue, stage);
+  }
+
+  if (!invRequiresApproval) {
+    badge.innerHTML = '<span class="badge b-approved">No approval required</span>';
+    banner.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>' +
+      (stage === 'final' ? 'Final is within ±15% of the estimate' : (stage === 'deposit' ? 'Deposit' : 'Midpoint') + ' invoice — formulaic from the approved estimate') +
+      '</strong> — no manager approval required. Review and send.</div></div>';
+  } else {
+    var _vpct = Math.round(_variancePct * 100);
+    var _dir = overUnder >= 0 ? 'over' : 'under';
+    badge.innerHTML = invApproved ? '<span class="badge b-approved">✓ Approved</span>' : '<span class="badge b-pending">Manager Approval Required</span>';
+    banner.innerHTML = invApproved ?
+      '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Invoice approved</strong> — ' + invApprovedBy + ' · ' + invApprovedAt + '</div></div>' :
+      '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Final is ' + _vpct + '% ' + _dir + ' the estimate</strong> — outside the ±15% tolerance, so manager review is required. Enter PIN to approve and unlock.</div></div>';
+  }
 }
 
 function openInvPinModal() {
@@ -6699,7 +6721,7 @@ function checkInvPin() {
 }
 
 function printInvoice() {
-  if (!invApproved) { alert('Invoice must be approved before printing.'); return; }
+  if (invRequiresApproval && !invApproved) { alert('This final invoice is outside the ±15% tolerance and needs manager approval before printing.'); return; }
   // Temporarily make invoice panel the active one for printing
   document.querySelectorAll('.panel').forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
   document.getElementById('panel-invoice').classList.add('active');
