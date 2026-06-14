@@ -236,7 +236,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3111,7 +3111,7 @@ function proposedPlanRow(e) {
   var vTypes = (e.vendors || []).filter(function(v){ return v.cost > 0; }).map(function(v){ return esc(v.type); });
   vTypes = vTypes.filter(function(t, i){ return vTypes.indexOf(t) === i; });
   if (vTypes.length) {
-    notes.push(['Third-party coordination', 'We coordinate every outside vendor on your behalf — ' + andList(vTypes) + ' — scheduling each pickup, supervising on-site, and verifying the work. These are billed to you directly at cost and summarized below.']);
+    notes.push(['Third-party coordination', 'We coordinate every outside vendor on your behalf — ' + andList(vTypes) + ' — scheduling each pickup, supervising on-site, and verifying the work. Third-party vendor costs are estimates only; actual invoices are billed directly to you at cost.']);
   }
 
   if ((e.collections || []).length) {
@@ -3345,7 +3345,7 @@ function renderClientEstimate() {
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note">Third-party vendor costs are estimates only. Actual invoices are billed directly to the client at cost. Havellin does not mark up vendor costs — the 15% Service Management Fee is included in the Havellin Services section above.</div>' +
+    '<div style="margin-bottom:1.25rem;"></div>' +
 
     (e.prepEnabled && e.prepItems && e.prepItems.length > 0 ? (function() {
       var rows = e.prepItems.filter(function(p){ return p.cost > 0; }).map(function(p) {
