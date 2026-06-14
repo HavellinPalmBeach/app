@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 11:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 11:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9981,6 +9981,25 @@ function updateCollectionNote(collId, value) {
   if (c) c.note = value;
 }
 
+// Inline-edit a collection's name/value/qty without re-rendering the table (keeps the
+// input focused — same reason as the vendor-cost fix). calcAll refreshes the totals.
+function updateCollectionField(id, field, val) {
+  var c = collectionsData.find(function(x){ return x.id === id; });
+  if (!c) return;
+  c[field] = val;
+  calcAll();
+}
+// Disposition is a <select>, so a re-render here is safe and refreshes the
+// cost-disposition (appraiser/FFL) reminder row.
+function updateCollectionDisp(id, val) {
+  var c = collectionsData.find(function(x){ return x.id === id; });
+  if (!c) return;
+  c.disp = val;
+  c.dispLabel = COL_DISP_LABELS[val] || val;
+  renderCollections();
+  calcAll();
+}
+
 function startCollectionTranscription(collId) {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { showFB('e-fb','warn','Voice transcription not supported in this browser.'); return; }
@@ -10042,11 +10061,14 @@ function renderCollections() {
   var h = '';
   collectionsData.forEach(function(c) {
     var noteVal = (c.note || '').replace(/"/g, '&quot;');
+    var dispSelect = '<select onchange="updateCollectionDisp(' + c.id + ',this.value)" style="font-size:11px;font-weight:600;color:var(--bronze);padding:3px 4px;max-width:140px;">' +
+      Object.keys(COL_DISP_LABELS).map(function(k){ return '<option value="' + k + '"' + (k === c.disp ? ' selected' : '') + '>' + COL_DISP_LABELS[k] + '</option>'; }).join('') +
+      '</select>';
     h += '<tr>' +
-      '<td style="font-size:12px;font-weight:500;">' + c.name + '</td>' +
-      '<td style="font-size:12px;">$' + (parseFloat(c.value)||0).toLocaleString() + '</td>' +
-      '<td style="font-size:12px;text-align:center;">' + c.qty + '</td>' +
-      '<td style="font-size:11px;font-weight:600;color:var(--bronze);">' + (COL_DISP_LABELS[c.disp]||c.disp||'—') + '</td>' +
+      '<td><input value="' + esc(c.name) + '" oninput="updateCollectionField(' + c.id + ',\'name\',this.value)" style="width:100%;font-size:12px;padding:3px 5px;"></td>' +
+      '<td><input value="' + esc(c.value) + '" oninput="updateCollectionField(' + c.id + ',\'value\',this.value)" title="Dollar value, or e.g. Unknown" style="width:85px;font-size:12px;padding:3px 5px;"></td>' +
+      '<td><input value="' + esc(c.qty) + '" oninput="updateCollectionField(' + c.id + ',\'qty\',this.value)" style="width:55px;font-size:12px;padding:3px 5px;text-align:center;"></td>' +
+      '<td>' + dispSelect + '</td>' +
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
     '</tr>' +
     '<tr>' +
