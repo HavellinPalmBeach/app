@@ -241,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 11:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.14 · 11:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2104,8 +2104,9 @@ function calcAll() {
   var psFee = Math.round(totPS * psRate);
   var pkgCost = parseInt(document.getElementById('e-pkg').value) || 0;
   var pkgLabel = document.getElementById('e-pkg').options[document.getElementById('e-pkg').selectedIndex].text;
-  var smf = calcVendorTotals();
-  var vendorCost = getVendorCost();
+  var _collCost = getCollectionCost();
+  var smf = calcVendorTotals() + Math.round(_collCost * 0.15);
+  var vendorCost = getVendorCost() + _collCost;
   // Home Prep for Sale
   var prepEnabled = document.getElementById('e-prep-enabled') && document.getElementById('e-prep-enabled').checked;
   var prepCost = prepEnabled ? getPrepCost() : 0;
@@ -2512,6 +2513,9 @@ function calcVendorTotals() {
   return totalSMF;
 }
 function getVendorCost() { return vendors.reduce(function(a,v){ return a+v.cost; }, 0); }
+// Collection vendors (appraisers, FFLs, etc.) are entered per collection; their fees roll
+// into the third-party total and the 15% SMF alongside the vendor table.
+function getCollectionCost() { return collectionsData.reduce(function(a,c){ return a + (parseFloat(c.cost)||0); }, 0); }
 
 // ─── HOME PREP FOR SALE ───────────────────────────────────────────────────────
 var prepItems = [];
@@ -3325,6 +3329,17 @@ function renderClientEstimate() {
     // is collected/proceeds-based, but the client should still see they're engaged.
     var amt = v.cost > 0 ? fmt(v.cost) : '<span style="color:var(--gray);font-style:italic;">No direct cost</span>';
     vendorRows += '<tr><td>' + esc(v.type) + '</td><td class="r">' + amt + '</td></tr>';
+  });
+  // Collection-attached vendors (appraisers, FFLs, auction houses) — listed here so the
+  // third-party total reconciles; the collection itself shows in the Disposition Plan.
+  (e.collections||[]).forEach(function(c) {
+    var cCost = parseFloat(c.cost)||0;
+    if (cCost <= 0 && !(c.vendor && c.vendor.trim())) return;
+    var label = (c.vendor && c.vendor.trim())
+      ? esc(c.vendor) + ' <span style="color:var(--gray);font-size:11px;">· ' + esc(c.name) + '</span>'
+      : esc(c.name);
+    var amt = cCost > 0 ? fmt(cCost) : '<span style="color:var(--gray);font-style:italic;">No direct cost</span>';
+    vendorRows += '<tr><td>' + label + '</td><td class="r">' + amt + '</td></tr>';
   });
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
 
@@ -9962,7 +9977,7 @@ function addCollection() {
   var dispEl = document.getElementById('new-col-disp');
   var disp = dispEl ? dispEl.value : 'auction';
   if (!name) { alert('Please enter a collection name.'); return; }
-  collectionsData.push({ id: Date.now(), name: name, value: value||'Unknown', qty: qty||'Est.', disp: disp, dispLabel: COL_DISP_LABELS[disp]||disp, note: '' });
+  collectionsData.push({ id: Date.now(), name: name, value: value||'Unknown', qty: qty||'Est.', disp: disp, dispLabel: COL_DISP_LABELS[disp]||disp, vendor: '', cost: 0, note: '' });
   document.getElementById('new-col-name').value = '';
   document.getElementById('new-col-value').value = '';
   document.getElementById('new-col-qty').value = '';
@@ -10072,7 +10087,14 @@ function renderCollections() {
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
     '</tr>' +
     '<tr>' +
-      '<td colspan="5" style="padding:4px 8px 10px;background:var(--tan);">' +
+      '<td colspan="5" style="padding:6px 8px 10px;background:var(--tan);">' +
+        '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;">' +
+          '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">Vendor</span>' +
+          '<input value="' + esc(c.vendor||'') + '" oninput="updateCollectionField(' + c.id + ',\'vendor\',this.value)" placeholder="e.g. Heritage Auctions, Jane Doe Appraisals" style="flex:1;min-width:170px;font-size:11px;padding:3px 6px;">' +
+          '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">Fee $</span>' +
+          '<input type="number" value="' + (parseFloat(c.cost)||0) + '" oninput="updateCollectionField(' + c.id + ',\'cost\',this.value)" title="Appraisal / FFL fee — leave 0 for proceeds-based (auction, consign)" style="width:90px;font-size:11px;padding:3px 6px;">' +
+          '<span style="font-size:10px;color:var(--gray);font-style:italic;">+15% coordination</span>' +
+        '</div>' +
         '<div style="display:flex;align-items:flex-start;gap:6px;">' +
           '<button id="coll-mic-btn-' + c.id + '" onclick="startCollectionTranscription(' + c.id + ')" title="Voice note" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--gray);padding:2px 4px;flex-shrink:0;">&#127908;</button>' +
           '<div style="flex:1;">' +
@@ -10083,14 +10105,6 @@ function renderCollections() {
       '</td>' +
     '</tr>';
   });
-  // Cost-bearing dispositions (appraisal, firearms transfer) are paid services, not
-  // sales — nudge the TC to capture the provider cost in the vendor table below.
-  var costDisps = {appraise:1, firearms:1};
-  if (collectionsData.some(function(c){ return costDisps[c.disp]; })) {
-    h += '<tr><td colspan="5" style="padding:8px 10px;background:var(--warn-bg);border-left:3px solid var(--bronze);font-size:11px;color:var(--warn-tx);line-height:1.5;">' +
-      '&#8595; Add the appraiser / FFL under <strong>Third-Party Vendors</strong> below.' +
-      '</td></tr>';
-  }
   tbody.innerHTML = h;
 }
 
