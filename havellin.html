@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 12:25am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 3:05am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -922,9 +922,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div class="card" id="log-entry-card">
           <div class="sec">Log Daily Hours</div>
           <label>Date</label>
-          <input type="date" id="log-date">
-          <label>Activity summary</label>
+          <input type="date" id="log-date" onchange="refreshRoomProgressSummary()">
+          <label>TC Notes</label>
           <input type="text" id="log-activity" placeholder="e.g. Primary suite sorting, kitchen packing, garage clearout">
+          <label style="margin-top:10px;">Room progressions <span style="font-weight:400;color:var(--gray);font-size:10px;">— auto-generated</span></label>
+          <textarea id="log-room-progress" readonly rows="3" style="width:100%;box-sizing:border-box;font-size:11px;color:var(--gray);background:var(--tan);border:1px solid var(--border);border-radius:6px;padding:7px 9px;resize:vertical;font-family:inherit;" placeholder="Room status changes for this date will appear here automatically."></textarea>
           <div style="margin-top:14px;">
             <div class="sec">Team Members &amp; Hours</div>
             <div id="log-team-rows"></div>
@@ -1004,6 +1006,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="btn-s" id="btn-inv-approve" onclick="openInvPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-bronze" id="btn-inv-pdf" onclick="printInvoice()" style="display:none;">Print / Save PDF</button>
         <a class="btn-bronze" id="btn-mailto-inv" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
+        <label id="inv-activity-toggle" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--gray);cursor:pointer;">
+          <input type="checkbox" id="inv-include-activity" onchange="renderInvoice()"> Include Daily Activity Report
+        </label>
       </div>
     </div>
   </div>
@@ -5179,6 +5184,7 @@ function hardDeleteJob(id) {
   try { delete estimateStore[id]; localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
   try { if (typeof jobLogs === 'object' && jobLogs) { delete jobLogs[id]; localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } } catch(e) {}
   try { if (typeof jobPlanStore === 'object' && jobPlanStore) { delete jobPlanStore[id]; localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } } catch(e) {}
+  try { if (typeof roomChangelog === 'object' && roomChangelog) { delete roomChangelog[id]; localStorage.setItem('havellin_roomlog_v1', JSON.stringify(roomChangelog)); } } catch(e) {}
   try { if (Array.isArray(changeOrders)) { changeOrders = changeOrders.filter(function(co){ return co.jobId !== id; }); localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } } catch(e) {}
   try { localStorage.removeItem('hav_media_' + id); } catch(e) {}
   saveJobs();
@@ -6026,6 +6032,7 @@ function setVendorDirStatus(msg, isErr) {
 
 // ─── JOB LOG ──────────────────────────────────────────────────────────────────
 var jobLogs = {}; // keyed by job.id
+var roomChangelog = {}; // keyed by job.id → [{roomIdx,roomName,from,to,date,ts}]
 var invApproved = false;
 var invApprovedBy = '';
 var invApprovedAt = '';
@@ -6208,6 +6215,7 @@ function saveLogEntry() {
   var date = document.getElementById('log-date').value;
   if (!date) { showFB('log-fb','warn','Enter a date.'); return; }
   var activity = document.getElementById('log-activity').value.trim();
+  var roomProgress = document.getElementById('log-room-progress').value.trim();
 
   var members = [];
   for (var i = 0; i <= 4; i++) {
@@ -6225,6 +6233,7 @@ function saveLogEntry() {
     id: Date.now(),
     date: date,
     activity: activity,
+    roomProgress: roomProgress,
     members: members
   });
 
@@ -6247,6 +6256,7 @@ function clearLogEntry() {
     var hrsEl = document.getElementById('log-m'+i+'-hrs');
     if (hrsEl) hrsEl.value = '';
   }
+  refreshRoomProgressSummary();
 }
 
 function deleteLogEntry(jobId, entryId) {
@@ -6329,7 +6339,7 @@ function renderLogHistory(jobId) {
     '<thead><tr>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">Date</th>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">Team &amp; Hours</th>' +
-    '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">Activity</th>' +
+    '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">TC Notes &amp; Room Progressions</th>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);">TC Hrs</th>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);">PS Hrs</th>' +
     '<th style="background:var(--tan);border-bottom:1px solid var(--border);"></th>' +
@@ -6344,7 +6354,10 @@ function renderLogHistory(jobId) {
     html += '<tr>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;">' + dateStr + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);">' + teamStr + '</td>' +
-      '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--gray);">' + (entry.activity||'—') + '</td>' +
+      '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;">' +
+        (entry.activity ? '<span style="color:var(--ink);">' + entry.activity + '</span>' : '') +
+        (entry.roomProgress ? '<div style="margin-top:' + (entry.activity ? '5px' : '0') + ';font-size:10px;color:var(--gray);font-style:italic;">' + entry.roomProgress + '</div>' : (!entry.activity ? '—' : '')) +
+      '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;text-align:center;">' + (tcHrs||'—') + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;text-align:center;">' + (psHrs||'—') + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);"><button class="icon-btn del" onclick="deleteLogEntry(' + jobId + ',' + entry.id + ')">✕</button></td>' +
@@ -6400,6 +6413,38 @@ function setInvStage(v) {
   currentInvStage = v || 'final';
   invApproved = false; // re-approval required per stage document
   renderInvoice();
+}
+
+function buildDailyActivityReport(logs) {
+  if (!logs || logs.length === 0) {
+    return '<div style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid var(--border-md);">' +
+      '<div class="ce-section-hdr">Daily Activity Report — Probate Record</div>' +
+      '<div style="font-size:12px;color:var(--gray);font-style:italic;">No daily entries logged for this job yet.</div></div>';
+  }
+  var sorted = logs.slice().sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  var rows = sorted.map(function(entry) {
+    var dateStr = new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'});
+    var teamStr = entry.members.map(function(m){ return esc(m.name) + ' (' + m.role + ') ' + m.hours + 'h'; }).join(' &nbsp;·&nbsp; ');
+    var notesHtml = entry.activity ? esc(entry.activity) : '<span style="color:var(--gray);font-style:italic;">—</span>';
+    var roomsHtml = entry.roomProgress ? esc(entry.roomProgress).replace(/\n/g,'<br>') : '<span style="color:var(--gray);font-style:italic;">—</span>';
+    return '<tr style="vertical-align:top;">' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap;font-weight:600;width:140px;">' + dateStr + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;width:180px;">' + teamStr + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;">' + notesHtml + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--gray);">' + roomsHtml + '</td>' +
+      '</tr>';
+  }).join('');
+  return '<div style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid var(--border-md);">' +
+    '<div class="ce-section-hdr">Daily Activity Report — Probate Record</div>' +
+    '<div style="font-size:11px;color:var(--gray);margin-bottom:.75rem;">Day-by-day breakdown as logged by the Transition Concierge. Room progressions are recorded automatically at the time each status was advanced.</div>' +
+    '<table style="width:100%;border-collapse:collapse;">' +
+    '<thead><tr style="background:var(--tan);">' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">Date</th>' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">Team &amp; Hours</th>' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">TC Notes</th>' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">Room Progressions</th>' +
+    '</tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
 }
 
 function renderInvoice() {
@@ -6661,8 +6706,23 @@ function renderInvoice() {
   var vendorNote = (vendorCost > 0 || act.prep.length)
     ? '<div class="ce-note" style="margin-top:1rem;">Third-party vendor costs (movers, hauling, donation, cleaning, etc.) are billed to you directly by each vendor and are not included on this invoice. Havellin\'s coordination fee is the Service Management Fee shown above.</div>'
     : '';
+  // Daily activity report toggle — visible on final invoice for probate/contested jobs only
+  var isProbateJob = (job.type === 'probate' || job.type === 'contested_probate');
+  var toggleWrap = document.getElementById('inv-activity-toggle');
+  var activityCheckbox = document.getElementById('inv-include-activity');
+  if (toggleWrap) {
+    toggleWrap.style.display = (stage === 'final' && isProbateJob) ? 'flex' : 'none';
+    // Default on for contested probate, off for standard probate
+    if (toggleWrap.style.display === 'flex' && activityCheckbox && activityCheckbox.dataset.initialized !== jobId + stage) {
+      activityCheckbox.checked = (job.type === 'contested_probate');
+      activityCheckbox.dataset.initialized = jobId + stage;
+    }
+  }
+  var activityReport = (stage === 'final' && isProbateJob && activityCheckbox && activityCheckbox.checked)
+    ? buildDailyActivityReport(logs) : '';
+
   var bodyHtml = (stage === 'final')
-    ? (finalServices + coSection + finalPayment + vendorNote)
+    ? (finalServices + coSection + finalPayment + vendorNote + activityReport)
     : (advanceServices + advancePayment + vendorNote);
 
   // Contact line + Transition Concierge bio — placed at the top (matching the
@@ -6815,6 +6875,31 @@ function saveLogData() {
 }
 function loadLogData() {
   try { var s=localStorage.getItem('havellin_logs_v3'); if(s) jobLogs=JSON.parse(s); } catch(e) {}
+}
+
+// ─── ROOM CHANGELOG PERSISTENCE ───────────────────────────────────────────────
+function saveRoomChangelog() {
+  try { localStorage.setItem('havellin_roomlog_v1', JSON.stringify(roomChangelog)); } catch(e) {}
+}
+function loadRoomChangelog() {
+  try { var s=localStorage.getItem('havellin_roomlog_v1'); if(s) roomChangelog=JSON.parse(s); } catch(e) {}
+}
+
+// Rebuilds the auto-generated room progressions textarea for whatever date is
+// currently selected in the log form.
+function refreshRoomProgressSummary() {
+  var el = document.getElementById('log-room-progress');
+  if (!el) return;
+  var jobId = parseInt((document.getElementById('log-job')||{}).value);
+  var date = (document.getElementById('log-date')||{}).value;
+  if (!jobId || !date) { el.value = ''; return; }
+  var changes = (roomChangelog[jobId] || []).filter(function(c){ return c.date === date; });
+  if (changes.length === 0) { el.value = ''; return; }
+  var STATUS_LABEL = {pending:'Pending',sorting:'Sorting',locked:'Locked',packed:'Packed',complete:'Complete'};
+  el.value = changes.map(function(c){
+    return (c.roomName || ('Room '+c.roomIdx)) + ': ' +
+           (STATUS_LABEL[c.from] || c.from) + ' → ' + (STATUS_LABEL[c.to] || c.to);
+  }).join('\n');
 }
 
 // ─── JOB PLAN PERSISTENCE ────────────────────────────────────────────────────
@@ -7011,10 +7096,26 @@ function renderProjection(jobId) {
 
 function setRoomStatus(jobId, roomIdx, status) {
   var plan = getJobPlan(jobId);
+  var oldStatus = (plan.rooms[roomIdx] && plan.rooms[roomIdx].status) || 'pending';
   if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
   plan.rooms[roomIdx].status = status;
+  // Record the change for the daily audit trail
+  if (!roomChangelog[jobId]) roomChangelog[jobId] = [];
+  var estRec = estimateStore[jobId];
+  var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  var room = estRooms.find(function(r){ return r.idx === roomIdx; });
+  roomChangelog[jobId].push({
+    roomIdx: roomIdx,
+    roomName: room ? room.name : ('Room ' + roomIdx),
+    from: oldStatus,
+    to: status,
+    date: new Date().toISOString().split('T')[0],
+    ts: Date.now()
+  });
+  saveRoomChangelog();
   saveJobPlan(jobId);
   renderProjection(jobId);
+  refreshRoomProgressSummary();
 }
 
 function setCollStatus(jobId, collId, status) {
@@ -7097,6 +7198,7 @@ function loadJobPlanTab() {
   if (logDateEl && !logDateEl.value) {
     logDateEl.value = new Date().toISOString().split('T')[0];
   }
+  refreshRoomProgressSummary();
 
   // Auto-select TC from job assignment
   var tcSel = document.getElementById('log-m0-name');
@@ -10116,6 +10218,7 @@ function renderCollections() {
 loadJobs();
 loadEstimateState();
 loadLogData();
+loadRoomChangelog();
 loadJobPlanData();
 loadContractors();
 loadChangeOrders();
