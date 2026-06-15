@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 2:45am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 3:05am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1006,6 +1006,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="btn-s" id="btn-inv-approve" onclick="openInvPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-bronze" id="btn-inv-pdf" onclick="printInvoice()" style="display:none;">Print / Save PDF</button>
         <a class="btn-bronze" id="btn-mailto-inv" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
+        <label id="inv-activity-toggle" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--gray);cursor:pointer;">
+          <input type="checkbox" id="inv-include-activity" onchange="renderInvoice()"> Include Daily Activity Report
+        </label>
       </div>
     </div>
   </div>
@@ -6412,6 +6415,38 @@ function setInvStage(v) {
   renderInvoice();
 }
 
+function buildDailyActivityReport(logs) {
+  if (!logs || logs.length === 0) {
+    return '<div style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid var(--border-md);">' +
+      '<div class="ce-section-hdr">Daily Activity Report — Probate Record</div>' +
+      '<div style="font-size:12px;color:var(--gray);font-style:italic;">No daily entries logged for this job yet.</div></div>';
+  }
+  var sorted = logs.slice().sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  var rows = sorted.map(function(entry) {
+    var dateStr = new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'});
+    var teamStr = entry.members.map(function(m){ return esc(m.name) + ' (' + m.role + ') ' + m.hours + 'h'; }).join(' &nbsp;·&nbsp; ');
+    var notesHtml = entry.activity ? esc(entry.activity) : '<span style="color:var(--gray);font-style:italic;">—</span>';
+    var roomsHtml = entry.roomProgress ? esc(entry.roomProgress).replace(/\n/g,'<br>') : '<span style="color:var(--gray);font-style:italic;">—</span>';
+    return '<tr style="vertical-align:top;">' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap;font-weight:600;width:140px;">' + dateStr + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;width:180px;">' + teamStr + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;">' + notesHtml + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--gray);">' + roomsHtml + '</td>' +
+      '</tr>';
+  }).join('');
+  return '<div style="margin-top:2rem;padding-top:1.5rem;border-top:2px solid var(--border-md);">' +
+    '<div class="ce-section-hdr">Daily Activity Report — Probate Record</div>' +
+    '<div style="font-size:11px;color:var(--gray);margin-bottom:.75rem;">Day-by-day breakdown as logged by the Transition Concierge. Room progressions are recorded automatically at the time each status was advanced.</div>' +
+    '<table style="width:100%;border-collapse:collapse;">' +
+    '<thead><tr style="background:var(--tan);">' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">Date</th>' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">Team &amp; Hours</th>' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">TC Notes</th>' +
+    '<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">Room Progressions</th>' +
+    '</tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+}
+
 function renderInvoice() {
   var jobId = currentInvJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -6671,8 +6706,23 @@ function renderInvoice() {
   var vendorNote = (vendorCost > 0 || act.prep.length)
     ? '<div class="ce-note" style="margin-top:1rem;">Third-party vendor costs (movers, hauling, donation, cleaning, etc.) are billed to you directly by each vendor and are not included on this invoice. Havellin\'s coordination fee is the Service Management Fee shown above.</div>'
     : '';
+  // Daily activity report toggle — visible on final invoice for probate/contested jobs only
+  var isProbateJob = (job.type === 'probate' || job.type === 'contested_probate');
+  var toggleWrap = document.getElementById('inv-activity-toggle');
+  var activityCheckbox = document.getElementById('inv-include-activity');
+  if (toggleWrap) {
+    toggleWrap.style.display = (stage === 'final' && isProbateJob) ? 'flex' : 'none';
+    // Default on for contested probate, off for standard probate
+    if (toggleWrap.style.display === 'flex' && activityCheckbox && activityCheckbox.dataset.initialized !== jobId + stage) {
+      activityCheckbox.checked = (job.type === 'contested_probate');
+      activityCheckbox.dataset.initialized = jobId + stage;
+    }
+  }
+  var activityReport = (stage === 'final' && isProbateJob && activityCheckbox && activityCheckbox.checked)
+    ? buildDailyActivityReport(logs) : '';
+
   var bodyHtml = (stage === 'final')
-    ? (finalServices + coSection + finalPayment + vendorNote)
+    ? (finalServices + coSection + finalPayment + vendorNote + activityReport)
     : (advanceServices + advancePayment + vendorNote);
 
   // Contact line + Transition Concierge bio — placed at the top (matching the
