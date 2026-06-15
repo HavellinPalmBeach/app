@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 12:25am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 2:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -922,9 +922,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div class="card" id="log-entry-card">
           <div class="sec">Log Daily Hours</div>
           <label>Date</label>
-          <input type="date" id="log-date">
-          <label>Activity summary</label>
+          <input type="date" id="log-date" onchange="refreshRoomProgressSummary()">
+          <label>TC Notes</label>
           <input type="text" id="log-activity" placeholder="e.g. Primary suite sorting, kitchen packing, garage clearout">
+          <label style="margin-top:10px;">Room progressions <span style="font-weight:400;color:var(--gray);font-size:10px;">— auto-generated</span></label>
+          <textarea id="log-room-progress" readonly rows="3" style="width:100%;box-sizing:border-box;font-size:11px;color:var(--gray);background:var(--tan);border:1px solid var(--border);border-radius:6px;padding:7px 9px;resize:vertical;font-family:inherit;" placeholder="Room status changes for this date will appear here automatically."></textarea>
           <div style="margin-top:14px;">
             <div class="sec">Team Members &amp; Hours</div>
             <div id="log-team-rows"></div>
@@ -5179,6 +5181,7 @@ function hardDeleteJob(id) {
   try { delete estimateStore[id]; localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
   try { if (typeof jobLogs === 'object' && jobLogs) { delete jobLogs[id]; localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } } catch(e) {}
   try { if (typeof jobPlanStore === 'object' && jobPlanStore) { delete jobPlanStore[id]; localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } } catch(e) {}
+  try { if (typeof roomChangelog === 'object' && roomChangelog) { delete roomChangelog[id]; localStorage.setItem('havellin_roomlog_v1', JSON.stringify(roomChangelog)); } } catch(e) {}
   try { if (Array.isArray(changeOrders)) { changeOrders = changeOrders.filter(function(co){ return co.jobId !== id; }); localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } } catch(e) {}
   try { localStorage.removeItem('hav_media_' + id); } catch(e) {}
   saveJobs();
@@ -6026,6 +6029,7 @@ function setVendorDirStatus(msg, isErr) {
 
 // ─── JOB LOG ──────────────────────────────────────────────────────────────────
 var jobLogs = {}; // keyed by job.id
+var roomChangelog = {}; // keyed by job.id → [{roomIdx,roomName,from,to,date,ts}]
 var invApproved = false;
 var invApprovedBy = '';
 var invApprovedAt = '';
@@ -6208,6 +6212,7 @@ function saveLogEntry() {
   var date = document.getElementById('log-date').value;
   if (!date) { showFB('log-fb','warn','Enter a date.'); return; }
   var activity = document.getElementById('log-activity').value.trim();
+  var roomProgress = document.getElementById('log-room-progress').value.trim();
 
   var members = [];
   for (var i = 0; i <= 4; i++) {
@@ -6225,6 +6230,7 @@ function saveLogEntry() {
     id: Date.now(),
     date: date,
     activity: activity,
+    roomProgress: roomProgress,
     members: members
   });
 
@@ -6247,6 +6253,7 @@ function clearLogEntry() {
     var hrsEl = document.getElementById('log-m'+i+'-hrs');
     if (hrsEl) hrsEl.value = '';
   }
+  refreshRoomProgressSummary();
 }
 
 function deleteLogEntry(jobId, entryId) {
@@ -6329,7 +6336,7 @@ function renderLogHistory(jobId) {
     '<thead><tr>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">Date</th>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">Team &amp; Hours</th>' +
-    '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">Activity</th>' +
+    '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;">TC Notes &amp; Room Progressions</th>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);">TC Hrs</th>' +
     '<th style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--tan);">PS Hrs</th>' +
     '<th style="background:var(--tan);border-bottom:1px solid var(--border);"></th>' +
@@ -6344,7 +6351,10 @@ function renderLogHistory(jobId) {
     html += '<tr>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;">' + dateStr + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);">' + teamStr + '</td>' +
-      '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--gray);">' + (entry.activity||'—') + '</td>' +
+      '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;">' +
+        (entry.activity ? '<span style="color:var(--ink);">' + entry.activity + '</span>' : '') +
+        (entry.roomProgress ? '<div style="margin-top:' + (entry.activity ? '5px' : '0') + ';font-size:10px;color:var(--gray);font-style:italic;">' + entry.roomProgress + '</div>' : (!entry.activity ? '—' : '')) +
+      '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;text-align:center;">' + (tcHrs||'—') + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;text-align:center;">' + (psHrs||'—') + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);"><button class="icon-btn del" onclick="deleteLogEntry(' + jobId + ',' + entry.id + ')">✕</button></td>' +
@@ -6817,6 +6827,31 @@ function loadLogData() {
   try { var s=localStorage.getItem('havellin_logs_v3'); if(s) jobLogs=JSON.parse(s); } catch(e) {}
 }
 
+// ─── ROOM CHANGELOG PERSISTENCE ───────────────────────────────────────────────
+function saveRoomChangelog() {
+  try { localStorage.setItem('havellin_roomlog_v1', JSON.stringify(roomChangelog)); } catch(e) {}
+}
+function loadRoomChangelog() {
+  try { var s=localStorage.getItem('havellin_roomlog_v1'); if(s) roomChangelog=JSON.parse(s); } catch(e) {}
+}
+
+// Rebuilds the auto-generated room progressions textarea for whatever date is
+// currently selected in the log form.
+function refreshRoomProgressSummary() {
+  var el = document.getElementById('log-room-progress');
+  if (!el) return;
+  var jobId = parseInt((document.getElementById('log-job')||{}).value);
+  var date = (document.getElementById('log-date')||{}).value;
+  if (!jobId || !date) { el.value = ''; return; }
+  var changes = (roomChangelog[jobId] || []).filter(function(c){ return c.date === date; });
+  if (changes.length === 0) { el.value = ''; return; }
+  var STATUS_LABEL = {pending:'Pending',sorting:'Sorting',locked:'Locked',packed:'Packed',complete:'Complete'};
+  el.value = changes.map(function(c){
+    return (c.roomName || ('Room '+c.roomIdx)) + ': ' +
+           (STATUS_LABEL[c.from] || c.from) + ' → ' + (STATUS_LABEL[c.to] || c.to);
+  }).join('\n');
+}
+
 // ─── JOB PLAN PERSISTENCE ────────────────────────────────────────────────────
 var jobPlanStore = {};
 
@@ -7011,10 +7046,26 @@ function renderProjection(jobId) {
 
 function setRoomStatus(jobId, roomIdx, status) {
   var plan = getJobPlan(jobId);
+  var oldStatus = (plan.rooms[roomIdx] && plan.rooms[roomIdx].status) || 'pending';
   if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
   plan.rooms[roomIdx].status = status;
+  // Record the change for the daily audit trail
+  if (!roomChangelog[jobId]) roomChangelog[jobId] = [];
+  var estRec = estimateStore[jobId];
+  var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  var room = estRooms.find(function(r){ return r.idx === roomIdx; });
+  roomChangelog[jobId].push({
+    roomIdx: roomIdx,
+    roomName: room ? room.name : ('Room ' + roomIdx),
+    from: oldStatus,
+    to: status,
+    date: new Date().toISOString().split('T')[0],
+    ts: Date.now()
+  });
+  saveRoomChangelog();
   saveJobPlan(jobId);
   renderProjection(jobId);
+  refreshRoomProgressSummary();
 }
 
 function setCollStatus(jobId, collId, status) {
@@ -7097,6 +7148,7 @@ function loadJobPlanTab() {
   if (logDateEl && !logDateEl.value) {
     logDateEl.value = new Date().toISOString().split('T')[0];
   }
+  refreshRoomProgressSummary();
 
   // Auto-select TC from job assignment
   var tcSel = document.getElementById('log-m0-name');
@@ -10116,6 +10168,7 @@ function renderCollections() {
 loadJobs();
 loadEstimateState();
 loadLogData();
+loadRoomChangelog();
 loadJobPlanData();
 loadContractors();
 loadChangeOrders();
