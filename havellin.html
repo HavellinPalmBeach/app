@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 4:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 4:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5665,6 +5665,7 @@ function savePhotoRefs(jobId) {
   try {
     var refs = (_photoRefs[jobId] || []).map(function(r) {
       return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId,
+               seq:r.seq, objectName:r.objectName,
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
@@ -5774,6 +5775,96 @@ function _updatePhotoStatusEl(jobId, roomIdx, label) {
     flagEl.style.display = anyFailed ? '' : 'none';
     flagEl.innerHTML = anyFailed ? warnHtml : '';
   }
+}
+
+// ── Court item inventory: one photo per object, named at capture ──────────────
+// Inventory photos live on the room (roomIdx) with label 'inventory' and carry an
+// objectName that is baked into the Drive filename, so each file is self-identifying
+// for a §733.604 court inventory.
+function _invRefs(jobId, roomIdx) {
+  return (_photoRefs[jobId] || []).filter(function(r){
+    return r.roomIdx === roomIdx && r.label === 'inventory' && !r.collId;
+  });
+}
+
+function _renderRoomInventoryList(jobId, roomIdx) {
+  var refs = _invRefs(jobId, roomIdx);
+  if (!refs.length) return '';
+  var rows = refs.map(function(r) {
+    var st = r.status === 'uploaded'
+      ? '<span style="color:var(--ok-tx);font-weight:700;">&#10003;</span>'
+      : (r.status === 'failed'
+          ? '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>'
+          : '<span style="color:var(--gray);">…</span>');
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:10px;padding:1px 0;">'
+      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.seq||'') + '. ' + esc(r.objectName||'(unnamed)') + '</span>'
+      + st + '</div>';
+  }).join('');
+  var nUp = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
+  return '<div style="margin-top:4px;padding-top:4px;border-top:1px dashed var(--border-md);">'
+    + '<div style="font-size:9px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Inventory · ' + nUp + '/' + refs.length + ' saved</div>'
+    + rows + '</div>';
+}
+
+function _renderRoomInventoryCapture(jobId, roomIdx) {
+  var nameId = 'inv-name-' + jobId + '-r' + roomIdx;
+  var listId = 'inv-list-' + jobId + '-r' + roomIdx;
+  var btnStyle = 'cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
+    + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);color:var(--gray-dk);white-space:nowrap;';
+  return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">'
+    + '<input type="text" id="' + nameId + '" placeholder="Object name (e.g. Tiffany lamp)" '
+    + 'style="width:100%;box-sizing:border-box;padding:4px 6px;font-size:11px;margin-bottom:4px;">'
+    + '<label style="' + btnStyle + '">'
+    + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
+    + 'onchange="attachJobPlanInventoryPhoto(this,' + jobId + ',' + roomIdx + ')">'
+    + '&#128247; Capture item</label>'
+    + '<div id="' + listId + '">' + _renderRoomInventoryList(jobId, roomIdx) + '</div>'
+    + '</div>';
+}
+
+function _updateRoomInventoryEl(jobId, roomIdx) {
+  var listEl = document.getElementById('inv-list-' + jobId + '-r' + roomIdx);
+  if (listEl) listEl.innerHTML = _renderRoomInventoryList(jobId, roomIdx);
+}
+
+function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
+  var file = input.files[0];
+  if (!file) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || job.status !== 'active') return;
+  var estRec = estimateStore[jobId];
+  var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  var room = estRooms.find(function(r){ return r.idx === roomIdx; });
+  var roomName = room ? room.name : ('Room' + roomIdx);
+  var seq = _invRefs(jobId, roomIdx).length + 1;
+  // Object name is typed before the shot; if left blank, fall back to a prompt so a
+  // captured photo is never lost, then to a sequence placeholder.
+  var nameEl = document.getElementById('inv-name-' + jobId + '-r' + roomIdx);
+  var objectName = (nameEl && nameEl.value.trim()) || '';
+  if (!objectName) objectName = (window.prompt('Name this item for the inventory:') || '').trim();
+  if (!objectName) objectName = 'Item ' + seq;
+  var ts = Date.now();
+  var stableId = jobId + '_r' + roomIdx + '_inv_' + ts;
+  var cleanRoom = _cleanName(roomName);
+  var cleanObj = _cleanName(objectName) || ('Item' + seq);
+  var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_INV_' + cleanObj + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
+      var ref = { stableId:stableId, roomIdx:roomIdx, label:'inventory', seq:seq, collId:null,
+                  objectName:objectName, filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
+      _setPhotoRef(jobId, ref);
+      savePhotoRefs(jobId);
+      _photoRetryData[stableId] = dataUrl;
+      if (nameEl) nameEl.value = '';
+      _updateRoomInventoryEl(jobId, roomIdx);
+      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Photos', function() {
+        _updateRoomInventoryEl(jobId, roomIdx);
+      });
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
@@ -5936,6 +6027,11 @@ function retryPhotoUpload(jobId, stableId) {
     _updateCollPhotoStatus(jobId, ref.collId);
     _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
       _updateCollPhotoStatus(jobId, ref.collId);
+    });
+  } else if (ref.label === 'inventory') {
+    _updateRoomInventoryEl(jobId, ref.roomIdx);
+    _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
+      _updateRoomInventoryEl(jobId, ref.roomIdx);
     });
   } else {
     _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
@@ -7824,6 +7920,7 @@ function renderJobPlan(jobId, job, est) {
         '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
         _renderRoomPhotoControls(jobId, r.idx, 'before') +
         '</div>' +
+        _renderRoomInventoryCapture(jobId, r.idx) +
         '</div>';
     }).join('') +
     '</div>';
