@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 7:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 7:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5977,6 +5977,19 @@ function _invRoomName(jobId, roomIdx) {
   return room ? room.name : ('Room ' + roomIdx);
 }
 
+// Room <select> options for manual line items, sourced from the estimate's rooms so
+// they match the capture room cards. Blank = item not tied to a room (cash, account).
+function _invRoomOptions(jobId, selIdx) {
+  var estRec = estimateStore[jobId];
+  var rooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  var sel = (selIdx == null || selIdx === '') ? '' : String(selIdx);
+  var o = '<option value=""' + (sel === '' ? ' selected' : '') + '>Unassigned / estate-wide</option>';
+  o += rooms.map(function(r){
+    return '<option value="' + r.idx + '"' + (sel === String(r.idx) ? ' selected' : '') + '>' + esc(r.name) + '</option>';
+  }).join('');
+  return o;
+}
+
 function _invDateTime(ts) {
   if (!ts) return '—';
   var d = new Date(ts);
@@ -6093,6 +6106,10 @@ function _invColEditable(ref, col) {
 }
 
 function _invInput(jobId, ref, col, job) {
+  if (col.key === 'room') {
+    var base0 = 'style="width:100%;box-sizing:border-box;padding:3px 5px;font-size:11px;"';
+    return '<select onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'roomIdx\',this)" ' + base0 + '>' + _invRoomOptions(jobId, ref.roomIdx) + '</select>';
+  }
   var on = 'onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)"';
   var base = 'style="width:100%;box-sizing:border-box;padding:3px 5px;font-size:11px;"';
   var ctrl = col.edit || (col.key === 'category' ? 'catSelect' : 'text');
@@ -6149,7 +6166,11 @@ function _invCell(jobId, ref, col, job, seq) {
 function _invEdit(jobId, stableId, key, el) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
-  ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
+  if (key === 'roomIdx') {
+    ref.roomIdx = (el.value === '') ? null : parseInt(el.value);
+  } else {
+    ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
+  }
   _setPhotoRef(jobId, ref);
   savePhotoRefs(jobId);
   if (key === 'gross' || key === 'fees') {
