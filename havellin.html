@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 6:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 7:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5941,27 +5941,27 @@ var INVENTORY_COLUMNS = [
   {key:'room',         header:'Room',                kind:'capture'},
   {key:'objectName',   header:'Object Name',         kind:'capture'},
   {key:'category',     header:'Category',            kind:'capture'},
-  {key:'disposition',  header:'Disposition',         kind:'capture'},
+  {key:'disposition',  header:'Disposition',         kind:'capture', edit:'dispSelect'},
   {key:'ts',           header:'Captured At',         kind:'capture'},
   {key:'filename',     header:'Photo Filename',      kind:'capture'},
   {key:'driveFileUrl', header:'Photo Link',          kind:'capture'},
-  {key:'qty',          header:'Qty',                 kind:'manage'},
-  {key:'condition',    header:'Condition',           kind:'manage'},
-  {key:'fmv',          header:'Estimated FMV',       kind:'manage'},
-  {key:'valDate',      header:'Valuation Date',      kind:'manage'},
-  {key:'valSource',    header:'Valuation Source',    kind:'manage'},
-  {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage'},
-  {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage'},
-  {key:'flagBequest',  header:'Specific Bequest',    kind:'manage'},
-  {key:'flagDisputed', header:'Disputed',            kind:'manage'},
-  {key:'channel',      header:'Channel / Recipient', kind:'manage'},
-  {key:'authBy',       header:'Authorized By',       kind:'manage'},
-  {key:'approvalDate', header:'Approval Date',       kind:'manage'},
-  {key:'gross',        header:'Gross Proceeds',      kind:'manage'},
-  {key:'fees',         header:'Fees',                kind:'manage'},
+  {key:'qty',          header:'Qty',                 kind:'manage',  edit:'number'},
+  {key:'condition',    header:'Condition',           kind:'manage',  edit:'select'},
+  {key:'fmv',          header:'Estimated FMV',       kind:'manage',  edit:'currency'},
+  {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date'},
+  {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select'},
+  {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage',  edit:'text'},
+  {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage',  edit:'flag'},
+  {key:'flagBequest',  header:'Specific Bequest',    kind:'manage',  edit:'flag'},
+  {key:'flagDisputed', header:'Disputed',            kind:'manage',  edit:'flag'},
+  {key:'channel',      header:'Channel / Recipient', kind:'manage',  edit:'text'},
+  {key:'authBy',       header:'Authorized By',       kind:'manage',  edit:'text'},
+  {key:'approvalDate', header:'Approval Date',       kind:'manage',  edit:'date'},
+  {key:'gross',        header:'Gross Proceeds',      kind:'manage',  edit:'currency'},
+  {key:'fees',         header:'Fees',                kind:'manage',  edit:'currency'},
   {key:'net',          header:'Net to Estate',       kind:'formula'},
-  {key:'dispDate',     header:'Date of Disposition', kind:'manage'},
-  {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage'}
+  {key:'dispDate',     header:'Date of Disposition', kind:'manage',  edit:'date'},
+  {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text'}
 ];
 
 function _jobInvRefs(jobId) {
@@ -6083,6 +6083,111 @@ function _renderInventorySummary(job, items) {
     + '</div>';
 }
 
+// ── Build 2: inline editing of app-manage columns + manual line items ─────────
+function _invColEditable(ref, col) {
+  if (col.kind === 'formula') return false;
+  if (col.edit) return true;                       // manage columns + disposition
+  // Capture-origin columns are editable only on manual (non-photo) rows.
+  if (ref.manual && (col.key === 'objectName' || col.key === 'room' || col.key === 'category')) return true;
+  return false;
+}
+
+function _invInput(jobId, ref, col, job) {
+  var on = 'onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)"';
+  var base = 'style="width:100%;box-sizing:border-box;padding:3px 5px;font-size:11px;"';
+  var ctrl = col.edit || (col.key === 'category' ? 'catSelect' : 'text');
+  var v = ref[col.key];
+  switch (ctrl) {
+    case 'number':
+      return '<input type="number" min="0" step="1" value="' + esc(v != null ? v : '') + '" ' + on + ' ' + base + '>';
+    case 'currency':
+      return '<input type="number" min="0" step="0.01" placeholder="$" value="' + esc(v != null ? v : '') + '" ' + on + ' ' + base + '>';
+    case 'date': {
+      var ttl = col.key === 'valDate' ? ' title="Defaults to date of death if left blank"' : '';
+      return '<input type="date" value="' + esc(v || '') + '"' + ttl + ' ' + on + ' ' + base + '>';
+    }
+    case 'select': {
+      var list = col.key === 'condition' ? INV_CONDITIONS : INV_VAL_SOURCES;
+      var o = '<option value="">—</option>' + list.map(function(x){ return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      return '<select ' + on + ' ' + base + '>' + o + '</select>';
+    }
+    case 'dispSelect': {
+      var od = '<option value="">—</option>' + INV_DISPOSITIONS.map(function(x){ return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      return '<select ' + on + ' ' + base + '>' + od + '</select>';
+    }
+    case 'catSelect': {
+      var oc = INV_CATEGORIES.map(function(x){ return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      return '<select ' + on + ' ' + base + '>' + oc + '</select>';
+    }
+    case 'flag':
+      return '<input type="checkbox" ' + (v ? 'checked' : '') + ' onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--gray-dk);">';
+    case 'text': default:
+      return '<input type="text" value="' + esc(v || '') + '" ' + on + ' ' + base + '>';
+  }
+}
+
+function _invNetDisplay(ref) {
+  var g = parseFloat(ref.gross), f = parseFloat(ref.fees);
+  if (isNaN(g) && isNaN(f)) return '—';
+  return _money((isNaN(g) ? 0 : g) - (isNaN(f) ? 0 : f));
+}
+
+function _invCell(jobId, ref, col, job, seq) {
+  if (col.key === 'seq') {
+    var s = String(seq);
+    if (ref.manual) {
+      s += ' <span style="font-size:8px;color:var(--bronze);font-weight:700;" title="Manual line item (no photo)">M</span>'
+        +  ' <a href="#" onclick="removeInventoryManualItem(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Remove line item" style="color:#c0392b;text-decoration:none;font-weight:700;">✕</a>';
+    }
+    return s;
+  }
+  if (col.key === 'net') return '<span id="inv-net-' + ref.stableId + '">' + _invNetDisplay(ref) + '</span>';
+  if (_invColEditable(ref, col)) return _invInput(jobId, ref, col, job);
+  return _invCellRead(ref, col, job, seq);
+}
+
+function _invEdit(jobId, stableId, key, el) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref) return;
+  ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
+  _setPhotoRef(jobId, ref);
+  savePhotoRefs(jobId);
+  if (key === 'gross' || key === 'fees') {
+    var netEl = document.getElementById('inv-net-' + stableId);
+    if (netEl) netEl.textContent = _invNetDisplay(ref);
+  }
+  // These feed the Summary rollups; refresh only the summary (table inputs keep focus).
+  if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','disposition','category','qty'].indexOf(key) >= 0) {
+    _invRefreshSummary(jobId);
+  }
+}
+
+function _invRefreshSummary(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var el = document.getElementById('inv-summary');
+  if (job && el) el.innerHTML = _renderInventorySummary(job, _jobInvRefs(jobId));
+}
+
+function addInventoryManualItem(jobId) {
+  var name = (window.prompt('Line item description (e.g. Cash on hand, 2019 Lexus RX, brokerage account …):') || '').trim();
+  if (!name) return;
+  var ts = Date.now();
+  _setPhotoRef(jobId, {
+    stableId: jobId + '_m_' + ts, roomIdx: null, label: 'inventory', manual: true,
+    objectName: name, category: INV_DEFAULT_CATEGORY, disposition: '', qty: '1',
+    filename: '', driveFileUrl: null, status: 'manual', ts: ts
+  });
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+}
+
+function removeInventoryManualItem(jobId, stableId) {
+  if (!window.confirm('Remove this manual line item?')) return;
+  _photoRefs[jobId] = (_photoRefs[jobId] || []).filter(function(r){ return r.stableId !== stableId; });
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -6093,27 +6198,32 @@ function renderInventoryTab() {
   if (!job) { cont.innerHTML = '<div class="empty-state">Job not found.</div>'; return; }
   var items = _jobInvRefs(jobId);
   var summary = _renderInventorySummary(job, items);
-  if (!items.length) {
-    cont.innerHTML = summary + '<div class="empty-state">No inventory items captured yet. Use “Capture item” on the room cards in the Job Plan to start cataloging.</div>';
-    return;
-  }
   var head = INVENTORY_COLUMNS.map(function(c){
     var tag = c.kind === 'formula' ? ' <span style="font-weight:400;color:var(--gray);font-size:8px;">ƒ</span>' : '';
     return '<th style="white-space:nowrap;">' + esc(c.header) + tag + '</th>';
   }).join('');
-  var body = items.map(function(ref, i){
-    var cells = INVENTORY_COLUMNS.map(function(c){
-      var manageStyle = c.kind !== 'capture' ? 'background:#fcfaf5;color:var(--gray);' : '';
-      return '<td style="white-space:nowrap;' + manageStyle + '">' + _invCellRead(ref, c, job, i + 1) + '</td>';
+  var body;
+  if (!items.length) {
+    body = '<tr><td colspan="' + INVENTORY_COLUMNS.length + '" style="text-align:center;color:var(--gray);padding:18px;">No items yet. Capture items on the Job Plan room cards, or add a manual line item above.</td></tr>';
+  } else {
+    body = items.map(function(ref, i){
+      var cells = INVENTORY_COLUMNS.map(function(c){
+        var manageStyle = (c.kind !== 'capture') ? 'background:#fcfaf5;' : '';
+        return '<td style="white-space:nowrap;vertical-align:middle;' + manageStyle + '">' + _invCell(jobId, ref, c, job, i + 1) + '</td>';
+      }).join('');
+      return '<tr>' + cells + '</tr>';
     }).join('');
-    return '<tr>' + cells + '</tr>';
-  }).join('');
-  var table = '<div class="card"><div class="sec">Inventory — Tangible Personal Property</div>'
+  }
+  var table = '<div class="card">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
+    + '<div class="sec" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Inventory — Tangible Personal Property</div>'
+    + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
+    + '</div>'
     + '<div style="overflow-x:auto;"><table class="vtbl" style="min-width:100%;font-size:11px;">'
     + '<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>'
-    + '<div style="font-size:10px;color:var(--gray);margin-top:8px;">Shaded columns are filled from the in-app inventory editor (next build). ƒ = formula (Net = Gross − Fees).</div>'
+    + '<div style="font-size:10px;color:var(--gray);margin-top:8px;">Shaded columns are entered here at the office; they save automatically. ƒ = Net (Gross − Fees), computed. Blank Valuation Date defaults to the date of death.</div>'
     + '</div>';
-  cont.innerHTML = summary + table;
+  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + table;
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
