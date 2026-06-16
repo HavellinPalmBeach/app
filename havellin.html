@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 8:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 8:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6268,7 +6268,7 @@ function renderInventoryTab() {
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
-  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId); });
+  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId) && r.label === 'collection'; });
   var nUploaded = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
   var failedRefs = refs.filter(function(r){ return r.status === 'failed'; });
   var statusHtml = nUploaded > 0 ? '<span style="color:var(--ok-tx);font-size:10px;font-weight:600;">&#10003; ' + nUploaded + ' saved</span> ' : '';
@@ -6284,12 +6284,17 @@ function _renderCollPhotoCapture(jobId, collId) {
     + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
     + 'onchange="attachJobPlanCollectionPhoto(this,' + jobId + ',' + collId + ')">'
     + '&#128247; Capture Asset Photo</label>'
+    + '<label style="' + btnStyle + '" title="Appraisal report, dealer/buyer offer, receipt — PDF or image">'
+    + '<input type="file" accept="image/*,application/pdf" style="display:none;" '
+    + 'onchange="attachCollectionDoc(this,' + jobId + ',' + collId + ')">'
+    + '&#128196; Upload Appraisal / Offer</label>'
     + '<span id="photo-coll-status-' + jobId + '-' + collId + '">' + statusHtml + '</span>'
-    + '</div>';
+    + '</div>'
+    + '<div id="coll-docs-' + jobId + '-' + collId + '">' + _renderCollDocs(jobId, collId) + '</div>';
 }
 
 function _updateCollPhotoStatus(jobId, collId) {
-  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId); });
+  var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId) && r.label === 'collection'; });
   var nUploaded = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
   var failedRefs = refs.filter(function(r){ return r.status === 'failed'; });
   var el = document.getElementById('photo-coll-status-' + jobId + '-' + collId);
@@ -6423,7 +6428,12 @@ function retryPhotoUpload(jobId, stableId) {
   ref.status = 'uploading';
   _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
   var subfolder = ref.collId ? 'Asset Documentation' : 'Photos';
-  if (ref.collId) {
+  if (ref.label === 'appraisal') {
+    _updateCollDocs(jobId, ref.collId);
+    _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
+      _updateCollDocs(jobId, ref.collId);
+    });
+  } else if (ref.collId) {
     _updateCollPhotoStatus(jobId, ref.collId);
     _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
       _updateCollPhotoStatus(jobId, ref.collId);
@@ -6441,33 +6451,57 @@ function retryPhotoUpload(jobId, stableId) {
   }
 }
 
-function uploadAppraisalFile(input, collId, jobIdOverride) {
+// Collection diligence docs (appraisals, buyer offers, receipts). Uploaded to the
+// job's "Asset Documentation" Drive folder and tracked as refs (label 'appraisal')
+// so each collection lists its supporting documents with open links.
+function _collDocRefs(jobId, collId) {
+  return (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId) && r.label === 'appraisal'; });
+}
+
+function _renderCollDocs(jobId, collId) {
+  var refs = _collDocRefs(jobId, collId);
+  if (!refs.length) return '';
+  var rows = refs.map(function(r){
+    var st = r.status === 'uploaded'
+      ? (r.driveFileUrl ? '<a href="' + esc(r.driveFileUrl) + '" target="_blank" style="color:var(--bronze);">open</a>' : '<span style="color:var(--ok-tx);">&#10003;</span>')
+      : (r.status === 'failed'
+          ? '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>'
+          : '<span style="color:var(--gray);">…</span>');
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;padding:1px 0;">'
+      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">&#128196; ' + esc(r.objectName || r.filename) + '</span>' + st + '</div>';
+  }).join('');
+  return '<div style="margin-top:4px;padding-top:3px;border-top:1px dashed var(--border-md);">' + rows + '</div>';
+}
+
+function _updateCollDocs(jobId, collId) {
+  var el = document.getElementById('coll-docs-' + jobId + '-' + collId);
+  if (el) el.innerHTML = _renderCollDocs(jobId, collId);
+}
+
+function attachCollectionDoc(input, jobId, collId) {
   var file = input.files[0];
   if (!file) return;
-  var jobId = jobIdOverride || (document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0);
-  var coll = collectionsData.find(function(c){ return c.id===collId; });
-  var collName = coll ? coll.name : String(collId);
-  var job = jobs.find(function(j){ return j.id===jobId; });
-  var badge = document.getElementById('appraisal-badge-'+collId);
-  if (badge) badge.innerHTML = '<span style="color:var(--gray);">&#8635; uploading...</span>';
-  var ext = file.name.split('.').pop();
-  var ts = new Date().toISOString().slice(0,10);
-  var cleanColl = _cleanName(collName);
-  var filename = (job&&job.hvlId?job.hvlId+'_':'')+'APPRSL_'+cleanColl+'_'+ts+'.'+ext;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || job.status !== 'active') return;
+  var estRec = estimateStore[jobId];
+  var colls = estRec && estRec.estimate && estRec.estimate.collections ? estRec.estimate.collections : [];
+  var coll = colls.find(function(c){ return c.id === collId; });
+  var collName = coll ? coll.name : ('Collection' + collId);
+  var ext = (file.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '') || 'pdf';
+  var ts = Date.now();
+  var seq = _collDocRefs(jobId, collId).length + 1;
+  var stableId = jobId + '_cdoc' + collId + '_' + ts;
+  var filename = (job.hvlId ? job.hvlId + '_' : '') + 'APPRSL_' + _cleanName(collName) + '_' + seq + '_' + _photoStamp(ts) + '.' + ext;
   var reader = new FileReader();
   reader.onload = function(ev) {
-    function _up() {
-      var folderId = job && job.driveSubfolders && job.driveSubfolders['Asset Documentation']
-        ? job.driveSubfolders['Asset Documentation'].id : null;
-      if (!folderId) { if(badge) badge.innerHTML='<span style="color:var(--err-tx);">No Asset Documentation folder</span>'; return; }
-      uploadToDrive(folderId, filename, ev.target.result, function(ok) {
-        if (badge) badge.innerHTML = ok
-          ? '<span style="color:var(--ok-tx);">&#10003; '+filename+' saved to Drive</span>'
-          : '<span style="color:var(--err-tx);">Upload failed — saved locally</span>';
-      });
-    }
-    if (job && !job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
-    else _up();
+    var ref = { stableId:stableId, roomIdx:null, label:'appraisal', collId:String(collId),
+                objectName:file.name, filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
+    _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
+    _photoRetryData[stableId] = ev.target.result;
+    _updateCollDocs(jobId, collId);
+    _doPhotoUpload(jobId, ev.target.result, filename, stableId, 'Asset Documentation', function() {
+      _updateCollDocs(jobId, collId);
+    });
   };
   reader.readAsDataURL(file);
   input.value = '';
