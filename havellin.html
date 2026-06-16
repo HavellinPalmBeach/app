@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 8:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 9:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6260,11 +6260,69 @@ function renderInventoryTab() {
   var table = '<div class="card">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
     + '<div class="sec" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Inventory — Tangible Personal Property</div>'
+    + '<div style="display:flex;gap:8px;">'
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
+    + '<button class="btn-bronze" onclick="syncInventoryWorkbook(' + jobId + ')" title="Generate / update this client’s inventory workbook in Google Drive">⬆ Sync to Workbook</button>'
+    + '</div>'
     + '</div>'
     + inner
     + '</div>';
   cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + table;
+}
+
+// ── Build 3: push the manifest to the per-client Google workbook ───────────────
+// Resolves each row to its final cell value (room name, valuation-date default,
+// flags as Yes/blank, ts as ISO). Net is left blank — the Apps Script writes it as
+// a formula (=Gross−Fees) per the schema.
+function _invExportValue(ref, col, job, seq) {
+  switch (col.key) {
+    case 'seq': return seq;
+    case 'room': return (ref.roomIdx == null) ? '' : _invRoomName(job.id, ref.roomIdx);
+    case 'ts': return ref.ts ? new Date(ref.ts).toISOString() : '';
+    case 'driveFileUrl': return ref.driveFileUrl || '';
+    case 'net': return '';
+    case 'valDate': return ref.valDate || job.deathDate || '';
+    case 'qty': return (ref.qty != null && ref.qty !== '') ? ref.qty : 1;
+    case 'fmv': case 'gross': case 'fees': { var n = parseFloat(ref[col.key]); return isNaN(n) ? '' : n; }
+    case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '';
+    default: { var v = ref[col.key]; return (v == null) ? '' : v; }
+  }
+}
+
+function buildInventoryPayload(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; }) || {};
+  var items = _jobInvRefs(jobId);
+  // Column A = Job ID, then the 25 manifest columns (includes the on-screen-hidden ones).
+  var columns = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.header; }));
+  var rows = items.map(function(ref, i){
+    var row = [job.hvlId || String(jobId)];
+    INVENTORY_COLUMNS.forEach(function(c){ row.push(_invExportValue(ref, c, job, i + 1)); });
+    return row;
+  });
+  return {
+    jobId: jobId,
+    hvlId: job.hvlId || '',
+    estate: job.name || '',
+    address: [job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', '),
+    deathDate: job.deathDate || '',
+    lettersDate: job.lettersDate || '',
+    deadline: job.probateDeadline || '',
+    preparedBy: 'Havellin Palm Beach, LLC',
+    driveFolder: job.driveFolder || '',
+    lastUpdated: new Date().toISOString(),
+    columns: columns,
+    rows: rows
+  };
+}
+
+function syncInventoryWorkbook(jobId) {
+  if (!SHEETS_SYNC_URL) { showSyncBadge('No cloud sync configured — workbook not written', true); return; }
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  if (!job.driveFolder) { showSyncBadge('This client has no Drive folder yet — open the job to create it first', true); return; }
+  showSyncBadge('Building inventory workbook…');
+  postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
+                'Inventory workbook synced ✓', 'Inventory sync failed');
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
