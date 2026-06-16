@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 3:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 4:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5812,6 +5812,15 @@ function _updateCollPhotoStatus(jobId, collId) {
   el.innerHTML = html;
 }
 
+// Capture-time stamp for photo filenames: YYYY-MM-DD_HHMMSS in local time,
+// for chain-of-custody / probate documentation.
+function _photoStamp(ms) {
+  var d = new Date(ms);
+  var p = function(n){ return String(n).padStart(2,'0'); };
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate())
+       + '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+
 function attachJobPlanPhoto(input, jobId, roomIdx, label) {
   var file = input.files[0];
   if (!file) return;
@@ -5825,12 +5834,13 @@ function attachJobPlanPhoto(input, jobId, roomIdx, label) {
   var seq = _slotRefs(jobId, roomIdx, label).length + 1;
   var stableId = jobId + '_r' + roomIdx + '_' + label + '_' + seq;
   var cleanRoom = _cleanName(roomName);
-  var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + label + '_' + seq + '.jpg';
+  var ts = Date.now();
+  var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + label + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
       var ref = { stableId:stableId, roomIdx:roomIdx, label:label, seq:seq, collId:null,
-                  filename:filename, driveFileUrl:null, status:'uploading', ts:Date.now() };
+                  filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
       _setPhotoRef(jobId, ref);
       savePhotoRefs(jobId);
       _photoRetryData[stableId] = dataUrl;
@@ -5854,11 +5864,14 @@ function attachJobPlanCollectionPhoto(input, jobId, collId) {
   var coll = colls.find(function(c){ return c.id === collId; });
   var collName = coll ? coll.name : ('Collection' + collId);
   var ts = Date.now();
+  // Sequence number = total existing shots for this collection + 1 (keeps
+  // filenames unique even when two are captured within the same second).
+  var seq = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId); }).length + 1;
   var stableId = jobId + '_c' + collId + '_' + ts;
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
-      var filename = (job.hvlId ? job.hvlId + '_' : '') + 'ASSET_' + _cleanName(collName) + '_' + ts + '.jpg';
+      var filename = (job.hvlId ? job.hvlId + '_' : '') + 'ASSET_' + _cleanName(collName) + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
       var ref = { stableId:stableId, roomIdx:null, label:'collection', collId:String(collId),
                   filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
       _setPhotoRef(jobId, ref);
