@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 5:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 6:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -260,6 +260,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
   <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
   <button class="nb" onclick="showPanel('job-plan',this)">Job Plan</button>
+  <button class="nb" onclick="showPanel('inventory',this)">Inventory</button>
   <button class="nb" onclick="showPanel('invoice',this)">Invoices</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
   <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
@@ -823,6 +824,23 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
     </div>
   </div>
+</div>
+
+<!-- ══════════════════════════════ ESTATE INVENTORY ══════════════════════════════ -->
+<div class="panel" id="panel-inventory">
+  <div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;">Estate Inventory</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Per-client tangible personal property manifest. Captured items populate automatically; valuation &amp; disposition detail comes in the next build.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
+        <select id="inv-job" onchange="renderInventoryTab()" style="width:340px;font-size:12px;"><option value="">Select client</option></select>
+      </div>
+    </div>
+  </div>
+  <div id="inventory-content"></div>
 </div>
 
 <!-- ══════════════════════════════ CLIENT ESTIMATE ══════════════════════════════ -->
@@ -5265,6 +5283,7 @@ function showPanel(id, btn) {
   }
   if (id==='invoice') { populateLogAndInvSelects(); loadInvoice(); }
   if (id==='agreement') { populateAgrSelect(); }
+  if (id==='inventory') { populateInventorySelect(); renderInventoryTab(); }
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -5666,6 +5685,10 @@ function savePhotoRefs(jobId) {
     var refs = (_photoRefs[jobId] || []).map(function(r) {
       return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId,
                seq:r.seq, objectName:r.objectName, category:r.category, disposition:r.disposition,
+               qty:r.qty, condition:r.condition, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
+               apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
+               channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
+               dispDate:r.dispDate, receiptDoc:r.receiptDoc,
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
@@ -5905,6 +5928,192 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
   };
   reader.readAsDataURL(file);
   input.value = '';
+}
+
+// ══════════════ ESTATE INVENTORY TAB (Build 1 — read-only manifest) ══════════════
+// Per-client tangible personal property manifest. App-capture columns are filled at
+// photo time; app-manage columns (valuation, disposition detail, proceeds) become
+// editable in the next build. Mirrors Havellin_Estate_Inventory_Master.xlsx.
+var INV_CONDITIONS  = ['Excellent','Good','Fair','Poor','Salvage'];
+var INV_VAL_SOURCES = ['Appraisal','Dealer quote','Auction comps','Online comps','PR estimate'];
+var INVENTORY_COLUMNS = [
+  {key:'seq',          header:'Item #',              kind:'capture'},
+  {key:'room',         header:'Room',                kind:'capture'},
+  {key:'objectName',   header:'Object Name',         kind:'capture'},
+  {key:'category',     header:'Category',            kind:'capture'},
+  {key:'disposition',  header:'Disposition',         kind:'capture'},
+  {key:'ts',           header:'Captured At',         kind:'capture'},
+  {key:'filename',     header:'Photo Filename',      kind:'capture'},
+  {key:'driveFileUrl', header:'Photo Link',          kind:'capture'},
+  {key:'qty',          header:'Qty',                 kind:'manage'},
+  {key:'condition',    header:'Condition',           kind:'manage'},
+  {key:'fmv',          header:'Estimated FMV',       kind:'manage'},
+  {key:'valDate',      header:'Valuation Date',      kind:'manage'},
+  {key:'valSource',    header:'Valuation Source',    kind:'manage'},
+  {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage'},
+  {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage'},
+  {key:'flagBequest',  header:'Specific Bequest',    kind:'manage'},
+  {key:'flagDisputed', header:'Disputed',            kind:'manage'},
+  {key:'channel',      header:'Channel / Recipient', kind:'manage'},
+  {key:'authBy',       header:'Authorized By',       kind:'manage'},
+  {key:'approvalDate', header:'Approval Date',       kind:'manage'},
+  {key:'gross',        header:'Gross Proceeds',      kind:'manage'},
+  {key:'fees',         header:'Fees',                kind:'manage'},
+  {key:'net',          header:'Net to Estate',       kind:'formula'},
+  {key:'dispDate',     header:'Date of Disposition', kind:'manage'},
+  {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage'}
+];
+
+function _jobInvRefs(jobId) {
+  return (_photoRefs[jobId] || [])
+    .filter(function(r){ return r.label === 'inventory' && !r.collId; })
+    .sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
+}
+
+function _invRoomName(jobId, roomIdx) {
+  var estRec = estimateStore[jobId];
+  var rooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  var room = rooms.find(function(r){ return r.idx === roomIdx; });
+  return room ? room.name : ('Room ' + roomIdx);
+}
+
+function _invDateTime(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  return d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) + ' '
+       + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+function _money(v){ var n = parseFloat(v); return isNaN(n) ? '' : '$' + n.toLocaleString(); }
+
+function populateInventorySelect() {
+  var sel = document.getElementById('inv-job');
+  if (!sel) return;
+  var prev = sel.value;
+  var opts = '<option value="">Select client</option>';
+  jobs.forEach(function(j){
+    opts += '<option value="' + j.id + '">' + esc(j.name || ('Job ' + j.id)) + (j.hvlId ? ' · ' + esc(j.hvlId) : '') + '</option>';
+  });
+  sel.innerHTML = opts;
+  if (prev && jobs.find(function(j){ return String(j.id) === prev; })) sel.value = prev;
+}
+
+function _invCellRead(ref, col, job, displaySeq) {
+  switch (col.key) {
+    case 'seq': return String(displaySeq);
+    case 'room': return esc(_invRoomName(job.id, ref.roomIdx));
+    case 'objectName': return esc(ref.objectName || '—');
+    case 'category': return esc(ref.category || '—');
+    case 'disposition': return esc(ref.disposition || '—');
+    case 'ts': return _invDateTime(ref.ts);
+    case 'filename': return '<span style="font-family:monospace;font-size:10px;">' + esc(ref.filename || '—') + '</span>';
+    case 'driveFileUrl': return ref.driveFileUrl ? '<a href="' + esc(ref.driveFileUrl) + '" target="_blank" style="color:var(--bronze);">open</a>' : '—';
+    case 'net': {
+      var g = parseFloat(ref.gross), f = parseFloat(ref.fees);
+      if (isNaN(g) && isNaN(f)) return '—';
+      return _money((isNaN(g)?0:g) - (isNaN(f)?0:f));
+    }
+    case 'valDate':
+      if (ref.valDate) return esc(fmtDate2(ref.valDate));
+      return job.deathDate ? '<span style="color:var(--gray);font-style:italic;" title="Defaults to date of death">' + esc(fmtDate2(job.deathDate)) + '</span>' : '—';
+    case 'approvalDate': case 'dispDate': return ref[col.key] ? esc(fmtDate2(ref[col.key])) : '—';
+    case 'fmv': case 'gross': case 'fees': { var m = _money(ref[col.key]); return m || '—'; }
+    case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '—';
+    default: { var v = ref[col.key]; return (v === undefined || v === null || v === '') ? '—' : esc(String(v)); }
+  }
+}
+
+function _renderInventorySummary(job, items) {
+  var catAgg = {}; INV_CATEGORIES.forEach(function(c){ catAgg[c] = {fmv:0, count:0}; });
+  var dispAgg = {}; INV_DISPOSITIONS.forEach(function(d){ dispAgg[d] = 0; });
+  var totalFMV = 0, awaiting = 0, nDisp = 0, nBequest = 0, nExempt = 0, gross = 0, fees = 0;
+  items.forEach(function(r){
+    var cat = (r.category && catAgg[r.category]) ? r.category : 'General/Household';
+    if (!catAgg[cat]) catAgg[cat] = {fmv:0, count:0};
+    catAgg[cat].count++;
+    var f = parseFloat(r.fmv);
+    if (!isNaN(f)) { catAgg[cat].fmv += f; totalFMV += f; } else { awaiting++; }
+    if (r.disposition && dispAgg.hasOwnProperty(r.disposition)) dispAgg[r.disposition]++;
+    if (r.flagDisputed || r.disposition === 'Hold') nDisp++;
+    if (r.flagBequest) nBequest++;
+    if (r.flagExempt) nExempt++;
+    var g = parseFloat(r.gross); if (!isNaN(g)) gross += g;
+    var fe = parseFloat(r.fees);  if (!isNaN(fe)) fees += fe;
+  });
+  var dt = function(v){ return v ? fmtDate2(v) : '—'; };
+  var hdrRow = function(l, v){
+    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:12px;">'
+      + '<span style="color:var(--gray);">' + l + '</span><span style="font-weight:600;text-align:right;">' + v + '</span></div>';
+  };
+  var header = '<div>'
+    + hdrRow('Client / Estate', esc(job.name || '—'))
+    + hdrRow('Job ID', esc(job.hvlId || '—'))
+    + hdrRow('Property Address', esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—'))
+    + hdrRow('Date of Death', dt(job.deathDate))
+    + hdrRow('Letters Issued', dt(job.lettersDate))
+    + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))
+    + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
+    + hdrRow('Last Updated', _invDateTime(Date.now()))
+    + '</div>';
+  var totals = '<div>'
+    + hdrRow('Total Items', String(items.length))
+    + hdrRow('Total Estimated FMV', _money(totalFMV) || '$0')
+    + hdrRow('Items Awaiting Valuation', String(awaiting))
+    + hdrRow('Disputed / Hold', String(nDisp))
+    + hdrRow('Specific Bequests', String(nBequest))
+    + hdrRow('Exempt §732.402', String(nExempt))
+    + hdrRow('Gross Proceeds', _money(gross) || '$0')
+    + hdrRow('Fees', _money(fees) || '$0')
+    + hdrRow('Net to Estate', _money(gross - fees) || '$0')
+    + '</div>';
+  var catRows = INV_CATEGORIES.map(function(c){
+    return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td><td style="text-align:right;">' + (_money(catAgg[c].fmv) || '$0') + '</td></tr>';
+  }).join('');
+  var catTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>FMV by Category</th><th style="text-align:right;">Count</th><th style="text-align:right;">FMV</th></tr></thead><tbody>'
+    + catRows
+    + '<tr style="font-weight:700;"><td>Total</td><td style="text-align:right;">' + items.length + '</td><td style="text-align:right;">' + (_money(totalFMV) || '$0') + '</td></tr></tbody></table>';
+  var dispRows = INV_DISPOSITIONS.map(function(d){
+    return '<tr><td>' + esc(d) + '</td><td style="text-align:right;">' + (dispAgg[d] || 0) + '</td></tr>';
+  }).join('');
+  var dispTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Disposition</th><th style="text-align:right;">Count</th></tr></thead><tbody>' + dispRows + '</tbody></table>';
+  return '<div class="card" style="margin-bottom:1rem;"><div class="sec">Estate Inventory — Summary</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:14px;">' + header + totals + '</div>'
+    + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;">' + catTable + dispTable + '</div>'
+    + '<div style="font-size:10px;color:var(--gray);margin-top:10px;font-style:italic;">Tangible personal property only. The §733.604 court inventory (real property, accounts, securities) is the PR’s filing, prepared with counsel.</div>'
+    + '</div>';
+}
+
+function renderInventoryTab() {
+  var sel = document.getElementById('inv-job');
+  var jobId = sel ? parseInt(sel.value) || 0 : 0;
+  var cont = document.getElementById('inventory-content');
+  if (!cont) return;
+  if (!jobId) { cont.innerHTML = '<div class="empty-state">Select a client to view their estate inventory.</div>'; return; }
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) { cont.innerHTML = '<div class="empty-state">Job not found.</div>'; return; }
+  var items = _jobInvRefs(jobId);
+  var summary = _renderInventorySummary(job, items);
+  if (!items.length) {
+    cont.innerHTML = summary + '<div class="empty-state">No inventory items captured yet. Use “Capture item” on the room cards in the Job Plan to start cataloging.</div>';
+    return;
+  }
+  var head = INVENTORY_COLUMNS.map(function(c){
+    var tag = c.kind === 'formula' ? ' <span style="font-weight:400;color:var(--gray);font-size:8px;">ƒ</span>' : '';
+    return '<th style="white-space:nowrap;">' + esc(c.header) + tag + '</th>';
+  }).join('');
+  var body = items.map(function(ref, i){
+    var cells = INVENTORY_COLUMNS.map(function(c){
+      var manageStyle = c.kind !== 'capture' ? 'background:#fcfaf5;color:var(--gray);' : '';
+      return '<td style="white-space:nowrap;' + manageStyle + '">' + _invCellRead(ref, c, job, i + 1) + '</td>';
+    }).join('');
+    return '<tr>' + cells + '</tr>';
+  }).join('');
+  var table = '<div class="card"><div class="sec">Inventory — Tangible Personal Property</div>'
+    + '<div style="overflow-x:auto;"><table class="vtbl" style="min-width:100%;font-size:11px;">'
+    + '<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>'
+    + '<div style="font-size:10px;color:var(--gray);margin-top:8px;">Shaded columns are filled from the in-app inventory editor (next build). ƒ = formula (Net = Gross − Fees).</div>'
+    + '</div>';
+  cont.innerHTML = summary + table;
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
