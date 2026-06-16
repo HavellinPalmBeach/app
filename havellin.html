@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 7:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 7:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5942,8 +5942,8 @@ var INVENTORY_COLUMNS = [
   {key:'objectName',   header:'Object Name',         kind:'capture'},
   {key:'category',     header:'Category',            kind:'capture'},
   {key:'disposition',  header:'Disposition',         kind:'capture', edit:'dispSelect'},
-  {key:'ts',           header:'Captured At',         kind:'capture'},
-  {key:'filename',     header:'Photo Filename',      kind:'capture'},
+  {key:'ts',           header:'Captured At',         kind:'capture', hideInTab:true},
+  {key:'filename',     header:'Photo Filename',      kind:'capture', hideInTab:true},
   {key:'driveFileUrl', header:'Photo Link',          kind:'capture'},
   {key:'qty',          header:'Qty',                 kind:'manage',  edit:'number'},
   {key:'condition',    header:'Condition',           kind:'manage',  edit:'select'},
@@ -6219,16 +6219,19 @@ function renderInventoryTab() {
   if (!job) { cont.innerHTML = '<div class="empty-state">Job not found.</div>'; return; }
   var items = _jobInvRefs(jobId);
   var summary = _renderInventorySummary(job, items);
-  var head = INVENTORY_COLUMNS.map(function(c){
+  // Captured At / Photo Filename are hidden on screen to save room; they remain in
+  // the data model and the workbook export. Photo Link still gives one-click access.
+  var cols = INVENTORY_COLUMNS.filter(function(c){ return !c.hideInTab; });
+  var head = cols.map(function(c){
     var tag = c.kind === 'formula' ? ' <span style="font-weight:400;color:var(--gray);font-size:8px;">ƒ</span>' : '';
     return '<th style="white-space:nowrap;">' + esc(c.header) + tag + '</th>';
   }).join('');
   var body;
   if (!items.length) {
-    body = '<tr><td colspan="' + INVENTORY_COLUMNS.length + '" style="text-align:center;color:var(--gray);padding:18px;">No items yet. Capture items on the Job Plan room cards, or add a manual line item above.</td></tr>';
+    body = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:var(--gray);padding:18px;">No items yet. Capture items on the Job Plan room cards, or add a manual line item above.</td></tr>';
   } else {
     body = items.map(function(ref, i){
-      var cells = INVENTORY_COLUMNS.map(function(c){
+      var cells = cols.map(function(c){
         var manageStyle = (c.kind !== 'capture') ? 'background:#fcfaf5;' : '';
         return '<td style="white-space:nowrap;vertical-align:middle;' + manageStyle + '">' + _invCell(jobId, ref, c, job, i + 1) + '</td>';
       }).join('');
