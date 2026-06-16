@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 9:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 9:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5923,6 +5923,7 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
       _updateRoomInventoryEl(jobId, roomIdx);
       _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Photos', function() {
         _updateRoomInventoryEl(jobId, roomIdx);
+        _scheduleInventorySync(jobId);
       });
     });
   };
@@ -6197,6 +6198,7 @@ function _invEdit(jobId, stableId, key, el) {
   if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','disposition','category','qty'].indexOf(key) >= 0) {
     _invRefreshSummary(jobId);
   }
+  _scheduleInventorySync(jobId);
 }
 
 function _invRefreshSummary(jobId) {
@@ -6216,6 +6218,7 @@ function addInventoryManualItem(jobId) {
   });
   savePhotoRefs(jobId);
   renderInventoryTab();
+  _scheduleInventorySync(jobId);
 }
 
 function removeInventoryManualItem(jobId, stableId) {
@@ -6223,6 +6226,7 @@ function removeInventoryManualItem(jobId, stableId) {
   _photoRefs[jobId] = (_photoRefs[jobId] || []).filter(function(r){ return r.stableId !== stableId; });
   savePhotoRefs(jobId);
   renderInventoryTab();
+  _scheduleInventorySync(jobId);
 }
 
 function renderInventoryTab() {
@@ -6255,15 +6259,12 @@ function renderInventoryTab() {
     }).join('');
     inner = '<div style="overflow-x:auto;"><table class="vtbl" style="min-width:100%;font-size:11px;">'
       + '<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>'
-      + '<div style="font-size:10px;color:var(--gray);margin-top:8px;">Shaded columns are entered here at the office; they save automatically. Net to Estate is computed (Gross − Fees). Blank Valuation Date defaults to the date of death.</div>';
+      + '<div style="font-size:10px;color:var(--gray);margin-top:8px;">Shaded columns are entered here; they save and sync to the client’s Drive workbook automatically. Net to Estate is computed (Gross − Fees). Blank Valuation Date defaults to the date of death.</div>';
   }
   var table = '<div class="card">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
     + '<div class="sec" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Inventory — Tangible Personal Property</div>'
-    + '<div style="display:flex;gap:8px;">'
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
-    + '<button class="btn-bronze" onclick="syncInventoryWorkbook(' + jobId + ')" title="Generate / update this client’s inventory workbook in Google Drive">⬆ Sync to Workbook</button>'
-    + '</div>'
     + '</div>'
     + inner
     + '</div>';
@@ -6315,14 +6316,19 @@ function buildInventoryPayload(jobId) {
   };
 }
 
-function syncInventoryWorkbook(jobId) {
-  if (!SHEETS_SYNC_URL) { showSyncBadge('No cloud sync configured — workbook not written', true); return; }
+// Auto-sync the per-client workbook whenever inventory data changes, like the
+// jobs/estimates sheets. Debounced so a burst of edits coalesces into one write,
+// and silent when sync/Drive folder isn't set up (no error spam on every keystroke).
+var _invSyncTimer = {};
+function _scheduleInventorySync(jobId) {
+  if (!SHEETS_SYNC_URL) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  if (!job.driveFolder) { showSyncBadge('This client has no Drive folder yet — open the job to create it first', true); return; }
-  showSyncBadge('Building inventory workbook…');
-  postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
-                'Inventory workbook synced ✓', 'Inventory sync failed');
+  if (!job || !job.driveFolder) return;
+  clearTimeout(_invSyncTimer[jobId]);
+  _invSyncTimer[jobId] = setTimeout(function(){
+    postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
+                  'Inventory workbook synced ✓', 'Inventory sync failed');
+  }, 2500);
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
