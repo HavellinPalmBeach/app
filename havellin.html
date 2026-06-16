@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.15 · 12:25am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -367,8 +367,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
         <div class="sec" style="margin:10px 0 6px;font-size:11px;">Probate Details</div>
         <div class="row">
+          <div><label>Date of death <span style="color:#A32D2D;font-weight:700;">*</span></label>
+            <input type="date" id="i-date-of-death" onchange="computeInventoryDeadline()"></div>
+          <div><label>Letters issued</label>
+            <input type="date" id="i-letters-date" onchange="computeInventoryDeadline()"></div>
+        </div>
+        <div class="row">
           <div><label>Case number <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234"></div>
-          <div><label>Court deadline</label><input type="date" id="i-probate-deadline"></div>
+          <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
         </div>
         <div class="row">
           <div><label>Property sale required?</label><select id="i-probate-sale"><option value="">Select</option><option value="yes">Yes — property must be sold</option><option value="no">No — heirs retaining property</option><option value="maybe">Under discussion</option></select></div>
@@ -2638,6 +2644,18 @@ function updateIntakeDateMins() {
   }
 }
 
+function computeInventoryDeadline(){
+  var l = document.getElementById('i-letters-date').value;
+  var out = document.getElementById('i-probate-deadline');
+  var fb  = document.getElementById('i-deadline-fb');
+  if(!l){ if(fb) fb.textContent='Inventory clock starts when Letters are issued.'; return; }
+  var p=l.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); d.setDate(d.getDate()+60);
+  var iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(out && !out.dataset.userEdited) out.value=iso;
+  var days=Math.ceil((d-new Date())/86400000);
+  if(fb) fb.textContent='Inventory due '+iso+' ('+days+' days from today).';
+}
+
 function toggleProbateFields() { toggleIntakeFields(); }
 function toggleIntakeFields() {
   var svc = document.getElementById('i-svc') ? document.getElementById('i-svc').value : '';
@@ -2733,6 +2751,7 @@ function saveIntake() {
   // Additional mandatory fields for probate
   if (svc === 'probate' || svc === 'contested_probate') {
     var probateMissing = [];
+    if (!document.getElementById('i-date-of-death').value) probateMissing.push('Date of death');
     if (!document.getElementById('i-probate-case').value.trim()) probateMissing.push('Probate case number');
     if (!document.getElementById('i-probate-atty-fname').value.trim()) probateMissing.push('Attorney first name');
     if (!document.getElementById('i-probate-atty-lname').value.trim()) probateMissing.push('Attorney last name');
@@ -2762,6 +2781,8 @@ function saveIntake() {
     destSqft:destSqft, destBeds:destBeds, destBaths:destBaths,
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
     probateDeadline: document.getElementById('i-probate-deadline') ? document.getElementById('i-probate-deadline').value : '',
+    deathDate:  document.getElementById('i-date-of-death') ? document.getElementById('i-date-of-death').value : '',
+    lettersDate:document.getElementById('i-letters-date')  ? document.getElementById('i-letters-date').value  : '',
     probateAttyFname: document.getElementById('i-probate-atty-fname') ? document.getElementById('i-probate-atty-fname').value.trim() : '',
     probateAttyLname: document.getElementById('i-probate-atty-lname') ? document.getElementById('i-probate-atty-lname').value.trim() : '',
     probateAttyName: (function(){ var f=document.getElementById('i-probate-atty-fname'); var l=document.getElementById('i-probate-atty-lname'); return f&&l ? (f.value.trim()+' '+l.value.trim()).trim() : ''; })(),
@@ -2825,11 +2846,14 @@ function saveIntake() {
 function clearIntakeForm() {
   ['i-fname','i-lname','i-name','i-phone','i-email','i-addr','i-city','i-zip','i-sqft','i-beds','i-baths','i-notes',
    'i-walkthrough','i-start','i-completion',
+   'i-date-of-death','i-letters-date','i-probate-deadline',
    'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
    'i-probate-atty-phone','i-probate-atty-email',
    'i-executor-fname','i-executor-lname','i-executor-phone','i-executor-email'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
+  var _pd = document.getElementById('i-probate-deadline'); if (_pd) delete _pd.dataset.userEdited;
+  var _dfb = document.getElementById('i-deadline-fb'); if (_dfb) _dfb.textContent = '';
   ['i-svc','i-ptype','i-src','i-tc','i-pri','i-probate-sale','i-site-visit-by','i-home-value'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
@@ -2842,9 +2866,12 @@ function clearIntakeForm() {
 }
 function clearIntake() {
   ['i-fname','i-lname','i-phone','i-email','i-addr','i-city','i-notes','i-sqft','i-years-in-home','i-beds','i-baths',
+   'i-date-of-death','i-letters-date','i-probate-deadline',
    'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
    'i-probate-atty-phone','i-probate-atty-email',
    'i-executor-fname','i-executor-lname','i-executor-phone','i-executor-email'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var _pd2 = document.getElementById('i-probate-deadline'); if (_pd2) delete _pd2.dataset.userEdited;
+  var _dfb2 = document.getElementById('i-deadline-fb'); if (_dfb2) _dfb2.textContent='';
   var erEl = document.getElementById('i-executor-role'); if(erEl) erEl.value='';
   ['i-zip','i-src','i-svc','i-ptype','i-tc','i-start','i-home-value'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   ['i-dest-addr','i-dest-city','i-dest-zip','i-dest-sqft','i-dest-beds','i-dest-baths'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
@@ -3284,8 +3311,9 @@ function renderClientEstimate() {
         '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val" style="font-size:11px;">' + (job.executorEmail||'—') + '</div></div>' +
         '</div>' +
         '<div class="ce-hdr-divider"></div>' +
-        '<div class="ce-hdr-row" style="grid-template-columns:1fr;">' +
+        '<div class="ce-hdr-row" style="grid-template-columns:' + (job.deathDate ? '1fr 1fr' : '1fr') + ';">' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
+        (job.deathDate ? '<div><div class="ce-meta-label">Date of Death (Valuation Date)</div><div class="ce-meta-val">' + fmtCEDate(job.deathDate) + '</div></div>' : '') +
         '</div>'
       : '<div class="ce-hdr-row ce-hdr-row-1">' +
         '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
@@ -8631,7 +8659,7 @@ function renderProbateAgreement() {
   content += dRow('Phone', clientPhone);
   content += dRow('Estate Attorney', attyName + (attyFirm ? ' &middot; '+attyFirm : ''));
   content += dRow('Attorney Phone', attyPhone);
-  content += dRow('Letters of Administration', letters);
+  content += dRow('Letters of Administration', job.lettersDate ? fmtDate2(job.lettersDate) : letters);
   content += '</table>';
   content += subHdr('1.3 Property');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
