@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 7:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 8:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6105,14 +6105,30 @@ function _invColEditable(ref, col) {
   return false;
 }
 
+// Minimum readable width per control so select/text values aren't chopped inside
+// the narrow columns (the table scrolls horizontally, so widening is fine).
+function _invCtrlMinW(ctrl, key) {
+  if (key === 'objectName') return 160;
+  if (key === 'room' || ctrl === 'catSelect') return 150;
+  if (ctrl === 'select') return 140;
+  if (ctrl === 'date') return 150;
+  if (ctrl === 'dispSelect') return 100;
+  if (ctrl === 'currency') return 100;
+  if (ctrl === 'number') return 70;
+  if (ctrl === 'text') return 150;
+  return 110;
+}
+function _invInputStyle(ctrl, key) {
+  return 'style="width:100%;min-width:' + _invCtrlMinW(ctrl, key) + 'px;box-sizing:border-box;padding:3px 5px;font-size:11px;"';
+}
+
 function _invInput(jobId, ref, col, job) {
   if (col.key === 'room') {
-    var base0 = 'style="width:100%;box-sizing:border-box;padding:3px 5px;font-size:11px;"';
-    return '<select onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'roomIdx\',this)" ' + base0 + '>' + _invRoomOptions(jobId, ref.roomIdx) + '</select>';
+    return '<select onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'roomIdx\',this)" ' + _invInputStyle('room', 'room') + '>' + _invRoomOptions(jobId, ref.roomIdx) + '</select>';
   }
   var on = 'onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)"';
-  var base = 'style="width:100%;box-sizing:border-box;padding:3px 5px;font-size:11px;"';
   var ctrl = col.edit || (col.key === 'category' ? 'catSelect' : 'text');
+  var base = _invInputStyle(ctrl, col.key);
   var v = ref[col.key];
   switch (ctrl) {
     case 'number':
