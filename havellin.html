@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.16 · 9:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.18 · 3:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2191,7 +2191,11 @@ function calcAll() {
     crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
   }
   if (timelineBadge) {
-    if (!jobStartStr) {
+    if (includedRoomCount === 0) {
+      // No scope yet — a projected completion derived from zero hours is meaningless
+      // and a green "on track" badge here is misleading. Prompt for scope instead.
+      timelineBadge.innerHTML = '<div class="alert a-info" style="margin-top:0;">Tick off rooms to generate a timeline.</div>';
+    } else if (!jobStartStr) {
       timelineBadge.innerHTML = '<div class="alert a-warn" style="margin-top:0;">No start date set in intake — set one to see projected completion.</div>';
     } else {
       var projectedEnd = addWorkingDays(jobStartStr, crew.tcDays);
