@@ -1678,7 +1678,7 @@ var JOB_STEPS = {
   home_cleanout:     {triage:[0.40,0.10], pack:[0.25,0.45], disposition:[0.18,0.60]},
   cleanout:          {triage:[0.40,0.10], document:[0.95,0.05], pack:[0.25,0.45], disposition:[0.18,0.60]},
   probate:           {triage:[0.40,0.10], document:[1.15,0.05], pack:[0.25,0.45], disposition:[0.18,0.60], legal:[0.30,0]},
-  contested_probate: {triage:[0.40,0.10], document:[1.15,0.05], pack:[0.25,0.45], disposition:[0.18,0.60], legal:[0.30,0], heir:1.20},
+  contested_probate: {triage:[0.40,0.10], document:[1.15,0.05], pack:[0.25,0.45], disposition:[0.18,0.60], legal:[0.30,0]},
   prep:              {triage:[0.30,0.10], pack:[0.15,0.40], disposition:[0.10,0.40]}
 };
 var ENGINE_CAREFUL = {triage:1, pack:1, document:1, legal:1}; // steps complexity scales (concierge side)
@@ -2989,6 +2989,11 @@ function loadJobIntoEstimate() {
   var svcDisplay = document.getElementById('e-svc-display');
   if (svcDisplay) svcDisplay.textContent = svcLabelsDisp[job.svc] || job.svc || '—';
   svcTypeChanged();
+  // Contested probate inherently has multiple/disputing heirs — auto-enable the
+  // "Multiple decision-makers / heirs?" toggle, which is the single mechanism for
+  // that +20% concierge premium (no hidden multiplier on the job type). Editable.
+  var heirsTgl = document.getElementById('adj-heirs');
+  if (heirsTgl && job.svc === 'contested_probate') heirsTgl.checked = true;
   // Auto-populate estimate prepared by from site visit TC
   var prepByEl = document.getElementById('e-prepared-by');
   if (prepByEl && job.siteVisitBy) prepByEl.value = job.siteVisitBy;
