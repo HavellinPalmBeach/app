@@ -2056,49 +2056,39 @@ function calcAll() {
       '<span style="color:#A32D2D;font-size:11px;font-weight:600;">&#9888; Property value required — set before saving</span>' : '';
   }
 
-  // Show property multiplier badge if active
+  // Property value no longer multiplies hours — it informs the Premium Estate rate
+  // decision. Surface a soft hint for high-value homes instead of an hours multiplier.
   var propBadge = document.getElementById('prop-mult-badge');
   if (propBadge) {
-    propBadge.innerHTML = propVal > 0 && propMult > 1.0 ?
-      '<div class="alert a-warn" style="margin-top:6px;">Property value multiplier active: ' + propMult.toFixed(2) + '× Transition Concierge hours ('+formatPropVal(propVal)+')</div>' : '';
+    propBadge.innerHTML = (propVal >= 5000000 && !prem) ?
+      '<div class="alert a-info" style="margin-top:6px;">High-value property ('+formatPropVal(propVal)+') — consider the Premium Estate rate.</div>' : '';
   }
 
   var baseTCHrs = 0, basePSHrs = 0;
   var totalVol = 0, includedRoomCount = 0;
   var includedRooms = [];
+  var svcKey = document.getElementById('e-svc') ? document.getElementById('e-svc').value : 'cleanout';
+  var sqftVal = parseFloat(document.getElementById('e-sqft') ? document.getElementById('e-sqft').value : 0) || 0;
+
+  // ── Pass 1: collect ticked rooms; clear unticked room displays ─────────────
+  var engineRooms = [];   // {name, vol, cplx} fed to computeEngineV3
+  var roomMeta = [];      // display + snapshot bookkeeping, parallel to engineRooms
   var ri = 0;
   ROOMS.forEach(function(sec) {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
-      var chk = document.getElementById('chk-'+id).checked;
-      if (chk) {
-        var vol = parseFloat(document.getElementById('vol-'+id).value) || 0;
-        var cplx = parseFloat(document.getElementById('cplx-'+id).value) || 0;
+      if (document.getElementById('chk-'+id).checked) {
+        var vol = parseFloat(document.getElementById('vol-'+id).value) || 3;
+        var cplx = parseFloat(document.getElementById('cplx-'+id).value) || 3;
         var spcl = document.getElementById('spcl-'+id).checked;
         var nameEl = document.getElementById('name-'+id);
         var roomName = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
         var note = document.getElementById('note-'+id).value;
-        var avg = (vol + cplx) / 2;
-        var spclAdder = spcl ? 0.5 : 0;
-        var premAdder = prem ? 0.3 : 0;
-        var tcH = Math.round((avg * r.tc + spclAdder + premAdder) * 10) / 10;
-        var psH = Math.round((avg * r.ps + (spcl ? 0.75 : 0)) * 10) / 10;
-        var elapsed = Math.round((tcH + psH) * 10) / 10;
-        var roomDollar = Math.round(tcH * tcRate + psH * psRate);
+        // Special-items flag = extra-careful handling → bump this room's complexity (capped at 5)
+        var effCpx = Math.min(5, cplx + (spcl ? 1 : 0));
+        engineRooms.push({name: roomName, vol: vol, cplx: effCpx});
+        roomMeta.push({id:id, ri:ri, name:roomName, vol:vol, cplx:cplx, spcl:spcl, note:note, section:sec.section});
         totalVol += vol; includedRoomCount++;
-        baseTCHrs += tcH;
-        basePSHrs += psH;
-        document.getElementById('el-'+id).textContent = elapsed.toFixed(1);
-        document.getElementById('el-'+id).className = 'calc on';
-        var tcEl = document.getElementById('tc-'+id);
-        tcEl.textContent = tcH.toFixed(1) + ' TC';
-        tcEl.className = 'calc on';
-        tcEl.style.color = 'var(--bronze)';
-        var psEl = document.getElementById('ps-'+id);
-        psEl.textContent = psH.toFixed(1) + ' PS';
-        psEl.className = 'calc on';
-        psEl.style.color = 'var(--gray)';
-        includedRooms.push({idx:ri,name:roomName,vol:vol,cplx:cplx,spcl:spcl,mult:r.mult,elapsed:elapsed,tcH:tcH,psH:psH,roomDollar:roomDollar,note:note,section:sec.section});
       } else {
         ['el-','tc-','ps-'].forEach(function(p){
           var el=document.getElementById(p+id);
@@ -2111,47 +2101,36 @@ function calcAll() {
     });
   });
 
-  // MODEL: direct room-level TC + PS hours, service type + propVal multipliers on top
-  baseTCHrs = Math.round(baseTCHrs * 10) / 10;
-  basePSHrs = Math.round(basePSHrs * 10) / 10;
+  // ── Pricing engine v3: sqft backbone × room-score modulation × work-steps ──
+  var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize);
+  baseTCHrs = eng.totTC;
+  basePSHrs = eng.totPS;
 
-  // Square footage multiplier — applies to both TC and PS
-  var sqftVal = parseFloat(document.getElementById('e-sqft') ? document.getElementById('e-sqft').value : 0) || 0;
-  var sqftMult = sqftMultiplier(sqftVal);
-  baseTCHrs = Math.round(baseTCHrs * sqftMult * 10) / 10;
-  basePSHrs = Math.round(basePSHrs * sqftMult * 10) / 10;
+  // Per-room display + includedRooms (hours distributed by the engine)
+  roomMeta.forEach(function(m, i) {
+    var pr = eng.perRoom[i] || {tcH:0, psH:0};
+    var elapsed = Math.round((pr.tcH + pr.psH) * 10) / 10;
+    var elEl = document.getElementById('el-'+m.id);
+    elEl.textContent = elapsed.toFixed(1); elEl.className = 'calc on';
+    var tcEl = document.getElementById('tc-'+m.id);
+    tcEl.textContent = pr.tcH.toFixed(1) + ' TC'; tcEl.className = 'calc on'; tcEl.style.color = 'var(--bronze)';
+    var psEl = document.getElementById('ps-'+m.id);
+    psEl.textContent = pr.psH.toFixed(1) + ' PS'; psEl.className = 'calc on'; psEl.style.color = 'var(--gray)';
+    includedRooms.push({idx:m.ri, name:m.name, vol:m.vol, cplx:m.cplx, spcl:m.spcl, mult:1,
+      elapsed:elapsed, tcH:pr.tcH, psH:pr.psH,
+      roomDollar:Math.round(pr.tcH*tcRate + pr.psH*psRate), note:m.note, section:m.section});
+  });
 
-  // Service type multiplier
-  var svcKey = document.getElementById('e-svc') ? document.getElementById('e-svc').value : 'cleanout';
-  var svcM = SVC_MULTS[svcKey] || {tc:1.0, ps:1.0};
-  baseTCHrs = Math.round(baseTCHrs * svcM.tc * 10) / 10;
-  basePSHrs = Math.round(basePSHrs * svcM.ps * 10) / 10;
-
-  // Property value multiplier on TC only
-  baseTCHrs = Math.round(baseTCHrs * propMult * 10) / 10;
-
-  // Downsizing PS reduction — movers absorb the keep pile (~30% of PS work)
-  // Applies to downsizing and downsizing+MM only. TC hours unaffected.
-  var downsizingPSReduct = (svcKey === 'downsizing' || svcKey === 'downsizing_move') ? 0.70 : 1.0;
-  basePSHrs = Math.round(basePSHrs * downsizingPSReduct * 10) / 10;
-
-  // Vendor coordination hours removed — TC presence during vendor work
-  // is already captured in room scoring; 15% SMF covers coordination overhead
+  // Compatibility vars retained for the snapshot/ref box (no longer applied to hours).
+  // Square footage and service type now live inside the engine; property value drives
+  // the rate (Premium Estate), not hours; move-day scales inside the engine.
+  var sqftMult = 1.0;
+  var svcM = {tc:1.0, ps:1.0};
+  var downsizingPSReduct = 1.0;
   var vcHrs = 0;
+  var destTC = 0, destPS = 0;
 
-  // Destination TC hours for downsizing+MM
-  var destTC = 0; var destPS = 0;
-  if (svcKey === 'downsizing_move') {
-    var job = null;
-    var eJobEl = document.getElementById('e-job');
-    if (eJobEl && eJobEl.value) job = jobs.find(function(j){ return j.id === parseInt(eJobEl.value); });
-    if (job && job.destSqft) destTC = destTCHours(job.destSqft, job.destBeds);
-    if (job && job.destSqft) destPS = destPSHours(job.destSqft, job.destBeds);
-  }
-  baseTCHrs = Math.round((baseTCHrs + destTC) * 10) / 10;
-  basePSHrs = Math.round((basePSHrs + destPS) * 10) / 10;
-
-  // Collections TC + PS adder
+  // Collections TC + PS adder (sits on top of the engine output)
   var colHrs = collectionsHours();
   baseTCHrs = Math.round((baseTCHrs + colHrs.tc) * 10) / 10;
   basePSHrs = Math.round((basePSHrs + colHrs.ps) * 10) / 10;
@@ -2160,13 +2139,11 @@ function calcAll() {
   var svcBadgeEl = document.getElementById('svc-mult-badge');
   if (svcBadgeEl) {
     var svcBadgeTxt = '';
-    if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate service: TC ×1.5 (legal documentation &amp; compliance)</div>';
-    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: TC ×1.8, PS ×1.1 — multiple attorneys/heirs, full chain-of-custody</div>';
-    else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: destination TC hours added (' + destTC + ' hrs)</div>';
-    else if (svcKey === 'prep') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Prep for Sale: TC ×1.1, PS ×1.2</div>';
-    if (svcKey === 'downsizing' || svcKey === 'downsizing_move') {
-      svcBadgeTxt += '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Downsizing: PS hours reduced 30% — moving crew absorbs keep-pile handling</div>';
-    }
+    if (svcKey === 'cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Estate Settlement: adds full item documentation for the §733.604 inventory.</div>';
+    else if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate: documentation + legal / chain-of-custody work.</div>';
+    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: documentation + legal + 20% concierge for multiple heirs/attorneys.</div>';
+    else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: move-day coordination added (scales with home size).</div>';
+    else if (svcKey === 'home_cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Home Cleanout: full disposition of all contents (haul / donate / sell / shred).</div>';
     svcBadgeEl.innerHTML = svcBadgeTxt;
   }
 
@@ -2179,46 +2156,23 @@ function calcAll() {
   var adjPS = Math.round(basePSHrs * adjPSpct * 10) / 10;
   var totTC = Math.round((baseTCHrs + adjTC) * 10) / 10;
   var totPS = Math.round((basePSHrs + adjPS) * 10) / 10;
-  var days = Math.round(baseTCHrs / 7 * 10) / 10;
+  var days = eng.days;
   var crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
 
-  // Timeline — projected completion is derived from the estimate, not the intake
+  // Timeline — projected completion is derived from the engine (max of concierge
+  // time, specialist-crew time, and the logistics/mobilization floor)
   var timelineBadge = document.getElementById('timeline-badge');
-  var daysNeeded = Math.ceil(baseTCHrs / 7);
+  var daysNeeded = eng.days;
 
   var loadedJobId = parseInt(document.getElementById('e-job').value);
   var loadedJob = jobs.find(function(j){ return j.id === loadedJobId; });
   var jobStartStr = loadedJob && loadedJob.start ? loadedJob.start : null;
 
-  // Probate inventory multiplier — TC only, fires when service type is probate
+  // Probate documentation is priced inside the engine (work-step model). No separate
+  // inventory multiplier — that would double-count the documentation hours.
   var probateInvBadgeEl = document.getElementById('probate-inv-badge');
-  if (svcKey === 'probate' || svcKey === 'contested_probate') {
-    var yih = loadedJob && loadedJob.yearsInHome ? parseFloat(loadedJob.yearsInHome) : 0;
-    var avgRoomScoreForInv = includedRoomCount > 0 ? (totalVol / includedRoomCount) : 0;
-    var invResult = probateInventoryMultiplier(sqftVal, yih, propVal, prem, avgRoomScoreForInv);
-    baseTCHrs = Math.round(baseTCHrs * invResult.mult * 10) / 10;
-    // Rebuild totals after this additional multiplier
-    adjTCheirs = heirs ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;
-    adjTC = Math.round((baseTCHrs * adjTCpct + adjTCheirs) * 10) / 10;
-    totTC = Math.round((baseTCHrs + adjTC) * 10) / 10;
-    days = Math.round(baseTCHrs / 7 * 10) / 10;
-    crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
-    if (probateInvBadgeEl) {
-      var missingFactors = [];
-      if (!yih) missingFactors.push('years in home');
-      if (!sqftVal) missingFactors.push('sqft');
-      if (!propVal) missingFactors.push('property value');
-      var missingNote = missingFactors.length ? ' <em>(missing: ' + missingFactors.join(', ') + ' — score may be low)</em>' : '';
-      probateInvBadgeEl.innerHTML = '<div class="alert a-warn" style="margin-top:4px;font-size:11px;">Probate inventory multiplier: TC hours ×' + invResult.mult.toFixed(2) + ' (score ' + invResult.score + '/100)' + missingNote + '</div>';
-    }
-  } else {
-    if (probateInvBadgeEl) probateInvBadgeEl.innerHTML = '';
-  }
-  // Timeline is handled as a STAFFING problem in the crew/timeline status badge
-  // below (after totTC is finalized) — there is no TC-hours pressure multiplier.
-  // Hours and the quote are unaffected by the calendar; the completion date is
-  // met by sizing the PS crew, not by inflating the price.
-  daysNeeded = Math.ceil(baseTCHrs / 7);
+  if (probateInvBadgeEl) probateInvBadgeEl.innerHTML = '';
+  daysNeeded = eng.days;
 
   // Crew/timeline status is computed AFTER totTC is finalized — see the
   // "CREW / TIMELINE STATUS" block further down in calcAll().
@@ -2268,6 +2222,9 @@ function calcAll() {
   // Projected completion is derived from the estimate, not taken from the client.
   // The optional hard target (job.completion) triggers a warning if we can't meet it.
   var crew = computeRequiredCrew(totPS, totTC);
+  // Use the engine's duration (max of concierge, specialist-crew, logistics floor)
+  // for the projected completion, rather than the raw concierge-hours/7.
+  crew.tcDays = daysNeeded;
   // Enforce the crew floor on the PS dropdowns.
   var curPS = getScheduledPSCount();
   if (curPS < crew.requiredPS) {
