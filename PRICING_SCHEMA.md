@@ -51,11 +51,15 @@ specialist rate **per content unit**; a job type activates only its steps.
 | Work step (Job Plan phase) | Downsizing | Dsz+Move | Cleanout | Estate | Probate |
 |---|---|---|---|---|---|
 | Triage — sort keep/sell/donate/dispose (Ph1) | .50 / .05 | .50 / .05 | .40 / .10 | .40 / .10 | .40 / .10 |
-| Pack — all keep (Ph1/2) | .30 / .50 | .30 / .50 | .25 / .45 | .25 / .45 | .25 / .45 |
+| Pack — all keep; crew-led, concierge directs+valuables (Ph1/2) | .25 / .70 | .25 / .70 | .25 / .45 | .25 / .45 | .25 / .45 |
 | Documentation — photo + itemize $500+ for executor (Ph5) | — | — | — | .95 / .05 | 1.15 / .05 |
 | Disposition — auction/consign/dealer/sell/donate/dump/distribute (Ph7–10) | .05 / .15 | .05 / .15 | .18 / .60 | .18 / .60 | .18 / .60 |
 | Legal / chain-of-custody (Ph12) | — | — | — | — | .30 / 0 |
-| Move day — movers haul; TC supervises (Ph3) | — | +12 / +4 | — | — | — |
+| Move day — movers haul; TC supervises, **scales with size** (Ph3) | — | +(6 + L·.24) / (2 + L·.13) | — | — | — |
+
+Where **L = total content load**. Move-day is a flat mobilization base plus a
+size-scaling term, so a trophy-estate move carries proportionally more
+move-management than a condo move.
 
 - **Contested Probate** = Probate × **1.20 on concierge hours** — already the app's
   "Multiple decision-makers / heirs?" toggle (+20% TC).
@@ -111,21 +115,21 @@ Floors: downsizing 2 · downsizing+move 3 · cleanout/estate/probate 3 · contes
 
 | Sqft | Downsizing | Dsz+Move | Cleanout | Estate | Probate | Contested |
 |---|---|---|---|---|---|---|
-| 1,200 | $3,900 | $6,500 | $4,400 | $7,000 | $8,300 | $9,500 |
-| 2,500 | $8,000 | $10,600 | $9,000 | $14,300 | $17,200 | $19,700 |
-| 4,500 | $14,400 | $17,000 | $16,000 | $25,900 | $30,900 | $35,400 |
-| 6,000 | $19,100 | $21,700 | $21,400 | $34,400 | $41,100 | $47,000 |
-| 8,000 | $25,500 | $28,100 | $28,400 | $46,000 | $54,800 | $62,900 |
+| 1,200 | $3,800 | $6,100 | $4,400 | $7,000 | $8,300 | $9,500 |
+| 2,500 | $7,900 | $10,900 | $9,000 | $14,300 | $17,200 | $19,700 |
+| 4,500 | $14,100 | $18,600 | $16,000 | $25,900 | $30,900 | $35,400 |
+| 6,000 | $18,700 | $24,300 | $21,400 | $34,400 | $41,100 | $47,000 |
+| 8,000 | $24,900 | $32,100 | $28,400 | $46,000 | $54,800 | $62,900 |
 
 **Duration (working days):**
 
 | Sqft | Downsizing | Dsz+Move | Cleanout | Estate | Probate | Contested |
 |---|---|---|---|---|---|---|
-| 1,200 | 3 | 4 | 3 | 4 | 5 | 6 |
-| 2,500 | 5 | 7 | 4 | 8 | 11 | 13 |
-| 4,500 | 8 | 10 | 7 | 15 | 19 | 22 |
-| 6,000 | 11 | 13 | 9 | 19 | 25 | 29 |
-| 8,000 | 15 | 16 | 12 | 26 | 33 | 39 |
+| 1,200 | 2 | 4 | 3 | 4 | 5 | 6 |
+| 2,500 | 4 | 6 | 4 | 8 | 11 | 13 |
+| 4,500 | 7 | 10 | 7 | 15 | 19 | 22 |
+| 6,000 | 9 | 12 | 9 | 19 | 25 | 29 |
+| 8,000 | 12 | 16 | 12 | 26 | 33 | 39 |
 
 (Each cell × ~0.6 to ~1.7 with the walkthrough; Premium Estate adds ~22% to price.)
 
@@ -153,9 +157,9 @@ auction/consign dispositions · property type simplified.
 
 Bottom-up hours vs. the business's independent top-down bands:
 
-- **Downsizing, Downsizing+Move, Home Cleanout:** prices land **inside** the reference
-  bands at every tier, and (after the pack 0.30/0.50 nudge) **days land in range too**.
-  Two methods agree → validated.
+- **Downsizing, Downsizing+Move, Home Cleanout:** after crew-led packing (0.25/0.70)
+  and a size-scaling move-day, **prices and days land inside the reference bands at
+  every tier** — none below the floor. Two independent methods agree → validated.
 - **Estate Settlement / Probate / Contested:** run **hotter** than the old reference,
   especially small sizes — the **expected** direction, because the old bands predated the
   documentation playbook and under-modeled it. **Decision (locked): trust the
