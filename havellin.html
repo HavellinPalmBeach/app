@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 5:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 7:11pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1491,7 +1491,6 @@ var ROOMS = [
     {name:'Formal Sitting Room',tc:0.60,ps:0.90},
     {name:'Dining Room',tc:0.55,ps:1.00},
     {name:'Family Room / Great Room',tc:0.70,ps:1.10},
-    {name:'Media Room',tc:0.65,ps:1.00},
     {name:'Sunroom',tc:0.55,ps:0.80},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
@@ -1503,19 +1502,21 @@ var ROOMS = [
     {name:'Half Bath',tc:0.22,ps:0.30},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
-  {section:'Work & Specialty',rooms:[
+  {section:'Lifestyle Rooms',rooms:[
     {name:'Art Studio',tc:0.85,ps:1.20},
-    {name:'Home Gym',tc:0.55,ps:0.95},
-    {name:'Pilates / Yoga Studio',tc:0.45,ps:0.75},
-    {name:'Billiards / Game Room',tc:0.85,ps:1.20},
     {name:'Bar / Speakeasy',tc:0.95,ps:1.10},
-    {name:'Home Office',tc:0.85,ps:1.10},
+    {name:'Billiards / Game Room',tc:0.85,ps:1.20},
+    {name:'Gym',tc:0.55,ps:0.95},
     {name:'Library',tc:1.00,ps:1.20},
+    {name:'Media Room',tc:0.65,ps:1.00},
+    {name:'Office 1',tc:0.85,ps:1.10},
+    {name:'Office 2',tc:0.85,ps:1.10},
+    {name:'Pilates / Yoga Studio',tc:0.45,ps:0.75},
     {name:'Safe Room',tc:0.85,ps:0.65},
     {name:'Wine Cellar',tc:1.05,ps:1.35},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
-  {section:'Bedrooms & Bathrooms',rooms:[
+  {section:'First Floor Bedrooms & Bathrooms',rooms:[
     {name:'Primary Suite',tc:0.75,ps:1.20},
     {name:'Primary Bath',tc:0.55,ps:0.80},
     {name:'His Primary Bath',tc:0.55,ps:0.80},
@@ -1529,17 +1530,29 @@ var ROOMS = [
     {name:'Bathroom 3',tc:0.22,ps:0.35},
     {name:'Bedroom 4',tc:0.55,ps:0.80},
     {name:'Bathroom 4',tc:0.22,ps:0.35},
-    {name:'Bedroom 5',tc:0.55,ps:0.80},
-    {name:'Bedroom 6',tc:0.55,ps:0.80},
-    {name:'Additional Bedroom(s)',tc:0.55,ps:0.80},
-    {name:'Additional Bathroom(s)',tc:0.22,ps:0.35},
-    {name:'Other',tc:0.70,ps:1.05,custom:true}
+    {name:'Additional Bathroom(s)',tc:0.22,ps:0.35}
   ]},
-  {section:'Bonus & Flex Rooms',rooms:[
-    {name:'Bonus Room',tc:0.70,ps:0.95},
-    {name:'Additional Office',tc:0.85,ps:1.10},
-    {name:'Additional Sitting Room',tc:0.60,ps:0.90},
-    {name:'Other',tc:0.70,ps:1.05,custom:true}
+  {section:'Second Floor',rooms:[
+    {name:'Additional Bathroom(s)',tc:0.22,ps:0.35},
+    {name:'Bathroom 2',tc:0.22,ps:0.35},
+    {name:'Bathroom 3',tc:0.22,ps:0.35},
+    {name:'Bathroom 4',tc:0.22,ps:0.35},
+    {name:'Bedroom 2',tc:0.55,ps:0.80},
+    {name:'Bedroom 3',tc:0.55,ps:0.80},
+    {name:'Bedroom 4',tc:0.55,ps:0.80},
+    {name:'Game Room',tc:0.85,ps:1.20},
+    {name:'Hers Primary Bath',tc:0.55,ps:0.80},
+    {name:'Hers Walk-in Closet',tc:0.55,ps:0.80},
+    {name:'His Primary Bath',tc:0.55,ps:0.80},
+    {name:'His Walk-in Closet',tc:0.55,ps:0.80},
+    {name:'Laundry Room',tc:0.22,ps:0.35},
+    {name:'Media Room',tc:0.65,ps:1.00},
+    {name:'Office',tc:0.85,ps:1.10},
+    {name:'Primary Bath',tc:0.55,ps:0.80},
+    {name:'Primary Suite',tc:0.75,ps:1.20},
+    {name:'Sitting Room',tc:0.60,ps:0.90},
+    {name:'TV Room',tc:0.65,ps:1.00},
+    {name:'Walk-in Closet',tc:0.55,ps:0.80}
   ]},
   {section:'Garage & Storage',rooms:[
     {name:'Garage (1-car)',tc:0.70,ps:1.65},
@@ -1644,8 +1657,9 @@ var ROOM_WEIGHT = {
   'Entryway / Foyer':1.0,'Living Room':2.6,'Formal Sitting Room':1.8,'Dining Room':2.0,
   'Family Room / Great Room':2.4,'Media Room':2.0,'Sunroom':1.6,
   'Kitchen':3.5,"Butler's Pantry":2.0,'Laundry Room':0.8,'Mudroom / Utility Entry':0.8,'Half Bath':0.4,
-  'Art Studio':2.0,'Home Gym':1.2,'Pilates / Yoga Studio':1.0,'Billiards / Game Room':2.0,'Bar / Speakeasy':2.0,
-  'Home Office':1.8,'Library':2.5,'Safe Room':1.0,'Wine Cellar':2.5,
+  'Art Studio':2.0,'Home Gym':1.2,'Gym':1.2,'Pilates / Yoga Studio':1.0,'Billiards / Game Room':2.0,'Bar / Speakeasy':2.0,
+  'Home Office':1.8,'Office':1.8,'Office 1':1.8,'Office 2':1.8,'Game Room':1.8,'TV Room':1.6,'Sitting Room':1.6,
+  'Library':2.5,'Safe Room':1.0,'Wine Cellar':2.5,
   'Primary Suite':2.0,'Primary Bath':1.0,'His Primary Bath':1.0,'Hers Primary Bath':1.0,
   'Walk-in Closet':1.5,'His Walk-in Closet':1.5,'Hers Walk-in Closet':1.5,
   'Bedroom 2':1.5,'Bathroom 2':0.5,'Bedroom 3':1.5,'Bathroom 3':0.5,
