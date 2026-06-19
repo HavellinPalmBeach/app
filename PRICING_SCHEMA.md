@@ -42,7 +42,7 @@ add the rest (today they have *no* playbook — this fixes that).
 | Pack | Ph 5 | ✓ | ✓ | ✓ | ✓ |
 | **Documentation** (photo + itemize $500+ for executor) | Ph 5 inventory | — | — | ✓ | ✓ |
 | **Appraisal coordination** (referral, billed vendor line) | Ph 6 | opt | opt | ✓ | ✓ |
-| **Disposition** (sell / donate / dump / distribute) | Ph 7–10 | — | ✓ | ✓ | ✓ |
+| **Disposition** (auction / consign / dealer / sell / donate / dump / distribute) | Ph 7–10 | light ✓ | ✓ | ✓ | ✓ |
 | **Move day** (movers haul; TC supervises load/unload) | Ph 3 | move only | — | — | — |
 | **Legal / chain-of-custody** (Letters, 60-day inventory, COC) | Ph 12 | — | — | partial | ✓ |
 
@@ -75,10 +75,10 @@ room content load (walkthrough)  ×  the work-step rates the job type turns on
 
 | Step | Downsizing | Cleanout | Estate | Probate |
 |---|---|---|---|---|
-| Triage | 0.55 / 0.05 | 0.40 / 0.10 | 0.40 / 0.10 | 0.40 / 0.10 |
-| Pack | 0.45 / 0.60 | 0.25 / 0.45 | 0.25 / 0.45 | 0.25 / 0.45 |
+| Triage | 0.50 / 0.05 | 0.40 / 0.10 | 0.40 / 0.10 | 0.40 / 0.10 |
+| Pack | 0.45 / 0.45 | 0.25 / 0.45 | 0.25 / 0.45 | 0.25 / 0.45 |
 | Documentation | — | — | 0.95 / 0.05 | 1.15 / 0.05 |
-| Disposition | — | 0.18 / 0.60 | 0.18 / 0.60 | 0.18 / 0.60 |
+| Disposition | 0.05 / 0.15 (lightest) | 0.18 / 0.60 | 0.18 / 0.60 | 0.18 / 0.60 |
 | Legal / COC | — | — | — | 0.30 / 0 |
 | Move day (flat) | +12 / +4 (move mgmt only) | — | — | — |
 
@@ -197,10 +197,27 @@ it must carry these from your documents — these are scope, and they justify th
 
 ---
 
-## 9. Open decisions for you
+## 9. Already in the app (confirmed in code — not open questions)
+
+- **Margin** — the Estimate tab has an *Internal Margin Analysis* panel (not on the
+  client doc): TC cost defaults to $60/hr or pulls the assigned concierge's rate from
+  the contractor directory; PS cost is blended from the actual specialist slots; it
+  shows total cost, gross profit, margin %, a 30%-margin walk-away floor, and
+  negotiation room. **No new margin work needed.**
+- **20% buffer** — `fixedPriceBuffer()` already applies 20% standard (25% probate,
+  35% contested). Leaving as-is per your instruction.
+- **Premium Estate rates** — already wired: $185 TC / $125 PS (toggle label was stale
+  at "$200/$140 + 0.5 hr"; **fixed** to "$185/$125 + 0.3 hr/room" to match the code).
+- **Contested/multiple heirs** — already a toggle ("Multiple decision-makers /
+  heirs?") that adds **+20% to concierge hours** (you suggested +15%; existing is +20%
+  on all TC). Use the existing toggle rather than a new disposition-only adder.
+- **Disposition venues** — Collections module already offers auction / consign /
+  appraise / ebay / dealer / replacements; per-item inventory dispositions **now**
+  include Auction and Consign (added to `INV_DISPOSITIONS`).
+
+## 10. Open decisions for you
 
 - [ ] Work-step rates in §3 — they hit 160/90; comfortable with the per-step split?
-- [ ] Buffer % (proposed 20%).
 - [ ] Market price bands (§6) — the input only you have:
 
   | Job type | Condo/small | Home | Estate | Trophy estate |
@@ -210,13 +227,15 @@ it must carry these from your documents — these are scope, and they justify th
   | Estate Settlement | ? | ? | ? | ? |
   | Probate / Contested | ? | ? | ? | ? |
 
-- [ ] Payroll rates (for margin display), or skip margin for now.
-- [ ] Contested-heirs adder (proposed +15% concierge on disposition).
-- [ ] Premium Estate rate ($185/$125) — confirm, or set the luxury lever differently.
+- [ ] Payroll rates for any concierges not yet in the contractor directory (margin
+      math already works off the directory; default TC cost is $60/hr).
+
+(Buffer, premium rates, contested-heirs toggle, and margin display are all already
+in the app — see §9.)
 
 ---
 
-## 10. Build order (once approved)
+## 11. Build order (once approved)
 
 1. **Estimator**: replace `ROOMS` + service multiplier with content-load × work-step
    model (§3); retire the property-value hours multiplier; keep Premium Estate as the

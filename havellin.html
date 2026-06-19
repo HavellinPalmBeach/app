@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.18 · 3:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 2:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -398,11 +398,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <label>Property type <span style="color:#A32D2D;font-weight:700;">*</span></label>
           <select id="i-ptype">
             <option value="">Select type</option>
-            <option>Apartment</option><option>Penthouse</option>
-            <option>Town Home</option><option>Patio Home</option>
-            <option>Single Family Home</option><option>Contemporary Estate</option>
-            <option>Equestrian Estate</option><option>Historic Estate</option>
-            <option>Waterfront Estate</option>
+            <option>Apartment</option>
+            <option>Town Home</option>
+            <option>Patio Home</option>
+            <option>Single Family Home</option>
+            <option>Estate</option>
           </select>
         </div>
         <div>
@@ -608,7 +608,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div class="toggle-wrap">
           <div class="toggle-info">
             <div class="toggle-title">Premium estate?</div>
-            <div class="toggle-sub">Activates $200 TC / $140 PS rates + 0.5 hrs/room across all rooms</div>
+            <div class="toggle-sub">Activates $185 TC / $125 PS rates + 0.3 hrs/room across all rooms</div>
           </div>
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
@@ -5811,7 +5811,7 @@ function _updatePhotoStatusEl(jobId, roomIdx, label) {
 // (not in the filename, since the app can't rename a file already in Drive).
 var INV_CATEGORIES = ['Art & Décor','Collectibles','Electronics & Appliances','Furniture','General/Household','Jewelry & Watches'];
 var INV_DEFAULT_CATEGORY = 'General/Household';
-var INV_DISPOSITIONS = ['Donate','Hold','Junk','Keep','Sell'];
+var INV_DISPOSITIONS = ['Auction','Consign','Donate','Hold','Junk','Keep','Sell'];
 
 function _invRefs(jobId, roomIdx) {
   return (_photoRefs[jobId] || []).filter(function(r){
@@ -10439,7 +10439,7 @@ function showEditClient(jobId) {
   html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'}], job.svc)+'</select>', true);
   html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano Sr',l:'Anthony Graziano Sr'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
-  html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Condo / apartment',l:'Condo / apartment'},{v:'Single family home',l:'Single family home'},{v:'Waterfront estate',l:'Waterfront estate'},{v:'Historic estate',l:'Historic estate'},{v:'Equestrian / ranch property',l:'Equestrian / ranch property'},{v:'Penthouse',l:'Penthouse'}], job.ptype)+'</select>', true);
+  html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Apartment',l:'Apartment'},{v:'Town Home',l:'Town Home'},{v:'Patio Home',l:'Patio Home'},{v:'Single Family Home',l:'Single Family Home'},{v:'Estate',l:'Estate'}], job.ptype)+'</select>', true);
   html += fld('Priority', '<select id="ec-priority" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'normal',l:'Normal'},{v:'high',l:'High — probate deadline'},{v:'urgent',l:'Urgent — health / emergency'}], job.priority)+'</select>', false);
   html += fld('RE Potential', '<select id="ec-re" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'unknown',l:'Unknown'},{v:'yes',l:'Yes — likely RE transaction'},{v:'no',l:'No RE component expected'}], job.re)+'</select>', false);
   html += fld('Premium Estate', '<select id="ec-premium" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'no',l:'No — standard rates'},{v:'yes',l:'Yes — art, antiques, wine'}], job.premium?'yes':'no')+'</select>', false);
