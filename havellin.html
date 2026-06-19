@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 5:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 6:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1756,7 +1756,10 @@ function buildRoomTable() {
       var rid = e.target.id.replace('note-ta-', '');
       var hidden = document.getElementById('note-' + rid);
       if (hidden) hidden.value = e.target.value;
-      calcAll();
+      // Notes don't affect pricing — debounce the recompute so typing in a long
+      // walkthrough note doesn't run the full estimate engine on every keystroke
+      // (which made notes feel like they could only be typed one word at a time).
+      scheduleCalcAll();
     }
   });
   document.getElementById('room-table-wrap').addEventListener('click', function(e) {
@@ -2010,6 +2013,11 @@ function sqftMultiplier(sqft) {
   if (sqft < 10000)       return 1.60;
   return 1.80;
 }
+
+// Debounced calcAll for high-frequency inputs (e.g. typing notes) where instant
+// per-keystroke recompute isn't needed. Scoring inputs still call calcAll directly.
+var _calcAllT;
+function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(calcAll, 250); }
 
 function calcAll() {
   var prem = document.getElementById('e-prem').checked;
@@ -2471,28 +2479,14 @@ function calcAll() {
     currentEstimate.lockedBy = _storedLocked.lockedBy;
   }
 
-  // Auto-save estimate per job whenever rooms are scored.
-  // Guards:
-  //   1. Suppress flag — set during restore loop and clearEstimateTab sequences
-  //   2. Never overwrite a valid estimate (has rooms) with an empty-rooms state —
-  //      prevents mid-restore or mid-clear calcAll calls from wiping saved data
-  if (!window._suppressEstimateAutoSave && currentEstimate && currentEstimate.jobId) {
-    var _existingRec = estimateStore[currentEstimate.jobId];
-    var _existingHasRooms = _existingRec && _existingRec.estimate && (_existingRec.estimate.rooms || []).length > 0;
-    var _newHasRooms = currentEstimate.rooms && currentEstimate.rooms.length > 0;
-    if (!_existingRec || !_existingRec.approved) {
-      if (!_existingHasRooms || _newHasRooms) {
-        estimateStore[currentEstimate.jobId] = {
-          estimate: currentEstimate,
-          approved: estimateApproved,
-          submitted: estimateSubmitted,
-          approvedBy: approvedBy,
-          approvedAt: approvedAt
-        };
-        try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
-      }
-    }
-  }
+  // Session scratch only. We do NOT persist to the authoritative estimate store or
+  // the cloud while the user is typing/scoring — that old autosave is what let a
+  // half-built copy overwrite a finished one and produced multiple live totals for
+  // one job. Instead we keep the in-progress copy in a dedicated, non-authoritative
+  // scratch key so a page refresh or a dropped connection in the field doesn't lose
+  // work. The sheet always wins on open (see refreshEstimateFromCloud); scratch is
+  // only a fallback for an unsaved active session on this same device.
+  scheduleEstimateScratch();
 }
 
 function updateRefBox(havellinTotal) {
@@ -3016,28 +3010,62 @@ function loadJobIntoEstimate() {
   if (eDS) eDS.textContent = fmtD(job.start);
   if (eDCp) eDCp.textContent = fmtD(job.completion);
 
-  // Try to load saved estimate for this job
+  // Cloud-authoritative open: pull this job's saved estimate fresh from the sheet
+  // before loading, so a stale local copy can never mask the real saved build.
+  // Offline is handled explicitly in applyOpenedEstimate (warn, never silently
+  // present local data as current).
+  refreshEstimateFromCloud(jobId, function(status){
+    applyOpenedEstimate(jobId, job, status);
+  });
+}
+
+// Render the opened estimate into the Estimate tab. status is 'cloud' (the store
+// now reflects the sheet) or 'offline' (the fetch failed — fall back to whatever
+// local copy we have, but warn the user it may be stale).
+function applyOpenedEstimate(jobId, job, status) {
   var hasSaved = loadEstimateForJob(jobId);
   if (hasSaved && currentEstimate && currentEstimate.rooms && currentEstimate.rooms.length > 0) {
-    // Restore all room scores from saved estimate
     restoreEstimateToUI(currentEstimate);
     updateApprovalUI();
-    showFB('e-fb','ok','Estimate loaded for job: ' + job.name);
-  } else {
-    // No saved estimate — clear all rooms and start fresh
-    window._suppressEstimateAutoSave = true;
-    clearAllRooms();
-    window._suppressEstimateAutoSave = false;
-    document.getElementById('e-prem').checked = job.premium || false;
-    // Reset PS slots
-    for (var si = 0; si <= 3; si++) {
-      var slotEl = document.getElementById('ps-slot-' + si);
-      if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
+    if (status === 'offline') {
+      showFB('e-fb','warn','Offline — showing the last estimate saved on this device for "' + job.name + '". It may be out of date. Reconnect and reopen to load the current saved version before editing or sending.');
+    } else {
+      showFB('e-fb','ok','Estimate loaded for job: ' + job.name);
     }
-    estimateApproved = false; approvedBy = ''; approvedAt = '';
-    updateApprovalUI();
-    calcAll();
+    return;
   }
+  // No saved estimate available in the (cloud-refreshed) store.
+  if (status === 'offline') {
+    // Cold open with no connection. If this device has an unsaved scratch session
+    // for this job, restore it as a fallback rather than wiping the user's work —
+    // but make clear it's an unsynced local draft, not a confirmed saved copy.
+    var scratch = loadEstimateScratch(jobId);
+    if (scratch && scratch.estimate && scratch.estimate.rooms && scratch.estimate.rooms.length > 0) {
+      currentEstimate = scratch.estimate;
+      estimateApproved = scratch.approved || false;
+      estimateSubmitted = scratch.submitted || false;
+      approvedBy = scratch.approvedBy || '';
+      approvedAt = scratch.approvedAt || '';
+      restoreEstimateToUI(currentEstimate);
+      updateApprovalUI();
+      showFB('e-fb','warn','Offline — restored an unsaved draft for "' + job.name + '" from this device. It has not been saved to the cloud. Save once your connection returns.');
+      return;
+    }
+    showFB('e-fb','warn','Offline — couldn’t reach the cloud and no estimate for "' + job.name + '" is stored on this device. Reconnect before building so you don’t overwrite a saved version you can’t see.');
+  }
+  // No saved estimate — clear all rooms and start fresh
+  window._suppressEstimateAutoSave = true;
+  clearAllRooms();
+  window._suppressEstimateAutoSave = false;
+  document.getElementById('e-prem').checked = job.premium || false;
+  // Reset PS slots
+  for (var si = 0; si <= 3; si++) {
+    var slotEl = document.getElementById('ps-slot-' + si);
+    if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
+  }
+  estimateApproved = false; approvedBy = ''; approvedAt = '';
+  updateApprovalUI();
+  calcAll();
 }
 
 function clearEstimateTab() {
@@ -3127,9 +3155,8 @@ function saveEstimateAndPreview() {
   currentEstimate.jobId = jobId;
   currentEstimate.job = job;
   saveJobs();
-  saveEstimateState();
+  saveEstimateState();   // single atomic write: estimate record + derived job summary + cloud
   syncJobToSheets(job);
-  syncEstimateToSheets(currentEstimate, false, '', '');
   var roomsWithNotes = (currentEstimate.rooms||[]).filter(function(r){ return r.note && r.note.trim(); }).length;
   var saveMsg = 'Saved: ' + currentEstimate.rooms.length + ' rooms'
     + (roomsWithNotes > 0 ? ', ' + roomsWithNotes + ' with notes' : '')
@@ -3317,8 +3344,13 @@ function loadClientEstimateFromSelect() {
     renderClientEstimate();
     return;
   }
-  loadEstimateForJob(jobId);
-  renderClientEstimate();
+  // Cloud-authoritative: the Client Estimate is what gets shown to the client, so
+  // pull the saved record fresh from the sheet before rendering rather than trusting
+  // whatever happens to be cached locally (the stale-copy that drove the incident).
+  refreshEstimateFromCloud(jobId, function(){
+    loadEstimateForJob(jobId);
+    renderClientEstimate();
+  });
 }
 
 function renderClientEstimate() {
@@ -3847,8 +3879,7 @@ function applyDiscountRevision() {
   // Update job status back to pending
   var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
   if (job) { job.status = 'pending'; job.approved = false; job.havellinEst = newHavellinTotal; saveJobs(); syncJobToSheets(job); }
-  saveEstimateState();
-  syncEstimateToSheets(currentEstimate, false, '', '');
+  saveEstimateState();   // single authoritative write (carries the revised totals + approval state)
   closeDiscountModal();
   renderClientEstimate();
   updateApprovalUI();
@@ -3950,8 +3981,7 @@ function checkPin() {
       if (job) { job.status='active'; job.approved=true; saveJobs(); }
     }
     closePinModal();
-    saveEstimateState();
-    syncEstimateToSheets(currentEstimate, true, approvedBy, approvedAt);
+    saveEstimateState();   // single authoritative write; carries approved=true + approver to the cloud
     if (currentEstimate && currentEstimate.jobId) {
       var syncJob = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
       if (syncJob) syncJobToSheets(syncJob);
@@ -4375,21 +4405,40 @@ function restoreEstimateToUI(est) {
 // ── CHANGE ORDER ──────────────────────────────────────────────────────────────
 var changeOrders = [];
 
+// Normalize legacy change orders that predate the client-approval fields.
+function migrateChangeOrders() {
+  changeOrders.forEach(function(co) {
+    if (co.clientApproved === undefined) { co.clientApproved = true; co.clientName = 'Pre-existing'; co.clientAcceptedAt = co.createdAt || ''; }
+  });
+}
+
 function loadChangeOrders() {
   try {
     var s = localStorage.getItem('havellin_co_v1');
-    if (s) {
-      changeOrders = JSON.parse(s);
-      // Migrate old COs that predate client approval fields
-      changeOrders.forEach(function(co) {
-        if (co.clientApproved === undefined) { co.clientApproved = true; co.clientName = 'Pre-existing'; co.clientAcceptedAt = co.createdAt || ''; }
-      });
-    }
+    if (s) { changeOrders = JSON.parse(s); migrateChangeOrders(); }
   } catch(e) {}
+  // Cloud is the source of truth across devices (same model as jobs/estimates).
+  // Guarded on data.changeOrders so the app is safe before the Apps Script handler
+  // exists — an unsupported action just leaves the local copy untouched.
+  if (SHEETS_SYNC_URL) {
+    fetch(SHEETS_SYNC_URL + '?action=loadChangeOrders')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data && Array.isArray(data.changeOrders) && !data.error) {
+          changeOrders = data.changeOrders;   // cloud wins
+          migrateChangeOrders();
+          try { localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } catch(e) {}
+          if (typeof renderJobs === 'function') renderJobs();
+        }
+      })
+      .catch(function(){ /* offline — local cache remains the fallback */ });
+  }
 }
 
 function saveChangeOrders() {
   try { localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } catch(e) {}
+  // Push to Sheets so change orders follow across devices (verified write).
+  postSyncBadge({ type: 'saveAllChangeOrders', payload: changeOrders }, 'Change order synced ✓', 'Change order sync failed — saved locally');
 }
 
 function openChangeOrder(jobId) {
@@ -5397,6 +5446,78 @@ function loadJobs() {
 // Per-job estimate store
 var estimateStore = {};  // { jobId: { estimate, approved, approvedBy, approvedAt } }
 
+// ── Estimate scratch (session-only, non-authoritative) ───────────────────────
+// While building an estimate we hold the in-progress working copy in a dedicated
+// local key so a page refresh or a dropped connection in the field doesn't lose
+// work. This is NEVER preferred on open — the sheet always wins (see
+// refreshEstimateFromCloud). Scratch is only a fallback for an unsaved active
+// session on this same device, and is cleared once the estimate is saved.
+var _estScratchT;
+function scheduleEstimateScratch() { clearTimeout(_estScratchT); _estScratchT = setTimeout(saveEstimateScratch, 400); }
+function saveEstimateScratch() {
+  if (window._suppressEstimateAutoSave) return;
+  if (!currentEstimate || !currentEstimate.jobId) return;
+  // Never persist an empty-rooms state over a real in-progress build.
+  if (!currentEstimate.rooms || currentEstimate.rooms.length === 0) return;
+  try {
+    localStorage.setItem('havellin_est_scratch', JSON.stringify({
+      jobId: currentEstimate.jobId,
+      savedAt: Date.now(),
+      estimate: currentEstimate,
+      approved: estimateApproved,
+      submitted: estimateSubmitted,
+      approvedBy: approvedBy,
+      approvedAt: approvedAt
+    }));
+  } catch(e) {}
+}
+function loadEstimateScratch(jobId) {
+  try {
+    var s = localStorage.getItem('havellin_est_scratch');
+    if (!s) return null;
+    var d = JSON.parse(s);
+    if (d && d.jobId === jobId && d.estimate) return d;
+  } catch(e) {}
+  return null;
+}
+function clearEstimateScratch(jobId) {
+  try {
+    var s = localStorage.getItem('havellin_est_scratch');
+    if (!s) return;
+    var d = JSON.parse(s);
+    if (!jobId || (d && d.jobId === jobId)) localStorage.removeItem('havellin_est_scratch');
+  } catch(e) {}
+}
+
+// Cloud-authoritative open. Fetch this job's saved estimate fresh from the sheet
+// and overwrite the local cache before loading it, so a stale local copy can never
+// mask the real saved build. onReady(status) runs with 'cloud' on a successful
+// fetch (store now reflects the sheet) or 'offline' when the fetch fails/errors.
+function refreshEstimateFromCloud(jobId, onReady) {
+  if (!SHEETS_SYNC_URL) { onReady('offline'); return; }
+  fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!data || typeof data.estimates !== 'object' || data.estimates === null) { onReady('offline'); return; }
+      if (data.estimates[jobId]) {
+        var rec = data.estimates[jobId];
+        normalizeLegacyRoomKeys(rec);
+        estimateStore[jobId] = rec;            // cloud wins whenever the sheet has a record
+      } else {
+        // Sheet reached but has no record for this job. Don't delete a local copy
+        // that actually has rooms — it may be an estimate saved on this device while
+        // offline that never reached the sheet, and dropping it would be data loss.
+        // Only clear an empty/roomless placeholder so it can't masquerade as real.
+        var _local = estimateStore[jobId];
+        var _localHasRooms = _local && _local.estimate && (_local.estimate.rooms || []).length > 0;
+        if (!_localHasRooms) delete estimateStore[jobId];
+      }
+      try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+      onReady('cloud');
+    })
+    .catch(function(){ onReady('offline'); });
+}
+
 function saveEstimateState() {
   var jobId = currentEstimate && currentEstimate.jobId ? currentEstimate.jobId : 0;
   if (jobId) {
@@ -5408,9 +5529,22 @@ function saveEstimateState() {
       approvedBy: approvedBy,
       approvedAt: approvedAt
     };
+    // Single source of truth: derive the jobs-list summary fields from the full
+    // estimate record in the same step, so the list total and the Client Estimate
+    // (both read different stores) can never drift apart from the saved record.
+    var _job = jobs.find(function(j){ return j.id === jobId; });
+    if (_job && currentEstimate) {
+      _job.havellinEst = currentEstimate.havellinTotal;
+      _job.totalEst = currentEstimate.grandTotal;
+      saveJobs();
+    }
+    // The in-progress scratch is now superseded by the saved record.
+    clearEstimateScratch(jobId);
   }
   try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
-  // Push full estimate store to Sheets so other devices can load it (verified write)
+  // Single authoritative cloud write: the full estimate store, which the loader
+  // reads back via ?action=loadEstimates. The job summary is derived above, so we
+  // no longer fire a second, differently-shaped 'estimate' write that could diverge.
   postSyncBadge({ type: 'saveAllEstimates', payload: estimateStore }, 'Estimate synced to cloud ✓', 'Cloud sync failed — saved locally only');
 }
 
@@ -5441,37 +5575,28 @@ function loadEstimateState() {
       localStorage.removeItem('havellin_est_v3');
     }
   } catch(e) {}
-  // Pull from Sheets for cross-device sync.
-  // Prefer Sheets when Sheets has rooms but local doesn't (e.g. built on another device).
+  // Pull from Sheets — the sheet is the source of truth. The cloud copy wins for
+  // every job it has a record for, overwriting the local cache, so a stale local
+  // copy can never permanently mask the real saved estimate (the bug that left a
+  // second device stuck on an old total until browser data was wiped). Local
+  // records survive only for jobs the sheet doesn't know about yet (e.g. saved
+  // while offline). This load primes the cache; opening a job re-fetches fresh.
   if (SHEETS_SYNC_URL) {
     fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
       .then(function(r){ return r.json(); })
       .then(function(data){
         if (data.estimates && typeof data.estimates === 'object') {
-          var added = 0;
           Object.keys(data.estimates).forEach(function(key){
             var sheetsRec = data.estimates[key];
-            var localRec  = estimateStore[key];
-            var sheetsHasRooms = sheetsRec && sheetsRec.estimate && (sheetsRec.estimate.rooms||[]).length > 0;
-            var localHasRooms  = localRec  && localRec.estimate  && (localRec.estimate.rooms||[]).length > 0;
-            var sheetsApproved = sheetsRec && sheetsRec.approved;
-            var localApproved  = localRec  && localRec.approved;
-            // Use Sheets version if local is missing, local has no rooms but Sheets does,
-            // or Sheets is approved but local isn't (cross-device approval sync).
-            if (!localRec || (!localHasRooms && sheetsHasRooms) || (sheetsApproved && !localApproved)) {
-              normalizeLegacyRoomKeys(sheetsRec);
-              estimateStore[key] = sheetsRec;
-              added++;
-            }
+            normalizeLegacyRoomKeys(sheetsRec);
+            estimateStore[key] = sheetsRec;   // cloud wins
           });
-          if (added > 0) {
-            try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
-            rebuildDropdowns();
-            showSyncBadge('Estimates synced from cloud ✓');
-          }
+          try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+          rebuildDropdowns();
+          showSyncBadge('Estimates synced from cloud ✓');
         }
       })
-      .catch(function(){ /* silent fail — localStorage is the fallback */ });
+      .catch(function(){ /* offline — local cache remains as last-known fallback */ });
   }
 }
 
@@ -6653,6 +6778,11 @@ function syncJobToSheets(job) {
   syncToSheets('job', job);
 }
 
+// DEPRECATED — no longer called by the save path. The estimate is now written in a
+// single shape via saveEstimateState() -> 'saveAllEstimates' (which the loader reads
+// back). This wrote a second, differently-shaped 'estimate' record that could drift
+// from the store. Retained only so any remaining backend 'estimate' handler can be
+// migrated to derive from the saveAllEstimates payload before this is removed.
 function syncEstimateToSheets(est, approved, approvedBy, approvedAt) {
   var payload = Object.assign({}, est, { approved: approved, approvedBy: approvedBy, approvedAt: approvedAt });
   syncToSheets('estimate', payload);
@@ -7501,9 +7631,26 @@ function printInvoice() {
 // ─── LOG PERSISTENCE ──────────────────────────────────────────────────────────
 function saveLogData() {
   try { localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
+  // Push to Sheets so on-site logs follow across devices (previously logs were
+  // local-only in both directions). Verified write.
+  postSyncBadge({ type: 'saveAllLogs', payload: jobLogs }, 'Log synced ✓', 'Log sync failed — saved locally');
 }
 function loadLogData() {
   try { var s=localStorage.getItem('havellin_logs_v3'); if(s) jobLogs=JSON.parse(s); } catch(e) {}
+  // Cloud is the source of truth across devices. Guarded on data.logs so the app is
+  // safe before the Apps Script handler exists — an unsupported action leaves local
+  // data untouched.
+  if (SHEETS_SYNC_URL) {
+    fetch(SHEETS_SYNC_URL + '?action=loadLogs')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data && data.logs && typeof data.logs === 'object' && !data.error) {
+          jobLogs = data.logs;   // cloud wins
+          try { localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
+        }
+      })
+      .catch(function(){ /* offline — local cache remains the fallback */ });
+  }
 }
 
 // ─── JOB PLAN PERSISTENCE ────────────────────────────────────────────────────
