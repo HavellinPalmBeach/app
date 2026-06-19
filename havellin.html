@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 8:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 9:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -615,6 +615,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div style="font-size:11px;color:var(--gray);">Check a room to include it (auto-scores 3/3). Adjust Volume &amp; Complexity (1–5). Special Items = fragile/high-value (bumps this room's complexity for extra careful handling).</div>
         </div>
         <div id="room-table-wrap"></div>
+        <div id="room-overhead-line" style="display:none;padding:.6rem 1.1rem .9rem;border-top:1px solid var(--border);font-size:11px;color:var(--gray-dk);background:var(--cream);"></div>
       </div>
 
       <div class="card" style="margin-top:1rem;">
@@ -1652,6 +1653,14 @@ var JOB_STEPS = {
   prep:              {triage:[0.20,0.10], pack:[0.10,0.25]}  // light declutter/stage; value is vendor costs + 30% GC fee
 };
 var ENGINE_CAREFUL = {triage:1, pack:1, document:1, legal:1}; // steps complexity scales (concierge side)
+// Steps that are hands-on, room-level work (physically handling each room's contents).
+// Only these are shown per-room; the rest (triage, documentation, disposition/haul-out,
+// move, heir coordination) are job-level overhead surfaced as one separate line.
+var ENGINE_ROOMLEVEL = {pack:1};
+// Nominal interior room-weight at which the house is considered "fully scored." The
+// per-room hands-on breakdown divides by this (or the actual ticked weight, whichever
+// is larger) so per-room hours read realistically during a partial walkthrough.
+var PERROOM_REF = 18;
 var ENGINE_FLOOR = {downsizing:2, downsizing_move:3, home_cleanout:3, cleanout:3, probate:3, contested_probate:4, prep:3};
 
 // rooms: [{name, vol, cplx}]. Returns hours, load, calendar days, and per-room split.
@@ -1674,27 +1683,38 @@ function computeEngineV3(sqft, rooms, svc, crew){
   var interiorLoad = sqft * ENGINE_K * volFactor;
   var load = interiorLoad + extLoad;
   var cpxFactor = allW>0 ? allCpxW/allW : 1.0;
-  // Hours from active work-steps (complexity scales the careful/concierge steps)
-  var tc=0, ps=0;
+  // Hours from active work-steps (complexity scales the careful/concierge steps).
+  // We also track the room-level "hands-on" portion (physical packing) separately
+  // from the job-level overhead (triage, documentation, disposition/haul-out, move,
+  // heir coordination). Only the hands-on portion is distributed to individual rooms
+  // for display, so a single ticked room shows realistic minutes — not the whole
+  // job. The job TOTAL (tc/ps) is unchanged: hands-on + overhead.
+  var tc=0, ps=0, roomTC=0, roomPS=0;
   for (var L in steps){
-    if (L==='move'){ tc += 6 + load*0.24; ps += 2 + load*0.13; continue; }
+    if (L==='move'){ tc += 6 + load*0.24; ps += 2 + load*0.13; continue; }  // overhead
     if (L==='heir'){ continue; }
     var cf = ENGINE_CAREFUL[L] ? cpxFactor : 1;
-    tc += load*steps[L][0]*cf;
-    ps += load*steps[L][1];
+    var stepTC = load*steps[L][0]*cf;
+    var stepPS = load*steps[L][1];
+    tc += stepTC; ps += stepPS;
+    if (ENGINE_ROOMLEVEL[L]) { roomTC += stepTC; roomPS += stepPS; }
   }
-  if (steps.heir) tc *= steps.heir;
+  if (steps.heir) tc *= steps.heir;   // multi-heir coordination premium — overhead
   tc = Math.ceil(tc); ps = Math.ceil(ps);
   var floor = ENGINE_FLOOR[svc] || 2;
   var days = Math.max(Math.ceil(tc/7), Math.ceil(ps/(crew*7)), floor);
-  // Distribute hours back to rooms (proportional to load contribution) for display
-  var iVolWsum = iVolW || 1;
+  // Distribute ONLY the hands-on room work to rooms. Divide by a nominal "fully
+  // scored" interior weight (PERROOM_REF) so the breakdown accrues bottom-up as the
+  // walkthrough proceeds instead of dumping everything on the first room; once enough
+  // rooms are scored (iVolW ≥ PERROOM_REF) it falls back to the actual ticked weight.
+  var iDenom = Math.max(PERROOM_REF, iVolW) || 1;
   var perRoom = rb.map(function(b){
     var share = b.ext ? (load>0 ? b.raw/load : 0)
-                      : (load>0 ? (b.raw/iVolWsum)*interiorLoad/load : 0);
-    return { tcH: Math.round(tc*share*10)/10, psH: Math.round(ps*share*10)/10 };
+                      : (load>0 ? (b.raw/iDenom)*interiorLoad/load : 0);
+    return { tcH: Math.round(roomTC*share*10)/10, psH: Math.round(roomPS*share*10)/10 };
   });
-  return { totTC:tc, totPS:ps, load:Math.round(load*10)/10, days:days,
+  return { totTC:tc, totPS:ps, roomTC:Math.round(roomTC*10)/10, roomPS:Math.round(roomPS*10)/10,
+           load:Math.round(load*10)/10, days:days,
            volFactor:volFactor, cpxFactor:cpxFactor, perRoom:perRoom };
 }
 
@@ -2194,6 +2214,26 @@ function calcAll() {
   totPS = Math.ceil(totPS);
   tcFee = Math.round(totTC * tcRate);
   psFee = Math.round(totPS * psRate);
+
+  // Coordination & logistics line: everything in the job total that isn't hands-on
+  // room work (triage, documentation, disposition/haul-out, move, collections & prep
+  // coordination, access/heir adjustments). Derived as total − sum of per-room
+  // hands-on hours, so the room breakdown plus this line always equals the total.
+  var _roomSumTC = includedRooms.reduce(function(a, r){ return a + (r.tcH || 0); }, 0);
+  var _roomSumPS = includedRooms.reduce(function(a, r){ return a + (r.psH || 0); }, 0);
+  var _ovhTC = Math.max(0, Math.round((totTC - _roomSumTC) * 10) / 10);
+  var _ovhPS = Math.max(0, Math.round((totPS - _roomSumPS) * 10) / 10);
+  var _ovhLine = document.getElementById('room-overhead-line');
+  if (_ovhLine) {
+    if (includedRoomCount === 0) {
+      _ovhLine.style.display = 'none';
+    } else {
+      _ovhLine.style.display = 'block';
+      _ovhLine.innerHTML = '<strong>+ Project coordination &amp; logistics:</strong> '
+        + _ovhTC.toFixed(1) + ' TC · ' + _ovhPS.toFixed(1) + ' PS hrs '
+        + '<span style="color:var(--gray);">— job-level work not tied to one room (triage, documentation, haul-out, vendor &amp; move coordination). Per-room figures above are hands-on handling only; together they make up the totals at right.</span>';
+    }
+  }
 
   // ─── CREW / TIMELINE STATUS ────────────────────────────────────────────────
   // TC hours are the hard floor — PS cannot compress below the TC-gated duration.
@@ -9106,13 +9146,22 @@ function exportEstimateToDrive(jobId, estSnapshot) {
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+fmt(r.roomDollar)+'</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666;">'+((r.note||'').trim())+'</td></tr>';
     }).join('');
+    // Coordination & logistics row so the internal record reconciles: room hands-on
+    // hours plus this equals the job total.
+    var _rTC = (est.rooms||[]).reduce(function(a,r){ return a + (r.tcH||0); }, 0);
+    var _rPS = (est.rooms||[]).reduce(function(a,r){ return a + (r.psH||0); }, 0);
+    var _oTC = Math.max(0, Math.round(((est.totTC||0) - _rTC) * 10) / 10);
+    var _oPS = Math.max(0, Math.round(((est.totPS||0) - _rPS) * 10) / 10);
+    var _coordRow = '<tr><td><em>Project coordination &amp; logistics</em></td><td></td><td></td>'
+      + '<td style="text-align:right;">' + _oTC.toFixed(1) + ' TC / ' + _oPS.toFixed(1) + ' PS</td><td></td>'
+      + '<td style="font-size:11px;color:#666;">Job-level work not tied to one room (triage, documentation, haul-out, coordination)</td></tr>';
     var html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
       +'<title>Estimate – '+(job.hvlId||'')+'</title>'
       +'<style>body{font-family:Arial,sans-serif;padding:24px;color:#333;}h2{margin-bottom:4px;}table{width:100%;border-collapse:collapse;}th{background:#f5f0e8;padding:6px 8px;text-align:left;font-size:12px;}</style>'
       +'</head><body>'
       +'<h2>Estimate — '+(job.name||'')+'</h2>'
       +'<div style="font-size:13px;color:#888;margin-bottom:16px;">'+(job.hvlId||'')+' · '+ts+'</div>'
-      +'<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +'<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours (hands-on)</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+_coordRow+'</tbody></table>'
       +'<div style="margin-top:20px;font-size:14px;">'
       +'<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; '
       +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
