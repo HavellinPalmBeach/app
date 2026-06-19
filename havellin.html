@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 3:47pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 5:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1506,6 +1506,9 @@ var ROOMS = [
   {section:'Work & Specialty',rooms:[
     {name:'Art Studio',tc:0.85,ps:1.20},
     {name:'Home Gym',tc:0.55,ps:0.95},
+    {name:'Pilates / Yoga Studio',tc:0.45,ps:0.75},
+    {name:'Billiards / Game Room',tc:0.85,ps:1.20},
+    {name:'Bar / Speakeasy',tc:0.95,ps:1.10},
     {name:'Home Office',tc:0.85,ps:1.10},
     {name:'Library',tc:1.00,ps:1.20},
     {name:'Safe Room',tc:0.85,ps:0.65},
@@ -1556,6 +1559,19 @@ var ROOMS = [
     {name:'Screened Porch',tc:0.45,ps:0.85},
     {name:'Shed',tc:0.70,ps:1.65},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
+  ]},
+  {section:'Outbuildings & Guest Quarters',rooms:[
+    {name:'Guest House — Bedroom(s)',tc:0.85,ps:1.40},
+    {name:'Guest House — Living Room',tc:0.95,ps:1.50},
+    {name:'Guest House — Kitchen / Bar',tc:1.05,ps:1.40},
+    {name:'Guest House — Bath',tc:0.45,ps:0.70},
+    {name:'Pool House — Living / Bedroom',tc:0.85,ps:1.40},
+    {name:'Pool House — Kitchen / Bar',tc:0.75,ps:1.05},
+    {name:'Pool House — Bath',tc:0.45,ps:0.70},
+    {name:"Caretaker's Cottage — Bedroom(s)",tc:0.85,ps:1.40},
+    {name:"Caretaker's Cottage — Living / Kitchen",tc:1.10,ps:1.70},
+    {name:"Caretaker's Cottage — Bath",tc:0.45,ps:0.70},
+    {name:'Additional Outbuilding Room',tc:0.85,ps:1.30,custom:true}
   ]}
 ];
 
@@ -1628,7 +1644,8 @@ var ROOM_WEIGHT = {
   'Entryway / Foyer':1.0,'Living Room':2.6,'Formal Sitting Room':1.8,'Dining Room':2.0,
   'Family Room / Great Room':2.4,'Media Room':2.0,'Sunroom':1.6,
   'Kitchen':3.5,"Butler's Pantry":2.0,'Laundry Room':0.8,'Mudroom / Utility Entry':0.8,'Half Bath':0.4,
-  'Art Studio':2.0,'Home Gym':1.2,'Home Office':1.8,'Library':2.5,'Safe Room':1.0,'Wine Cellar':2.5,
+  'Art Studio':2.0,'Home Gym':1.2,'Pilates / Yoga Studio':1.0,'Billiards / Game Room':2.0,'Bar / Speakeasy':2.0,
+  'Home Office':1.8,'Library':2.5,'Safe Room':1.0,'Wine Cellar':2.5,
   'Primary Suite':2.0,'Primary Bath':1.0,'His Primary Bath':1.0,'Hers Primary Bath':1.0,
   'Walk-in Closet':1.5,'His Walk-in Closet':1.5,'Hers Walk-in Closet':1.5,
   'Bedroom 2':1.5,'Bathroom 2':0.5,'Bedroom 3':1.5,'Bathroom 3':0.5,
@@ -1638,15 +1655,25 @@ var ROOM_WEIGHT = {
   'Garage (1-car)':2.5,'Garage (2-car)':3.5,'Garage (3+ car)':4.5,
   'Storage Room / Oversized Closets':2.5,'Mechanical / Utility Room':0.5,
   'Balcony':0.5,'Boat House':2.0,'Casita':2.5,'Furnished Patio':2.2,'Outdoor Kitchen':1.0,
-  'Pool House':2.7,'Screened Porch':1.0,'Shed':1.65
+  'Pool House':2.7,'Screened Porch':1.0,'Shed':1.65,
+  // Outbuildings broken into sub-rooms (each additive). Per-building sub-room weights
+  // sum to a full small dwelling: Guest House 7.0, Pool House w/ quarters 4.5, Cottage 5.5.
+  'Guest House — Bedroom(s)':2.0,'Guest House — Living Room':2.0,'Guest House — Kitchen / Bar':2.0,'Guest House — Bath':1.0,
+  'Pool House — Living / Bedroom':2.0,'Pool House — Kitchen / Bar':1.5,'Pool House — Bath':1.0,
+  "Caretaker's Cottage — Bedroom(s)":2.0,"Caretaker's Cottage — Living / Kitchen":2.5,"Caretaker's Cottage — Bath":1.0,
+  'Additional Outbuilding Room':2.0
 };
 // Exterior / non-under-air spaces — added on top of the sqft-anchored interior.
 var EXTERIOR_ROOMS = {
   'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Balcony':1,'Boat House':1,
-  'Casita':1,'Furnished Patio':1,'Outdoor Kitchen':1,'Pool House':1,'Screened Porch':1,'Shed':1
+  'Casita':1,'Furnished Patio':1,'Outdoor Kitchen':1,'Pool House':1,'Screened Porch':1,'Shed':1,
+  'Guest House — Bedroom(s)':1,'Guest House — Living Room':1,'Guest House — Kitchen / Bar':1,'Guest House — Bath':1,
+  'Pool House — Living / Bedroom':1,'Pool House — Kitchen / Bar':1,'Pool House — Bath':1,
+  "Caretaker's Cottage — Bedroom(s)":1,"Caretaker's Cottage — Living / Kitchen":1,"Caretaker's Cottage — Bath":1,
+  'Additional Outbuilding Room':1
 };
 function engineRoomWeight(name){ return ROOM_WEIGHT[name] !== undefined ? ROOM_WEIGHT[name] : 2.0; }
-function engineIsExterior(name){ return EXTERIOR_ROOMS[name] === true; }
+function engineIsExterior(name){ return !!EXTERIOR_ROOMS[name]; }
 
 // Starting volume/complexity scores when a room is first ticked. Most rooms start at
 // the neutral 3 ("normally furnished Palm Beach home"); inherently light rooms start
