@@ -423,18 +423,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30"></div>
         <div><label>Bathrooms</label><input type="number" id="i-baths" placeholder="e.g. 3" min="0" max="30" step="0.5"></div>
       </div>
-      <label>Approximate home value</label>
-      <select id="i-home-value">
-        <option value="0">Unknown / not specified</option>
-        <option value="500000">Under $1M</option>
-        <option value="1750000">$1M – $2.5M</option>
-        <option value="3500000">$2.5M – $5M</option>
-        <option value="7500000">$5M – $10M</option>
-        <option value="14000000">$10M – $20M</option>
-        <option value="27500000">$20M – $35M</option>
-        <option value="52500000">$35M – $75M</option>
-        <option value="100000000">$75M+</option>
-      </select>
+      <label>Approximate home value <span style="font-weight:400;color:var(--gray);">(market / Zillow estimate)</span></label>
+      <input type="number" id="i-home-value" placeholder="e.g. 3200000">
+      <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ballpark $ value — informs the Premium Estate rate decision and the real-estate referral angle.</div>
       <div class="row">
         <div>
           <label>Walkthrough / site visit date <span style="color:#A32D2D;font-weight:700;">*</span></label>
@@ -543,17 +534,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <!-- Property value, square footage, and years in home are captured at Client Intake
              and applied to the estimate behind the scenes — kept here (hidden) so calcAll still reads them. -->
         <div style="display:none;">
-          <select id="e-propval" onchange="calcAll()">
-            <option value="0">Unknown / not specified</option>
-            <option value="500000">Under $1M</option>
-            <option value="1750000">$1M – $2.5M</option>
-            <option value="3500000">$2.5M – $5M</option>
-            <option value="7500000">$5M – $10M</option>
-            <option value="14000000">$10M – $20M</option>
-            <option value="27500000">$20M – $35M</option>
-            <option value="52500000">$35M – $75M</option>
-            <option value="100000000">$75M+</option>
-          </select>
+          <input type="hidden" id="e-propval" value="0">
           <div id="propval-warn"></div>
           <div id="prop-mult-badge"></div>
           <div id="e-sqft-display">—</div>
@@ -642,7 +623,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div class="card" style="margin-top:1rem;padding:0;overflow:hidden;">
         <div style="padding:.9rem 1.1rem .5rem;">
           <div class="sec" style="margin-bottom:4px;">Room-by-Room Assessment</div>
-          <div style="font-size:11px;color:var(--gray);">Check a room to include it (auto-scores 3/3). Adjust Volume &amp; Complexity (1–5). Special Items = high-value (+0.75 hrs).</div>
+          <div style="font-size:11px;color:var(--gray);">Check a room to include it (auto-scores 3/3). Adjust Volume &amp; Complexity (1–5). Special Items = fragile/high-value (bumps this room's complexity for extra careful handling).</div>
         </div>
         <div id="room-table-wrap"></div>
       </div>
@@ -1679,7 +1660,7 @@ var JOB_STEPS = {
   cleanout:          {triage:[0.40,0.10], document:[0.95,0.05], pack:[0.25,0.45], disposition:[0.18,0.60]},
   probate:           {triage:[0.40,0.10], document:[1.15,0.05], pack:[0.25,0.45], disposition:[0.18,0.60], legal:[0.30,0]},
   contested_probate: {triage:[0.40,0.10], document:[1.15,0.05], pack:[0.25,0.45], disposition:[0.18,0.60], legal:[0.30,0]},
-  prep:              {triage:[0.30,0.10], pack:[0.15,0.40], disposition:[0.10,0.40]}
+  prep:              {triage:[0.20,0.10], pack:[0.10,0.25]}  // light declutter/stage; value is vendor costs + 30% GC fee
 };
 var ENGINE_CAREFUL = {triage:1, pack:1, document:1, legal:1}; // steps complexity scales (concierge side)
 var ENGINE_FLOOR = {downsizing:2, downsizing_move:3, home_cleanout:3, cleanout:3, probate:3, contested_probate:4, prep:3};
@@ -1737,7 +1718,7 @@ function buildRoomTable() {
     html += '<table class="rtable"><thead><tr>' +
       '<th style="width:34px">Incl.</th><th style="min-width:140px;">Room</th>' +
       '<th style="width:68px">Volume <button onclick="document.getElementById(\'icd-modal\').style.display=\'flex\'" style="font-size:9px;padding:1px 4px;border:1px solid var(--border-md);border-radius:3px;background:var(--cream);cursor:pointer;color:var(--bronze);font-weight:700;vertical-align:middle;">?</button></th><th style="width:82px">Complexity <button onclick="document.getElementById(\'icd-modal\').style.display=\'flex\'" style="font-size:9px;padding:1px 4px;border:1px solid var(--border-md);border-radius:3px;background:var(--cream);cursor:pointer;color:var(--bronze);font-weight:700;vertical-align:middle;">?</button></th>' +
-      '<th style="width:76px" title="Check for rooms containing fragile, high-value, or specialty items requiring extra handling care — art, antiques, wine, crystal, jewelry, collectibles. Adds +0.5 TC hrs and +0.75 PS hrs to this room.">Special Items</th>' +
+      '<th style="width:76px" title="Check for rooms containing fragile, high-value, or specialty items requiring extra careful handling — art, antiques, wine, crystal, jewelry, collectibles. Bumps this room\'s complexity (+1) for more careful-handling hours.">Special Items</th>' +
       '<th style="width:56px;text-align:center;">TC hrs</th>' +
       '<th style="width:56px;text-align:center;">PS hrs</th>' +
       '<th style="width:90px;text-align:center;">Media</th>' +
@@ -4875,7 +4856,7 @@ function renderClientDashboard(jobId) {
     h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);font-weight:600;margin-bottom:10px;">★ Real Estate Opportunity</div>';
     h += '<div class="d-grid2">';
     var propValLabels = {'1750000':'$1M – $2.5M','3500000':'$2.5M – $5M','7500000':'$5M – $10M','14000000':'$10M – $20M','27500000':'$20M – $35M','52500000':'$35M – $75M','100000000':'$75M+'};
-    var propValLabel = est && est.propVal ? (propValLabels[String(est.propVal)] || est.propVal) : '—';
+    var propValLabel = est && est.propVal ? (propValLabels[String(est.propVal)] || formatPropVal(parseInt(est.propVal))) : '—';
     var propValNum = est ? est.propVal : 0;
     var commRate = propValNum >= 10000000 ? 0.025 : 0.03;
     var commRateLabel = propValNum >= 10000000 ? '2.5%' : '3.0%';
