@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 6:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 8:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -420,11 +420,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div><label>Years in home</label><input type="number" id="i-years-in-home" placeholder="e.g. 12" min="0" max="99"></div>
       </div>
       <div class="row">
-        <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30"></div>
-        <div><label>Bathrooms</label><input type="number" id="i-baths" placeholder="e.g. 3" min="0" max="30" step="0.5"></div>
+        <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
+        <div><label>Bathrooms</label><input type="number" id="i-baths" placeholder="e.g. 3" min="0" max="30" step="0.5" inputmode="decimal" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,Math.round((parseFloat(this.value)||0)*2)/2))"></div>
       </div>
       <label>Approximate home value <span style="font-weight:400;color:var(--gray);">(market / Zillow estimate)</span></label>
-      <input type="number" id="i-home-value" placeholder="e.g. 3200000">
+      <input type="text" id="i-home-value" placeholder="e.g. $3,200,000" inputmode="numeric" oninput="formatMoneyInput(this)">
       <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ballpark $ value — informs the Premium Estate rate decision and the real-estate referral angle.</div>
       <div class="row">
         <div>
@@ -531,6 +531,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set in Client Intake">
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
         <div id="timeline-badge" style="margin-top:6px;"></div>
+        <div class="sec" style="margin-top:12px;">Adjustments</div>
+        <div class="toggle-wrap">
+          <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to all hours</div></div>
+          <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-wrap">
+          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub">Adds 20% to Transition Concierge hours only</div></div>
+          <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
         <!-- Property value, square footage, and years in home are captured at Client Intake
              and applied to the estimate behind the scenes — kept here (hidden) so calcAll still reads them. -->
         <div style="display:none;">
@@ -594,33 +603,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <div id="prem-badge"></div>
-        <div class="sec" style="margin-top:12px;">Rate Card</div>
-        <table class="rate-tbl">
-          <thead><tr><th>Role</th><th>Std</th><th>Premium</th><th>Active</th></tr></thead>
-          <tbody>
-            <tr><td>Transition Concierge (1/job)</td><td>$150</td><td>$185</td><td><span class="active-pill" id="tc-rate-pill">$150</span></td></tr>
-            <tr><td>Property Specialist</td><td>$100</td><td>$125</td><td><span class="active-pill" id="ps-rate-pill">$100</span></td></tr>
-          </tbody>
-        </table>
       </div>
     </div>
   </div>
 
   <div class="grid2" style="gap:1rem;align-items:start;">
     <div>
-      <div class="card">
-        <div class="sec">Adjustments</div>
-        <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to all hours</div></div>
-          <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub">Adds 20% to Transition Concierge hours only</div></div>
-          <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:1rem;padding:0;overflow:hidden;">
+      <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:.9rem 1.1rem .5rem;">
           <div class="sec" style="margin-bottom:4px;">Room-by-Room Assessment</div>
           <div style="font-size:11px;color:var(--gray);">Check a room to include it (auto-scores 3/3). Adjust Volume &amp; Complexity (1–5). Special Items = fragile/high-value (bumps this room's complexity for extra careful handling).</div>
@@ -2032,8 +2021,8 @@ function calcAll() {
   var propVal = parseInt(document.getElementById('e-propval').value) || 0;
   var propMult = propValMultiplier(propVal);
 
-  document.getElementById('tc-rate-pill').textContent = '$' + tcRate;
-  document.getElementById('ps-rate-pill').textContent = '$' + psRate;
+  var _tcPill = document.getElementById('tc-rate-pill'); if (_tcPill) _tcPill.textContent = '$' + tcRate;
+  var _psPill = document.getElementById('ps-rate-pill'); if (_psPill) _psPill.textContent = '$' + psRate;
   document.getElementById('prem-badge').innerHTML = prem ?
     '<div class="alert a-warn" style="margin-top:6px;">Premium rates active: TC $185/hr | PS $125/hr</div>' : '';
 
@@ -2226,6 +2215,16 @@ function calcAll() {
     crewSize = crew.requiredPS;
     crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
   }
+  // Unify the projected duration with the Client Estimate. Compute working days from
+  // the FINAL billable hours (which include access/heirs adjustments and prep
+  // coordination), not just the base engine room hours — otherwise the estimate tab
+  // and the client document disagree (e.g. 8 vs 9 days). Keep the engine's duration
+  // as a floor so the logistics/mobilization minimum still applies. Both the timeline
+  // badge below and the Client Estimate now read this one value via e.days.
+  var _psForDays = Math.max(getScheduledPSCount(), crew.requiredPS, 1);
+  daysNeeded = Math.max(Math.ceil(totTC / 7), Math.ceil(totPS / (_psForDays * 7)), eng.days);
+  days = daysNeeded;
+  crew.tcDays = daysNeeded;
   if (timelineBadge) {
     if (includedRoomCount === 0) {
       // No scope yet — a projected completion derived from zero hours is meaningless
@@ -2769,7 +2768,9 @@ function saveIntake() {
   var sqft = document.getElementById('i-sqft').value.trim();
   var beds = (document.getElementById('i-beds')||{}).value ? document.getElementById('i-beds').value.trim() : '';
   var baths = (document.getElementById('i-baths')||{}).value ? document.getElementById('i-baths').value.trim() : '';
-  var propVal = (document.getElementById('i-home-value')||{}).value || '';
+  // Home value is a comma-formatted text field ($3,200,000) — store digits only so
+  // downstream parseInt/_num reads a clean number.
+  var propVal = ((document.getElementById('i-home-value')||{}).value || '').replace(/[^0-9]/g, '');
   var ptype = document.getElementById('i-ptype').value;
   var src = document.getElementById('i-src').value;
   var start = document.getElementById('i-start').value;
@@ -3366,13 +3367,12 @@ function renderClientEstimate() {
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
 
-  // Calculated duration: max of TC-driven and PS-driven days at 7 hrs/day
-  var estDays = (function() {
-    var tc = Math.ceil((e.totTC || 0) / 7);
-    var psPerPerson = (e.psCount && e.psCount > 0) ? Math.ceil((e.totPS || 0) / e.psCount / 7) : tc;
-    var d = Math.max(tc, psPerPerson);
-    return d > 0 ? d + ' working day' + (d !== 1 ? 's' : '') : '—';
-  })();
+  // Duration comes straight from the estimate's stored working-day count (e.days),
+  // the same figure the Estimate tab's timeline badge shows — so the two never
+  // disagree. Fallback recompute only for older estimates saved before e.days.
+  var _estDayNum = (e.days && e.days > 0) ? e.days
+    : Math.max(Math.ceil((e.totTC || 0) / 7), (e.psCount && e.psCount > 0) ? Math.ceil((e.totPS || 0) / e.psCount / 7) : 0);
+  var estDays = _estDayNum > 0 ? _estDayNum + ' working day' + (_estDayNum !== 1 ? 's' : '') : '—';
 
   // Preparer contact info from contractor directory
   var allContractors = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
@@ -3429,7 +3429,7 @@ function renderClientEstimate() {
     '<div class="ce-hdr-row ce-hdr-row-2">' +
     '<div><div class="ce-meta-label">Site Visit</div><div class="ce-meta-val">' + (job.walkthrough ? fmtCEDate(job.walkthrough) : '—') + '</div></div>' +
     '<div><div class="ce-meta-label">Target Start</div><div class="ce-meta-val">' + (job.start ? fmtCEDate(job.start) : '—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Projected Completion</div><div class="ce-meta-val">' + (job.start && e.totTC ? fmtCEDate(addWorkingDays(job.start, Math.ceil(e.totTC / 7))) : '—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Projected Completion</div><div class="ce-meta-val">' + (job.start && _estDayNum > 0 ? fmtCEDate(addWorkingDays(job.start, _estDayNum)) : '—') + '</div></div>' +
     '<div><div class="ce-meta-label">Anticipated Duration</div><div class="ce-meta-val">' + estDays + '</div></div>' +
     '</div>' +
 
@@ -5390,6 +5390,13 @@ function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
 // addresses/room names containing & < > " ' don't corrupt or inject into the
 // rendered estimate, agreement, or invoice.
 function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+// Live-format a free-text money field as the user types: digits only, grouped with
+// commas and a leading $ (e.g. "$3,200,000"). Readers must strip non-digits.
+function formatMoneyInput(el) {
+  var digits = (el.value || '').replace(/[^0-9]/g, '');
+  el.value = digits ? '$' + parseInt(digits, 10).toLocaleString() : '';
+}
+
 function formatPropVal(v) {
   if (!v) return 'Not specified';
   if (v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
@@ -10939,6 +10946,25 @@ function startCollectionTranscription(collId) {
   }
 }
 
+// Format a collection's "Est. Value (owner)" for display: pure numeric strings
+// become "$5,000"; free text like "Unknown" passes through untouched.
+function fmtColVal(v) {
+  if (v == null) return '';
+  var s = String(v).trim();
+  if (s === '') return '';
+  if (/^[\s$,.0-9]+$/.test(s)) {
+    var n = parseFloat(s.replace(/[^0-9.]/g, ''));
+    if (!isNaN(n) && n > 0) return '$' + Math.round(n).toLocaleString();
+  }
+  return s;
+}
+// Commit + reformat the value field on blur.
+function setColValue(id, el) {
+  var f = fmtColVal(el.value);
+  el.value = f;
+  updateCollectionField(id, 'value', f);
+}
+
 function renderCollections() {
   var tbody = document.getElementById('collections-body');
   if (!tbody) return;
@@ -10955,7 +10981,7 @@ function renderCollections() {
       '</select>';
     h += '<tr>' +
       '<td><input value="' + esc(c.name) + '" oninput="updateCollectionField(' + c.id + ',\'name\',this.value)" style="width:100%;font-size:12px;padding:3px 5px;"></td>' +
-      '<td><input value="' + esc(c.value) + '" oninput="updateCollectionField(' + c.id + ',\'value\',this.value)" title="Dollar value, or e.g. Unknown" style="width:85px;font-size:12px;padding:3px 5px;"></td>' +
+      '<td><input value="' + esc(fmtColVal(c.value)) + '" onchange="setColValue(' + c.id + ',this)" title="Dollar value (e.g. $5,000), or text like Unknown" style="width:85px;font-size:12px;padding:3px 5px;"></td>' +
       '<td><input value="' + esc(c.qty) + '" oninput="updateCollectionField(' + c.id + ',\'qty\',this.value)" style="width:55px;font-size:12px;padding:3px 5px;text-align:center;"></td>' +
       '<td>' + dispSelect + '</td>' +
       '<td><button class="icon-btn del" onclick="removeCollection(' + c.id + ')">Remove</button></td>' +
@@ -11003,6 +11029,18 @@ buildRoomTable();
 renderVendors();
 rebuildDropdowns();
 populateIntakeTCDropdown();
+// Force Client Intake date fields to use the calendar picker only — block manual
+// keyboard entry so you can't type a malformed or impossible date.
+(function(){
+  var p = document.getElementById('panel-intake');
+  if (!p) return;
+  Array.prototype.forEach.call(p.querySelectorAll('input[type="date"]'), function(el){
+    el.addEventListener('keydown', function(e){
+      if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') return;
+      e.preventDefault();
+    });
+  });
+})();
 calcAll();
 </script>
 </body>
