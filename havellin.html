@@ -8366,13 +8366,18 @@ function renderJobPlan(jobId, job, est) {
   var isMM         = svc === 'downsizing_move';
   var isDownsizing = svc === 'downsizing' || svc === 'downsizing_move';
   var isCleanout   = svc === 'home_cleanout';
-  // Downsizing and Home Cleanout share the core sort-and-disposition playbook.
-  // Estate/Probate/Contested have no playbook yet — they fall through to room-docs-only.
-  var hasPlaybook  = isDownsizing || isCleanout;
+  var isEstate     = svc === 'cleanout';                  // Estate Settlement (deceased owner)
+  var isProbate    = svc === 'probate' || svc === 'contested_probate';
+  var isContested  = svc === 'contested_probate';
+  var isDocJob     = isEstate || isProbate;               // requires §733.604 documentation
+  var isDisposal   = isCleanout || isDocJob;              // full clear-out + disposition streams
+  // Downsizing, Home Cleanout, Estate Settlement, Probate & Contested all share the core
+  // sort/pack/disposition playbook; estate & probate add documentation + court phases.
+  var hasPlaybook  = isDownsizing || isDisposal;
   var vendors     = est.vendors     || [];
   var collections = est.collections || [];
   var prem   = !!est.prem;
-  var hasCOC = prem || collections.length > 0;
+  var hasCOC = prem || collections.length > 0 || isDocJob; // chain of custody mandatory for estate/probate
   var psNames = (est.psSlots && est.psSlots.length)
     ? est.psSlots.map(function(s){
         return (s.label && !s.label.startsWith('contractor_')) ? s.label
@@ -8464,7 +8469,16 @@ function renderJobPlan(jobId, job, est) {
         'New home measured; furniture placement plan drafted against keep list',
         'Furniture placement plan reviewed with and approved by client before move day',
         'Moving company confirmed: date, window, crew size, contact',
-        'HOA/building move-out rules confirmed at origin; move-in rules at destination']) : '');
+        'HOA/building move-out rules confirmed at origin; move-in rules at destination']) : '') +
+    (isDocJob ? planSubsec('Authority &amp; Legal'+(isProbate?' (Probate)':' (Estate)')) +
+      chks('p0_auth_',['Certified copy of Letters of Administration / Testamentary on file',
+        'Personal Representative authority confirmed (full vs. limited) — limitations noted',
+        'Estate attorney contact confirmed; direct communication channel established',
+        'Signed engagement &amp; access authorization from the Personal Representative',
+        'NDA signed by every crew member / contractor before entry',
+        'Certificate of Insurance (COI) provided to attorney / PR / HOA as required']) +
+      (isProbate ? chks('p0_deadline_',['60-day §733.604 inventory deadline calculated from Letters issuance — logged in job file',
+        'Target substantial completion in 30–45 days to leave room for amendments']) : '') : '');
 
   // ── Phase 1 ──────────────────────────────────────────────────────────────────
   // Compact room grid: 3 per row. Status buttons + photos only — no per-room checklists.
@@ -8492,9 +8506,10 @@ function renderJobPlan(jobId, job, est) {
     '</div>';
 
   // Phase 1 house-level gates
-  var p1gates = isCleanout ? [
+  var p1gates = isDisposal ? [
     'All rooms sorted and decision-locked — every item routed to a disposition stream',
-    'Retained items list confirmed with client in writing before Phase 2',
+    (isDocJob ? 'Retained / heir-designated items listed and confirmed with the PR in writing before Phase 2'
+              : 'Retained items list confirmed with client in writing before Phase 2'),
     'Sale / consignment items inventoried, photographed, chain of custody opened',
     'High-value items reviewed by TC, documented, and set aside'
   ] : [
@@ -8507,11 +8522,19 @@ function renderJobPlan(jobId, job, est) {
   var p1 = planSubsec('Rooms — Sort & Lock (ordered by complexity)') + p1rooms +
     planSubsec('Phase Gates') +
     chks('p1_gate_', p1gates) +
-    (hasCOC ? planSubsec('Chain of Custody'+(prem?' — Mandatory (Premium Estate)':'')) +
+    (hasCOC ? planSubsec('Chain of Custody'+((prem||isDocJob)?' — Mandatory':'')) +
       chks('p1_coc_',['Photograph high-value item in place before it moves',
-        'Logged: description, client\'s stated value, condition, photo reference',
-        'Client acknowledgment of the room\'s inventory before items leave it',
+        'Logged: description, '+(isDocJob?'date-of-death FMV estimate':'client\'s stated value')+', condition, photo reference',
+        (isDocJob?'PR acknowledgment of the room\'s inventory before items leave it':'Client acknowledgment of the room\'s inventory before items leave it'),
         'Vendor handoff documented; TC physically present for valuables pickup']) : '') +
+    (isDocJob ? planSubsec('§733.604 Documentation Package') +
+      chks('p1_doc_',['Wide-angle photo of every room before anything is moved',
+        'Every item est. $500+ photographed in place (full shot + maker\'s marks / serial)',
+        'Master inventory spreadsheet building: Category | Description | Location | Qty | Condition | Est. FMV | Valuation Source | Photo ID | Disposition',
+        'Items for formal appraisal flagged on a separate tab (jewelry, art, antiques, firearms, coins/metals, vehicles)',
+        'Potentially exempt property logged (§732.402 — household ≤ $20K, up to 2 vehicles)',
+        'Wills/codicils, trusts, deeds, titles, financial &amp; military records sequestered and turned over to PR/attorney with signed receipt',
+        'Cash, jewelry, firearms, documents NEVER removed without PR/attorney sign-off']) : '') +
     renderDailyCloseBlock(jobId,1);
 
   // ── Phase 2 ──────────────────────────────────────────────────────────────────
@@ -8541,13 +8564,14 @@ function renderJobPlan(jobId, job, est) {
   var p2 = planSubsec('Midpoint Invoice (25%)') + midpointGateHtml(jobId, _midAmt) +
     planSubsec('Rooms — Pack &amp; Complete') + p2rooms +
     planSubsec('Phase Gates') +
-    (isCleanout
+    (isDisposal
       ? chks('p2_gate_',[
-          'All disposition streams cleared: haul staged or removed, donation staged, consignment picked up, shred staged',
+          'All disposition streams cleared: haul staged or removed, donation staged, consignment/auction picked up, shred staged',
           'Donation receipt captured',
-          'Sale / consignment chain-of-custody closed for all pickups',
+          'Sale / consignment / auction chain-of-custody closed for all pickups',
           'Shredding completed or vendor confirmed on schedule',
-          'Only retained items remain — boxed, labeled, and ready for client'])
+          (isDocJob ? 'Disposition recorded against each inventory line; proceeds routed to the estate account'
+                    : 'Only retained items remain — boxed, labeled, and ready for client')])
       : chks('p2_gate_',[
           'All keep items packed and labeled by destination room'+(isMM?' (checked against floor plan)':''),
           'Sell items: all vendor pickups completed, chain-of-custody closed',
@@ -8598,25 +8622,35 @@ function renderJobPlan(jobId, job, est) {
     : '';
   var p4 = _midCloseFlag + p4prep +
     planSubsec('Financial Close') +
-    (isCleanout
+    (isDisposal
       ? chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
           'All vendor invoices collected and filed in the job folder',
-          'Sale / consignment proceeds reconciled: amounts received confirmed and documented',
+          'Sale / consignment / auction proceeds reconciled: amounts received confirmed and documented',
           'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received',
-          'Donation receipts collected and filed (for client\'s tax records)',
+          'Donation receipts collected and filed (for tax records)',
           'Materials costs totaled and itemized (cost + 25% materials handling)',
           'All Change Orders finalized and signed',
-          'Final invoice generated from job log; reviewed; sent to client'])
+          (isDocJob ? 'Final invoice generated from job log on actual hours — hour-by-hour breakdown for PR/court'
+                    : 'Final invoice generated from job log; reviewed; sent to client')])
       : chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
           'All vendor invoices collected and filed in the job folder',
           'Materials costs totaled and itemized (cost + 25% materials handling)',
           'All Change Orders finalized and signed',
           'Final invoice generated from job log; reviewed; sent to client'])) +
     p4re +
+    (isProbate ? planSubsec('Florida Court &amp; Legal Compliance') +
+      chks('p4_court_',['Verified §733.604 inventory prepared with date-of-death FMV for every asset',
+        'All professional appraisals attached as supporting documentation',
+        'Non-probate assets excluded (joint w/ survivorship, POD/TOD, trust, beneficiary-designated)',
+        'Inventory served on all interested parties; proof of service filed',
+        'Filed within the 60-day deadline (or extension petitioned for cause)',
+        'Final accounting prepared: all sale proceeds, donations, disposal costs, professional fees',
+        'PR sign-off obtained on the final disposition summary',
+        'Project file retained — 7-year minimum (FL statute of limitations)']) : '') +
     planSubsec('Vendor Scorecard') +
     '<div id="scorecard-' + jobId + '">' + renderVendorScorecard(jobId, job) + '</div>' +
     planSubsec('Job Complete') +
-    (isCleanout
+    (isDisposal
       ? chks('p4_done_',['Home confirmed empty: every room, closet, attic, garage, and outdoor space walked and verified',
           'Property confirmed broom-clean; final photographs taken inside and out',
           'Client satisfaction confirmed by phone (a call, not a text)',
@@ -8662,11 +8696,11 @@ function renderJobPlan(jobId, job, est) {
   }
 
   return _midBanner +
-    planPhaseWrap('p0','Phase 0 — Pre-Job', p0) +
-    planPhaseWrap('p1','Phase 1 — Sort & Decisions', p1) +
-    planPhaseWrap('p2','Phase 2 — Pack & Prepare', p2) +
+    planPhaseWrap('p0','Phase 0 — Pre-Job'+(isDocJob?' & Authority':''), p0) +
+    planPhaseWrap('p1','Phase 1 — Sort, Decisions'+(isDocJob?' & Documentation':''), p1) +
+    planPhaseWrap('p2','Phase 2 — '+(isDisposal?'Pack & Disposition':'Pack & Prepare'), p2) +
     p3 +
-    planPhaseWrap('p4','Phase 4 — Close-Out', p4);
+    planPhaseWrap('p4','Phase 4 — Close-Out'+(isProbate?' & Court Filing':''), p4);
 }
 
 function togglePhase(id) {
