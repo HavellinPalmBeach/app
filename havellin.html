@@ -608,7 +608,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div class="toggle-wrap">
           <div class="toggle-info">
             <div class="toggle-title">Premium estate?</div>
-            <div class="toggle-sub">Activates $185 TC / $125 PS rates + 0.3 hrs/room across all rooms</div>
+            <div class="toggle-sub">Activates $185 TC / $125 PS rates (rate only — no change to hours)</div>
           </div>
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
@@ -2334,18 +2334,27 @@ function calcAll() {
     if (sDiscAmt) sDiscAmt.textContent = '- $' + Math.round(discountAmt).toLocaleString();
   }
 
-  // Fixed-price project fee
+  // Billing model: fixed-price (living jobs) vs itemized hourly / time-and-materials
+  // (Estate Settlement, Probate, Contested) — the latter bill on actual logged hours
+  // for Personal-Representative and court defensibility, with no fixed-price buffer.
   var fpPanel = document.getElementById('fixed-price-panel');
   var fpLabel = document.getElementById('fixed-price-label');
   var fpVal   = document.getElementById('fixed-price-val');
   var fpNote  = document.getElementById('fixed-price-note');
+  var courtBilled = (svcKey === 'cleanout' || svcKey === 'probate' || svcKey === 'contested_probate');
   if (fpPanel && havellinTotalDiscounted > 0) {
-    var buf = fixedPriceBuffer(svcKey);
-    var fpFee = Math.round(havellinTotalDiscounted * (1 + buf));
     fpPanel.style.display = 'block';
-    if (fpLabel) fpLabel.textContent = 'Havellin services total × ' + Math.round(buf * 100) + '% contingency';
-    if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
-    if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.';
+    if (courtBilled) {
+      if (fpLabel) fpLabel.textContent = 'Itemized hourly estimate — billed on actual logged hours';
+      if (fpVal)   fpVal.textContent   = '$' + Math.round(havellinTotalDiscounted).toLocaleString();
+      if (fpNote)  fpNote.textContent  = 'Planning estimate only — the final invoice bills actual TC + PS hours, with an hour-by-hour breakdown for the Personal Representative and court. No fixed-price contingency. Vendor costs pass through at cost.';
+    } else {
+      var buf = fixedPriceBuffer(svcKey);
+      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf));
+      if (fpLabel) fpLabel.textContent = 'Fixed-price project fee — Havellin services × ' + Math.round(buf * 100) + '% contingency';
+      if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
+      if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.';
+    }
   } else if (fpPanel) {
     fpPanel.style.display = 'none';
   }
@@ -3514,6 +3523,9 @@ function renderClientEstimate() {
     '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred customer discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">This estimate is based on the initial property walkthrough. Final charges reflect actual hours worked. If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</div>' +
+    ((e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate')
+      ? '<div class="ce-note" style="margin-top:6px;"><strong>Billing — probate / estate:</strong> This engagement is billed on actual logged Transition Concierge and Property Specialist hours (time-and-materials). An itemized, hour-by-hour record is maintained and provided to the Personal Representative and, as required, the court. No fixed-price contingency is applied.</div>'
+      : '') +
 
     (function() {
       var cols = e.collections || [];
