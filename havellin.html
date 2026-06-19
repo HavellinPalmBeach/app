@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 9:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 3:47pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1515,6 +1515,11 @@ var ROOMS = [
   {section:'Bedrooms & Bathrooms',rooms:[
     {name:'Primary Suite',tc:0.75,ps:1.20},
     {name:'Primary Bath',tc:0.55,ps:0.80},
+    {name:'His Primary Bath',tc:0.55,ps:0.80},
+    {name:'Hers Primary Bath',tc:0.55,ps:0.80},
+    {name:'Walk-in Closet',tc:0.55,ps:0.80},
+    {name:'His Walk-in Closet',tc:0.55,ps:0.80},
+    {name:'Hers Walk-in Closet',tc:0.55,ps:0.80},
     {name:'Bedroom 2',tc:0.55,ps:0.80},
     {name:'Bathroom 2',tc:0.22,ps:0.35},
     {name:'Bedroom 3',tc:0.55,ps:0.80},
@@ -1614,8 +1619,8 @@ var PRICING_REF = {
 // Spec: PRICING_SCHEMA.md. Pure (no DOM) so it can be unit-tested. calcAll() calls it.
 // ═══════════════════════════════════════════════════════════════════════════════
 var ENGINE_K = 0.0123;                                   // content-load units per under-air sqft
-var ENGINE_VOLF = {1:0.65, 2:0.82, 3:1.0, 4:1.22, 5:1.45}; // volume slider -> load scale
-var ENGINE_CPXF = {1:0.85, 2:0.92, 3:1.0, 4:1.13, 5:1.25}; // complexity slider -> careful-work scale
+var ENGINE_VOLF = {1:0.55, 2:0.78, 3:1.0, 4:1.35, 5:1.70}; // volume slider -> load scale (widened: a packed room bites harder, a sparse one drops further; 3 = neutral anchor)
+var ENGINE_CPXF = {1:0.78, 2:0.89, 3:1.0, 4:1.18, 5:1.35}; // complexity slider -> careful-work scale (widened to match)
 
 // Per-room content weight (relative). Interior rooms modulate the sqft baseline;
 // exterior rooms (outside under-air sqft) are additive add-ons.
@@ -1624,7 +1629,9 @@ var ROOM_WEIGHT = {
   'Family Room / Great Room':2.4,'Media Room':2.0,'Sunroom':1.6,
   'Kitchen':3.5,"Butler's Pantry":2.0,'Laundry Room':0.8,'Mudroom / Utility Entry':0.8,'Half Bath':0.4,
   'Art Studio':2.0,'Home Gym':1.2,'Home Office':1.8,'Library':2.5,'Safe Room':1.0,'Wine Cellar':2.5,
-  'Primary Suite':2.0,'Primary Bath':1.0,'Bedroom 2':1.5,'Bathroom 2':0.5,'Bedroom 3':1.5,'Bathroom 3':0.5,
+  'Primary Suite':2.0,'Primary Bath':1.0,'His Primary Bath':1.0,'Hers Primary Bath':1.0,
+  'Walk-in Closet':1.5,'His Walk-in Closet':1.5,'Hers Walk-in Closet':1.5,
+  'Bedroom 2':1.5,'Bathroom 2':0.5,'Bedroom 3':1.5,'Bathroom 3':0.5,
   'Bedroom 4':1.5,'Bathroom 4':0.5,'Bedroom 5':1.5,'Bedroom 6':1.5,
   'Additional Bedroom(s)':1.5,'Additional Bathroom(s)':0.5,
   'Bonus Room':1.8,'Additional Office':1.8,'Additional Sitting Room':1.6,
@@ -1640,6 +1647,20 @@ var EXTERIOR_ROOMS = {
 };
 function engineRoomWeight(name){ return ROOM_WEIGHT[name] !== undefined ? ROOM_WEIGHT[name] : 2.0; }
 function engineIsExterior(name){ return EXTERIOR_ROOMS[name] === true; }
+
+// Starting volume/complexity scores when a room is first ticked. Most rooms start at
+// the neutral 3 ("normally furnished Palm Beach home"); inherently light rooms start
+// at the 1 floor (you'd rarely bump a powder room or foyer); primary baths start at 2
+// (high-end more often than not, but you still score up when you see the marble).
+var ROOM_DEFAULTS = {
+  'Entryway / Foyer':{vol:1,cplx:1},'Half Bath':{vol:1,cplx:1},
+  'Bathroom 2':{vol:1,cplx:1},'Bathroom 3':{vol:1,cplx:1},'Bathroom 4':{vol:1,cplx:1},
+  'Additional Bathroom(s)':{vol:1,cplx:1},
+  'Laundry Room':{vol:1,cplx:1},'Mudroom / Utility Entry':{vol:1,cplx:1},
+  'Mechanical / Utility Room':{vol:1,cplx:1},
+  'Primary Bath':{vol:2,cplx:2},'His Primary Bath':{vol:2,cplx:2},'Hers Primary Bath':{vol:2,cplx:2}
+};
+function roomDefault(name){ return ROOM_DEFAULTS[name] || {vol:3, cplx:3}; }
 
 // Work-step rates [concierge, specialist] per content unit, by service type.
 // 'move' = scaling move-day; 'heir' = concierge multiplier (contested probate).
@@ -1790,8 +1811,10 @@ function toggleRoom(id) {
   var notesBtn = document.getElementById('notes-btn-'+id);
   if (chk) {
     row.className = 'active-row';
-    vol.disabled = false; if (!vol.value) vol.value = 3;
-    cplx.disabled = false; if (!cplx.value) cplx.value = 3;
+    var rname = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
+    var def = roomDefault(rname);
+    vol.disabled = false; if (!vol.value) vol.value = def.vol;
+    cplx.disabled = false; if (!cplx.value) cplx.value = def.cplx;
     spcl.disabled = false; note.disabled = false;
     var noteTaOn = document.getElementById('note-ta-'+id);
     if (noteTaOn) { noteTaOn.disabled = false; noteTaOn.style.background = ''; }
