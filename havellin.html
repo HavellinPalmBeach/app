@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.21 · 9:04am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.21 · 9:15am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4585,6 +4585,7 @@ function saveChangeOrder() {
 
   var co = {
     id: Date.now(),
+    updatedAt: Date.now(),
     jobId: jobId,
     description: desc,
     amount: amount,
@@ -4662,6 +4663,7 @@ function acceptChangeOrder() {
   co.clientApproved = true;
   co.clientName = clientName;
   co.clientAcceptedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  co.updatedAt = Date.now();   // recency for the cross-device merge (acceptance beats the pending copy)
   saveChangeOrders();
   var job = jobs.find(function(j){ return j.id===co.jobId; });
   if (job) {
@@ -5647,7 +5649,8 @@ function saveEstimateState() {
       submitted: estimateSubmitted,
       discountRevision: discountRevision,
       approvedBy: approvedBy,
-      approvedAt: approvedAt
+      approvedAt: approvedAt,
+      savedAt: Date.now()   // recency so the Sheet merges estimates by job id (newest wins)
     };
     // Single source of truth: derive the jobs-list summary fields from the full
     // estimate record in the same step, so the list total and the Client Estimate
@@ -7782,6 +7785,7 @@ function getJobPlan(jobId) {
   return jobPlanStore[jobId];
 }
 function saveJobPlan(jobId) {
+  if (jobId && jobPlanStore[jobId]) jobPlanStore[jobId].savedAt = Date.now();  // recency for the by-job merge
   try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
   // Push to Sheets so the Job Plan (call notes, checkboxes, room status) follows
   // you across devices, the same way jobs and estimates do.
