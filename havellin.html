@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.19 · 7:28pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.21 · 9:04am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5523,9 +5523,16 @@ function generateHvlId() {
   return 'HVL-' + yy + mm + '-' + suffix;
 }
 function saveJobs() {
+  // Give every job a modified-time so the Sheet can MERGE saves by id (newest wins)
+  // instead of doing a destructive full replace. Only fill when missing, so we never
+  // bump a job this device didn't actually touch.
+  var _now = Date.now();
+  for (var _i = 0; _i < jobs.length; _i++) { if (jobs[_i] && !jobs[_i].updatedAt) jobs[_i].updatedAt = _now; }
   try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
   document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
-  // Push to Sheets for cross-device sync (verified write)
+  // Push to Sheets for cross-device sync. The Sheet now merges this payload by job id
+  // and never drops a job missing from it, so a second device can no longer overwrite a
+  // client created on another device. Deletions go through the explicit deleteJob action.
   postSyncBadge({ type: 'saveAllJobs', payload: jobs }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
 }
 
@@ -6888,6 +6895,7 @@ function syncToSheets(type, payload) {
 }
 
 function syncJobToSheets(job) {
+  if (job) job.updatedAt = Date.now();  // bump recency so same-job edits resolve newest-wins on the merge
   syncToSheets('job', job);
 }
 
