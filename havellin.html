@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 6:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 7:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1339,12 +1339,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <!-- TOOLBAR -->
   <div class="card" style="margin-bottom:1rem;padding:0.8rem 1rem;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <input type="text" id="v-search" oninput="renderVendorsTab()" placeholder="Search name, category, contact, area…" style="flex:2;min-width:200px;">
-      <select id="v-filter-sort" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="Sort within each category">
-        <option value="name">Sort: Name A–Z</option>
-        <option value="rating">Sort: Highest rating</option>
-        <option value="used">Sort: Recently used</option>
-        <option value="contacted">Sort: Least recently contacted</option>
+      <select id="v-filter-cat" onchange="renderVendorsTab()" style="flex:2;min-width:220px;" title="Start here — pick a category (type to jump)"><option value="">All categories</option></select>
+      <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
+        <option value="">All statuses</option>
+        <option value="Approved">Approved</option>
+        <option value="Identified">Identified</option>
+        <option value="Backup">Backup</option>
+        <option value="Do Not Use">Do Not Use</option>
+        <option value="__none">(no status)</option>
       </select>
       <select id="v-filter-rating" onchange="renderVendorsTab()" style="flex:1;min-width:130px;" title="Rating comes from job performance; vendors read Unrated until they've been used">
         <option value="">Any rating</option>
@@ -1354,21 +1356,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="2">★★ &amp; up</option>
         <option value="unrated">Unrated only</option>
       </select>
-      <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
-        <option value="">All statuses</option>
-        <option value="Approved">Approved</option>
-        <option value="Identified">Identified</option>
-        <option value="Backup">Backup</option>
-        <option value="Do Not Use">Do Not Use</option>
-        <option value="__none">(no status)</option>
+      <select id="v-filter-sort" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="Sort within each category">
+        <option value="name">Sort: Name A–Z</option>
+        <option value="rating">Sort: Highest rating</option>
+        <option value="used">Sort: Recently used</option>
+        <option value="contacted">Sort: Least recently contacted</option>
       </select>
-      <select id="v-filter-recip" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
-        <option value="">Any reciprocity</option>
-        <option value="yes">Reciprocal partners</option>
-      </select>
-      <select id="v-filter-group" onchange="renderVendorsTab()" style="flex:1;min-width:140px;"><option value="">All groups</option></select>
-      <select id="v-filter-cat" onchange="renderVendorsTab()" style="flex:1;min-width:140px;"><option value="">All categories</option></select>
-      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-dk);white-space:nowrap;margin:0;"><input type="checkbox" id="v-filter-stale" onchange="renderVendorsTab()" style="width:auto;margin:0;"> Not yet contacted</label>
     </div>
   </div>
 
@@ -8870,20 +8863,11 @@ function initVendorsTab() {
   renderVendorsTab();
 }
 
-// Fill the group/category filter selects and the intake category datalist from the
-// live directory, preserving whatever the user already had selected.
+// Fill the category filter select and the intake category datalist from the live
+// directory, preserving whatever the user already had selected.
 function populateVendorFilters() {
-  var groups = {}, cats = {};
-  vendorDirectory.forEach(function(v){
-    if (v.category_group) groups[String(v.category_group).trim()] = 1;
-    if (v.category) cats[String(v.category).trim()] = 1;
-  });
-  var gSel = document.getElementById('v-filter-group');
-  if (gSel) {
-    var gv = gSel.value;
-    gSel.innerHTML = '<option value="">All groups</option>' + Object.keys(groups).sort().map(function(g){
-      return '<option' + (gv===g?' selected':'') + '>' + esc(g) + '</option>'; }).join('');
-  }
+  var cats = {};
+  vendorDirectory.forEach(function(v){ if (v.category) cats[String(v.category).trim()] = 1; });
   var cSel = document.getElementById('v-filter-cat');
   if (cSel) {
     var cv = cSel.value;
@@ -8895,28 +8879,15 @@ function populateVendorFilters() {
 }
 
 function getFilteredVendors() {
-  var q = (document.getElementById('v-search')||{}).value || '';
-  q = q.trim().toLowerCase();
-  var fg = (document.getElementById('v-filter-group')||{}).value || '';
   var fc = (document.getElementById('v-filter-cat')||{}).value || '';
   var fs = (document.getElementById('v-filter-status')||{}).value || '';
   var frating = (document.getElementById('v-filter-rating')||{}).value || '';
-  var frecip = (document.getElementById('v-filter-recip')||{}).value || '';
-  var stale = !!(document.getElementById('v-filter-stale')||{}).checked;
   return vendorDirectory.filter(function(v){
-    if (fg && String(v.category_group||'').trim() !== fg) return false;
     if (fc && String(v.category||'').trim() !== fc) return false;
     if (fs === '__none') { if (String(v.status||'').trim()) return false; }
     else if (fs && String(v.status||'').trim() !== fs) return false;
     if (frating === 'unrated') { if (vendorPerf(v) != null) return false; }
     else if (frating && vendorStars(v) < parseInt(frating, 10)) return false;
-    if (frecip === 'yes' && String(v.reciprocity||'').trim().toLowerCase() !== 'possible') return false;
-    if (stale && String(v.last_contacted||'').trim()) return false;
-    if (q) {
-      var hay = [v.vendor_name, v.category, v.category_group, v.primary_contact, v.service_area,
-                 v.physical_address, v.notes, v.pricing_structure].join(' ').toLowerCase();
-      if (hay.indexOf(q) === -1) return false;
-    }
     return true;
   });
 }
@@ -8941,18 +8912,14 @@ function renderVendorStats() {
 
 // The list is a category accordion, not a flat wall of 152: each category is a
 // collapsible section (collapsed by default) with counts, so you work one
-// category at a time. Any active search/filter auto-expands the matching
-// sections so results are never hidden behind a closed header.
+// category at a time. Any active filter auto-expands the matching sections so
+// results are never hidden behind a closed header.
 var vendorExpandedCats = {};
 var _vendorCatOrder = [];
 function vendorFiltersActive() {
-  return !!((document.getElementById('v-search')||{}).value
-    || (document.getElementById('v-filter-group')||{}).value
-    || (document.getElementById('v-filter-cat')||{}).value
+  return !!((document.getElementById('v-filter-cat')||{}).value
     || (document.getElementById('v-filter-status')||{}).value
-    || (document.getElementById('v-filter-rating')||{}).value
-    || (document.getElementById('v-filter-recip')||{}).value
-    || (document.getElementById('v-filter-stale')||{}).checked);
+    || (document.getElementById('v-filter-rating')||{}).value);
 }
 // Within-category comparator for the chosen sort. Default is plain alphabetical;
 // rating/used key off real job performance (unrated/unused sort last).
