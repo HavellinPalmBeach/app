@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 1:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 2:15am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5134,7 +5134,11 @@ function renderClientDashboard(jobId) {
   if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="font-size:11px;">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
   if (job.premium) h += '<span class="badge" style="font-size:11px;background:var(--tan);color:var(--bronze);">Premium estate</span>';
   h += '<span class="badge" style="font-size:11px;background:'+statusColors[job.status]+';color:white;">'+statusLabels[job.status]+'</span>';
-  if (job.re==='yes') h += '<span class="badge b-bronze" style="font-size:11px;">★ Real Estate Opportunity</span>';
+  if (job.re==='yes') {
+    var _reProp = parseInt(job.propVal || (est && est.propVal) || 0) || 0;
+    var _reC = _reProp > 0 ? calcRECommission(_reProp) : null;
+    h += '<span class="badge b-bronze" style="font-size:11px;">★ Real Estate Opportunity' + (_reC ? ' · ' + formatPropVal(_reC.net) + ' potential' : '') + '</span>';
+  }
   h += '</div></div>';
   h += '<div style="display:flex;gap:7px;flex-shrink:0;">';
   var estRec = estimateStore[jobId];
@@ -5251,52 +5255,17 @@ function renderClientDashboard(jobId) {
     h += '</div></div>';
   }
 
-  // FINANCIAL + RE CARD
-  h += '<div class="card" style="margin-bottom:12px;">';
-  h += sectionHdr('Financial Summary & Real Estate Opportunity');
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px;margin-top:12px;">';
-  // Payment schedule
-  h += '<div>';
-  h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">Payment Schedule</div>';
+  // Payment/estimate figures — rendered inside the Timeline & Payments card below,
+  // and reused by the Documents card. The old standalone Financial Summary card is
+  // gone: payments now live in the timeline, and the RE commission is in the top badge.
   var hav = est ? est.havellinTotal : (job.havellinEst||0);
   var tot = job.totalEst || hav;
   var _split = paymentSplit(hav);
   var dep = _split.deposit, mid = _split.midpoint, fin2 = _split.final;
-  h += '<div class="fin-r"><span class="fin-l">Havellin estimate</span><span class="fin-v">'+(hav?fmtMoney(hav):'—')+'</span></div>';
-  h += '<div class="fin-r"><span class="fin-l">Total incl. vendors</span><span class="fin-v">'+(tot?fmtMoney(tot):'—')+'</span></div>';
-  h += '<div class="fin-r"><span class="fin-l">First invoice — deposit (50%)</span><span class="fin-v" style="display:flex;align-items:center;gap:4px;">';
-  h += dot(job.depositReceived?'#1D9E75':'#A32D2D')+(hav?fmtMoney(dep):'—')+'<span style="font-size:10px;color:'+(job.depositReceived?'#1D9E75':'#A32D2D')+'">'+(job.depositReceived?' received':' not received')+'</span></span></div>';
-  h += '<div class="fin-r"><span class="fin-l">Midpoint invoice (25%)</span><span class="fin-v" style="color:var(--gray);">'+(hav?fmtMoney(mid)+' — pending':'—')+'</span></div>';
-  h += '<div class="fin-r"><span class="fin-l">Final invoice</span><span class="fin-v" style="color:var(--gray);">'+(hav?fmtMoney(fin2)+' — on completion':'—')+'</span></div>';
-  h += '<div class="fin-r" style="padding-top:10px;border-top:1px solid var(--border);"><span class="fin-l" style="font-weight:600;color:var(--gray-dk);">Balance due</span><span class="fin-v" style="font-size:15px;color:var(--bronze);">'+(tot?fmtMoney(tot):'—')+'</span></div>';
-  h += '</div>';
-  // RE opportunity
-  h += '<div>';
-  if (job.re==='yes') {
-    h += '<div style="background:var(--tan);border-radius:var(--br);padding:12px 14px;">';
-    h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);font-weight:600;margin-bottom:10px;">★ Real Estate Opportunity</div>';
-    h += '<div class="d-grid2">';
-    // Actual home value entered at client intake (job.propVal), not a tier/bucket.
-    var propValNum = parseInt(job.propVal || (est && est.propVal) || 0) || 0;
-    var propValLabel = propValNum > 0 ? formatPropVal(propValNum) : '—';
-    h += field('Property value', '<span style="color:var(--bronze);font-weight:600;">'+propValLabel+'</span>');
-    h += field('Listing commission', '3% · sell-side');
-    var reCap = '';
-    var re = propValNum > 0 ? calcRECommission(propValNum) : null;
-    if (re) {
-      h += field('Gross commission (3%)', '<span style="color:var(--bronze);">'+fmtMoney(re.gross)+'</span>');
-      h += field('Total potential — Team Ashley &amp; Anthony', '<span style="color:#1D9E75;font-weight:700;">'+fmtMoney(re.net)+'</span> <span style="font-size:10px;color:var(--gray);">(70% of 3%)</span>');
-      reCap = '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-top:8px;">Assumes Havellin wins the sell-side listing off the estate engagement. 3% listing commission on the home value at intake; Team Ashley &amp; Anthony keep 70% (net 2.1%). Estimate only — final commission depends on the actual sale price.</div>';
-    }
-    h += '</div>' + reCap + '</div>';
-  } else {
-    h += '<div style="font-size:12px;color:var(--gray);font-style:italic;padding-top:8px;">No real estate opportunity flagged for this client.</div>';
-  }
-  h += '</div></div></div>';
 
-  // KEY DATES CARD
+  // TIMELINE & PAYMENTS CARD
   h += '<div class="card" style="margin-bottom:12px;">';
-  h += sectionHdr('Key Dates & Job Timeline');
+  h += sectionHdr('Job Timeline & Payments');
   h += '<div class="d-grid4" style="margin-bottom:16px;margin-top:12px;">';
   h += field('Client intake', job.created ? '<span style="color:#1D9E75;">'+job.created+'</span>' : '—');
   h += field('Walkthrough', fmtDate2(job.walkthrough)||'—');
@@ -5331,7 +5300,19 @@ function renderClientDashboard(jobId) {
     h += '<div style="font-size:10px;color:'+(s.deadline?'#A32D2D':(s.done?'#1D9E75':(s.active?'#BA7517':'var(--gray)')))+';text-align:center;">'+s.dt+'</div>';
     h += '</div></div>';
   });
-  h += '</div></div></div>';
+  h += '</div></div>';  // close timeline flex + bar wrapper
+  // ── Estimate & Payments (folded into the timeline — no separate finance card) ──
+  h += '<div style="border-top:0.5px solid var(--border);margin-top:16px;padding-top:12px;">';
+  h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:10px;">Estimate &amp; Payments</div>';
+  h += '<div class="d-grid4">';
+  h += field('Havellin estimate', '<span style="font-weight:600;color:var(--gray-dk);">'+(hav?fmtMoney(hav):'—')+'</span>');
+  h += field('Deposit (50%)', (hav?fmtMoney(dep):'—') + ' <span style="font-size:10px;color:'+(job.depositReceived?'#1D9E75':'#A32D2D')+';">'+(job.depositReceived?'· received':'· not received')+'</span>');
+  h += field('Midpoint (25%)', (hav?fmtMoney(mid):'—') + ' <span style="font-size:10px;color:var(--gray);">· pending</span>');
+  h += field('Final invoice', (hav?fmtMoney(fin2):'—') + ' <span style="font-size:10px;color:var(--gray);">· on completion</span>');
+  h += '</div>';
+  h += '<div class="fin-r" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><span class="fin-l" style="font-weight:600;color:var(--gray-dk);">Balance due'+(tot!==hav?' (incl. vendors)':'')+'</span><span class="fin-v" style="font-size:16px;color:var(--bronze);">'+(tot?fmtMoney(tot):'—')+'</span></div>';
+  h += '</div>';  // close payments block
+  h += '</div>';  // close card
 
   // DOCUMENTS CARD
   h += '<div class="card" style="margin-bottom:12px;">';
