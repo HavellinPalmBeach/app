@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 1:10am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 1:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5049,27 +5049,15 @@ function getJobActuals(jobId) {
 }
 
 // Sell-side listing commission if Havellin wins the listing off the estate
-// engagement: flat 3% (no high-value discount), and Team Ashley & Anthony keep
-// 70% of it (net 2.1%). Returns the NET-to-team range. `tier` is the property-
-// value select value; ranges are keyed to those exact bucket values.
-var RE_PROP_RANGES = {
-  '500000': [500000,1000000], '1750000': [1000000,2500000],
-  '3500000': [2500000,5000000], '7500000': [5000000,10000000],
-  '14000000': [10000000,20000000], '27500000': [20000000,35000000],
-  '52500000': [35000000,75000000], '100000000': [75000000,150000000]
-};
+// engagement: flat 3% on the actual home value entered at intake, and Team Ashley
+// & Anthony keep 70% of it (net 2.1%). Returns a single gross + net figure.
 var RE_COMMISSION_RATE = 0.03;   // sell-side, no discount
 var RE_TEAM_SPLIT = 0.70;        // Team Ashley & Anthony's share
-function calcRECommission(propVal, tier) {
-  var r = RE_PROP_RANGES[String(tier)];
-  if (!r) return null;
-  return {
-    rate: '3%',
-    grossLo: Math.round(r[0] * RE_COMMISSION_RATE),
-    grossHi: Math.round(r[1] * RE_COMMISSION_RATE),
-    lo: Math.round(r[0] * RE_COMMISSION_RATE * RE_TEAM_SPLIT),
-    hi: Math.round(r[1] * RE_COMMISSION_RATE * RE_TEAM_SPLIT)
-  };
+function calcRECommission(propVal) {
+  var v = parseFloat(propVal) || 0;
+  if (v <= 0) return null;
+  var gross = Math.round(v * RE_COMMISSION_RATE);
+  return { rate: '3%', gross: gross, net: Math.round(gross * RE_TEAM_SPLIT) };
 }
 
 function fmtMoney(n) { return '$' + Math.round(n).toLocaleString(); }
@@ -5288,19 +5276,17 @@ function renderClientDashboard(jobId) {
     h += '<div style="background:var(--tan);border-radius:var(--br);padding:12px 14px;">';
     h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);font-weight:600;margin-bottom:10px;">★ Real Estate Opportunity</div>';
     h += '<div class="d-grid2">';
-    var propValLabels = {'1750000':'$1M – $2.5M','3500000':'$2.5M – $5M','7500000':'$5M – $10M','14000000':'$10M – $20M','27500000':'$20M – $35M','52500000':'$35M – $75M','100000000':'$75M+'};
-    var propValLabel = est && est.propVal ? (propValLabels[String(est.propVal)] || formatPropVal(parseInt(est.propVal))) : '—';
-    var propValNum = est ? est.propVal : 0;
+    // Actual home value entered at client intake (job.propVal), not a tier/bucket.
+    var propValNum = parseInt(job.propVal || (est && est.propVal) || 0) || 0;
+    var propValLabel = propValNum > 0 ? formatPropVal(propValNum) : '—';
     h += field('Property value', '<span style="color:var(--bronze);font-weight:600;">'+propValLabel+'</span>');
     h += field('Listing commission', '3% · sell-side');
     var reCap = '';
-    if (propValNum > 0) {
-      var re = calcRECommission(propValNum, propValNum);
-      if (re) {
-        h += field('Gross commission (3%)', '<span style="color:var(--bronze);">'+fmtMoney(re.grossLo)+' – '+fmtMoney(re.grossHi)+'</span>');
-        h += field('Est. net — Team Ashley &amp; Anthony', '<span style="color:#1D9E75;font-weight:700;">'+fmtMoney(re.lo)+' – '+fmtMoney(re.hi)+'</span> <span style="font-size:10px;color:var(--gray);">(70% of 3%)</span>');
-        reCap = '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-top:8px;">Assumes Havellin wins the sell-side listing off the estate engagement. 3% listing commission; Team Ashley &amp; Anthony keep 70% (net 2.1%). Estimate only — final commission depends on the actual sale price.</div>';
-      }
+    var re = propValNum > 0 ? calcRECommission(propValNum) : null;
+    if (re) {
+      h += field('Gross commission (3%)', '<span style="color:var(--bronze);">'+fmtMoney(re.gross)+'</span>');
+      h += field('Total potential — Team Ashley &amp; Anthony', '<span style="color:#1D9E75;font-weight:700;">'+fmtMoney(re.net)+'</span> <span style="font-size:10px;color:var(--gray);">(70% of 3%)</span>');
+      reCap = '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-top:8px;">Assumes Havellin wins the sell-side listing off the estate engagement. 3% listing commission on the home value at intake; Team Ashley &amp; Anthony keep 70% (net 2.1%). Estimate only — final commission depends on the actual sale price.</div>';
     }
     h += '</div>' + reCap + '</div>';
   } else {
