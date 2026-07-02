@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 11:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 11:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4676,15 +4676,14 @@ function restoreEstimateToUI(est) {
   if (jobForStart) {
     var startDisplayEl = document.getElementById('e-start-date');
     if (startDisplayEl) startDisplayEl.value = jobForStart.start || '';
-    // Prefer the estimate's OWN sqft — that's the value its saved hours were computed
-    // against. Fall back to job intake only when the estimate never stored one.
-    // (Overwriting with a later-edited or across-devices-stale job.sqft silently
-    // changed the hours engine's backbone and the recomputed totals.)
+    // Square footage is a property of the home — ALWAYS sourced from intake (the job
+    // record), never editable or stored-and-diverged on the estimate. Kept consistent
+    // across devices by the jobs refresh on estimate open (refreshEstimateFromCloud).
     var sqftEl2 = document.getElementById('e-sqft');
     var sqftDispEl = document.getElementById('e-sqft-display');
-    var _estSqft = (est.sqft != null && est.sqft !== '') ? est.sqft : (jobForStart.sqft || '');
-    if (sqftEl2) sqftEl2.value = _estSqft;
-    if (sqftDispEl) sqftDispEl.textContent = _estSqft ? parseInt(_estSqft).toLocaleString() + ' sqft' : '— (not set in intake)';
+    var _jobSqft = jobForStart.sqft || '';
+    if (sqftEl2) sqftEl2.value = _jobSqft;
+    if (sqftDispEl) sqftDispEl.textContent = _jobSqft ? parseInt(_jobSqft).toLocaleString() + ' sqft' : '— (not set in intake)';
     var yihDispEl = document.getElementById('e-years-in-home-display');
     if (yihDispEl) yihDispEl.textContent = jobForStart.yearsInHome ? jobForStart.yearsInHome + ' years' : '— (not set in intake)';
     // Restore prepared-by: prefer the saved value on the estimate, fall back to the job's TC
@@ -5901,12 +5900,31 @@ function clearEstimateScratch(jobId) {
   } catch(e) {}
 }
 
-// Cloud-authoritative open. Fetch this job's saved estimate fresh from the sheet
-// and overwrite the local cache before loading it, so a stale local copy can never
-// mask the real saved build. onReady(status) runs with 'cloud' on a successful
-// fetch (store now reflects the sheet) or 'offline' when the fetch fails/errors.
+// Pull the jobs list fresh from the sheet and overwrite the local array. Jobs
+// otherwise sync only at startup, which let job.status (approval state) and job
+// intake fields (sqft — the hours-engine backbone) go stale across devices. cb()
+// always runs, even offline, so callers can proceed.
+function refreshJobsFromCloud(cb) {
+  if (!SHEETS_SYNC_URL) { if (cb) cb(); return; }
+  fetch(SHEETS_SYNC_URL + '?action=loadJobs')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && Array.isArray(data.jobs) && !data.error) {
+        jobs = data.jobs;
+        try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
+      }
+    })
+    .catch(function(){})
+    .then(function(){ if (cb) cb(); });
+}
+
+// Cloud-authoritative open. Refresh the jobs list AND fetch this job's saved
+// estimate fresh from the sheet before loading, so neither a stale estimate nor a
+// stale job.status/sqft can mask the real saved build. onReady(status) runs with
+// 'cloud' on a successful fetch or 'offline' when the fetch fails/errors.
 function refreshEstimateFromCloud(jobId, onReady) {
   if (!SHEETS_SYNC_URL) { onReady('offline'); return; }
+  refreshJobsFromCloud(function(){
   fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -5928,6 +5946,7 @@ function refreshEstimateFromCloud(jobId, onReady) {
       onReady('cloud');
     })
     .catch(function(){ onReady('offline'); });
+  });
 }
 
 function saveEstimateState() {
