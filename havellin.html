@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 2:15am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 2:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1654,6 +1654,11 @@ var estimateSubmitted = false;  // TC submitted for manager approval
 var discountRevision = false;   // true when in discount-only revision re-approval flow
 var approvedBy = '';
 var approvedAt = '';
+// Cross-device approval convergence. While an estimate sits "awaiting manager
+// approval", this watches the cloud so a decision made on another device
+// (approve/deny) lands on this screen automatically instead of leaving it stuck
+// on a stale "pending". Armed/disarmed by applyEstimateLock based on state.
+var _approvalWatch = { timer: null, jobId: 0 };
 
 // ─── ROOM DATA ────────────────────────────────────────────────────────────────
 var ROOMS = [
@@ -4032,6 +4037,54 @@ function applyEstimateLock() {
   if (saveBtn) { saveBtn.disabled = locked; saveBtn.style.opacity = locked ? '0.45' : ''; }
   var resetBtn = document.querySelector('button[onclick="resetEstimate()"]');
   if (resetBtn) { resetBtn.disabled = locked; resetBtn.style.opacity = locked ? '0.45' : ''; }
+
+  // Cross-device convergence: while this estimate is out for manager approval,
+  // watch the cloud so an approve/deny from another device (e.g. the manager's)
+  // updates the TC's screen on its own. Any other state disarms the watch.
+  if (estimateSubmitted && !estimateApproved && currentEstimate && currentEstimate.jobId) {
+    startApprovalWatch(currentEstimate.jobId);
+  } else {
+    stopApprovalWatch();
+  }
+}
+
+function stopApprovalWatch() {
+  if (_approvalWatch.timer) { clearInterval(_approvalWatch.timer); }
+  _approvalWatch.timer = null;
+  _approvalWatch.jobId = 0;
+}
+
+function startApprovalWatch(jobId) {
+  if (!jobId || !SHEETS_SYNC_URL) return;
+  if (_approvalWatch.timer && _approvalWatch.jobId === jobId) return;  // already watching
+  stopApprovalWatch();
+  _approvalWatch.jobId = jobId;
+  _approvalWatch.timer = setInterval(function(){ approvalWatchTick(jobId); }, 12000);
+  approvalWatchTick(jobId);   // fire once now so the first update doesn't wait a full cycle
+}
+
+// Re-pull this job's estimate from the cloud and re-render the active estimate
+// view. Stops itself once the estimate is no longer this job's awaiting-approval
+// record (approved, denied-and-reset, or the user switched jobs).
+function approvalWatchTick(jobId) {
+  // A locally-open PIN modal means the manager is mid-decision here — don't yank
+  // state out from under him.
+  var pm = document.getElementById('pin-modal');
+  if (pm && pm.style.display && pm.style.display !== 'none') return;
+  if (!currentEstimate || currentEstimate.jobId !== jobId || estimateApproved || !estimateSubmitted) {
+    stopApprovalWatch();
+    return;
+  }
+  refreshEstimateFromCloud(jobId, function(){
+    // The user may have switched jobs during the async fetch — bail if so.
+    if (!currentEstimate || currentEstimate.jobId !== jobId) return;
+    loadEstimateForJob(jobId);
+    var ap = document.querySelector('.panel.active');
+    if (ap && ap.id === 'panel-client-estimate') renderClientEstimate();
+    else updateApprovalUI();
+    // renderClientEstimate/updateApprovalUI end in applyEstimateLock, which
+    // re-arms or disarms this watch based on the freshly-loaded state.
+  });
 }
 
 // ─── TC REVIEW / SUBMIT FOR APPROVAL ────────────────────────────────────────
@@ -5715,7 +5768,17 @@ function showPanel(id, btn) {
     // submitted or approved estimate appears fully editable when reopened here.
     applyEstimateLock();
   }
-  if (id==='client-estimate') { populateClientEstimateSelect(); renderClientEstimate(); }
+  if (id==='client-estimate') {
+    populateClientEstimateSelect();
+    // Cloud-authoritative: re-pull the loaded job so an approve/deny made on
+    // another device shows immediately, not the stale copy this tab last rendered.
+    var _ceJid = currentEstimate && currentEstimate.jobId;
+    if (_ceJid) {
+      refreshEstimateFromCloud(_ceJid, function(){ loadEstimateForJob(_ceJid); renderClientEstimate(); });
+    } else {
+      renderClientEstimate();
+    }
+  }
   if (id==='contractors') { renderContractors(); }
   if (id==='vendors') { initVendorsTab(); }
   if (id==='winloss') renderWinLoss();
