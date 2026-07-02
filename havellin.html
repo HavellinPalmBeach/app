@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 9:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 9:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3920,19 +3920,27 @@ function updateApprovalUI() {
   if (estimateApproved) {
     // STATE 3a: Approved, not yet sent — show Mark as Sent
     // STATE 3b: Approved and sent — show Offer Discount
-    badge.innerHTML = '<span class="badge b-approved">&#10003; Approved</span>';
-    if (btnEdit) btnEdit.style.display = 'inline-block';   // TC may revise an approved estimate — editing un-approves it and requires re-approval
+    // The estimate is a negotiation artifact: it stays editable (discounts, price
+    // drops to win the job) even after the client has seen it. It only locks once
+    // the service agreement is SIGNED (agrSigned) — from then on it's the basis of
+    // an executed contract and changes go through a Change Order, never an edit.
+    var contractSigned = !!(ceJob && ceJob.agrSigned);
+    badge.innerHTML = '<span class="badge b-approved">&#10003; Approved</span>' + (contractSigned ? ' <span class="badge b-ok">Under signed agreement</span>' : '');
+    if (btnEdit && !contractSigned) btnEdit.style.display = 'inline-block';
     if (btnPdf) btnPdf.style.display = 'inline-block';
     if (btnDriveEst) btnDriveEst.style.display = 'inline-block';
     if (mailtoEl) { mailtoEl.style.display = 'inline-block'; mailtoEl.href = buildEstimateMailto(); }
+    var lockNote = contractSigned ? ' Locked by the signed agreement — revise via a Change Order.' : '';
     if (!sentDate) {
       if (btnMarkSent) btnMarkSent.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = 'Approved. Send the estimate to the client, then mark as sent.';
-      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Approved</strong> · ' + approvedBy + ' · ' + approvedAt + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Print or email to client, then click <strong>Mark as Sent</strong> to record delivery.</div></div>';
+      if (subtitle) subtitle.textContent = (contractSigned ? 'Approved · under signed agreement.' : 'Approved — not yet sent. Edit if you still need changes, or send to the client and mark as sent.') ;
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Approved</strong> · ' + approvedBy + ' · ' + approvedAt + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Print or email to client, then click <strong>Mark as Sent</strong> to record delivery.' + lockNote + '</div></div>';
     } else {
-      if (btnOfferDiscount) btnOfferDiscount.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = 'Estimate sent ' + sentDate + '. Use Offer Discount if client pushes back.';
-      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">If the client requests a lower price, use <strong>Offer Discount</strong> to revise and re-submit for approval.</div></div>';
+      // Offer Discount also revises the price, so it's locked once the agreement is
+      // signed — post-signing price changes go through a Change Order.
+      if (btnOfferDiscount && !contractSigned) btnOfferDiscount.style.display = 'inline-block';
+      if (subtitle) subtitle.textContent = contractSigned ? ('Estimate sent ' + sentDate + ' · under signed agreement — locked.') : ('Estimate sent ' + sentDate + '. Edit to revise, or Offer Discount if the client pushes back.');
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">' + (contractSigned ? 'Agreement signed — estimate locked. Revise via a Change Order.' : 'If the client wants a lower price, <strong>Edit</strong> to revise or use <strong>Offer Discount</strong>, then re-approve.') + '</div></div>';
     }
 
   } else if (estimateSubmitted) {
