@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 7:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 7:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2890,7 +2890,7 @@ function renderPrepItems() {
   prepItems.forEach(function(p,i) {
     html += '<tr><td><strong>'+p.type+'</strong></td>' +
       '<td><input type="number" value="'+p.cost+'" oninput="updatePrepCost('+i+',this.value)" style="width:100%;"></td>' +
-      '<td>$'+Math.round(p.cost*0.30).toLocaleString()+'</td>' +
+      '<td id="prep-fee-'+i+'">$'+Math.round(p.cost*0.30).toLocaleString()+'</td>' +
       '<td><button class="icon-btn del" onclick="removePrepItem('+i+')">✕</button></td></tr>';
   });
   var tbody = document.getElementById('prep-body');
@@ -2898,7 +2898,16 @@ function renderPrepItems() {
   calcPrepTotals();
 }
 
-function updatePrepCost(i, val) { prepItems[i].cost = parseFloat(val)||0; renderPrepItems(); calcAll(); }
+// Update the model + this row's 30% fee + totals in place. Do NOT re-render the
+// prep table here — rebuilding it on every keystroke destroys the <input> you're
+// typing in (that's the "can't get past the first digit" bug).
+function updatePrepCost(i, val) {
+  prepItems[i].cost = parseFloat(val)||0;
+  var feeCell = document.getElementById('prep-fee-'+i);
+  if (feeCell) feeCell.textContent = '$'+Math.round(prepItems[i].cost*0.30).toLocaleString();
+  calcPrepTotals();
+  calcAll();
+}
 
 function calcPrepTotals() {
   var totalCost = prepItems.reduce(function(a,p){ return a+p.cost; }, 0);
