@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 8:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 9:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -830,6 +830,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="btn-s" id="btn-edit-est" onclick="editEstimateFromCE()" style="display:none;">&#9998; Edit Estimate</button>
         <button class="btn-s" id="btn-submit-approval" onclick="submitForApproval()" style="display:none;">Submit for Approval &#8594;</button>
         <button class="btn-s" id="btn-approve" onclick="openPinModal()" style="display:none;">Manager Approval</button>
+        <button class="btn-s" id="btn-deny-est" onclick="openDenyModal()" style="display:none;color:var(--err-tx);border-color:var(--err-tx);">Deny</button>
         <button class="btn-bronze" id="btn-pdf" onclick="printClientEstimate()" style="display:none;">Print / Save PDF</button>
         <a class="btn-bronze" id="btn-mailto-est" href="#" style="display:none;text-decoration:none;">&#9993; Email to Client</a>
         <button class="btn-s" id="btn-drive-est" onclick="saveFolderEstimate()" style="display:none;">&#128193; Save to Drive</button>
@@ -1547,6 +1548,22 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div id="pin-fb" style="margin-top:10px;"></div>
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="closePinModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- DENY MODAL -->
+<div class="modal-overlay" id="deny-modal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-title">Deny Estimate</div>
+    <div class="modal-sub">Send this estimate back to the Transition Concierge to revise. Enter a reason and your manager PIN.</div>
+    <label style="font-size:11px;font-weight:600;color:var(--gray-dk);">Reason (shown to the TC) <span style="color:#A32D2D;">*</span></label>
+    <textarea id="deny-reason" rows="3" style="width:100%;font-size:13px;padding:8px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;box-sizing:border-box;margin:4px 0 10px;" placeholder="e.g. Kitchen hours look high — re-score and trim the discount before resubmitting."></textarea>
+    <input type="password" class="pin-input" id="deny-pin" maxlength="4" placeholder="••••">
+    <div id="deny-fb" style="margin-top:10px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeDenyModal()">Cancel</button>
+      <button class="btn-s" style="flex:1;color:var(--err-tx);border-color:var(--err-tx);" onclick="submitDeny()">Deny &amp; Send Back</button>
     </div>
   </div>
 </div>
@@ -3878,8 +3895,9 @@ function updateApprovalUI() {
   var bannerWrap = document.getElementById('approval-banner-wrap');
   var subtitle = document.getElementById('ce-subtitle');
 
+  var btnDeny = document.getElementById('btn-deny-est');
   // Hide all first
-  [btnApprove, btnPdf, btnEdit, btnSubmit].forEach(function(b){ if(b) b.style.display='none'; });
+  [btnApprove, btnPdf, btnEdit, btnSubmit, btnDeny].forEach(function(b){ if(b) b.style.display='none'; });
   var mailtoEl = document.getElementById('btn-mailto-est');
   if (mailtoEl) mailtoEl.style.display = 'none';
   var btnDriveEst = document.getElementById('btn-drive-est');
@@ -3903,6 +3921,7 @@ function updateApprovalUI() {
     // STATE 3a: Approved, not yet sent — show Mark as Sent
     // STATE 3b: Approved and sent — show Offer Discount
     badge.innerHTML = '<span class="badge b-approved">&#10003; Approved</span>';
+    if (btnEdit) btnEdit.style.display = 'inline-block';   // TC may revise an approved estimate — editing un-approves it and requires re-approval
     if (btnPdf) btnPdf.style.display = 'inline-block';
     if (btnDriveEst) btnDriveEst.style.display = 'inline-block';
     if (mailtoEl) { mailtoEl.style.display = 'inline-block'; mailtoEl.href = buildEstimateMailto(); }
@@ -3919,31 +3938,34 @@ function updateApprovalUI() {
   } else if (estimateSubmitted) {
     // STATE 2a: Discount revision awaiting re-approval
     // STATE 2b: Original submission awaiting approval
-    // Pending approval locks the estimator, so expose an Edit button as the
-    // TC's deliberate path back to draft (otherwise a submitted estimate is
-    // trapped until a manager acts).
-    if (btnEdit) btnEdit.style.display = 'inline-block';
+    // Out for approval: the estimator is hard-locked on every device and the TC
+    // gets NO edit path — only the manager can move it, by approving or denying.
+    // This prevents a TC editing a version while the manager approves another
+    // (which would produce two "approved" totals for one client).
+    if (btnApprove) btnApprove.style.display = 'inline-block';
+    if (btnDeny) btnDeny.style.display = 'inline-block';
     if (discountRevision) {
       badge.innerHTML = '<span class="badge b-pending">Discount Revision — Awaiting Approval</span>';
-      if (btnApprove) btnApprove.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = 'Discount revision submitted. Manager PIN required to re-approve. Use Edit Estimate to make further changes.';
+      if (subtitle) subtitle.textContent = 'Discount revision submitted. Locked pending the manager — approve or deny with the manager PIN.';
       var prevTotal = currentEstimate.prevApprovedTotal ? Math.round(currentEstimate.prevApprovedTotal).toLocaleString() : '—';
       var newTotal = Math.round(currentEstimate.havellinTotal).toLocaleString();
-      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Discount revision — awaiting manager re-approval</strong></div><div style="font-size:11px;color:var(--gray-dk);margin-top:2px;">Revised Havellin total: <strong>$' + newTotal + '</strong> (was $' + prevTotal + '). Enter manager PIN to approve.</div></div>';
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Discount revision — awaiting manager re-approval</strong></div><div style="font-size:11px;color:var(--gray-dk);margin-top:2px;">Revised Havellin total: <strong>$' + newTotal + '</strong> (was $' + prevTotal + '). Manager PIN to approve, or Deny to send back.</div></div>';
     } else {
       badge.innerHTML = '<span class="badge b-pending">Awaiting Manager Approval</span>';
-      if (btnApprove) btnApprove.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = 'Submitted for approval. Enter manager PIN to approve and unlock PDF.';
-      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Awaiting manager approval</strong> — enter PIN to approve.</div></div>';
+      if (subtitle) subtitle.textContent = 'Locked — out for manager approval. Manager PIN to approve, or Deny to send back to the TC.';
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Awaiting manager approval</strong> — locked until the manager approves or denies.</div></div>';
     }
 
   } else {
     // STATE 1: TC Review — edit freely, submit when ready
-    badge.innerHTML = '<span class="badge b-bronze">TC Review</span>';
+    var wasDenied = currentEstimate && currentEstimate.denyReason;
+    badge.innerHTML = wasDenied ? '<span class="badge" style="background:var(--err-bg);color:var(--err-tx);">Denied — Revise</span>' : '<span class="badge b-bronze">TC Review</span>';
     if (btnEdit) btnEdit.style.display = 'inline-block';
     if (btnSubmit) btnSubmit.style.display = 'inline-block';
-    if (subtitle) subtitle.textContent = 'Review the estimate below. Edit if needed, then submit for manager approval.';
-    if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>TC Review</strong> — check all details before submitting.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Once submitted, only the manager PIN can approve.</div></div>';
+    if (subtitle) subtitle.textContent = wasDenied ? 'Denied by manager — revise and resubmit for approval.' : 'Review the estimate below. Edit if needed, then submit for manager approval.';
+    if (bannerWrap) bannerWrap.innerHTML = wasDenied
+      ? '<div class="approval-banner" style="margin-bottom:1rem;background:var(--err-bg);"><div><strong>Denied by ' + esc(currentEstimate.deniedBy || 'manager') + (currentEstimate.deniedAt ? ' · ' + esc(currentEstimate.deniedAt) : '') + '</strong></div><div style="font-size:12px;color:var(--err-tx);margin-top:3px;">' + esc(currentEstimate.denyReason) + '</div><div style="font-size:11px;color:var(--gray);margin-top:3px;">Edit the estimate to address this, then resubmit for approval.</div></div>'
+      : '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>TC Review</strong> — check all details before submitting.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Once submitted, only the manager PIN can approve.</div></div>';
   }
   applyEstimateLock();
 }
@@ -4012,6 +4034,8 @@ function submitForApproval() {
   }
 
   estimateSubmitted = true;
+  // Clear any prior denial marker — this is a fresh submission of the revised estimate.
+  if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
   saveEstimateState();
   // Now it's genuinely awaiting manager approval — reflect that on the job.
   var subJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
@@ -4162,11 +4186,12 @@ function editEstimateFromCE() {
     delete currentEstimate.lockedAt;
     delete currentEstimate.lockedBy;
   }
-  // Editing pulls the estimate back to draft, so drop the job out of
-  // "Pending Approval" too (unless it's already further along).
+  // Editing pulls the estimate back to draft. Drop the job out of "Pending
+  // Approval" AND out of "Approved" — editing an approved estimate un-approves it
+  // so there can never be an approved version sitting alongside an in-flight edit.
   if (currentEstimate && currentEstimate.jobId) {
     var edJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
-    if (edJob && edJob.status === 'pending') { edJob.status = 'new'; edJob.approved = false; saveJobs(); syncJobToSheets(edJob); }
+    if (edJob && (edJob.status === 'pending' || edJob.approved)) { edJob.status = 'new'; edJob.approved = false; saveJobs(); syncJobToSheets(edJob); }
   }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -4184,6 +4209,74 @@ function openPinModal() {
 }
 function closePinModal() {
   document.getElementById('pin-modal').style.display = 'none';
+}
+
+// Email the assigned TC when the manager approves or denies their submitted
+// estimate. Mirrors notifyManagerForApproval — a pre-filled mailto opens on the
+// manager's device, addressed to the TC on the job.
+function notifyTCOfDecision(job, est, decision, reason) {
+  if (!job) return;
+  var tc = assignedTCContact(job);
+  if (!tc || !tc.email) return;
+  var client = job.name || 'Client';
+  var approved = decision === 'approved';
+  var total = est && est.havellinTotal ? '$' + Math.round(est.havellinTotal).toLocaleString() : 'see estimate';
+  var subject = 'Havellin — Estimate ' + (approved ? 'Approved' : 'Denied') + ': ' + client;
+  var lines = [
+    'Hi ' + firstName(tc.name) + ',',
+    '',
+    approved
+      ? ('Your estimate for ' + client + ' has been approved (' + total + '). You can send it to the client from the Client Estimate tab.')
+      : ('Your estimate for ' + client + ' was denied and sent back for revision.')
+  ];
+  if (!approved && reason) { lines.push(''); lines.push('Reason: ' + reason); }
+  lines.push('');
+  lines.push('Open the Havellin app → Client Estimate → select ' + client + (approved ? '.' : ' to revise and resubmit for approval.'));
+  lines.push('');
+  lines.push('Havellin Palm Beach');
+  var mailto = 'mailto:' + tc.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(lines.join('\n'));
+  window.open(mailto, '_blank');
+}
+
+function openDenyModal() {
+  if (!currentEstimate) return;
+  document.getElementById('deny-modal').style.display = 'flex';
+  document.getElementById('deny-reason').value = '';
+  document.getElementById('deny-pin').value = '';
+  document.getElementById('deny-fb').innerHTML = '';
+  setTimeout(function(){ document.getElementById('deny-reason').focus(); }, 100);
+}
+function closeDenyModal() {
+  document.getElementById('deny-modal').style.display = 'none';
+}
+function submitDeny() {
+  var reason = (document.getElementById('deny-reason').value || '').trim();
+  var pin = document.getElementById('deny-pin').value;
+  var fb = document.getElementById('deny-fb');
+  if (!reason) { fb.innerHTML = '<div class="alert a-err">Enter a reason so the TC knows what to fix.</div>'; return; }
+  if (pin !== '3010') { fb.innerHTML = '<div class="alert a-err">Incorrect PIN.</div>'; return; }
+  if (!currentEstimate) { closeDenyModal(); return; }
+  currentEstimate.denyReason = reason;
+  currentEstimate.deniedBy = 'Anthony Graziano Sr';
+  currentEstimate.deniedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  // Send it back to the TC as an editable draft.
+  estimateSubmitted = false;
+  estimateApproved = false;
+  discountRevision = false;
+  approvedBy = ''; approvedAt = '';
+  // Drop the frozen lock snapshot so re-approval rebuilds against the revised scope.
+  if (currentEstimate) {
+    delete currentEstimate.lockedRooms; delete currentEstimate.lockedCollections;
+    delete currentEstimate.lockedAt; delete currentEstimate.lockedBy;
+  }
+  var djob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  if (djob) { djob.status = 'new'; djob.approved = false; saveJobs(); syncJobToSheets(djob); }
+  saveEstimateState();
+  closeDenyModal();
+  renderClientEstimate();
+  updateApprovalUI();
+  notifyTCOfDecision(djob, currentEstimate, 'denied', reason);
+  showFB('ce-fb','warn','Estimate denied and sent back to ' + (djob && djob.tc ? djob.tc : 'the TC') + '. They’ve been emailed the reason.');
 }
 
 // Snapshot an immutable copy of each included room's walkthrough data at lock
@@ -4241,6 +4334,8 @@ function checkPin() {
       var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
       if (job) { job.status='active'; job.approved=true; saveJobs(); }
     }
+    // An approval clears any prior denial marker so the "Denied" banner doesn't linger.
+    if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
     closePinModal();
     saveEstimateState();   // single authoritative write; carries approved=true + approver to the cloud
     if (currentEstimate && currentEstimate.jobId) {
@@ -4249,6 +4344,10 @@ function checkPin() {
     }
     applyEstimateLock();
     renderClientEstimate();
+    if (currentEstimate && currentEstimate.jobId) {
+      var _apprJobN = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
+      notifyTCOfDecision(_apprJobN, currentEstimate, 'approved', '');
+    }
     // Refresh the Drive copy to the APPROVED figures. The estimate is first
     // exported to Drive at save time; a later discount revision changes the
     // totals but not the Drive file, so re-export here on approval. The Apps
