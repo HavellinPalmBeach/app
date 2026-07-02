@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 3:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 4:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8328,25 +8328,95 @@ function lookupVendorById(id) {
   }
   return null;
 }
-// Directory options grouped by category, sorted by rank within each category.
-function vendorPickerOptions(selId) {
-  var html = '<option value="">— select from directory —</option>';
-  if (!vendorDirectory.length) return html;
-  var byCat = {};
-  vendorDirectory.forEach(function(v){
-    var c = v.category || v.category_group || 'Other';
-    (byCat[c] = byCat[c] || []).push(v);
-  });
-  Object.keys(byCat).sort().forEach(function(cat){
-    var list = byCat[cat].slice().sort(function(a,b){ return (parseFloat(a.rank)||99)-(parseFloat(b.rank)||99); });
-    html += '<optgroup label="' + esc(cat) + '">';
-    list.forEach(function(v){
-      var id = vendorIdOf(v);
-      var label = (v.vendor_name||'Vendor') + (v.rank ? ' (#' + v.rank + ')' : '');
-      html += '<option value="' + esc(String(id)) + '"' + (String(selId)===String(id)?' selected':'') + '>' + esc(label) + '</option>';
-    });
-    html += '</optgroup>';
-  });
+// Maps a Job Plan sourcing slot to the vendor-directory categories that fill it,
+// so the picker shows only the relevant vendors (a painter slot → painters), not
+// the whole 150-vendor list. Keyed by the estimate vendor-type / logistics label /
+// prep-item type; collection dispositions are keyed with a '__disp_' prefix.
+// A slot label that already equals a directory category needs no entry (identity
+// fallback in vendorCategoriesForSlot covers Carpet Cleaning, HVAC Service, etc.).
+var VENDOR_SLOT_CATEGORY_MAP = {
+  // Estimate service-vendor line types
+  'Appraiser(s)': ['Antiques & Furniture Appraiser','Art Appraiser','Jewelry & Watch Appraiser','Real Estate Appraiser','Wine Appraiser','Vehicle / Boat Appraiser'],
+  'Firearms / FFL Transfer': ['Firearms Dealer (FFL)'],
+  'Auction House': ['Auction House'],
+  'Dumpster Rental': ['Junk Removal & Dumpster'],
+  'Estate Sale Company': ['Estate Sale Company'],
+  'Junk Removal / Hauling': ['Junk Removal & Dumpster'],
+  'Moving Company': ['Moving Company'],
+  'Professional Cleaning': ['Deep Cleaning','Carpet Cleaning','Window Cleaning','Pressure Washing'],
+  'Specialty Vendor (art handler, etc.)': ['Specialty Packing & Shipping'],
+  'Document Shredding': ['Document Shredding'],
+  'Handyman / General Repairs': ['Handyman Services','General Contractor'],
+  'Pest Inspection / Treatment': ['Pest Inspection / Treatment'],
+  // End-of-Job Logistics labels (see LOGISTICS_CATEGORIES)
+  'Donation Organization': ['Donation Pickup'],
+  'Move-Out / Final Cleaning': ['Deep Cleaning','Carpet Cleaning'],
+  // Home-Prep item types
+  'Appliance Service / Repair': ['Appliance Repair'],
+  'Deep Clean / Move-Out Clean': ['Deep Cleaning'],
+  'Full Interior Paint': ['Painting'],
+  'Touch-Up / Interior Paint': ['Painting'],
+  'Landscaping / Curb Appeal': ['Landscaper'],
+  'Minor Repairs': ['Handyman Services','General Contractor'],
+  'Professional Staging': ['Home Staging'],
+  'Pool / Spa Service': ['Pool & Spa Service'],
+  // Collection dispositions (COL_DISP_LABELS keys)
+  '__disp_auction': ['Auction House'],
+  '__disp_appraise': ['Antiques & Furniture Appraiser','Art Appraiser','Jewelry & Watch Appraiser','Wine Appraiser','Vehicle / Boat Appraiser'],
+  '__disp_consign': ['Estate Sale Company','Auction House'],
+  '__disp_ebay': ['Specialty Packing & Shipping'],
+  '__disp_replacements': ['Specialty Packing & Shipping'],
+  '__disp_dealer': ['Coin Buyer','Gold & Silver Buyer','Jewelry & Watch Buyer','Rare Books & Manuscripts'],
+  '__disp_firearms': ['Firearms Dealer (FFL)'],
+  '__disp_other': []
+};
+function vendorCategoriesForSlot(kind, label) {
+  if (label == null || label === '') return [];
+  if (kind === 'disp') return VENDOR_SLOT_CATEGORY_MAP['__disp_' + label] || [];
+  var m = VENDOR_SLOT_CATEGORY_MAP[label];
+  if (m) return m;
+  return [String(label)]; // identity fallback: slot label already equals a category
+}
+function _catSet(cats) {
+  var set = {}; (cats||[]).forEach(function(c){ set[String(c).trim().toLowerCase()] = 1; });
+  return set;
+}
+// Approved vendors whose category is in `cats` (all approved if cats is empty).
+function approvedVendorsInCats(cats) {
+  var approved = vendorDirectory.filter(isApprovedVendor);
+  if (!cats || !cats.length) return approved;
+  var set = _catSet(cats);
+  return approved.filter(function(v){ return set[String(v.category||'').trim().toLowerCase()] === 1; });
+}
+// Directory options for a Job Plan slot: APPROVED vendors only, scoped to the
+// slot's categories, sorted by rank, with pricing shown inline. Any vendor already
+// assigned to this slot is kept visible under "Currently assigned" even if it isn't
+// approved / in-category, so upgrading the picker never silently drops an existing
+// choice. When nothing is approved for the slot, the placeholder says so — an empty
+// dropdown then reads as "go approve one in Vendors," not "something's broken."
+function vendorPickerOptions(selId, cats) {
+  function optOne(v){
+    var id = vendorIdOf(v);
+    var extra = v.estimate_cost || v.pricing_structure || '';
+    var label = (v.vendor_name||'Vendor') + (v.rank ? ' (#' + v.rank + ')' : '') + (extra ? ' — ' + extra : '');
+    return '<option value="' + esc(String(id)) + '"' + (String(selId)===String(id)?' selected':'') + '>' + esc(label) + '</option>';
+  }
+  function groupOptions(list){
+    var byCat = {};
+    list.forEach(function(v){ var c = v.category || v.category_group || 'Other'; (byCat[c]=byCat[c]||[]).push(v); });
+    return Object.keys(byCat).sort().map(function(cat){
+      var items = byCat[cat].slice().sort(function(a,b){ return (parseFloat(a.rank)||99)-(parseFloat(b.rank)||99); });
+      return '<optgroup label="' + esc(cat) + '">' + items.map(optOne).join('') + '</optgroup>';
+    }).join('');
+  }
+  var matched = approvedVendorsInCats(cats);
+  var placeholder = !vendorDirectory.length ? '— directory not loaded —'
+    : (matched.length ? '— select from directory —' : '— no approved vendor for this slot (approve one in Vendors) —');
+  var html = '<option value="">' + placeholder + '</option>';
+  var sel = (selId != null && selId !== '') ? lookupVendorById(selId) : null;
+  var selShown = sel && matched.some(function(v){ return String(vendorIdOf(v)) === String(selId); });
+  if (sel && !selShown) html += '<optgroup label="Currently assigned">' + optOne(sel) + '</optgroup>';
+  html += groupOptions(matched);
   return html;
 }
 // Filled sourcing fields stay white (the default is cream, white only on focus),
@@ -8362,6 +8432,9 @@ function _vendorRefLine(rec) {
   var rest = [];
   if (v.license_cert) rest.push(v.license_cert);
   var price = v.pricing_structure || rec.pricing; if (price) rest.push(price);
+  if (v.estimate_cost) rest.push('~' + v.estimate_cost);
+  if (v.minimum_job)   rest.push('Min ' + v.minimum_job);
+  if (v.lead_time)     rest.push('Lead ' + v.lead_time);
   var head = ['<strong>' + esc(name) + '</strong>'];
   if (contact) head.push('<strong>' + esc(contact) + '</strong>');
   if (phone)   head.push('<strong>' + esc(phone) + '</strong>');
@@ -8420,7 +8493,7 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setJobVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setJobVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('type', v.type)) + '</select>' +
           '<select onchange="setJobVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
@@ -8442,7 +8515,7 @@ function renderVendorSourcing(jobId, job, est) {
     return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
       '<div style="font-size:12px;font-weight:600;">' + cat.label + '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-        '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+        '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('logistics', cat.label)) + '</select>' +
         '<select onchange="setLogisticsStatus(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
         '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
         '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setLogisticsQuote(' + jobId + ',\'' + cat.key + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(quote !== '') + '">' +
@@ -8465,7 +8538,7 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('type', p.type)) + '</select>' +
           '<select onchange="setPrepVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setPrepVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
@@ -8497,7 +8570,7 @@ function renderVendorSourcing(jobId, job, est) {
           '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId) + '</select>' +
+          '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('disp', c.disp)) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">' + feeLabel + '</span>' +
           '<input type="number" value="' + esc(String(fee)) + '" min="0" onchange="setCollFee(' + jobId + ',\'' + c.id + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(fee !== '') + '">' +
         '</div>' +
