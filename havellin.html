@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 10:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 11:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3404,6 +3404,10 @@ function clearAllRooms() {
       ri++;
     });
   });
+  // Reset the hours-affecting adjustment toggles so a fresh estimate (or a reopened
+  // one, before its restore runs) never inherits another job's access/heirs uplift.
+  var _acc = document.getElementById('adj-access'); if (_acc) _acc.checked = false;
+  var _hei = document.getElementById('adj-heirs');  if (_hei) _hei.checked = false;
   calcAll();
 }
 
@@ -4651,6 +4655,12 @@ function restoreEstimateToUI(est) {
   var discEl = document.getElementById('e-discount');
   if (discEl) discEl.value = est.discountPct || 0;
 
+  // Restore the hours-affecting adjustment toggles from the saved estimate. Without
+  // this, the recompute on open drops the +15% difficult-access / +20% multiple-heirs
+  // uplift that was baked into the saved hours — the cross-device days/hours mismatch.
+  var accRestore = document.getElementById('adj-access'); if (accRestore) accRestore.checked = !!est.access;
+  var heirsRestore = document.getElementById('adj-heirs'); if (heirsRestore) heirsRestore.checked = !!est.heirs;
+
   // Set property value
   var propEl = document.getElementById('e-propval');
   if (propEl && est.propVal) propEl.value = est.propVal;
@@ -4666,10 +4676,15 @@ function restoreEstimateToUI(est) {
   if (jobForStart) {
     var startDisplayEl = document.getElementById('e-start-date');
     if (startDisplayEl) startDisplayEl.value = jobForStart.start || '';
+    // Prefer the estimate's OWN sqft — that's the value its saved hours were computed
+    // against. Fall back to job intake only when the estimate never stored one.
+    // (Overwriting with a later-edited or across-devices-stale job.sqft silently
+    // changed the hours engine's backbone and the recomputed totals.)
     var sqftEl2 = document.getElementById('e-sqft');
     var sqftDispEl = document.getElementById('e-sqft-display');
-    if (sqftEl2) sqftEl2.value = jobForStart.sqft || '';
-    if (sqftDispEl) sqftDispEl.textContent = jobForStart.sqft ? parseInt(jobForStart.sqft).toLocaleString() + ' sqft' : '— (not set in intake)';
+    var _estSqft = (est.sqft != null && est.sqft !== '') ? est.sqft : (jobForStart.sqft || '');
+    if (sqftEl2) sqftEl2.value = _estSqft;
+    if (sqftDispEl) sqftDispEl.textContent = _estSqft ? parseInt(_estSqft).toLocaleString() + ' sqft' : '— (not set in intake)';
     var yihDispEl = document.getElementById('e-years-in-home-display');
     if (yihDispEl) yihDispEl.textContent = jobForStart.yearsInHome ? jobForStart.yearsInHome + ' years' : '— (not set in intake)';
     // Restore prepared-by: prefer the saved value on the estimate, fall back to the job's TC
@@ -6009,9 +6024,13 @@ function loadEstimateForJob(jobId) {
     // blob's `submitted` flag didn't survive the cross-device round-trip. This is
     // what lets a manager land on the PIN-approval screen instead of "Submit for
     // Approval" for an estimate a TC already submitted from another device.
+    // ...but NOT if the (cloud-fresh) record shows it was denied — otherwise a
+    // stale local job.status='pending' (jobs refresh only at startup) would re-lock
+    // a denied estimate and hide the "Denied — Revise" state from the TC.
     if (!estimateApproved) {
       var _apprJob = jobs.find(function(j){ return j.id === jobId; });
-      if (_apprJob && _apprJob.status === 'pending') estimateSubmitted = true;
+      var _denied = currentEstimate && currentEstimate.denyReason;
+      if (!_denied && _apprJob && _apprJob.status === 'pending') estimateSubmitted = true;
     }
     discountRevision = rec.discountRevision || false;
     approvedBy = rec.approvedBy || '';
