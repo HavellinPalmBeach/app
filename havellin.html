@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 5:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 6:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1298,10 +1298,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <input type="text" id="v-license" placeholder="e.g. FFL; ISA CAPP; state license #">
         <label>Reviews (rating + source)</label>
         <input type="text" id="v-reviews" placeholder="e.g. 4.7 Google (120 reviews)">
-        <div class="grid2" style="gap:0 12px;">
-          <div><label>Category score</label><input type="number" id="v-score" placeholder="0–100" min="0" max="100"></div>
-          <div><label>Category rank</label><input type="number" id="v-rank" placeholder="1 = best" min="1"></div>
-        </div>
         <label>Last contacted</label>
         <input type="date" id="v-lastcontacted">
       </div>
@@ -1344,8 +1340,20 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <div class="card" style="margin-bottom:1rem;padding:0.8rem 1rem;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <input type="text" id="v-search" oninput="renderVendorsTab()" placeholder="Search name, category, contact, area…" style="flex:2;min-width:200px;">
-      <select id="v-filter-group" onchange="renderVendorsTab()" style="flex:1;min-width:150px;"><option value="">All groups</option></select>
-      <select id="v-filter-cat" onchange="renderVendorsTab()" style="flex:1;min-width:150px;"><option value="">All categories</option></select>
+      <select id="v-filter-sort" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="Sort within each category">
+        <option value="name">Sort: Name A–Z</option>
+        <option value="rating">Sort: Highest rating</option>
+        <option value="used">Sort: Recently used</option>
+        <option value="contacted">Sort: Least recently contacted</option>
+      </select>
+      <select id="v-filter-rating" onchange="renderVendorsTab()" style="flex:1;min-width:130px;" title="Rating comes from job performance; vendors read Unrated until they've been used">
+        <option value="">Any rating</option>
+        <option value="5">★★★★★ only</option>
+        <option value="4">★★★★ &amp; up</option>
+        <option value="3">★★★ &amp; up</option>
+        <option value="2">★★ &amp; up</option>
+        <option value="unrated">Unrated only</option>
+      </select>
       <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
         <option value="">All statuses</option>
         <option value="Approved">Approved</option>
@@ -1354,12 +1362,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="Do Not Use">Do Not Use</option>
         <option value="__none">(no status)</option>
       </select>
-      <select id="v-filter-coi" onchange="renderVendorsTab()" style="flex:1;min-width:120px;">
-        <option value="">Any COI</option>
-        <option value="Yes">COI: Yes</option>
-        <option value="Pending">COI: Pending</option>
-        <option value="No">COI: No</option>
+      <select id="v-filter-recip" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
+        <option value="">Any reciprocity</option>
+        <option value="yes">Reciprocal partners</option>
       </select>
+      <select id="v-filter-group" onchange="renderVendorsTab()" style="flex:1;min-width:140px;"><option value="">All groups</option></select>
+      <select id="v-filter-cat" onchange="renderVendorsTab()" style="flex:1;min-width:140px;"><option value="">All categories</option></select>
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-dk);white-space:nowrap;margin:0;"><input type="checkbox" id="v-filter-stale" onchange="renderVendorsTab()" style="width:auto;margin:0;"> Not yet contacted</label>
     </div>
   </div>
@@ -7081,15 +7089,10 @@ function showSyncBadge(msg, isErr) {
 // jobs/estimates sheet. The app reads it to populate vendor pickers; the sheet
 // stays the source of truth. Cached locally so it survives offline / failed loads.
 var vendorDirectory = [];
-// The sheet's ranking/scoring columns come across as category_rank / category_score,
-// but the pickers read v.rank / v.score. Normalize once on load so the two agree
-// (this is what makes "(#rank)" show and rank-sorting work).
-function normalizeVendorDir() {
-  vendorDirectory.forEach(function(v){
-    if (v.rank == null || v.rank === '') v.rank = (v.category_rank != null ? v.category_rank : '');
-    if (v.score == null || v.score === '') v.score = (v.category_score != null ? v.category_score : '');
-  });
-}
+// Category Score/Rank were one-time sourcing-sprint seeds — retired now that the
+// list is narrowed. Vendor quality is keyed off real job performance instead
+// (see vendorPerf). Kept as a harmless no-op so existing call sites don't break.
+function normalizeVendorDir() {}
 // Re-render the Vendors tab if it's the one on screen, so a reload/edit is
 // reflected immediately instead of only after switching tabs.
 function refreshVendorsTabIfActive() {
@@ -8418,14 +8421,19 @@ function vendorPickerOptions(selId, cats) {
   function optOne(v){
     var id = vendorIdOf(v);
     var extra = v.estimate_cost || v.pricing_structure || '';
-    var label = (v.vendor_name||'Vendor') + (v.rank ? ' (#' + v.rank + ')' : '') + (extra ? ' — ' + extra : '');
+    var stars = vendorStars(v);
+    var label = (v.vendor_name||'Vendor') + (stars ? ' ' + '★'.repeat(stars) : '') + (extra ? ' — ' + extra : '');
     return '<option value="' + esc(String(id)) + '"' + (String(selId)===String(id)?' selected':'') + '>' + esc(label) + '</option>';
   }
   function groupOptions(list){
     var byCat = {};
     list.forEach(function(v){ var c = v.category || v.category_group || 'Other'; (byCat[c]=byCat[c]||[]).push(v); });
     return Object.keys(byCat).sort().map(function(cat){
-      var items = byCat[cat].slice().sort(function(a,b){ return (parseFloat(a.rank)||99)-(parseFloat(b.rank)||99); });
+      // Best-performing approved vendor first; unrated fall to the bottom, then A–Z.
+      var items = byCat[cat].slice().sort(function(a,b){
+        var pa = vendorPerf(a), pb = vendorPerf(b);
+        return ((pb==null?-1:pb) - (pa==null?-1:pa)) || String(a.vendor_name||'').localeCompare(String(b.vendor_name||''));
+      });
       return '<optgroup label="' + esc(cat) + '">' + items.map(optOne).join('') + '</optgroup>';
     }).join('');
   }
@@ -8832,6 +8840,29 @@ function vendorStatusBadge(status) {
 }
 function isApprovedVendor(v) { return String(v && v.status || '').trim().toLowerCase() === 'approved'; }
 
+// Vendor quality comes only from real job performance now. performance_score is a
+// 1–5 rolling average written post-job; anything non-numeric ("Not Used", blank)
+// means the vendor hasn't been rated yet → Unrated. Returns null when unrated.
+function vendorPerf(v) {
+  var p = parseFloat(v && v.performance_score);
+  return (!isNaN(p) && p > 0) ? p : null;
+}
+function vendorStars(v) { var p = vendorPerf(v); return p == null ? 0 : Math.round(p); }
+function starBar(n) {
+  n = Math.max(0, Math.min(5, n || 0));
+  return '<span style="letter-spacing:1px;color:var(--bronze);">' + '★★★★★'.slice(0, n) +
+    '<span style="color:var(--border-md);">' + '☆☆☆☆☆'.slice(0, 5 - n) + '</span></span>';
+}
+// Compact rating snippet for a vendor card / picker: stars + jobs + last used, or Unrated.
+function vendorRatingHtml(v) {
+  var p = vendorPerf(v);
+  if (p == null) return '<span style="font-size:10px;color:var(--gray);">Unrated — no jobs yet</span>';
+  var jr = parseFloat(v.jobs_rated);
+  var jobs = (!isNaN(jr) && jr > 0) ? (' · ' + jr + ' job' + (jr === 1 ? '' : 's')) : '';
+  var used = v.last_used ? (' · used ' + esc(String(v.last_used))) : '';
+  return starBar(Math.round(p)) + '<span style="font-size:10px;color:var(--gray);"> ' + p.toFixed(1) + jobs + used + '</span>';
+}
+
 function initVendorsTab() {
   var warn = document.getElementById('vendors-url-warn');
   if (warn) warn.style.display = VENDOR_SYNC_URL ? 'none' : 'block';
@@ -8869,14 +8900,17 @@ function getFilteredVendors() {
   var fg = (document.getElementById('v-filter-group')||{}).value || '';
   var fc = (document.getElementById('v-filter-cat')||{}).value || '';
   var fs = (document.getElementById('v-filter-status')||{}).value || '';
-  var fcoi = (document.getElementById('v-filter-coi')||{}).value || '';
+  var frating = (document.getElementById('v-filter-rating')||{}).value || '';
+  var frecip = (document.getElementById('v-filter-recip')||{}).value || '';
   var stale = !!(document.getElementById('v-filter-stale')||{}).checked;
   return vendorDirectory.filter(function(v){
     if (fg && String(v.category_group||'').trim() !== fg) return false;
     if (fc && String(v.category||'').trim() !== fc) return false;
     if (fs === '__none') { if (String(v.status||'').trim()) return false; }
     else if (fs && String(v.status||'').trim() !== fs) return false;
-    if (fcoi && String(v.coi_on_file||'').trim() !== fcoi) return false;
+    if (frating === 'unrated') { if (vendorPerf(v) != null) return false; }
+    else if (frating && vendorStars(v) < parseInt(frating, 10)) return false;
+    if (frecip === 'yes' && String(v.reciprocity||'').trim().toLowerCase() !== 'possible') return false;
     if (stale && String(v.last_contacted||'').trim()) return false;
     if (q) {
       var hay = [v.vendor_name, v.category, v.category_group, v.primary_contact, v.service_area,
@@ -8916,8 +8950,29 @@ function vendorFiltersActive() {
     || (document.getElementById('v-filter-group')||{}).value
     || (document.getElementById('v-filter-cat')||{}).value
     || (document.getElementById('v-filter-status')||{}).value
-    || (document.getElementById('v-filter-coi')||{}).value
+    || (document.getElementById('v-filter-rating')||{}).value
+    || (document.getElementById('v-filter-recip')||{}).value
     || (document.getElementById('v-filter-stale')||{}).checked);
+}
+// Within-category comparator for the chosen sort. Default is plain alphabetical;
+// rating/used key off real job performance (unrated/unused sort last).
+function vendorListComparator() {
+  var mode = (document.getElementById('v-filter-sort')||{}).value || 'name';
+  function byName(a,b){ return String(a.vendor_name||'').localeCompare(String(b.vendor_name||'')); }
+  if (mode === 'rating') return function(a,b){
+    var pa = vendorPerf(a), pb = vendorPerf(b);
+    var va = (pa==null?-1:pa), vb = (pb==null?-1:pb);
+    return (vb - va) || byName(a,b);
+  };
+  if (mode === 'used') return function(a,b){
+    var ua = String(a.last_used||''), ub = String(b.last_used||'');
+    return (ua===ub ? 0 : ub.localeCompare(ua)) || byName(a,b); // most recent first, unused last
+  };
+  if (mode === 'contacted') return function(a,b){
+    var ca = String(a.last_contacted||''), cb = String(b.last_contacted||'');
+    return (ca===cb ? 0 : ca.localeCompare(cb)) || byName(a,b); // never-contacted first, then oldest
+  };
+  return byName;
 }
 function toggleVendorCat(i) {
   var cat = _vendorCatOrder[i];
@@ -8950,11 +9005,7 @@ function renderVendorsTab() {
   '</div>';
   if (!rows.length) { list.innerHTML = head + '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">No vendors match these filters.</div>'; return; }
   var body = cats.map(function(cat, i){
-    var vs = byCat[cat].slice().sort(function(a,b){
-      var ap = isApprovedVendor(a)?0:1, bp = isApprovedVendor(b)?0:1;
-      if (ap !== bp) return ap - bp;
-      return (parseFloat(a.rank)||99) - (parseFloat(b.rank)||99);
-    });
+    var vs = byCat[cat].slice().sort(vendorListComparator());
     var appr = vs.filter(isApprovedVendor).length;
     var contacted = vs.filter(function(v){ return String(v.last_contacted||'').trim(); }).length;
     var open = active || !!vendorExpandedCats[cat];
@@ -8980,9 +9031,7 @@ function _vLine(pairs) {
 function vendorCardHtml(v) {
   var id = vendorIdOf(v);
   var idAttr = esc(String(id)).replace(/'/g, "\\'");
-  var rankScore = [];
-  if (v.rank) rankScore.push('#' + esc(String(v.rank)));
-  if (v.score) rankScore.push(esc(String(v.score)) + ' pts');
+  var rating = vendorRatingHtml(v);
   var pricing = _vLine([
     ['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]
   ]);
@@ -8999,9 +9048,8 @@ function vendorCardHtml(v) {
 
   return '<div class="card" style="margin-bottom:8px;padding:0.85rem 1rem;">' +
     '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">' +
-      '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') +
-        (rankScore.length ? ' <span style="font-size:11px;color:var(--gray);font-weight:400;">' + rankScore.join(' · ') + '</span>' : '') + '</div>' +
-      '<div style="display:flex;gap:6px;align-items:center;">' + vendorStatusBadge(v.status) + '</div>' +
+      '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;">' + rating + vendorStatusBadge(v.status) + '</div>' +
     '</div>' +
     '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin:2px 0 6px;">' + esc(v.category||'—') +
       (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
@@ -9020,7 +9068,7 @@ var VENDOR_FORM_MAP = {
   'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
   'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity',
   'v-license':'license_cert', 'v-reviews':'reviews_rating_source',
-  'v-score':'category_score', 'v-rank':'category_rank', 'v-lastcontacted':'last_contacted',
+  'v-lastcontacted':'last_contacted',
   'v-pricing':'pricing_structure', 'v-estcost':'estimate_cost', 'v-minjob':'minimum_job',
   'v-ratedetail':'rate_detail', 'v-leadtime':'lead_time', 'v-turnaround':'estimate_turnaround',
   'v-notes':'notes'
