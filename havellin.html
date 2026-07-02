@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 9:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 10:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1230,7 +1230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Vendor Directory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:640px;">Vet the approved vendor list, log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Approved</strong> vendors can be assigned to a job.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:660px;">Work the list through its lifecycle (Identified → Contacted → Qualified → Vetting → Contracted → Active), log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Active</strong> vendors can be assigned to a job.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-s" onclick="loadVendorDirectory()">↻ Reload directory</button>
@@ -1277,10 +1277,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div>
         <label>Status</label>
         <select id="v-status">
-          <option value="Identified">Identified — sourced, not yet vetted</option>
-          <option value="Approved">Approved — cleared for jobs</option>
+          <option value="Identified">Identified — sourced, not yet contacted</option>
+          <option value="Contacted">Contacted — outreach made</option>
+          <option value="Qualified">Qualified — a fit, worth vetting</option>
+          <option value="Vetting">Vetting — checking COI, refs, pricing</option>
+          <option value="Contracted">Contracted — agreement in place</option>
+          <option value="Active">Active — cleared for jobs</option>
           <option value="Backup">Backup — secondary option</option>
-          <option value="Do Not Use">Do Not Use</option>
+          <option value="Removed">Removed — do not use</option>
         </select>
         <label>COI on file</label>
         <select id="v-coi">
@@ -1343,10 +1347,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <select id="v-filter-cat" onchange="renderVendorsTab()" style="flex:2;min-width:220px;" title="Start here — pick a category (type to jump)"><option value="">All categories</option></select>
       <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
         <option value="">All statuses</option>
-        <option value="Approved">Approved</option>
         <option value="Identified">Identified</option>
+        <option value="Contacted">Contacted</option>
+        <option value="Qualified">Qualified</option>
+        <option value="Vetting">Vetting</option>
+        <option value="Contracted">Contracted</option>
+        <option value="Active">Active</option>
         <option value="Backup">Backup</option>
-        <option value="Do Not Use">Do Not Use</option>
+        <option value="Removed">Removed</option>
         <option value="__none">(no status)</option>
       </select>
       <select id="v-filter-rating" onchange="renderVendorsTab()" style="flex:1;min-width:130px;" title="Rating comes from job performance; vendors read Unrated until they've been used">
@@ -8526,12 +8534,13 @@ function _catSet(cats) {
   var set = {}; (cats||[]).forEach(function(c){ set[String(c).trim().toLowerCase()] = 1; });
   return set;
 }
-// Approved vendors whose category is in `cats` (all approved if cats is empty).
+// Active vendors whose category is in `cats` (all active if cats is empty).
+// Only "Active" vendors are assignable to a job.
 function approvedVendorsInCats(cats) {
-  var approved = vendorDirectory.filter(isApprovedVendor);
-  if (!cats || !cats.length) return approved;
+  var usable = vendorDirectory.filter(isActiveVendor);
+  if (!cats || !cats.length) return usable;
   var set = _catSet(cats);
-  return approved.filter(function(v){ return set[String(v.category||'').trim().toLowerCase()] === 1; });
+  return usable.filter(function(v){ return set[String(v.category||'').trim().toLowerCase()] === 1; });
 }
 // Directory options for a Job Plan slot: APPROVED vendors only, scoped to the
 // slot's categories, sorted by rank, with pricing shown inline. Any vendor already
@@ -8561,7 +8570,7 @@ function vendorPickerOptions(selId, cats) {
   }
   var matched = approvedVendorsInCats(cats);
   var placeholder = !vendorDirectory.length ? '— directory not loaded —'
-    : (matched.length ? '— select from directory —' : '— no approved vendor for this slot (approve one in Vendors) —');
+    : (matched.length ? '— select from directory —' : '— no Active vendor for this slot (set one to Active in Vendors) —');
   var html = '<option value="">' + placeholder + '</option>';
   var sel = (selId != null && selId !== '') ? lookupVendorById(selId) : null;
   var selShown = sel && matched.some(function(v){ return String(vendorIdOf(v)) === String(selId); });
@@ -8948,19 +8957,20 @@ function writeVendorScores(jobId) {
 // the 150+ vendors, log outreach, flip status → Approved, and add new vendors.
 // Writes go through the vendor web app (addVendor / updateVendor); the sheet stays
 // the source of truth and the local cache is updated in lock-step so the UI is live.
-var VENDOR_STATUSES = ['Approved','Identified','Backup','Do Not Use'];
+// Vendor lifecycle — mirrors the Status data-validation dropdown in the sheet.
+var VENDOR_STATUSES = ['Identified','Contacted','Qualified','Vetting','Contracted','Active','Backup','Removed'];
 function vendorStatusBadge(status) {
   var s = String(status || '').trim();
-  var map = {
-    'Approved':   'b-ok',
-    'Identified': 'b-info',
-    'Backup':     'b-bronze'
-  };
   if (!s) return '<span class="badge b-warn">No status</span>';
-  if (s === 'Do Not Use') return '<span class="badge" style="background:var(--err-bg);color:var(--err-tx);">Do Not Use</span>';
+  if (s === 'Removed') return '<span class="badge" style="background:var(--err-bg);color:var(--err-tx);">Removed</span>';
+  var map = {
+    'Identified':'b-info', 'Contacted':'b-info', 'Qualified':'b-bronze',
+    'Vetting':'b-warn', 'Contracted':'b-bronze', 'Active':'b-ok', 'Backup':'b-bronze'
+  };
   return '<span class="badge ' + (map[s] || 'b-info') + '">' + esc(s) + '</span>';
 }
-function isApprovedVendor(v) { return String(v && v.status || '').trim().toLowerCase() === 'approved'; }
+// "Active" is the only status cleared for assignment to a job in Job Plan.
+function isActiveVendor(v) { return String(v && v.status || '').trim().toLowerCase() === 'active'; }
 
 // Vendor quality comes only from real job performance now. performance_score is a
 // 1–5 rolling average written post-job; anything non-numeric ("Not Used", blank)
@@ -9024,7 +9034,7 @@ function getFilteredVendors() {
 function renderVendorStats() {
   var el = document.getElementById('vendors-stats');
   if (!el) return;
-  var counts = { total: vendorDirectory.length, Approved:0, Identified:0, Backup:0, contacted:0 };
+  var counts = { total: vendorDirectory.length, Active:0, Vetting:0, Backup:0, contacted:0 };
   vendorDirectory.forEach(function(v){
     var s = String(v.status||'').trim();
     if (counts[s] != null) counts[s]++;
@@ -9034,8 +9044,8 @@ function renderVendorStats() {
     return '<div style="min-width:70px;"><div style="font-size:20px;font-weight:600;color:' + (color||'var(--gray-dk)') + ';">' + n + '</div>' +
       '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);">' + label + '</div></div>';
   }
-  el.innerHTML = tile(counts.total,'Total') + tile(counts.Approved,'Approved','var(--ok-tx)') +
-    tile(counts.Identified,'Identified','var(--info-tx)') + tile(counts.Backup,'Backup','var(--bronze)') +
+  el.innerHTML = tile(counts.total,'Total') + tile(counts.Active,'Active','var(--ok-tx)') +
+    tile(counts.Vetting,'Vetting','var(--warn-tx)') + tile(counts.Backup,'Backup','var(--bronze)') +
     tile(counts.contacted + ' / ' + counts.total,'Contacted');
 }
 
@@ -9102,12 +9112,12 @@ function renderVendorsTab() {
   if (!rows.length) { list.innerHTML = head + '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">No vendors match these filters.</div>'; return; }
   var body = cats.map(function(cat, i){
     var vs = byCat[cat].slice().sort(vendorListComparator());
-    var appr = vs.filter(isApprovedVendor).length;
+    var appr = vs.filter(isActiveVendor).length;
     var contacted = vs.filter(function(v){ return String(v.last_contacted||'').trim(); }).length;
     var open = active || !!vendorExpandedCats[cat];
     var apprTxt = appr > 0
-      ? '<span style="color:var(--ok-tx);font-weight:600;">' + appr + ' approved</span>'
-      : '<span style="color:var(--gray);">0 approved</span>';
+      ? '<span style="color:var(--ok-tx);font-weight:600;">' + appr + ' active</span>'
+      : '<span style="color:var(--gray);">0 active</span>';
     var header = '<div onclick="toggleVendorCat(' + i + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px;">' +
         '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (open?'▾':'▸') + '</span>' + esc(cat) + '</div>' +
         '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' + vs.length + ' vendor' + (vs.length!==1?'s':'') + ' · ' + apprTxt + ' · ' + contacted + ' contacted</div>' +
@@ -9124,35 +9134,66 @@ function _vLine(pairs) {
   return parts.length ? '<div style="font-size:11px;color:var(--gray-dk);line-height:1.7;">' + parts.join(' &nbsp;·&nbsp; ') + '</div>' : '';
 }
 
+// Format a stored date (which may arrive as an ISO datetime from the sheet) as a
+// clean "Mon D, YYYY". Falls back to the raw string if it isn't a date.
+function fmtVendorDate(s) {
+  if (!s) return '';
+  var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return String(s);
+  var d = new Date(m[1] + '-' + m[2] + '-' + m[3] + 'T12:00:00');
+  return isNaN(d) ? (m[1]+'-'+m[2]+'-'+m[3]) : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+}
+// Inline status dropdown on a card — deliberate (pick the stage) and covers the
+// full lifecycle, replacing the accidental one-click "Approve".
+function vendorStatusSelect(v, idAttr) {
+  var cur = String(v.status||'');
+  var opts = '<option value="">— set status —</option>' + VENDOR_STATUSES.map(function(s){
+    return '<option value="' + esc(s) + '"' + (cur===s?' selected':'') + '>' + esc(s) + '</option>'; }).join('');
+  return '<select onchange="setVendorStatusFromCard(\'' + idAttr + '\',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' + opts + '</select>';
+}
+function setVendorStatusFromCard(id, val) { if (!val) return; _quickWriteVendor(id, { status: val }, 'Updating status…'); }
+
 function vendorCardHtml(v) {
   var id = vendorIdOf(v);
   var idAttr = esc(String(id)).replace(/'/g, "\\'");
   var rating = vendorRatingHtml(v);
-  var pricing = _vLine([
-    ['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]
-  ]);
-  var timing = _vLine([['Lead time', v.lead_time], ['Quote turnaround', v.estimate_turnaround]]);
-  var contact = _vLine([['', v.primary_contact], ['☎', v.phone], ['✉', v.email]]);
-  var meta = _vLine([['Area', v.service_area], ['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert]]);
-  var reviews = v.reviews_rating_source ? _vLine([['Reviews', v.reviews_rating_source]]) : '';
-  var lastc = v.last_contacted ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(String(v.last_contacted)) + '</span>' : '<span style="font-size:10px;color:var(--warn-tx);">Not yet contacted</span>';
 
-  var quick = '';
-  if (!isApprovedVendor(v)) quick += '<button class="btn-s" style="background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-tx);" onclick="setVendorStatusQuick(\'' + idAttr + '\',\'Approved\')">✓ Approve</button>';
-  quick += '<button class="btn-s" onclick="stampVendorContacted(\'' + idAttr + '\')">☎ Log contact</button>';
-  quick += '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>';
+  // Highlighted contact + service-area block — the primary reason to open a card.
+  var cbits = [];
+  if (v.primary_contact) cbits.push('<strong>' + esc(v.primary_contact) + '</strong>');
+  if (v.phone) cbits.push('☎ ' + esc(v.phone));
+  if (v.email) cbits.push('✉ <a href="mailto:' + esc(v.email) + '" style="color:var(--bronze);">' + esc(v.email) + '</a>');
+  var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
+  var addrRow = v.physical_address ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Address</span> ' + esc(v.physical_address) + '</div>' : '';
+  var areaRow = v.service_area ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Service area</span> <strong>' + esc(v.service_area) + '</strong></div>' : '';
+  var contactBlock = (contactRow || addrRow || areaRow)
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + contactRow + addrRow + areaRow + '</div>'
+    : '';
+
+  var pricing = _vLine([['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]]);
+  var timing = _vLine([['Lead time', v.lead_time], ['Quote turnaround', v.estimate_turnaround]]);
+  var meta = _vLine([['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert]]);
+  var lastc = v.last_contacted
+    ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(v.last_contacted)) + '</span>'
+    : '<span style="font-size:10px;color:var(--warn-tx);">Not yet contacted</span>';
+
+  var actions = vendorStatusSelect(v, idAttr) +
+    '<button class="btn-s" onclick="stampVendorContacted(\'' + idAttr + '\')">☎ Log contact</button>' +
+    '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>';
 
   return '<div class="card" style="margin-bottom:8px;padding:0.85rem 1rem;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">' +
-      '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
-      '<div style="display:flex;gap:8px;align-items:center;">' + rating + vendorStatusBadge(v.status) + '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
+      '<div>' +
+        '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
+        '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(v.category||'—') +
+          (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;white-space:nowrap;">' + rating + vendorStatusBadge(v.status) + '</div>' +
     '</div>' +
-    '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin:2px 0 6px;">' + esc(v.category||'—') +
-      (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
-    contact + pricing + timing + meta + reviews +
+    contactBlock + pricing + timing + meta +
     (v.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(v.notes) + '</div>' : '') +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + quick + '</div>' + lastc +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + actions + '</div>' + lastc +
     '</div>' +
   '</div>';
 }
