@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 4:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 5:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7090,12 +7090,30 @@ function normalizeVendorDir() {
     if (v.score == null || v.score === '') v.score = (v.category_score != null ? v.category_score : '');
   });
 }
+// Re-render the Vendors tab if it's the one on screen, so a reload/edit is
+// reflected immediately instead of only after switching tabs.
+function refreshVendorsTabIfActive() {
+  var p = document.getElementById('panel-vendors');
+  if (p && p.classList.contains('active') && typeof renderVendorsTab === 'function') {
+    populateVendorFilters();
+    renderVendorsTab();
+  }
+}
 function loadVendorDirectory() {
   try { var s = localStorage.getItem('hav_vendor_dir'); if (s) vendorDirectory = JSON.parse(s); } catch(e) {}
   try { var u = localStorage.getItem('hav_vendor_url') || ''; if (u) VENDOR_SYNC_URL = u; } catch(e) {}
   normalizeVendorDir();
-  if (!VENDOR_SYNC_URL) { setVendorDirStatus('No URL set yet', false); return; }
+  var warn = document.getElementById('vendors-url-warn');
+  if (!VENDOR_SYNC_URL) {
+    setVendorDirStatus('No URL set yet', false);
+    if (warn) warn.style.display = 'block';
+    showSyncBadge('Vendor Directory URL not set — add it in Settings to load vendors', true);
+    refreshVendorsTabIfActive();
+    return;
+  }
+  if (warn) warn.style.display = 'none';
   setVendorDirStatus('Loading…', false);
+  showSyncBadge('Reloading vendor directory…');
   fetch(VENDOR_SYNC_URL + '?action=loadVendors')
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -7110,10 +7128,12 @@ function loadVendorDirectory() {
         showSyncBadge('Vendor directory: ' + err, true);
         setVendorDirStatus('Error: ' + err, true);
       }
+      refreshVendorsTabIfActive();
     })
     .catch(function(){
       showSyncBadge('Vendor directory load failed — check the URL / sharing', true);
       setVendorDirStatus('Load failed — confirm the web app is shared to “Anyone” and you used the /exec URL', true);
+      refreshVendorsTabIfActive();
     });
 }
 function setVendorDirStatus(msg, isErr) {
