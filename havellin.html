@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 7:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 8:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5035,7 +5035,11 @@ function renderClientDashboard(jobId) {
   var estRec = estimateStore[jobId];
   var estApproved = (estRec && estRec.approved) || job.approved;
   var estExists = estRec && estRec.estimate && (estRec.estimate.rooms||[]).length > 0;
-  var estSubmitted = estRec && estRec.submitted;
+  // job.status==='pending' means "Pending Approval" and syncs reliably per-job, so
+  // trust it as the authoritative submitted signal even if the estimate blob's
+  // `submitted` flag drifted (the cross-device bug where a manager saw a submitted
+  // estimate still offering "Submit for Approval").
+  var estSubmitted = (estRec && estRec.submitted) || (job.status === 'pending' && !estApproved);
   h += estApproved
     ? '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">&#10003; Estimate</button>'
     : estExists
@@ -5885,6 +5889,15 @@ function loadEstimateForJob(jobId) {
     currentEstimate = rec.estimate || null;
     estimateApproved = rec.approved || false;
     estimateSubmitted = rec.submitted || false;
+    // Fallback: if the job is Pending Approval (a reliable per-job synced status)
+    // and not yet approved, treat the estimate as submitted even when the estimate
+    // blob's `submitted` flag didn't survive the cross-device round-trip. This is
+    // what lets a manager land on the PIN-approval screen instead of "Submit for
+    // Approval" for an estimate a TC already submitted from another device.
+    if (!estimateApproved) {
+      var _apprJob = jobs.find(function(j){ return j.id === jobId; });
+      if (_apprJob && _apprJob.status === 'pending') estimateSubmitted = true;
+    }
     discountRevision = rec.discountRevision || false;
     approvedBy = rec.approvedBy || '';
     approvedAt = rec.approvedAt || '';
