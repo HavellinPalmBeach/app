@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 5:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 5:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8905,6 +8905,30 @@ function renderVendorStats() {
     tile(counts.contacted + ' / ' + counts.total,'Contacted');
 }
 
+// The list is a category accordion, not a flat wall of 152: each category is a
+// collapsible section (collapsed by default) with counts, so you work one
+// category at a time. Any active search/filter auto-expands the matching
+// sections so results are never hidden behind a closed header.
+var vendorExpandedCats = {};
+var _vendorCatOrder = [];
+function vendorFiltersActive() {
+  return !!((document.getElementById('v-search')||{}).value
+    || (document.getElementById('v-filter-group')||{}).value
+    || (document.getElementById('v-filter-cat')||{}).value
+    || (document.getElementById('v-filter-status')||{}).value
+    || (document.getElementById('v-filter-coi')||{}).value
+    || (document.getElementById('v-filter-stale')||{}).checked);
+}
+function toggleVendorCat(i) {
+  var cat = _vendorCatOrder[i];
+  if (cat == null) return;
+  vendorExpandedCats[cat] = !vendorExpandedCats[cat];
+  renderVendorsTab();
+}
+function setAllVendorCats(open) {
+  _vendorCatOrder.forEach(function(c){ vendorExpandedCats[c] = open; });
+  renderVendorsTab();
+}
 function renderVendorsTab() {
   renderVendorStats();
   var list = document.getElementById('vendors-list');
@@ -8915,17 +8939,36 @@ function renderVendorsTab() {
     return;
   }
   var rows = getFilteredVendors();
-  // Approved first, then by category, then rank.
-  rows.sort(function(a,b){
-    var ap = isApprovedVendor(a)?0:1, bp = isApprovedVendor(b)?0:1;
-    if (ap !== bp) return ap - bp;
-    var ca = String(a.category||''), cb = String(b.category||'');
-    if (ca !== cb) return ca.localeCompare(cb);
-    return (parseFloat(a.rank)||99) - (parseFloat(b.rank)||99);
-  });
-  var head = '<div style="font-size:11px;color:var(--gray);margin:0 2px 8px;">Showing ' + rows.length + ' of ' + vendorDirectory.length + ' vendors</div>';
+  var active = vendorFiltersActive();
+  var byCat = {};
+  rows.forEach(function(v){ var c = String(v.category||'').trim() || 'Uncategorized'; (byCat[c]=byCat[c]||[]).push(v); });
+  var cats = Object.keys(byCat).sort();
+  _vendorCatOrder = cats;
+  var head = '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 8px;flex-wrap:wrap;gap:6px;">' +
+    '<span style="font-size:11px;color:var(--gray);">Showing ' + rows.length + ' of ' + vendorDirectory.length + ' vendors in ' + cats.length + ' categor' + (cats.length===1?'y':'ies') + '</span>' +
+    '<span style="display:flex;gap:6px;"><button class="btn-s" onclick="setAllVendorCats(true)">Expand all</button><button class="btn-s" onclick="setAllVendorCats(false)">Collapse all</button></span>' +
+  '</div>';
   if (!rows.length) { list.innerHTML = head + '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">No vendors match these filters.</div>'; return; }
-  list.innerHTML = head + rows.map(vendorCardHtml).join('');
+  var body = cats.map(function(cat, i){
+    var vs = byCat[cat].slice().sort(function(a,b){
+      var ap = isApprovedVendor(a)?0:1, bp = isApprovedVendor(b)?0:1;
+      if (ap !== bp) return ap - bp;
+      return (parseFloat(a.rank)||99) - (parseFloat(b.rank)||99);
+    });
+    var appr = vs.filter(isApprovedVendor).length;
+    var contacted = vs.filter(function(v){ return String(v.last_contacted||'').trim(); }).length;
+    var open = active || !!vendorExpandedCats[cat];
+    var apprTxt = appr > 0
+      ? '<span style="color:var(--ok-tx);font-weight:600;">' + appr + ' approved</span>'
+      : '<span style="color:var(--gray);">0 approved</span>';
+    var header = '<div onclick="toggleVendorCat(' + i + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px;">' +
+        '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (open?'▾':'▸') + '</span>' + esc(cat) + '</div>' +
+        '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' + vs.length + ' vendor' + (vs.length!==1?'s':'') + ' · ' + apprTxt + ' · ' + contacted + ' contacted</div>' +
+      '</div>';
+    var section = open ? '<div style="margin:0 0 12px 12px;">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
+    return header + section;
+  }).join('');
+  list.innerHTML = head + body;
 }
 
 function _vLine(pairs) {
