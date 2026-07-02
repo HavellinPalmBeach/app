@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 11:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 12:20am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4756,6 +4756,10 @@ function restoreEstimateToUI(est) {
           if (spclEl) spclEl.checked = savedRoom.spcl || false;
           if (noteEl && savedRoom.note) {
             noteEl.value = savedRoom.note;
+            // Light up the note icon so a restored note is visible at a glance —
+            // otherwise it only showed after opening + re-saving the note.
+            var notesBtnR = document.getElementById('notes-btn-' + id);
+            if (notesBtnR) { notesBtnR.style.color = 'var(--bronze)'; notesBtnR.style.fontWeight = '600'; }
             var noteTaR = document.getElementById('note-ta-' + id);
             if (noteTaR) {
               noteTaR.value = savedRoom.note;
