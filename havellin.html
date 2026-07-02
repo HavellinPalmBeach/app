@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.06.21 · 9:15am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.02 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -263,6 +263,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('inventory',this)">Inventory</button>
   <button class="nb" onclick="showPanel('invoice',this)">Invoices</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
+  <button class="nb" onclick="showPanel('vendors',this)">Vendors</button>
   <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
 </div>
 
@@ -1220,6 +1221,150 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div id="ps-list"><div class="empty-state">No PS contractors added yet.</div></div>
     </div>
   </div>
+</div>
+
+<!-- ═══ VENDOR MANAGEMENT ═══ -->
+<div class="panel" id="panel-vendors">
+  <div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Vendor Directory</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:640px;">Vet the approved vendor list, log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Approved</strong> vendors can be assigned to a job.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-s" onclick="loadVendorDirectory()">↻ Reload directory</button>
+        <button class="btn-p" onclick="showAddVendor()">+ Add Vendor</button>
+      </div>
+    </div>
+    <div id="vendors-url-warn" style="display:none;font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-top:10px;">Vendor Directory URL not set — open Settings and paste the vendor web-app /exec URL to load, add, and edit vendors.</div>
+    <div id="vendors-stats" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;"></div>
+  </div>
+
+  <!-- INTAKE / EDIT FORM -->
+  <div id="add-vendor-card" class="card" style="margin-bottom:1rem;display:none;">
+    <div class="sec" id="v-form-title">Add Vendor</div>
+    <input type="hidden" id="v-edit-row" value="">
+    <div class="grid2">
+      <div>
+        <label>Vendor name <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        <input type="text" id="v-name" placeholder="e.g. Junk King Palm Beach">
+        <label>Category group</label>
+        <select id="v-group">
+          <option value="">— select —</option>
+          <option>Asset Liquidation &amp; Valuation</option>
+          <option>Disposal &amp; Waste Management</option>
+          <option>Moving &amp; Logistics</option>
+          <option>Professional Services</option>
+          <option>Property Preparation</option>
+        </select>
+        <label>Category</label>
+        <input type="text" id="v-category" list="v-cat-list" placeholder="e.g. Junk Removal &amp; Dumpster">
+        <datalist id="v-cat-list"></datalist>
+        <label>Primary contact</label>
+        <input type="text" id="v-contact" placeholder="Name / title">
+        <label>Phone</label>
+        <input type="tel" id="v-phone" placeholder="(561) 000-0000">
+        <label>Email</label>
+        <input type="email" id="v-email" placeholder="vendor@email.com">
+        <label>Website</label>
+        <input type="text" id="v-website" placeholder="example.com">
+        <label>Physical address</label>
+        <input type="text" id="v-address" placeholder="City, FL">
+        <label>Service area</label>
+        <input type="text" id="v-area" placeholder="e.g. Palm Beach County + Treasure Coast">
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="v-status">
+          <option value="Identified">Identified — sourced, not yet vetted</option>
+          <option value="Approved">Approved — cleared for jobs</option>
+          <option value="Backup">Backup — secondary option</option>
+          <option value="Do Not Use">Do Not Use</option>
+        </select>
+        <label>COI on file</label>
+        <select id="v-coi">
+          <option value="">—</option>
+          <option>Yes</option>
+          <option>Pending</option>
+          <option>No</option>
+        </select>
+        <label>Reciprocity</label>
+        <select id="v-recip">
+          <option value="">—</option>
+          <option>Possible</option>
+          <option>No</option>
+        </select>
+        <label>License / cert</label>
+        <input type="text" id="v-license" placeholder="e.g. FFL; ISA CAPP; state license #">
+        <label>Reviews (rating + source)</label>
+        <input type="text" id="v-reviews" placeholder="e.g. 4.7 Google (120 reviews)">
+        <div class="grid2" style="gap:0 12px;">
+          <div><label>Category score</label><input type="number" id="v-score" placeholder="0–100" min="0" max="100"></div>
+          <div><label>Category rank</label><input type="number" id="v-rank" placeholder="1 = best" min="1"></div>
+        </div>
+        <label>Last contacted</label>
+        <input type="date" id="v-lastcontacted">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin-bottom:8px;">Pricing &amp; Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— notes only; the TC applies rough math when estimating. Fees are trued up on real costs at final billing.</span></div>
+    <div class="grid2">
+      <div>
+        <label>Pricing structure <span style="font-weight:400;color:var(--gray);">(how they charge)</span></label>
+        <input type="text" id="v-pricing" placeholder="e.g. Per sqft · Flat trip fee · Per truckload · Hourly">
+        <label>Ballpark rate</label>
+        <input type="text" id="v-estcost" placeholder="e.g. $2/sqft · $150/room · $550/load · $100 flat">
+        <label>Minimum job / fee</label>
+        <input type="text" id="v-minjob" placeholder="e.g. $150 minimum">
+      </div>
+      <div>
+        <label>Rate detail <span style="font-weight:400;color:var(--gray);">(caveats)</span></label>
+        <input type="text" id="v-ratedetail" placeholder="e.g. interior walls only; 2-coat; ceilings +$0.50/sqft">
+        <label>Lead time <span style="font-weight:400;color:var(--gray);">(to start work)</span></label>
+        <input type="text" id="v-leadtime" placeholder="e.g. 3–5 days · 2 weeks">
+        <label>Estimate turnaround <span style="font-weight:400;color:var(--gray);">(to return a quote)</span></label>
+        <input type="text" id="v-turnaround" placeholder="e.g. 48 hrs after site visit">
+      </div>
+    </div>
+
+    <label style="margin-top:10px;">Notes</label>
+    <textarea id="v-notes" placeholder="Credentials, specialties, relationship notes, red flags…"></textarea>
+
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-s" onclick="document.getElementById('add-vendor-card').style.display='none'">Cancel</button>
+      <button class="btn-p" onclick="saveVendor()">Save Vendor</button>
+      <span id="v-save-status" style="font-size:11px;color:var(--gray);"></span>
+    </div>
+    <div id="v-fb"></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="card" style="margin-bottom:1rem;padding:0.8rem 1rem;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="v-search" oninput="renderVendorsTab()" placeholder="Search name, category, contact, area…" style="flex:2;min-width:200px;">
+      <select id="v-filter-group" onchange="renderVendorsTab()" style="flex:1;min-width:150px;"><option value="">All groups</option></select>
+      <select id="v-filter-cat" onchange="renderVendorsTab()" style="flex:1;min-width:150px;"><option value="">All categories</option></select>
+      <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
+        <option value="">All statuses</option>
+        <option value="Approved">Approved</option>
+        <option value="Identified">Identified</option>
+        <option value="Backup">Backup</option>
+        <option value="Do Not Use">Do Not Use</option>
+        <option value="__none">(no status)</option>
+      </select>
+      <select id="v-filter-coi" onchange="renderVendorsTab()" style="flex:1;min-width:120px;">
+        <option value="">Any COI</option>
+        <option value="Yes">COI: Yes</option>
+        <option value="Pending">COI: Pending</option>
+        <option value="No">COI: No</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-dk);white-space:nowrap;margin:0;"><input type="checkbox" id="v-filter-stale" onchange="renderVendorsTab()" style="width:auto;margin:0;"> Not yet contacted</label>
+    </div>
+  </div>
+
+  <div id="vendors-list"></div>
 </div>
 
 <!-- NOTES MODAL -->
@@ -5477,6 +5622,7 @@ function showPanel(id, btn) {
   }
   if (id==='client-estimate') { populateClientEstimateSelect(); renderClientEstimate(); }
   if (id==='contractors') { renderContractors(); }
+  if (id==='vendors') { initVendorsTab(); }
   if (id==='winloss') renderWinLoss();
   if (id==='job-plan') {
     populateLogAndInvSelects();
@@ -6935,9 +7081,19 @@ function showSyncBadge(msg, isErr) {
 // jobs/estimates sheet. The app reads it to populate vendor pickers; the sheet
 // stays the source of truth. Cached locally so it survives offline / failed loads.
 var vendorDirectory = [];
+// The sheet's ranking/scoring columns come across as category_rank / category_score,
+// but the pickers read v.rank / v.score. Normalize once on load so the two agree
+// (this is what makes "(#rank)" show and rank-sorting work).
+function normalizeVendorDir() {
+  vendorDirectory.forEach(function(v){
+    if (v.rank == null || v.rank === '') v.rank = (v.category_rank != null ? v.category_rank : '');
+    if (v.score == null || v.score === '') v.score = (v.category_score != null ? v.category_score : '');
+  });
+}
 function loadVendorDirectory() {
   try { var s = localStorage.getItem('hav_vendor_dir'); if (s) vendorDirectory = JSON.parse(s); } catch(e) {}
   try { var u = localStorage.getItem('hav_vendor_url') || ''; if (u) VENDOR_SYNC_URL = u; } catch(e) {}
+  normalizeVendorDir();
   if (!VENDOR_SYNC_URL) { setVendorDirStatus('No URL set yet', false); return; }
   setVendorDirStatus('Loading…', false);
   fetch(VENDOR_SYNC_URL + '?action=loadVendors')
@@ -6945,6 +7101,7 @@ function loadVendorDirectory() {
     .then(function(data){
       if (data && Array.isArray(data.vendors) && !data.error) {
         vendorDirectory = data.vendors;
+        normalizeVendorDir();
         try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
         showSyncBadge('Loaded ' + vendorDirectory.length + ' vendor' + (vendorDirectory.length !== 1 ? 's' : '') + ' from directory ✓');
         setVendorDirStatus('✓ ' + vendorDirectory.length + ' vendors loaded', false);
@@ -8561,6 +8718,271 @@ function writeVendorScores(jobId) {
       .catch(function(){ failed++; })
       .then(function(){ if (--pending === 0) say('Updated ' + done + ' in directory' + (failed?(' · ' + failed + ' failed'):'') + ' ✓', failed>0); });
   });
+}
+
+// ─── VENDORS TAB (intake + vetting console) ───────────────────────────────────
+// Manage the approved-vendor list without touching the sheet by hand: search/vet
+// the 150+ vendors, log outreach, flip status → Approved, and add new vendors.
+// Writes go through the vendor web app (addVendor / updateVendor); the sheet stays
+// the source of truth and the local cache is updated in lock-step so the UI is live.
+var VENDOR_STATUSES = ['Approved','Identified','Backup','Do Not Use'];
+function vendorStatusBadge(status) {
+  var s = String(status || '').trim();
+  var map = {
+    'Approved':   'b-ok',
+    'Identified': 'b-info',
+    'Backup':     'b-bronze'
+  };
+  if (!s) return '<span class="badge b-warn">No status</span>';
+  if (s === 'Do Not Use') return '<span class="badge" style="background:var(--err-bg);color:var(--err-tx);">Do Not Use</span>';
+  return '<span class="badge ' + (map[s] || 'b-info') + '">' + esc(s) + '</span>';
+}
+function isApprovedVendor(v) { return String(v && v.status || '').trim().toLowerCase() === 'approved'; }
+
+function initVendorsTab() {
+  var warn = document.getElementById('vendors-url-warn');
+  if (warn) warn.style.display = VENDOR_SYNC_URL ? 'none' : 'block';
+  populateVendorFilters();
+  renderVendorsTab();
+}
+
+// Fill the group/category filter selects and the intake category datalist from the
+// live directory, preserving whatever the user already had selected.
+function populateVendorFilters() {
+  var groups = {}, cats = {};
+  vendorDirectory.forEach(function(v){
+    if (v.category_group) groups[String(v.category_group).trim()] = 1;
+    if (v.category) cats[String(v.category).trim()] = 1;
+  });
+  var gSel = document.getElementById('v-filter-group');
+  if (gSel) {
+    var gv = gSel.value;
+    gSel.innerHTML = '<option value="">All groups</option>' + Object.keys(groups).sort().map(function(g){
+      return '<option' + (gv===g?' selected':'') + '>' + esc(g) + '</option>'; }).join('');
+  }
+  var cSel = document.getElementById('v-filter-cat');
+  if (cSel) {
+    var cv = cSel.value;
+    cSel.innerHTML = '<option value="">All categories</option>' + Object.keys(cats).sort().map(function(c){
+      return '<option' + (cv===c?' selected':'') + '>' + esc(c) + '</option>'; }).join('');
+  }
+  var dl = document.getElementById('v-cat-list');
+  if (dl) dl.innerHTML = Object.keys(cats).sort().map(function(c){ return '<option value="' + esc(c) + '">'; }).join('');
+}
+
+function getFilteredVendors() {
+  var q = (document.getElementById('v-search')||{}).value || '';
+  q = q.trim().toLowerCase();
+  var fg = (document.getElementById('v-filter-group')||{}).value || '';
+  var fc = (document.getElementById('v-filter-cat')||{}).value || '';
+  var fs = (document.getElementById('v-filter-status')||{}).value || '';
+  var fcoi = (document.getElementById('v-filter-coi')||{}).value || '';
+  var stale = !!(document.getElementById('v-filter-stale')||{}).checked;
+  return vendorDirectory.filter(function(v){
+    if (fg && String(v.category_group||'').trim() !== fg) return false;
+    if (fc && String(v.category||'').trim() !== fc) return false;
+    if (fs === '__none') { if (String(v.status||'').trim()) return false; }
+    else if (fs && String(v.status||'').trim() !== fs) return false;
+    if (fcoi && String(v.coi_on_file||'').trim() !== fcoi) return false;
+    if (stale && String(v.last_contacted||'').trim()) return false;
+    if (q) {
+      var hay = [v.vendor_name, v.category, v.category_group, v.primary_contact, v.service_area,
+                 v.physical_address, v.notes, v.pricing_structure].join(' ').toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+}
+
+function renderVendorStats() {
+  var el = document.getElementById('vendors-stats');
+  if (!el) return;
+  var counts = { total: vendorDirectory.length, Approved:0, Identified:0, Backup:0, contacted:0 };
+  vendorDirectory.forEach(function(v){
+    var s = String(v.status||'').trim();
+    if (counts[s] != null) counts[s]++;
+    if (String(v.last_contacted||'').trim()) counts.contacted++;
+  });
+  function tile(n, label, color){
+    return '<div style="min-width:70px;"><div style="font-size:20px;font-weight:600;color:' + (color||'var(--gray-dk)') + ';">' + n + '</div>' +
+      '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);">' + label + '</div></div>';
+  }
+  el.innerHTML = tile(counts.total,'Total') + tile(counts.Approved,'Approved','var(--ok-tx)') +
+    tile(counts.Identified,'Identified','var(--info-tx)') + tile(counts.Backup,'Backup','var(--bronze)') +
+    tile(counts.contacted + ' / ' + counts.total,'Contacted');
+}
+
+function renderVendorsTab() {
+  renderVendorStats();
+  var list = document.getElementById('vendors-list');
+  if (!list) return;
+  if (!vendorDirectory.length) {
+    list.innerHTML = '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">' +
+      (VENDOR_SYNC_URL ? 'No vendors loaded yet — click “↻ Reload directory”.' : 'Set the Vendor Directory URL in Settings, then reload.') + '</div>';
+    return;
+  }
+  var rows = getFilteredVendors();
+  // Approved first, then by category, then rank.
+  rows.sort(function(a,b){
+    var ap = isApprovedVendor(a)?0:1, bp = isApprovedVendor(b)?0:1;
+    if (ap !== bp) return ap - bp;
+    var ca = String(a.category||''), cb = String(b.category||'');
+    if (ca !== cb) return ca.localeCompare(cb);
+    return (parseFloat(a.rank)||99) - (parseFloat(b.rank)||99);
+  });
+  var head = '<div style="font-size:11px;color:var(--gray);margin:0 2px 8px;">Showing ' + rows.length + ' of ' + vendorDirectory.length + ' vendors</div>';
+  if (!rows.length) { list.innerHTML = head + '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">No vendors match these filters.</div>'; return; }
+  list.innerHTML = head + rows.map(vendorCardHtml).join('');
+}
+
+function _vLine(pairs) {
+  var parts = pairs.filter(function(p){ return p[1] != null && String(p[1]).trim() !== ''; })
+    .map(function(p){ return '<span style="color:var(--gray);">' + p[0] + '</span> ' + esc(String(p[1])); });
+  return parts.length ? '<div style="font-size:11px;color:var(--gray-dk);line-height:1.7;">' + parts.join(' &nbsp;·&nbsp; ') + '</div>' : '';
+}
+
+function vendorCardHtml(v) {
+  var id = vendorIdOf(v);
+  var idAttr = esc(String(id)).replace(/'/g, "\\'");
+  var rankScore = [];
+  if (v.rank) rankScore.push('#' + esc(String(v.rank)));
+  if (v.score) rankScore.push(esc(String(v.score)) + ' pts');
+  var pricing = _vLine([
+    ['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]
+  ]);
+  var timing = _vLine([['Lead time', v.lead_time], ['Quote turnaround', v.estimate_turnaround]]);
+  var contact = _vLine([['', v.primary_contact], ['☎', v.phone], ['✉', v.email]]);
+  var meta = _vLine([['Area', v.service_area], ['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert]]);
+  var reviews = v.reviews_rating_source ? _vLine([['Reviews', v.reviews_rating_source]]) : '';
+  var lastc = v.last_contacted ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(String(v.last_contacted)) + '</span>' : '<span style="font-size:10px;color:var(--warn-tx);">Not yet contacted</span>';
+
+  var quick = '';
+  if (!isApprovedVendor(v)) quick += '<button class="btn-s" style="background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-tx);" onclick="setVendorStatusQuick(\'' + idAttr + '\',\'Approved\')">✓ Approve</button>';
+  quick += '<button class="btn-s" onclick="stampVendorContacted(\'' + idAttr + '\')">☎ Log contact</button>';
+  quick += '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>';
+
+  return '<div class="card" style="margin-bottom:8px;padding:0.85rem 1rem;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">' +
+      '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') +
+        (rankScore.length ? ' <span style="font-size:11px;color:var(--gray);font-weight:400;">' + rankScore.join(' · ') + '</span>' : '') + '</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;">' + vendorStatusBadge(v.status) + '</div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin:2px 0 6px;">' + esc(v.category||'—') +
+      (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
+    contact + pricing + timing + meta + reviews +
+    (v.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(v.notes) + '</div>' : '') +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + quick + '</div>' + lastc +
+    '</div>' +
+  '</div>';
+}
+
+// Map form-field ids → sheet column keys (as produced by the sync script's vendorKey).
+var VENDOR_FORM_MAP = {
+  'v-name':'vendor_name', 'v-group':'category_group', 'v-category':'category',
+  'v-contact':'primary_contact', 'v-phone':'phone', 'v-email':'email',
+  'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
+  'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity',
+  'v-license':'license_cert', 'v-reviews':'reviews_rating_source',
+  'v-score':'category_score', 'v-rank':'category_rank', 'v-lastcontacted':'last_contacted',
+  'v-pricing':'pricing_structure', 'v-estcost':'estimate_cost', 'v-minjob':'minimum_job',
+  'v-ratedetail':'rate_detail', 'v-leadtime':'lead_time', 'v-turnaround':'estimate_turnaround',
+  'v-notes':'notes'
+};
+function _setV(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
+function _getV(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+function showAddVendor() {
+  var card = document.getElementById('add-vendor-card');
+  Object.keys(VENDOR_FORM_MAP).forEach(function(id){ _setV(id, ''); });
+  _setV('v-status', 'Identified');
+  document.getElementById('v-edit-row').value = '';
+  document.getElementById('v-form-title').textContent = 'Add Vendor';
+  var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
+  var st = document.getElementById('v-save-status'); if (st) st.textContent = '';
+  populateVendorFilters(); // refresh category datalist
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function editVendor(id) {
+  var v = lookupVendorById(id);
+  if (!v) return;
+  Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ _setV(fid, v[VENDOR_FORM_MAP[fid]]); });
+  document.getElementById('v-edit-row').value = String(id);
+  document.getElementById('v-form-title').textContent = 'Edit Vendor — ' + (v.vendor_name || '');
+  var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
+  var st = document.getElementById('v-save-status'); if (st) st.textContent = '';
+  populateVendorFilters();
+  var card = document.getElementById('add-vendor-card');
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// POST a write to the vendor web app; cb(ok, data).
+function postVendorWrite(type, payload, cb) {
+  if (!VENDOR_SYNC_URL) { cb(false, {error:'No Vendor Directory URL set'}); return; }
+  fetch(VENDOR_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:type, payload:payload }) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ cb(!!(d && d.ok), d || {}); })
+    .catch(function(e){ cb(false, {error:String(e)}); });
+}
+
+function saveVendor() {
+  var name = _getV('v-name');
+  if (!name) { showFB('v-fb','warn','Vendor name is required.'); return; }
+  if (!VENDOR_SYNC_URL) { showFB('v-fb','err','Set the Vendor Directory URL in Settings first — vendors are saved to the shared sheet.'); return; }
+  var fields = {};
+  Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ fields[VENDOR_FORM_MAP[fid]] = _getV(fid); });
+  var editId = document.getElementById('v-edit-row').value;
+  var st = document.getElementById('v-save-status');
+  if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
+
+  if (editId) {
+    var existing = lookupVendorById(editId) || {};
+    postVendorWrite('updateVendor', { _row: existing._row, vendor_name: existing.vendor_name || name, fields: fields }, function(ok, d){
+      if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
+      Object.keys(fields).forEach(function(k){ existing[k] = fields[k]; });
+      normalizeVendorDir();
+      try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
+      if (st){ st.textContent = 'Saved ✓'; st.style.color = 'var(--ok-tx)'; }
+      document.getElementById('add-vendor-card').style.display = 'none';
+      populateVendorFilters(); renderVendorsTab();
+    });
+  } else {
+    postVendorWrite('addVendor', { fields: fields }, function(ok, d){
+      if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
+      var rec = {};
+      Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; });
+      if (d._row != null) rec._row = d._row;
+      vendorDirectory.push(rec);
+      normalizeVendorDir();
+      try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
+      if (st){ st.textContent = 'Added ✓'; st.style.color = 'var(--ok-tx)'; }
+      document.getElementById('add-vendor-card').style.display = 'none';
+      populateVendorFilters(); renderVendorsTab();
+    });
+  }
+}
+
+// One-click field writes from the card (status flip, outreach stamp).
+function _quickWriteVendor(id, patch, busyMsg) {
+  var v = lookupVendorById(id);
+  if (!v) return;
+  if (!VENDOR_SYNC_URL) { showSyncBadge('Set the Vendor Directory URL in Settings first', true); return; }
+  showSyncBadge(busyMsg);
+  postVendorWrite('updateVendor', { _row: v._row, vendor_name: v.vendor_name, fields: patch }, function(ok, d){
+    if (!ok) { showSyncBadge('Vendor update failed: ' + (d.error||''), true); return; }
+    Object.keys(patch).forEach(function(k){ v[k] = patch[k]; });
+    try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
+    showSyncBadge('Vendor updated ✓');
+    renderVendorsTab();
+  });
+}
+function setVendorStatusQuick(id, status) { _quickWriteVendor(id, { status: status }, 'Updating status…'); }
+function stampVendorContacted(id) {
+  var today = new Date().toISOString().slice(0,10);
+  _quickWriteVendor(id, { last_contacted: today }, 'Logging outreach…');
 }
 
 // Deep-link from the Job Plan into the Invoices tab, preset to a job + stage so the
