@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 12:20am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 12:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -754,6 +754,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr><td class="muted">Base room hours — Property Specialist (total)</td><td class="num" id="s-base-ps">0.0</td></tr>
           <tr><td class="muted">Other adjustments — Transition Concierge</td><td class="num" id="s-adj-tc">0.0</td></tr>
           <tr><td class="muted">Other adjustments — Property Specialist</td><td class="num" id="s-adj-ps">0.0</td></tr>
+          <tr id="s-prep-tc-sum-row" style="display:none;"><td class="muted">Home-prep coordination — Transition Concierge</td><td class="num" id="s-prep-tc-sum">0.0</td></tr>
           <tr class="total-row"><td>Total Transition Concierge hours</td><td class="num big" id="s-tot-tc">0.0</td></tr>
           <tr class="total-row"><td>Total Property Specialist hours</td><td class="num big" id="s-tot-ps">0.0</td></tr>
         </table>
@@ -2571,6 +2572,10 @@ function calcAll() {
   document.getElementById('s-base-ps').textContent = basePSHrs.toFixed(1) + ' hrs';
   document.getElementById('s-adj-tc').textContent = adjTC.toFixed(1) + ' hrs';
   document.getElementById('s-adj-ps').textContent = adjPS.toFixed(1) + ' hrs';
+  // Show home-prep coordination hours in the hours breakdown so base + adj + prep
+  // = total is obvious at a glance (the prep hours are folded into Total TC).
+  var sPrepTCSumRow = document.getElementById('s-prep-tc-sum-row');
+  if (sPrepTCSumRow) { sPrepTCSumRow.style.display = (prepEnabled && prepTCHrs > 0) ? '' : 'none'; document.getElementById('s-prep-tc-sum').textContent = '+ ' + prepTCHrs.toFixed(1) + ' hrs'; }
   document.getElementById('s-tot-tc').textContent = totTC.toFixed(1) + ' hrs';
   document.getElementById('s-tot-ps').textContent = totPS.toFixed(1) + ' hrs';
   document.getElementById('tc-fee-label').textContent = 'Transition Concierge fee (' + totTC.toFixed(1) + ' hrs × $' + tcRate + ')';
@@ -4575,57 +4580,30 @@ function editEstimateForJob(jobId) {
   // Suppress auto-save during clear+restore to prevent overwriting saved estimate
   window._suppressEstimateAutoSave = true;
 
-  // Load saved estimate BEFORE clearing rooms
-  var hasSavedEst = loadEstimateForJob(jobId);
-  var savedEstSnapshot = hasSavedEst && currentEstimate && currentEstimate.rooms && currentEstimate.rooms.length > 0 ? currentEstimate : null;
-
-  // Now clear rooms
-  clearAllRooms();
-
-  // Restore from snapshot
-  if (savedEstSnapshot) {
-    currentEstimate = savedEstSnapshot;
-    restoreEstimateToUI(savedEstSnapshot);
+  // Cloud-authoritative open: pull the latest jobs + this job's estimate fresh from
+  // the sheet BEFORE loading, so the Estimate tab can never edit and re-save a stale
+  // local copy (which could silently drop hours and overwrite the good cloud record).
+  // Same pattern as the Client Estimate tab. onReady runs 'cloud' or 'offline'.
+  refreshEstimateFromCloud(jobId, function(){
+    var hasSavedEst = loadEstimateForJob(jobId);
+    var savedEstSnapshot = hasSavedEst && currentEstimate && currentEstimate.rooms && currentEstimate.rooms.length > 0 ? currentEstimate : null;
+    clearAllRooms();
+    if (savedEstSnapshot) {
+      currentEstimate = savedEstSnapshot;
+      restoreEstimateToUI(savedEstSnapshot);
+    } else {
+      loadJobIntoEstimate();   // no saved estimate for this job — fresh build
+    }
     window._suppressEstimateAutoSave = false;
-  } else if (SHEETS_SYNC_URL) {
-    // No local rooms — try Sheets directly (cross-device: built on iPad, reviewing on desktop)
-    showSyncBadge('Looking for saved estimate in cloud…');
-    fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
-      .then(function(r){ return r.json(); })
-      .then(function(data){
-        var sheetsRec = data.estimates && data.estimates[jobId];
-        var sheetsHasRooms = sheetsRec && sheetsRec.estimate && (sheetsRec.estimate.rooms||[]).length > 0;
-        if (sheetsHasRooms) {
-          normalizeLegacyRoomKeys(sheetsRec);
-          estimateStore[jobId] = sheetsRec;
-          try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
-          loadEstimateForJob(jobId);
-          clearAllRooms();
-          restoreEstimateToUI(currentEstimate);
-          showSyncBadge('Estimate loaded from cloud ✓');
-        } else {
-          loadJobIntoEstimate();
-          showSyncBadge('No cloud estimate found — starting fresh', true);
-        }
-        window._suppressEstimateAutoSave = false;
-        rebuildDropdowns();
-      })
-      .catch(function(){
-        loadJobIntoEstimate();
-        window._suppressEstimateAutoSave = false;
-      });
-  } else {
-    loadJobIntoEstimate();
-    window._suppressEstimateAutoSave = false;
-  }
-
-  // Reset approval unless already approved
-  if (!estimateStore[jobId] || !estimateStore[jobId].approved) {
-    estimateApproved = false;
-    approvedBy = ''; approvedAt = '';
-  }
-  updateApprovalUI();
-  showFB('e-fb', 'info', 'Estimate ready. Score rooms then save and approve.');
+    rebuildDropdowns();
+    // Reset approval unless already approved
+    if (!estimateStore[jobId] || !estimateStore[jobId].approved) {
+      estimateApproved = false;
+      approvedBy = ''; approvedAt = '';
+    }
+    updateApprovalUI();
+    showFB('e-fb', 'info', 'Estimate ready. Score rooms then save and approve.');
+  });
 }
 
 function restoreEstimateToUI(est) {
