@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 5:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -537,8 +537,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to all hours</div></div>
           <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
         </div>
-        <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub">Adds 20% to Transition Concierge hours only</div></div>
+        <div class="toggle-wrap" id="adj-heirs-wrap">
+          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
           <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <!-- Property value, square footage, and years in home are captured at Client Intake
@@ -555,7 +555,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div>
         <div class="sec">Property Specialists</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to complete all PS hours within the TC-gated window (floor 2, cap 4). You can manually add specialists above the minimum. Billing is total PS hours regardless of crew size — adding PS does not change the quote.</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to complete all PS hours within the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation. Billing is total PS hours regardless of crew size — adding PS does not change the quote.</div>
         <div id="ps-slots">
           <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
             <select id="ps-slot-0" onchange="calcAll()" style="font-size:12px;"><option value="contractor_standard">Contractor — Standard</option></select>
@@ -572,6 +572,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
             <select id="ps-slot-3" onchange="calcAll()" style="font-size:12px;"><option value="none">Not scheduled</option></select>
             <span style="font-size:11px;color:var(--gray);">Specialist 4</span>
+          </div>
+          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
+            <select id="ps-slot-4" onchange="calcAll()" style="font-size:12px;"><option value="none">Not scheduled</option></select>
+            <span style="font-size:11px;color:var(--gray);">Specialist 5</span>
+          </div>
+          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
+            <select id="ps-slot-5" onchange="calcAll()" style="font-size:12px;"><option value="none">Not scheduled</option></select>
+            <span style="font-size:11px;color:var(--gray);">Specialist 6</span>
           </div>
         </div>
         <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
@@ -1888,21 +1896,25 @@ var ROOM_DEFAULTS = {
 };
 function roomDefault(name){ return ROOM_DEFAULTS[name] || {vol:3, cplx:3}; }
 
-// Work-step rates [concierge, specialist] per content unit, by service type.
-// 'move' = scaling move-day; 'heir' = concierge multiplier (contested probate).
+// Work-step rates [concierge/TC, specialist/PS] per content unit, by service type.
+// NASMM-aligned split: the specialist (hands-on) side carries the bulk of the hours
+// and the concierge/TC side is the lighter coordination layer, so calendar duration
+// reflects crew throughput rather than ballooning on the TC line. 'move' = scaling
+// move-day overhead (unchanged formula). Contested-probate load is carried by its own
+// coefficients — no separate concierge multiplier.
 var JOB_STEPS = {
-  downsizing:        {triage:[0.50,0.05], pack:[0.25,0.70], disposition:[0.05,0.15]},
-  downsizing_move:   {triage:[0.50,0.05], pack:[0.25,0.70], disposition:[0.05,0.15], move:true},
-  home_cleanout:     {triage:[0.40,0.10], pack:[0.25,0.45], disposition:[0.18,0.60]},
-  cleanout:          {triage:[0.40,0.10], document:[0.95,0.05], pack:[0.25,0.45], disposition:[0.18,0.60]},
-  probate:           {triage:[0.40,0.10], document:[1.15,0.05], pack:[0.25,0.45], disposition:[0.18,0.60], legal:[0.30,0]},
-  contested_probate: {triage:[0.40,0.10], document:[1.15,0.05], pack:[0.25,0.45], disposition:[0.18,0.60], legal:[0.30,0]},
+  downsizing:        {triage:[0.30,0.15], pack:[0.15,0.85], disposition:[0.06,0.19]},
+  downsizing_move:   {triage:[0.30,0.15], pack:[0.15,0.85], disposition:[0.06,0.19], move:true},
+  home_cleanout:     {triage:[0.10,0.25], pack:[0.06,0.75], disposition:[0.06,0.76]},
+  cleanout:          {triage:[0.12,0.25], document:[0.12,0.90], pack:[0.06,0.70], disposition:[0.09,0.74]},
+  probate:           {triage:[0.12,0.25], document:[0.12,1.25], pack:[0.06,0.70], disposition:[0.09,0.79], legal:[0.10,0]},
+  contested_probate: {triage:[0.20,0.30], document:[0.30,1.75], pack:[0.06,0.70], disposition:[0.09,1.00], legal:[0.46,0.15]},
   prep:              {triage:[0.20,0.10], pack:[0.10,0.25]}  // light declutter/stage; value is vendor costs + 30% GC fee
 };
 var ENGINE_CAREFUL = {triage:1, pack:1, document:1, legal:1}; // steps complexity scales (concierge side)
 // Steps that are hands-on, room-level work (physically handling each room's contents).
 // Only these are shown per-room; the rest (triage, documentation, disposition/haul-out,
-// move, heir coordination) are job-level overhead surfaced as one separate line.
+// move) are job-level overhead surfaced as one separate line.
 var ENGINE_ROOMLEVEL = {pack:1};
 // Nominal interior room-weight at which the house is considered "fully scored." The
 // per-room hands-on breakdown divides by this (or the actual ticked weight, whichever
@@ -1910,8 +1922,20 @@ var ENGINE_ROOMLEVEL = {pack:1};
 var PERROOM_REF = 18;
 var ENGINE_FLOOR = {downsizing:2, downsizing_move:3, home_cleanout:3, cleanout:3, probate:3, contested_probate:4, prep:3};
 
+// Years-in-home tenure nudge — the longer someone has lived in a home, the more
+// contents accumulate. Applies to the interior (under-air) load only, never to
+// exterior add-ons. Blank / missing / non-positive value = neutral 1.00.
+function tenureMultiplier(years){
+  var y = parseFloat(years);
+  if (!(y > 0)) return 1.00;
+  if (y < 10)  return 1.00;
+  if (y < 20)  return 1.10;
+  if (y < 30)  return 1.20;
+  return 1.30;
+}
+
 // rooms: [{name, vol, cplx}]. Returns hours, load, calendar days, and per-room split.
-function computeEngineV3(sqft, rooms, svc, crew){
+function computeEngineV3(sqft, rooms, svc, crew, years){
   crew = crew || 2;
   sqft = parseFloat(sqft) || 0;
   var steps = JOB_STEPS[svc] || JOB_STEPS.cleanout;
@@ -1927,26 +1951,26 @@ function computeEngineV3(sqft, rooms, svc, crew){
     allW += w; allCpxW += w*cpxF;
   });
   var volFactor = iW>0 ? iVolW/iW : 1.0;
-  var interiorLoad = sqft * ENGINE_K * volFactor;
+  // Interior load scales with under-air sqft, room-volume modulation, and years in
+  // home (tenure nudge — interior only). Exterior add-ons are unaffected by tenure.
+  var interiorLoad = sqft * ENGINE_K * volFactor * tenureMultiplier(years);
   var load = interiorLoad + extLoad;
   var cpxFactor = allW>0 ? allCpxW/allW : 1.0;
   // Hours from active work-steps (complexity scales the careful/concierge steps).
   // We also track the room-level "hands-on" portion (physical packing) separately
-  // from the job-level overhead (triage, documentation, disposition/haul-out, move,
-  // heir coordination). Only the hands-on portion is distributed to individual rooms
-  // for display, so a single ticked room shows realistic minutes — not the whole
-  // job. The job TOTAL (tc/ps) is unchanged: hands-on + overhead.
+  // from the job-level overhead (triage, documentation, disposition/haul-out, move).
+  // Only the hands-on portion is distributed to individual rooms for display, so a
+  // single ticked room shows realistic minutes — not the whole job. The job TOTAL
+  // (tc/ps) is unchanged: hands-on + overhead.
   var tc=0, ps=0, roomTC=0, roomPS=0;
   for (var L in steps){
     if (L==='move'){ tc += 6 + load*0.24; ps += 2 + load*0.13; continue; }  // overhead
-    if (L==='heir'){ continue; }
     var cf = ENGINE_CAREFUL[L] ? cpxFactor : 1;
     var stepTC = load*steps[L][0]*cf;
     var stepPS = load*steps[L][1];
     tc += stepTC; ps += stepPS;
     if (ENGINE_ROOMLEVEL[L]) { roomTC += stepTC; roomPS += stepPS; }
   }
-  if (steps.heir) tc *= steps.heir;   // multi-heir coordination premium — overhead
   tc = Math.ceil(tc); ps = Math.ceil(ps);
   var floor = ENGINE_FLOOR[svc] || 2;
   var days = Math.max(Math.ceil(tc/7), Math.ceil(ps/(crew*7)), floor);
@@ -2222,27 +2246,57 @@ function addWorkingDays(startDateStr, days) {
 }
 
 // ─── REQUIRED CREW ───────────────────────────────────────────────────────────
-// TC hours determine project duration — PS cannot compress below the TC floor.
-//   Duration = ceil(totTC / 7) working days
-//   PS needed = ceil(totPS / (tcDays * 7)), floor 2, cap 4
-// overCapacity flag fires if psNeeded > 4 (scope too large for 1 TC + 4 PS).
-function computeRequiredCrew(totPS, totTC) {
-  var tcDays  = Math.ceil(totTC / 7);
-  var psNeeded = Math.max(2, Math.ceil(totPS / (Math.max(tcDays, 1) * 7)));
+// Target-driven staffing. Rather than reporting a duration that balloons on trophy
+// estates, we size the crew to land the job near a fixed working-day target and lead
+// with that recommended team.
+//   PS recommendation = ceil(totPS / (TARGET_DAYS * 7)), floor 2, cap 6
+//   TC count          = 1, or 2 on premium jobs whose solo-TC time exceeds the target
+//   Duration          = max(TC-gated days, PS-gated days, mobilization floor)
+// If the job still exceeds the target at maximum staffing (2 TC + 6 PS), the honest
+// day count is reported with a plain scope-driven note — no phasing, no error state.
+var TARGET_DAYS = 10;
+function computeRequiredCrew(totPS, totTC, premium, svc) {
+  var floor    = ENGINE_FLOOR[svc] || 2;
+  var recPS    = Math.min(6, Math.max(2, Math.ceil(totPS / (TARGET_DAYS * 7))));
+  var tcCount  = (premium && Math.ceil(totTC / 7) > TARGET_DAYS) ? 2 : 1;  // 2 TCs: premium only
+  var tcDays   = Math.ceil(totTC / (tcCount * 7));
+  var psDays   = Math.ceil(totPS / (recPS * 7));
+  var days     = Math.max(tcDays, psDays, floor);
+  var atMaxCrew = tcCount >= (premium ? 2 : 1) && recPS >= 6;
   return {
-    tcDays:      tcDays,
-    requiredPS:  Math.min(psNeeded, 4),
-    psNeeded:    psNeeded,
-    overCapacity: psNeeded > 4
+    tcDays:      days,
+    days:        days,
+    requiredPS:  recPS,
+    psNeeded:    recPS,
+    tcCount:     tcCount,
+    overTarget:  days > TARGET_DAYS,
+    maxedOut:    days > TARGET_DAYS && atMaxCrew
   };
 }
 
 // ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
 // Contingency buffer added on top of hourly estimate for fixed-price proposals.
+// Court-billed engagements (Estate Settlement / Probate / Contested) stay strictly
+// time-and-materials and never use this buffer — only living / fixed-price jobs do.
 function fixedPriceBuffer(svcKey) {
   if (svcKey === 'contested_probate') return 0.35;
   if (svcKey === 'probate')           return 0.25;
   return 0.20;
+}
+
+// ─── RUSH MULTIPLIER ──────────────────────────────────────────────────────────
+// Applied AFTER the contingency buffer on a fixed-price fee, keyed to the runway
+// (calendar days from today to the client's hard-target deadline). Compressed
+// timelines cost more to staff. A <30-day runway also requires a written client
+// acknowledgment. Only meaningful when a hard target exists and the job is priced
+// fixed — time-and-materials engagements carry their margin in the hourly rate.
+function rushMultiplier(runwayDays) {
+  if (runwayDays == null || !isFinite(runwayDays)) return 1.00;
+  if (runwayDays >= 90) return 1.00;
+  if (runwayDays >= 60) return 1.12;
+  if (runwayDays >= 45) return 1.20;
+  if (runwayDays >= 30) return 1.32;
+  return 1.50;
 }
 
 // ─── PROBATE INVENTORY MULTIPLIER ────────────────────────────────────────────
@@ -2349,7 +2403,12 @@ function calcAll() {
   });
 
   // ── Pricing engine v3: sqft backbone × room-score modulation × work-steps ──
-  var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize);
+  // Years-in-home tenure nudge (Change 2) reads the loaded job's intake value; blank
+  // / no job selected = neutral 1.00 inside computeEngineV3.
+  var _ejId = parseInt(document.getElementById('e-job').value);
+  var _ejob = jobs.find(function(j){ return j.id === _ejId; });
+  var yearsInHomeVal = _ejob ? _ejob.yearsInHome : '';
+  var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal);
   baseTCHrs = eng.totTC;
   basePSHrs = eng.totPS;
 
@@ -2388,20 +2447,40 @@ function calcAll() {
     var svcBadgeTxt = '';
     if (svcKey === 'cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Estate Settlement: adds full item documentation for the §733.604 inventory.</div>';
     else if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate: documentation + legal / chain-of-custody work.</div>';
-    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: documentation + legal + 20% concierge for multiple heirs/attorneys.</div>';
+    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: heavier documentation, legal, and disposition load for multiple heirs/attorneys is built into the rates — no separate heir uplift.</div>';
     else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: move-day coordination added (scales with home size).</div>';
     else if (svcKey === 'home_cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Home Cleanout: full disposition of all contents (haul / donate / sell / shred).</div>';
     svcBadgeEl.innerHTML = svcBadgeTxt;
   }
 
   var access = document.getElementById('adj-access').checked;
-  var heirs = document.getElementById('adj-heirs').checked;
+  // Contested probate already carries the multi-heir / multi-attorney premium inside
+  // its JOB_STEPS coefficients (heavier documentation, legal, and disposition load).
+  // The generic "multiple decision-makers / heirs" +20% toggle would double-count it,
+  // so for contested jobs we force it off, disable it, and explain why. For every other
+  // service type the toggle behaves as before.
+  var heirsBakedIn = (svcKey === 'contested_probate');
+  var heirsEl = document.getElementById('adj-heirs');
+  var heirsSubEl = document.getElementById('adj-heirs-sub');
+  var heirsWrapEl = document.getElementById('adj-heirs-wrap');
+  if (heirsEl) {
+    heirsEl.disabled = heirsBakedIn;
+    if (heirsBakedIn) heirsEl.checked = false;
+  }
+  if (heirsWrapEl) heirsWrapEl.style.opacity = heirsBakedIn ? '0.55' : '';
+  if (heirsSubEl) heirsSubEl.textContent = heirsBakedIn
+    ? 'Built into contested-probate rates — no separate uplift'
+    : 'Adds 20% to Transition Concierge hours only';
+  var heirs = heirsEl ? heirsEl.checked : false;
   var adjTCpct = (access ? 0.15 : 0);
   var adjPSpct = (access ? 0.15 : 0);
   var adjTCheirs = heirs ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;
   var adjTC = Math.round((baseTCHrs * adjTCpct + adjTCheirs) * 10) / 10;
   var adjPS = Math.round(basePSHrs * adjPSpct * 10) / 10;
-  var totTC = Math.round((baseTCHrs + adjTC) * 10) / 10;
+  // Change 3: premium-estate specialty coordination (auction house, appraiser,
+  // wine/art logistics) — a flat +25 TC hours, not scaled by the access/heir uplifts.
+  var premiumSpecialtyTC = prem ? 25 : 0;
+  var totTC = Math.round((baseTCHrs + adjTC + premiumSpecialtyTC) * 10) / 10;
   var totPS = Math.round((basePSHrs + adjPS) * 10) / 10;
   var days = eng.days;
   var crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
@@ -2488,14 +2567,14 @@ function calcAll() {
   // TC hours are the hard floor — PS cannot compress below the TC-gated duration.
   // Projected completion is derived from the estimate, not taken from the client.
   // The optional hard target (job.completion) triggers a warning if we can't meet it.
-  var crew = computeRequiredCrew(totPS, totTC);
+  var crew = computeRequiredCrew(totPS, totTC, prem, svcKey);
   // Use the engine's duration (max of concierge, specialist-crew, logistics floor)
   // for the projected completion, rather than the raw concierge-hours/7.
   crew.tcDays = daysNeeded;
-  // Enforce the crew floor on the PS dropdowns.
+  // Enforce the recommended crew on the PS dropdowns (up to the raised cap of 6).
   var curPS = getScheduledPSCount();
   if (curPS < crew.requiredPS) {
-    for (var psi = 0; psi < 4; psi++) {
+    for (var psi = 0; psi < 6; psi++) {
       var slotEl = document.getElementById('ps-slot-' + psi);
       if (slotEl && psi < crew.requiredPS && (slotEl.value === 'none' || !slotEl.value)) {
         slotEl.value = 'contractor_standard';
@@ -2505,15 +2584,19 @@ function calcAll() {
     crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
   }
   // Unify the projected duration with the Client Estimate. Compute working days from
-  // the FINAL billable hours (which include access/heirs adjustments and prep
-  // coordination), not just the base engine room hours — otherwise the estimate tab
-  // and the client document disagree (e.g. 8 vs 9 days). Keep the engine's duration
-  // as a floor so the logistics/mobilization minimum still applies. Both the timeline
-  // badge below and the Client Estimate now read this one value via e.days.
+  // the FINAL billable hours (which include access/heirs adjustments, the premium
+  // specialty block, and prep coordination), not just the base engine room hours —
+  // otherwise the estimate tab and the client document disagree (e.g. 8 vs 9 days).
+  // Duration is target-driven (Change 4): TC gated by the recommended TC count, PS
+  // gated by the actual/recommended crew, floored at the service mobilization minimum.
+  // Both the timeline badge below and the Client Estimate read this one value via e.days.
   var _psForDays = Math.max(getScheduledPSCount(), crew.requiredPS, 1);
-  daysNeeded = Math.max(Math.ceil(totTC / 7), Math.ceil(totPS / (_psForDays * 7)), eng.days);
+  var _tcForDays = crew.tcCount || 1;
+  var _mobFloor  = ENGINE_FLOOR[svcKey] || 2;
+  daysNeeded = Math.max(Math.ceil(totTC / (_tcForDays * 7)), Math.ceil(totPS / (_psForDays * 7)), _mobFloor);
   days = daysNeeded;
   crew.tcDays = daysNeeded;
+  crew.overTarget = daysNeeded > TARGET_DAYS;
   if (timelineBadge) {
     if (includedRoomCount === 0) {
       // No scope yet — a projected completion derived from zero hours is meaningless
@@ -2525,18 +2608,21 @@ function calcAll() {
       var projectedEnd = addWorkingDays(jobStartStr, crew.tcDays);
       var projDateFmt = new Date(projectedEnd + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
       var hardTarget = loadedJob && loadedJob.completion ? loadedJob.completion : null;
-      var crewNote = crew.requiredPS <= 2
+      var tcNote = (crew.tcCount >= 2 ? '2 TC' : '1 TC');
+      var crewNote = tcNote + ' + ' + (crew.requiredPS <= 2
         ? '2 PS'
-        : '<strong>' + crew.requiredPS + ' PS required</strong> (auto-set)';
+        : '<strong>' + crew.requiredPS + ' PS recommended</strong>');
       var assigned = Math.max(getScheduledPSCount(), crew.requiredPS);
       if (assigned > crew.requiredPS) crewNote += ', ' + assigned + ' assigned';
-      var overCapNote = crew.overCapacity ? ' <strong style="color:var(--err);">Crew cap exceeded — escalate to Anthony Sr.</strong>' : '';
+      var overNote = crew.overTarget
+        ? ' <span style="color:var(--gray);">— exceeds ' + TARGET_DAYS + '-day target at ' + (crew.maxedOut ? 'maximum' : 'recommended') + ' staffing; scope-driven.</span>'
+        : '';
       if (hardTarget && projectedEnd > hardTarget) {
         var htFmt = new Date(hardTarget + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
         timelineBadge.innerHTML = '<div class="alert a-err" style="margin-top:0;"><strong>Cannot meet hard target.</strong> Projected completion is ' + projDateFmt + ' (' + crew.tcDays + ' working days, ' + crewNote + ') — ' + Math.round(workingDaysBetween(hardTarget, projectedEnd)) + ' working days past the ' + htFmt + ' deadline. Renegotiate scope or deadline before sending estimate.</div>';
       } else {
         var htNote = hardTarget ? ' Hard target ' + new Date(hardTarget + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ✓' : '';
-        timelineBadge.innerHTML = '<div class="alert ' + (crew.overCapacity ? 'a-err' : crew.requiredPS >= 4 ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">Projected completion: <strong>' + projDateFmt + '</strong> (' + crew.tcDays + ' working days, ' + crewNote + ')' + htNote + overCapNote + '</div>';
+        timelineBadge.innerHTML = '<div class="alert ' + (crew.overTarget ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">Projected completion: <strong>' + projDateFmt + '</strong> (' + crew.tcDays + ' working days, ' + crewNote + ')' + htNote + overNote + '</div>';
       }
     }
   }
@@ -2631,10 +2717,21 @@ function calcAll() {
       if (fpNote)  fpNote.textContent  = 'Planning estimate only — the final invoice bills actual TC + PS hours, with an hour-by-hour breakdown for the Personal Representative and court. No fixed-price contingency. Vendor costs pass through at cost.';
     } else {
       var buf = fixedPriceBuffer(svcKey);
-      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf));
-      if (fpLabel) fpLabel.textContent = 'Fixed-price project fee — Havellin services × ' + Math.round(buf * 100) + '% contingency';
+      // Rush multiplier: keyed to the runway (calendar days from today to the hard
+      // target). Applied AFTER the buffer. No hard target = ample runway = ×1.00.
+      var _hardTarget = loadedJob && loadedJob.completion ? loadedJob.completion : null;
+      var _runwayDays = null;
+      if (_hardTarget) {
+        _runwayDays = Math.round((new Date(_hardTarget + 'T12:00:00') - new Date()) / 86400000);
+      }
+      var rush = rushMultiplier(_runwayDays);
+      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf) * rush);
+      var rushPct = Math.round((rush - 1) * 100);
+      if (fpLabel) fpLabel.textContent = 'Fixed-price project fee — Havellin services × ' + Math.round(buf * 100) + '% contingency' + (rushPct > 0 ? ' × +' + rushPct + '% rush timeline' : '');
       if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
-      if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.';
+      if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
+        + (rushPct > 0 ? ' Includes a +' + rushPct + '% compressed-timeline adjustment (' + _runwayDays + '-day runway to the hard target).' : '')
+        + (_runwayDays != null && _runwayDays < 30 ? ' ⚠ Sub-30-day turnaround — requires written client acknowledgment before scheduling.' : '');
     }
   } else if (fpPanel) {
     fpPanel.style.display = 'none';
@@ -3276,11 +3373,10 @@ function loadJobIntoEstimate() {
   var svcDisplay = document.getElementById('e-svc-display');
   if (svcDisplay) svcDisplay.textContent = svcLabelsDisp[job.svc] || job.svc || '—';
   svcTypeChanged();
-  // Contested probate inherently has multiple/disputing heirs — auto-enable the
-  // "Multiple decision-makers / heirs?" toggle, which is the single mechanism for
-  // that +20% concierge premium (no hidden multiplier on the job type). Editable.
-  var heirsTgl = document.getElementById('adj-heirs');
-  if (heirsTgl && job.svc === 'contested_probate') heirsTgl.checked = true;
+  // Contested probate carries its multi-heir / multi-attorney premium inside its own
+  // JOB_STEPS coefficients, so we no longer auto-enable the generic "multiple
+  // decision-makers / heirs?" +20% toggle for it — that would double-count. calcAll()
+  // forces the toggle off and disables it for contested jobs.
   // Auto-populate estimate prepared by from site visit TC
   var prepByEl = document.getElementById('e-prepared-by');
   if (prepByEl && job.siteVisitBy) prepByEl.value = job.siteVisitBy;
@@ -3365,7 +3461,7 @@ function applyOpenedEstimate(jobId, job, status) {
   window._suppressEstimateAutoSave = false;
   document.getElementById('e-prem').checked = job.premium || false;
   // Reset PS slots
-  for (var si = 0; si <= 3; si++) {
+  for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
     if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
   }
@@ -3389,7 +3485,7 @@ function clearEstimateTab() {
   var targetEl = document.getElementById('e-target-date');
   if (targetEl) targetEl.value = '';
   document.getElementById('e-prem').checked = false;
-  for (var si = 0; si <= 3; si++) {
+  for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
     if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
   }
@@ -3543,7 +3639,7 @@ function resetEstimate() {
   var prepFields = document.getElementById('prep-fields'); if(prepFields) prepFields.style.display='none';
   var prepNote = document.getElementById('prep-note'); if(prepNote) prepNote.style.display='none';
   // Reset PS slots to defaults
-  for (var si = 0; si <= 3; si++) {
+  for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
     if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
   }
@@ -11342,7 +11438,7 @@ function getPSCostRate(name) {
 
 function getPSSlots() {
   var slots = [];
-  for (var i = 0; i <= 3; i++) {
+  for (var i = 0; i <= 5; i++) {
     var el = document.getElementById('ps-slot-' + i);
     if (!el) continue;
     var val = el.value;
@@ -11569,7 +11665,7 @@ function rebuildDropdowns() {
       var bLast = b.name.trim().split(' ').pop();
       return aLast.localeCompare(bLast);
     });
-  for (var si = 0; si <= 3; si++) {
+  for (var si = 0; si <= 5; si++) {
     var slotSel = document.getElementById('ps-slot-' + si);
     if (!slotSel) continue;
     var curSlot = slotSel.value;
