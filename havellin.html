@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 5:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 5:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -779,12 +779,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
           <tr><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
           <tr><td class="muted">Vendor SMF (15%)</td><td class="num" id="s-smf">$0</td></tr>
-          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
-          <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
+          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
+          <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
           <tr><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
-          <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
+          <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
         <div id="fixed-price-panel" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
@@ -2303,6 +2303,7 @@ function computeRequiredCrew(totPS, totTC, premium, svc) {
 function fixedPriceBuffer(svcKey) {
   if (svcKey === 'contested_probate') return 0.35;
   if (svcKey === 'probate')           return 0.25;
+  if (svcKey === 'cleanout')          return 0.25;  // Estate Settlement
   return 0.20;
 }
 
@@ -2687,7 +2688,7 @@ function calcAll() {
     if (svcType === 'prep' && (coordDays > 0 || vendorTotal > 0)) {
       prepSummaryEl.style.display = 'block';
       prepSummaryEl.innerHTML =
-        '<div class="sec" style="margin-bottom:6px;">Prep for Sale Breakdown</div>' +
+        '<div class="sec" style="margin-bottom:6px;">Home Prep for Sale Breakdown</div>' +
         '<table style="width:100%;font-size:11px;border-collapse:collapse;">' +
         (coordDays > 0 ? '<tr><td style="padding:4px 0;">Transition Concierge coordination (' + coordDays + ' days × 8hrs)</td><td style="text-align:right;">' + fmt(coordDays*8*tcRate) + '</td></tr>' : '') +
         (vendorTotal > 0 ? '<tr><td style="padding:4px 0;">Contractor / vendor costs</td><td style="text-align:right;">' + fmt(vendorTotal) + '</td></tr>' : '') +
@@ -2747,9 +2748,16 @@ function calcAll() {
   if (fpPanel && havellinTotalDiscounted > 0) {
     fpPanel.style.display = 'block';
     if (courtBilled) {
-      if (fpLabel) fpLabel.textContent = 'Itemized hourly estimate — billed on actual logged hours';
+      // Court-billed engagements bill on actual logged hours (T&M). We still surface
+      // what a fixed-price quote WOULD run, with the contingency buffer, as an
+      // internal manager reference — this panel is on the Build Estimate tab only,
+      // never on the client-facing document, and it does not change the billing.
+      var _refBuf = fixedPriceBuffer(svcKey);
+      var _refFixed = Math.round(havellinTotalDiscounted * (1 + _refBuf));
+      if (fpLabel) fpLabel.textContent = 'Time & materials — billed on actual logged hours';
       if (fpVal)   fpVal.textContent   = '$' + Math.round(havellinTotalDiscounted).toLocaleString();
-      if (fpNote)  fpNote.textContent  = 'Planning estimate only — the final invoice bills actual TC + PS hours, with an hour-by-hour breakdown for the Personal Representative and court. No fixed-price contingency. Vendor costs pass through at cost.';
+      if (fpNote)  fpNote.innerHTML    = 'The final invoice bills actual TC + PS hours, itemized for the Personal Representative and court — no fixed-price contingency, vendor costs at cost. '
+        + '<span style="color:var(--gray-dk);">Internal reference: a fixed-price quote would run <strong>$' + _refFixed.toLocaleString() + '</strong> (incl. ' + Math.round(_refBuf * 100) + '% contingency). Not shown to the client.</span>';
     } else {
       var buf = fixedPriceBuffer(svcKey);
       // Rush multiplier: keyed to the runway (calendar days from today to the hard
@@ -3752,7 +3760,7 @@ function proposedPlanRow(e) {
   }
 
   if (e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
-    notes.push(['Home prep for sale', 'We manage the work needed to get the property show-ready, coordinating and overseeing each vendor — detailed below.']);
+    notes.push(['Home Prep for Sale', 'We manage the work needed to get the property show-ready, coordinating and overseeing each vendor — detailed below.']);
   }
 
   var notesHtml = notes.map(function(n){
