@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 3:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 4:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4152,7 +4152,33 @@ function applyEstimateLock() {
   // "Edit Estimate" button, which resets to TC Review (draft) state.
   var locked = estimateApproved || estimateSubmitted;
   var banner = document.getElementById('est-approved-banner');
-  if (banner) banner.style.display = locked ? 'flex' : 'none';
+  if (banner) {
+    banner.style.display = locked ? 'flex' : 'none';
+    if (locked) {
+      // State-aware copy so the banner tells the truth about the lock. An estimate
+      // stays a negotiation artifact (revisable via Edit / Offer Discount) after
+      // approval — it only becomes Change-Order-only once the agreement is SIGNED.
+      var _ceJobLk = jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); });
+      var _signedLk = !!(_ceJobLk && _ceJobLk.agrSigned);
+      var _bIcon, _bTitle, _bText;
+      if (estimateSubmitted && !estimateApproved) {
+        _bIcon = '&#8987;'; // hourglass
+        _bTitle = 'Out for Manager Approval';
+        _bText = 'Locked while the manager reviews. It reopens for edits as soon as it’s approved or denied.';
+      } else if (estimateApproved && !_signedLk) {
+        _bIcon = '&#9998;'; // pencil
+        _bTitle = 'Approved — Locked for Direct Edits';
+        _bText = 'Still negotiable: to revise price or scope, use <strong>Edit Estimate</strong> or <strong>Offer Discount</strong> on the Client Estimate tab (manager re-approval required). A Change Order is only needed once the agreement is signed.';
+      } else {
+        _bIcon = '&#128274;'; // lock
+        _bTitle = 'Estimate Locked — Under Signed Agreement';
+        _bText = 'The agreement is signed, so this estimate is the basis of an executed contract. To make changes, create a Change Order from the Client Dashboard.';
+      }
+      banner.innerHTML = '<span style="font-size:20px;">' + _bIcon + '</span>' +
+        '<div><div style="font-weight:700;font-size:13px;">' + _bTitle + '</div>' +
+        '<div style="font-size:11px;opacity:.8;margin-top:2px;">' + _bText + '</div></div>';
+    }
+  }
   // Lock the ENTIRE estimator input area, not just the room table — the
   // discount, property value, adjustments and prep fields live outside the
   // room table and must freeze too. The job selector stays enabled so the user
