@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 2:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 3:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2276,10 +2276,27 @@ function computeRequiredCrew(totPS, totTC, premium, svc) {
 
 // ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
 // Contingency buffer added on top of hourly estimate for fixed-price proposals.
+// Court-billed engagements (Estate Settlement / Probate / Contested) stay strictly
+// time-and-materials and never use this buffer — only living / fixed-price jobs do.
 function fixedPriceBuffer(svcKey) {
   if (svcKey === 'contested_probate') return 0.35;
   if (svcKey === 'probate')           return 0.25;
   return 0.20;
+}
+
+// ─── RUSH MULTIPLIER ──────────────────────────────────────────────────────────
+// Applied AFTER the contingency buffer on a fixed-price fee, keyed to the runway
+// (calendar days from today to the client's hard-target deadline). Compressed
+// timelines cost more to staff. A <30-day runway also requires a written client
+// acknowledgment. Only meaningful when a hard target exists and the job is priced
+// fixed — time-and-materials engagements carry their margin in the hourly rate.
+function rushMultiplier(runwayDays) {
+  if (runwayDays == null || !isFinite(runwayDays)) return 1.00;
+  if (runwayDays >= 90) return 1.00;
+  if (runwayDays >= 60) return 1.12;
+  if (runwayDays >= 45) return 1.20;
+  if (runwayDays >= 30) return 1.32;
+  return 1.50;
 }
 
 // ─── PROBATE INVENTORY MULTIPLIER ────────────────────────────────────────────
@@ -2683,10 +2700,21 @@ function calcAll() {
       if (fpNote)  fpNote.textContent  = 'Planning estimate only — the final invoice bills actual TC + PS hours, with an hour-by-hour breakdown for the Personal Representative and court. No fixed-price contingency. Vendor costs pass through at cost.';
     } else {
       var buf = fixedPriceBuffer(svcKey);
-      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf));
-      if (fpLabel) fpLabel.textContent = 'Fixed-price project fee — Havellin services × ' + Math.round(buf * 100) + '% contingency';
+      // Rush multiplier: keyed to the runway (calendar days from today to the hard
+      // target). Applied AFTER the buffer. No hard target = ample runway = ×1.00.
+      var _hardTarget = loadedJob && loadedJob.completion ? loadedJob.completion : null;
+      var _runwayDays = null;
+      if (_hardTarget) {
+        _runwayDays = Math.round((new Date(_hardTarget + 'T12:00:00') - new Date()) / 86400000);
+      }
+      var rush = rushMultiplier(_runwayDays);
+      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf) * rush);
+      var rushPct = Math.round((rush - 1) * 100);
+      if (fpLabel) fpLabel.textContent = 'Fixed-price project fee — Havellin services × ' + Math.round(buf * 100) + '% contingency' + (rushPct > 0 ? ' × +' + rushPct + '% rush timeline' : '');
       if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
-      if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.';
+      if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
+        + (rushPct > 0 ? ' Includes a +' + rushPct + '% compressed-timeline adjustment (' + _runwayDays + '-day runway to the hard target).' : '')
+        + (_runwayDays != null && _runwayDays < 30 ? ' ⚠ Sub-30-day turnaround — requires written client acknowledgment before scheduling.' : '');
     }
   } else if (fpPanel) {
     fpPanel.style.display = 'none';
