@@ -369,14 +369,22 @@ function createJobFolder(hvlId, clientName, svc, subfolderNames, parentFolderId)
   try {
     var rootFolder = DriveApp.getFolderById(parentFolderId || ROOT_FOLDER_ID);
     var folderName = clientName + ' - ' + hvlId;
-    var clientFolder = rootFolder.createFolder(folderName);
+    // Idempotent by name: REUSE an existing job folder instead of creating another.
+    // createFolder fires from more than one place (auto on client creation + the
+    // manual button) and across devices; without this each call minted a fresh
+    // "Client - HVLID" folder, which is how one client ended up with 4 folders.
+    var existing = rootFolder.getFoldersByName(folderName);
+    var reused = existing.hasNext();
+    var clientFolder = reused ? existing.next() : rootFolder.createFolder(folderName);
     var names = subfolderNames || ['Photos', 'Walkthrough Notes', 'Estimate', 'Agreement', 'Change Orders', 'Asset Documentation', 'Invoice', 'Job Log'];
     var subfolders = {};
     names.forEach(function(name) {
-      var sub = clientFolder.createFolder(name);
+      // Same reuse-by-name rule for each subfolder, so re-running never duplicates them.
+      var subIt = clientFolder.getFoldersByName(name);
+      var sub = subIt.hasNext() ? subIt.next() : clientFolder.createFolder(name);
       subfolders[name] = { id: sub.getId(), url: sub.getUrl() };
     });
-    return { ok: true, success: true, folderUrl: clientFolder.getUrl(), folderId: clientFolder.getId(), folderName: folderName, subfolders: subfolders };
+    return { ok: true, success: true, folderUrl: clientFolder.getUrl(), folderId: clientFolder.getId(), folderName: folderName, subfolders: subfolders, reused: reused };
   } catch (error) {
     Logger.log('createJobFolder error: ' + error.toString());
     return { ok: false, success: false, error: error.toString() };
