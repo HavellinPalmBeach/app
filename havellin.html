@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 3:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -537,8 +537,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to all hours</div></div>
           <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
         </div>
-        <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub">Adds 20% to Transition Concierge hours only</div></div>
+        <div class="toggle-wrap" id="adj-heirs-wrap">
+          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
           <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <!-- Property value, square footage, and years in home are captured at Client Intake
@@ -2447,14 +2447,31 @@ function calcAll() {
     var svcBadgeTxt = '';
     if (svcKey === 'cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Estate Settlement: adds full item documentation for the §733.604 inventory.</div>';
     else if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate: documentation + legal / chain-of-custody work.</div>';
-    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: documentation + legal + 20% concierge for multiple heirs/attorneys.</div>';
+    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: heavier documentation, legal, and disposition load for multiple heirs/attorneys is built into the rates — no separate heir uplift.</div>';
     else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: move-day coordination added (scales with home size).</div>';
     else if (svcKey === 'home_cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Home Cleanout: full disposition of all contents (haul / donate / sell / shred).</div>';
     svcBadgeEl.innerHTML = svcBadgeTxt;
   }
 
   var access = document.getElementById('adj-access').checked;
-  var heirs = document.getElementById('adj-heirs').checked;
+  // Contested probate already carries the multi-heir / multi-attorney premium inside
+  // its JOB_STEPS coefficients (heavier documentation, legal, and disposition load).
+  // The generic "multiple decision-makers / heirs" +20% toggle would double-count it,
+  // so for contested jobs we force it off, disable it, and explain why. For every other
+  // service type the toggle behaves as before.
+  var heirsBakedIn = (svcKey === 'contested_probate');
+  var heirsEl = document.getElementById('adj-heirs');
+  var heirsSubEl = document.getElementById('adj-heirs-sub');
+  var heirsWrapEl = document.getElementById('adj-heirs-wrap');
+  if (heirsEl) {
+    heirsEl.disabled = heirsBakedIn;
+    if (heirsBakedIn) heirsEl.checked = false;
+  }
+  if (heirsWrapEl) heirsWrapEl.style.opacity = heirsBakedIn ? '0.55' : '';
+  if (heirsSubEl) heirsSubEl.textContent = heirsBakedIn
+    ? 'Built into contested-probate rates — no separate uplift'
+    : 'Adds 20% to Transition Concierge hours only';
+  var heirs = heirsEl ? heirsEl.checked : false;
   var adjTCpct = (access ? 0.15 : 0);
   var adjPSpct = (access ? 0.15 : 0);
   var adjTCheirs = heirs ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;
@@ -3356,11 +3373,10 @@ function loadJobIntoEstimate() {
   var svcDisplay = document.getElementById('e-svc-display');
   if (svcDisplay) svcDisplay.textContent = svcLabelsDisp[job.svc] || job.svc || '—';
   svcTypeChanged();
-  // Contested probate inherently has multiple/disputing heirs — auto-enable the
-  // "Multiple decision-makers / heirs?" toggle, which is the single mechanism for
-  // that +20% concierge premium (no hidden multiplier on the job type). Editable.
-  var heirsTgl = document.getElementById('adj-heirs');
-  if (heirsTgl && job.svc === 'contested_probate') heirsTgl.checked = true;
+  // Contested probate carries its multi-heir / multi-attorney premium inside its own
+  // JOB_STEPS coefficients, so we no longer auto-enable the generic "multiple
+  // decision-makers / heirs?" +20% toggle for it — that would double-count. calcAll()
+  // forces the toggle off and disables it for contested jobs.
   // Auto-populate estimate prepared by from site visit TC
   var prepByEl = document.getElementById('e-prepared-by');
   if (prepByEl && job.siteVisitBy) prepByEl.value = job.siteVisitBy;
