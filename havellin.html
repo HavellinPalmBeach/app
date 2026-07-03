@@ -525,6 +525,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <select id="e-prepared-by">
           <option value="">Select TC</option>
         </select>
+        <div id="e-tc2-wrap">
+          <label>Second Transition Concierge <span style="color:var(--gray);font-weight:400;">(optional)</span></label>
+          <select id="e-prepared-by-2" onchange="calcAll()">
+            <option value="">None — single concierge</option>
+          </select>
+          <div id="e-tc2-hint" style="font-size:11px;color:var(--gray);margin-top:2px;"></div>
+        </div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <div id="e-svc-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <input type="hidden" id="e-svc" value="">
@@ -2597,6 +2604,19 @@ function calcAll() {
   days = daysNeeded;
   crew.tcDays = daysNeeded;
   crew.overTarget = daysNeeded > TARGET_DAYS;
+  // Second Transition Concierge: nudge the estimator to name a second concierge when
+  // the engine recommends two (premium jobs whose solo-TC time exceeds the target).
+  var tc2Hint = document.getElementById('e-tc2-hint');
+  var tc2Sel = document.getElementById('e-prepared-by-2');
+  if (tc2Hint) {
+    if (crew.tcCount >= 2 && !(tc2Sel && tc2Sel.value)) {
+      tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">Engine recommends 2 concierges for this scope</span> — assign a second here so both are tracked on the job.';
+    } else if (tc2Sel && tc2Sel.value) {
+      tc2Hint.textContent = 'Both concierges will be tracked in the crew and Log Hours. Billing is total TC hours — a second concierge shortens the calendar, not the fee.';
+    } else {
+      tc2Hint.textContent = '';
+    }
+  }
   if (timelineBadge) {
     if (includedRoomCount === 0) {
       // No scope yet — a projected completion derived from zero hours is meaningless
@@ -2839,6 +2859,8 @@ function calcAll() {
     discountPct: discountPct,
     discountAmt: Math.round(discountAmt),
     preparedBy: document.getElementById('e-prepared-by') ? document.getElementById('e-prepared-by').value : '',
+    preparedBy2: document.getElementById('e-prepared-by-2') ? document.getElementById('e-prepared-by-2').value : '',
+    tcCount: crew.tcCount || 1,
     destTC: typeof destTC !== 'undefined' ? destTC : 0,
     destPS: typeof destPS !== 'undefined' ? destPS : 0,
     psSlots: getPSSlots(),
@@ -4843,6 +4865,9 @@ function restoreEstimateToUI(est) {
     // Restore prepared-by: prefer the saved value on the estimate, fall back to the job's TC
     var prepByEl = document.getElementById('e-prepared-by');
     if (prepByEl) prepByEl.value = est.preparedBy || jobForStart.siteVisitBy || jobForStart.tc || '';
+    // Restore the optional second concierge
+    var prepBy2El = document.getElementById('e-prepared-by-2');
+    if (prepBy2El) prepBy2El.value = est.preparedBy2 || '';
   }
 
 
@@ -7592,7 +7617,8 @@ var PS_NAMES = ['Anthony Graziano Jr', 'Contractor — PS 1', 'Contractor — PS
 // crew member can be added later (and that slot locks on its own first save).
 function seedCrewFromEstimate(job, est) {
   var TIERS = { contractor_standard:1, contractor_senior:1, aj:1, none:1 };
-  var crew = { tc: { name: (est && est.preparedBy) || job.tc || '', locked: false }, ps: [] };
+  var crew = { tc: { name: (est && est.preparedBy) || job.tc || '', locked: false },
+               tc2: { name: (est && est.preparedBy2) || '', locked: false }, ps: [] };
   var slots = (est && est.psSlots) ? est.psSlots : [];
   slots.forEach(function(s) {
     var isTier = !!TIERS[s.type];
@@ -7615,12 +7641,24 @@ function getJobCrew(jobId) {
     var est = rec ? rec.estimate : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
     job.crew = seedCrewFromEstimate(job, est);
   }
+  // Migrate crews seeded before the second-concierge slot existed.
+  if (job.crew && !job.crew.tc2) {
+    var rec2 = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
+    var est2 = rec2 ? rec2.estimate : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
+    job.crew.tc2 = { name: (est2 && est2.preparedBy2) || '', locked: false };
+  }
   return job.crew;
 }
 
 function setCrewTC(jobId, name) {
   var crew = getJobCrew(jobId); if (!crew || crew.tc.locked) return;
   crew.tc.name = name; saveJobs();
+}
+function setCrewTC2(jobId, name) {
+  var crew = getJobCrew(jobId); if (!crew) return;
+  if (!crew.tc2) crew.tc2 = { name:'', locked:false };
+  if (crew.tc2.locked) return;
+  crew.tc2.name = name; saveJobs();
 }
 function setCrewPS(jobId, slot, name) {
   var crew = getJobCrew(jobId); if (!crew) return;
@@ -7635,6 +7673,7 @@ function setCrewPS(jobId, slot, name) {
 function lockAssignedCrew(jobId) {
   var crew = getJobCrew(jobId); if (!crew) return;
   if (crew.tc.name && !crew.tc.locked) crew.tc.locked = true;
+  if (crew.tc2 && crew.tc2.name && !crew.tc2.locked) crew.tc2.locked = true;
   crew.ps.forEach(function(p){ if (p.name && !p.locked) p.locked = true; });
   saveJobs();
 }
@@ -7675,10 +7714,29 @@ function buildLogTeamRows() {
     '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
   '</div>';
 
-  // PS rows 1-4 (slot index = i-1) in a responsive 2-column grid to save space.
+  // Second TC row — shown when the estimate recommended two concierges or a second
+  // is already assigned. Its hours log as TC role and roll into the TC total.
+  var estRecLog = (jobId && typeof estimateStore !== 'undefined' && estimateStore[jobId]) ? estimateStore[jobId].estimate : null;
+  var tc2Name = (crew && crew.tc2) ? crew.tc2.name : '';
+  var tc2Locked = !!(crew && crew.tc2 && crew.tc2.locked);
+  var showTC2 = (estRecLog && estRecLog.tcCount >= 2) || !!tc2Name;
+  if (showTC2) {
+    html += '<div style="' + rowStyle + '">' +
+      '<div>' +
+        '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge 2' + (tc2Locked ? lockTag : '') + '</label>' +
+        '<select id="log-tc2-name"' + (tc2Locked ? ' disabled' : '') + ' onchange="setCrewTC2(' + jobId + ',this.value)" style="margin-top:4px;">' +
+          '<option value="">Not on site</option>' +
+          optList(tcNames, tc2Name) +
+        '</select>' +
+      '</div>' +
+      '<div><label style="margin:0;">Hours</label><input type="number" id="log-tc2-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
+    '</div>';
+  }
+
+  // PS rows 1-6 (slot index = i-1) in a responsive 2-column grid to save space.
   // Locked slots are fixed; empty slots stay addable.
   var psCells = '';
-  for (var i = 1; i <= 4; i++) {
+  for (var i = 1; i <= 6; i++) {
     var slot = i - 1;
     var p = crew && crew.ps[slot] ? crew.ps[slot] : null;
     var psName = p ? p.name : '';
@@ -7709,12 +7767,23 @@ function saveLogEntry() {
   var activity = document.getElementById('log-activity').value.trim();
 
   var members = [];
-  for (var i = 0; i <= 4; i++) {
-    var name = document.getElementById('log-m'+i+'-name').value;
-    var hrs = parseFloat(document.getElementById('log-m'+i+'-hrs').value) || 0;
+  for (var i = 0; i <= 6; i++) {
+    var nEl = document.getElementById('log-m'+i+'-name');
+    var hEl = document.getElementById('log-m'+i+'-hrs');
+    if (!nEl || !hEl) continue;                 // row not rendered (e.g. unused PS slot)
+    var name = nEl.value;
+    var hrs = parseFloat(hEl.value) || 0;
     if (name && hrs > 0) {
       members.push({name: name, role: i === 0 ? 'TC' : 'PS', hours: hrs});
     }
+  }
+  // Second Transition Concierge row (optional) logs as TC.
+  var tc2NEl = document.getElementById('log-tc2-name');
+  var tc2HEl = document.getElementById('log-tc2-hrs');
+  if (tc2NEl && tc2HEl) {
+    var tc2n = tc2NEl.value;
+    var tc2h = parseFloat(tc2HEl.value) || 0;
+    if (tc2n && tc2h > 0) members.push({name: tc2n, role: 'TC', hours: tc2h});
   }
 
   if (members.length === 0) { showFB('log-fb','warn','Enter at least one team member with hours.'); return; }
@@ -7742,10 +7811,12 @@ function clearLogEntry() {
   // Crew names persist (they live on job.crew); only hours/date/activity reset.
   document.getElementById('log-activity').value = '';
   document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
-  for (var i = 0; i <= 4; i++) {
+  for (var i = 0; i <= 6; i++) {
     var hrsEl = document.getElementById('log-m'+i+'-hrs');
     if (hrsEl) hrsEl.value = '';
   }
+  var tc2HrsEl = document.getElementById('log-tc2-hrs');
+  if (tc2HrsEl) tc2HrsEl.value = '';
 }
 
 function deleteLogEntry(jobId, entryId) {
@@ -8623,9 +8694,18 @@ function loadJobPlanTab() {
     }
   }
 
-  // Auto-select PS crew from estimate assignment
+  // Auto-select the second TC (if the estimate named one)
+  var tc2Sel = document.getElementById('log-tc2-name');
+  var tc2Assigned = (job.crew && job.crew.tc2 && job.crew.tc2.name) || (est && est.preparedBy2) || '';
+  if (tc2Sel && tc2Assigned) {
+    for (var t2 = 0; t2 < tc2Sel.options.length; t2++) {
+      if (tc2Sel.options[t2].text === tc2Assigned) { tc2Sel.selectedIndex = t2; break; }
+    }
+  }
+
+  // Auto-select PS crew from estimate assignment (up to 6)
   var psSlots = est.psSlots || [];
-  for (var psi = 0; psi < 4; psi++) {
+  for (var psi = 0; psi < 6; psi++) {
     var psSlot = psSlots[psi];
     var psSel = document.getElementById('log-m' + (psi + 1) + '-name');
     if (!psSel || !psSlot) continue;
@@ -9660,7 +9740,7 @@ function renderJobPlan(jobId, job, est) {
     ['Service', esc(job.svcLabel||est.svc||'—')],
     ['Property', esc([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—')],
     ['Target Start', fmtDate2(job.start)],
-    ['Projected', (job.start && est.totTC ? fmtDate2(addWorkingDays(job.start, Math.ceil(est.totTC / 7))) : '—')]
+    ['Projected', (job.start && (est.days || est.totTC) ? fmtDate2(addWorkingDays(job.start, est.days > 0 ? est.days : Math.ceil(est.totTC / 7))) : '—')]
   ];
   if (isMM && job.destAddr) {
     _hdrBits.push(['New Home', esc([job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') + (job.destSqft ? ' · '+job.destSqft+' sqft':''))]);
@@ -11656,6 +11736,14 @@ function rebuildDropdowns() {
     tcList.forEach(function(c){ prepBySel.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
     if (curPB) prepBySel.value = curPB;
   }
+  // Rebuild the optional second-TC dropdown
+  var prepBy2Sel = document.getElementById('e-prepared-by-2');
+  if (prepBy2Sel) {
+    var curPB2 = prepBy2Sel.value;
+    prepBy2Sel.innerHTML = '<option value="">None — single concierge</option>';
+    tcList.forEach(function(c){ prepBy2Sel.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
+    if (curPB2) prepBy2Sel.value = curPB2;
+  }
 
   // Rebuild PS slot dropdowns — fixed order: AJ first, then Standard/Senior placeholders, then named contractors
   var psNamedList = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS' && c.status!=='inactive' && c.name !== 'Anthony Graziano Jr'; })
@@ -11695,8 +11783,16 @@ function rebuildLogDropdowns(tcList, psList) {
     tcList.forEach(function(c){ tcSel.innerHTML += '<option>'+c.name+'</option>'; });
     if (cur) tcSel.value = cur;
   }
-  // PS rows 1-4
-  for (var i = 1; i <= 4; i++) {
+  // Second TC row (only present when rendered)
+  var tc2Sel = document.getElementById('log-tc2-name');
+  if (tc2Sel) {
+    var cur2 = tc2Sel.value;
+    tc2Sel.innerHTML = '<option value="">Not on site</option>';
+    tcList.forEach(function(c){ tc2Sel.innerHTML += '<option>'+c.name+'</option>'; });
+    if (cur2) tc2Sel.value = cur2;
+  }
+  // PS rows 1-6
+  for (var i = 1; i <= 6; i++) {
     var psSel = document.getElementById('log-m'+i+'-name');
     if (psSel) {
       var curPs = psSel.value;
