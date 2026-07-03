@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 4:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 5:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -562,7 +562,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div>
         <div class="sec">Property Specialists</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to complete all PS hours within the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation. Billing is total PS hours regardless of crew size — adding PS does not change the quote.</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to complete all PS hours within the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation. Billing is total PS hours regardless of crew size — adding PS does not change the estimate.</div>
         <div id="ps-slots">
           <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
             <select id="ps-slot-0" onchange="calcAll()" style="font-size:12px;"><option value="contractor_standard">Contractor — Standard</option></select>
@@ -596,7 +596,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <input type="text" id="ps-crew-reason" placeholder="e.g. Grand piano + oversized armoire require 3 PS simultaneously on Day 1" oninput="calcAll()">
           <div style="font-size:10px;color:var(--gray);margin-top:2px;">Appears on client estimate to justify crew size.</div>
         </div>
-        <div class="sec" style="margin-top:8px;">Preferred Customer Discount</div>
+        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
           <div style="flex:1;">
             <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
@@ -782,7 +782,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
-          <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Customer Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
+          <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
           <tr><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
@@ -1847,6 +1847,21 @@ var PRICING_REF = {
 // PRICING ENGINE v3 — square-footage backbone + room-score modulation + work-steps
 // Spec: PRICING_SCHEMA.md. Pure (no DOM) so it can be unit-tested. calcAll() calls it.
 // ═══════════════════════════════════════════════════════════════════════════════
+// Canonical service-type display labels — the single source of truth for every place
+// that renders a service name (Build Estimate, Client Estimate doc, dashboard, Win/Loss,
+// job header, invoices). Add or rename a service type HERE only, so labels can never
+// drift between tabs again.
+var SVC_LABELS = {
+  downsizing:        'Downsizing',
+  downsizing_move:   'Downsizing & Move Management',
+  home_cleanout:     'Home Cleanout',
+  cleanout:          'Estate Settlement',
+  probate:           'Probate Estate Settlement',
+  contested_probate: 'Contested Probate Estate Settlement',
+  estate:            'Estate Settlement',
+  prep:              'Home Prep for Sale'
+};
+
 var ENGINE_K = 0.0123;                                   // content-load units per under-air sqft
 var ENGINE_VOLF = {1:0.55, 2:0.78, 3:1.0, 4:1.35, 5:1.70}; // volume slider -> load scale (widened: a packed room bites harder, a sparse one drops further; 3 = neutral anchor)
 var ENGINE_CPXF = {1:0.78, 2:0.89, 3:1.0, 4:1.18, 5:1.35}; // complexity slider -> careful-work scale (widened to match)
@@ -2649,7 +2664,7 @@ function calcAll() {
 
   var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
 
-  // Apply preferred customer discount to Havellin labor fees
+  // Apply preferred client discount to Havellin labor fees
   var discountPct = Math.min(30, Math.max(0, parseInt(document.getElementById('e-discount') ? document.getElementById('e-discount').value : 0) || 0));
   var laborBase = tcFee + psFee;  // discount applies to labor only
   var discountAmt = Math.round(laborBase * discountPct / 100);
@@ -2660,7 +2675,7 @@ function calcAll() {
   var discBadge = document.getElementById('discount-badge');
   if (discBadge) {
     if (discountPct > 0) {
-      discBadge.innerHTML = '<div style="background:var(--ok-bg);border-radius:4px;padding:5px 10px;font-size:12px;color:var(--ok-tx);font-weight:600;">&#10003; Preferred Customer Discount active — saving client ' + fmt(discountAmt) + '</div>';
+      discBadge.innerHTML = '<div style="background:var(--ok-bg);border-radius:4px;padding:5px 10px;font-size:12px;color:var(--ok-tx);font-weight:600;">&#10003; Preferred Client Discount active — saving client ' + fmt(discountAmt) + '</div>';
     } else {
       discBadge.innerHTML = '';
     }
@@ -2717,7 +2732,7 @@ function calcAll() {
     sDiscRow.style.display = (discountPct > 0 && discountAmt > 0) ? '' : 'none';
     var sDiscLbl = document.getElementById('s-discount-label');
     var sDiscAmt = document.getElementById('s-discount-amt');
-    if (sDiscLbl) sDiscLbl.textContent = 'Preferred Customer Discount (' + discountPct + '%)';
+    if (sDiscLbl) sDiscLbl.textContent = 'Preferred Client Discount (' + discountPct + '%)';
     if (sDiscAmt) sDiscAmt.textContent = '- $' + Math.round(discountAmt).toLocaleString();
   }
 
@@ -3247,7 +3262,7 @@ function saveIntake() {
     showFB('i-fb','warn','Please complete: ' + missing.join(', ') + '.');
     return;
   }
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = SVC_LABELS;
   var job = {
     id:Date.now(), hvlId:generateHvlId(), name:name, fname:fname, lname:lname,
     phone:document.getElementById('i-phone').value,
@@ -3389,9 +3404,7 @@ function loadJobIntoEstimate() {
   // Load service type and dates
   var svcEl = document.getElementById('e-svc');
   if (svcEl) svcEl.value = job.svc || '';
-  var svcLabelsDisp = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',
-    home_cleanout:'Home Cleanout',
-    cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabelsDisp = SVC_LABELS;
   var svcDisplay = document.getElementById('e-svc-display');
   if (svcDisplay) svcDisplay.textContent = svcLabelsDisp[job.svc] || job.svc || '—';
   svcTypeChanged();
@@ -3809,7 +3822,7 @@ function renderClientEstimate() {
   var _eSplit = paymentSplit(e.havellinTotal);
   var job = e.job || jobs.find(function(j){ return j.id===e.jobId; }) || {};
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = SVC_LABELS;
 
   // Duration comes straight from the estimate's stored working-day count (e.days),
   // the same figure the Estimate tab's timeline badge shows — so the two never
@@ -3975,9 +3988,9 @@ function renderClientEstimate() {
       (e.stagerCost > 0 ? '<tr><td>Professional staging</td><td>' + fmt(e.stagerCost) + ' est.</td><td>Pass-through + 30% GC fee</td><td class="r">' + fmt(e.stagerCost + (e.stagerGcFee||0)) + '</td></tr>' : '') : '') +
     (e.discountPct > 0 ?
       '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt)) + '</td></tr>' +
-      '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Customer Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
+      '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
       : '') +
-    '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred customer discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
+    '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">This estimate is based on the initial property walkthrough. Final charges reflect actual hours worked. If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</div>' +
     ((e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate')
@@ -4838,9 +4851,7 @@ function restoreEstimateToUI(est) {
   if (svcEl && est.svc) { svcEl.value = est.svc; }
   var svcDisplayR = document.getElementById('e-svc-display');
   if (svcDisplayR && est.svc) {
-    var svcLabelsR = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',
-      home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',
-      contested_probate:'Contested Probate Estate Settlement',estate:'Estate Settlement'};
+    var svcLabelsR = SVC_LABELS;
     svcDisplayR.textContent = svcLabelsR[est.svc] || est.svc;
   }
   svcTypeChanged();
@@ -5368,7 +5379,7 @@ function renderClientDashboard(jobId) {
   var initials = nameParts.length >= 2 ? (nameParts[0][0]+(nameParts[nameParts.length-1][0])).toUpperCase() : job.name.slice(0,2).toUpperCase();
 
   // ── Build svcLabel
-  var svcLabelsMap = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabelsMap = SVC_LABELS;
   var svcLabel = svcLabelsMap[job.svc] || job.svc || '—';
   var isEstateDash = (job.svc === 'cleanout' || job.svc === 'probate' || job.svc === 'contested_probate');
 
@@ -5877,7 +5888,7 @@ function renderWinLoss() {
       h += '<th style="padding:7px 10px;text-align:left;">Note</th>';
       h += '<th style="padding:7px 10px;text-align:left;">Date Lost</th>';
       h += '</tr></thead><tbody>';
-      var svcLabel = {downsizing:'Downsizing',downsizing_move:'Downsizing + Move',home_cleanout:'Home Cleanout',estate:'Estate Settlement',cleanout:'Estate Cleanout',probate:'Probate',contested_probate:'Contested Probate'};
+      var svcLabel = SVC_LABELS;
       sorted.forEach(function(j, i){
         var bg = i%2===0 ? 'var(--cream)' : 'var(--white)';
         var dateLost = j.lostAt ? new Date(j.lostAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
@@ -8185,7 +8196,7 @@ function renderInvoice() {
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (30%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
-    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Customer Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
+    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>';
@@ -11861,7 +11872,7 @@ function showEditClient(jobId) {
   if (!job) return;
   var isProbate = (job.svc === 'probate' || job.svc === 'contested_probate');
   var isEstate = (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate');
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',contested_probate:'Contested Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = SVC_LABELS;
 
   var m = document.getElementById('edit-client-modal');
   if (!m) {
@@ -11981,7 +11992,7 @@ function saveClientEdit(jobId) {
   if (!fname || !lname) { alert('First and last name are required.'); return; }
 
   var svc = document.getElementById('ec-svc').value;
-  var svcLabels = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
+  var svcLabels = SVC_LABELS;
 
   // Update core fields
   job.fname = fname;
