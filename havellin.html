@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 3:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 4:15am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5223,50 +5223,34 @@ function renderClientDashboard(jobId) {
   // ── Build svcLabel
   var svcLabelsMap = {downsizing:'Downsizing',downsizing_move:'Downsizing & Move Management',home_cleanout:'Home Cleanout',cleanout:'Estate Settlement',probate:'Probate Estate Settlement',estate:'Estate Settlement'};
   var svcLabel = svcLabelsMap[job.svc] || job.svc || '—';
+  var isEstateDash = (job.svc === 'cleanout' || job.svc === 'probate' || job.svc === 'contested_probate');
 
-  // ── Blocker checks
+  // ── Blocker checks. `short` is the compact top-row chip label; `fix` is the
+  // hover tooltip / detail so the chips stay tight without losing the how-to.
   var blockers = [];
-  if (!job.agrSigned) blockers.push({msg:'Service agreement not yet signed', fix:'Go to Agreement tab to approve and send'});
-  if (!job.depositReceived) blockers.push({msg:'Deposit (50%) not received', fix:'Mark received on Agreement tab once payment clears'});
-  if (job.svc==='probate' && job.executorAuth==='pending') blockers.push({msg:'Executor authorization pending', fix:'Contact '+( job.executor||'executor')+' — '+(job.executorPhone||job.executorEmail||'see probate info')});
+  if (!job.agrSigned) blockers.push({msg:'Service agreement not yet signed', short:'Agreement not signed', fix:'Go to Agreement tab to approve and send'});
+  if (!job.depositReceived) blockers.push({msg:'Deposit (50%) not received', short:'Deposit not received', fix:'Mark received on Agreement tab once payment clears'});
+  if (job.svc==='probate' && job.executorAuth==='pending') blockers.push({msg:'Executor authorization pending', short:'Executor auth pending', fix:'Contact '+( job.executor||'executor')+' — '+(job.executorPhone||job.executorEmail||'see probate info')});
 
   var h = '';
 
   // BACK BUTTON
   h += '<button onclick="closeClientDashboard()" style="font-size:12px;color:var(--gray);background:none;border:none;padding:0;cursor:pointer;margin-bottom:10px;">← Back to Clients</button>';
 
-  // HEADER CARD
+  // HEADER CARD — one white box: identity (avatar + name + address) on the left,
+  // actions on the right, then a single reordered chip row (status · service ·
+  // premium · RE opportunity · blockers) underneath. Redundant executor line and
+  // Job ID that used to sit up here are gone — they live once, in the card below.
   h += '<div class="card" style="margin-bottom:12px;">';
-  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">';
-  h += '<div style="flex:1;">';
-  h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:3px;">';
-  h += '<div style="width:36px;height:36px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--bronze);flex-shrink:0;">'+initials+'</div>';
-  var isEstateDash = (job.svc === 'cleanout' || job.svc === 'probate' || job.svc === 'contested_probate');
-  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
-  if (isEstateDash && job.executor) h += '<div style="font-size:12px;color:var(--gray);margin-top:1px;">'+job.executor+(job.executorRole?' · '+job.executorRole:'')+'</div>';
-  h += '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--bronze);margin-top:1px;">'+( job.hvlId||'—')+'</div>';
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">';
+  h += '<div style="display:flex;align-items:center;gap:12px;min-width:0;">';
+  h += '<div style="width:38px;height:38px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bronze);flex-shrink:0;">'+initials+'</div>';
+  h += '<div style="min-width:0;">';
+  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
+  if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
   h += '</div>';
-  if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-left:46px;margin-bottom:8px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
-  // Bigger, roomier badges. `_bpad` is the shared sizing so every chip stretches
-  // out the same; the RE Opportunity chip breaks the mould on purpose (below).
-  var _bpad = 'font-size:12px;padding:6px 13px;border-radius:5px;';
-  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:46px;padding-bottom:2px;">';
-  h += '<span class="badge b-bronze" style="'+_bpad+'">'+svcLabel+'</span>';
-  if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="'+_bpad+'">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
-  if (job.premium) h += '<span class="badge" style="'+_bpad+'background:var(--tan);color:var(--bronze);">Premium estate</span>';
-  h += '<span class="badge" style="'+_bpad+'background:'+statusColors[job.status]+';color:white;">'+statusLabels[job.status]+'</span>';
-  if (job.re==='yes') {
-    var _reProp = parseInt(job.propVal || (est && est.propVal) || 0) || 0;
-    var _reC = _reProp > 0 ? calcRECommission(_reProp) : null;
-    // The headline chip: a bronze→gold gradient with a gold star and soft glow so
-    // a six-figure commission opportunity actually looks like one.
-    h += '<span class="badge" style="font-size:12.5px;padding:6px 15px;border-radius:5px;background:linear-gradient(135deg,#C9A06A 0%,#A67C45 55%,#7a5a2e 100%);color:#fff;border:1px solid #7a5a2e;box-shadow:0 1px 5px rgba(122,90,46,.4);text-shadow:0 1px 1px rgba(0,0,0,.15);">'
-       + '<span style="color:#FFE39A;">&#9733;</span> Real Estate Opportunity'
-       + (_reC ? ' <span style="opacity:.8;">·</span> <strong style="color:#FFF3DC;">' + formatPropVal(_reC.net) + ' potential</strong>' : '')
-       + '</span>';
-  }
-  h += '</div></div>';
-  h += '<div style="display:flex;gap:7px;flex-shrink:0;">';
+  h += '</div>';
+  h += '<div style="display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">';
   var estRec = estimateStore[jobId];
   var estApproved = (estRec && estRec.approved) || job.approved;
   var estExists = estRec && estRec.estimate && (estRec.estimate.rooms||[]).length > 0;
@@ -5291,36 +5275,74 @@ function renderClientDashboard(jobId) {
     h += '<button class="btn-s" onclick="var btn=this;btn.disabled=true;btn.textContent=\'Creating...\';createDriveJobFolder(jobs.find(function(j){return j.id==='+jobId+';}));" style="color:var(--gray);" title="Create Drive folder for this job">&#128193; Create Folder</button>';
   }
   h += '<button class="btn-p" onclick="activateOrCycle('+jobId+')">'+( job.status==='active'?'Close Job': job.status==='closed'?'Re-open':'Activate Job')+'</button>';
-  h += '</div></div>';
+  h += '</div>';   // close actions
+  h += '</div>';   // close identity/actions flex row
 
-  // BLOCKERS ALERT
-  if (blockers.length > 0 && job.status !== 'active' && job.status !== 'closed') {
-    h += '<div style="background:#FCEBEB;border:0.5px solid #F09595;border-radius:var(--br);padding:10px 14px;margin-bottom:12px;">';
-    h += '<div style="font-size:11px;font-weight:600;color:#A32D2D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Blockers — must resolve before activating</div>';
-    blockers.forEach(function(b){
-      h += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;font-size:12px;">';
-      h += dot('#A32D2D')+'<div><strong style="color:#A32D2D;">'+b.msg+'</strong><div style="color:#791F1F;margin-top:1px;">'+b.fix+'</div></div></div>';
-    });
-    h += '</div>';
+  // CHIP ROW — status · service · premium · RE opportunity · blockers, in that
+  // order, all on one line. Blockers are folded in here as compact red chips
+  // (hover for the how-to) so they no longer need a separate full-width box.
+  var _bpad = 'font-size:12px;padding:6px 13px;border-radius:5px;';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">';
+  h += '<span class="badge" style="'+_bpad+'background:'+statusColors[job.status]+';color:white;">'+statusLabels[job.status]+'</span>';
+  h += '<span class="badge b-bronze" style="'+_bpad+'">'+svcLabel+'</span>';
+  if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="'+_bpad+'">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
+  if (job.premium) h += '<span class="badge" style="'+_bpad+'background:var(--tan);color:var(--bronze);">Premium estate</span>';
+  if (job.re==='yes') {
+    var _reProp = parseInt(job.propVal || (est && est.propVal) || 0) || 0;
+    var _reC = _reProp > 0 ? calcRECommission(_reProp) : null;
+    // The headline chip: a bronze→gold gradient with a gold star and soft glow so
+    // a six-figure commission opportunity actually looks like one.
+    h += '<span class="badge" style="font-size:12.5px;padding:6px 15px;border-radius:5px;background:linear-gradient(135deg,#C9A06A 0%,#A67C45 55%,#7a5a2e 100%);color:#fff;border:1px solid #7a5a2e;box-shadow:0 1px 5px rgba(122,90,46,.4);text-shadow:0 1px 1px rgba(0,0,0,.15);">'
+       + '<span style="color:#FFE39A;">&#9733;</span> Real Estate Opportunity'
+       + (_reC ? ' <span style="opacity:.8;">·</span> <strong style="color:#FFF3DC;">' + formatPropVal(_reC.net) + ' potential</strong>' : '')
+       + '</span>';
   }
+  if (blockers.length > 0 && job.status !== 'active' && job.status !== 'closed') {
+    blockers.forEach(function(b){
+      h += '<span class="badge" style="'+_bpad+'background:#FCEBEB;color:#A32D2D;border:0.5px solid #F09595;cursor:default;" title="'+esc(b.fix)+'">&#9888; '+esc(b.short)+'</span>';
+    });
+  }
+  h += '</div>';   // close chip row
+  h += '</div>';   // close header card
 
-  // CLIENT & PROPERTY CARD
+  // The Job Timeline is the "where do we stand" intelligence, so it renders right
+  // here — directly under the header, above the fold. It's actually built further
+  // down (it needs the payment figures); we splice it into this slot at the end.
+  h += '<!--TIMELINE_SLOT-->';
+
+  // CLIENT & PROPERTY CARD — now also carries the authorized representative (the
+  // old separate card is gone) and ends with Notes on one full-width line.
   h += '<div class="card" style="margin-bottom:12px;">';
   h += sectionHdr('Client & Property');
   h += '<div class="d-grid4">';
   h += field('Job ID', '<span style="font-weight:600;color:var(--bronze);font-family:monospace;">'+(job.hvlId||'—')+'</span>');
-  h += field(isEstateDash ? 'Rep Phone' : 'Phone', isEstateDash ? (job.executorPhone||'—') : (job.phone||'—'));
-  h += field(isEstateDash ? 'Rep Email' : 'Email', '<span style="font-size:11px;">'+(isEstateDash ? (job.executorEmail||'—') : (job.email||'—'))+'</span>');
   h += field('Property type', job.ptype||'—');
   h += field('Approx. sqft', job.sqft ? job.sqft+' sqft' : '—');
-  h += field('Years in home', job.yearsInHome ? job.yearsInHome + ' yrs' : '—');
   h += field('Beds / Baths', (job.beds||job.baths) ? ((job.beds||'—')+' bd / '+(job.baths||'—')+' ba') : '—');
   h += field('Approx. home value', (job.propVal && job.propVal !== '0') ? ({'500000':'Under $1M','1750000':'$1M – $2.5M','3500000':'$2.5M – $5M','7500000':'$5M – $10M','14000000':'$10M – $20M','27500000':'$20M – $35M','52500000':'$35M – $75M','100000000':'$75M+'}[String(job.propVal)] || formatPropVal(parseInt(job.propVal))) : '—');
+  h += field('Years in home', job.yearsInHome ? job.yearsInHome + ' yrs' : '—');
   h += field('Referral source', job.src||'—');
   h += field('Transition Concierge', job.tc||'<span style="color:#A32D2D;">Unassigned</span>');
-  h += field('Premium estate', job.premium?'Yes':'No');
-  h += field('Notes', job.notes||'<span style="color:var(--gray);font-style:italic;">None</span>');
-  h += '</div></div>';
+  if (isEstateDash) {
+    h += field('Rep phone', job.executorPhone||'—');
+    h += field('Rep email', '<span style="font-size:11px;">'+(job.executorEmail||'—')+'</span>');
+    // Estate settlement has no dedicated probate card, so fold the rep's name/role
+    // and Letters status in here; probate keeps its own detailed card below.
+    if (job.svc === 'cleanout' && job.executor) {
+      h += field('Authorized rep', job.executor + (job.executorRole?' · '+job.executorRole:''));
+      h += field('Letters of Admin', ({received:'Received',pending:'Pending',notneeded:'N/A'}[job.executorAuth]) || '—');
+    }
+  } else {
+    h += field('Phone', job.phone||'—');
+    h += field('Email', '<span style="font-size:11px;">'+(job.email||'—')+'</span>');
+  }
+  h += '</div>';
+  // Notes — one full-width line along the bottom to save vertical space.
+  h += '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border);">';
+  h += '<span class="dfl" style="text-transform:uppercase;">Notes</span> ';
+  h += '<span style="font-size:12px;color:var(--gray-dk);">'+(job.notes||'<span style="color:var(--gray);font-style:italic;">None</span>')+'</span>';
+  h += '</div>';
+  h += '</div>';
 
   // PROBATE CARD (probate only)
   if (job.svc === 'probate' || job.svc === 'contested_probate') {
@@ -5365,22 +5387,6 @@ function renderClientDashboard(jobId) {
     h += '</div></div>';
   }
 
-  // AUTHORIZED REP CARD (estate settlement / cleanout — not probate, which already shows executor above)
-  if (job.svc === 'cleanout' && job.executor) {
-    h += '<div class="card" style="margin-bottom:12px;">';
-    h += sectionHdr('Authorized Representative');
-    h += '<div class="d-grid2">';
-    h += field('Name', job.executor||'—');
-    h += field('Role / Authority', job.executorRole||'—');
-    h += field('Phone', job.executorPhone||'—');
-    h += field('Email', '<span style="font-size:11px;">'+(job.executorEmail||'—')+'</span>');
-    h += field('Letters of Administration', (function(){
-      var m = {received:'Received',pending:'Pending',notneeded:'N/A (not required)'};
-      return m[job.executorAuth] || '—';
-    })());
-    h += '</div></div>';
-  }
-
   // Payment/estimate figures — rendered inside the Timeline & Payments card below,
   // and reused by the Documents card. The old standalone Financial Summary card is
   // gone: payments now live in the timeline, and the RE commission is in the top badge.
@@ -5389,7 +5395,9 @@ function renderClientDashboard(jobId) {
   var _split = paymentSplit(hav);
   var dep = _split.deposit, mid = _split.midpoint, fin2 = _split.final;
 
-  // TIMELINE & PAYMENTS CARD
+  // TIMELINE & PAYMENTS CARD. Built here (needs the figures above) but hoisted to
+  // the slot under the header — see _tlStart capture / splice below.
+  var _tlStart = h.length;
   h += '<div class="card" style="margin-bottom:12px;">';
   h += sectionHdr('Job Timeline & Payments');
   h += '<div class="d-grid4" style="margin-bottom:16px;margin-top:12px;">';
@@ -5439,6 +5447,13 @@ function renderClientDashboard(jobId) {
   h += '<div class="fin-r" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><span class="fin-l" style="font-weight:600;color:var(--gray-dk);">Balance due'+(tot!==hav?' (incl. vendors)':'')+'</span><span class="fin-v" style="font-size:16px;color:var(--bronze);">'+(tot?fmtMoney(tot):'—')+'</span></div>';
   h += '</div>';  // close payments block
   h += '</div>';  // close card
+
+  // Hoist the timeline card up under the header: cut it from here and drop it into
+  // the slot, so "where do we stand" is the first thing you see, no scrolling.
+  var _tlHtml = h.slice(_tlStart);
+  h = h.slice(0, _tlStart);
+  // Function replacement so `$` in money values isn't read as a replace pattern.
+  h = h.replace('<!--TIMELINE_SLOT-->', function(){ return _tlHtml; });
 
   // DOCUMENTS CARD
   h += '<div class="card" style="margin-bottom:12px;">';
