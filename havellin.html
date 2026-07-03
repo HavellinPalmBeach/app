@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 2:45am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 3:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1659,6 +1659,12 @@ var approvedAt = '';
 // (approve/deny) lands on this screen automatically instead of leaving it stuck
 // on a stale "pending". Armed/disarmed by applyEstimateLock based on state.
 var _approvalWatch = { timer: null, jobId: 0 };
+// Jobs-list convergence. While any job is Pending Approval, poll the jobs sheet so
+// a status flip made on another device (Pending → Active on approval) shows in the
+// jobs table / open dashboard without a manual reload. Armed by renderJobs and the
+// dashboard render; self-stops when nothing is pending.
+var _jobsWatch = { timer: null };
+var _dashboardJobId = 0;   // the job whose client dashboard is currently open (0 = none)
 
 // ─── ROOM DATA ────────────────────────────────────────────────────────────────
 var ROOMS = [
@@ -3350,9 +3356,12 @@ function applyOpenedEstimate(jobId, job, status) {
     }
     showFB('e-fb','warn','Offline — couldn’t reach the cloud and no estimate for "' + job.name + '" is stored on this device. Reconnect before building so you don’t overwrite a saved version you can’t see.');
   }
-  // No saved estimate — clear all rooms and start fresh
+  // No saved estimate — clear all rooms AND the non-room extras (package, third-
+  // party vendors, home prep) so this new client starts clean instead of inheriting
+  // the last estimate's selections.
   window._suppressEstimateAutoSave = true;
   clearAllRooms();
+  resetEstimateExtras();
   window._suppressEstimateAutoSave = false;
   document.getElementById('e-prem').checked = job.premium || false;
   // Reset PS slots
@@ -3387,12 +3396,7 @@ function clearEstimateTab() {
   clearAllRooms();
   collectionsData = [];
   renderCollections();
-  prepItems = [];
-  var prepChk = document.getElementById('e-prep-enabled');
-  if (prepChk) prepChk.checked = false;
-  var prepContent = document.getElementById('prep-content');
-  if (prepContent) prepContent.style.display = 'none';
-  renderPrepItems();
+  resetEstimateExtras();   // package + third-party vendors + home prep
   currentEstimate = null;
   estimateApproved = false;
   estimateSubmitted = false;
@@ -3419,6 +3423,28 @@ function clearAllRooms() {
   var _acc = document.getElementById('adj-access'); if (_acc) _acc.checked = false;
   var _hei = document.getElementById('adj-heirs');  if (_hei) _hei.checked = false;
   calcAll();
+}
+
+// Clear every estimate input that lives OUTSIDE the room grid: the moving-
+// materials package, the third-party vendor table, and the home-prep section.
+// clearAllRooms() only resets rooms + the access/heirs toggles, so on its own a
+// fresh estimate for a new client would inherit the PREVIOUS client's package,
+// vendors, and prep selections — the "sticky selections" bug. A saved estimate
+// re-populates all of these in restoreEstimateToUI, so this only ever runs on the
+// no-saved-estimate (start-fresh) path.
+function resetEstimateExtras() {
+  var pkg = document.getElementById('e-pkg'); if (pkg) pkg.value = '0';
+  vendors = [];
+  var nvt = document.getElementById('new-vendor-type'); if (nvt) nvt.value = '';
+  var nvc = document.getElementById('new-vendor-cost'); if (nvc) nvc.value = '';
+  var nsmf = document.getElementById('new-smf'); if (nsmf) nsmf.textContent = '$0';
+  renderVendors();
+  prepItems = [];
+  var prepChk = document.getElementById('e-prep-enabled'); if (prepChk) prepChk.checked = false;
+  var prepContent = document.getElementById('prep-content'); if (prepContent) prepContent.style.display = 'none';
+  var npt = document.getElementById('new-prep-type'); if (npt) npt.value = '';
+  var npc = document.getElementById('new-prep-cost'); if (npc) npc.value = '';
+  renderPrepItems();
 }
 
 
@@ -4598,6 +4624,7 @@ function renderJobs() {
     // Detail expand suppressed — click row to open Client Dashboard
   });
   body.innerHTML = html;
+  maybeStartJobsWatch();   // keep the list live while anything is Pending Approval
 }
 
 
@@ -5055,15 +5082,53 @@ function toggleJobDetail(id) {
 }
 
 function openClientDashboard(jobId) {
+  _dashboardJobId = jobId;
   document.getElementById('clients-list-view').style.display = 'none';
   document.getElementById('client-dashboard-view').style.display = 'block';
   renderClientDashboard(jobId);
 }
 
 function closeClientDashboard() {
+  _dashboardJobId = 0;
   document.getElementById('clients-list-view').style.display = 'block';
   document.getElementById('client-dashboard-view').style.display = 'none';
   renderJobs();
+}
+
+// A compact signature of every job's approval-relevant state, so a poll only
+// re-renders when something actually changed (no constant table flicker).
+function jobsStatusSig() {
+  return jobs.map(function(j){ return j.id + ':' + j.status + ':' + (j.approved ? 1 : 0); }).join('|');
+}
+
+function stopJobsWatch() {
+  if (_jobsWatch.timer) { clearInterval(_jobsWatch.timer); }
+  _jobsWatch.timer = null;
+}
+
+// Arm the jobs poll only while something is Pending Approval (the sole state that
+// flips remotely and matters here). Idempotent — safe to call on every render.
+function maybeStartJobsWatch() {
+  var hasPending = jobs.some(function(j){ return j.status === 'pending'; });
+  if (!hasPending || !SHEETS_SYNC_URL) { stopJobsWatch(); return; }
+  if (_jobsWatch.timer) return;   // already watching
+  _jobsWatch.timer = setInterval(jobsWatchTick, 15000);
+}
+
+function jobsWatchTick() {
+  var before = jobsStatusSig();
+  refreshJobsFromCloud(function(){
+    if (jobsStatusSig() !== before) {
+      // Something flipped remotely — re-render whichever clients view is showing.
+      var dv = document.getElementById('client-dashboard-view');
+      if (dv && dv.style.display !== 'none' && _dashboardJobId) {
+        renderClientDashboard(_dashboardJobId);
+      }
+      var jp = document.getElementById('panel-jobs');
+      if (jp && jp.classList.contains('active')) renderJobs();
+    }
+    maybeStartJobsWatch();   // stop once nothing is pending anymore
+  });
 }
 
 function toggleProbatePkg(jobId) {
@@ -5182,15 +5247,23 @@ function renderClientDashboard(jobId) {
   h += '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--bronze);margin-top:1px;">'+( job.hvlId||'—')+'</div>';
   h += '</div>';
   if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-left:46px;margin-bottom:8px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
-  h += '<div style="display:flex;gap:6px;flex-wrap:nowrap;margin-left:46px;overflow-x:auto;padding-bottom:2px;">';
-  h += '<span class="badge b-bronze" style="font-size:11px;">'+svcLabel+'</span>';
-  if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="font-size:11px;">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
-  if (job.premium) h += '<span class="badge" style="font-size:11px;background:var(--tan);color:var(--bronze);">Premium estate</span>';
-  h += '<span class="badge" style="font-size:11px;background:'+statusColors[job.status]+';color:white;">'+statusLabels[job.status]+'</span>';
+  // Bigger, roomier badges. `_bpad` is the shared sizing so every chip stretches
+  // out the same; the RE Opportunity chip breaks the mould on purpose (below).
+  var _bpad = 'font-size:12px;padding:6px 13px;border-radius:5px;';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:46px;padding-bottom:2px;">';
+  h += '<span class="badge b-bronze" style="'+_bpad+'">'+svcLabel+'</span>';
+  if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="'+_bpad+'">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
+  if (job.premium) h += '<span class="badge" style="'+_bpad+'background:var(--tan);color:var(--bronze);">Premium estate</span>';
+  h += '<span class="badge" style="'+_bpad+'background:'+statusColors[job.status]+';color:white;">'+statusLabels[job.status]+'</span>';
   if (job.re==='yes') {
     var _reProp = parseInt(job.propVal || (est && est.propVal) || 0) || 0;
     var _reC = _reProp > 0 ? calcRECommission(_reProp) : null;
-    h += '<span class="badge b-bronze" style="font-size:11px;">★ Real Estate Opportunity' + (_reC ? ' · ' + formatPropVal(_reC.net) + ' potential' : '') + '</span>';
+    // The headline chip: a bronze→gold gradient with a gold star and soft glow so
+    // a six-figure commission opportunity actually looks like one.
+    h += '<span class="badge" style="font-size:12.5px;padding:6px 15px;border-radius:5px;background:linear-gradient(135deg,#C9A06A 0%,#A67C45 55%,#7a5a2e 100%);color:#fff;border:1px solid #7a5a2e;box-shadow:0 1px 5px rgba(122,90,46,.4);text-shadow:0 1px 1px rgba(0,0,0,.15);">'
+       + '<span style="color:#FFE39A;">&#9733;</span> Real Estate Opportunity'
+       + (_reC ? ' <span style="opacity:.8;">·</span> <strong style="color:#FFF3DC;">' + formatPropVal(_reC.net) + ' potential</strong>' : '')
+       + '</span>';
   }
   h += '</div></div>';
   h += '<div style="display:flex;gap:7px;flex-shrink:0;">';
@@ -5442,6 +5515,7 @@ function renderClientDashboard(jobId) {
   h += '</div>';
 
   document.getElementById('client-dashboard-view').innerHTML = h;
+  maybeStartJobsWatch();   // keep the dashboard live while this job is Pending Approval
 }
 
 function activateOrCycle(jobId) {
