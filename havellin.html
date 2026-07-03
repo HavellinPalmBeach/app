@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 5:10am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 5:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5262,10 +5262,13 @@ function renderClientDashboard(jobId) {
   }
   h += '<button class="btn-s" onclick="openChangeOrder('+jobId+')">Change Order</button>';
   h += '<button class="btn-s" onclick="showEditClient('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">&#9998; Edit Client</button>';
-  if (job.driveFolder) {
-    h += '<a href="'+job.driveFolder+'" target="_blank" class="btn-s" style="text-decoration:none;color:var(--gray);" title="Open job folder in Google Drive">&#128193; Drive</a>';
-  } else if (SHEETS_SYNC_URL && DRIVE_FOLDER_ID) {
-    h += '<button class="btn-s" onclick="var btn=this;btn.disabled=true;btn.textContent=\'Creating...\';createDriveJobFolder(jobs.find(function(j){return j.id==='+jobId+';}));" style="color:var(--gray);" title="Create Drive folder for this job">&#128193; Create Folder</button>';
+  // Drive is ALWAYS just a link — never a "create" action. The job folder is made
+  // once, automatically, when the client is created. If this job somehow has no
+  // folder URL yet, fall back to the Drive root so the button still opens Drive
+  // instead of minting a duplicate folder.
+  var _driveHref = job.driveFolder || (DRIVE_FOLDER_ID ? 'https://drive.google.com/drive/folders/' + DRIVE_FOLDER_ID : '');
+  if (_driveHref) {
+    h += '<a href="'+_driveHref+'" target="_blank" class="btn-s" style="text-decoration:none;color:var(--gray);" title="Open in Google Drive">&#128193; Drive</a>';
   }
   h += '<button class="btn-p" onclick="activateOrCycle('+jobId+')">'+( job.status==='active'?'Close Job': job.status==='closed'?'Re-open':'Activate Job')+'</button>';
   h += '</div>';   // close actions
