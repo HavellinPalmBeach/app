@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 4:15am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 4:55am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5237,20 +5237,9 @@ function renderClientDashboard(jobId) {
   // BACK BUTTON
   h += '<button onclick="closeClientDashboard()" style="font-size:12px;color:var(--gray);background:none;border:none;padding:0;cursor:pointer;margin-bottom:10px;">← Back to Clients</button>';
 
-  // HEADER CARD — one white box: identity (avatar + name + address) on the left,
-  // actions on the right, then a single reordered chip row (status · service ·
-  // premium · RE opportunity · blockers) underneath. Redundant executor line and
-  // Job ID that used to sit up here are gone — they live once, in the card below.
-  h += '<div class="card" style="margin-bottom:12px;">';
-  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">';
-  h += '<div style="display:flex;align-items:center;gap:12px;min-width:0;">';
-  h += '<div style="width:38px;height:38px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bronze);flex-shrink:0;">'+initials+'</div>';
-  h += '<div style="min-width:0;">';
-  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
-  if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
-  h += '</div>';
-  h += '</div>';
-  h += '<div style="display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">';
+  // ACTION TOOLBAR — its own white bubble (screenshot-template style): a heading on
+  // the left, the job actions on the right. Deliberately separate from the client-
+  // info card below so the buttons aren't tangled with the identity/status.
   var estRec = estimateStore[jobId];
   var estApproved = (estRec && estRec.approved) || job.approved;
   var estExists = estRec && estRec.estimate && (estRec.estimate.rooms||[]).length > 0;
@@ -5259,6 +5248,10 @@ function renderClientDashboard(jobId) {
   // `submitted` flag drifted (the cross-device bug where a manager saw a submitted
   // estimate still offering "Submit for Approval").
   var estSubmitted = (estRec && estRec.submitted) || (job.status === 'pending' && !estApproved);
+  h += '<div class="card" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">';
+  h += '<div><div style="font-size:15px;font-weight:600;color:var(--gray-dk);">Client Dashboard</div>';
+  h += '<div style="font-size:11px;color:var(--gray);margin-top:1px;">Manage this client&rsquo;s estimate, agreement, and job.</div></div>';
+  h += '<div style="display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">';
   h += estApproved
     ? '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">&#10003; Estimate</button>'
     : estExists
@@ -5276,7 +5269,18 @@ function renderClientDashboard(jobId) {
   }
   h += '<button class="btn-p" onclick="activateOrCycle('+jobId+')">'+( job.status==='active'?'Close Job': job.status==='closed'?'Re-open':'Activate Job')+'</button>';
   h += '</div>';   // close actions
-  h += '</div>';   // close identity/actions flex row
+  h += '</div>';   // close toolbar bubble
+
+  // CLIENT INFO CARD — identity (avatar + name + address) and the status chips,
+  // on its own now that the actions have their own bar above.
+  h += '<div class="card" style="margin-bottom:12px;">';
+  h += '<div style="display:flex;align-items:center;gap:12px;min-width:0;">';
+  h += '<div style="width:38px;height:38px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bronze);flex-shrink:0;">'+initials+'</div>';
+  h += '<div style="min-width:0;">';
+  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
+  if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
+  h += '</div>';
+  h += '</div>';
 
   // CHIP ROW — status · service · premium · RE opportunity · blockers, in that
   // order, all on one line. Blockers are folded in here as compact red chips
@@ -5303,7 +5307,7 @@ function renderClientDashboard(jobId) {
     });
   }
   h += '</div>';   // close chip row
-  h += '</div>';   // close header card
+  h += '</div>';   // close client info card
 
   // The Job Timeline is the "where do we stand" intelligence, so it renders right
   // here — directly under the header, above the fold. It's actually built further
@@ -5410,14 +5414,21 @@ function renderClientDashboard(jobId) {
   h += field('Agreement signed', job.agrSigned ? '<span style="color:#1D9E75;">Yes</span>' : '<span style="display:flex;align-items:center;">'+dot('#A32D2D')+'<span style="color:#A32D2D;">Not signed</span></span>');
   h += field('Work completed', job.completionDate ? '<span style="color:#1D9E75;">'+job.completionDate+'</span>' : '<span style="color:var(--gray);font-style:italic;">—</span>');
   h += '</div>';
-  // Timeline bar
+  // Timeline bar — the full lifecycle with the estimate + payments folded in as
+  // steps (with dollar amounts): intake → walkthrough → estimate sent → agreement
+  // → first deposit → midpoint → complete → final invoice. Replaces the old
+  // separate Estimate & Payments grid + balance-due line.
+  var _wDone   = !!(job.walkthrough && new Date(job.walkthrough+'T12:00:00') <= new Date());
+  var _wActive = !!(job.walkthrough && new Date(job.walkthrough+'T12:00:00') >  new Date());
   var steps = [
-    {name:'Intake', done:true, dt:job.created||'', active:false},
-    {name:'Walkthrough', done:!!(job.walkthrough && new Date(job.walkthrough+'T12:00:00') <= new Date()), dt:fmtDate2(job.walkthrough), active:!!(job.walkthrough && new Date(job.walkthrough+'T12:00:00') > new Date())},
-    {name:'Estimate sent', done:!!job.estimateSentDate, dt:job.estimateSentDate||'—', active:false},
-    {name:'Agreement', done:!!job.agrSigned, dt:job.agrSigned?'Signed':'—', active:false},
-    {name:'Active', done:job.status==='active'||job.status==='closed', dt:job.status==='active'?'In progress':job.status==='closed'?'Done':'—', active:job.status==='active'},
-    {name:'Complete', done:job.status==='closed', dt:job.completionDate||'—', active:false},
+    {name:'Intake', done:true, dt:job.created||'—'},
+    {name:'Walkthrough', done:_wDone, active:_wActive, dt:fmtDate2(job.walkthrough)||'—'},
+    {name:'Estimate sent', done:!!job.estimateSentDate, dt:job.estimateSentDate||'—', sub:(hav?fmtMoney(hav):''), subColor:'var(--gray-dk)'},
+    {name:'Agreement', done:!!job.agrSigned, dt:job.agrSigned?'Signed':'—'},
+    {name:'First deposit', done:!!job.depositReceived, active:(job.agrSigned && !job.depositReceived), dt:(hav?fmtMoney(dep):'—'), sub:(job.depositReceived?'received':(job.agrSigned?'due now':'50%')), subColor:(job.depositReceived?'#1D9E75':(job.agrSigned?'#A32D2D':'var(--gray)')), pay:true},
+    {name:'Midpoint', done:false, dt:(hav?fmtMoney(mid):'—'), sub:'25% · pending', subColor:'var(--gray)', pay:true},
+    {name:'Complete', done:job.status==='closed', active:job.status==='active', dt:job.completionDate||(job.status==='active'?'In progress':(job.status==='closed'?'Done':'—'))},
+    {name:'Final invoice', done:job.status==='closed', dt:(hav?fmtMoney(fin2):'—'), sub:'on completion', subColor:'var(--gray)', pay:true},
   ];
   if (job.svc==='probate') steps.push({name:'Court deadline', done:false, dt:fmtDate2(job.probateDeadline), active:false, deadline:true});
   h += '<div style="border-top:0.5px solid var(--border);padding-top:14px;"><div style="display:flex;">';
@@ -5431,22 +5442,16 @@ function renderClientDashboard(jobId) {
     var innerDot = s.done ? '<div style="width:7px;height:7px;border-radius:50%;background:white;"></div>' : (s.active ? '<div style="width:7px;height:7px;border-radius:50%;background:#BA7517;"></div>' : (s.deadline ? '<div style="width:7px;height:7px;border-radius:50%;background:#A32D2D;"></div>' : ''));
     h += '<div style="width:18px;height:18px;border-radius:50%;border:2px solid '+dotBorder+';background:'+dotBg+';display:flex;align-items:center;justify-content:center;margin-bottom:5px;background:var(--white);">'+(s.done?'<div style="width:18px;height:18px;border-radius:50%;background:#1D9E75;margin:-2px;display:flex;align-items:center;justify-content:center;"><div style="width:7px;height:7px;border-radius:50%;background:white;"></div></div>':innerDot)+'</div>';
     h += '<div style="font-size:10px;font-weight:500;color:'+(s.deadline?'#A32D2D':'var(--gray-dk)')+';text-align:center;">'+s.name+'</div>';
-    h += '<div style="font-size:10px;color:'+(s.deadline?'#A32D2D':(s.done?'#1D9E75':(s.active?'#BA7517':'var(--gray)')))+';text-align:center;">'+s.dt+'</div>';
+    // Payment nodes lead with the dollar amount (bold, dark); date nodes with the date.
+    var _dtColor = s.deadline?'#A32D2D':(s.pay?'var(--gray-dk)':(s.done?'#1D9E75':(s.active?'#BA7517':'var(--gray)')));
+    h += '<div style="font-size:10px;color:'+_dtColor+';text-align:center;'+(s.pay?'font-weight:600;':'')+'">'+s.dt+'</div>';
+    if (s.sub) h += '<div style="font-size:9px;color:'+(s.subColor||'var(--gray)')+';text-align:center;margin-top:1px;">'+s.sub+'</div>';
     h += '</div></div>';
   });
   h += '</div></div>';  // close timeline flex + bar wrapper
-  // ── Estimate & Payments (folded into the timeline — no separate finance card) ──
-  h += '<div style="border-top:0.5px solid var(--border);margin-top:16px;padding-top:12px;">';
-  h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:10px;">Estimate &amp; Payments</div>';
-  h += '<div class="d-grid4">';
-  h += field('Havellin estimate', '<span style="font-weight:600;color:var(--gray-dk);">'+(hav?fmtMoney(hav):'—')+'</span>');
-  h += field('Deposit (50%)', (hav?fmtMoney(dep):'—') + ' <span style="font-size:10px;color:'+(job.depositReceived?'#1D9E75':'#A32D2D')+';">'+(job.depositReceived?'· received':'· not received')+'</span>');
-  h += field('Midpoint (25%)', (hav?fmtMoney(mid):'—') + ' <span style="font-size:10px;color:var(--gray);">· pending</span>');
-  h += field('Final invoice', (hav?fmtMoney(fin2):'—') + ' <span style="font-size:10px;color:var(--gray);">· on completion</span>');
-  h += '</div>';
-  h += '<div class="fin-r" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><span class="fin-l" style="font-weight:600;color:var(--gray-dk);">Balance due'+(tot!==hav?' (incl. vendors)':'')+'</span><span class="fin-v" style="font-size:16px;color:var(--bronze);">'+(tot?fmtMoney(tot):'—')+'</span></div>';
-  h += '</div>';  // close payments block
   h += '</div>';  // close card
+  // (Estimate total and the deposit/midpoint/final amounts now live on the timeline
+  // steps above; the standalone payments grid and "Balance due" line are retired.)
 
   // Hoist the timeline card up under the header: cut it from here and drop it into
   // the slot, so "where do we stand" is the first thing you see, no scrolling.
