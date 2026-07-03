@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 4:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.03 · 4:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="nav">
   <button class="nb active" onclick="showPanel('jobs',this)">Client Dashboard</button>
   <button class="nb" onclick="showPanel('intake',this)">Client Intake</button>
-  <button class="nb" onclick="showPanel('estimate',this)">Estimate</button>
+  <button class="nb" onclick="showPanel('estimate',this)">Build Estimate</button>
   <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
   <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
   <button class="nb" onclick="showPanel('job-plan',this)">Job Plan</button>
@@ -861,7 +861,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
   <div id="client-estimate-preview">
     <div class="ce-page" id="ce-page-content">
-      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Estimate tab.</div>
+      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>
     </div>
   </div>
 </div>
@@ -3801,7 +3801,7 @@ function loadClientEstimateFromSelect() {
 function renderClientEstimate() {
   var _ceJob = currentEstimate && (currentEstimate.job || jobs.find(function(j){ return j.id===currentEstimate.jobId; }));
   if (!currentEstimate || !_ceJob) {
-    document.getElementById('ce-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Estimate tab.</div>';
+    document.getElementById('ce-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>';
     updateApprovalUI();
     return;
   }
