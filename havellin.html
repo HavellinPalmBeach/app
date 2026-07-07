@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 5:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 6:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9722,20 +9722,41 @@ function _readAppsScriptJson(r) {
   return r.text().then(function(t){
     var s = (t || '').trim();
     if (s.charAt(0) === '<' || /^<!doctype|^<html/i.test(s)) {
-      throw new Error('the web app returned a login/HTML page, not data — re-deploy the Apps Script with "Who has access: Anyone" and paste the fresh /exec URL into Settings');
+      // Apps Script sometimes serves a transient HTML interstitial (throttle / auth
+      // redirect) even on a correctly-deployed "Anyone" web app — so the same save can
+      // work once and fail the next second. Tag it so idempotent writes can retry.
+      var err = new Error('the web app returned a login/HTML page, not data — if this repeats, re-deploy the Apps Script with "Who has access: Anyone" and paste the fresh /exec URL into Settings');
+      err.htmlResponse = true;
+      throw err;
     }
     try { return JSON.parse(s); }
     catch (e) { throw new Error('the web app response was not valid JSON — confirm the /exec URL and that the script is deployed'); }
   });
 }
 
-// POST a write to the vendor web app; cb(ok, data).
+// POST a JSON write to an Apps Script /exec endpoint. When allowRetry is true, a single
+// automatic retry is made if the endpoint returns a transient HTML interstitial (the
+// "worked once, failed the next time" flakiness). Retry is only safe for IDEMPOTENT
+// writes (update/rate) — never for an append (addVendor/addPartner), which a retry
+// could duplicate.
+function _appsScriptPost(url, bodyObj, cb, allowRetry) {
+  function attempt(triesLeft) {
+    fetch(url, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(bodyObj) })
+      .then(_readAppsScriptJson)
+      .then(function(d){ cb(!!(d && d.ok), d || {}); })
+      .catch(function(e){
+        if (triesLeft > 0 && e && e.htmlResponse) { setTimeout(function(){ attempt(triesLeft - 1); }, 700); return; }
+        cb(false, { error: (e && e.message) || String(e) });
+      });
+  }
+  attempt(allowRetry ? 1 : 0);
+}
+
+// POST a write to the vendor web app; cb(ok, data). Idempotent writes retry once on a
+// flaky HTML interstitial; addVendor does not (a retry could append a duplicate row).
 function postVendorWrite(type, payload, cb) {
   if (!VENDOR_SYNC_URL) { cb(false, {error:'No Vendor Directory URL set'}); return; }
-  fetch(VENDOR_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:type, payload:payload }) })
-    .then(_readAppsScriptJson)
-    .then(function(d){ cb(!!(d && d.ok), d || {}); })
-    .catch(function(e){ cb(false, {error:(e && e.message) || String(e)}); });
+  _appsScriptPost(VENDOR_SYNC_URL, { type:type, payload:payload }, cb, type !== 'addVendor');
 }
 
 function saveVendor() {
@@ -9775,23 +9796,26 @@ function saveVendor() {
   }
 }
 
-// One-click field writes from the card (status flip, outreach stamp).
-function _quickWriteVendor(id, patch, busyMsg) {
+// One-click field writes from the card (status flip, outreach stamp). Mirrors
+// _quickWriteReferral: surface a visible message on every failure path — a silent
+// return here is what made "Log contact" look like it did nothing.
+function _quickWriteVendor(id, patch, busyMsg, okMsg) {
   var v = lookupVendorById(id);
-  if (!v) return;
+  if (!v) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  if (v._row == null || String(v._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this vendor, then retry', true); return; }
   if (!VENDOR_SYNC_URL) { showSyncBadge('Set the Vendor Directory URL in Settings first', true); return; }
   showSyncBadge(busyMsg);
   postVendorWrite('updateVendor', { _row: v._row, vendor_name: v.vendor_name, fields: patch }, function(ok, d){
     if (!ok) { showSyncBadge('Vendor update failed: ' + (d.error||''), true); return; }
     Object.keys(patch).forEach(function(k){ v[k] = patch[k]; });
     try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
-    showSyncBadge('Vendor updated ✓');
+    showSyncBadge(okMsg || 'Vendor updated ✓');
     renderVendorsTab();
   });
 }
 function stampVendorContacted(id) {
   var today = new Date().toISOString().slice(0,10);
-  _quickWriteVendor(id, { last_contacted: today }, 'Logging outreach…');
+  _quickWriteVendor(id, { last_contacted: today }, 'Logging outreach…', 'Outreach logged — last contacted set to today ✓');
 }
 
 // ═══ REFERRAL PARTNERS DIRECTORY ═══════════════════════════════════════════════
@@ -9956,10 +9980,7 @@ function editReferral(id){
 }
 function postReferralWrite(type, payload, cb){
   if (!REFERRAL_SYNC_URL) { cb(false, {error:'No Referral Partners URL set'}); return; }
-  fetch(REFERRAL_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:type, payload:payload }) })
-    .then(_readAppsScriptJson)
-    .then(function(d){ cb(!!(d && d.ok), d || {}); })
-    .catch(function(e){ cb(false, {error:(e && e.message) || String(e)}); });
+  _appsScriptPost(REFERRAL_SYNC_URL, { type:type, payload:payload }, cb, type !== 'addPartner');
 }
 function saveReferral(){
   var fname = _getR('r-fname'), lname = _getR('r-lname');
