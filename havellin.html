@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 3:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2127,62 +2127,6 @@ function svcTypeChanged() {
   calcAll();
 }
 
-function stagerChanged() {
-  var val = document.getElementById('e-stager').value;
-  var wrap = document.getElementById('stager-cost-wrap');
-  if (wrap) wrap.style.display = val === 'vendor' ? 'block' : 'none';
-  calcAll();
-}
-
-// PS ratio driven by avg Vol score — not crew size
-
-// ─── SERVICE TYPE MULTIPLIERS ─────────────────────────────────────────────────
-var SVC_MULTS = {
-  downsizing:      {tc: 1.0,  ps: 1.0},
-  downsizing_move: {tc: 1.0,  ps: 1.0},  // dest TC hours added separately
-  home_cleanout:   {tc: 1.0,  ps: 1.0},  // living-client clear-out — volume-heavy; no keep-pile PS reduction
-  cleanout:        {tc: 1.0,  ps: 1.0},
-  probate:           {tc: 1.5,  ps: 1.0},  // TC ×1.5 for legal/documentation
-  contested_probate: {tc: 1.8,  ps: 1.1},  // TC ×1.8 + PS ×1.1 — multiple attorneys, heirs, chain-of-custody
-  prep:            {tc: 1.1,  ps: 1.2}
-};
-
-// ─── DESTINATION TC HOURS lookup (new home sqft + beds) ───────────────────────
-function destTCHours(sqft, beds) {
-  sqft = parseFloat(sqft) || 0;
-  beds = parseFloat(beds) || 0;
-  if (sqft === 0 && beds === 0) return 0;
-  var base = 0;
-  if (sqft < 800)        base = 4;
-  else if (sqft < 1200)  base = 5;
-  else if (sqft < 1800)  base = 6;
-  else if (sqft < 2500)  base = 8;
-  else if (sqft < 3500)  base = 10;
-  else if (sqft < 5000)  base = 13;
-  else                   base = 16;
-  // +1 TC hr per bedroom over 1
-  var bedAdder = Math.max(0, beds - 1) * 1;
-  return base + bedAdder;
-}
-
-
-// ─── DESTINATION PS HOURS lookup (new home sqft + beds) ───────────────────────
-function destPSHours(sqft, beds) {
-  sqft = parseFloat(sqft) || 0;
-  beds = parseFloat(beds) || 0;
-  if (sqft === 0 && beds === 0) return 0;
-  var base = 0;
-  if (sqft < 800)        base = 3;
-  else if (sqft < 1200)  base = 4;
-  else if (sqft < 1800)  base = 6;
-  else if (sqft < 2500)  base = 8;
-  else if (sqft < 3500)  base = 10;
-  else if (sqft < 5000)  base = 14;
-  else                   base = 18;
-  // +1 PS hr per bedroom over 1
-  var bedAdder = Math.max(0, beds - 1) * 1;
-  return base + bedAdder;
-}
 // ─── COLLECTIONS HOURS (TC + PS) ──────────────────────────────────────────────
 // TC = on-site coordination: schedule partner, be present, follow up with client
 // PS = physical execution: stage/organize, pack accepted items, transport if offsite drop
@@ -2203,15 +2147,6 @@ function collectionsHours() {
     tc += h.tc; ps += h.ps;
   });
   return {tc: Math.round(tc*10)/10, ps: Math.round(ps*10)/10};
-}
-
-function psRatioByVol(avgVol) {
-  if (avgVol < 2.0) return 0.3;
-  if (avgVol < 2.5) return 0.5;
-  if (avgVol < 3.0) return 0.7;
-  if (avgVol < 3.5) return 0.9;
-  if (avgVol < 4.0) return 1.1;
-  return 1.3;
 }
 
 // TC hour multiplier based on property value
@@ -2313,19 +2248,6 @@ function rushMultiplier(runwayDays) {
   if (runwayDays >= 45) return 1.20;
   if (runwayDays >= 30) return 1.32;
   return 1.50;
-}
-
-// ─── SQFT MULTIPLIER ──────────────────────────────────────────────────────────
-// Baseline: 2,500 sqft. Applies to both TC and PS hours.
-function sqftMultiplier(sqft) {
-  if (!sqft || sqft <= 0) return 1.0;  // unknown — no adjustment
-  if (sqft < 2000)        return 0.85;
-  if (sqft < 3000)        return 1.00; // baseline
-  if (sqft < 4000)        return 1.12;
-  if (sqft < 5500)        return 1.25;
-  if (sqft < 7500)        return 1.40;
-  if (sqft < 10000)       return 1.60;
-  return 1.80;
 }
 
 // Debounced calcAll for high-frequency inputs (e.g. typing notes) where instant
@@ -2797,7 +2719,6 @@ function calcAll() {
   if (psBadge) {
     var psSlots = getPSSlots();
     if (psSlots.length > 0) {
-      var slotDesc = psSlots.map(function(s){ return s.label; }).join(', ');
       var blended = Math.round(getBlendedPSCost() * 10) / 10;
       psBadge.innerHTML = '<strong>' + psSlots.length + ' specialist(s) scheduled</strong>';
     } else {
@@ -3093,10 +3014,6 @@ function calcPrepTotals() {
 
 function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost; }, 0); }
 function getPrepFee()  { return Math.round(getPrepCost() * 0.30); }
-function toggleMoveHours() {
-  document.getElementById('move-hours-wrap').style.display = document.getElementById('adj-move').checked ? 'block' : 'none';
-  calcAll();
-}
 
 // ─── INTAKE ───────────────────────────────────────────────────────────────────
 function isWeekend(dateStr) {
@@ -3924,9 +3841,6 @@ function renderClientEstimate() {
     vendorRows += '<tr><td>' + label + '</td><td class="r">' + amt + '</td></tr>';
   });
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
-
-  var approvedBlock = (estimateApproved && approvedBy) ?
-    '<div class="approved-stamp"><div class="approved-stamp-text">\u2713 Approved for Release</div><div class="approved-stamp-sub">Approved by ' + approvedBy + ' on ' + approvedAt + '</div></div>' : '';
 
   var _svcSubHdr = {
     downsizing: 'Onsite Downsizing Services',
@@ -5799,7 +5713,6 @@ function renderWinLoss() {
   var total = won.length + lost.length;
   var convRate = total > 0 ? Math.round(won.length / total * 100) : 0;
   var lostRev = lost.reduce(function(a,j){ return a + (j.lostEst||j.havellinEst||0); }, 0);
-  var wonRev  = won.reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
 
   // ── Metrics row ──
   var mEl = document.getElementById('wl-metrics');
@@ -6463,34 +6376,6 @@ function buildEstimateMailto() {
   ]));
   // CC the central department inbox so every outbound client email is captured.
   var cc = encodeURIComponent(DEPT_EMAILS.estimates);
-  return 'mailto:' + to + '?cc=' + cc + '&subject=' + subject + '&body=' + body;
-}
-
-function buildAgreementMailto() {
-  var selEl = document.getElementById('agr-job-select');
-  var jobId = selEl ? parseInt(selEl.value)||0 : 0;
-  var job = jobs.find(function(j){ return j.id===jobId; }) || {};
-  var to = encodeURIComponent(bestClientEmail(job));
-  var tc = assignedTCContact(job);
-  var subject = encodeURIComponent('Havellin Palm Beach - Service Agreement for ' + (job.name||'Your Property'));
-  var body = mailtoBody([
-    'Dear ' + bestClientGreetingName(job) + ',',
-    '',
-    'Your Havellin Palm Beach Service Agreement for ' + (job.addr||'your property') + ' is ready for your review and signature.',
-    '',
-    '** Please attach the agreement PDF before sending — use the "Print / Save PDF" button in the app to generate it. **',
-    '',
-    'Please review, sign, and return. Upon receipt of your signed agreement and deposit we will confirm your start date.',
-    '',
-    'Payment instructions are included in the agreement. Please do not hesitate to reach out with any questions.',
-    '',
-    'Warm regards,',
-    tc.name,
-    'Havellin Palm Beach',
-    tc.phone,
-    tc.email
-  ]);
-  var cc = encodeURIComponent(DEPT_EMAILS.agreements);
   return 'mailto:' + to + '?cc=' + cc + '&subject=' + subject + '&body=' + body;
 }
 
@@ -7689,7 +7574,6 @@ function buildLogTeamRows() {
   }
 
   var rowStyle = 'display:grid;grid-template-columns:2fr 80px;gap:8px;align-items:end;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);';
-  var lastRowStyle = 'display:grid;grid-template-columns:2fr 80px;gap:8px;align-items:end;margin-bottom:0;';
 
   var html = '';
 
@@ -8130,19 +8014,6 @@ function renderInvoice() {
   }
 
   // Vendor / prep costs — shown in every stage (informational; paid directly by client).
-  var vendorSection =
-    '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendor Costs (at cost — paid directly by client)</div>' +
-    '<table class="ce-tbl"><thead><tr><th>Vendor / Service</th><th style="text-align:right;">Amount</th></tr></thead>' +
-    '<tbody>' + vendorRows + '</tbody>' +
-    '<tr class="subtotal"><td>Third-Party Total</td><td style="text-align:right;">' + fmt(vendorCost) + '</td></tr>' +
-    '</table>' +
-    (act.prep.length ?
-      '<div class="ce-section-hdr" style="margin-top:1rem;">Home Prep for Sale — Vendor Costs (at cost — paid directly by client)</div>' +
-      '<table class="ce-tbl"><thead><tr><th>Prep Item / Vendor</th><th style="text-align:right;">Amount</th></tr></thead>' +
-      '<tbody>' + prepRows + '</tbody>' +
-      '<tr class="subtotal"><td>Prep Vendor Total</td><td style="text-align:right;">' + fmt(prepCost) + '</td></tr>' +
-      '</table>' : '');
-
   // FINAL stage — labor trued to logged hours, fees on actuals.
   var finalServices =
     '<div class="ce-section-hdr">Havellin Services — Actual Hours</div>' +
@@ -9678,7 +9549,6 @@ function renderJobPlan(jobId, job, est) {
   var isCleanout   = svc === 'home_cleanout';
   var isEstate     = svc === 'cleanout';                  // Estate Settlement (deceased owner)
   var isProbate    = svc === 'probate' || svc === 'contested_probate';
-  var isContested  = svc === 'contested_probate';
   var isDocJob     = isEstate || isProbate;               // requires §733.604 documentation
   var isDisposal   = isCleanout || isDocJob;              // full clear-out + disposition streams
   // Downsizing, Home Cleanout, Estate Settlement, Probate & Contested all share the core
@@ -9971,7 +9841,6 @@ function renderJobPlan(jobId, job, est) {
           'Move documented for NASMM SMM-C tracking']));
 
   // For service types without the core playbook: render standalone Room Documentation instead
-  var standaloneDocs = '';
   if (!hasPlaybook) {
     var docRooms = rooms.map(function(r) {
       return '<div style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">'
@@ -10156,16 +10025,6 @@ function resolveSubfolderId(job, name, cb) {
   if (id) { cb(id); return; }
   if (job.driveFolder) { fetchSubfolderIds(job, function(){ cb(look()); }); }
   else { cb(null); }
-}
-
-function syncDriveSubfolders(jobId) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  showSyncBadge('Syncing folder IDs…');
-  fetchSubfolderIds(job, function(ok) {
-    if (ok) { showSyncBadge('Drive subfolders synced ✓'); openClientDashboard(jobId); }
-    else showSyncBadge('Sync failed — check Apps Script', true);
-  });
 }
 
 function uploadToDrive(folderId, filename, dataUrl, onDone) {
@@ -10478,7 +10337,7 @@ function populateLogAndInvSelects() {
   var selLog  = document.getElementById('log-job');
   var selInv  = document.getElementById('inv-job');
   var selPlan = document.getElementById('plan-job');
-  var curLog = selLog ? selLog.value : '', curInv = selInv.value, curPlan = selPlan ? selPlan.value : '';
+  var curInv = selInv.value, curPlan = selPlan ? selPlan.value : '';
   selInv.innerHTML  = '<option value="">Select job</option>';
   if (selPlan) selPlan.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
@@ -10701,8 +10560,6 @@ function renderProbateAgreement() {
   content += dRow('Property Type', propType);
   content += dRow('Approx. Square Footage', propSqft);
   content += (function() {
-    var _volL = {1:'Sparse',2:'Light',3:'Standard',4:'Dense',5:'Extreme'};
-    var _cplxL = {1:'Simple',2:'Moderate',3:'Standard',4:'High',5:'Specialist'};
     var rooms = est ? (est.rooms || []) : [];
     if (!rooms.length) return dRow('Rooms &amp; Spaces Included','_______________________________________________');
     var roomNames = rooms.map(function(r){ return esc(r.name); }).join(', ');
@@ -10976,7 +10833,6 @@ function renderAgreement() {
     estate:'Estate Settlement'
   };
   var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
-  var smfRate  = '15%';
 
   var _split = paymentSplit(havTotal);
   var dep  = _split.deposit.toLocaleString();
@@ -10984,8 +10840,6 @@ function renderAgreement() {
   var fin  = _split.final.toLocaleString();
 
   var today     = new Date();
-  var monthName = today.toLocaleDateString('en-US',{month:'long'});
-  var dayNum    = today.getDate();
   var year      = today.getFullYear();
 
   // Logo
@@ -11363,7 +11217,6 @@ function printAgreement() {
   }, 150);
 }
 
-// Also fix printInvoice and printEstimate to use same print target approach
 function printClientEstimate() {
   if (!estimateApproved) { alert('Estimate must be approved before printing.'); return; }
   
@@ -11400,34 +11253,12 @@ function printClientEstimate() {
 
 
 
-// ─── GOOGLE DRIVE INTEGRATION ────────────────────────────────────────────────
-// Set DRIVE_ROOT to your Havellin Jobs folder URL once you share it
-var DRIVE_ROOT = localStorage.getItem('havellin_drive_root') || 'https://drive.google.com/drive/folders/0ADz5Z-Lfvyt8Uk9PVA';
-
-function buildDriveLink(job) {
-  // Search Drive for client folder by name
-  var clientName = job.client || job.name || ('Job ' + job.id);
-  var query = encodeURIComponent('Havellin ' + clientName);
-  return 'https://drive.google.com/drive/search?q=' + query;
-}
-
-function openDriveRoot() {
-  window.open(DRIVE_ROOT, '_blank');
-}
-
-function setDriveRoot(url) {
-  DRIVE_ROOT = url;
-  try { localStorage.setItem('havellin_drive_root', url); } catch(e) {}
-}
-
-
 // ─── NOTES MODAL ─────────────────────────────────────────────────────────────
 var _notesRoomId = null;
 
 function openNotesModal(id) {
   _notesRoomId = id;
   var noteEl = document.getElementById('note-'+id);
-  var rowEl = document.getElementById('row-'+id);
   var nameEl = document.getElementById('name-'+id);
   var roomName = nameEl ? (nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent) : id;
   document.getElementById('notes-modal-title').textContent = 'Walkthrough note — ' + roomName;
