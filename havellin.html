@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 6:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 6:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3115,14 +3115,27 @@ function removePrepItem(i) { prepItems.splice(i,1); renderPrepItems(); calcAll()
 function renderPrepItems() {
   var html = '';
   prepItems.forEach(function(p,i) {
-    html += '<tr><td><strong>'+p.type+'</strong></td>' +
+    html += '<tr><td><strong>'+esc(p.type)+'</strong></td>' +
       '<td><input type="number" value="'+p.cost+'" oninput="updatePrepCost('+i+',this.value)" style="width:100%;"></td>' +
       '<td id="prep-fee-'+i+'">$'+Math.round(p.cost*0.30).toLocaleString()+'</td>' +
-      '<td><button class="icon-btn del" onclick="removePrepItem('+i+')">✕</button></td></tr>';
+      '<td><button class="icon-btn del" onclick="removePrepItem('+i+')">✕</button></td></tr>' +
+      // Scope note — what to tell this vendor when you call for a quote (captured on the
+      // walkthrough since there's no room-by-room grid for a prep job).
+      '<tr><td colspan="4" style="padding-top:0;">' +
+        '<textarea oninput="updatePrepNote('+i+',this.value)" rows="2" placeholder="Scope for this vendor — e.g. 5 bedrooms + hallway, walls &amp; ceilings; front &amp; back landscaping; whole-house pressure wash…" ' +
+        'style="width:100%;font-size:11px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;">'+esc(p.note||'')+'</textarea>' +
+      '</td></tr>';
   });
   var tbody = document.getElementById('prep-body');
   if (tbody) tbody.innerHTML = html || '<tr><td colspan="4" style="color:var(--gray);font-size:11px;padding:10px;">No items added</td></tr>';
   calcPrepTotals();
+}
+
+// Scope note per prep vendor line. Set the model + recalc (which persists via the
+// scratch save); do NOT re-render the table here — that would drop focus mid-type.
+function updatePrepNote(i, val) {
+  if (prepItems[i]) prepItems[i].note = val;
+  calcAll();
 }
 
 // Update the model + this row's 30% fee + totals in place. Do NOT re-render the
@@ -3876,7 +3889,10 @@ function proposedPlanRow(e) {
     notes.push(['Notable collections', 'Items of value are matched to the right partner and handled through the disposition plan below.' + collectionsDispositionNote(e.collections)]);
   }
 
-  if (e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
+  // For a standalone Home Prep for Sale job the main narrative already describes the
+  // vendor-management model, so this note would just repeat it. Only add it when prep is
+  // an ADD-ON to another service (e.g. a downsizing job), where it flags the extra scope.
+  if (e.svc !== 'prep' && e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
     notes.push(['Home Prep for Sale', 'We manage the work needed to get the property show-ready, coordinating and overseeing each vendor — detailed below.']);
   }
 
@@ -3963,7 +3979,7 @@ function buildPrepEstimateBody(e) {
     '</tbody>' +
     '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note" style="margin-top:6px;">The final fee is 30% of actual vendor spend. If that exceeds this estimate by more than 15%, Havellin will notify you before proceeding.</div>' +
+    '<div class="ce-note" style="margin-top:6px;">The final fee is 30% of actual vendor spend. We review each vendor’s quote with you before booking, so the cost is confirmed before any work begins.</div>' +
 
     // 3) Then the combined total — a single grand-total line. The vendor spend and fee
     // are already itemized in the two sections above, and the "grand" row carries its
@@ -9164,6 +9180,10 @@ function renderVendorSourcing(jobId, job, est) {
           '<strong style="font-size:12px;">' + esc(p.type||'Prep item') + '</strong>' +
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
         '</div>' +
+        // Scope captured on the walkthrough — what to tell the vendor when calling for a quote.
+        (p.note && String(p.note).trim()
+          ? '<div style="margin-top:5px;font-size:11.5px;color:var(--gray-dk);line-height:1.45;background:var(--cream);border-left:3px solid var(--bronze);border-radius:3px;padding:5px 8px;"><span style="color:var(--bronze);font-weight:700;">Scope:</span> ' + esc(p.note) + '</div>'
+          : '') +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
           '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('type', p.type)) + '</select>' +
           '<select onchange="setPrepVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
