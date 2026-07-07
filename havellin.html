@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 6:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 6:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1570,6 +1570,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div id="r-fb"></div>
   </div>
 
+  <div id="referrals-leaderboard"></div>
   <div id="referrals-list"></div>
 </div>
 
@@ -9684,6 +9685,7 @@ function renderReferralStats(){
 }
 function renderReferralsTab(){
   renderReferralStats();
+  renderReferralLeaderboard();
   var list = document.getElementById('referrals-list'); if (!list) return;
   if (!referralDirectory.length) {
     list.innerHTML = '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">' +
@@ -9710,6 +9712,7 @@ function referralStatusSelect(p){
 function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferral(id, { status: val }, 'Updating status…'); }
 function referralCardHtml(p){
   var id = referralIdOf(p);
+  var _rst = referralPartnerStats(p._row);
   var cbits = [];
   if (p.primary_contact) cbits.push(esc(p.primary_contact));
   if (p.phone) cbits.push('<a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(p.phone) + '</a>');
@@ -9727,6 +9730,7 @@ function referralCardHtml(p){
       '<div><div style="font-weight:600;font-size:13px;">' + esc(p.partner_name||'—') +
         ' <span style="font-size:11px;font-weight:600;color:' + statusColor + ';">&middot; ' + esc(p.status||'—') + '</span></div>' +
         (meta.length ? '<div style="font-size:11px;color:var(--gray);margin-top:2px;">' + meta.join(' &middot; ') + '</div>' : '') +
+        (_rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:3px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' &middot; ' + _rst.won + ' won &middot; $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '') +
         (cbits.length ? '<div style="font-size:11px;color:var(--gray-dk);margin-top:3px;">' + cbits.join(' &nbsp;&middot;&nbsp; ') + '</div>' : '') +
         (p.notes ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;font-style:italic;">' + esc(p.notes) + '</div>' : '') +
       '</div>' +
@@ -9806,6 +9810,49 @@ function _quickWriteReferral(id, patch, busyMsg){
   });
 }
 function stampReferralContacted(id){ var today = new Date().toISOString().slice(0,10); _quickWriteReferral(id, { last_contacted: today }, 'Logging outreach…'); }
+
+// ── Attribution: aggregate the jobs linked to a partner at intake (job.refPartnerId).
+function referralPartnerStats(partnerRow){
+  var key = String(partnerRow||'');
+  if (!key) return { count:0, won:0, pipeline:0, wonRev:0, last:'' };
+  var js = jobs.filter(function(j){ return String(j.refPartnerId||'') === key; });
+  var won = js.filter(function(j){ return j.status==='active' || j.status==='closed'; });
+  var pipeline = js.filter(function(j){ return j.status!=='lost'; }).reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
+  var wonRev = won.reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
+  var lastJob = js.slice().sort(function(a,b){ return (b.id||0) - (a.id||0); })[0];
+  return { count: js.length, won: won.length, pipeline: pipeline, wonRev: wonRev, last: lastJob ? (lastJob.created||'') : '' };
+}
+function renderReferralLeaderboard(){
+  var el = document.getElementById('referrals-leaderboard'); if (!el) return;
+  var rows = referralDirectory.map(function(p){ return { p:p, s:referralPartnerStats(p._row) }; })
+    .filter(function(r){ return r.s.count > 0; })
+    .sort(function(a,b){ return (b.s.wonRev - a.s.wonRev) || (b.s.count - a.s.count); });
+  if (!rows.length) { el.innerHTML = ''; return; }
+  var money = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
+  var body = rows.map(function(r,i){
+    var conv = r.s.count ? Math.round(r.s.won / r.s.count * 100) : 0;
+    return '<tr style="border-top:1px solid var(--border);">' +
+      '<td style="padding:6px 8px;color:var(--gray);">' + (i+1) + '</td>' +
+      '<td style="padding:6px 8px;font-weight:600;">' + esc(r.p.partner_name||'—') +
+        '<div style="font-size:10px;color:var(--gray);font-weight:400;">' + esc(r.p.partner_type||'') + (r.p.internal_external==='Internal' ? ' &middot; internal' : '') + '</div></td>' +
+      '<td style="padding:6px 8px;text-align:center;">' + r.s.count + '</td>' +
+      '<td style="padding:6px 8px;text-align:center;">' + r.s.won + ' <span style="color:var(--gray);font-size:10px;">(' + conv + '%)</span></td>' +
+      '<td style="padding:6px 8px;text-align:right;">' + money(r.s.pipeline) + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;color:var(--ok-tx);font-weight:600;">' + money(r.s.wonRev) + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--gray);white-space:nowrap;">' + esc(r.s.last) + '</td>' +
+    '</tr>';
+  }).join('');
+  el.innerHTML = '<div class="card" style="margin-bottom:1rem;overflow-x:auto;">' +
+    '<div class="sec" style="margin-bottom:8px;">Referral Leaderboard <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— jobs attributed to each partner at intake</span></div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px;">' +
+      '<thead><tr style="text-align:left;color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.05em;">' +
+        '<th style="padding:4px 8px;">#</th><th style="padding:4px 8px;">Partner</th>' +
+        '<th style="padding:4px 8px;text-align:center;">Referrals</th><th style="padding:4px 8px;text-align:center;">Won</th>' +
+        '<th style="padding:4px 8px;text-align:right;">Pipeline</th><th style="padding:4px 8px;text-align:right;">Won $</th>' +
+        '<th style="padding:4px 8px;text-align:right;">Last</th></tr></thead>' +
+      '<tbody>' + body + '</tbody>' +
+    '</table></div>';
+}
 
 // Intake: reveal the named-partner picker for person-type referral sources, and keep
 // it populated from the active directory.
