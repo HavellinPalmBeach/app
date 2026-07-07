@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 9:05am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 9:40am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9789,9 +9789,12 @@ function saveReferral(){
   var fields = {}; Object.keys(REFERRAL_FORM_MAP).forEach(function(fid){ fields[REFERRAL_FORM_MAP[fid]] = _getR(fid); });
   fields.partner_name = (fname + ' ' + lname).trim();
   var editId = document.getElementById('r-edit-row').value;
+  // Only update an existing row when we still have a valid sheet-row reference for it;
+  // otherwise fall back to a clean add so a stale/dropped _row can't hard-fail the save.
+  var existing = editId ? lookupReferralById(editId) : null;
+  var canUpdate = !!(existing && existing._row != null && String(existing._row).trim() !== '');
   var st = document.getElementById('r-save-status'); if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
-  if (editId) {
-    var existing = lookupReferralById(editId) || {};
+  if (canUpdate) {
     postReferralWrite('updatePartner', { _row: existing._row, partner_name: fields.partner_name, fields: fields }, function(ok, d){
       if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
       Object.keys(fields).forEach(function(k){ existing[k] = fields[k]; });
