@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 2:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 3:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9796,7 +9796,6 @@ function renderJobPlan(jobId, job, est) {
   var p1rooms = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px;">' +
     rooms.map(function(r) {
       var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
-      var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
       return '<div id="plan-room-block-p1-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
         '<strong style="font-size:12px;line-height:1.3;">'+r.name+'</strong>' +
@@ -9804,7 +9803,6 @@ function renderJobPlan(jobId, job, est) {
         '</div>' +
         '<div style="font-size:10px;color:var(--gray);margin-bottom:5px;">Vol '+r.vol+' · Cplx '+r.cplx+' · '+r.tcH.toFixed(1)+'TC / '+r.psH.toFixed(1)+'PS hrs</div>' +
         (r.note ? '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-bottom:4px;">&#128203; '+r.note+'</div>' : '') +
-        (hasAudioNote ? '<div style="font-size:10px;color:var(--bronze);margin-bottom:4px;">&#127908; Voice note</div>' : '') +
         '<div id="plan-room-status-p1-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status,'p1')+'</div>' +
         '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'-before" style="display:none;margin-top:4px;"></div>' +
         '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
@@ -9976,11 +9974,9 @@ function renderJobPlan(jobId, job, est) {
   var standaloneDocs = '';
   if (!hasPlaybook) {
     var docRooms = rooms.map(function(r) {
-      var hasAudioNote = roomMedia[jobId + '_r' + r.idx + '_audio'] && roomMedia[jobId + '_r' + r.idx + '_audio'].length > 0;
       return '<div style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">'
         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
         + '<strong style="font-size:12px;">'+r.name+'</strong>'
-        + (hasAudioNote ? '<span style="font-size:10px;color:var(--bronze);">&#127908; Voice note</span>' : '')
         + (r.note ? '<span style="font-size:10px;color:var(--gray);font-style:italic;">'+r.note+'</span>' : '')
         + '</div>'
         + '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-bottom:4px;"></div>'
@@ -11994,9 +11990,6 @@ function formatPhone(input) {
     input.value = '(' + v;
   }
 }
-
-// ─── ROOM MEDIA CAPTURE (video / audio) ───────────────────────────────────────
-var roomMedia = {};
 
 // ─── COLLECTIONS TABLE ─────────────────────────────────────────────────────────
 var collectionsData = [];
