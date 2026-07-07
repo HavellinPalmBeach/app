@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 5:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 5:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7677,7 +7677,7 @@ function loadVendorDirectory() {
   setVendorDirStatus('Loading…', false);
   showSyncBadge('Reloading vendor directory…');
   fetch(VENDOR_SYNC_URL + '?action=loadVendors')
-    .then(function(r){ return r.json(); })
+    .then(_readAppsScriptJson)
     .then(function(data){
       if (data && Array.isArray(data.vendors) && !data.error) {
         vendorDirectory = data.vendors;
@@ -7692,9 +7692,10 @@ function loadVendorDirectory() {
       }
       refreshVendorsTabIfActive();
     })
-    .catch(function(){
-      showSyncBadge('Vendor directory load failed — check the URL / sharing', true);
-      setVendorDirStatus('Load failed — confirm the web app is shared to “Anyone” and you used the /exec URL', true);
+    .catch(function(e){
+      var msg = (e && e.message) || 'check the URL / sharing';
+      showSyncBadge('Vendor directory load failed — ' + msg, true);
+      setVendorDirStatus('Load failed — ' + msg, true);
       refreshVendorsTabIfActive();
     });
 }
@@ -9712,13 +9713,29 @@ function editVendor(id) {
   card.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
+// Apps Script /exec endpoints must return JSON. When the deployment's access isn't
+// "Anyone" — or the URL is stale/wrong — Google serves an HTML login/error page instead,
+// and a blind r.json() throws the opaque "Unexpected token '<'". Read the body as text
+// first so we can detect that case and return an actionable message (the real fix is a
+// re-deploy with "Who has access: Anyone" and a fresh /exec URL).
+function _readAppsScriptJson(r) {
+  return r.text().then(function(t){
+    var s = (t || '').trim();
+    if (s.charAt(0) === '<' || /^<!doctype|^<html/i.test(s)) {
+      throw new Error('the web app returned a login/HTML page, not data — re-deploy the Apps Script with "Who has access: Anyone" and paste the fresh /exec URL into Settings');
+    }
+    try { return JSON.parse(s); }
+    catch (e) { throw new Error('the web app response was not valid JSON — confirm the /exec URL and that the script is deployed'); }
+  });
+}
+
 // POST a write to the vendor web app; cb(ok, data).
 function postVendorWrite(type, payload, cb) {
   if (!VENDOR_SYNC_URL) { cb(false, {error:'No Vendor Directory URL set'}); return; }
   fetch(VENDOR_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:type, payload:payload }) })
-    .then(function(r){ return r.json(); })
+    .then(_readAppsScriptJson)
     .then(function(d){ cb(!!(d && d.ok), d || {}); })
-    .catch(function(e){ cb(false, {error:String(e)}); });
+    .catch(function(e){ cb(false, {error:(e && e.message) || String(e)}); });
 }
 
 function saveVendor() {
@@ -9821,7 +9838,7 @@ function loadReferralDirectory(){
   setReferralDirStatus('Loading…', false);
   showSyncBadge('Reloading referral partners…');
   fetch(REFERRAL_SYNC_URL + '?action=loadPartners')
-    .then(function(r){ return r.json(); })
+    .then(_readAppsScriptJson)
     .then(function(data){
       if (data && Array.isArray(data.partners) && !data.error) {
         referralDirectory = data.partners;
@@ -9940,9 +9957,9 @@ function editReferral(id){
 function postReferralWrite(type, payload, cb){
   if (!REFERRAL_SYNC_URL) { cb(false, {error:'No Referral Partners URL set'}); return; }
   fetch(REFERRAL_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:type, payload:payload }) })
-    .then(function(r){ return r.json(); })
+    .then(_readAppsScriptJson)
     .then(function(d){ cb(!!(d && d.ok), d || {}); })
-    .catch(function(e){ cb(false, {error:String(e)}); });
+    .catch(function(e){ cb(false, {error:(e && e.message) || String(e)}); });
 }
 function saveReferral(){
   var fname = _getR('r-fname'), lname = _getR('r-lname');
