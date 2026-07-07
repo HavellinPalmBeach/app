@@ -1,7 +1,7 @@
 # Havellin Palm Beach — App Notes
 
 ## Always on every commit
-- Update the version timestamp in `havellin.html` line ~233:
+- Update the version timestamp in `havellin.html` line ~247:
   `2026.MM.DD · H:MMpm ET`
   Use the current date and approximate ET time.
   Format: `YYYY.MM.DD · H:MMpm ET`
@@ -23,6 +23,17 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Single-file app: `havellin.html` — all CSS, JS, HTML in one file
 - Hosted on GitHub Pages from `main` branch
 - No build process
+
+## Docs / operations manual (`manual.html`)
+- `manual.html` is the internal operations manual. It is **hand-maintained** and does
+  NOT auto-sync with the app, so it drifts whenever the app changes.
+- **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
+  dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
+  a reconciliation pass against the current app. Don't let it silently fall out of date.
+- Last reconciled against the app: **2026-07-07** (nav tabs, property types → 5,
+  premium rates → $185/$125, Log Hours now under Job Plan, Final Invoice → Invoices).
+  Still deferred until the app is fully built: full sections for the newer tabs
+  (Job Plan, Inventory, Contractors, Win / Loss) are not yet written.
 
 ## Backlog / don't forget
 - Warm up the **estimate email language** — add a personal touch tying back to the

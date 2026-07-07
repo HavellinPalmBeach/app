@@ -45,7 +45,7 @@
 
   <h2>1. Overview</h2>
   <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Approvals require a manager PIN. Client signatures via DocuSign. Payments via Stripe.</p>
-  <p><strong>Navigation tabs:</strong> New Client · Estimate · Client Estimate · Agreement · Log Hours · Final Invoice · Clients</p>
+  <p><strong>Navigation tabs:</strong> Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Win / Loss</p>
 
   <h2>2. Initial Setup (one time per device)</h2>
   <p>Open <strong>Settings</strong> (gear icon) and enter:</p>
@@ -66,7 +66,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <h2>4. New Client Intake</h2>
   <p>All fields marked * are required. Job ID is auto-generated (<code>HVL-YYMM-XXXX</code>). Google Drive folders are created automatically on save — no manual step needed.</p>
-  <p><strong>Property Types:</strong> Apartment · Penthouse · Town Home · Patio Home · Single Family Home · Contemporary Estate · Equestrian Estate · Historic Estate · Waterfront Estate</p>
+  <p><strong>Property Types:</strong> Apartment · Town Home · Patio Home · Single Family Home · Estate</p>
   <p><strong>Estate / Probate</strong> jobs require authorized representative (executor, POA, administrator) — name, role, phone, email. <strong>Probate</strong> additionally requires case number and attorney details.</p>
   <p>Drive folder structure created automatically per job:</p>
   <div class="flow">Photos · Walkthrough Notes · Estimate · Agreement · Change Orders · Asset Documentation</div>
@@ -90,10 +90,10 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <h3>5c. Job Settings</h3>
   <ul>
-    <li><strong>Premium Property</strong> — TC $175/hr, PS $135/hr (vs. standard $150/$100)</li>
+    <li><strong>Premium Estate</strong> — TC $185/hr, PS $125/hr (vs. standard $150/$100)</li>
     <li><strong>PS Count</strong> — number of Property Specialists assigned</li>
     <li><strong>Preferred Customer Discount</strong> — percentage off Havellin labor fees only</li>
-    <li><strong>Moving Materials Package</strong> — None · Basic · Standard · Premium · Custom</li>
+    <li><strong>Moving Materials Package</strong> — None, or an Estate tier (Basic $500 · Standard $750 · Premium $1,500) or Downsizing tier (Basic $200 · Standard $350 · Premium $550)</li>
     <li><strong>Target Completion</strong> — appears in estimate and agreement documents</li>
   </ul>
 
@@ -180,10 +180,10 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   </ul>
 
   <h2>10. Log Hours</h2>
-  <p><strong>Tab: Log Hours</strong> → select job. Log each working session: date, team member, role (TC / PS / Specialty), hours, task description. Hours accumulate against the estimate. Log daily — do not batch at end of job.</p>
+  <p><strong>Tab: Job Plan → Log Hours</strong> → select job. Log each working session: date, team member, role (TC / PS / Specialty), hours, task description. Hours accumulate against the estimate. Log daily — do not batch at end of job.</p>
 
   <h2>11. Final Invoice</h2>
-  <p><strong>Tab: Final Invoice</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
+  <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
 
   <h2>12. Drive Folder Reference</h2>
   <table>
@@ -198,9 +198,9 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <h2>13. Rates &amp; Fees Reference</h2>
   <table>
-    <tr><th>Item</th><th>Standard</th><th>Premium Property</th></tr>
-    <tr><td>Transition Concierge</td><td>$150/hr</td><td>$175/hr</td></tr>
-    <tr><td>Property Specialist</td><td>$100/hr</td><td>$135/hr</td></tr>
+    <tr><th>Item</th><th>Standard</th><th>Premium Estate</th></tr>
+    <tr><td>Transition Concierge</td><td>$150/hr</td><td>$185/hr</td></tr>
+    <tr><td>Property Specialist</td><td>$100/hr</td><td>$125/hr</td></tr>
     <tr><td>Service Management Fee</td><td>15% of vendor costs</td><td>15% of vendor costs</td></tr>
     <tr><td>Home Prep GC / Site Management Fee</td><td>30% of prep vendors</td><td>30% of prep vendors</td></tr>
     <tr><td>Moving Materials</td><td>Cost + 25%</td><td>Cost + 25%</td></tr>
@@ -211,7 +211,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.05
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07
   </div>
 
 </div>
