@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 3:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 4:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -799,11 +799,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr id="s-smf-row"><td class="muted">Vendor SMF (15%)</td><td class="num" id="s-smf">$0</td></tr>
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
-          <tr class="total-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
+          <tr class="total-row" id="s-havellin-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
           <tr id="s-vendor-row"><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
-          <tr class="total-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
+          <tr class="total-row" id="s-grand-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
         <div id="fixed-price-panel" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
           <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Fixed-Price Project Fee Option</div>
@@ -2379,6 +2379,21 @@ function applyEstimateServiceMode(isPrep) {
   if (isPrep) { var pc = document.getElementById('prep-content'); if (pc) pc.style.display = 'block'; }
   var lbl = document.getElementById('prep-card-label');
   if (lbl) lbl.textContent = isPrep ? 'Home Prep for Sale — Managed Vendors (30% GC fee)' : 'Home Prep for Sale';
+
+  // Reorder the ESTIMATE SUMMARY panel for Home Prep for Sale so it reads the way the
+  // client estimate does: vendors (at cost) first, then the 30% fee, then the grand
+  // total. Also drop the redundant "Havellin services total" line — for a fee-only
+  // service it equals the fee and just adds a confusing duplicate. Idempotent:
+  // applyEstimateServiceMode runs on every calcAll.
+  var havRow  = document.getElementById('s-havellin-row');
+  var grandRow = document.getElementById('s-grand-row');
+  var pCostRow = document.getElementById('s-prep-cost-row');
+  var pFeeRow  = document.getElementById('s-prep-fee-row');
+  if (havRow) havRow.style.display = isPrep ? 'none' : '';
+  if (pCostRow && pFeeRow && grandRow && pCostRow.parentNode) {
+    if (isPrep) pCostRow.parentNode.insertBefore(pCostRow, pFeeRow);   // vendors before fee
+    else        grandRow.parentNode.insertBefore(pCostRow, grandRow);  // restore: vendors before grand total
+  }
 }
 
 function calcAll() {
@@ -3873,7 +3888,7 @@ function populateClientEstimateSelect() {
   var opts = '<option value="">Select job</option>';
   jobs.forEach(function(j){
     var rec = estimateStore[j.id];
-    if (rec && rec.estimate && rec.estimate.rooms && rec.estimate.rooms.length) {
+    if (rec && rec.estimate && estimateHasContent(rec.estimate)) {
       opts += '<option value="' + j.id + '">' + esc(j.name || ('Job ' + j.id)) + (j.hvlId ? ' · ' + esc(j.hvlId) : '') + '</option>';
     }
   });
@@ -3900,6 +3915,44 @@ function loadClientEstimateFromSelect() {
     loadEstimateForJob(jobId);
     renderClientEstimate();
   });
+}
+
+// Home Prep for Sale client estimate body — a purpose-built, minimal layout. The
+// fee-only model reads cleanest vendors-first: the client sees the third-party prep
+// vendor estimates (billed at cost), then Havellin's 30% management fee on that spend,
+// then the combined total. No labor lines, no empty "Third-Party Vendors Engaged"
+// section, no fee shown twice — just the three numbers that matter, in order.
+function buildPrepEstimateBody(e) {
+  var prepRows = (e.prepItems||[]).filter(function(p){ return p.cost > 0; }).map(function(p){
+    return '<tr><td>' + esc(p.type) + '</td><td class="r">' + fmt(p.cost) + '</td></tr>';
+  }).join('') || '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No prep vendors estimated yet</td></tr>';
+  return '' +
+    // Proposed Plan (reuses the shared, service-specific narrative box)
+    '<table class="ce-tbl" style="margin-bottom:1.1rem;"><tbody>' + proposedPlanRow(e) + '</tbody></table>' +
+
+    // 1) Vendors first — billed at cost
+    '<div class="ce-section-hdr">Home Prep Vendors — Estimated (billed to you at cost)</div>' +
+    '<table class="ce-tbl"><tbody>' + prepRows + '</tbody>' +
+    '<tr class="subtotal"><td>Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
+    '</table>' +
+    '<div class="ce-note" style="margin-top:6px;">Vendor amounts are estimates. Actual invoices are billed to you directly at cost — Havellin does not mark them up.</div>' +
+
+    // 2) Then Havellin\'s 30% management fee on that spend
+    '<div class="ce-section-hdr" style="margin-top:1.25rem;">Havellin Management Fee</div>' +
+    '<table class="ce-tbl"><tbody>' +
+    '<tr><td>GC / Site Management Fee — sourcing, scheduling, on-site oversight &amp; quality control (30% of vendor spend)</td><td class="r">' + fmt(e.prepFee || e.havellinTotal) + '</td></tr>' +
+    '</tbody>' +
+    '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
+    '</table>' +
+    '<div class="ce-note" style="margin-top:6px;">The final fee is 30% of actual vendor spend. If that exceeds this estimate by more than 15%, Havellin will notify you before proceeding.</div>' +
+
+    // 3) Then the combined total
+    '<div style="margin-top:1.25rem;"><div class="ce-section-hdr">Total Estimated Project Cost</div>' +
+    '<table class="ce-tbl"><tbody>' +
+    '<tr><td>Prep Vendors (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
+    '<tr><td>Havellin Management Fee (30%)</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
+    '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
+    '</tbody></table></div>';
 }
 
 function renderClientEstimate() {
@@ -4049,6 +4102,9 @@ function renderClientEstimate() {
   var _onsiteTcFee = (e.tcFee||0) - _destTcFee;
   var _onsitePsFee = (e.psFee||0) - _destPsFee;
 
+  if (e.svc === 'prep') {
+    html += buildPrepEstimateBody(e);
+  } else {
   html +=
     '<div class="ce-section-hdr">Havellin Services</div>' +
     '<table class="ce-tbl">' +
@@ -4120,8 +4176,10 @@ function renderClientEstimate() {
     '<tr><td>Est. Third-Party Vendors (at cost)</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
     (e.prepEnabled && e.prepCost > 0 ? '<tr><td>Est. Home Prep Vendors (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' : '') +
     '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
-    '</tbody></table></div>' +
+    '</tbody></table></div>';
+  }
 
+  html +=
     '<div style="margin-top:1.5rem;"><div class="ce-section-hdr">Payment Schedule</div>' +
     '<table class="pay-tbl">' +
     '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
