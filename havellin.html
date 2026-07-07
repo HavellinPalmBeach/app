@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 6:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 7:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1899,7 +1899,7 @@ var ROOMS = [
 ];
 
 var PRICING_REF = {
-  downsizing:{label:'Senior Downsizing',sizes:[
+  downsizing:{label:'Downsizing',sizes:[
     {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
     {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
     {l:'Estate (4,000–6,000 sqft) ',min:14000,max:25000,days:'8–14 days'},
@@ -11567,8 +11567,8 @@ function renderAgreement() {
   var startFmt    = job.start ? new Date(job.start+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '[START DATE]';
   var svcMap = {
     cleanout:'Estate Settlement', probate:'Probate Estate Settlement',
-    downsizing:'Senior Downsizing',
-    downsizing_move:'Senior Downsizing with Move Management',
+    downsizing:'Downsizing',
+    downsizing_move:'Downsizing & Move Management',
     estate:'Estate Settlement',
     prep:'Home Prep for Sale'
   };
@@ -11678,7 +11678,7 @@ function renderAgreement() {
     '</tbody></table></div>'+
     p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.')+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
-    p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement and Senior Downsizing engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
+    p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement and Downsizing engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
     p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.')+
