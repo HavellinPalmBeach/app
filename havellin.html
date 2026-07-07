@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 4:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 4:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3965,10 +3965,10 @@ function buildPrepEstimateBody(e) {
     '</table>' +
     '<div class="ce-note" style="margin-top:6px;">The final fee is 30% of actual vendor spend. If that exceeds this estimate by more than 15%, Havellin will notify you before proceeding.</div>' +
 
-    // 3) Then the combined total — just the grand total; the vendor spend and fee
-    // are already itemized in the two sections directly above, so we don't repeat them.
-    '<div style="margin-top:1.25rem;"><div class="ce-section-hdr">Total Estimated Project Cost</div>' +
-    '<table class="ce-tbl"><tbody>' +
+    // 3) Then the combined total — a single grand-total line. The vendor spend and fee
+    // are already itemized in the two sections above, and the "grand" row carries its
+    // own label, so we drop the redundant section header that repeated the same words.
+    '<div style="margin-top:1.25rem;"><table class="ce-tbl"><tbody>' +
     '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
     '</tbody></table></div>';
 }
