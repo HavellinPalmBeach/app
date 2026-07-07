@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 1:52pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 2:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3470,12 +3470,22 @@ function loadJobIntoEstimate() {
   });
 }
 
+// A saved estimate is restorable if it has scored rooms OR it's a Home Prep for Sale
+// estimate (fee-only, zero rooms) that carries managed prep vendors. Without the prep
+// clause a saved prep estimate looks "empty" and gets wiped down the start-fresh path.
+function estimateHasContent(est) {
+  if (!est) return false;
+  if (est.rooms && est.rooms.length > 0) return true;
+  if (est.svc === 'prep' && est.prepEnabled && (est.prepItems || []).length > 0) return true;
+  return false;
+}
+
 // Render the opened estimate into the Estimate tab. status is 'cloud' (the store
 // now reflects the sheet) or 'offline' (the fetch failed — fall back to whatever
 // local copy we have, but warn the user it may be stale).
 function applyOpenedEstimate(jobId, job, status) {
   var hasSaved = loadEstimateForJob(jobId);
-  if (hasSaved && currentEstimate && currentEstimate.rooms && currentEstimate.rooms.length > 0) {
+  if (hasSaved && estimateHasContent(currentEstimate)) {
     restoreEstimateToUI(currentEstimate);
     updateApprovalUI();
     if (status === 'offline') {
@@ -3491,7 +3501,7 @@ function applyOpenedEstimate(jobId, job, status) {
     // for this job, restore it as a fallback rather than wiping the user's work —
     // but make clear it's an unsynced local draft, not a confirmed saved copy.
     var scratch = loadEstimateScratch(jobId);
-    if (scratch && scratch.estimate && scratch.estimate.rooms && scratch.estimate.rooms.length > 0) {
+    if (scratch && scratch.estimate && estimateHasContent(scratch.estimate)) {
       currentEstimate = scratch.estimate;
       estimateApproved = scratch.approved || false;
       estimateSubmitted = scratch.submitted || false;
@@ -3602,18 +3612,32 @@ function saveEstimateAndPreview() {
   if (!jobId) { showFB('e-fb','warn','Select a job to attach this estimate to.'); return; }
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) { showFB('e-fb','warn','Job not found.'); return; }
-  if (!currentEstimate || currentEstimate.havellinTotal === 0 || !currentEstimate.rooms || currentEstimate.rooms.length === 0) { showFB('e-fb','warn','No rooms scored — check at least one room and set volume/complexity before saving.'); return; }
-  var unscoredRooms = currentEstimate.rooms.filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
-  if (unscoredRooms.length > 0) { showFB('e-fb','warn','Every included room needs a volume and complexity score (1–5): ' + unscoredRooms.map(function(r){ return r.name; }).join(', ')); return; }
-  var propValEl = document.getElementById('e-propval');
-  if (!propValEl || !propValEl.value || propValEl.value === '0') {
-    showFB('e-fb','warn','Property value is required — set the approximate home value in Client Intake for this client, then reopen the estimate.');
-    return;
+  if (!currentEstimate) { showFB('e-fb','warn','Nothing to save yet — build the estimate first.'); return; }
+  // Home Prep for Sale is a fee-only service: no rooms, no labor engine, no property
+  // value. The estimate IS the 30% management fee on the prep vendors, so it validates
+  // on "at least one prep vendor with a cost" instead of the room-scoring path below.
+  var isPrepEst = (currentEstimate.svc === 'prep');
+  if (isPrepEst) {
+    if (!currentEstimate.prepEnabled || (currentEstimate.havellinTotal || 0) === 0) {
+      showFB('e-fb','warn','Add at least one Home Prep vendor with a cost before saving — the estimate is the 30% management fee on those managed vendors.');
+      return;
+    }
+  } else {
+    if (currentEstimate.havellinTotal === 0 || !currentEstimate.rooms || currentEstimate.rooms.length === 0) { showFB('e-fb','warn','No rooms scored — check at least one room and set volume/complexity before saving.'); return; }
+    var unscoredRooms = currentEstimate.rooms.filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
+    if (unscoredRooms.length > 0) { showFB('e-fb','warn','Every included room needs a volume and complexity score (1–5): ' + unscoredRooms.map(function(r){ return r.name; }).join(', ')); return; }
+    var propValEl = document.getElementById('e-propval');
+    if (!propValEl || !propValEl.value || propValEl.value === '0') {
+      showFB('e-fb','warn','Property value is required — set the approximate home value in Client Intake for this client, then reopen the estimate.');
+      return;
+    }
   }
   var svc = document.getElementById('e-svc').value;
   var ref = PRICING_REF[svc];
-  var inRange = false;
-  if (ref) ref.sizes.forEach(function(s){ if (currentEstimate.havellinTotal>=s.min && currentEstimate.havellinTotal<=s.max) inRange=true; });
+  // Home Prep for Sale is fee-based (30% of vendor costs), so no size-band benchmark
+  // applies — treat it as in-range so the jobs list never flags it "out of range".
+  var inRange = isPrepEst ? true : false;
+  if (!isPrepEst && ref) ref.sizes.forEach(function(s){ if (currentEstimate.havellinTotal>=s.min && currentEstimate.havellinTotal<=s.max) inRange=true; });
   job.havellinEst = currentEstimate.havellinTotal;
   job.totalEst = currentEstimate.grandTotal;
   // Reset to TC Review state on each new save. Saving an estimate does NOT mean
@@ -3633,11 +3657,19 @@ function saveEstimateAndPreview() {
   saveEstimateState();   // single atomic write: estimate record + derived job summary + cloud
   syncJobToSheets(job);
   var roomsWithNotes = (currentEstimate.rooms||[]).filter(function(r){ return r.note && r.note.trim(); }).length;
-  var saveMsg = 'Saved: ' + currentEstimate.rooms.length + ' rooms'
-    + (roomsWithNotes > 0 ? ', ' + roomsWithNotes + ' with notes' : '')
-    + ' · ' + currentEstimate.totTC.toFixed(1) + ' TC hrs · ' + currentEstimate.totPS.toFixed(1) + ' PS hrs'
-    + ' · $' + currentEstimate.havellinTotal.toLocaleString()
-    + ' · Uploading to cloud…';
+  var saveMsg;
+  if (isPrepEst) {
+    var _prepVendorCount = (currentEstimate.prepItems||[]).length;
+    saveMsg = 'Saved: Home Prep for Sale · ' + _prepVendorCount + ' managed vendor' + (_prepVendorCount === 1 ? '' : 's')
+      + ' · 30% fee $' + currentEstimate.havellinTotal.toLocaleString()
+      + ' · Uploading to cloud…';
+  } else {
+    saveMsg = 'Saved: ' + currentEstimate.rooms.length + ' rooms'
+      + (roomsWithNotes > 0 ? ', ' + roomsWithNotes + ' with notes' : '')
+      + ' · ' + currentEstimate.totTC.toFixed(1) + ' TC hrs · ' + currentEstimate.totPS.toFixed(1) + ' PS hrs'
+      + ' · $' + currentEstimate.havellinTotal.toLocaleString()
+      + ' · Uploading to cloud…';
+  }
   showFB('e-fb','ok', saveMsg);
   // Capture estimate snapshot now — clearEstimateTab() nulls currentEstimate at t+1200ms
   // so Drive uploads must use a local reference, not currentEstimate.
@@ -4832,7 +4864,7 @@ function editEstimateForJob(jobId) {
   // Same pattern as the Client Estimate tab. onReady runs 'cloud' or 'offline'.
   refreshEstimateFromCloud(jobId, function(){
     var hasSavedEst = loadEstimateForJob(jobId);
-    var savedEstSnapshot = hasSavedEst && currentEstimate && currentEstimate.rooms && currentEstimate.rooms.length > 0 ? currentEstimate : null;
+    var savedEstSnapshot = hasSavedEst && estimateHasContent(currentEstimate) ? currentEstimate : null;
     clearAllRooms();
     if (savedEstSnapshot) {
       currentEstimate = savedEstSnapshot;
@@ -6205,12 +6237,14 @@ function refreshEstimateFromCloud(jobId, onReady) {
         estimateStore[jobId] = rec;            // cloud wins whenever the sheet has a record
       } else {
         // Sheet reached but has no record for this job. Don't delete a local copy
-        // that actually has rooms — it may be an estimate saved on this device while
+        // that actually has content — it may be an estimate saved on this device while
         // offline that never reached the sheet, and dropping it would be data loss.
-        // Only clear an empty/roomless placeholder so it can't masquerade as real.
+        // "Content" includes a Home Prep for Sale estimate, which is roomless by design
+        // (fee-only) and would otherwise look like an empty placeholder and be purged.
+        // Only clear a truly empty placeholder so it can't masquerade as real.
         var _local = estimateStore[jobId];
-        var _localHasRooms = _local && _local.estimate && (_local.estimate.rooms || []).length > 0;
-        if (!_localHasRooms) delete estimateStore[jobId];
+        var _localHasContent = _local && _local.estimate && estimateHasContent(_local.estimate);
+        if (!_localHasContent) delete estimateStore[jobId];
       }
       try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
       onReady('cloud');
