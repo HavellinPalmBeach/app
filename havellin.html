@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 9:40am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 10:05am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -254,6 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 </div>
 
 <div class="nav">
+  <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
   <button class="nb active" onclick="showPanel('jobs',this)">Client Dashboard</button>
   <button class="nb" onclick="showPanel('intake',this)">Client Intake</button>
   <button class="nb" onclick="showPanel('estimate',this)">Build Estimate</button>
@@ -265,7 +266,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
   <button class="nb" onclick="showPanel('vendors',this)">Vendors</button>
   <button class="nb" onclick="showPanel('referrals',this)">Referral Partners</button>
-  <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
 </div>
 
 <div class="main">
@@ -3660,7 +3660,7 @@ function saveEstimateAndPreview() {
   var _estSnapshotForDrive = currentEstimate;
   setTimeout(function() { exportEstimateToDrive(jobId, _estSnapshotForDrive); uploadWalkthroughNotesToDrive(jobId, _estSnapshotForDrive); }, 1500);
   setTimeout(function() {
-    document.querySelectorAll('.nb')[3].click();
+    var _ceBtn = document.querySelector('.nb[onclick*="\'client-estimate\'"]'); if (_ceBtn) _ceBtn.click();
     setTimeout(function() {
       window._suppressEstimateAutoSave = true;
       clearEstimateTab();
@@ -5766,7 +5766,9 @@ function docPdf(jobId, docType) {
     document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
     navBtns.forEach(function(b){ b.classList.remove('active'); });
     document.getElementById('panel-' + panelId).classList.add('active');
-    if (navBtns[btnIdx]) navBtns[btnIdx].classList.add('active');
+    // Highlight the matching tab by its panel id (order-independent).
+    var _pb = document.querySelector('.nb[onclick*="\'' + panelId + '\'"]');
+    if (_pb) _pb.classList.add('active');
   }
   if (docType === 'estimate') {
     var rec = estimateStore[jobId];
@@ -5798,7 +5800,8 @@ function docEmail(jobId, docType) {
     document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
     navBtns2.forEach(function(b){ b.classList.remove('active'); });
     document.getElementById('panel-agreement').classList.add('active');
-    if (navBtns2[4]) navBtns2[4].classList.add('active');
+    var _agB = document.querySelector('.nb[onclick*="\'agreement\'"]');
+    if (_agB) _agB.classList.add('active');
     var sel4 = document.getElementById('agr-job');
     if (sel4) { sel4.value = jobId; loadAgreement(); }
   } else if (docType === 'invoice') {
