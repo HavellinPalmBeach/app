@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 1:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 1:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9628,7 +9628,6 @@ function stampVendorContacted(id) {
 // named referral sources (estate attorneys, realtors, trust officers) we cultivate,
 // then attribute jobs to at intake (job.refPartnerId). Directory keys mirror the
 // sync script's columns; _row is the sheet row for updates.
-var REFERRAL_STATUSES = ['Identified','Contacted','Intro Meeting','Active Partner','Dormant','Do Not Use'];
 var REFERRAL_FORM_MAP = {
   'r-fname':'first_name','r-lname':'last_name','r-type':'partner_type','r-firm':'firm',
   'r-contact':'primary_contact','r-phone':'phone','r-email':'email','r-website':'website',
@@ -9715,13 +9714,20 @@ function renderReferralsTab(){
       ps.map(referralCardHtml).join('');
   }).join('');
 }
-function referralStatusSelect(p){
-  var cur = String(p.status||''); var id = referralIdOf(p);
-  var opts = '<option value="">— set status —</option>' + REFERRAL_STATUSES.map(function(s){
-    return '<option value="' + esc(s) + '"' + (cur===s?' selected':'') + '>' + esc(s) + '</option>'; }).join('');
-  return '<select onchange="setReferralStatusFromCard(\'' + id + '\',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' + opts + '</select>';
+// Status is a read-only, colour-coded badge on the list card — Do Not Use is red,
+// Dormant amber, Active green. Status is changed deliberately via Edit, not inline.
+function referralStatusBadge(s){
+  s = String(s||'—');
+  var c = ({
+    'Active Partner': ['var(--ok-bg)','var(--ok-tx)'],
+    'Dormant':        ['var(--warn-bg)','var(--warn-tx)'],
+    'Do Not Use':     ['var(--err-bg)','var(--err-tx)'],
+    'Intro Meeting':  ['var(--tan)','var(--gray-dk)'],
+    'Contacted':      ['var(--tan)','var(--gray-dk)'],
+    'Identified':     ['var(--cream)','var(--gray)']
+  })[s] || ['var(--cream)','var(--gray)'];
+  return '<span style="display:inline-block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:' + c[0] + ';color:' + c[1] + ';white-space:nowrap;">' + esc(s) + '</span>';
 }
-function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferral(id, { status: val }, 'Updating status…'); }
 function referralCardHtml(p){
   var id = referralIdOf(p);
   var _rst = referralPartnerStats(p._row);
@@ -9736,18 +9742,19 @@ function referralCardHtml(p){
   var lastc = String(p.last_contacted||'').trim()
     ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(p.last_contacted)) + '</span>'
     : '<span style="font-size:10px;color:var(--gray);">Not yet contacted</span>';
-  var statusColor = isActivePartner(p) ? 'var(--ok-tx)' : 'var(--gray)';
-  return '<div class="card" style="margin-bottom:8px;padding:.8rem 1rem;">' +
+  var _st = String(p.status||'');
+  var _accent = _st === 'Do Not Use' ? 'border-left:3px solid var(--err-tx);' : (_st === 'Dormant' ? 'border-left:3px solid var(--warn-tx);' : '');
+  return '<div class="card" style="margin-bottom:8px;padding:.8rem 1rem;' + _accent + '">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
-      '<div><div style="font-weight:600;font-size:13px;">' + esc(p.partner_name||'—') +
-        ' <span style="font-size:11px;font-weight:600;color:' + statusColor + ';">&middot; ' + esc(p.status||'—') + '</span></div>' +
+      '<div><div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;">' + esc(p.partner_name||'—') +
+        referralStatusBadge(p.status) + '</div>' +
         (meta.length ? '<div style="font-size:11px;color:var(--gray);margin-top:2px;">' + meta.join(' &middot; ') + '</div>' : '') +
         (_rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:3px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' &middot; ' + _rst.won + ' won &middot; $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '') +
         (_dorm.dormant ? '<div style="font-size:11px;color:var(--warn-tx);font-weight:600;margin-top:3px;">&#9200; ' + (_dorm.days == null ? 'No outreach logged — time for a nudge' : _dorm.days + ' days quiet — time for a nudge') + '</div>' : '') +
         (cbits.length ? '<div style="font-size:11px;color:var(--gray-dk);margin-top:3px;">' + cbits.join(' &nbsp;&middot;&nbsp; ') + '</div>' : '') +
         (p.notes ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;font-style:italic;">' + esc(p.notes) + '</div>' : '') +
       '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">' + referralStatusSelect(p) +
+      '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">' +
         '<div style="display:flex;gap:6px;">' +
           '<button class="btn-s" style="font-size:11px;" onclick="stampReferralContacted(\'' + id + '\')">Log outreach</button>' +
           '<button class="btn-s" style="font-size:11px;" onclick="editReferral(\'' + id + '\')">Edit</button>' +
