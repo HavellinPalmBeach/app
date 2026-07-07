@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 2:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 2:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2109,13 +2109,6 @@ function toggleRoom(id) {
   calcAll();
 }
 
-function syncNote(roomId) {
-  var ta = document.getElementById('note-ta-' + roomId);
-  var hidden = document.getElementById('note-' + roomId);
-  if (ta && hidden) hidden.value = ta.value;
-  calcAll();
-}
-
 // ─── CALC ENGINE ──────────────────────────────────────────────────────────────
 
 // ─── PREP FOR SALE LOGIC ──────────────────────────────────────────────────────
@@ -2320,20 +2313,6 @@ function rushMultiplier(runwayDays) {
   if (runwayDays >= 45) return 1.20;
   if (runwayDays >= 30) return 1.32;
   return 1.50;
-}
-
-// ─── PROBATE INVENTORY MULTIPLIER ────────────────────────────────────────────
-// Scores 5 factors (0–100 pts) → TC hour multiplier (1.0×–2.8×).
-// Only applied when service type is Probate.
-function probateInventoryMultiplier(sqft, years, propVal, premium, avgRoomScore) {
-  var sqftPts  = sqft < 2000 ? 5 : sqft < 3500 ? 10 : sqft < 5500 ? 15 : sqft < 8000 ? 20 : 25;
-  var yearsPts = years < 5  ? 5 : years < 10   ? 10 : years < 20   ? 15 : years < 30   ? 20 : 25;
-  var valPts   = propVal < 2000000 ? 4 : propVal < 5000000 ? 8 : propVal < 10000000 ? 12 : propVal < 25000000 ? 16 : 20;
-  var premPts  = premium ? 15 : 0;
-  var roomPts  = avgRoomScore < 2.0 ? 3 : avgRoomScore < 2.5 ? 6 : avgRoomScore < 3.5 ? 10 : 15;
-  var score = sqftPts + yearsPts + valPts + premPts + roomPts;
-  var mult = score <= 20 ? 1.00 : score <= 35 ? 1.25 : score <= 50 ? 1.50 : score <= 65 ? 1.75 : score <= 80 ? 2.10 : 2.50;
-  return {mult: mult, score: score};
 }
 
 // ─── SQFT MULTIPLIER ──────────────────────────────────────────────────────────
@@ -2543,12 +2522,19 @@ function calcAll() {
   var svcType = document.getElementById('e-svc').value;
   var coordDays = 0, vendorTotal = 0, gcFee = 0, stagerCost = 0, stagerGcFee = 0;
   if (svcType === 'prep') {
-    coordDays = parseFloat(document.getElementById('e-coord-days').value) || 0;
-    vendorTotal = parseFloat(document.getElementById('e-vendor-total').value) || 0;
+    // Legacy service type — the prep-as-service UI was retired, so these inputs no
+    // longer exist. Guard every read so an old saved job with svc:'prep' can't crash
+    // calcAll() on a null element. (Full removal of this branch is deferred.)
+    var _coordEl  = document.getElementById('e-coord-days');
+    var _vendorEl = document.getElementById('e-vendor-total');
+    var _stagerEl = document.getElementById('e-stager');
+    coordDays = _coordEl ? (parseFloat(_coordEl.value) || 0) : 0;
+    vendorTotal = _vendorEl ? (parseFloat(_vendorEl.value) || 0) : 0;
     gcFee = Math.round(vendorTotal * 0.30);
-    var stagerType = document.getElementById('e-stager').value;
+    var stagerType = _stagerEl ? _stagerEl.value : '';
     if (stagerType === 'vendor') {
-      stagerCost = parseFloat(document.getElementById('e-stager-cost').value) || 0;
+      var _stagerCostEl = document.getElementById('e-stager-cost');
+      stagerCost = _stagerCostEl ? (parseFloat(_stagerCostEl.value) || 0) : 0;
       stagerGcFee = Math.round(stagerCost * 0.30);
     }
     var coordTCHrs = Math.round(coordDays * 8 * propMult * 10) / 10;
@@ -3157,7 +3143,6 @@ function computeInventoryDeadline(){
   if(fb) fb.textContent='Inventory due '+iso+' ('+days+' days from today).';
 }
 
-function toggleProbateFields() { toggleIntakeFields(); }
 function toggleIntakeFields() {
   var svc = document.getElementById('i-svc') ? document.getElementById('i-svc').value : '';
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
@@ -4636,11 +4621,6 @@ function checkPin() {
   }
 }
 
-function printEstimate_old() {
-  if (!estimateApproved) { alert('Estimate must be approved before printing.'); return; }
-  window.print();
-}
-
 // ─── JOB MANAGEMENT ───────────────────────────────────────────────────────────
 function setFilter(f, btn) {
   currentFilter = f;
@@ -5241,12 +5221,6 @@ function printChangeOrder(coId) {
   }, 150);
 }
 
-function toggleJobDetail(id) {
-  var row = document.getElementById('detail-' + id);
-  if (!row) return;
-  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-}
-
 function openClientDashboard(jobId) {
   _dashboardJobId = jobId;
   document.getElementById('clients-list-view').style.display = 'none';
@@ -5350,7 +5324,6 @@ function fmtDate2(d) {
   try { return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch(e) { return d; }
 }
 function dot(color) { return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+color+';margin-right:4px;flex-shrink:0;"></span>'; }
-function statusDot(ok, warn, bad) { return ok ? dot('#1D9E75') : warn ? dot('#BA7517') : dot('#A32D2D'); }
 function field(label, val, extraStyle) {
   return '<div class="df"><div class="dfl">'+label+'</div><div class="dfv'+(extraStyle?' '+extraStyle:'')+'">'+val+'</div></div>';
 }
@@ -5744,11 +5717,6 @@ function goToJobLog(jobId) {
   }, 50);
 }
 
-
-function openEstimateForJob(id) {
-  document.querySelectorAll('.nb')[3].click(); // go to client estimate tab
-  renderClientEstimate();
-}
 
 // Navigate to a tab with the right job loaded, then trigger PDF or email.
 function docPdf(jobId, docType) {
@@ -6564,7 +6532,6 @@ function buildInvoiceMailto(job, balance, stage) {
 var _photoRefs = {};
 var _photoRetryData = {};
 
-function _seqStr(n) { return String(n).padStart(3,'0'); }
 function _cleanName(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); }
 
 function loadPhotoRefs(jobId) {
@@ -6604,22 +6571,6 @@ function _setPhotoRef(jobId, ref) {
   }
   if (idx >= 0) _photoRefs[jobId][idx] = ref;
   else _photoRefs[jobId].push(ref);
-}
-
-function _photoStatusHtml(ref, jobId) {
-  if (!ref) return '';
-  if (ref.status === 'uploaded') {
-    return '<span style="color:var(--ok-tx);font-size:10px;font-weight:600;">&#10003; Saved</span>';
-  }
-  if (ref.status === 'uploading') {
-    return '<span style="color:var(--gray);font-size:10px;">Uploading…</span>';
-  }
-  if (ref.status === 'failed') {
-    return '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Not saved —</span>'
-      + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + ref.stableId + '\')"'
-      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>';
-  }
-  return '';
 }
 
 function _slotRefs(jobId, roomIdx, label) {
@@ -7651,9 +7602,6 @@ function getVendorActuals(job, est) {
     prepFee: Math.round(pr.total * 0.30)
   };
 }
-
-var TC_NAMES = ['Anthony Graziano Sr', 'Ashley Jerome', 'Anthony Graziano Jr', 'Contractor — TC 1', 'Contractor — TC 2'];
-var PS_NAMES = ['Anthony Graziano Jr', 'Contractor — PS 1', 'Contractor — PS 2', 'Contractor — PS 3', 'Contractor — PS 4', 'Contractor — PS 5', 'Other'];
 
 // ─── JOB CREW (lock-in) ───────────────────────────────────────────────────────
 // The crew (TC + property specialists) is seeded from the estimate the first time
@@ -9187,10 +9135,6 @@ function setCollFee(jobId, collId, val) {
   var job = _collJob(jobId, collId); if (!job) return;
   job.collSourcing[collId].fee = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
 }
-function setCollVendorStatus(jobId, collId, val) {
-  var job = _collJob(jobId, collId); if (!job) return;
-  job.collSourcing[collId].status = val; saveJobs(); refreshVendorSourcing(jobId);
-}
 function _logiJob(jobId, key) {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return null;
@@ -9671,7 +9615,6 @@ function _quickWriteVendor(id, patch, busyMsg) {
     renderVendorsTab();
   });
 }
-function setVendorStatusQuick(id, status) { _quickWriteVendor(id, { status: status }, 'Updating status…'); }
 function stampVendorContacted(id) {
   var today = new Date().toISOString().slice(0,10);
   _quickWriteVendor(id, { last_contacted: today }, 'Logging outreach…');
@@ -11537,19 +11480,6 @@ function saveNotesModal() {
 
 
 // ─── PS SLOT HELPERS ─────────────────────────────────────────────────────────
-var PS_RATES = {
-  'none': 0,
-  'contractor_standard': 25,
-  'contractor_senior': 30,
-  'aj': 75
-};
-var PS_LABELS = {
-  'none': 'Not scheduled',
-  'contractor_standard': 'Contractor Standard',
-  'contractor_senior': 'Contractor Senior',
-  'aj': 'Anthony Graziano Jr'
-};
-
 function getPSCostRate(name) {
   // Handle placeholder keys
   if (name === 'contractor_standard') return 25;
@@ -12067,41 +11997,6 @@ function formatPhone(input) {
 
 // ─── ROOM MEDIA CAPTURE (video / audio) ───────────────────────────────────────
 var roomMedia = {};
-
-function attachRoomMedia(input, type, roomId) {
-  var file = input.files[0];
-  if (!file) return;
-  var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
-  var roomNameEl = document.getElementById('name-' + roomId);
-  var roomName = roomNameEl ? (roomNameEl.textContent || roomNameEl.value || roomId) : roomId;
-
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var dataUrl = e.target.result;
-    var key = jobId + '_' + roomId + '_' + type;
-    if (!roomMedia[key]) roomMedia[key] = [];
-    roomMedia[key].push({ dataUrl: dataUrl, name: file.name, type: type, roomName: roomName, jobId: jobId });
-
-    // Show indicator in cam-thumb div
-    var thumb = document.getElementById('cam-thumb-' + roomId);
-    if (thumb) {
-      var icon = type === 'video' ? '&#127909;' : '&#127908;';
-      var count = roomMedia[key].length;
-      var existing = thumb.querySelector('.' + type + '-indicator');
-      if (existing) {
-        existing.textContent = icon + ' ' + count + ' ' + type;
-      } else {
-        var span = document.createElement('span');
-        span.className = type + '-indicator';
-        span.style.cssText = 'font-size:10px;color:var(--bronze);margin-right:6px;';
-        span.innerHTML = icon + ' ' + count + ' ' + type;
-        thumb.appendChild(span);
-      }
-    }
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
-}
 
 // ─── COLLECTIONS TABLE ─────────────────────────────────────────────────────────
 var collectionsData = [];
