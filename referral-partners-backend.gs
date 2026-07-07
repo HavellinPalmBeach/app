@@ -23,8 +23,8 @@
 
 var SHEET_NAME = 'Partners';
 var COLUMNS = [
-  'partner_name', 'partner_type', 'firm', 'primary_contact', 'phone', 'email',
-  'website', 'status', 'owner', 'internal_external', 'last_contacted', 'notes'
+  'first_name', 'last_name', 'partner_name', 'partner_type', 'firm', 'primary_contact',
+  'phone', 'email', 'website', 'status', 'owner', 'last_contacted', 'notes'
 ];
 
 function setupSheet() {

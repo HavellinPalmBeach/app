@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 6:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 8:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -331,6 +331,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <label>Referral partner <span style="font-weight:400;color:var(--gray);">(who specifically)</span></label>
         <select id="i-refpartner"><option value="">— none / not a named partner —</option></select>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — link this job to a specific attorney, realtor, or trust officer so referrals are tracked. Manage the list in the Referral Partners tab.</div>
+      </div>
+      <div id="i-referredby-wrap" style="display:none;">
+        <label>Referred by <span style="font-weight:400;color:var(--gray);">(name of the family member, friend, or past client)</span></label>
+        <input type="text" id="i-referredby" placeholder="e.g. John Smith">
       </div>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
@@ -1512,27 +1516,27 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <input type="hidden" id="r-edit-row" value="">
     <div class="grid2">
       <div>
-        <label>Partner name <span style="color:#A32D2D;font-weight:700;">*</span></label>
-        <input type="text" id="r-name" placeholder="e.g. Jane Ellis">
-        <label>Partner type</label>
+        <label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        <input type="text" id="r-fname" placeholder="First name">
+        <label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        <input type="text" id="r-lname" placeholder="Last name">
+        <label>Partner type <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <select id="r-type">
           <option value="">&mdash; select &mdash;</option>
           <option>Estate attorney</option>
+          <option>Financial advisor</option>
           <option>Realtor &mdash; Douglas Elliman</option>
           <option>Realtor &mdash; Other</option>
           <option>Trust officer</option>
-          <option>Financial advisor</option>
-          <option>Country club</option>
-          <option>Existing client</option>
           <option>Other</option>
         </select>
         <label>Firm / brokerage</label>
         <input type="text" id="r-firm" placeholder="e.g. Gunster &middot; Douglas Elliman">
         <label>Primary contact <span style="font-weight:400;color:var(--gray);">(if different)</span></label>
         <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
-        <label>Phone</label>
-        <input type="tel" id="r-phone" placeholder="(561) 000-0000">
-        <label>Email</label>
+        <label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        <input type="tel" id="r-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <input type="email" id="r-email" placeholder="partner@firm.com">
         <label>Website</label>
         <input type="text" id="r-website" placeholder="firm.com">
@@ -1548,12 +1552,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option value="Do Not Use">Do Not Use</option>
         </select>
         <label>Relationship owner</label>
-        <input type="text" id="r-owner" placeholder="Which TC owns this relationship">
-        <label>Internal / external</label>
-        <select id="r-internal">
-          <option value="">&mdash;</option>
-          <option value="External">External &mdash; outside partner</option>
-          <option value="Internal">Internal &mdash; Havellin team (our own DE agent)</option>
+        <select id="r-owner">
+          <option value="">&mdash; select &mdash;</option>
+          <option>Anthony Graziano Sr</option>
+          <option>Ashley Jerome</option>
+          <option>Anthony Graziano Jr</option>
         </select>
         <label>Last contacted</label>
         <input type="date" id="r-lastcontacted">
@@ -3296,6 +3299,7 @@ function saveIntake() {
     src:document.getElementById('i-src').value,
     refPartnerId: document.getElementById('i-refpartner') ? document.getElementById('i-refpartner').value : '',
     refPartnerName: (document.getElementById('i-refpartner') && document.getElementById('i-refpartner').value && typeof lookupReferralById === 'function' && lookupReferralById(document.getElementById('i-refpartner').value)) ? lookupReferralById(document.getElementById('i-refpartner').value).partner_name : '',
+    referredByName: document.getElementById('i-referredby') ? document.getElementById('i-referredby').value.trim() : '',
     notes:document.getElementById('i-notes').value,
     destAddr:destAddr, destCity:destCity, destZip:destZip,
     destSqft:destSqft, destBeds:destBeds, destBaths:destBaths,
@@ -9619,9 +9623,9 @@ function stampVendorContacted(id) {
 // sync script's columns; _row is the sheet row for updates.
 var REFERRAL_STATUSES = ['Identified','Contacted','Intro Meeting','Active Partner','Dormant','Do Not Use'];
 var REFERRAL_FORM_MAP = {
-  'r-name':'partner_name','r-type':'partner_type','r-firm':'firm',
+  'r-fname':'first_name','r-lname':'last_name','r-type':'partner_type','r-firm':'firm',
   'r-contact':'primary_contact','r-phone':'phone','r-email':'email','r-website':'website',
-  'r-status':'status','r-owner':'owner','r-internal':'internal_external',
+  'r-status':'status','r-owner':'owner',
   'r-lastcontacted':'last_contacted','r-notes':'notes'
 };
 function _setR(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
@@ -9720,7 +9724,6 @@ function referralCardHtml(p){
   var meta = [];
   if (p.firm) meta.push(esc(p.firm));
   if (p.owner) meta.push('Owner: ' + esc(p.owner));
-  if (String(p.internal_external||'')) meta.push(esc(p.internal_external));
   var lastc = String(p.last_contacted||'').trim()
     ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(p.last_contacted)) + '</span>'
     : '<span style="font-size:10px;color:var(--gray);">Not yet contacted</span>';
@@ -9770,15 +9773,22 @@ function postReferralWrite(type, payload, cb){
     .catch(function(e){ cb(false, {error:String(e)}); });
 }
 function saveReferral(){
-  var name = _getR('r-name');
-  if (!name) { showFB('r-fb','warn','Partner name is required.'); return; }
+  var fname = _getR('r-fname'), lname = _getR('r-lname');
+  var missing = [];
+  if (!fname) missing.push('First name');
+  if (!lname) missing.push('Last name');
+  if (!_getR('r-type')) missing.push('Partner type');
+  if (!_getR('r-phone')) missing.push('Phone');
+  if (!_getR('r-email')) missing.push('Email');
+  if (missing.length) { showFB('r-fb','warn','Required: ' + missing.join(', ') + '.'); return; }
   if (!REFERRAL_SYNC_URL) { showFB('r-fb','err','Set the Referral Partners URL in Settings first — partners save to the shared sheet.'); return; }
   var fields = {}; Object.keys(REFERRAL_FORM_MAP).forEach(function(fid){ fields[REFERRAL_FORM_MAP[fid]] = _getR(fid); });
+  fields.partner_name = (fname + ' ' + lname).trim();
   var editId = document.getElementById('r-edit-row').value;
   var st = document.getElementById('r-save-status'); if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
   if (editId) {
     var existing = lookupReferralById(editId) || {};
-    postReferralWrite('updatePartner', { _row: existing._row, partner_name: existing.partner_name || name, fields: fields }, function(ok, d){
+    postReferralWrite('updatePartner', { _row: existing._row, partner_name: fields.partner_name, fields: fields }, function(ok, d){
       if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
       Object.keys(fields).forEach(function(k){ existing[k] = fields[k]; });
       try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
@@ -9834,7 +9844,7 @@ function renderReferralLeaderboard(){
     return '<tr style="border-top:1px solid var(--border);">' +
       '<td style="padding:6px 8px;color:var(--gray);">' + (i+1) + '</td>' +
       '<td style="padding:6px 8px;font-weight:600;">' + esc(r.p.partner_name||'—') +
-        '<div style="font-size:10px;color:var(--gray);font-weight:400;">' + esc(r.p.partner_type||'') + (r.p.internal_external==='Internal' ? ' &middot; internal' : '') + '</div></td>' +
+        '<div style="font-size:10px;color:var(--gray);font-weight:400;">' + esc(r.p.partner_type||'') + '</div></td>' +
       '<td style="padding:6px 8px;text-align:center;">' + r.s.count + '</td>' +
       '<td style="padding:6px 8px;text-align:center;">' + r.s.won + ' <span style="color:var(--gray);font-size:10px;">(' + conv + '%)</span></td>' +
       '<td style="padding:6px 8px;text-align:right;">' + money(r.s.pipeline) + '</td>' +
@@ -9857,12 +9867,16 @@ function renderReferralLeaderboard(){
 // Intake: reveal the named-partner picker for person-type referral sources, and keep
 // it populated from the active directory.
 function onReferralSourceChange(){
-  var src = document.getElementById('i-src'); var wrap = document.getElementById('i-refpartner-wrap');
-  if (!src || !wrap) return;
-  var personTypes = ['Estate attorney','Realtor — Douglas Elliman','Realtor — Other','Trust officer','Existing client referral'];
-  var show = personTypes.indexOf(src.value) >= 0;
-  wrap.style.display = show ? 'block' : 'none';
-  if (show) { populateReferralPicker(); if (!referralDirectory.length && REFERRAL_SYNC_URL) loadReferralDirectory(); }
+  var src = document.getElementById('i-src');
+  if (!src) return;
+  var pWrap = document.getElementById('i-refpartner-wrap');
+  var rbWrap = document.getElementById('i-referredby-wrap');
+  var pro = ['Estate attorney','Realtor — Douglas Elliman','Realtor — Other','Trust officer'];
+  var personal = ['Family','Friend','Existing client referral'];
+  var isPro = pro.indexOf(src.value) >= 0;
+  if (pWrap) pWrap.style.display = isPro ? 'block' : 'none';
+  if (rbWrap) rbWrap.style.display = personal.indexOf(src.value) >= 0 ? 'block' : 'none';
+  if (isPro) { populateReferralPicker(); if (!referralDirectory.length && REFERRAL_SYNC_URL) loadReferralDirectory(); }
 }
 function populateReferralPicker(){
   var sel = document.getElementById('i-refpartner'); if (!sel) return;
