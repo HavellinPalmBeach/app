@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 5:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 6:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -264,6 +264,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('invoice',this)">Invoices</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
   <button class="nb" onclick="showPanel('vendors',this)">Vendors</button>
+  <button class="nb" onclick="showPanel('referrals',this)">Referral Partners</button>
   <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
 </div>
 
@@ -307,7 +308,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
         <div>
           <label>Referral source <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <select id="i-src">
+          <select id="i-src" onchange="onReferralSourceChange()">
             <option value="">Select source</option>
             <option>Country club / golf community</option>
             <option>Direct mail</option>
@@ -325,6 +326,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <option>Other</option>
           </select>
         </div>
+      </div>
+      <div id="i-refpartner-wrap" style="display:none;">
+        <label>Referral partner <span style="font-weight:400;color:var(--gray);">(who specifically)</span></label>
+        <select id="i-refpartner"><option value="">— none / not a named partner —</option></select>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — link this job to a specific attorney, realtor, or trust officer so referrals are tracked. Manage the list in the Referral Partners tab.</div>
       </div>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
@@ -1160,6 +1166,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     </div>
     <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Separate web app bound to the Vendor Directory sheet only — populates vendor pickers. Kept apart from job data so directory editors can't reach jobs.</div>
 
+    <label>Referral Partners — Apps Script URL</label>
+    <input type="text" id="set-referral-url" placeholder="https://script.google.com/macros/s/...">
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+      <button type="button" class="btn-s" onclick="loadReferralDirectory()">Reload partners</button>
+      <span id="referral-dir-status" style="font-size:11px;color:var(--gray);"></span>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Separate web app bound to the Referral Partners sheet only — the network of attorneys, realtors, and trust officers who refer business. Kept apart from job data, same as the Vendor Directory.</div>
+
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
 
     <label>Stripe Publishable Key</label>
@@ -1476,6 +1490,89 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     </div>
   </div>
 </div>
+<!-- ═══ REFERRAL PARTNERS ═══ -->
+<div class="panel" id="panel-referrals">
+  <div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Referral Partners</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:680px;">Build and work your referral network — estate attorneys, realtors, trust officers. Move each partner through the outreach lifecycle (Identified &rarr; Contacted &rarr; Intro Meeting &rarr; Active Partner), log outreach, and add new partners. Link a partner to a job at intake so referrals are tracked.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-s" onclick="loadReferralDirectory()">&#8635; Reload</button>
+        <button class="btn-p" onclick="showAddReferral()">+ Add Partner</button>
+      </div>
+    </div>
+    <div id="referrals-url-warn" style="display:none;font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-top:10px;">Referral Partners URL not set — open Settings and paste the referral web-app /exec URL to load and sync partners.</div>
+    <div id="referrals-stats" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;"></div>
+  </div>
+
+  <div id="add-referral-card" class="card" style="margin-bottom:1rem;display:none;">
+    <div class="sec" id="r-form-title">Add Referral Partner</div>
+    <input type="hidden" id="r-edit-row" value="">
+    <div class="grid2">
+      <div>
+        <label>Partner name <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        <input type="text" id="r-name" placeholder="e.g. Jane Ellis">
+        <label>Partner type</label>
+        <select id="r-type">
+          <option value="">&mdash; select &mdash;</option>
+          <option>Estate attorney</option>
+          <option>Realtor &mdash; Douglas Elliman</option>
+          <option>Realtor &mdash; Other</option>
+          <option>Trust officer</option>
+          <option>Financial advisor</option>
+          <option>Country club</option>
+          <option>Existing client</option>
+          <option>Other</option>
+        </select>
+        <label>Firm / brokerage</label>
+        <input type="text" id="r-firm" placeholder="e.g. Gunster &middot; Douglas Elliman">
+        <label>Primary contact <span style="font-weight:400;color:var(--gray);">(if different)</span></label>
+        <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
+        <label>Phone</label>
+        <input type="tel" id="r-phone" placeholder="(561) 000-0000">
+        <label>Email</label>
+        <input type="email" id="r-email" placeholder="partner@firm.com">
+        <label>Website</label>
+        <input type="text" id="r-website" placeholder="firm.com">
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="r-status">
+          <option value="Identified">Identified &mdash; sourced, not yet contacted</option>
+          <option value="Contacted">Contacted &mdash; outreach made</option>
+          <option value="Intro Meeting">Intro Meeting &mdash; met / introduced</option>
+          <option value="Active Partner">Active Partner &mdash; actively refers</option>
+          <option value="Dormant">Dormant &mdash; no recent activity</option>
+          <option value="Do Not Use">Do Not Use</option>
+        </select>
+        <label>Relationship owner</label>
+        <input type="text" id="r-owner" placeholder="Which TC owns this relationship">
+        <label>Internal / external</label>
+        <select id="r-internal">
+          <option value="">&mdash;</option>
+          <option value="External">External &mdash; outside partner</option>
+          <option value="Internal">Internal &mdash; Havellin team (our own DE agent)</option>
+        </select>
+        <label>Last contacted</label>
+        <input type="date" id="r-lastcontacted">
+      </div>
+    </div>
+    <label style="margin-top:10px;">Notes</label>
+    <textarea id="r-notes" placeholder="Relationship notes, referral history, reciprocity, preferences&hellip;"></textarea>
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-s" onclick="document.getElementById('add-referral-card').style.display='none'">Cancel</button>
+      <button class="btn-p" onclick="saveReferral()">Save Partner</button>
+      <span id="r-save-status" style="font-size:11px;color:var(--gray);"></span>
+    </div>
+    <div id="r-fb"></div>
+  </div>
+
+  <div id="referrals-list"></div>
+</div>
+
 <div class="panel" id="panel-winloss">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
     <div>
@@ -3196,6 +3293,8 @@ function saveIntake() {
     city:city,
     zip:document.getElementById('i-zip').value,
     src:document.getElementById('i-src').value,
+    refPartnerId: document.getElementById('i-refpartner') ? document.getElementById('i-refpartner').value : '',
+    refPartnerName: (document.getElementById('i-refpartner') && document.getElementById('i-refpartner').value && typeof lookupReferralById === 'function' && lookupReferralById(document.getElementById('i-refpartner').value)) ? lookupReferralById(document.getElementById('i-refpartner').value).partner_name : '',
     notes:document.getElementById('i-notes').value,
     destAddr:destAddr, destCity:destCity, destZip:destZip,
     destSqft:destSqft, destBeds:destBeds, destBaths:destBaths,
@@ -5944,6 +6043,7 @@ function showPanel(id, btn) {
   }
   if (id==='contractors') { renderContractors(); }
   if (id==='vendors') { initVendorsTab(); }
+  if (id==='referrals') { initReferralsTab(); }
   if (id==='winloss') renderWinLoss();
   if (id==='job-plan') {
     populateLogAndInvSelects();
@@ -9510,6 +9610,225 @@ function stampVendorContacted(id) {
   _quickWriteVendor(id, { last_contacted: today }, 'Logging outreach…');
 }
 
+// ═══ REFERRAL PARTNERS DIRECTORY ═══════════════════════════════════════════════
+// Mirrors the Vendor Directory: its own Google Sheets web app (REFERRAL_SYNC_URL,
+// set in Settings), a local cache, and add/edit/status/outreach writes. Partners are
+// named referral sources (estate attorneys, realtors, trust officers) we cultivate,
+// then attribute jobs to at intake (job.refPartnerId). Directory keys mirror the
+// sync script's columns; _row is the sheet row for updates.
+var REFERRAL_STATUSES = ['Identified','Contacted','Intro Meeting','Active Partner','Dormant','Do Not Use'];
+var REFERRAL_FORM_MAP = {
+  'r-name':'partner_name','r-type':'partner_type','r-firm':'firm',
+  'r-contact':'primary_contact','r-phone':'phone','r-email':'email','r-website':'website',
+  'r-status':'status','r-owner':'owner','r-internal':'internal_external',
+  'r-lastcontacted':'last_contacted','r-notes':'notes'
+};
+function _setR(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
+function _getR(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function referralIdOf(p){ return p._row!=null ? String(p._row) : ''; }
+function lookupReferralById(row){ return referralDirectory.find(function(p){ return String(p._row)===String(row); }); }
+function isActivePartner(p){ return String(p.status||'')==='Active Partner'; }
+function setReferralDirStatus(msg, isErr){ var el = document.getElementById('referral-dir-status'); if (!el) return; el.textContent = msg; el.style.color = isErr ? 'var(--err-tx)' : 'var(--gray)'; }
+
+function initReferralsTab(){
+  try { var s = localStorage.getItem('hav_referral_dir'); if (s) referralDirectory = JSON.parse(s); } catch(e) {}
+  try { var u = localStorage.getItem('hav_referral_url') || ''; if (u) REFERRAL_SYNC_URL = u; } catch(e) {}
+  var warn = document.getElementById('referrals-url-warn');
+  if (warn) warn.style.display = REFERRAL_SYNC_URL ? 'none' : 'block';
+  renderReferralsTab();
+  if (REFERRAL_SYNC_URL) loadReferralDirectory();
+}
+function refreshReferralsTabIfActive(){
+  var p = document.getElementById('panel-referrals');
+  if (p && p.classList.contains('active')) renderReferralsTab();
+}
+function loadReferralDirectory(){
+  try { var u = localStorage.getItem('hav_referral_url') || ''; if (u) REFERRAL_SYNC_URL = u; } catch(e) {}
+  var warn = document.getElementById('referrals-url-warn');
+  if (!REFERRAL_SYNC_URL) {
+    setReferralDirStatus('No URL set yet', false);
+    if (warn) warn.style.display = 'block';
+    refreshReferralsTabIfActive();
+    return;
+  }
+  if (warn) warn.style.display = 'none';
+  setReferralDirStatus('Loading…', false);
+  showSyncBadge('Reloading referral partners…');
+  fetch(REFERRAL_SYNC_URL + '?action=loadPartners')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && Array.isArray(data.partners) && !data.error) {
+        referralDirectory = data.partners;
+        try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
+        showSyncBadge('Loaded ' + referralDirectory.length + ' referral partner' + (referralDirectory.length!==1?'s':'') + ' ✓');
+        setReferralDirStatus('✓ ' + referralDirectory.length + ' partners loaded', false);
+      } else {
+        var err = (data && data.error) ? data.error : 'no partners returned';
+        showSyncBadge('Referral partners: ' + err, true); setReferralDirStatus('Error: ' + err, true);
+      }
+      refreshReferralsTabIfActive(); populateReferralPicker();
+    })
+    .catch(function(){
+      showSyncBadge('Referral partners load failed — check the URL / sharing', true);
+      setReferralDirStatus('Load failed — confirm the web app is shared to “Anyone” and you used the /exec URL', true);
+      refreshReferralsTabIfActive();
+    });
+}
+function renderReferralStats(){
+  var el = document.getElementById('referrals-stats'); if (!el) return;
+  var total = referralDirectory.length;
+  var active = referralDirectory.filter(isActivePartner).length;
+  var contacted = referralDirectory.filter(function(p){ return String(p.last_contacted||'').trim(); }).length;
+  function stat(n,l){ return '<div style="background:var(--tan);border-radius:6px;padding:8px 12px;"><div style="font-size:18px;font-weight:600;color:var(--gray-dk);">'+n+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);">'+l+'</div></div>'; }
+  el.innerHTML = stat(total,'Partners') + stat(active,'Active') + stat(contacted,'Contacted');
+}
+function renderReferralsTab(){
+  renderReferralStats();
+  var list = document.getElementById('referrals-list'); if (!list) return;
+  if (!referralDirectory.length) {
+    list.innerHTML = '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">' +
+      (REFERRAL_SYNC_URL ? 'No partners loaded yet — click “+ Add Partner” or “↻ Reload”.' : 'Set the Referral Partners URL in Settings, then add partners.') + '</div>';
+    return;
+  }
+  var byType = {};
+  referralDirectory.forEach(function(p){ var t = String(p.partner_type||'').trim() || 'Uncategorized'; (byType[t]=byType[t]||[]).push(p); });
+  var types = Object.keys(byType).sort();
+  list.innerHTML = types.map(function(t){
+    var ps = byType[t].slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
+    var active = ps.filter(isActivePartner).length;
+    return '<div style="font-weight:600;font-size:13px;margin:14px 2px 6px;">' + esc(t) +
+      ' <span style="font-size:11px;font-weight:400;color:var(--gray);">&middot; ' + ps.length + ' &middot; ' + active + ' active</span></div>' +
+      ps.map(referralCardHtml).join('');
+  }).join('');
+}
+function referralStatusSelect(p){
+  var cur = String(p.status||''); var id = referralIdOf(p);
+  var opts = '<option value="">— set status —</option>' + REFERRAL_STATUSES.map(function(s){
+    return '<option value="' + esc(s) + '"' + (cur===s?' selected':'') + '>' + esc(s) + '</option>'; }).join('');
+  return '<select onchange="setReferralStatusFromCard(\'' + id + '\',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' + opts + '</select>';
+}
+function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferral(id, { status: val }, 'Updating status…'); }
+function referralCardHtml(p){
+  var id = referralIdOf(p);
+  var cbits = [];
+  if (p.primary_contact) cbits.push(esc(p.primary_contact));
+  if (p.phone) cbits.push('<a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(p.phone) + '</a>');
+  if (p.email) cbits.push('<a href="mailto:' + esc(p.email) + '" style="color:var(--bronze);text-decoration:none;">' + esc(p.email) + '</a>');
+  var meta = [];
+  if (p.firm) meta.push(esc(p.firm));
+  if (p.owner) meta.push('Owner: ' + esc(p.owner));
+  if (String(p.internal_external||'')) meta.push(esc(p.internal_external));
+  var lastc = String(p.last_contacted||'').trim()
+    ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(p.last_contacted)) + '</span>'
+    : '<span style="font-size:10px;color:var(--gray);">Not yet contacted</span>';
+  var statusColor = isActivePartner(p) ? 'var(--ok-tx)' : 'var(--gray)';
+  return '<div class="card" style="margin-bottom:8px;padding:.8rem 1rem;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
+      '<div><div style="font-weight:600;font-size:13px;">' + esc(p.partner_name||'—') +
+        ' <span style="font-size:11px;font-weight:600;color:' + statusColor + ';">&middot; ' + esc(p.status||'—') + '</span></div>' +
+        (meta.length ? '<div style="font-size:11px;color:var(--gray);margin-top:2px;">' + meta.join(' &middot; ') + '</div>' : '') +
+        (cbits.length ? '<div style="font-size:11px;color:var(--gray-dk);margin-top:3px;">' + cbits.join(' &nbsp;&middot;&nbsp; ') + '</div>' : '') +
+        (p.notes ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;font-style:italic;">' + esc(p.notes) + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">' + referralStatusSelect(p) +
+        '<div style="display:flex;gap:6px;">' +
+          '<button class="btn-s" style="font-size:11px;" onclick="stampReferralContacted(\'' + id + '\')">Log outreach</button>' +
+          '<button class="btn-s" style="font-size:11px;" onclick="editReferral(\'' + id + '\')">Edit</button>' +
+        '</div>' + lastc +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+function showAddReferral(){
+  var card = document.getElementById('add-referral-card');
+  Object.keys(REFERRAL_FORM_MAP).forEach(function(id){ _setR(id, ''); });
+  _setR('r-status', 'Identified');
+  document.getElementById('r-edit-row').value = '';
+  document.getElementById('r-form-title').textContent = 'Add Referral Partner';
+  var fb = document.getElementById('r-fb'); if (fb) fb.innerHTML = '';
+  var st = document.getElementById('r-save-status'); if (st) st.textContent = '';
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function editReferral(id){
+  var p = lookupReferralById(id); if (!p) return;
+  Object.keys(REFERRAL_FORM_MAP).forEach(function(fid){ _setR(fid, p[REFERRAL_FORM_MAP[fid]]); });
+  document.getElementById('r-edit-row').value = String(id);
+  document.getElementById('r-form-title').textContent = 'Edit Partner — ' + (p.partner_name || '');
+  var fb = document.getElementById('r-fb'); if (fb) fb.innerHTML = '';
+  var st = document.getElementById('r-save-status'); if (st) st.textContent = '';
+  var card = document.getElementById('add-referral-card'); card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function postReferralWrite(type, payload, cb){
+  if (!REFERRAL_SYNC_URL) { cb(false, {error:'No Referral Partners URL set'}); return; }
+  fetch(REFERRAL_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:type, payload:payload }) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ cb(!!(d && d.ok), d || {}); })
+    .catch(function(e){ cb(false, {error:String(e)}); });
+}
+function saveReferral(){
+  var name = _getR('r-name');
+  if (!name) { showFB('r-fb','warn','Partner name is required.'); return; }
+  if (!REFERRAL_SYNC_URL) { showFB('r-fb','err','Set the Referral Partners URL in Settings first — partners save to the shared sheet.'); return; }
+  var fields = {}; Object.keys(REFERRAL_FORM_MAP).forEach(function(fid){ fields[REFERRAL_FORM_MAP[fid]] = _getR(fid); });
+  var editId = document.getElementById('r-edit-row').value;
+  var st = document.getElementById('r-save-status'); if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
+  if (editId) {
+    var existing = lookupReferralById(editId) || {};
+    postReferralWrite('updatePartner', { _row: existing._row, partner_name: existing.partner_name || name, fields: fields }, function(ok, d){
+      if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
+      Object.keys(fields).forEach(function(k){ existing[k] = fields[k]; });
+      try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
+      if (st){ st.textContent = 'Saved ✓'; st.style.color = 'var(--ok-tx)'; }
+      document.getElementById('add-referral-card').style.display = 'none';
+      renderReferralsTab(); populateReferralPicker();
+    });
+  } else {
+    postReferralWrite('addPartner', { fields: fields }, function(ok, d){
+      if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
+      var rec = {}; Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; }); if (d._row != null) rec._row = d._row;
+      referralDirectory.push(rec);
+      try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
+      if (st){ st.textContent = 'Added ✓'; st.style.color = 'var(--ok-tx)'; }
+      document.getElementById('add-referral-card').style.display = 'none';
+      renderReferralsTab(); populateReferralPicker();
+    });
+  }
+}
+function _quickWriteReferral(id, patch, busyMsg){
+  var p = lookupReferralById(id); if (!p) return;
+  if (!REFERRAL_SYNC_URL) { showSyncBadge('Set the Referral Partners URL in Settings first', true); return; }
+  showSyncBadge(busyMsg);
+  postReferralWrite('updatePartner', { _row: p._row, partner_name: p.partner_name, fields: patch }, function(ok, d){
+    if (!ok) { showSyncBadge('Partner update failed: ' + (d.error||''), true); return; }
+    Object.keys(patch).forEach(function(k){ p[k] = patch[k]; });
+    try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
+    showSyncBadge('Partner updated ✓'); renderReferralsTab(); populateReferralPicker();
+  });
+}
+function stampReferralContacted(id){ var today = new Date().toISOString().slice(0,10); _quickWriteReferral(id, { last_contacted: today }, 'Logging outreach…'); }
+
+// Intake: reveal the named-partner picker for person-type referral sources, and keep
+// it populated from the active directory.
+function onReferralSourceChange(){
+  var src = document.getElementById('i-src'); var wrap = document.getElementById('i-refpartner-wrap');
+  if (!src || !wrap) return;
+  var personTypes = ['Estate attorney','Realtor — Douglas Elliman','Realtor — Other','Trust officer','Existing client referral'];
+  var show = personTypes.indexOf(src.value) >= 0;
+  wrap.style.display = show ? 'block' : 'none';
+  if (show) { populateReferralPicker(); if (!referralDirectory.length && REFERRAL_SYNC_URL) loadReferralDirectory(); }
+}
+function populateReferralPicker(){
+  var sel = document.getElementById('i-refpartner'); if (!sel) return;
+  var cur = sel.value;
+  var list = referralDirectory.filter(function(p){ return String(p.status||'') !== 'Do Not Use'; })
+    .slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
+  sel.innerHTML = '<option value="">— none / not a named partner —</option>' + list.map(function(p){
+    var id = referralIdOf(p); var lbl = esc(p.partner_name||'') + (p.partner_type ? ' (' + esc(p.partner_type) + ')' : '');
+    return '<option value="' + esc(id) + '">' + lbl + '</option>';
+  }).join('');
+  if (cur) sel.value = cur;
+}
+
 // Deep-link from the Job Plan into the Invoices tab, preset to a job + stage so the
 // TC doesn't have to hunt for it.
 function openInvoiceFor(jobId, stage) {
@@ -10396,6 +10715,8 @@ var STRIPE_SCRIPT_URL = '';
 var DRIVE_FOLDER_ID = '';
 var SHEETS_SYNC_URL = '';
 var VENDOR_SYNC_URL = '';   // separate web app — vendor directory sheet only
+var REFERRAL_SYNC_URL = '';   // separate web app — referral partners sheet only
+var referralDirectory = [];   // cached referral-partner records ({partner_name, partner_type, …, _row})
 // When true, a missing walkthrough note hard-blocks submit-for-approval
 // instead of showing a one-click-override warning. Off by default.
 var REQUIRE_WALKTHROUGH_NOTES = false;
@@ -10408,6 +10729,8 @@ function openSettings() {
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
   var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
   setVendorDirStatus(VENDOR_SYNC_URL ? (vendorDirectory.length ? ('✓ ' + vendorDirectory.length + ' vendors loaded') : 'URL set — click Reload directory to load') : 'No URL set yet', false);
+  var rUrlEl = document.getElementById('set-referral-url'); if (rUrlEl) rUrlEl.value = REFERRAL_SYNC_URL;
+  setReferralDirStatus(REFERRAL_SYNC_URL ? (referralDirectory.length ? ('✓ ' + referralDirectory.length + ' partners loaded') : 'URL set — click Reload partners to load') : 'No URL set yet', false);
   var reqEl = document.getElementById('set-require-notes');
   if (reqEl) reqEl.checked = REQUIRE_WALKTHROUGH_NOTES;
 }
@@ -10418,6 +10741,7 @@ function saveSettings() {
   SHEETS_SYNC_URL    = document.getElementById('set-sheets-url').value.trim();
   DRIVE_FOLDER_ID    = document.getElementById('set-drive-id').value.trim();
   var vUrlEl2 = document.getElementById('set-vendor-url'); if (vUrlEl2) VENDOR_SYNC_URL = vUrlEl2.value.trim();
+  var rUrlEl2 = document.getElementById('set-referral-url'); if (rUrlEl2) REFERRAL_SYNC_URL = rUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
   try {
@@ -10426,11 +10750,13 @@ function saveSettings() {
     localStorage.setItem('hav_sheets_url',    SHEETS_SYNC_URL);
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
     localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
+    localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
   } catch(e) {}
   document.getElementById('settings-modal').style.display = 'none';
   showSyncBadge('Settings saved \u2713');
   loadVendorDirectory();   // pull the directory right away when the URL is set/changed
+  loadReferralDirectory();
 }
 
 function loadSettings() {
@@ -10440,6 +10766,8 @@ function loadSettings() {
     SHEETS_SYNC_URL   = localStorage.getItem('hav_sheets_url')    || localStorage.getItem('havellin_sheets_url') || '';
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
     VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
+    REFERRAL_SYNC_URL = localStorage.getItem('hav_referral_url')  || '';
+    try { var _rd = localStorage.getItem('hav_referral_dir'); if (_rd) referralDirectory = JSON.parse(_rd); } catch(e) {}
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';
   } catch(e) {}
 }
@@ -12030,6 +12358,7 @@ if (jobs.length === 0) {
 }
 loadSettings();
 loadVendorDirectory();
+loadReferralDirectory();
 buildRoomTable();
 renderVendors();
 rebuildDropdowns();
