@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 8:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 9:05am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -303,9 +303,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div>
           <label>City <span style="color:#A32D2D;font-weight:700;">*</span></label>
           <input type="text" id="i-city" placeholder="e.g. Palm Beach">
-          <label style="margin-top:8px;">Zip <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        </div>
+        <div>
+          <label>Zip <span style="color:#A32D2D;font-weight:700;">*</span></label>
           <input type="text" id="i-zip" placeholder="e.g. 33480" maxlength="5">
         </div>
+      </div>
+      <div class="row">
         <div>
           <label>Referral source <span style="color:#A32D2D;font-weight:700;">*</span></label>
           <select id="i-src" onchange="onReferralSourceChange()">
@@ -326,15 +330,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <option>Other</option>
           </select>
         </div>
+        <div id="i-referredby-wrap" style="display:none;">
+          <label>Referred by <span style="font-weight:400;color:var(--gray);">(name)</span></label>
+          <input type="text" id="i-referredby" placeholder="e.g. John Smith">
+        </div>
       </div>
       <div id="i-refpartner-wrap" style="display:none;">
         <label>Referral partner <span style="font-weight:400;color:var(--gray);">(who specifically)</span></label>
         <select id="i-refpartner"><option value="">— none / not a named partner —</option></select>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — link this job to a specific attorney, realtor, or trust officer so referrals are tracked. Manage the list in the Referral Partners tab.</div>
-      </div>
-      <div id="i-referredby-wrap" style="display:none;">
-        <label>Referred by <span style="font-weight:400;color:var(--gray);">(name of the family member, friend, or past client)</span></label>
-        <input type="text" id="i-referredby" placeholder="e.g. John Smith">
       </div>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
@@ -4730,7 +4734,7 @@ function renderJobs() {
       ['Phone', j.phone||'—'], ['Email', j.email||'—'],
       ['Property address', j.addr||'—'], ['Zip / Market', j.zip||'—'],
       ['Sqft', j.sqft ? j.sqft + ' sqft' : '—'], ['Property type', j.ptype||'—'],
-      ['Referral source', j.src||'—'], ['Site visit by', j.siteVisitBy||'—'], ['Priority', j.priority||'Normal'],
+      ['Referral source', (j.src||'—') + ((j.refPartnerName||j.referredByName) ? ' — ' + esc(j.refPartnerName||j.referredByName) : '')], ['Site visit by', j.siteVisitBy||'—'], ['Priority', j.priority||'Normal'],
       ['Walkthrough date', j.walkthrough ? new Date(j.walkthrough+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
       ['Target start date', j.start ? new Date(j.start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
       ['Hard target', j.completion ? new Date(j.completion+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
@@ -5504,7 +5508,7 @@ function renderClientDashboard(jobId) {
   h += field('Beds / Baths', (job.beds||job.baths) ? ((job.beds||'—')+' bd / '+(job.baths||'—')+' ba') : '—');
   h += field('Approx. home value', (job.propVal && job.propVal !== '0') ? ({'500000':'Under $1M','1750000':'$1M – $2.5M','3500000':'$2.5M – $5M','7500000':'$5M – $10M','14000000':'$10M – $20M','27500000':'$20M – $35M','52500000':'$35M – $75M','100000000':'$75M+'}[String(job.propVal)] || formatPropVal(parseInt(job.propVal))) : '—');
   h += field('Years in home', job.yearsInHome ? job.yearsInHome + ' yrs' : '—');
-  h += field('Referral source', job.src||'—');
+  h += field('Referral source', (job.src||'—') + ((job.refPartnerName||job.referredByName) ? ' — ' + esc(job.refPartnerName||job.referredByName) : ''));
   h += field('Transition Concierge', job.tc||'<span style="color:#A32D2D;">Unassigned</span>');
   if (isEstateDash) {
     h += field('Rep phone', job.executorPhone||'—');
