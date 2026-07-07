@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 4:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 5:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4045,12 +4045,23 @@ function renderClientEstimate() {
 
     '<div class="ce-hdr-divider"></div>' +
 
-    '<div class="ce-hdr-row ce-hdr-row-2">' +
-    '<div><div class="ce-meta-label">Site Visit</div><div class="ce-meta-val">' + (job.walkthrough ? fmtCEDate(job.walkthrough) : '—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Target Start</div><div class="ce-meta-val">' + (job.start ? fmtCEDate(job.start) : '—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Projected Completion</div><div class="ce-meta-val">' + (job.start && _estDayNum > 0 ? fmtCEDate(addWorkingDays(job.start, _estDayNum)) : '—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Anticipated Duration</div><div class="ce-meta-val">' + estDays + '</div></div>' +
-    '</div>' +
+    // Home Prep for Sale is executed on the third-party vendors' schedule (a landscaper,
+    // painter, or stager sets their own lead time), so Havellin has no defensible day-
+    // count to project. Rather than show blank "Projected Completion / Duration" fields —
+    // which read as a gap — we show the Target Start and reframe the rest as vendor-driven.
+    (e.svc === 'prep'
+      ? '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
+        '<div><div class="ce-meta-label">Site Visit</div><div class="ce-meta-val">' + (job.walkthrough ? fmtCEDate(job.walkthrough) : '—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Target Start</div><div class="ce-meta-val">' + (job.start ? fmtCEDate(job.start) : '—') + '</div></div>' +
+        '</div>' +
+        '<div style="margin-top:9px;font-size:12px;color:var(--gray-dk);line-height:1.55;"><span style="color:var(--bronze);font-weight:700;">Timeline:</span> Scheduled around vendor availability. Your Transition Concierge coordinates each trade and confirms the working schedule once vendors are booked.</div>'
+      : '<div class="ce-hdr-row ce-hdr-row-2">' +
+        '<div><div class="ce-meta-label">Site Visit</div><div class="ce-meta-val">' + (job.walkthrough ? fmtCEDate(job.walkthrough) : '—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Target Start</div><div class="ce-meta-val">' + (job.start ? fmtCEDate(job.start) : '—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Projected Completion</div><div class="ce-meta-val">' + (job.start && _estDayNum > 0 ? fmtCEDate(addWorkingDays(job.start, _estDayNum)) : '—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Anticipated Duration</div><div class="ce-meta-val">' + estDays + '</div></div>' +
+        '</div>'
+    ) +
 
     '<div class="ce-hdr-divider"></div>' +
 
@@ -8782,6 +8793,17 @@ function loadJobPlanTab() {
   }
   var est = estRec.estimate;
   if (printBtn) printBtn.style.display = 'inline-block';
+
+  // Home Prep for Sale gets a stripped-down plan: no hours log, PS crew, room phases, or
+  // end-of-job logistics — just vendor sourcing, budget, and a coordination checklist.
+  if (job.svc === 'prep') {
+    var logSectionP = document.getElementById('plan-log-section');
+    if (logSectionP) logSectionP.style.display = 'none';
+    content.innerHTML = renderPrepJobPlan(jobId, job, est);
+    loadPhotoRefs(jobId);
+    return;
+  }
+
   content.innerHTML = renderJobPlan(jobId, job, est);
 
   // Show log section and wire log-job hidden input to this job
@@ -9109,7 +9131,9 @@ function renderVendorSourcing(jobId, job, est) {
   // estimate (those live under Service Vendors). Assign only what this job needs;
   // quotes flow into the invoice's third-party actuals (15% SMF).
   var logiCats = logisticsCatsFor(svcLines);
-  if (logiCats.length) {
+  // Home Prep for Sale doesn't clear out a home — there's no haul-away / donation /
+  // shredding stream — so the End-of-Job Logistics vendors don't apply.
+  if (logiCats.length && job.svc !== 'prep') {
   html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">End-of-Job Logistics <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— assign only what this job needs; self-haul (van to dump/donation) needs no vendor</span></div>';
   html += logiCats.map(function(cat){
     var rec = lsrc[cat.key] || {};
@@ -9190,12 +9214,21 @@ function renderVendorSourcing(jobId, job, est) {
   return html;
 }
 function refreshVendorSourcing(jobId) {
-  var el = document.getElementById('vendor-sourcing-' + jobId);
-  if (!el) return;
   var job = jobs.find(function(j){ return j.id===jobId; });
   var estRec = estimateStore[jobId];
   var est = estRec ? estRec.estimate : (currentEstimate && currentEstimate.jobId===jobId ? currentEstimate : null);
-  if (job && est) el.innerHTML = renderVendorSourcing(jobId, job, est);
+  if (!job || !est) return;
+  // For a prep job the sourcing lives inside the simplified plan; re-render the whole
+  // plan so the budget/fee rollup tracks the quote that just changed.
+  if (job.svc === 'prep') {
+    var planContent = document.getElementById('job-plan-content');
+    if (planContent && document.getElementById('vendor-sourcing-' + jobId)) {
+      planContent.innerHTML = renderPrepJobPlan(jobId, job, est);
+    }
+    return;
+  }
+  var el = document.getElementById('vendor-sourcing-' + jobId);
+  if (el) el.innerHTML = renderVendorSourcing(jobId, job, est);
 }
 function _svcJob(jobId, i) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -10109,6 +10142,75 @@ function midpointGateHtml(jobId, midAmt) {
     '</div>' +
     '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Send this the moment all rooms lock — collection takes time, and you don\'t want to finish the job with 50% outstanding.</div>' +
   '</div>';
+}
+
+// Home Prep for Sale — simplified Job Plan. A fee-only, vendor-managed service has no
+// in-house labor, so the room phases, hours log, PS crew, and end-of-job logistics don't
+// apply. This plan shows only what the Transition Concierge actually manages: the prep
+// vendors (partner, status, quote vs budget), a budget/fee rollup, and a light
+// coordination checklist. No completion date is projected — the schedule is vendor-driven.
+function renderPrepJobPlan(jobId, job, est) {
+  var prepLines = (est.prepItems || []).filter(function(p){ return p.cost > 0; });
+  var psrc = job.prepSourcing || {};
+  var totalBudget = prepLines.reduce(function(a,p){ return a + (p.cost||0); }, 0);
+  var totalQuoted = 0, quotedCount = 0;
+  prepLines.forEach(function(p, i){
+    var q = psrc[i] && psrc[i].quote;
+    if (q != null && q !== '') { totalQuoted += Number(q) || 0; quotedCount++; }
+  });
+  var feeActual = Math.round(totalQuoted * 0.30);
+  var allQuoted = prepLines.length > 0 && quotedCount === prepLines.length;
+  var overBudget = totalQuoted > totalBudget && totalBudget > 0;
+
+  // Header (set into the shared job-plan-header slot). No "Projected completion" — a prep
+  // job runs on the vendors' schedule, so we show Target Start + a vendor-driven note.
+  var addr = esc([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ') || '—');
+  var hdrBits = [
+    ['Client', esc(job.name||'—')],
+    ['Service', 'Home Prep for Sale'],
+    ['Property', addr],
+    ['Target Start', fmtDate2(job.start)]
+  ];
+  var hdr = '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
+    '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
+    hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
+    (job.driveFolder ? '<span><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Photos in Drive</a></span>' : '') +
+    '</div>' +
+    '<div style="margin-top:7px;font-size:11px;color:var(--gray-dk);"><span style="color:var(--bronze);font-weight:700;">Timeline:</span> Vendor-driven — scheduled around each trade’s availability. Confirm the working schedule with the homeowner once vendors are booked.</div>' +
+    '</div>';
+  var _jpHeader = document.getElementById('job-plan-header');
+  if (_jpHeader) _jpHeader.innerHTML = hdr;
+
+  var budgetCard = '<div class="card" style="margin-bottom:1rem;">' +
+    '<div class="sec">Budget &amp; Fee</div>' +
+    '<table class="stbl">' +
+    '<tr><td class="muted">Estimated vendor spend (budget)</td><td class="num">$' + totalBudget.toLocaleString() + '</td></tr>' +
+    '<tr><td class="muted">Quoted to date (' + quotedCount + ' of ' + prepLines.length + ' vendors)</td><td class="num"' + (overBudget?' style="color:var(--err-tx);font-weight:600;"':'') + '>$' + totalQuoted.toLocaleString() + '</td></tr>' +
+    '<tr><td class="muted">Havellin 30% fee (on quoted actuals)</td><td class="num">$' + feeActual.toLocaleString() + '</td></tr>' +
+    '</table>' +
+    (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the 30% fee follows actual vendor spend.</div>' : '') +
+    (allQuoted ? '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">All prep vendors have quotes — the fee shown is final at these quotes.</div>' : '') +
+    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s 30% GC / Site Management Fee is billed on the actual vendor spend logged here.</div>' +
+    '</div>';
+
+  var sourcingCard = '<div class="card" style="margin-bottom:1rem;">' +
+    '<div class="sec">Home Prep Vendors — Sourcing &amp; Status</div>' +
+    '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>' +
+    '</div>';
+
+  var checklistCard = '<div class="card">' +
+    '<div class="sec">Coordination Checklist</div>' +
+    chkGrid(
+      planChk(jobId, 'prep_wt', 'Scope of prep work confirmed with homeowner') +
+      planChk(jobId, 'prep_quotes', 'Quotes collected from all prep vendors') +
+      planChk(jobId, 'prep_booked', 'Vendors booked and scheduled') +
+      planChk(jobId, 'prep_progress', 'Work underway — site checks &amp; quality control') +
+      planChk(jobId, 'prep_done', 'All prep work completed and inspected show-ready') +
+      planChk(jobId, 'prep_invoiced', 'Final vendor invoices collected; 30% fee invoiced to homeowner')
+    ) +
+    '</div>';
+
+  return budgetCard + sourcingCard + checklistCard;
 }
 
 function renderJobPlan(jobId, job, est) {
