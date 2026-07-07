@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 4:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 5:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10853,6 +10853,7 @@ function renderAgreement() {
     prep:'Home Prep for Sale'
   };
   var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
+  var isPrepAgr = (job.svc === 'prep');   // Home Prep for Sale — fee-only vendor management; Client is the homeowner
 
   var _split = paymentSplit(havTotal);
   var dep  = _split.deposit.toLocaleString();
@@ -10925,8 +10926,12 @@ function renderAgreement() {
 
   // ── SECTION 1 ─────────────────────────────────────────────────────────────
   content += agrSection('1. Scope of Services',
-    p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, downsizing, move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference.')+
-    p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and project planning; sorting, organizing, and packing of personal property and household goods; coordination of appraisers, auction houses, estate sale providers, movers, junk removal, art/antique handlers, and other third-party vendors; move-management, scheduling, and oversight; limited assistance identifying items that may have value for referral to qualified third parties; and basic home preparation and staging in anticipation of sale (excluding real estate brokerage services unless covered under a separate written brokerage agreement).')+
+    (isPrepAgr
+      ? p(b('1.1 Services.')+'  Contractor will provide home sale preparation project-management services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference. The Services consist of sourcing, coordinating, and overseeing the third-party vendors and tradespeople engaged to prepare the Property for sale.')+
+        p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and a written preparation plan; sourcing and scheduling of vendors and tradespeople (including painting, repairs, cleaning, landscaping, pressure washing, handyman work, and staging); on-site oversight, quality control, and coordination of that work through completion; and management of vendor scheduling and Property access. Third-party vendors are engaged for and invoiced to Client at cost; Contractor\'s fee for the Services is a management fee equal to thirty percent (30%) of the total third-party vendor costs managed under this Agreement. Contractor does not provide real estate brokerage, listing, or transactional representation.')
+      : p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, downsizing, move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference.')+
+        p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and project planning; sorting, organizing, and packing of personal property and household goods; coordination of appraisers, auction houses, estate sale providers, movers, junk removal, art/antique handlers, and other third-party vendors; move-management, scheduling, and oversight; limited assistance identifying items that may have value for referral to qualified third parties; and basic home preparation and staging in anticipation of sale (excluding real estate brokerage services unless covered under a separate written brokerage agreement).')
+    )+
     p(b('1.3 Exclusions.')+'  Unless expressly stated in the Estimate and agreed in writing, Services do not include: real estate brokerage, listing, or transactional representation; legal, tax, accounting, or financial advice; structural work, construction, or trade work requiring licensure; hazardous materials assessment, remediation, or abatement (including mold, asbestos, fuel tanks, medical waste); or heavy mechanical work beyond ordinary coordination with licensed professionals.')+
     p(b('1.4 Changes in Scope.')+'  Any material change to Services, hours, or timeline must be approved in writing by both Parties and may result in fee, schedule, and staffing adjustments.')
   );
