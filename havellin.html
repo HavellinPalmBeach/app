@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 3:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3394,10 +3394,27 @@ function clearIntake() {
 }
 
 // ─── ESTIMATE SAVE ────────────────────────────────────────────────────────────
+// Synchronously drop the previously-loaded job's rooms, vendors, and Home Prep items
+// from the estimator. The estimate open is cloud-first (refreshEstimateFromCloud) and
+// that fetch can take a while; without this, one job's data stays painted on screen
+// under the newly-selected job's name until the async load resolves — which is how a
+// Home Prep estimate bled into an unrelated Estate Settlement job. Called the instant
+// a job is selected, BEFORE the async fetch, so the transitional view is empty (not
+// stale). The async applyOpenedEstimate then fills in the real saved estimate.
+function neutralizeEstimateView() {
+  window._suppressEstimateAutoSave = true;
+  clearAllRooms();
+  resetEstimateExtras();
+  window._suppressEstimateAutoSave = false;
+}
+
 function loadJobIntoEstimate() {
   var jobId = parseInt(document.getElementById('e-job').value);
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return;
+
+  // Clear the prior job's data from view immediately (see neutralizeEstimateView).
+  neutralizeEstimateView();
 
   // Home reference strip — beds/baths/sqft from intake, for glancing at during the
   // walkthrough so you can sanity-check the rooms you've ticked against the property.
@@ -4877,6 +4894,17 @@ function editEstimateForJob(jobId) {
         }
       }
     }
+  }
+
+  // Drop the previously-loaded job's rooms/vendors/prep from view immediately, and
+  // reflect this job's service type synchronously, so the slow cloud fetch below can
+  // never show another job's estimate (e.g. a Home Prep build) under this job's name.
+  neutralizeEstimateView();
+  var _editJob = jobs.find(function(j){ return j.id === jobId; });
+  if (_editJob) {
+    var _svcElE = document.getElementById('e-svc'); if (_svcElE) _svcElE.value = _editJob.svc || '';
+    var _svcDispE = document.getElementById('e-svc-display'); if (_svcDispE) _svcDispE.textContent = SVC_LABELS[_editJob.svc] || _editJob.svc || '—';
+    svcTypeChanged();
   }
 
   // Suppress auto-save during clear+restore to prevent overwriting saved estimate
