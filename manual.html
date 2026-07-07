@@ -44,99 +44,124 @@
   <div class="subtitle">Operations Manual &nbsp;·&nbsp; Internal Use Only &nbsp;·&nbsp; v2026</div>
 
   <h2>1. Overview</h2>
-  <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Approvals require a manager PIN. Client signatures via DocuSign. Payments via Stripe.</p>
-  <p><strong>Navigation tabs:</strong> Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Win / Loss</p>
+  <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Approvals require a manager PIN. Client signatures via DocuSign. Payments via Stripe (planned — not yet live).</p>
+  <p><strong>Navigation tabs (in order):</strong> Win / Loss · Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Referral Partners</p>
+  <p class="note">The app opens on the <strong>Client Dashboard</strong> even though Win / Loss is the first tab.</p>
 
   <h2>2. Initial Setup (one time per device)</h2>
   <p>Open <strong>Settings</strong> (gear icon) and enter:</p>
   <table>
     <tr><th>Field</th><th>Value</th></tr>
-    <tr><td>Google Sheets Sync — Apps Script URL</td><td>Your deployed Apps Script URL</td></tr>
+    <tr><td>Google Sheets Sync — Apps Script URL</td><td>The jobs / estimates web-app <code>/exec</code> URL</td></tr>
     <tr><td>Google Drive — Jobs Folder ID</td><td><code>1X2bmAAjbruL5lLip-UgwwmPNo7y_Ubrb</code></td></tr>
-    <tr><td>Stripe Publishable Key</td><td><code>pk_live_...</code> (configure Q4)</td></tr>
-    <tr><td>Stripe Secret URL</td><td>Stripe Apps Script URL (configure Q4)</td></tr>
+    <tr><td>Vendor Directory — Apps Script URL</td><td>The Vendor Directory web-app <code>/exec</code> URL (separate sheet)</td></tr>
+    <tr><td>Referral Partners — Apps Script URL</td><td>The Referral Partners web-app <code>/exec</code> URL (separate sheet)</td></tr>
+    <tr><td>Stripe Publishable Key</td><td><code>pk_live_...</code> (configure when live)</td></tr>
   </table>
+  <div class="note">Each directory (Vendors, Referral Partners) is its own Google Sheet with its own deployed Apps Script, kept walled off from job/estimate data. When you deploy or re-deploy a script, use <strong>Who has access: Anyone</strong> and paste the fresh <code>/exec</code> URL. If a save shows a login/HTML-page error, that access setting or a stale URL is the cause.</p>
 
   <h2>3. End-to-End Job Workflow</h2>
   <div class="flow">
 Intake → Estimate → Manager Approval → Send to Client → Client Accepts<br>
 → Send Agreement (DocuSign) → Client Signs → Deposit Auto-Charged (Stripe)<br>
-→ Job Active → Document Property → Log Hours → Final Invoice → Complete
+→ Job Active → Job Plan / Document Property → Log Hours → Invoices → Complete
   </div>
+  <p><strong>Home Prep for Sale</strong> follows a streamlined variant of this flow — no room scoring, no labor/hours, no crew. See Section 6.</p>
 
   <h2>4. New Client Intake</h2>
   <p>All fields marked * are required. Job ID is auto-generated (<code>HVL-YYMM-XXXX</code>). Google Drive folders are created automatically on save — no manual step needed.</p>
-  <p><strong>Property Types:</strong> Apartment · Town Home · Patio Home · Single Family Home · Estate</p>
-  <p><strong>Estate / Probate</strong> jobs require authorized representative (executor, POA, administrator) — name, role, phone, email. <strong>Probate</strong> additionally requires case number and attorney details.</p>
+  <p><strong>Service Types:</strong> Downsizing · Downsizing &amp; Move Management · Home Cleanout · Estate Settlement · Probate Estate Settlement · Contested Probate Estate Settlement · <strong>Home Prep for Sale</strong>.</p>
+  <p><strong>Property Types:</strong> Apartment · Town Home · Patio Home · Single Family Home · Estate. (Property type is a label; square footage drives sizing.)</p>
+  <p><strong>Home details:</strong> Square footage, <strong>Bedrooms</strong>, <strong>Full baths</strong>, and <strong>Half baths</strong> are captured separately (so "5 baths" is never ambiguous), plus years in home and approximate property value.</p>
+  <p><strong>Estate / Probate</strong> jobs require an authorized representative (executor, POA, administrator) — name, role, phone, email. <strong>Probate</strong> additionally requires case number and attorney details.</p>
+  <p><strong>Referral source:</strong> Intake records how the job came in. Professional referral types (attorney, realtor, trust officer, etc.) link to a specific <strong>Referral Partner</strong> from that directory, so referrals are attributed on the partner leaderboard. Personal sources (family, friend, existing client) use a free-text "Referred by" name instead.</p>
   <p>Drive folder structure created automatically per job:</p>
   <div class="flow">Photos · Walkthrough Notes · Estimate · Agreement · Change Orders · Asset Documentation</div>
 
-  <h2>5. Estimate</h2>
-  <p><strong>Tab: Estimate</strong> → select job from dropdown</p>
+  <h2>5. Estimate (Labor-Based Services)</h2>
+  <p><strong>Tab: Build Estimate</strong> → select job from dropdown. This section covers the labor-based services (Downsizing, Cleanout, Estate Settlement, Probate). Home Prep for Sale uses the fee-only flow in Section 6.</p>
 
   <h3>5a. Walkthrough Notes &amp; Voice</h3>
-  <p>During the site visit, use <strong>📝</strong> (notes) and <strong>🎙</strong> (voice) buttons in each room row. Voice transcribes in real time into the notes field. Hit <strong>Save Notes</strong> — note saves with the estimate and uploads as a <code>.txt</code> file to the job's <strong>Walkthrough Notes</strong> Drive folder automatically.</p>
+  <p>During the site visit, use the <strong>📝</strong> (notes) and <strong>🎙</strong> (voice-to-text) buttons in each room row. Voice transcribes in real time into the notes field. Hit <strong>Save Notes</strong> — the note saves with the estimate and uploads as a <code>.txt</code> file to the job's <strong>Walkthrough Notes</strong> Drive folder automatically.</p>
   <div class="note">📷 Photos are NOT captured during the estimate stage. Photography happens only after job activation.</div>
 
   <h3>5b. Room Scoring</h3>
-  <p>Check each room to include it. Set Volume and Complexity on a 1–5 scale:</p>
+  <p>Check each room to include it (auto-scores 3/3). Set Volume and Complexity on a 1–5 scale:</p>
   <table>
     <tr><th>Score</th><th>Volume</th><th>Complexity</th></tr>
     <tr><td>1</td><td>Nearly empty</td><td>Simple / standard items</td></tr>
     <tr><td>3</td><td>Moderately filled</td><td>Mix of standard and care items</td></tr>
     <tr><td>5</td><td>Completely full</td><td>High-value / fragile / specialty handling</td></tr>
   </table>
-  <p>Check <strong>Special Items</strong> if the room contains artwork, antiques, or items requiring specialty care. TC and PS hours calculate automatically.</p>
+  <p>Check <strong>Special Items</strong> if the room contains artwork, antiques, or items requiring specialty care. TC and PS hours calculate automatically, and a working-day timeline is generated.</p>
 
   <h3>5c. Job Settings</h3>
   <ul>
     <li><strong>Premium Estate</strong> — TC $185/hr, PS $125/hr (vs. standard $150/$100)</li>
-    <li><strong>PS Count</strong> — number of Property Specialists assigned</li>
-    <li><strong>Preferred Customer Discount</strong> — percentage off Havellin labor fees only</li>
+    <li><strong>Property Specialists</strong> — crew is auto-sized to hit the 10-working-day target (floor 2, cap 6); you can add specialists manually. Billing is total PS hours regardless of crew size.</li>
+    <li><strong>Preferred Client Discount</strong> — percentage off Havellin labor fees only (max 30%)</li>
     <li><strong>Moving Materials Package</strong> — None, or an Estate tier (Basic $500 · Standard $750 · Premium $1,500) or Downsizing tier (Basic $200 · Standard $350 · Premium $550)</li>
-    <li><strong>Target Completion</strong> — appears in estimate and agreement documents</li>
   </ul>
 
   <h3>5d. Moving Materials &amp; Third-Party Vendors</h3>
   <p>Add third-party vendors with estimated costs. A <strong>15% Service Management Fee</strong> is automatically calculated on vendor totals. Vendor costs are estimates only — actual invoices billed directly to client at cost.</p>
 
-  <h3>5e. Home Prep for Sale</h3>
-  <p>Check <strong>Include in estimate</strong> to activate. Add prep items with estimated vendor costs. A <strong>30% GC / Site Management Fee</strong> is calculated per item (home prep is billed at the higher contractor rate, not the 15% vendor SMF). TC coordination hours are auto-estimated and added to TC total. Vendor costs can be updated later via Change Order as actual quotes come in.</p>
+  <h3>5e. Home Prep for Sale (as an add-on)</h3>
+  <p>On a labor-based job you can also check <strong>Include in estimate</strong> in the Home Prep section to add show-ready prep as an add-on. Prep vendors carry a <strong>30% GC / Site Management Fee</strong> (not the 15% vendor SMF). When Home Prep is the <em>only</em> service, use the standalone flow in Section 6 instead.</p>
 
   <h3>5f. Notable Collections</h3>
-  <p>Add significant asset collections (artwork, jewelry, antiques, silver, etc.) requiring disposition planning. Set name, estimated value, quantity, and proposed disposition: Auction · Appraise · Consign · Ebay · Replacements.com · Dealer · Other. Collections appear in the client-facing estimate under <em>Notable Collections — Disposition Plan</em>.</p>
+  <p>Add significant asset collections (artwork, jewelry, antiques, silver, etc.) requiring disposition planning. Set name, estimated value, quantity, and proposed disposition: Auction · Appraise · Consign · Ebay · Replacements.com · Specialized Dealer · Firearms (Licensed FFL) · Other. Collections appear in the client-facing estimate under <em>Notable Collections — Disposition Plan</em>.</p>
 
   <h3>5g. Saving</h3>
-  <p>Hit <strong>Save &amp; Calculate</strong>. Estimate saves locally and syncs to Google Sheets. Editable until approved.</p>
+  <p>Hit <strong>Save &amp; Preview Client Estimate</strong>. Estimate saves and syncs to Google Sheets, then opens in the Client Estimate preview. Editable until approved.</p>
 
-  <h2>6. Client Estimate &amp; Approval</h2>
+  <h2>6. Home Prep for Sale (Standalone Service)</h2>
+  <p>A show-ready, sell-side service offered primarily through <strong>Douglas Elliman referral agents</strong>. Havellin manages every trade needed to get a property market-ready — paint, repairs, landscaping, deep cleaning, staging — and charges a flat <strong>30% GC / Site Management Fee</strong> on the managed vendor spend. There is no room scoring, no in-house labor, and no crew.</p>
+  <div class="note"><strong>Who the contract is with:</strong> the agreement is directly with the <strong>homeowner</strong>. The referring agent is a referral channel only — never our client. No document should suggest otherwise.</div>
+
+  <h3>6a. Building the estimate</h3>
+  <ul>
+    <li>Select the job (Service Type = <em>Home Prep for Sale</em>). The estimator hides room scoring, crew, and labor entirely — the <strong>Home Prep for Sale — Managed Vendors</strong> card sits beside the Job details.</li>
+    <li>Add each prep item/vendor with an estimated cost. The 30% fee is shown per line and in total.</li>
+    <li><strong>Scope notes:</strong> each vendor line has a scope field — capture on the walkthrough exactly what to tell that trade (e.g. "5 bedrooms + hallway, walls &amp; ceilings; front &amp; back landscaping"). These carry through to the Job Plan sourcing.</li>
+    <li>No property value is required.</li>
+  </ul>
+
+  <h3>6b. Client estimate</h3>
+  <p>The client estimate reads vendors-first: the itemized prep vendor estimates (billed at cost), then the Havellin 30% management fee, then one Total Estimated Project Cost. Standard 50 / 25 / 25 payment schedule applies to the Havellin fee.</p>
+  <p><strong>Timeline:</strong> Home Prep runs on the vendors' schedules, so no completion date is projected. The estimate shows the Target Start plus a note that the schedule is confirmed once vendors are booked — the client never sees a blank completion date.</p>
+
+  <h3>6c. Job Plan (streamlined)</h3>
+  <p>A Home Prep job opens a stripped-down Job Plan — no hours log, no PS crew, no room phases, no end-of-job logistics. It shows only:</p>
+  <ul>
+    <li><strong>Budget &amp; Fee</strong> — estimated vendor spend, quoted-to-date, and the running 30% fee on actual quotes (flags any over-budget).</li>
+    <li><strong>Home Prep Vendors — Sourcing &amp; Status</strong> — assign a partner from the Vendor Directory, set status, and log the actual quote per item (with the scope note shown for reference).</li>
+    <li><strong>Coordination Checklist</strong> — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices + fee billed.</li>
+  </ul>
+
+  <h2>7. Client Estimate &amp; Approval</h2>
   <p><strong>Tab: Client Estimate</strong> → select job. The client-facing estimate document renders here. Review for accuracy. The estimate is informational — no client signature is required or requested.</p>
-
   <h3>Approval</h3>
   <p>Hit <strong>Submit for Approval</strong> → manager enters PIN → estimate is locked and marked <em>Approved for Release</em>. PDF is unlocked. Estimate cannot be edited after approval — use a Change Order instead.</p>
-
   <h3>Sending to Client</h3>
-  <p>Hit <strong>Email Estimate</strong> → opens pre-drafted email with estimate attached. Send to client for review. Then wait for the client to confirm they want to proceed before taking any further steps.</p>
+  <p>Hit <strong>Email Estimate</strong> → opens a pre-drafted, warmly-worded email (referencing the in-home walkthrough) with the estimate to attach. Send to the client for review, then wait for them to confirm they want to proceed before taking further steps.</p>
 
-  <h2>7. Service Agreement</h2>
+  <h2>8. Service Agreement</h2>
   <p><strong>Tab: Agreement</strong> → select job</p>
   <div class="note">Only initiate after the client has verbally or by email confirmed they want to proceed. Never send an agreement before the client has accepted the estimate.</div>
-
   <h3>Generate &amp; Send</h3>
   <ol>
     <li>Select job → agreement auto-populates from approved estimate data</li>
     <li>Manager enters PIN to approve for sending</li>
     <li>Hit <strong>Send for Signature</strong> → DocuSign delivers agreement to client email</li>
   </ol>
-
   <h3>Automated Steps After Sending</h3>
   <ul>
     <li>Client signs via DocuSign → agreement marked signed automatically</li>
     <li>Stripe deposit invoice (50%) fires automatically upon signature</li>
     <li>Client pays deposit → job status changes to <strong>Active</strong> automatically</li>
-    <li>TC receives notification that job is active</li>
+    <li>TC receives notification that the job is active</li>
   </ul>
-
   <h3>Payment Schedule</h3>
   <table>
     <tr><th>Milestone</th><th>Amount</th><th>Timing</th></tr>
@@ -144,74 +169,94 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <tr><td>Midpoint</td><td>Brings cumulative to 75%, with vendor &amp; home-prep fees trued to actual Job Plan quotes</td><td>Due at project midpoint</td></tr>
     <tr><td>Final</td><td>Balance — labor trued to logged hours, fees on actuals, plus any approved Change Orders</td><td>Within 7 days of final invoice</td></tr>
   </table>
-  <p style="font-size:11px;color:#888780;">Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 15% SMF / 30% GC fee is calculated on the actual quotes logged in the Job Plan (Phase 0 sourcing) and trued up from the midpoint invoice onward; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoice tab via the Stage selector.</p>
+  <p style="font-size:11px;color:#888780;">Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 15% SMF / 30% GC fee is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoices tab via the Stage selector.</p>
 
-  <h2>8. Client Dashboard</h2>
-  <p><strong>Tab: Clients</strong> → select job card. Shows full job status, action checklist, Drive folder link, and all management actions.</p>
+  <h2>9. Client Dashboard</h2>
+  <p><strong>Tab: Client Dashboard</strong> → select job card. Shows full job status, action checklist, referral source / partner, Drive folder link, and all management actions.</p>
   <table>
     <tr><th>Status</th><th>Meaning</th></tr>
     <tr><td>New</td><td>Intake complete, no estimate yet</td></tr>
     <tr><td>Estimated</td><td>Estimate saved, not yet approved</td></tr>
+    <tr><td>Pending Approval</td><td>Submitted for manager PIN approval</td></tr>
     <tr><td>Approved</td><td>Estimate approved, pending client acceptance</td></tr>
     <tr><td>Agreement Sent</td><td>DocuSign envelope delivered to client</td></tr>
     <tr><td>Active</td><td>Signed + deposit received — work in progress</td></tr>
     <tr><td>Complete</td><td>Final invoice paid and closed</td></tr>
   </table>
   <p>The <strong>📁 Drive</strong> button opens the job's Google Drive folder directly.</p>
-
   <h3>Change Orders</h3>
   <p>If scope changes after estimate approval: <strong>Create Change Order</strong> → enter description and cost impact → manager approves → sent to client for sign-off via DocuSign.</p>
 
-  <h2>9. Active Job Documentation</h2>
-  <p>Accessible from Client Dashboard once a job is <strong>Active</strong>. This is the only stage where photos are captured.</p>
-
+  <h2>10. Active Job Documentation</h2>
+  <p>Accessible from Client Dashboard once a job is <strong>Active</strong>. This is the only stage where photos are captured. (Home Prep jobs are vendor-managed and generally skip room documentation.)</p>
   <h3>Room Documentation</h3>
   <p>Each room row shows the walkthrough note from the estimate as a gray italic reference. Capture buttons per room:</p>
   <ul>
-    <li><strong>📷</strong> — tap to add/review photos. Uploads automatically to <strong>Photos</strong> Drive subfolder</li>
+    <li><strong>📷</strong> — tap to add/review photos. Uploads automatically to the <strong>Photos</strong> Drive subfolder</li>
     <li><strong>🎥</strong> — capture video walkthrough footage</li>
   </ul>
   <p>Photo naming: <code>HVL-YYMM-XXXX_RoomName_001.jpg</code></p>
-
   <h3>Notable Collections — Asset Documentation</h3>
   <ul>
-    <li><strong>📷 Asset photos</strong> — condition and identification photography. Uploads to <strong>Asset Documentation</strong> subfolder as <code>HVL-YYMM-XXXX_ASSET_CollectionName_001.jpg</code></li>
+    <li><strong>📷 Asset photos</strong> — condition/identification photography. Uploads to <strong>Asset Documentation</strong> as <code>HVL-YYMM-XXXX_ASSET_CollectionName_001.jpg</code></li>
     <li><strong>📄 Appraisal</strong> — upload PDF or image of appraisal document. Saves as <code>HVL-YYMM-XXXX_APPRSL_CollectionName_2026-05-01.pdf</code></li>
   </ul>
 
-  <h2>10. Log Hours</h2>
-  <p><strong>Tab: Job Plan → Log Hours</strong> → select job. Log each working session: date, team member, role (TC / PS / Specialty), hours, task description. Hours accumulate against the estimate. Log daily — do not batch at end of job.</p>
+  <h2>11. Job Plan &amp; Log Hours</h2>
+  <p><strong>Tab: Job Plan</strong> → select job. Generates once the estimate is approved. For labor-based services it runs the phase playbook (Phase 0 Pre-Job → Phase 4 Close-Out), vendor &amp; partner sourcing, and daily hours logging. For <strong>Home Prep for Sale</strong> it is the streamlined vendor/budget/checklist view described in Section 6c.</p>
+  <h3>Log Hours (labor jobs)</h3>
+  <p>Log each working session: date, team member, role (TC / PS / Specialty), hours, task description. Hours accumulate against the estimate and drive the forward-variance projection. Log daily — do not batch at end of job.</p>
+  <h3>Vendor &amp; Partner Sourcing</h3>
+  <p>Assign a directory vendor to each estimate line and logged category, set status, and record the actual quote. These actuals feed the midpoint and final invoices (15% SMF / 30% GC on the real numbers).</p>
 
-  <h2>11. Final Invoice</h2>
+  <h2>12. Invoices</h2>
   <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
 
-  <h2>12. Drive Folder Reference</h2>
+  <h2>13. Vendor Directory</h2>
+  <p><strong>Tab: Vendors.</strong> The curated network of trades and service providers (painters, landscapers, movers, appraisers, haulers, etc.), stored in its own Google Sheet. Work each vendor through its lifecycle: <em>Identified → Contacted → Qualified → Vetting → Contracted → Active</em>. Only <strong>Active</strong> vendors can be assigned to a job in the Job Plan sourcing.</p>
+  <ul>
+    <li><strong>☎ Log contact</strong> — stamps the last-contacted date (used for follow-up cadence).</li>
+    <li><strong>Edit</strong> — intake/vetting fields: contact, pricing structure, ballpark, minimum job, lead time, COI on file, license, service area, notes.</li>
+    <li>Performance is rated post-job (a rolling average), kept separate from the curated fields so a vetting edit never wipes performance history.</li>
+  </ul>
+
+  <h2>14. Referral Partners</h2>
+  <p><strong>Tab: Referral Partners.</strong> A CRM for the network of attorneys, realtors, trust officers, and Douglas Elliman agents who refer business. Mirrors the Vendor Directory: its own Google Sheet + Apps Script, kept apart from job data.</p>
+  <ul>
+    <li><strong>Add / Edit a partner</strong> — first &amp; last name, type, firm, primary contact, phone, email, website, owner, and notes. Type, phone, and email are required. Owner is one of Anthony Graziano Sr · Ashley Jerome · Anthony Graziano Jr.</li>
+    <li><strong>Status</strong> is a color-coded badge (e.g. <em>Do Not Use</em> shows red) set only by editing the partner — there is no inline status dropdown, and partners are retired by status rather than deleted.</li>
+    <li><strong>Log outreach</strong> — stamps last-contacted to today.</li>
+    <li><strong>Dormancy nudge</strong> — an engaged partner with no outreach or referral in 90 days is flagged "Needs Nudge."</li>
+    <li><strong>Leaderboard</strong> — jobs are attributed to a partner when a professional referral source is linked at intake, so you can see who sends the most business.</li>
+  </ul>
+
+  <h2>15. Drive Folder Reference</h2>
   <table>
     <tr><th>Subfolder</th><th>Contents</th><th>When populated</th></tr>
     <tr><td>Walkthrough Notes</td><td>Voice/typed notes per room (.txt)</td><td>During estimate walkthrough</td></tr>
-    <tr><td>Estimate</td><td>Approved estimate document</td><td>On estimate approval</td></tr>
+    <tr><td>Estimate</td><td>Approved estimate document</td><td>On estimate save/approval</td></tr>
     <tr><td>Agreement</td><td>Signed agreement (via DocuSign)</td><td>On DocuSign completion</td></tr>
     <tr><td>Photos</td><td>Room condition and documentation photos</td><td>During active job</td></tr>
     <tr><td>Asset Documentation</td><td>Collection photos + appraisal documents</td><td>During active job</td></tr>
     <tr><td>Change Orders</td><td>Approved change order documents</td><td>As needed</td></tr>
   </table>
 
-  <h2>13. Rates &amp; Fees Reference</h2>
+  <h2>16. Rates &amp; Fees Reference</h2>
   <table>
     <tr><th>Item</th><th>Standard</th><th>Premium Estate</th></tr>
     <tr><td>Transition Concierge</td><td>$150/hr</td><td>$185/hr</td></tr>
     <tr><td>Property Specialist</td><td>$100/hr</td><td>$125/hr</td></tr>
-    <tr><td>Service Management Fee</td><td>15% of vendor costs</td><td>15% of vendor costs</td></tr>
+    <tr><td>Service Management Fee (third-party vendors)</td><td>15% of vendor costs</td><td>15% of vendor costs</td></tr>
     <tr><td>Home Prep GC / Site Management Fee</td><td>30% of prep vendors</td><td>30% of prep vendors</td></tr>
     <tr><td>Moving Materials</td><td>Cost + 25%</td><td>Cost + 25%</td></tr>
   </table>
 
-  <h2>14. Manager PIN</h2>
+  <h2>17. Manager PIN</h2>
   <p>Required for: Estimate approval · Agreement approval · Invoice approval. Contact management for current PIN. Do not share or record in the app.</p>
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-08
   </div>
 
 </div>

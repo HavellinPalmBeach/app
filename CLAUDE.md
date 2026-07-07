@@ -30,12 +30,13 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-07-07** (nav tabs, property types → 5,
-  premium rates → $185/$125, Log Hours now under Job Plan, Final Invoice → Invoices).
-  Still deferred until the app is fully built: full sections for the newer tabs
-  (Job Plan, Inventory, Contractors, Win / Loss) are not yet written.
+- Last reconciled against the app: **2026-07-08** (added Home Prep for Sale as a
+  standalone service + streamlined Job Plan, Referral Partners tab, Vendor Directory
+  section, beds/full/half baths, referral-source linkage, nav order incl. Win/Loss first,
+  Vendor + Referral Apps Script URLs in Settings).
+  Still thin / deferred until the app is fully built: Inventory and Win / Loss tabs, and
+  the full labor-job Job Plan phase playbook detail.
 
 ## Backlog / don't forget
-- Warm up the **estimate email language** — add a personal touch tying back to the
-  in-home walkthrough (e.g. "It was a pleasure meeting you and walking through your
-  home..."). `buildEstimateMailto()` in `havellin.html`. Not yet executed.
+- ~~Warm up the **estimate email language** — personal touch tying back to the in-home
+  walkthrough. `buildEstimateMailto()`.~~ **Done 2026-07-08.**
