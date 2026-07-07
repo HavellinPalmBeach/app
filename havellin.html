@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 4:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 4:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -528,7 +528,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     </div>
   </div>
   <div class="card" style="margin-bottom:1rem;">
-    <div class="grid2" style="align-items:start;gap:1.5rem;">
+    <div class="grid2" style="align-items:start;gap:1.5rem;" id="est-job-grid">
       <div>
         <div class="sec">Job</div>
         <label>Attach estimate to job</label>
@@ -642,7 +642,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   </div>
 
   <div class="grid2" style="gap:1rem;align-items:start;">
-    <div>
+    <div id="est-build-col">
       <div class="card" style="padding:0;overflow:hidden;" id="est-rooms-card">
         <div style="padding:.9rem 1.1rem .5rem;">
           <div class="sec" style="margin-bottom:4px;">Room-by-Room Assessment</div>
@@ -732,7 +732,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
       </div>
 
-      <div class="card" style="margin-top:1rem;">
+      <div class="card" style="margin-top:1rem;" id="est-prep-card">
         <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
           <span id="prep-card-label">Home Prep for Sale</span>
           <label id="prep-include-label" style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;cursor:pointer;display:flex;align-items:center;gap:5px;">
@@ -2394,6 +2394,25 @@ function applyEstimateServiceMode(isPrep) {
     if (isPrep) pCostRow.parentNode.insertBefore(pCostRow, pFeeRow);   // vendors before fee
     else        grandRow.parentNode.insertBefore(pCostRow, grandRow);  // restore: vendors before grand total
   }
+
+  // Relocate the Home Prep vendor card for prep jobs. The Job card's right column
+  // (est-crew-col — PS scheduling) is hidden for a fee-only service, leaving white
+  // space next to the Job details. Move the prep vendor card up into that slot so it
+  // sits beside the Job block instead of stranded in a row below. Because est-crew-col
+  // is display:none it drops out of the 2-col grid, so the prep card becomes column 2.
+  // Idempotent (runs every calcAll) and reversible for non-prep services.
+  var prepCard = document.getElementById('est-prep-card');
+  var jobGrid  = document.getElementById('est-job-grid');
+  var buildCol = document.getElementById('est-build-col');
+  if (prepCard && jobGrid && buildCol) {
+    if (isPrep) {
+      if (prepCard.parentNode !== jobGrid) jobGrid.appendChild(prepCard);
+      prepCard.style.marginTop = '0';
+    } else {
+      if (prepCard.parentNode !== buildCol) buildCol.appendChild(prepCard);
+      prepCard.style.marginTop = '1rem';
+    }
+  }
 }
 
 function calcAll() {
@@ -3946,11 +3965,10 @@ function buildPrepEstimateBody(e) {
     '</table>' +
     '<div class="ce-note" style="margin-top:6px;">The final fee is 30% of actual vendor spend. If that exceeds this estimate by more than 15%, Havellin will notify you before proceeding.</div>' +
 
-    // 3) Then the combined total
+    // 3) Then the combined total — just the grand total; the vendor spend and fee
+    // are already itemized in the two sections directly above, so we don't repeat them.
     '<div style="margin-top:1.25rem;"><div class="ce-section-hdr">Total Estimated Project Cost</div>' +
     '<table class="ce-tbl"><tbody>' +
-    '<tr><td>Prep Vendors (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
-    '<tr><td>Havellin Management Fee (30%)</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
     '</tbody></table></div>';
 }
