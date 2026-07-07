@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 1:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 1:52pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -437,7 +437,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div class="row">
         <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
-        <div><label>Bathrooms</label><input type="number" id="i-baths" placeholder="e.g. 3" min="0" max="30" step="0.5" inputmode="decimal" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,Math.round((parseFloat(this.value)||0)*2)/2))"></div>
+        <div><label>Full baths</label><input type="number" id="i-baths" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
+        <div><label>Half baths</label><input type="number" id="i-half-baths" placeholder="e.g. 2" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
       </div>
       <label>Approximate home value <span style="font-weight:400;color:var(--gray);">(market / Zillow estimate)</span></label>
       <input type="text" id="i-home-value" placeholder="e.g. $3,200,000" inputmode="numeric" oninput="formatMoneyInput(this)">
@@ -2703,24 +2704,6 @@ function calcAll() {
     }
   }
 
-  // Update prep summary display
-  var prepSummaryEl = document.getElementById('prep-summary');
-  if (prepSummaryEl) {
-    if (svcType === 'prep' && (coordDays > 0 || vendorTotal > 0)) {
-      prepSummaryEl.style.display = 'block';
-      prepSummaryEl.innerHTML =
-        '<div class="sec" style="margin-bottom:6px;">Home Prep for Sale Breakdown</div>' +
-        '<table style="width:100%;font-size:11px;border-collapse:collapse;">' +
-        (coordDays > 0 ? '<tr><td style="padding:4px 0;">Transition Concierge coordination (' + coordDays + ' days × 8hrs)</td><td style="text-align:right;">' + fmt(coordDays*8*tcRate) + '</td></tr>' : '') +
-        (vendorTotal > 0 ? '<tr><td style="padding:4px 0;">Contractor / vendor costs</td><td style="text-align:right;">' + fmt(vendorTotal) + '</td></tr>' : '') +
-        (vendorTotal > 0 ? '<tr><td style="padding:4px 0;color:var(--bronze);">GC / Site Management Fee (30%)</td><td style="text-align:right;color:var(--bronze);">' + fmt(gcFee) + '</td></tr>' : '') +
-        (stagerCost > 0 ? '<tr><td style="padding:4px 0;">Professional stager</td><td style="text-align:right;">' + fmt(stagerCost) + '</td></tr>' : '') +
-        (stagerGcFee > 0 ? '<tr><td style="padding:4px 0;color:var(--bronze);">Stager GC fee (30%)</td><td style="text-align:right;color:var(--bronze);">' + fmt(stagerGcFee) + '</td></tr>' : '') +
-        '</table>';
-    } else {
-      prepSummaryEl.style.display = 'none';
-    }
-  }
 
   document.getElementById('s-base-tc').textContent = baseTCHrs.toFixed(1) + ' hrs';
   document.getElementById('s-base-ps').textContent = basePSHrs.toFixed(1) + ' hrs';
@@ -3234,6 +3217,7 @@ function saveIntake() {
   var sqft = document.getElementById('i-sqft').value.trim();
   var beds = (document.getElementById('i-beds')||{}).value ? document.getElementById('i-beds').value.trim() : '';
   var baths = (document.getElementById('i-baths')||{}).value ? document.getElementById('i-baths').value.trim() : '';
+  var halfBaths = (document.getElementById('i-half-baths')||{}).value ? document.getElementById('i-half-baths').value.trim() : '';
   // Home value is a comma-formatted text field ($3,200,000) — store digits only so
   // downstream parseInt/_num reads a clean number.
   var propVal = ((document.getElementById('i-home-value')||{}).value || '').replace(/[^0-9]/g, '');
@@ -3332,7 +3316,7 @@ function saveIntake() {
     svc:svc, svcLabel:svcLabels[svc],
     sqft:document.getElementById('i-sqft').value,
     yearsInHome:document.getElementById('i-years-in-home').value,
-    beds:beds, baths:baths, propVal:propVal,
+    beds:beds, baths:baths, halfBaths:halfBaths, propVal:propVal,
     ptype:document.getElementById('i-ptype').value,
     tc:tc,
     walkthrough:document.getElementById('i-walkthrough').value,
@@ -3372,7 +3356,7 @@ function saveIntake() {
 }
 
 function clearIntakeForm() {
-  ['i-fname','i-lname','i-name','i-phone','i-email','i-addr','i-city','i-zip','i-sqft','i-beds','i-baths','i-notes',
+  ['i-fname','i-lname','i-name','i-phone','i-email','i-addr','i-city','i-zip','i-sqft','i-beds','i-baths','i-half-baths','i-notes',
    'i-walkthrough','i-start','i-completion',
    'i-date-of-death','i-letters-date','i-probate-deadline',
    'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
@@ -3393,7 +3377,7 @@ function clearIntakeForm() {
   document.getElementById('i-fb').innerHTML = '';
 }
 function clearIntake() {
-  ['i-fname','i-lname','i-phone','i-email','i-addr','i-city','i-notes','i-sqft','i-years-in-home','i-beds','i-baths',
+  ['i-fname','i-lname','i-phone','i-email','i-addr','i-city','i-notes','i-sqft','i-years-in-home','i-beds','i-baths','i-half-baths',
    'i-date-of-death','i-letters-date','i-probate-deadline',
    'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
    'i-probate-atty-phone','i-probate-atty-email',
@@ -3422,7 +3406,7 @@ function loadJobIntoEstimate() {
     var _num = function(v){ var n = parseFloat(v); return isNaN(n) ? null : n; };
     var refBits = [];
     if (_num(job.beds)  != null) refBits.push('<strong>' + esc(job.beds)  + '</strong> bd');
-    if (_num(job.baths) != null) refBits.push('<strong>' + esc(job.baths) + '</strong> ba');
+    if (_num(job.baths) != null) refBits.push('<strong>' + esc(job.baths) + '</strong> full' + (_num(job.halfBaths) ? ' + <strong>' + esc(job.halfBaths) + '</strong> half' : '') + ' ba');
     if (_num(job.sqft)  != null) refBits.push('<strong>' + _num(job.sqft).toLocaleString() + '</strong> sqft');
     if (_num(job.yearsInHome) != null) refBits.push('<strong>' + esc(job.yearsInHome) + '</strong> yrs in home');
     if (_num(job.propVal) != null) refBits.push('Property value <strong>$' + _num(job.propVal).toLocaleString() + '</strong>');
@@ -4015,10 +3999,6 @@ function renderClientEstimate() {
     : '') +
     (e.prepEnabled && e.prepTCHrs > 0 ? '<tr><td colspan="4" style="font-size:11px;color:var(--gray);font-style:italic;padding:4px 10px;">Includes ' + e.prepTCHrs.toFixed(1) + ' TC hrs for home prep vendor coordination — factored into Transition Concierge total above.</td></tr>' : '') +
     '</tbody>' +
-    (e.svcType === 'prep' && e.gcFee > 0 ?
-      '<tr><td>Vendor / contractor costs</td><td>' + fmt(e.vendorTotal || 0) + ' est.</td><td>Pass-through</td><td class="r">' + fmt(e.vendorTotal || 0) + '</td></tr>' +
-      '<tr><td>GC / Site Management Fee (30%)</td><td></td><td></td><td class="r">' + fmt(e.gcFee) + '</td></tr>' +
-      (e.stagerCost > 0 ? '<tr><td>Professional staging</td><td>' + fmt(e.stagerCost) + ' est.</td><td>Pass-through + 30% GC fee</td><td class="r">' + fmt(e.stagerCost + (e.stagerGcFee||0)) + '</td></tr>' : '') : '') +
     (e.discountPct > 0 ?
       '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt)) + '</td></tr>' +
       '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
@@ -5505,7 +5485,7 @@ function renderClientDashboard(jobId) {
   h += field('Job ID', '<span style="font-weight:600;color:var(--bronze);font-family:monospace;">'+(job.hvlId||'—')+'</span>');
   h += field('Property type', job.ptype||'—');
   h += field('Approx. sqft', job.sqft ? job.sqft+' sqft' : '—');
-  h += field('Beds / Baths', (job.beds||job.baths) ? ((job.beds||'—')+' bd / '+(job.baths||'—')+' ba') : '—');
+  h += field('Beds / Baths', (job.beds||job.baths) ? ((job.beds||'—')+' bd / '+(job.baths||'—')+' full'+(job.halfBaths?' / '+job.halfBaths+' half':'')+' ba') : '—');
   h += field('Approx. home value', (job.propVal && job.propVal !== '0') ? ({'500000':'Under $1M','1750000':'$1M – $2.5M','3500000':'$2.5M – $5M','7500000':'$5M – $10M','14000000':'$10M – $20M','27500000':'$20M – $35M','52500000':'$35M – $75M','100000000':'$75M+'}[String(job.propVal)] || formatPropVal(parseInt(job.propVal))) : '—');
   h += field('Years in home', job.yearsInHome ? job.yearsInHome + ' yrs' : '—');
   h += field('Referral source', (job.src||'—') + ((job.refPartnerName||job.referredByName) ? ' — ' + esc(job.refPartnerName||job.referredByName) : ''));
@@ -6488,7 +6468,9 @@ function buildEstimateMailto() {
   var body = mailtoBody([
     'Dear ' + bestClientGreetingName(job) + ',',
     '',
-    'Thank you for the opportunity to meet with you. Your Havellin Palm Beach service estimate for ' + (job.addr||'your property') + ' is ready for your review.',
+    'It was a genuine pleasure meeting you and walking through your home together. Thank you for taking the time to share your plans with us and for trusting Havellin Palm Beach with this next chapter.',
+    '',
+    'With your home and priorities in mind, we have prepared the service estimate below for ' + (job.addr||'your property') + '.',
     ''
   ].concat(costLines).concat([
     'Total Estimated Project Cost: ' + money(grand),
@@ -6497,7 +6479,7 @@ function buildEstimateMailto() {
     '',
     '** Please attach the estimate PDF before sending — use the "Print / Save PDF" button in the app to generate it. **',
     '',
-    'Please review and reach out with any questions. Once ready to proceed, I will send the service agreement for your signature.',
+    'Please take your time reviewing everything, and never hesitate to reach out — I am always happy to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send over the service agreement for your signature.',
     '',
     'Warm regards,',
     tc.name,
@@ -7469,15 +7451,6 @@ function syncJobToSheets(job) {
   syncToSheets('job', job);
 }
 
-// DEPRECATED — no longer called by the save path. The estimate is now written in a
-// single shape via saveEstimateState() -> 'saveAllEstimates' (which the loader reads
-// back). This wrote a second, differently-shaped 'estimate' record that could drift
-// from the store. Retained only so any remaining backend 'estimate' handler can be
-// migrated to derive from the saveAllEstimates payload before this is removed.
-function syncEstimateToSheets(est, approved, approvedBy, approvedAt) {
-  var payload = Object.assign({}, est, { approved: approved, approvedBy: approvedBy, approvedAt: approvedAt });
-  syncToSheets('estimate', payload);
-}
 
 function showSyncBadge(msg, isErr) {
   var el = document.getElementById('sync-status');
@@ -8040,20 +8013,7 @@ function renderInvoice() {
 
   var tcFee = Math.round(actTC * tcRate);
   var psFee = Math.round(actPS * psRate);
-  // Prep for Sale additional pricing (legacy) — read from saved estimate, NOT live DOM
-  var svcType = est ? (est.svc || '') : (job.svc || '');
   var coordDays = 0, vendorTotal = 0, gcFee = 0, stagerCost = 0, stagerGcFee = 0;
-  if (svcType === 'prep' && est) {
-    coordDays  = est.coordDays  || 0;
-    vendorTotal = est.vendorTotal || 0;
-    gcFee = Math.round(vendorTotal * 0.30);
-    stagerCost   = est.stagerCost   || 0;
-    stagerGcFee  = est.stagerGcFee  || Math.round(stagerCost * 0.30);
-    var _propMult = est.propMult || 1.0;
-    var coordTCHrs = Math.round(coordDays * 8 * _propMult * 10) / 10;
-    var _invTotTC = Math.round((actTC + coordTCHrs) * 10) / 10;
-    tcFee = Math.round(_invTotTC * tcRate);
-  }
 
   // Discount from saved estimate only — never from live estimator form fields
   var discountPct = est ? (est.discountPct || 0) : 0;
