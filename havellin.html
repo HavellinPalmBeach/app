@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 2:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 3:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3484,6 +3484,22 @@ function estimateHasContent(est) {
 // now reflects the sheet) or 'offline' (the fetch failed — fall back to whatever
 // local copy we have, but warn the user it may be stale).
 function applyOpenedEstimate(jobId, job, status) {
+  // Stale-callback guard. refreshEstimateFromCloud is async and can resolve LATE —
+  // after the user has already switched jobs (or this open was superseded by a newer
+  // one). If the Estimate tab's selected job no longer matches this callback's jobId,
+  // bail: applying here would yank a different job's estimate into view or, worse,
+  // run the clear-fresh path below and wipe whatever the user is actively building.
+  var _selEl = document.getElementById('e-job');
+  var _selJobId = _selEl ? (parseInt(_selEl.value) || 0) : 0;
+  if (_selJobId && _selJobId !== jobId) return;
+
+  // In-progress guard. Capture any unsaved build the user has already started for THIS
+  // job BEFORE loadEstimateForJob() overwrites the live currentEstimate. A late cloud
+  // open with no saved store record must NOT clobber this — that race is what blanked
+  // the screen and erased freshly-added Home Prep vendors (which, being roomless, also
+  // slipped past the old rooms-length checks). estimateHasContent covers prep + rooms.
+  var _inProgress = (currentEstimate && currentEstimate.jobId === jobId && estimateHasContent(currentEstimate)) ? currentEstimate : null;
+
   var hasSaved = loadEstimateForJob(jobId);
   if (hasSaved && estimateHasContent(currentEstimate)) {
     restoreEstimateToUI(currentEstimate);
@@ -3493,6 +3509,14 @@ function applyOpenedEstimate(jobId, job, status) {
     } else {
       showFB('e-fb','ok','Estimate loaded for job: ' + job.name);
     }
+    return;
+  }
+  // No saved estimate in the store, but the user has an unsaved in-progress build for
+  // this job — keep it rather than resetting the form out from under them.
+  if (_inProgress) {
+    currentEstimate = _inProgress;
+    restoreEstimateToUI(_inProgress);
+    updateApprovalUI();
     return;
   }
   // No saved estimate available in the (cloud-refreshed) store.
