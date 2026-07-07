@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 3:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.07 · 4:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -283,6 +283,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="cleanout">Estate Settlement</option>
         <option value="probate">Probate Estate Settlement</option>
         <option value="contested_probate">Contested Probate Estate Settlement</option>
+        <option value="prep">Home Prep for Sale</option>
       </select>
       <div class="divider" style="margin:14px 0 10px;"></div>
       <div id="i-client-hdr" class="sec" style="margin-bottom:6px;">Client Information</div>
@@ -539,6 +540,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set in Client Intake">
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
         <div id="timeline-badge" style="margin-top:6px;"></div>
+        <div id="est-adjustments">
         <div class="sec" style="margin-top:12px;">Adjustments</div>
         <div class="toggle-wrap">
           <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to all hours</div></div>
@@ -547,6 +549,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div class="toggle-wrap" id="adj-heirs-wrap">
           <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
           <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
         </div>
         <!-- Property value, square footage, and years in home are captured at Client Intake
              and applied to the estimate behind the scenes — kept here (hidden) so calcAll still reads them. -->
@@ -560,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
         <div id="probate-inv-badge" style="margin-top:4px;"></div>
       </div>
-      <div>
+      <div id="est-crew-col">
         <div class="sec">Property Specialists</div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to complete all PS hours within the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation. Billing is total PS hours regardless of crew size — adding PS does not change the estimate.</div>
         <div id="ps-slots">
@@ -625,7 +628,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
   <div class="grid2" style="gap:1rem;align-items:start;">
     <div>
-      <div class="card" style="padding:0;overflow:hidden;">
+      <div class="card" style="padding:0;overflow:hidden;" id="est-rooms-card">
         <div style="padding:.9rem 1.1rem .5rem;">
           <div class="sec" style="margin-bottom:4px;">Room-by-Room Assessment</div>
           <div style="font-size:11px;color:var(--gray);">Check a room to include it (auto-scores 3/3). Adjust Volume &amp; Complexity (1–5). Special Items = fragile/high-value (bumps this room's complexity for extra careful handling).</div>
@@ -634,7 +637,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div id="room-overhead-line" style="display:none;padding:.6rem 1.1rem .9rem;border-top:1px solid var(--border);font-size:11px;color:var(--gray-dk);background:var(--cream);"></div>
       </div>
 
-      <div class="card" style="margin-top:1rem;">
+      <div class="card" style="margin-top:1rem;" id="est-collections-card">
         <div class="sec">Notable Collections <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(flag significant collections for auction — not room-by-room)</span></div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:6px;">Flag major collections only — china, coins, guns, art, wine, books, jewelry, etc. TC advises if items lack auction value.</div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:10px;font-style:italic;">Voice notes only at estimate. Photos available post signed agreement for documentation.</div>
@@ -673,7 +676,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
       </div>
 
-      <div class="card" style="margin-top:1rem;">
+      <div class="card" style="margin-top:1rem;" id="est-materials-card">
         <div class="sec">Moving Materials &amp; Third-Party Vendors</div>
         <label>Moving materials package</label>
         <select id="e-pkg" onchange="calcAll()">
@@ -716,8 +719,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
       <div class="card" style="margin-top:1rem;">
         <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>Home Prep for Sale</span>
-          <label style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <span id="prep-card-label">Home Prep for Sale</span>
+          <label id="prep-include-label" style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;cursor:pointer;display:flex;align-items:center;gap:5px;">
             <input type="checkbox" id="e-prep-enabled" onchange="togglePrepSection()"> Include in estimate
           </label>
         </div>
@@ -764,7 +767,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div class="card">
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
-        <table class="stbl">
+        <table class="stbl" id="s-hours-table">
           <tr><td class="muted">Base room hours — Transition Concierge</td><td class="num" id="s-base-tc">0.0</td></tr>
           <tr><td class="muted">Base room hours — Property Specialist (total)</td><td class="num" id="s-base-ps">0.0</td></tr>
           <tr><td class="muted">Other adjustments — Transition Concierge</td><td class="num" id="s-adj-tc">0.0</td></tr>
@@ -775,15 +778,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </table>
         <div class="divider"></div>
         <table class="stbl">
-          <tr><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
-          <tr><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
-          <tr><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
-          <tr><td class="muted">Vendor SMF (15%)</td><td class="num" id="s-smf">$0</td></tr>
+          <tr id="s-tc-fee-row"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
+          <tr id="s-ps-fee-row"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
+          <tr id="s-pkg-row"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
+          <tr id="s-smf-row"><td class="muted">Vendor SMF (15%)</td><td class="num" id="s-smf">$0</td></tr>
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
-          <tr><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
+          <tr id="s-vendor-row"><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
@@ -889,6 +892,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
         <button class="fb" onclick="setFilter('probate',this)">Probate</button>
         <button class="fb" onclick="setFilter('contested_probate',this)">Contested Probate</button>
+        <button class="fb" onclick="setFilter('prep',this)">Home Prep</button>
         <button class="fb" onclick="setFilter('re',this)">RE Potential</button>
         <button class="fb" onclick="setFilter('unassigned',this)">Unassigned TC</button>
       </div>
@@ -2255,6 +2259,22 @@ function rushMultiplier(runwayDays) {
 var _calcAllT;
 function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(calcAll, 250); }
 
+// Home Prep for Sale as a STANDALONE service is fee-only (a flat 30% GC on managed
+// vendor costs — no room scoring, crew, or labor hours). This toggles the labor-
+// oriented estimate UI off and makes the prep vendor list the centerpiece. Called
+// from calcAll() on every recompute so it stays in sync with the selected service.
+function applyEstimateServiceMode(isPrep) {
+  var hide = ['est-adjustments','est-crew-col','est-rooms-card','est-collections-card','est-materials-card','s-hours-table','s-tc-fee-row','s-ps-fee-row','s-pkg-row','s-smf-row','s-vendor-row'];
+  hide.forEach(function(id){ var el = document.getElementById(id); if (el) el.style.display = isPrep ? 'none' : ''; });
+  var incLbl = document.getElementById('prep-include-label');
+  if (incLbl) incLbl.style.display = isPrep ? 'none' : 'flex';
+  var chk = document.getElementById('e-prep-enabled');
+  if (chk) { chk.disabled = isPrep; if (isPrep && !chk.checked) chk.checked = true; }
+  if (isPrep) { var pc = document.getElementById('prep-content'); if (pc) pc.style.display = 'block'; }
+  var lbl = document.getElementById('prep-card-label');
+  if (lbl) lbl.textContent = isPrep ? 'Home Prep for Sale — Managed Vendors (30% GC fee)' : 'Home Prep for Sale';
+}
+
 function calcAll() {
   var prem = document.getElementById('e-prem').checked;
   var tcRate = prem ? 185 : 150;
@@ -2293,6 +2313,8 @@ function calcAll() {
   var totalVol = 0, includedRoomCount = 0;
   var includedRooms = [];
   var svcKey = document.getElementById('e-svc') ? document.getElementById('e-svc').value : 'cleanout';
+  var isPrep = (svcKey === 'prep');   // Home Prep for Sale — fee-only (30% GC), no room/labor engine
+  applyEstimateServiceMode(isPrep);
   var sqftVal = parseFloat(document.getElementById('e-sqft') ? document.getElementById('e-sqft').value : 0) || 0;
 
   // ── Pass 1: collect ticked rooms; clear unticked room displays ─────────────
@@ -2333,6 +2355,7 @@ function calcAll() {
   var _ejob = jobs.find(function(j){ return j.id === _ejId; });
   var yearsInHomeVal = _ejob ? _ejob.yearsInHome : '';
   var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal);
+  if (isPrep) eng = {totTC:0, totPS:0, roomTC:0, roomPS:0, load:0, days:0, perRoom:[], volFactor:1, cpxFactor:1};
   baseTCHrs = eng.totTC;
   basePSHrs = eng.totPS;
 
@@ -2433,36 +2456,19 @@ function calcAll() {
   var _collCost = getCollectionCost();
   var smf = calcVendorTotals() + Math.round(_collCost * 0.15);
   var vendorCost = getVendorCost() + _collCost;
-  // Home Prep for Sale
-  var prepEnabled = document.getElementById('e-prep-enabled') && document.getElementById('e-prep-enabled').checked;
+  // Home Prep for Sale. As the STANDALONE service ('prep') this IS the whole estimate:
+  // a pure 30% GC fee on managed vendor costs, with no room/labor hours and no billed
+  // TC coordination time. As an ADD-ON to another service, the checkbox toggles it and
+  // TC coordination hours are billed on top of that service's labor.
+  var prepEnabled = isPrep || (document.getElementById('e-prep-enabled') && document.getElementById('e-prep-enabled').checked);
   var prepCost = prepEnabled ? getPrepCost() : 0;
   var prepFee  = prepEnabled ? getPrepFee()  : 0;
-  var prepTCHrs = prepEnabled ? getPrepTCHrs() : 0;
+  var prepTCHrs = (prepEnabled && !isPrep) ? getPrepTCHrs() : 0;
+  if (isPrep) { totTC = 0; totPS = 0; baseTCHrs = 0; basePSHrs = 0; }
   totTC = Math.round((totTC + prepTCHrs) * 10) / 10;
   tcFee = Math.round(totTC * tcRate);
-  // Legacy prep-as-service fields (kept for backwards compat)
   var svcType = document.getElementById('e-svc').value;
   var coordDays = 0, vendorTotal = 0, gcFee = 0, stagerCost = 0, stagerGcFee = 0;
-  if (svcType === 'prep') {
-    // Legacy service type — the prep-as-service UI was retired, so these inputs no
-    // longer exist. Guard every read so an old saved job with svc:'prep' can't crash
-    // calcAll() on a null element. (Full removal of this branch is deferred.)
-    var _coordEl  = document.getElementById('e-coord-days');
-    var _vendorEl = document.getElementById('e-vendor-total');
-    var _stagerEl = document.getElementById('e-stager');
-    coordDays = _coordEl ? (parseFloat(_coordEl.value) || 0) : 0;
-    vendorTotal = _vendorEl ? (parseFloat(_vendorEl.value) || 0) : 0;
-    gcFee = Math.round(vendorTotal * 0.30);
-    var stagerType = _stagerEl ? _stagerEl.value : '';
-    if (stagerType === 'vendor') {
-      var _stagerCostEl = document.getElementById('e-stager-cost');
-      stagerCost = _stagerCostEl ? (parseFloat(_stagerCostEl.value) || 0) : 0;
-      stagerGcFee = Math.round(stagerCost * 0.30);
-    }
-    var coordTCHrs = Math.round(coordDays * 8 * propMult * 10) / 10;
-    totTC = Math.round((totTC + coordTCHrs) * 10) / 10;
-    tcFee = Math.round(totTC * tcRate);
-  }
 
   // Round billable hours UP to the next whole hour. The estimator computes to
   // the tenth, but that implies a precision the walkthrough can't deliver and
@@ -2504,7 +2510,7 @@ function calcAll() {
   crew.tcDays = daysNeeded;
   // Enforce the recommended crew on the PS dropdowns (up to the raised cap of 6).
   var curPS = getScheduledPSCount();
-  if (curPS < crew.requiredPS) {
+  if (!isPrep && curPS < crew.requiredPS) {
     for (var psi = 0; psi < 6; psi++) {
       var slotEl = document.getElementById('ps-slot-' + psi);
       if (slotEl && psi < crew.requiredPS && (slotEl.value === 'none' || !slotEl.value)) {
@@ -2524,7 +2530,7 @@ function calcAll() {
   var _psForDays = Math.max(getScheduledPSCount(), crew.requiredPS, 1);
   var _tcForDays = crew.tcCount || 1;
   var _mobFloor  = ENGINE_FLOOR[svcKey] || 2;
-  daysNeeded = Math.max(Math.ceil(totTC / (_tcForDays * 7)), Math.ceil(totPS / (_psForDays * 7)), _mobFloor);
+  daysNeeded = isPrep ? 0 : Math.max(Math.ceil(totTC / (_tcForDays * 7)), Math.ceil(totPS / (_psForDays * 7)), _mobFloor);
   days = daysNeeded;
   crew.tcDays = daysNeeded;
   crew.overTarget = daysNeeded > TARGET_DAYS;
@@ -2542,7 +2548,9 @@ function calcAll() {
     }
   }
   if (timelineBadge) {
-    if (includedRoomCount === 0) {
+    if (isPrep) {
+      timelineBadge.innerHTML = '';
+    } else if (includedRoomCount === 0) {
       // No scope yet — a projected completion derived from zero hours is meaningless
       // and a green "on track" badge here is misleading. Prompt for scope instead.
       timelineBadge.innerHTML = '<div class="alert a-info" style="margin-top:0;">Tick off rooms to generate a timeline.</div>';
@@ -2653,7 +2661,7 @@ function calcAll() {
   var fpVal   = document.getElementById('fixed-price-val');
   var fpNote  = document.getElementById('fixed-price-note');
   var courtBilled = (svcKey === 'cleanout' || svcKey === 'probate' || svcKey === 'contested_probate');
-  if (fpPanel && havellinTotalDiscounted > 0) {
+  if (fpPanel && havellinTotalDiscounted > 0 && !isPrep) {
     fpPanel.style.display = 'block';
     if (courtBilled) {
       // Court-billed engagements bill on actual logged hours (T&M). We still surface
@@ -2711,8 +2719,15 @@ function calcAll() {
       : '';
   }
 
-  updateRefBox(havellinTotalDiscounted);
-  updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct);
+  if (isPrep) {
+    var _rb = document.getElementById('ref-box');
+    if (_rb) _rb.innerHTML = '<div style="font-size:11px;color:var(--gray);">Home Prep for Sale — the fee is a flat 30% of managed vendor costs; no size-band benchmark applies.</div>';
+    var _mp = document.getElementById('margin-panel');
+    if (_mp) _mp.innerHTML = '<div style="font-size:11px;color:var(--gray);">Fee-only service — Havellin\'s margin is the full 30% GC fee (third-party vendors billed to the client at cost).</div>';
+  } else {
+    updateRefBox(havellinTotalDiscounted);
+    updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct);
+  }
 
   // Update PS cost badge
   var psBadge = document.getElementById('ps-cost-badge');
@@ -3640,7 +3655,8 @@ function proposedPlanRow(e) {
     home_cleanout: 'We clear the home in an orderly sequence, sorting contents room by room and routing everything to the right destination — haul-away, donation, consignment or sale, and secure shredding. Anything of value is set aside and reviewed with you before the home is emptied, and your Transition Concierge coordinates every vendor and pickup along the way.',
     cleanout: 'We settle the estate room by room — inventorying contents, documenting and setting aside items of value, and routing the remainder to sale, donation, or disposal. High-value items are photographed and tracked under chain of custody, and your Transition Concierge keeps the representative and any other heirs informed throughout.',
     probate: 'We settle the estate room by room under the documentation standards probate requires — a full inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records the court and counsel may request and keeps all parties informed.',
-    contested_probate: 'We settle the estate room by room under heightened documentation standards — a full inventory, photographs, and chain-of-custody tracking for every item of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge keeps meticulous, neutral records and takes direction only from the authorized representative.'
+    contested_probate: 'We settle the estate room by room under heightened documentation standards — a full inventory, photographs, and chain-of-custody tracking for every item of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge keeps meticulous, neutral records and takes direction only from the authorized representative.',
+    prep: 'We prepare the property for market by managing every vendor needed to get it show-ready — painting, repairs, landscaping, deep cleaning, and staging. Your Transition Concierge sources and schedules each trade, oversees the work to Havellin\'s standard, and handles all coordination and quality control on your behalf. Third-party vendors are billed to you directly at cost; Havellin\'s fee is a 30% management fee on that vendor spend.'
   };
   narratives.estate = narratives.cleanout;
   var narrative = narratives[e.svc] || 'We work through the property room by room — sorting and routing every item to the right destination while your Transition Concierge manages the plan and all vendor coordination and Property Specialists handle the hands-on work. The hours below reflect that careful, methodical pace.';
@@ -3873,9 +3889,11 @@ function renderClientEstimate() {
     '<table class="ce-tbl">' +
     '<tbody>' +
     proposedPlanRow(e) +
-    '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
-    '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
-    '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + _onsitePsHrs + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_onsitePsFee) + '</td></tr>' +
+    // Home Prep for Sale is fee-only — no on-site TC/PS labor lines (they would print $0).
+    ((e.svc === 'prep') ? '' :
+      '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
+      '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
+      '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + _onsitePsHrs + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_onsitePsFee) + '</td></tr>') +
     (_isMove ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
       '<tr><td>Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_destTcFee) + '</td></tr>' +
@@ -4556,6 +4574,7 @@ function renderJobs() {
       case 'cleanout': return j.status!=='lost' && (j.svc==='cleanout'||j.svc==='estate');
       case 'probate': return j.status!=='lost' && j.svc==='probate';
       case 'contested_probate': return j.status!=='lost' && j.svc==='contested_probate';
+      case 'prep': return j.status!=='lost' && j.svc==='prep';
       case 're': return j.status!=='lost' && j.re==='yes';
       case 'unassigned': return j.status!=='lost' && (!j.tc||j.tc==='');
       // 'all' = active ledger; Lost clients are archived out of the main view
@@ -10830,7 +10849,8 @@ function renderAgreement() {
     cleanout:'Estate Settlement', probate:'Probate Estate Settlement',
     downsizing:'Senior Downsizing',
     downsizing_move:'Senior Downsizing with Move Management',
-    estate:'Estate Settlement'
+    estate:'Estate Settlement',
+    prep:'Home Prep for Sale'
   };
   var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
 
@@ -11687,7 +11707,7 @@ function showEditClient(jobId) {
   // Job Details
   html += '<div class="sec" style="margin-top:14px;">Job Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'}], job.svc)+'</select>', true);
+  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'},{v:'contested_probate',l:'Contested Probate Estate Settlement'},{v:'prep',l:'Home Prep for Sale'}], job.svc)+'</select>', true);
   html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano Sr',l:'Anthony Graziano Sr'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
   html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Apartment',l:'Apartment'},{v:'Town Home',l:'Town Home'},{v:'Patio Home',l:'Patio Home'},{v:'Single Family Home',l:'Single Family Home'},{v:'Estate',l:'Estate'}], job.ptype)+'</select>', true);
