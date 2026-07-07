@@ -244,7 +244,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 10:05am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.08 · 1:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9691,8 +9691,9 @@ function renderReferralStats(){
   var total = referralDirectory.length;
   var active = referralDirectory.filter(isActivePartner).length;
   var contacted = referralDirectory.filter(function(p){ return String(p.last_contacted||'').trim(); }).length;
-  function stat(n,l){ return '<div style="background:var(--tan);border-radius:6px;padding:8px 12px;"><div style="font-size:18px;font-weight:600;color:var(--gray-dk);">'+n+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);">'+l+'</div></div>'; }
-  el.innerHTML = stat(total,'Partners') + stat(active,'Active') + stat(contacted,'Contacted');
+  var dormant = referralDirectory.filter(function(p){ return referralDormancy(p).dormant; }).length;
+  function stat(n,l,warn){ return '<div style="background:' + (warn ? 'var(--warn-bg)' : 'var(--tan)') + ';border-radius:6px;padding:8px 12px;"><div style="font-size:18px;font-weight:600;color:' + (warn ? 'var(--warn-tx)' : 'var(--gray-dk)') + ';">'+n+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);">'+l+'</div></div>'; }
+  el.innerHTML = stat(total,'Partners') + stat(active,'Active') + stat(contacted,'Contacted') + stat(dormant,'Needs Nudge', dormant>0);
 }
 function renderReferralsTab(){
   renderReferralStats();
@@ -9724,6 +9725,7 @@ function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferr
 function referralCardHtml(p){
   var id = referralIdOf(p);
   var _rst = referralPartnerStats(p._row);
+  var _dorm = referralDormancy(p);
   var cbits = [];
   if (p.primary_contact) cbits.push(esc(p.primary_contact));
   if (p.phone) cbits.push('<a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(p.phone) + '</a>');
@@ -9741,6 +9743,7 @@ function referralCardHtml(p){
         ' <span style="font-size:11px;font-weight:600;color:' + statusColor + ';">&middot; ' + esc(p.status||'—') + '</span></div>' +
         (meta.length ? '<div style="font-size:11px;color:var(--gray);margin-top:2px;">' + meta.join(' &middot; ') + '</div>' : '') +
         (_rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:3px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' &middot; ' + _rst.won + ' won &middot; $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '') +
+        (_dorm.dormant ? '<div style="font-size:11px;color:var(--warn-tx);font-weight:600;margin-top:3px;">&#9200; ' + (_dorm.days == null ? 'No outreach logged — time for a nudge' : _dorm.days + ' days quiet — time for a nudge') + '</div>' : '') +
         (cbits.length ? '<div style="font-size:11px;color:var(--gray-dk);margin-top:3px;">' + cbits.join(' &nbsp;&middot;&nbsp; ') + '</div>' : '') +
         (p.notes ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;font-style:italic;">' + esc(p.notes) + '</div>' : '') +
       '</div>' +
@@ -9818,18 +9821,47 @@ function saveReferral(){
     });
   }
 }
-function _quickWriteReferral(id, patch, busyMsg){
-  var p = lookupReferralById(id); if (!p) return;
+function _quickWriteReferral(id, patch, busyMsg, okMsg){
+  var p = lookupReferralById(id);
+  if (!p) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  if (p._row == null || String(p._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this partner, then retry', true); return; }
   if (!REFERRAL_SYNC_URL) { showSyncBadge('Set the Referral Partners URL in Settings first', true); return; }
   showSyncBadge(busyMsg);
   postReferralWrite('updatePartner', { _row: p._row, partner_name: p.partner_name, fields: patch }, function(ok, d){
-    if (!ok) { showSyncBadge('Partner update failed: ' + (d.error||''), true); return; }
+    if (!ok) { showSyncBadge('Update failed: ' + (d.error||''), true); return; }
     Object.keys(patch).forEach(function(k){ p[k] = patch[k]; });
     try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
-    showSyncBadge('Partner updated ✓'); renderReferralsTab(); populateReferralPicker();
+    showSyncBadge(okMsg || 'Partner updated ✓'); renderReferralsTab(); populateReferralPicker();
   });
 }
-function stampReferralContacted(id){ var today = new Date().toISOString().slice(0,10); _quickWriteReferral(id, { last_contacted: today }, 'Logging outreach…'); }
+function stampReferralContacted(id){
+  var today = new Date().toISOString().slice(0,10);
+  _quickWriteReferral(id, { last_contacted: today }, 'Logging outreach…', 'Outreach logged — last contacted set to today ✓');
+}
+
+// ── Dormancy: flag engaged partners who've gone quiet (no outreach or referral in
+// REFERRAL_DORMANT_DAYS). Logging outreach or a fresh referral resets the clock.
+var REFERRAL_DORMANT_DAYS = 90;
+function _daysSinceISODate(s){
+  if (!s) return null;
+  var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  var d = new Date(m[1] + '-' + m[2] + '-' + m[3] + 'T12:00:00');
+  return isNaN(d) ? null : Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+function referralDormancy(p){
+  var st = String(p.status||'');
+  if (st === '' || st === 'Identified' || st === 'Do Not Use') return { dormant:false, days:null };
+  var cDays = _daysSinceISODate(p.last_contacted);
+  var js = jobs.filter(function(j){ return String(j.refPartnerId||'') === String(p._row); });
+  var lastJobId = js.reduce(function(a,j){ return Math.max(a, j.id||0); }, 0);
+  var rDays = lastJobId ? Math.floor((Date.now() - lastJobId) / 86400000) : null;
+  var days = null;
+  if (cDays != null && rDays != null) days = Math.min(cDays, rDays);
+  else if (cDays != null) days = cDays;
+  else if (rDays != null) days = rDays;
+  return { dormant: (days == null || days >= REFERRAL_DORMANT_DAYS), days: days };
+}
 
 // ── Attribution: aggregate the jobs linked to a partner at intake (job.refPartnerId).
 function referralPartnerStats(partnerRow){
