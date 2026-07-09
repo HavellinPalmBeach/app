@@ -32,6 +32,7 @@ function doGet(e) {
     if (action === 'loadJobPlans')     { return jsonOut({ ok: true, success: true, jobPlans: getJobPlanStore() }); }
     if (action === 'loadChangeOrders') { return jsonOut({ ok: true, success: true, changeOrders: getChangeOrderStore() }); }
     if (action === 'loadLogs')         { return jsonOut({ ok: true, success: true, logs: getLogStore() }); }
+    if (action === 'loadContractors')  { return jsonOut({ ok: true, success: true, contractors: getContractorStore() }); }
 
     if (action === 'createFolder') {
       var hvlId = e.parameter.hvlId || '';
@@ -67,6 +68,8 @@ function doPost(e) {
     else if (type === 'saveAllJobPlans')     { saveJobPlanStore(payload); }
     else if (type === 'saveAllChangeOrders') { saveChangeOrderStore(payload); }
     else if (type === 'saveAllLogs')         { saveLogStore(payload); }
+    else if (type === 'saveAllContractors')  { saveContractorStore(payload); }
+    else if (type === 'deleteContractor')    { deleteContractorFromStore(payload.id); }
     else if (type === 'deleteJob')           { deleteJobFromSheet(payload.id); }
     else if (type === 'saveInventory')       { return jsonOut(saveInventory(payload)); }
     else if (type === 'log')                 { /* redundant single-entry log; saveAllLogs is authoritative — ignore */ }
@@ -208,6 +211,69 @@ function getLogStore() {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2 || !data[1][1]) return {};
   try { return JSON.parse(data[1][1]); } catch(e) { return {}; }
+}
+
+// ══ CONTRACTOR STORE (merge added[] and defaults[] by id) ════════════════════════
+// The shared contractor directory (Transition Concierges + Property Specialists).
+// Payload is { added:[...], defaults:[...] }: `added` are the contractors staff create
+// in the app (id = 'c'+timestamp); `defaults` carries edits to the three built-in team
+// members (id = 'default-N'). Both merge by id with the newer updatedAt winning, so a
+// device that only knows the built-ins can never wipe another device's additions — the
+// same disappearing-record protection the Jobs/Estimate stores use. Real removals of an
+// added contractor go through the explicit deleteContractor action.
+
+// Union two record arrays by id; newer updatedAt wins (missing timestamp counts oldest).
+// Preserves records present on only one side (absence != delete).
+function _mergeArrayById(existing, incoming) {
+  var byId = {}, order = [];
+  (existing || []).forEach(function(c) {
+    if (c && c.id != null) { if (!(c.id in byId)) order.push(c.id); byId[c.id] = c; }
+  });
+  (incoming || []).forEach(function(c) {
+    if (!c || c.id == null) return;
+    var cur = byId[c.id];
+    var inT  = Number(c.updatedAt || 0);
+    var curT = cur ? Number(cur.updatedAt || 0) : -1;
+    if (!cur) order.push(c.id);
+    if (!cur || inT >= curT) byId[c.id] = c;
+  });
+  return order.map(function(id) { return byId[id]; });
+}
+
+function getContractorStore() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('ContractorStore');
+  if (!sheet) return { added: [], defaults: [] };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2 || !data[1][1]) return { added: [], defaults: [] };
+  try {
+    var obj = JSON.parse(data[1][1]) || {};
+    return { added: obj.added || [], defaults: obj.defaults || [] };
+  } catch(e) { return { added: [], defaults: [] }; }
+}
+
+function saveContractorStore(incoming) {
+  if (!incoming) return;
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) {}
+  try {
+    var cur = getContractorStore();
+    _writeStoreBlob('ContractorStore', {
+      added:    _mergeArrayById(cur.added,    incoming.added),
+      defaults: _mergeArrayById(cur.defaults, incoming.defaults)
+    });
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+function deleteContractorFromStore(id) {
+  if (!id) return;
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) {}
+  try {
+    var cur = getContractorStore();
+    cur.added = (cur.added || []).filter(function(c) { return c && String(c.id) !== String(id); });
+    _writeStoreBlob('ContractorStore', cur);
+  } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
 // ══ JOBS ═════════════════════════════════════════════════════════════════════════
