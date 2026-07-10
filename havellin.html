@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.10 · 1:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.10 · 3:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -643,6 +643,26 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <div id="prem-badge"></div>
+        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
+        <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Quote as a fixed price?</div>
+            <div class="toggle-sub">Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
+        </div>
+        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
+            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fixed-price fee below — edit as needed.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
+            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
+              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
+          </div>
+        </div>
+        <div id="fixed-price-warn" style="margin-top:6px;"></div>
       </div>
     </div>
   </div>
@@ -2395,6 +2415,20 @@ function rushMultiplier(runwayDays) {
   return 1.50;
 }
 
+// Fixed-price toggle: on enable, prefill the amount from the latest suggested fee
+// (computed in calcAll's fixed-price panel) unless the manager already typed one.
+// "Prefill + override" — the prefilled number is fully editable afterward.
+function toggleFixedPrice() {
+  var on = document.getElementById('e-fixed').checked;
+  var row = document.getElementById('fixed-amount-row');
+  var amt = document.getElementById('e-fixed-amount');
+  if (on && amt && (!amt.value || parseFloat(amt.value) <= 0) && window._fixedPriceSuggested) {
+    amt.value = window._fixedPriceSuggested;
+  }
+  if (row) row.style.display = on ? 'flex' : 'none';
+  calcAll();
+}
+
 // Debounced calcAll for high-frequency inputs (e.g. typing notes) where instant
 // per-keystroke recompute isn't needed. Scoring inputs still call calcAll directly.
 var _calcAllT;
@@ -2834,6 +2868,12 @@ function calcAll() {
   // Billing model: fixed-price (living jobs) vs itemized hourly / time-and-materials
   // (Estate Settlement, Probate, Contested) — the latter bill on actual logged hours
   // for Personal-Representative and court defensibility, with no fixed-price buffer.
+  // Fixed-price mode: quote a firm flat fee instead of hourly. Prep jobs are already
+  // fee-only, so fixed mode doesn't apply there.
+  var isFixed = document.getElementById('e-fixed') ? document.getElementById('e-fixed').checked : false;
+  if (isPrep) isFixed = false;
+  var fixedAmount = isFixed ? Math.round(parseFloat(document.getElementById('e-fixed-amount') ? document.getElementById('e-fixed-amount').value : 0) || 0) : 0;
+
   var fpPanel = document.getElementById('fixed-price-panel');
   var fpLabel = document.getElementById('fixed-price-label');
   var fpVal   = document.getElementById('fixed-price-val');
@@ -2848,10 +2888,11 @@ function calcAll() {
       // never on the client-facing document, and it does not change the billing.
       var _refBuf = fixedPriceBuffer(svcKey);
       var _refFixed = Math.round(havellinTotalDiscounted * (1 + _refBuf));
+      window._fixedPriceSuggested = _refFixed;
       if (fpLabel) fpLabel.textContent = 'Time & materials — billed on actual logged hours';
       if (fpVal)   fpVal.textContent   = '$' + Math.round(havellinTotalDiscounted).toLocaleString();
       if (fpNote)  fpNote.innerHTML    = 'The final invoice bills actual TC + PS hours, itemized for the Personal Representative and court — no fixed-price contingency, vendor costs at cost. '
-        + '<span style="color:var(--gray-dk);">Internal reference: a fixed-price quote would run <strong>$' + _refFixed.toLocaleString() + '</strong> (incl. ' + Math.round(_refBuf * 100) + '% contingency). Not shown to the client.</span>';
+        + '<span style="color:var(--gray-dk);">Internal reference: a fixed-price quote would run <strong>$' + _refFixed.toLocaleString() + '</strong> (incl. ' + Math.round(_refBuf * 100) + '% contingency).</span>';
     } else {
       var buf = fixedPriceBuffer(svcKey);
       // Rush multiplier: keyed to the runway (calendar days from today to the hard
@@ -2863,15 +2904,34 @@ function calcAll() {
       }
       var rush = rushMultiplier(_runwayDays);
       var fpFee = Math.round(havellinTotalDiscounted * (1 + buf) * rush);
+      window._fixedPriceSuggested = fpFee;
       var rushPct = Math.round((rush - 1) * 100);
-      if (fpLabel) fpLabel.textContent = 'Fixed-price project fee — Havellin services × ' + Math.round(buf * 100) + '% contingency' + (rushPct > 0 ? ' × +' + rushPct + '% rush timeline' : '');
+      if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services × ' + Math.round(buf * 100) + '% contingency' + (rushPct > 0 ? ' × +' + rushPct + '% rush timeline' : '');
       if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
       if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
         + (rushPct > 0 ? ' Includes a +' + rushPct + '% compressed-timeline adjustment (' + _runwayDays + '-day runway to the hard target).' : '')
         + (_runwayDays != null && _runwayDays < 30 ? ' ⚠ Sub-30-day turnaround — requires written client acknowledgment before scheduling.' : '');
     }
+    // When fixed-price mode is ON, the panel reflects the CHOSEN flat fee (the number
+    // the client will actually see) plus the margin vs. the hourly basis.
+    if (isFixed) {
+      var _hrlyRef = Math.round(havellinTotalDiscounted);
+      var _delta = fixedAmount - _hrlyRef;
+      if (fpLabel) fpLabel.textContent = 'Fixed price for this quote (client-facing)';
+      if (fpVal)   fpVal.textContent   = '$' + fixedAmount.toLocaleString();
+      if (fpNote)  fpNote.innerHTML    = 'This flat fee replaces hourly billing on the client estimate, agreement, and invoices. '
+        + 'Underlying hourly basis: $' + _hrlyRef.toLocaleString() + ' (' + (_delta >= 0 ? '+' : '') + '$' + _delta.toLocaleString() + ' vs. fixed). Vendor costs remain pass-through at cost.';
+    }
   } else if (fpPanel) {
     fpPanel.style.display = 'none';
+  }
+
+  // Warning for probate / contested matters, which typically require T&M billing.
+  var fpWarnEl = document.getElementById('fixed-price-warn');
+  if (fpWarnEl) {
+    fpWarnEl.innerHTML = (isFixed && (svcKey === 'probate' || svcKey === 'contested_probate'))
+      ? '<div class="alert a-warn" style="font-size:11px;margin-top:0;">&#9888; Fixed pricing on a probate / contested matter may not be defensible to the court or Personal Representative, who typically require time-and-materials billing on actual logged hours. Confirm this is appropriate before presenting.</div>'
+      : '';
   }
 
   // Blended rate badge
@@ -2967,10 +3027,18 @@ function calcAll() {
     tcFee:tcFee, psFee:psFee, pkgCost:pkgCost, pkgLabel:pkgLabel,
     smf:smf, vendorCost:vendorCost,
     havellinTotalFull:havellinTotal,
-    havellinTotal:Math.round(havellinTotalDiscounted),
+    // In fixed-price mode the flat fee IS the client-facing Havellin services total,
+    // so payment splits, the estimate, the agreement, and invoices all derive from it.
+    // The hourly-derived number is preserved as hourlyHavellinTotal for internal margin.
+    havellinTotal: isFixed ? fixedAmount : Math.round(havellinTotalDiscounted),
+    hourlyHavellinTotal: Math.round(havellinTotalDiscounted),
+    fixedPrice: isFixed,
+    fixedAmount: fixedAmount,
     discountAmt:Math.round(discountAmt),
     discountPct:discountPct,
-    grandTotal:Math.round(grandTotal),
+    grandTotal: isFixed
+      ? Math.round(fixedAmount + vendorCost + vendorTotal + stagerCost + (prepEnabled ? prepCost : 0))
+      : Math.round(grandTotal),
     vendors:JSON.parse(JSON.stringify(vendors)),
     collections:JSON.parse(JSON.stringify(collectionsData)),
     rooms:includedRooms,
@@ -3691,6 +3759,9 @@ function clearEstimateTab() {
   var targetEl = document.getElementById('e-target-date');
   if (targetEl) targetEl.value = '';
   document.getElementById('e-prem').checked = false;
+  var _fxN = document.getElementById('e-fixed'); if (_fxN) _fxN.checked = false;
+  var _fxAN = document.getElementById('e-fixed-amount'); if (_fxAN) _fxAN.value = '';
+  var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
   for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
     if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
@@ -3853,6 +3924,9 @@ function resetEstimate() {
   var ri = 0;
   ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; setRoomState(id, 'off'); ri++; }); });
   document.getElementById('e-prem').checked = false;
+  var _fxR = document.getElementById('e-fixed'); if (_fxR) _fxR.checked = false;
+  var _fxAR = document.getElementById('e-fixed-amount'); if (_fxAR) _fxAR.value = '';
+  var _fxRowR = document.getElementById('fixed-amount-row'); if (_fxRowR) _fxRowR.style.display = 'none';
   ['adj-rush','adj-access','adj-heirs'].forEach(function(id){ document.getElementById(id).checked=false; });
   document.getElementById('e-pkg').value=0;
   var coordEl = document.getElementById('e-coord-days'); if(coordEl) coordEl.value=0;
@@ -4215,34 +4289,44 @@ function renderClientEstimate() {
     '<table class="ce-tbl">' +
     '<tbody>' +
     proposedPlanRow(e) +
-    // Home Prep for Sale is fee-only — no on-site TC/PS labor lines (they would print $0).
-    ((e.svc === 'prep') ? '' :
+    // Fixed-price mode: a single firm flat-fee line replaces the hourly TC/PS breakdown.
+    // The materials/SMF/GC coordination fees are folded into the flat fee (they were part
+    // of the hourly basis it was derived from), so no separate fee lines are shown.
+    (e.fixedPrice ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
-      '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
-      '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + _onsitePsHrs + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_onsitePsFee) + '</td></tr>') +
-    (_isMove ?
-      '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
-      '<tr><td>Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_destTcFee) + '</td></tr>' +
-      '<tr><td>Property Specialists — Unpacking, placement &amp; new home setup</td><td>' + (e.destPS||0).toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_destPsFee) + '</td></tr>'
-    : '') +
-    (hasMaterialsSection ?
-      '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
-      (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
-      (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
-      (prepGcFee > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)</td><td>—</td><td>30% of prep vendors</td><td class="r">' + fmt(prepGcFee) + '</td></tr>' : '')
-    : '') +
-    (e.prepEnabled && e.prepTCHrs > 0 ? '<tr><td colspan="4" style="font-size:11px;color:var(--gray);font-style:italic;padding:4px 10px;">Includes ' + e.prepTCHrs.toFixed(1) + ' TC hrs for home prep vendor coordination — factored into Transition Concierge total above.</td></tr>' : '') +
+      '<tr><td><strong>Fixed Project Fee</strong><br><span style="font-size:11px;color:var(--gray);">A firm flat fee for the complete scope of work described above — Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. Billed as a fixed price, not by the hour.</span></td><td>—</td><td>Fixed</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>'
+    : (
+      // Home Prep for Sale is fee-only — no on-site TC/PS labor lines (they would print $0).
+      ((e.svc === 'prep') ? '' :
+        '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
+        '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
+        '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + _onsitePsHrs + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_onsitePsFee) + '</td></tr>') +
+      (_isMove ?
+        '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
+        '<tr><td>Transition Concierge — New home coordination, mover supervision &amp; room placement oversight</td><td>' + (e.destTC||0).toFixed(1) + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_destTcFee) + '</td></tr>' +
+        '<tr><td>Property Specialists — Unpacking, placement &amp; new home setup</td><td>' + (e.destPS||0).toFixed(1) + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_destPsFee) + '</td></tr>'
+      : '') +
+      (hasMaterialsSection ?
+        '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
+        (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
+        (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
+        (prepGcFee > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)</td><td>—</td><td>30% of prep vendors</td><td class="r">' + fmt(prepGcFee) + '</td></tr>' : '')
+      : '') +
+      (e.prepEnabled && e.prepTCHrs > 0 ? '<tr><td colspan="4" style="font-size:11px;color:var(--gray);font-style:italic;padding:4px 10px;">Includes ' + e.prepTCHrs.toFixed(1) + ' TC hrs for home prep vendor coordination — factored into Transition Concierge total above.</td></tr>' : '')
+    )) +
     '</tbody>' +
-    (e.discountPct > 0 ?
+    (!e.fixedPrice && e.discountPct > 0 ?
       '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt)) + '</td></tr>' +
       '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
       : '') +
-    '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
+    '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (!e.fixedPrice && e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note">This estimate is based on the initial property walkthrough. Final charges reflect actual hours worked. If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</div>' +
-    ((e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate')
-      ? '<div class="ce-note" style="margin-top:6px;"><strong>Billing — probate / estate:</strong> This engagement is billed on actual logged Transition Concierge and Property Specialist hours (time-and-materials). An itemized, hour-by-hour record is maintained and provided to the Personal Representative and, as required, the court. No fixed-price contingency is applied.</div>'
-      : '') +
+    (e.fixedPrice
+      ? '<div class="ce-note">This is a <strong>fixed-price</strong> quote. The Havellin Services fee above is firm for the scope of work described and will not change based on actual hours worked. Any change to that scope will be documented in a written change order, with any price adjustment agreed before the additional work proceeds. Third-party vendor costs are billed separately at cost.</div>'
+      : '<div class="ce-note">This estimate is based on the initial property walkthrough. Final charges reflect actual hours worked. If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</div>' +
+        ((e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate')
+          ? '<div class="ce-note" style="margin-top:6px;"><strong>Billing — probate / estate:</strong> This engagement is billed on actual logged Transition Concierge and Property Specialist hours (time-and-materials). An itemized, hour-by-hour record is maintained and provided to the Personal Representative and, as required, the court. No fixed-price contingency is applied.</div>'
+          : '')) +
 
     (function() {
       var cols = e.collections || [];
@@ -4294,11 +4378,15 @@ function renderClientEstimate() {
 
     '<div class="ce-terms" style="margin-top:1.5rem;"><div class="ce-terms-title">Terms &amp; Conditions</div>' +
     '<ul>' +
-    '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
-    '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
-    '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
-    '<li>A 15% Service Management Fee applies to all third-party vendors coordinated by Havellin. Home Prep for Sale vendors are subject to a 30% GC / Site Management Fee.</li>' +
-    '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>' +
+    (e.fixedPrice
+      ? '<li>This is a <strong>fixed-price</strong> proposal. The Havellin Services fee is firm for the scope of work described and does not change based on the actual hours worked.</li>' +
+        '<li>Any change to the agreed scope will be documented in a written change order, with any price adjustment agreed in writing before the additional work proceeds.</li>' +
+        '<li>Third-party vendor costs are estimated and billed separately at cost via direct vendor invoices; Havellin\'s coordination of those vendors is included in the fixed fee.</li>'
+      : '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
+        '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
+        '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
+        '<li>A 15% Service Management Fee applies to all third-party vendors coordinated by Havellin. Home Prep for Sale vendors are subject to a 30% GC / Site Management Fee.</li>' +
+        '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>') +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     '<li>Havellin Palm Beach is licensed, insured, and bonded.</li>' +
     '</ul></div>' +
@@ -5124,6 +5212,14 @@ function restoreEstimateToUI(est) {
   // Restore discount
   var discEl = document.getElementById('e-discount');
   if (discEl) discEl.value = est.discountPct || 0;
+
+  // Restore fixed-price mode: toggle, amount, and the amount row's visibility.
+  var fxEl = document.getElementById('e-fixed');
+  var fxAmtEl = document.getElementById('e-fixed-amount');
+  var fxRow = document.getElementById('fixed-amount-row');
+  if (fxEl) fxEl.checked = !!est.fixedPrice;
+  if (fxAmtEl) fxAmtEl.value = est.fixedPrice ? (est.fixedAmount || est.havellinTotal || '') : '';
+  if (fxRow) fxRow.style.display = est.fixedPrice ? 'flex' : 'none';
 
   // Restore the hours-affecting adjustment toggles from the saved estimate. Without
   // this, the recompute on open drops the +15% difficult-access / +20% multiple-heirs
@@ -6712,7 +6808,7 @@ function buildEstimateMailto() {
   // Mirror the estimate document's "Total Estimated Project Cost" breakdown so
   // the email reflects ALL projected costs — Havellin services plus pass-through
   // third-party and home-prep vendor estimates — not just the Havellin fee.
-  var costLines = ['Havellin Services: ' + money(e.havellinTotal)];
+  var costLines = [(e.fixedPrice ? 'Fixed Project Fee: ' : 'Havellin Services: ') + money(e.havellinTotal)];
   if ((e.vendorCost||0) > 0) costLines.push('Estimated Third-Party Vendors (billed at cost): ' + money(e.vendorCost));
   if (e.prepEnabled && (e.prepCost||0) > 0) costLines.push('Estimated Home Prep Vendors (billed at cost): ' + money(e.prepCost));
   var grand = e.grandTotal || e.havellinTotal || 0;
@@ -8296,10 +8392,16 @@ function renderInvoice() {
   // the final naturally reconciles everything.
   // Anchor the deposit to the approved estimate total so it always reconciles to the
   // exact number the client saw and accepted (falls back to the component sum).
-  var totalDepositBasis = (est && est.havellinTotal) ? est.havellinTotal
-                        : (estLaborNet + materials + smfEst + prepFeeEst + legacyFees);
-  var totalMidBasis     = estLaborNet + materials + smf    + prepFee    + legacyFees;
-  var totalFinalBasis   = actLaborNet + materials + smf    + prepFee    + legacyFees + coTotal;
+  // FIXED-PRICE JOBS: the client owes the agreed flat fee, period — every stage is
+  // anchored to it and the final does NOT true-up to actual logged hours. Change
+  // orders (coTotal) are the only thing that adjusts a fixed price, added at the final.
+  var _fixed = !!(est && est.fixedPrice);
+  var _fixedTotal = _fixed ? (est.havellinTotal || 0) : 0;
+  var totalDepositBasis = _fixed ? _fixedTotal
+                        : ((est && est.havellinTotal) ? est.havellinTotal
+                          : (estLaborNet + materials + smfEst + prepFeeEst + legacyFees));
+  var totalMidBasis     = _fixed ? _fixedTotal : (estLaborNet + materials + smf + prepFee + legacyFees);
+  var totalFinalBasis   = _fixed ? (_fixedTotal + coTotal) : (actLaborNet + materials + smf + prepFee + legacyFees + coTotal);
 
   var depositAmt   = Math.round(0.5 * totalDepositBasis);
   var midCumTarget = Math.round(0.75 * totalMidBasis);
@@ -8444,6 +8546,35 @@ function renderInvoice() {
   var vendorNote = (vendorCost > 0 || act.prep.length)
     ? '<div class="ce-note" style="margin-top:1rem;">Third-party vendor costs (movers, hauling, donation, cleaning, etc.) are billed to you directly by each vendor and are not included on this invoice. Havellin\'s coordination fee is the Service Management Fee shown above.</div>'
     : '';
+  // Fixed-price jobs: the invoice bills the agreed flat fee, so replace the hours-based
+  // service tables and the over/under-vs-estimate payment summary with fixed-fee versions.
+  // The stage amounts (deposit/midpoint/balance) were already anchored to the fixed total
+  // in the reconciliation block above, so advancePayment needs no change.
+  if (_fixed) {
+    finalServices =
+      '<div class="ce-section-hdr">Havellin Services — Fixed Price</div>' +
+      '<table class="ce-tbl"><tbody>' +
+      '<tr><td>Fixed project fee — full scope of work per agreement</td><td style="text-align:right;font-weight:600;">' + fmt(_fixedTotal) + '</td></tr>' +
+      '<tr class="subtotal"><td>Havellin Services Total</td><td style="text-align:right;">' + fmt(_fixedTotal) + '</td></tr>' +
+      '</table>' +
+      '<div class="ce-note">This engagement is billed at the agreed fixed price; charges do not vary with the hours worked.</div>';
+    finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
+      '<table class="pay-tbl">' +
+      '<tr style="background:var(--tan);"><td colspan="2"><strong>Fixed Project Fee</strong></td><td class="r"><strong>' + fmt(_fixedTotal) + '</strong></td></tr>' +
+      '<tr><td>50% deposit — paid upon acceptance</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(deposit) + ')</td></tr>' +
+      '<tr><td>25% midpoint — paid at project midpoint</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(midpoint) + ')</td></tr>' +
+      '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Subtotal payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
+      (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' : '') +
+      _amtDueBox('Balance Due Upon Completion', balanceDue) +
+      '</table></div>';
+    advanceServices =
+      '<div class="ce-section-hdr">Project Summary — Fixed Price</div>' +
+      '<table class="ce-tbl"><tbody>' +
+      '<tr><td>Fixed project fee — full scope of work per agreement</td><td style="text-align:right;">' + fmt(_fixedTotal) + '</td></tr>' +
+      '<tr class="subtotal"><td>Havellin Services Total</td><td style="text-align:right;">' + fmt(_fixedTotal) + '</td></tr>' +
+      '</table>' +
+      '<div class="ce-note">This engagement is billed at the agreed fixed price. Third-party vendor costs are billed to you directly at cost.</div>';
+  }
   var bodyHtml = (stage === 'final')
     ? (finalServices + coSection + finalPayment + vendorNote)
     : (advanceServices + advancePayment + vendorNote);
@@ -11297,6 +11428,7 @@ function renderProbateAgreement() {
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   if (!est) { var rec = estimateStore[jobId]; if (rec && rec.estimate) est = rec.estimate; }
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
+  var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of T&M
   var _split = paymentSplit(havTotal);
   var dep = _split.deposit, mid = _split.midpoint, fin = _split.final;
   var _blank = '_______________________________________________';
@@ -11417,13 +11549,22 @@ function renderProbateAgreement() {
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
   });
   content += '</tbody></table>';
+  if (isFixedAgr) {
+    content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of $'+havTotal.toLocaleString())+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.');
+  }
   content += subHdr('3.2 Project Estimate');
   content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and vendor fees based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
-  content += pp(bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. If actual hours are projected to exceed the estimate by more than 15%, Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
+  content += pp(isFixedAgr
+    ? bb('IMPORTANT:')+'  This engagement is billed at the fixed price stated above, not on actual hours. Any work beyond the scope described in Exhibit A requires a signed Change Order before Havellin proceeds; the fixed price does not otherwise change.'
+    : bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. If actual hours are projected to exceed the estimate by more than 15%, Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
   content += subHdr('3.3 Payment Schedule');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.6rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Payment</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Amount</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Timing &amp; Trigger</th></tr></thead><tbody>';
-  var payRows = [
+  var payRows = isFixedAgr ? [
+    ['Deposit', havTotal>0?'$'+dep.toLocaleString()+' (50% of fixed price)':'50% of fixed price', 'Due upon signing this Agreement — before any work begins'],
+    ['Midpoint Payment', havTotal>0?'$'+mid.toLocaleString()+' (25% of fixed price)':'25% of fixed price', 'Due upon completion of Phase 5 (Asset Inventory) or at project midpoint, whichever comes first'],
+    ['Final Payment', havTotal>0?'$'+fin.toLocaleString()+' (25% of fixed price)':'25% of fixed price', 'Due within 7 days of final invoice delivery — completes the fixed price (plus any approved Change Orders)']
+  ] : [
     ['Deposit', havTotal>0?'$'+dep.toLocaleString()+' (50% of estimate)':'50% of estimate', 'Due upon signing this Agreement — before any work begins'],
     ['Midpoint Payment', havTotal>0?'$'+mid.toLocaleString()+' (25% of estimate)':'25% of estimate', 'Due upon completion of Phase 5 (Asset Inventory) or at project midpoint, whichever comes first'],
     ['Final Invoice', havTotal>0?'$'+fin.toLocaleString()+' + actual variance':'25% of estimate + actual variance', 'Due within 7 days of final invoice delivery — reflects actual hours and materials vs. estimate']
@@ -11643,6 +11784,7 @@ function renderAgreement() {
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
+  var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of hourly billing
   var tcRate    = est ? est.tcRate  : (job.premium ? 185 : 150);
   var psRate    = est ? est.psRate  : (job.premium ? 125 : 100);
 
@@ -11756,7 +11898,7 @@ function renderAgreement() {
 
   // ── SECTION 3 ─────────────────────────────────────────────────────────────
   content += agrSection('3. Estimates, Fees, and Payment Terms',
-    p(b('3.1 Estimate.')+'  Prior to commencing Services, Contractor will have provided a written Estimate outlining estimated hours by role, applicable rates, estimated third-party vendor costs, and any applicable coordination fees. Client acknowledges that the Estimate is based on an initial walkthrough and is not a guaranteed maximum or fixed price unless expressly stated as such.')+
+    p(b('3.1 Estimate.')+'  Prior to commencing Services, Contractor will have provided a written Estimate outlining estimated hours by role, applicable rates, estimated third-party vendor costs, and any applicable coordination fees. Client acknowledges that the Estimate is based on an initial walkthrough and is not a guaranteed maximum or fixed price unless expressly stated as such.'+(isFixedAgr ? '  '+b('For this engagement, the Parties expressly agree that Contractor\'s fee for the Services is a fixed price of $'+havTotal.toLocaleString()+' for the scope of work described in the Estimate. This fixed price is firm and does not vary with the actual hours worked; any change to the agreed scope is handled by written Change Order under Sections 1.4 and 3.8.') : ''))+
     '<div style="margin-bottom:.55rem;">' +
     b('3.2 Payment Schedule') + '<br>' +
     '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:6px;">' +
@@ -11769,12 +11911,16 @@ function renderAgreement() {
     '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Midpoint Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+mid+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon Contractor\'s determination that approximately 50% of scope is complete</td></tr>' +
     '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon substantial completion, prior to final property walk-through</td></tr>' +
     '</tbody></table></div>'+
-    p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.')+
+    (isFixedAgr
+      ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+havTotal.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.')
+      : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
     p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement and Downsizing engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
     p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
-    p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.')+
+    (isFixedAgr
+      ? p(b('3.8 Changes to Scope.')+'  The fixed price covers the scope of work described in the Estimate. If Client requests, or conditions require, work beyond that scope, Contractor will notify Client in writing before proceeding, and any resulting price adjustment will be documented in a written Change Order signed by both Parties.')
+      : p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.'))+
     p(b('3.9 Payment Method.')+'  Payment may be made by credit/debit card via Contractor\'s secure payment link, or by check or ACH payable to Havellin Palm Beach LLC.')
   );
 
