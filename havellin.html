@@ -80,10 +80,16 @@ input:checked+.slider:before{transform:translateX(18px);}
 .rtable td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .rtable tr.inactive td{color:var(--border-md);}
 .rtable tr.active-row td{background:#fdfaf4;}
+.rtable tr.excluded-row td{background:#fbeded;}
 .rtable input[type=number]{width:52px;padding:4px 6px;text-align:center;}
 .rtable input[type=text]{padding:4px 8px;font-size:11px;}
 .rtable input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gray-dk);}
 .rname{font-size:12px;font-weight:500;}.rname.dim{font-size:12px;font-weight:400;color:var(--gray);}
+.rname.excl{font-size:12px;font-weight:600;color:#A32D2D;text-decoration:line-through;}
+/* Tri-state scope toggle: off (□) → in scope (✓) → excluded/homeowner-handled (✕) */
+.scope-toggle{width:24px;height:24px;padding:0;border:1px solid var(--border-md);border-radius:4px;background:var(--white);cursor:pointer;font-size:14px;font-weight:800;line-height:1;color:var(--gray);vertical-align:middle;}
+.scope-toggle.scope-in{border-color:#357a50;background:#eef7f1;color:#357a50;}
+.scope-toggle.scope-excl{border-color:#A32D2D;background:#fbeded;color:#A32D2D;}
 .calc{font-size:12px;color:var(--gray);text-align:right;}.calc.on{color:var(--gray-dk);font-weight:500;}
 .room-dollar{font-size:12px;font-weight:600;text-align:right;}.room-dollar.on{color:var(--bronze);}
 .stbl{width:100%;border-collapse:collapse;}
@@ -244,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.09 · 4:17pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.10 · 1:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2128,7 +2134,7 @@ function buildRoomTable() {
   ROOMS.forEach(function(sec) {
     html += '<div class="sec-hdr">' + sec.section + '</div>';
     html += '<table class="rtable"><thead><tr>' +
-      '<th style="width:34px">Incl.</th><th style="min-width:140px;">Room</th>' +
+      '<th style="width:34px" title="Tap to cycle: blank → include in scope (✓) → homeowner-handled / out of scope (✕)">Scope</th><th style="min-width:140px;">Room</th>' +
       '<th style="width:68px">Volume <button onclick="document.getElementById(\'icd-modal\').style.display=\'flex\'" style="font-size:9px;padding:1px 4px;border:1px solid var(--border-md);border-radius:3px;background:var(--cream);cursor:pointer;color:var(--bronze);font-weight:700;vertical-align:middle;">?</button></th><th style="width:82px">Complexity <button onclick="document.getElementById(\'icd-modal\').style.display=\'flex\'" style="font-size:9px;padding:1px 4px;border:1px solid var(--border-md);border-radius:3px;background:var(--cream);cursor:pointer;color:var(--bronze);font-weight:700;vertical-align:middle;">?</button></th>' +
       '<th style="width:76px" title="Check for rooms containing fragile, high-value, or specialty items requiring extra careful handling — art, antiques, wine, crystal, jewelry, collectibles. Bumps this room\'s complexity (+1) for more careful-handling hours.">Special Items</th>' +
       '<th style="width:56px;text-align:center;">TC hrs</th>' +
@@ -2138,7 +2144,7 @@ function buildRoomTable() {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
       html += '<tr id="row-'+id+'" class="inactive">' +
-        '<td><input type="checkbox" id="chk-'+id+'" onchange="toggleRoom(\''+id+'\')"></td>' +
+        '<td><button type="button" class="scope-toggle" id="chk-'+id+'" data-state="off" onclick="cycleRoom(\''+id+'\')" title="Tap: include (✓) → homeowner-handled (✕) → off">&#9744;</button></td>' +
         '<td>' + (r.custom ?
           '<input type="text" id="name-'+id+'" value="'+r.name+'" style="width:140px;font-size:11px;" oninput="calcAll()">' :
           '<span class="rname dim" id="name-'+id+'">' + r.name + '</span>') + '</td>' +
@@ -2182,41 +2188,70 @@ function buildRoomTable() {
   });
 }
 
-function toggleRoom(id) {
-  var chk = document.getElementById('chk-'+id).checked;
+// Scope tri-state: 'off' (not in job) → 'in' (priced) → 'excl' (homeowner-handled,
+// out of scope but still shown to client + crew). Read via roomState(id).
+function roomState(id) {
+  var el = document.getElementById('chk-'+id);
+  return el ? (el.getAttribute('data-state') || 'off') : 'off';
+}
+
+// Tap handler: cycle off → in → excl → off.
+function cycleRoom(id) {
+  var s = roomState(id);
+  setRoomState(id, s === 'off' ? 'in' : s === 'in' ? 'excl' : 'off');
+}
+
+// Apply a scope state to a room row (visuals + input enable/disable), then recalc.
+// 'in'   → scoring inputs live, row highlighted, priced.
+// 'excl' → scoring inputs cleared/disabled (nothing to price) but the row stays
+//          active and notes/media stay available so the crew can record WHY it's
+//          out of scope (e.g. "client hauling their own garage").
+// 'off'  → row inert, everything cleared.
+function setRoomState(id, state) {
+  var el = document.getElementById('chk-'+id);
+  if (!el) return;
+  el.setAttribute('data-state', state);
+  el.innerHTML = state === 'in' ? '&#10003;' : state === 'excl' ? '&#10007;' : '&#9744;';
+  el.className = 'scope-toggle scope-' + state;
+  el.title = state === 'in' ? 'In scope — tap for homeowner-handled (✕)'
+           : state === 'excl' ? 'Homeowner-handled / out of scope — tap to clear'
+           : 'Tap: include (✓) → homeowner-handled (✕) → off';
   var row = document.getElementById('row-'+id);
   var vol = document.getElementById('vol-'+id);
   var cplx = document.getElementById('cplx-'+id);
   var spcl = document.getElementById('spcl-'+id);
   var note = document.getElementById('note-'+id);
   var nameEl = document.getElementById('name-'+id);
-  var notesBtn = document.getElementById('notes-btn-'+id);
-  if (chk) {
-    row.className = 'active-row';
+  var scoringOn = (state === 'in');
+  var active = (state !== 'off');   // notes + media available for both 'in' and 'excl'
+  if (scoringOn) {
     var rname = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
     var def = roomDefault(rname);
     vol.disabled = false; if (!vol.value) vol.value = def.vol;
     cplx.disabled = false; if (!cplx.value) cplx.value = def.cplx;
-    spcl.disabled = false; note.disabled = false;
-    var noteTaOn = document.getElementById('note-ta-'+id);
-    if (noteTaOn) { noteTaOn.disabled = false; noteTaOn.style.background = ''; }
-    var mediaBtnsOn = document.getElementById('room-media-btns-'+id);
-    if (mediaBtnsOn) mediaBtnsOn.style.display = 'flex';
-    if (nameEl.tagName === 'SPAN') nameEl.className = 'rname';
+    spcl.disabled = false;
   } else {
-    row.className = 'inactive';
     vol.disabled = true; vol.value = '';
     cplx.disabled = true; cplx.value = '';
     spcl.disabled = true; spcl.checked = false;
-    note.disabled = true; note.value = '';
-    var noteTaOff = document.getElementById('note-ta-'+id);
-    if (noteTaOff) { noteTaOff.disabled = true; noteTaOff.value = ''; noteTaOff.style.background = 'var(--cream)'; }
-    var mediaBtnsOff = document.getElementById('room-media-btns-'+id);
-    if (mediaBtnsOff) mediaBtnsOff.style.display = 'none';
-    if (_activeRecognitions && _activeRecognitions[id]) { try { _activeRecognitions[id].stop(); } catch(e){} }
-    if (nameEl.tagName === 'SPAN') nameEl.className = 'rname dim';
   }
+  note.disabled = !active;
+  var noteTa = document.getElementById('note-ta-'+id);
+  if (noteTa) { noteTa.disabled = !active; noteTa.style.background = active ? '' : 'var(--cream)'; if (!active) noteTa.value = ''; }
+  var mediaBtns = document.getElementById('room-media-btns-'+id);
+  if (mediaBtns) mediaBtns.style.display = active ? 'flex' : 'none';
+  if (!active) {
+    note.value = '';
+    if (_activeRecognitions && _activeRecognitions[id]) { try { _activeRecognitions[id].stop(); } catch(e){} }
+  }
+  row.className = state === 'in' ? 'active-row' : state === 'excl' ? 'excluded-row' : 'inactive';
+  if (nameEl.tagName === 'SPAN') nameEl.className = state === 'excl' ? 'rname excl' : active ? 'rname' : 'rname dim';
   calcAll();
+}
+
+// Back-compat shim: some callers still reference toggleRoom(id). Treat as off↔in.
+function toggleRoom(id) {
+  setRoomState(id, roomState(id) === 'off' ? 'in' : 'off');
 }
 
 // ─── CALC ENGINE ──────────────────────────────────────────────────────────────
@@ -2460,11 +2495,13 @@ function calcAll() {
   // ── Pass 1: collect ticked rooms; clear unticked room displays ─────────────
   var engineRooms = [];   // {name, vol, cplx} fed to computeEngineV3
   var roomMeta = [];      // display + snapshot bookkeeping, parallel to engineRooms
+  var excludedMeta = [];  // homeowner-handled rooms — kept in the snapshot, priced at $0
   var ri = 0;
   ROOMS.forEach(function(sec) {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
-      if (document.getElementById('chk-'+id).checked) {
+      var st = roomState(id);
+      if (st === 'in') {
         var vol = parseFloat(document.getElementById('vol-'+id).value) || 3;
         var cplx = parseFloat(document.getElementById('cplx-'+id).value) || 3;
         var spcl = document.getElementById('spcl-'+id).checked;
@@ -2476,6 +2513,18 @@ function calcAll() {
         engineRooms.push({name: roomName, vol: vol, cplx: effCpx});
         roomMeta.push({id:id, ri:ri, name:roomName, vol:vol, cplx:cplx, spcl:spcl, note:note, section:sec.section});
         totalVol += vol; includedRoomCount++;
+      } else if (st === 'excl') {
+        // Out of scope: not fed to the pricing engine, but still recorded so it
+        // surfaces in the client estimate and the job plan.
+        var exNameEl = document.getElementById('name-'+id);
+        var exRoomName = exNameEl.tagName === 'INPUT' ? exNameEl.value : exNameEl.textContent;
+        excludedMeta.push({ri:ri, name:exRoomName, note:document.getElementById('note-'+id).value, section:sec.section});
+        ['el-','tc-','ps-'].forEach(function(p){
+          var el=document.getElementById(p+id);
+          el.textContent = p==='tc-' ? '—' : p==='ps-' ? '—' : '0.0';
+          el.className='calc';
+          el.style.color='';
+        });
       } else {
         ['el-','tc-','ps-'].forEach(function(p){
           var el=document.getElementById(p+id);
@@ -2512,6 +2561,13 @@ function calcAll() {
     includedRooms.push({idx:m.ri, name:m.name, vol:m.vol, cplx:m.cplx, spcl:m.spcl, mult:1,
       elapsed:elapsed, tcH:pr.tcH, psH:pr.psH,
       roomDollar:Math.round(pr.tcH*tcRate + pr.psH*psRate), note:m.note, section:m.section});
+  });
+
+  // Excluded (homeowner-handled) rooms — carried through with zero hours/dollars so
+  // they show up flagged in the client estimate, agreements, and job plan.
+  excludedMeta.forEach(function(m) {
+    includedRooms.push({idx:m.ri, name:m.name, vol:0, cplx:0, spcl:false, mult:1,
+      elapsed:0, tcH:0, psH:0, roomDollar:0, note:m.note, section:m.section, excluded:true});
   });
 
   // Compatibility vars retained for the snapshot/ref box (no longer applied to hours).
@@ -3656,11 +3712,7 @@ function clearAllRooms() {
   ROOMS.forEach(function(sec) {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
-      var chk = document.getElementById('chk-' + id);
-      if (chk && chk.checked) {
-        chk.checked = false;
-        toggleRoom(id);
-      }
+      if (roomState(id) !== 'off') setRoomState(id, 'off');
       ri++;
     });
   });
@@ -3799,7 +3851,7 @@ function populateJobSelect() {
 
 function resetEstimate() {
   var ri = 0;
-  ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; document.getElementById('chk-'+id).checked=false; toggleRoom(id); ri++; }); });
+  ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; setRoomState(id, 'off'); ri++; }); });
   document.getElementById('e-prem').checked = false;
   ['adj-rush','adj-access','adj-heirs'].forEach(function(id){ document.getElementById(id).checked=false; });
   document.getElementById('e-pkg').value=0;
@@ -3902,15 +3954,23 @@ function proposedPlanRow(e) {
   }).join('');
 
   // Confirmed Spaces now lives inside this box, directly under the narrative.
-  var rooms = (e.rooms || []).map(function(r){ return esc(r.name); });
+  var rooms = (e.rooms || []).filter(function(r){ return !r.excluded; }).map(function(r){ return esc(r.name); });
   var spacesLine = rooms.length
     ? '<div style="margin-top:7px;font-size:11.5px;color:var(--gray-dk);line-height:1.5;"><span style="color:var(--bronze);font-weight:700;">Confirmed Spaces:</span> ' + rooms.join(', ') + '</div>'
+    : '';
+
+  // Excluded spaces — the homeowner told us they'll handle these themselves, so we
+  // priced no work in them. Call them out explicitly so the client sees the boundary.
+  var exclRooms = (e.rooms || []).filter(function(r){ return r.excluded; }).map(function(r){ return esc(r.name); });
+  var exclLine = exclRooms.length
+    ? '<div style="margin-top:7px;font-size:11.5px;color:#A32D2D;line-height:1.5;"><span style="font-weight:700;">Excluded — you will handle ' + (exclRooms.length === 1 ? 'this space' : 'these spaces') + ':</span> ' + exclRooms.join(', ') + '. No work in ' + (exclRooms.length === 1 ? 'this area was' : 'these areas was') + ' included in the pricing below.</div>'
     : '';
 
   return '<tr><td colspan="4" style="padding:11px 14px;background:var(--white);border-left:3px solid var(--bronze);">' +
     '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin-bottom:5px;">Proposed Plan</div>' +
     '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + narrative + '</div>' +
     spacesLine +
+    exclLine +
     notesHtml +
     '</td></tr>';
 }
@@ -4745,6 +4805,7 @@ function buildLockSnapshot(est, lockedBy) {
       vol: r.vol,
       cplx: r.cplx,
       special_items: !!r.spcl,
+      excluded: !!r.excluded,   // homeowner-handled / out of scope
       estimated_tc_hours: r.tcH,
       estimated_ps_hours: r.psH,
       locked_at: ts,
@@ -4767,7 +4828,7 @@ function buildLockSnapshot(est, lockedBy) {
 function checkPin() {
   var pin = document.getElementById('pin-input').value;
   if (pin === '3010') {
-    var unscoredRooms = (currentEstimate && currentEstimate.rooms||[]).filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
+    var unscoredRooms = (currentEstimate && currentEstimate.rooms||[]).filter(function(r){ return !r.excluded && (!(r.vol >= 1) || !(r.cplx >= 1)); });
     if (unscoredRooms.length > 0) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — unscored rooms: ' + unscoredRooms.map(function(r){ return r.name; }).join(', ') + '</div>'; return; }
     estimateApproved = true;
     estimateSubmitted = false;
@@ -5157,15 +5218,16 @@ function restoreEstimateToUI(est) {
       if (savedRoom) {
         var chk = document.getElementById('chk-' + id);
         if (chk) {
-          chk.checked = true;
-          toggleRoom(id);
-          var volEl = document.getElementById('vol-' + id);
-          var cplxEl = document.getElementById('cplx-' + id);
-          var spclEl = document.getElementById('spcl-' + id);
+          setRoomState(id, savedRoom.excluded ? 'excl' : 'in');
           var noteEl = document.getElementById('note-' + id);
-          if (volEl) volEl.value = savedRoom.vol || 3;
-          if (cplxEl) cplxEl.value = savedRoom.cplx || 3;
-          if (spclEl) spclEl.checked = savedRoom.spcl || false;
+          if (!savedRoom.excluded) {
+            var volEl = document.getElementById('vol-' + id);
+            var cplxEl = document.getElementById('cplx-' + id);
+            var spclEl = document.getElementById('spcl-' + id);
+            if (volEl) volEl.value = savedRoom.vol || 3;
+            if (cplxEl) cplxEl.value = savedRoom.cplx || 3;
+            if (spclEl) spclEl.checked = savedRoom.spcl || false;
+          }
           if (noteEl && savedRoom.note) {
             noteEl.value = savedRoom.note;
             // Light up the note icon so a restored note is visible at a glance —
@@ -6654,6 +6716,12 @@ function buildEstimateMailto() {
   if ((e.vendorCost||0) > 0) costLines.push('Estimated Third-Party Vendors (billed at cost): ' + money(e.vendorCost));
   if (e.prepEnabled && (e.prepCost||0) > 0) costLines.push('Estimated Home Prep Vendors (billed at cost): ' + money(e.prepCost));
   var grand = e.grandTotal || e.havellinTotal || 0;
+  // Excluded rooms — remind the client, in the email body, which spaces they told us
+  // they'll handle themselves so it's clear the estimate priced no work in them.
+  var exclNames = (e.rooms || []).filter(function(r){ return r.excluded; }).map(function(r){ return r.name; });
+  var exclNote = exclNames.length
+    ? ['As you asked, the following ' + (exclNames.length === 1 ? 'space is' : 'spaces are') + ' excluded from this estimate — you let us know you will take care of ' + (exclNames.length === 1 ? 'it' : 'them') + ' yourself, so no work in ' + (exclNames.length === 1 ? 'this area is' : 'these areas is') + ' priced below: ' + exclNames.join(', ') + '.', '']
+    : [];
   var body = mailtoBody([
     'Dear ' + bestClientGreetingName(job) + ',',
     '',
@@ -6661,7 +6729,7 @@ function buildEstimateMailto() {
     '',
     'With your home and priorities in mind, we have prepared the service estimate below for ' + (job.addr||'your property') + '.',
     ''
-  ].concat(costLines).concat([
+  ].concat(exclNote).concat(costLines).concat([
     'Total Estimated Project Cost: ' + money(grand),
     '',
     'Third-party vendor and home-prep costs are estimates billed directly to you at cost — Havellin does not mark them up. Full details are in the attached estimate.',
@@ -8621,7 +8689,7 @@ function computeProjection(jobId) {
   actPS = Math.round(actPS * 10) / 10;
 
   var estTC = est.totTC, estPS = est.totPS;
-  var rooms = est.rooms;
+  var rooms = est.rooms.filter(function(r){ return !r.excluded; });  // homeowner-handled rooms aren't tracked
   var totalTCHrs = 0, totalPSHrs = 0, doneTCHrs = 0, donePSHrs = 0;
   var invalidRooms = [];
 
@@ -10294,10 +10362,27 @@ function renderJobPlan(jobId, job, est) {
                : (s.label === 'contractor_senior' ? 'Senior PS' : 'PS Specialist');
       }).join(', ')
     : ((est.psCount || est.nps || 2) + ' specialists');
-  var rooms = (est.rooms || []).slice().sort(function(a,b){
+  var _allJpRooms = (est.rooms || []).slice().sort(function(a,b){
     return (b.cplx||0)-(a.cplx||0) || (b.vol||0)-(a.vol||0);
   });
+  // Excluded (homeowner-handled) rooms are shown to the crew flagged NOT IN SCOPE but
+  // are kept out of the priced/status-tracked room set (midpoint gate, projections).
+  var rooms = _allJpRooms.filter(function(r){ return !r.excluded; });
+  var excludedRooms = _allJpRooms.filter(function(r){ return r.excluded; });
   var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
+
+  // Red "NOT IN SCOPE" cards appended to each phase's room grid so on-site TC/PS
+  // know at a glance which rooms the homeowner is handling — do not touch.
+  var exclCardsHtml = excludedRooms.map(function(r) {
+    return '<div style="border:1px solid #E3B7B7;border-radius:4px;padding:8px 10px;background:#fbeded;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
+      '<strong style="font-size:12px;line-height:1.3;color:#A32D2D;">'+r.name+'</strong>' +
+      '<span style="font-size:9px;font-weight:800;color:#fff;background:#A32D2D;border-radius:3px;padding:1px 5px;white-space:nowrap;">NOT IN SCOPE</span>' +
+      '</div>' +
+      '<div style="font-size:10px;color:#A32D2D;font-weight:600;line-height:1.4;'+(r.note?'margin-bottom:4px;':'')+'">Homeowner is handling this room &mdash; do not touch.</div>' +
+      (r.note ? '<div style="font-size:10px;color:var(--gray);font-style:italic;">&#128203; '+r.note+'</div>' : '') +
+      '</div>';
+  }).join('');
 
   // Midpoint billing: "all rooms locked" = Phase 1 complete = the contractual midpoint,
   // and the moment to send the 25% invoice (collection takes time).
@@ -10410,7 +10495,7 @@ function renderJobPlan(jobId, job, est) {
         '</div>' +
         _renderRoomInventoryCapture(jobId, r.idx) +
         '</div>';
-    }).join('') +
+    }).join('') + exclCardsHtml +
     '</div>';
 
   // Phase 1 house-level gates
@@ -10466,7 +10551,7 @@ function renderJobPlan(jobId, job, est) {
         _renderRoomPhotoControls(jobId, r.idx, 'after') +
         '</div>' +
         '</div>';
-    }).join('') +
+    }).join('') + exclCardsHtml +
     '</div>';
 
   var p2 = planSubsec('Midpoint Invoice (25%)') + midpointGateHtml(jobId, _midAmt) +
@@ -11299,10 +11384,14 @@ function renderProbateAgreement() {
   content += dRow('Property Type', propType);
   content += dRow('Approx. Square Footage', propSqft);
   content += (function() {
-    var rooms = est ? (est.rooms || []) : [];
-    if (!rooms.length) return dRow('Rooms &amp; Spaces Included','_______________________________________________');
-    var roomNames = rooms.map(function(r){ return esc(r.name); }).join(', ');
-    return dRow('Rooms &amp; Spaces Included (' + rooms.length + ')', roomNames);
+    var allRooms = est ? (est.rooms || []) : [];
+    var rooms = allRooms.filter(function(r){ return !r.excluded; });
+    var excl = allRooms.filter(function(r){ return r.excluded; });
+    var out = !rooms.length ? dRow('Rooms &amp; Spaces Included','_______________________________________________')
+      : dRow('Rooms &amp; Spaces Included (' + rooms.length + ')', rooms.map(function(r){ return esc(r.name); }).join(', '));
+    if (excl.length) out += dRow('Excluded — Homeowner-Handled (' + excl.length + ')',
+      '<span style="color:#A32D2D;">' + excl.map(function(r){ return esc(r.name); }).join(', ') + '</span> — not within the scope of this Agreement; no work will be performed in ' + (excl.length === 1 ? 'this space' : 'these spaces') + '.');
+    return out;
   })();
   content += dRow('Probate Case Number', probateCase);
   content += dRow('Court','_______________________________________________');
@@ -11635,10 +11724,14 @@ function renderAgreement() {
   content += pRow('Estimated Start Date', startFmt);
   content += pRow('Job Reference', '<span style="font-family:monospace;font-weight:600;color:var(--bronze);">'+hvlId+'</span>');
   content += (function() {
-    var rooms = est ? (est.rooms || []) : [];
-    if (!rooms.length) return pRow('Rooms &amp; Spaces Included', '—');
-    var roomNames = rooms.map(function(r){ return esc(r.name); }).join(', ');
-    return pRow('Rooms &amp; Spaces Included (' + rooms.length + ')', roomNames);
+    var allRooms = est ? (est.rooms || []) : [];
+    var rooms = allRooms.filter(function(r){ return !r.excluded; });
+    var excl = allRooms.filter(function(r){ return r.excluded; });
+    var out = !rooms.length ? pRow('Rooms &amp; Spaces Included', '—')
+      : pRow('Rooms &amp; Spaces Included (' + rooms.length + ')', rooms.map(function(r){ return esc(r.name); }).join(', '));
+    if (excl.length) out += pRow('Excluded — Homeowner-Handled (' + excl.length + ')',
+      '<span style="color:#A32D2D;">' + excl.map(function(r){ return esc(r.name); }).join(', ') + '</span> — not within the scope of this Agreement; Contractor will perform no work in ' + (excl.length === 1 ? 'this space' : 'these spaces') + '.');
+    return out;
   })();
   content += '</table>';
   content += '<p style="font-size:11px;color:var(--gray);margin-bottom:1rem;">Contractor and Client may be referred to individually as a "Party" and collectively as the "Parties." The Parties agree as follows:</p>';
