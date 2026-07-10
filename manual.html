@@ -86,7 +86,14 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <div class="note">📷 Photos are NOT captured during the estimate stage. Photography happens only after job activation.</div>
 
   <h3>5b. Room Scoring</h3>
-  <p>Check each room to include it (auto-scores 3/3). Set Volume and Complexity on a 1–5 scale:</p>
+  <p>Each room row has a <strong>scope</strong> toggle you tap to cycle through three states:</p>
+  <table>
+    <tr><th>State</th><th>Meaning</th></tr>
+    <tr><td><strong>□ Blank</strong></td><td>Not part of this job.</td></tr>
+    <tr><td><strong>✓ Included</strong></td><td>In scope — auto-scores 3/3; set Volume and Complexity below.</td></tr>
+    <tr><td><strong>✕ Excluded</strong></td><td>Homeowner is handling this room themselves (e.g. "we'll clear our own two-car garage"). Priced at $0 and dropped from the labor engine, but kept on record.</td></tr>
+  </table>
+  <p>For an included room, set Volume and Complexity on a 1–5 scale:</p>
   <table>
     <tr><th>Score</th><th>Volume</th><th>Complexity</th></tr>
     <tr><td>1</td><td>Nearly empty</td><td>Simple / standard items</td></tr>
@@ -94,6 +101,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <tr><td>5</td><td>Completely full</td><td>High-value / fragile / specialty handling</td></tr>
   </table>
   <p>Check <strong>Special Items</strong> if the room contains artwork, antiques, or items requiring specialty care. TC and PS hours calculate automatically, and a working-day timeline is generated.</p>
+  <div class="note"><strong>Excluded rooms</strong> are called out explicitly on the client estimate ("Excluded — you will handle these spaces… no work was included in the pricing") and in the signed agreement, and appear on the Job Plan as red <strong>NOT IN SCOPE — do not touch</strong> cards so every TC and PS knows on site. You can still add a walkthrough note to an excluded room to capture why.</div>
 
   <h3>5c. Job Settings</h3>
   <ul>
@@ -101,6 +109,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <li><strong>Property Specialists</strong> — crew is auto-sized to hit the 10-working-day target (floor 2, cap 6); you can add specialists manually. Billing is total PS hours regardless of crew size.</li>
     <li><strong>Preferred Client Discount</strong> — percentage off Havellin labor fees only (max 30%)</li>
     <li><strong>Moving Materials Package</strong> — None, or an Estate tier (Basic $500 · Standard $750 · Premium $1,500) or Downsizing tier (Basic $200 · Standard $350 · Premium $550)</li>
+    <li><strong>Fixed-Price Quote</strong> — bill a firm flat fee instead of hourly TC/PS. See 5h.</li>
   </ul>
 
   <h3>5d. Moving Materials &amp; Third-Party Vendors</h3>
@@ -114,6 +123,17 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <h3>5g. Saving</h3>
   <p>Hit <strong>Save &amp; Preview Client Estimate</strong>. Estimate saves and syncs to Google Sheets, then opens in the Client Estimate preview. Editable until approved.</p>
+
+  <h3>5h. Fixed-Price Quotes</h3>
+  <p>Any labor-based job can be quoted at a <strong>fixed price</strong> instead of hourly. Flip <strong>Quote as a fixed price?</strong> in Job Settings and a fee field appears, prefilled from the app's suggested fixed-price fee (the hourly estimate plus a contingency / rush buffer). Edit it to whatever flat number you're quoting.</p>
+  <ul>
+    <li>The flat fee becomes the client-facing Havellin services total — the client estimate shows a single <strong>Fixed Project Fee</strong> line and the scope, not hours or hourly rates.</li>
+    <li>The agreement uses fixed-fee language, and the 50 / 25 / 25 payment schedule is calculated off the flat fee.</li>
+    <li>All three invoices bill against the fixed fee — the Final does <strong>not</strong> true up to logged hours. Only an approved Change Order changes a fixed price.</li>
+    <li>Rooms are still scored normally, so the Job Plan keeps real planning hours and internal margin is preserved.</li>
+    <li>Third-party vendor costs stay pass-through at cost, separate from the fixed fee.</li>
+  </ul>
+  <div class="note"><strong>Probate / Contested Probate</strong> normally bill time-and-materials for court / Personal-Representative defensibility. Fixed price is allowed on them, but the estimator shows a caution banner — confirm it's appropriate before presenting.</div>
 
   <h2>6. Home Prep for Sale (Standalone Service)</h2>
   <p>A show-ready, sell-side service offered primarily through <strong>Douglas Elliman referral agents</strong>. Havellin manages every trade needed to get a property market-ready — paint, repairs, landscaping, deep cleaning, staging — and charges a flat <strong>30% GC / Site Management Fee</strong> on the managed vendor spend. There is no room scoring, no in-house labor, and no crew.</p>
@@ -170,6 +190,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <tr><td>Final</td><td>Balance — labor trued to logged hours, fees on actuals, plus any approved Change Orders</td><td>Within 7 days of final invoice</td></tr>
   </table>
   <p style="font-size:11px;color:#888780;">Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 15% SMF / 30% GC fee is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoices tab via the Stage selector.</p>
+  <div class="note"><strong>Fixed-price jobs</strong> (see 5h) behave differently: every stage (50 / 25 / 25) bills against the agreed flat fee, and the Final does <strong>not</strong> true up to logged hours. Only approved Change Orders adjust the total. The agreement reflects this with fixed-fee wording in place of the hourly rate and true-up language.</div>
 
   <h2>9. Client Dashboard</h2>
   <p><strong>Tab: Client Dashboard</strong> → select job card. Shows full job status, action checklist, referral source / partner, Drive folder link, and all management actions.</p>
@@ -211,6 +232,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <h2>12. Invoices</h2>
   <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
+  <div class="note"><strong>Fixed-price jobs</strong> (see 5h): all three stages are anchored to the agreed flat fee (50 / 25 / 25) and the Final does <strong>not</strong> reconcile to logged hours — the invoices show a single Fixed Project Fee, not an hours breakdown. Change Orders are the only adjustment.</div>
 
   <h2>13. Vendor Directory</h2>
   <p><strong>Tab: Vendors.</strong> The curated network of trades and service providers (painters, landscapers, movers, appraisers, haulers, etc.), stored in its own Google Sheet. Work each vendor through its lifecycle: <em>Identified → Contacted → Qualified → Vetting → Contracted → Active</em>. Only <strong>Active</strong> vendors can be assigned to a job in the Job Plan sourcing.</p>
@@ -250,13 +272,14 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <tr><td>Home Prep GC / Site Management Fee</td><td>30% of prep vendors</td><td>30% of prep vendors</td></tr>
     <tr><td>Moving Materials</td><td>Cost + 25%</td><td>Cost + 25%</td></tr>
   </table>
+  <p style="font-size:11px;color:#888780;">A job can alternatively be quoted at a <strong>fixed project fee</strong> (see 5h) — a firm flat number in place of hourly TC/PS billing, with vendor costs still passed through at cost.</p>
 
   <h2>17. Manager PIN</h2>
   <p>Required for: Estimate approval · Agreement approval · Invoice approval. Contact management for current PIN. Do not share or record in the app.</p>
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-08
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-10
   </div>
 
 </div>
