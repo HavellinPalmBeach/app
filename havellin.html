@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 6:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 7:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1561,6 +1561,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <input type="text" id="r-fname" placeholder="First name">
         <label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <input type="text" id="r-lname" placeholder="Last name">
+        <label>Title</label>
+        <input type="text" id="r-title" placeholder="e.g. Partner &middot; SVP &amp; Senior Trust Officer">
+        <label>Firm / brokerage</label>
+        <input type="text" id="r-firm" placeholder="e.g. Gunster &middot; Cypress Bank &amp; Trust">
         <label>Partner type <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <select id="r-type">
           <option value="">&mdash; select &mdash;</option>
@@ -1572,22 +1576,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option>Allied vendor</option>
           <option>Other</option>
         </select>
-        <label>Title</label>
-        <input type="text" id="r-title" placeholder="e.g. Partner &middot; SVP &amp; Senior Trust Officer">
-        <label>Firm / brokerage</label>
-        <input type="text" id="r-firm" placeholder="e.g. Gunster &middot; Douglas Elliman">
-        <label>Primary contact <span style="font-weight:400;color:var(--gray);">(if different)</span></label>
-        <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
         <label>Phone</label>
         <input type="tel" id="r-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
-        <label>Phone type</label>
-        <input type="text" id="r-phonetype" placeholder="Direct &middot; Main &middot; Switchboard">
         <label>Email</label>
         <input type="email" id="r-email" placeholder="partner@firm.com">
-        <label>Email status <span style="font-weight:400;color:var(--gray);">(deliverability)</span></label>
-        <input type="text" id="r-emailstatus" placeholder="Verified &middot; Per FL Bar &middot; Not published">
-        <label>Website</label>
-        <input type="text" id="r-website" placeholder="firm.com">
       </div>
       <div>
         <label>Status</label>
@@ -1599,10 +1591,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option value="Dormant">Dormant &mdash; no recent activity</option>
           <option value="Do Not Use">Do Not Use</option>
         </select>
-        <label>Priority / tier</label>
-        <input type="text" id="r-priority" placeholder="e.g. 1 - Warm &middot; 2 - Elite &middot; 1 - Top Fiduciary">
-        <label>Channel / authority <span style="font-weight:400;color:var(--gray);">(who can hire vs. refer)</span></label>
-        <input type="text" id="r-channel" placeholder="e.g. Trust Officer - DECISION AUTHORITY">
+        <label>Priority <span style="font-weight:400;color:var(--gray);">(who to call first)</span></label>
+        <select id="r-priority">
+          <option value="">&mdash; select &mdash;</option>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
         <label>Relationship owner</label>
         <select id="r-owner">
           <option value="">&mdash; select &mdash;</option>
@@ -1612,45 +1607,59 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </select>
         <label>Last contacted</label>
         <input type="date" id="r-lastcontacted">
-        <label>Warm path <span style="font-weight:400;color:var(--gray);">(intro angle)</span></label>
-        <input type="text" id="r-warmpath" placeholder="e.g. Family friend of Anthony">
       </div>
     </div>
-    <div class="sec" style="margin-top:14px;font-size:11px;">Mailing address</div>
-    <div class="grid2">
-      <div>
-        <label>Street address</label>
-        <input type="text" id="r-street" placeholder="251 Royal Palm Way">
-        <label>Suite / floor</label>
-        <input type="text" id="r-suite" placeholder="Ste 300">
-        <label>City</label>
-        <input type="text" id="r-city" placeholder="Palm Beach">
+    <details style="margin-top:12px;">
+      <summary style="cursor:pointer;font-size:11px;color:var(--bronze);font-weight:600;">Research details &amp; address <span style="font-weight:400;color:var(--gray);">(optional — outreach context)</span></summary>
+      <div style="margin-top:10px;">
+        <div class="grid2">
+          <div>
+            <label>Channel / authority <span style="font-weight:400;color:var(--gray);">(hire vs. refer)</span></label>
+            <input type="text" id="r-channel" placeholder="e.g. Trust Officer - DECISION AUTHORITY">
+            <label>Warm path <span style="font-weight:400;color:var(--gray);">(intro angle)</span></label>
+            <input type="text" id="r-warmpath" placeholder="e.g. Family friend of Anthony">
+            <label>Primary contact <span style="font-weight:400;color:var(--gray);">(assistant, if any)</span></label>
+            <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
+            <label>Website</label>
+            <input type="text" id="r-website" placeholder="firm.com">
+            <label>Phone type</label>
+            <input type="text" id="r-phonetype" placeholder="Direct &middot; Main">
+            <label>Email status <span style="font-weight:400;color:var(--gray);">(deliverability)</span></label>
+            <input type="text" id="r-emailstatus" placeholder="Verified &middot; Not published">
+          </div>
+          <div>
+            <label>Credentials</label>
+            <input type="text" id="r-credentials" placeholder="JD, LL.M. Tax &middot; CFP, CTFA">
+            <label>Board Certified WTE</label>
+            <input type="text" id="r-boardcert" placeholder="Yes (2005) &middot; No">
+            <label>ACTEC Fellow</label>
+            <input type="text" id="r-actec" placeholder="Yes &middot; No">
+            <label>Council</label>
+            <input type="text" id="r-council" placeholder="e.g. Palm Beach County EPC">
+            <label>Council role</label>
+            <input type="text" id="r-councilrole" placeholder="e.g. President &middot; VP Programs">
+          </div>
+        </div>
+        <div class="sec" style="margin-top:10px;font-size:11px;">Mailing address</div>
+        <div class="grid2">
+          <div>
+            <label>Street address</label>
+            <input type="text" id="r-street" placeholder="251 Royal Palm Way">
+            <label>Suite / floor</label>
+            <input type="text" id="r-suite" placeholder="Ste 300">
+            <label>City</label>
+            <input type="text" id="r-city" placeholder="Palm Beach">
+          </div>
+          <div>
+            <label>State</label>
+            <input type="text" id="r-state" placeholder="FL" maxlength="2">
+            <label>ZIP</label>
+            <input type="text" id="r-zip" placeholder="33480">
+          </div>
+        </div>
       </div>
-      <div>
-        <label>State</label>
-        <input type="text" id="r-state" placeholder="FL" maxlength="2">
-        <label>ZIP</label>
-        <input type="text" id="r-zip" placeholder="33480">
-      </div>
-    </div>
-    <div class="sec" style="margin-top:14px;font-size:11px;">Professional profile</div>
-    <div class="grid2">
-      <div>
-        <label>Credentials</label>
-        <input type="text" id="r-credentials" placeholder="JD, LL.M. Tax &middot; CFP, CTFA">
-        <label>Board Certified WTE <span style="font-weight:400;color:var(--gray);">(FL Bar Wills/Trusts/Estates)</span></label>
-        <input type="text" id="r-boardcert" placeholder="Yes (2005) &middot; No">
-        <label>ACTEC Fellow</label>
-        <input type="text" id="r-actec" placeholder="Yes &middot; No">
-      </div>
-      <div>
-        <label>Council</label>
-        <input type="text" id="r-council" placeholder="e.g. Palm Beach County EPC">
-        <label>Council role</label>
-        <input type="text" id="r-councilrole" placeholder="e.g. President &middot; VP Programs">
-      </div>
-    </div>
-    <label style="margin-top:10px;">Notes</label>
+    </details>
+    <label style="margin-top:12px;">Notes</label>
     <textarea id="r-notes" placeholder="Relationship notes, referral history, reciprocity, preferences&hellip;"></textarea>
     <div class="divider"></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -10265,7 +10274,9 @@ function renderReferralsTab(){
     var active = ps.filter(isActivePartner).length;
     return '<div style="font-weight:600;font-size:13px;margin:14px 2px 6px;">' + esc(t) +
       ' <span style="font-size:11px;font-weight:400;color:var(--gray);">&middot; ' + ps.length + ' &middot; ' + active + ' active</span></div>' +
-      ps.map(referralCardHtml).join('');
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin-bottom:6px;">' +
+        ps.map(referralCardHtml).join('') +
+      '</div>';
   }).join('');
 }
 // Status is a read-only, colour-coded badge on the list card — Do Not Use is red,
@@ -10292,47 +10303,100 @@ function referralChannelHtml(ch){
   var icon = authority ? '&#9679; ' : (referrerOnly ? '&#9675; ' : '');
   return '<div style="font-size:11px;font-weight:600;color:' + col + ';margin-top:3px;">' + icon + esc(ch) + '</div>';
 }
+var REFERRAL_STATUSES = ['Identified','Contacted','Intro Meeting','Active Partner','Dormant','Do Not Use'];
+// Inline status dropdown on a card — pick the stage right where you're looking,
+// mirrors the Vendor Directory card. The top-right badge stays for at-a-glance colour.
+function referralStatusSelect(p, idAttr){
+  var cur = String(p.status||'');
+  var opts = '<option value="">— set status —</option>' + REFERRAL_STATUSES.map(function(s){
+    return '<option value="' + esc(s) + '"' + (cur===s?' selected':'') + '>' + esc(s) + '</option>'; }).join('');
+  return '<select onchange="setReferralStatusFromCard(\'' + idAttr + '\',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' + opts + '</select>';
+}
+function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferral(id, { status: val }, 'Updating status…', 'Status updated ✓'); }
+
+// Priority normalized to a clean High / Medium / Low badge. Reads either the simplified
+// words or the imported tier strings ("1 - Warm", "6 - Secondary"): tier 1–2 → High,
+// 3–4 → Medium, 5–6 → Low.
+function referralPriorityLevel(p){
+  var s = String(p||'').trim(); if (!s) return '';
+  if (/high/i.test(s)) return 'High';
+  if (/med/i.test(s)) return 'Medium';
+  if (/low/i.test(s)) return 'Low';
+  var m = s.match(/(\d+)/);
+  if (m){ var n = parseInt(m[1],10); return n<=2 ? 'High' : (n<=4 ? 'Medium' : 'Low'); }
+  return '';
+}
+function referralPriorityBadge(p){
+  var lvl = referralPriorityLevel(p); if (!lvl) return '';
+  var c = ({ High:['var(--bronze)','#fff'], Medium:['var(--tan)','var(--gray-dk)'], Low:['var(--cream)','var(--gray)'] })[lvl];
+  return '<span title="Priority" style="display:inline-block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:' + c[0] + ';color:' + c[1] + ';white-space:nowrap;">' + (lvl==='Medium'?'MED':lvl.toUpperCase()) + '</span>';
+}
+// Display-format a stored phone as (xxx) xxx-xxxx; leaves any non-10-digit value as-is.
+function fmtPhoneDisplay(s){
+  var d = String(s||'').replace(/\D/g,'');
+  if (d.length===11 && d.charAt(0)==='1') d = d.substring(1);
+  if (d.length===10) return '(' + d.substring(0,3) + ') ' + d.substring(3,6) + '-' + d.substring(6);
+  return String(s||'').trim();
+}
+
+// Vendor-directory-style card: name + type, priority/status badges top-right, a
+// highlighted contact block, the colour-coded channel line, then a consistent bottom
+// action row (status select + log + edit) so buttons never jump around.
 function referralCardHtml(p){
-  var id = referralIdOf(p);
+  var idAttr = esc(String(referralIdOf(p))).replace(/'/g, "\\'");
   var _rst = referralPartnerStats(p._row);
   var _dorm = referralDormancy(p);
+
+  var roleBits = [];
+  if (p.title) roleBits.push('<strong>' + esc(p.title) + '</strong>');
+  if (p.firm) roleBits.push(esc(p.firm));
+  var roleRow = roleBits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + roleBits.join(' &middot; ') + '</div>' : '';
+
   var cbits = [];
-  if (p.primary_contact) cbits.push(esc(p.primary_contact));
-  if (p.phone) cbits.push('<a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(p.phone) + '</a>' + (p.phone_type ? ' <span style="color:var(--gray);">(' + esc(p.phone_type) + ')</span>' : ''));
-  if (p.email) cbits.push('<a href="mailto:' + esc(p.email) + '" style="color:var(--bronze);text-decoration:none;">' + esc(p.email) + '</a>');
-  else if (p.email_status) cbits.push('<span style="color:var(--gray);">' + esc(p.email_status) + '</span>');
-  var meta = [];
-  if (p.title) meta.push(esc(p.title));
-  if (p.firm) meta.push(esc(p.firm));
+  var ph = fmtPhoneDisplay(p.phone);
+  if (ph) cbits.push('☎ <a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(ph) + '</a>');
+  if (p.email) cbits.push('✉ <a href="mailto:' + esc(p.email) + '" style="color:var(--bronze);">' + esc(p.email) + '</a>');
+  else if (p.email_status) cbits.push('<span style="color:var(--gray);">✉ ' + esc(p.email_status) + '</span>');
+  var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
+
   var _loc = [p.city, p.state].filter(function(x){ return String(x||'').trim(); }).join(', ');
-  if (_loc) meta.push(esc(_loc));
-  if (p.owner) meta.push('Owner: ' + esc(p.owner));
+  var locRow = _loc ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Location</span> ' + esc(_loc) + '</div>' : '';
+  var councilRow = String(p.council||'').trim()
+    ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Council</span> ' + esc(p.council) + (String(p.council_role||'').trim() ? ' — <strong>' + esc(p.council_role) + '</strong>' : '') + '</div>'
+    : '';
+  var contactBlock = (roleRow || contactRow || locRow || councilRow)
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + roleRow + contactRow + locRow + councilRow + '</div>'
+    : '';
+
+  var warm = String(p.warm_path||'').trim() ? '<div style="font-size:11px;color:var(--bronze);margin-top:4px;">Warm path: ' + esc(p.warm_path) + '</div>' : '';
+  var stats = _rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:4px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' · ' + _rst.won + ' won · $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '';
+  var dorm = _dorm.dormant ? '<div style="font-size:11px;color:var(--warn-tx);font-weight:600;margin-top:4px;">&#9200; ' + (_dorm.days == null ? 'No outreach logged' : _dorm.days + ' days quiet') + ' — time for a nudge</div>' : '';
+
   var lastc = String(p.last_contacted||'').trim()
     ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(p.last_contacted)) + '</span>'
-    : '<span style="font-size:10px;color:var(--gray);">Not yet contacted</span>';
+    : '<span style="font-size:10px;color:var(--warn-tx);">Not yet contacted</span>';
+
+  var actions = referralStatusSelect(p, idAttr) +
+    '<button class="btn-s" onclick="stampReferralContacted(\'' + idAttr + '\')">☎ Log outreach</button>' +
+    '<button class="btn-s" onclick="editReferral(\'' + idAttr + '\')">Edit</button>';
+
   var _st = String(p.status||'');
   var _accent = _st === 'Do Not Use' ? 'border-left:3px solid var(--err-tx);' : (_st === 'Dormant' ? 'border-left:3px solid var(--warn-tx);' : '');
-  return '<div class="card" style="margin-bottom:8px;padding:.8rem 1rem;' + _accent + '">' +
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
-      '<div><div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;">' + esc(p.partner_name||'—') +
-        referralStatusBadge(p.status) +
-        (String(p.priority||'').trim() ? '<span style="display:inline-block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:var(--tan);color:var(--gray-dk);white-space:nowrap;">' + esc(p.priority) + '</span>' : '') + '</div>' +
-        (meta.length ? '<div style="font-size:11px;color:var(--gray);margin-top:2px;">' + meta.join(' &middot; ') + '</div>' : '') +
-        (String(p.credentials||'').trim() ? '<div style="font-size:10.5px;color:var(--gray);margin-top:2px;">' + esc(p.credentials) + '</div>' : '') +
-        referralChannelHtml(p.channel) +
-        (String(p.council||'').trim() ? '<div style="font-size:10.5px;color:var(--gray);margin-top:2px;">' + esc(p.council) + (String(p.council_role||'').trim() ? ' &mdash; ' + esc(p.council_role) : '') + '</div>' : '') +
-        (String(p.warm_path||'').trim() ? '<div style="font-size:10.5px;color:var(--bronze);margin-top:2px;">Warm path: ' + esc(p.warm_path) + '</div>' : '') +
-        (_rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:3px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' &middot; ' + _rst.won + ' won &middot; $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '') +
-        (_dorm.dormant ? '<div style="font-size:11px;color:var(--warn-tx);font-weight:600;margin-top:3px;">&#9200; ' + (_dorm.days == null ? 'No outreach logged — time for a nudge' : _dorm.days + ' days quiet — time for a nudge') + '</div>' : '') +
-        (cbits.length ? '<div style="font-size:11px;color:var(--gray-dk);margin-top:3px;">' + cbits.join(' &nbsp;&middot;&nbsp; ') + '</div>' : '') +
-        (p.notes ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;font-style:italic;">' + esc(p.notes) + '</div>' : '') +
+
+  return '<div class="card" style="margin:0;padding:0.85rem 1rem;display:flex;flex-direction:column;' + _accent + '">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
+      '<div style="min-width:0;">' +
+        '<div style="font-weight:600;font-size:14px;">' + esc(p.partner_name||'—') + '</div>' +
+        '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(p.partner_type||'—') + '</div>' +
       '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">' +
-        '<div style="display:flex;gap:6px;">' +
-          '<button class="btn-s" style="font-size:11px;" onclick="stampReferralContacted(\'' + id + '\')">Log outreach</button>' +
-          '<button class="btn-s" style="font-size:11px;" onclick="editReferral(\'' + id + '\')">Edit</button>' +
-        '</div>' + lastc +
-      '</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;white-space:nowrap;flex-shrink:0;">' + referralPriorityBadge(p.priority) + referralStatusBadge(p.status) + '</div>' +
+    '</div>' +
+    contactBlock +
+    referralChannelHtml(p.channel) +
+    warm + stats + dorm +
+    (p.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(p.notes) + '</div>' : '') +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:8px;">' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + actions + '</div>' + lastc +
     '</div>' +
   '</div>';
 }
@@ -10349,6 +10413,9 @@ function showAddReferral(){
 function editReferral(id){
   var p = lookupReferralById(id); if (!p) return;
   Object.keys(REFERRAL_FORM_MAP).forEach(function(fid){ _setR(fid, p[REFERRAL_FORM_MAP[fid]]); });
+  // Priority is a High/Medium/Low <select> now — normalize any imported tier string
+  // ("1 - Warm", "6 - Secondary") to the matching option so it displays correctly.
+  _setR('r-priority', referralPriorityLevel(p.priority));
   document.getElementById('r-edit-row').value = String(id);
   document.getElementById('r-form-title').textContent = 'Edit Partner — ' + (p.partner_name || '');
   var fb = document.getElementById('r-fb'); if (fb) fb.innerHTML = '';
