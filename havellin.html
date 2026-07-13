@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 6:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 6:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -320,6 +320,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <label>Referral source <span style="color:#A32D2D;font-weight:700;">*</span></label>
           <select id="i-src" onchange="onReferralSourceChange()">
             <option value="">Select source</option>
+            <option>Allied vendor</option>
             <option>Country club / golf community</option>
             <option>Direct mail</option>
             <option>Estate attorney</option>
@@ -345,7 +346,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div id="i-refpartner-wrap" style="display:none;">
         <label>Referral partner <span style="font-weight:400;color:var(--gray);">(who specifically)</span></label>
         <select id="i-refpartner"><option value="">— none / not a named partner —</option></select>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — link this job to a specific attorney, trust officer, wealth manager, or realtor so referrals are tracked. Manage the list in the Referral Partners tab.</div>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — link this job to a specific attorney, trust officer, wealth manager, realtor, or allied vendor so referrals are tracked. Manage the list in the Referral Partners tab.</div>
       </div>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
@@ -1568,6 +1569,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option>Wealth manager</option>
           <option>Realtor &mdash; Douglas Elliman</option>
           <option>Realtor &mdash; Other</option>
+          <option>Allied vendor</option>
           <option>Other</option>
         </select>
         <label>Title</label>
@@ -10488,7 +10490,7 @@ function onReferralSourceChange(){
   if (!src) return;
   var pWrap = document.getElementById('i-refpartner-wrap');
   var rbWrap = document.getElementById('i-referredby-wrap');
-  var pro = ['Estate attorney','Trust officer','Wealth manager','Realtor — Douglas Elliman','Realtor — Other'];
+  var pro = ['Estate attorney','Trust officer','Wealth manager','Realtor — Douglas Elliman','Realtor — Other','Allied vendor'];
   var personal = ['Family','Friend','Existing client referral'];
   var isPro = pro.indexOf(src.value) >= 0;
   if (pWrap) pWrap.style.display = isPro ? 'block' : 'none';
