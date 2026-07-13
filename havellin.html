@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 7:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 8:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9957,7 +9957,7 @@ function renderVendorsTab() {
         '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (open?'▾':'▸') + '</span>' + esc(cat) + '</div>' +
         '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' + vs.length + ' vendor' + (vs.length!==1?'s':'') + ' · ' + apprTxt + ' · ' + contacted + ' contacted</div>' +
       '</div>';
-    var section = open ? '<div style="margin:0 0 12px 12px;">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
+    var section = open ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin:0 0 12px 12px;">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
     return header + section;
   }).join('');
   list.innerHTML = head + body;
@@ -10016,9 +10016,9 @@ function vendorCardHtml(v) {
     '<button class="btn-s" onclick="stampVendorContacted(\'' + idAttr + '\')">☎ Log contact</button>' +
     '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>';
 
-  return '<div class="card" style="margin-bottom:8px;padding:0.85rem 1rem;">' +
+  return '<div class="card" style="margin:0;padding:0.85rem 1rem;display:flex;flex-direction:column;">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
-      '<div>' +
+      '<div style="min-width:0;">' +
         '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
         '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(v.category||'—') +
           (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
@@ -10027,7 +10027,7 @@ function vendorCardHtml(v) {
     '</div>' +
     contactBlock + pricing + timing + meta +
     (v.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(v.notes) + '</div>' : '') +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:8px;">' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + actions + '</div>' + lastc +
     '</div>' +
   '</div>';
@@ -10257,6 +10257,21 @@ function renderReferralStats(){
   function stat(n,l,warn){ return '<div style="background:' + (warn ? 'var(--warn-bg)' : 'var(--tan)') + ';border-radius:6px;padding:8px 12px;"><div style="font-size:18px;font-weight:600;color:' + (warn ? 'var(--warn-tx)' : 'var(--gray-dk)') + ';">'+n+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);">'+l+'</div></div>'; }
   el.innerHTML = stat(total,'Partners') + stat(active,'Active') + stat(contacted,'Contacted') + stat(dormant,'Needs Nudge', dormant>0);
 }
+// The list is a partner-type accordion, mirroring the Vendor Directory: each type
+// (Estate attorney, Trust officer, Wealth manager, Allied vendor…) is a collapsible
+// section, collapsed by default, so the page opens compact and you expand the one
+// you want to work.
+var referralExpandedCats = {};
+var _referralCatOrder = [];
+function toggleReferralCat(i){
+  var t = _referralCatOrder[i]; if (t == null) return;
+  referralExpandedCats[t] = !referralExpandedCats[t];
+  renderReferralsTab();
+}
+function setAllReferralCats(open){
+  _referralCatOrder.forEach(function(t){ referralExpandedCats[t] = open; });
+  renderReferralsTab();
+}
 function renderReferralsTab(){
   renderReferralStats();
   renderReferralLeaderboard();
@@ -10269,15 +10284,29 @@ function renderReferralsTab(){
   var byType = {};
   referralDirectory.forEach(function(p){ var t = String(p.partner_type||'').trim() || 'Uncategorized'; (byType[t]=byType[t]||[]).push(p); });
   var types = Object.keys(byType).sort();
-  list.innerHTML = types.map(function(t){
+  _referralCatOrder = types;
+  var head = '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 8px;flex-wrap:wrap;gap:6px;">' +
+    '<span style="font-size:11px;color:var(--gray);">' + referralDirectory.length + ' partner' + (referralDirectory.length!==1?'s':'') + ' in ' + types.length + ' categor' + (types.length===1?'y':'ies') + '</span>' +
+    '<span style="display:flex;gap:6px;"><button class="btn-s" onclick="setAllReferralCats(true)">Expand all</button><button class="btn-s" onclick="setAllReferralCats(false)">Collapse all</button></span>' +
+  '</div>';
+  var body = types.map(function(t, i){
     var ps = byType[t].slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
     var active = ps.filter(isActivePartner).length;
-    return '<div style="font-weight:600;font-size:13px;margin:14px 2px 6px;">' + esc(t) +
-      ' <span style="font-size:11px;font-weight:400;color:var(--gray);">&middot; ' + ps.length + ' &middot; ' + active + ' active</span></div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin-bottom:6px;">' +
-        ps.map(referralCardHtml).join('') +
+    var contacted = ps.filter(function(p){ return String(p.last_contacted||'').trim(); }).length;
+    var open = !!referralExpandedCats[t];
+    var activeTxt = active > 0
+      ? '<span style="color:var(--ok-tx);font-weight:600;">' + active + ' active</span>'
+      : '<span style="color:var(--gray);">0 active</span>';
+    var header = '<div onclick="toggleReferralCat(' + i + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px;">' +
+        '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (open?'▾':'▸') + '</span>' + esc(t) + '</div>' +
+        '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' + ps.length + ' partner' + (ps.length!==1?'s':'') + ' · ' + activeTxt + ' · ' + contacted + ' contacted</div>' +
       '</div>';
+    var section = open
+      ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin:0 0 12px 12px;">' + ps.map(referralCardHtml).join('') + '</div>'
+      : '';
+    return header + section;
   }).join('');
+  list.innerHTML = head + body;
 }
 // Status is a read-only, colour-coded badge on the list card — Do Not Use is red,
 // Dormant amber, Active green. Status is changed deliberately via Edit, not inline.
