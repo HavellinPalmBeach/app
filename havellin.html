@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.10 · 3:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 2:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -767,7 +767,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
         <div id="prep-content" style="display:none;">
           <table class="vtbl">
-            <thead><tr><th>Prep Item / Vendor</th><th>Est. Cost</th><th>30% GC Fee</th><th></th></tr></thead>
+            <thead><tr><th>Prep Item / Vendor</th><th>Est. Cost</th><th id="prep-fee-col-hdr">30% GC Fee</th><th></th></tr></thead>
             <tbody id="prep-body"></tbody>
             <tfoot>
               <tr>
@@ -2448,6 +2448,11 @@ function applyEstimateServiceMode(isPrep) {
   if (isPrep) { var pc = document.getElementById('prep-content'); if (pc) pc.style.display = 'block'; }
   var lbl = document.getElementById('prep-card-label');
   if (lbl) lbl.textContent = isPrep ? 'Home Prep for Sale — Managed Vendors (30% GC fee)' : 'Home Prep for Sale';
+  // Bundled prep vendors fold in with all other coordinated vendors at the 15% SMF;
+  // only a standalone prep engagement carries the 30% GC fee. Keep the entry-card fee
+  // column header in step with what will actually be charged.
+  var feeHdr = document.getElementById('prep-fee-col-hdr');
+  if (feeHdr) feeHdr.textContent = isPrep ? '30% GC Fee' : '15% Fee';
 
   // Reorder the ESTIMATE SUMMARY panel for Home Prep for Sale so it reads the way the
   // client estimate does: vendors (at cost) first, then the 30% fee, then the grand
@@ -2692,8 +2697,14 @@ function calcAll() {
   // TC coordination hours are billed on top of that service's labor.
   var prepEnabled = isPrep || (document.getElementById('e-prep-enabled') && document.getElementById('e-prep-enabled').checked);
   var prepCost = prepEnabled ? getPrepCost() : 0;
-  var prepFee  = prepEnabled ? getPrepFee()  : 0;
+  var prepFee  = prepEnabled ? getPrepFee(svcKey) : 0;
   var prepTCHrs = (prepEnabled && !isPrep) ? getPrepTCHrs() : 0;
+  // Bundled prep folds in with every other coordinated vendor at the 15% SMF
+  // (getPrepFee returns 15% for a non-'prep' service). Only a standalone prep
+  // engagement keeps its own 30% GC fee line; here we roll the bundled fee into
+  // smf so the estimate shows a single vendor-coordination fee rather than a
+  // separate Home Prep line. The extra TC coordination hours still bill on top.
+  if (prepEnabled && !isPrep) { smf += prepFee; prepFee = 0; }
   if (isPrep) { totTC = 0; totPS = 0; baseTCHrs = 0; basePSHrs = 0; }
   totTC = Math.round((totTC + prepTCHrs) * 10) / 10;
   tcFee = Math.round(totTC * tcRate);
@@ -3220,7 +3231,7 @@ function togglePrepSection() {
 }
 
 document.getElementById('new-prep-cost').addEventListener('input', function() {
-  document.getElementById('new-prep-fee').textContent = '$' + Math.round((parseFloat(this.value)||0) * 0.30).toLocaleString();
+  document.getElementById('new-prep-fee').textContent = '$' + Math.round((parseFloat(this.value)||0) * currentPrepFeeRate()).toLocaleString();
 });
 
 function addPrepItem() {
@@ -3241,7 +3252,7 @@ function renderPrepItems() {
   prepItems.forEach(function(p,i) {
     html += '<tr><td><strong>'+esc(p.type)+'</strong></td>' +
       '<td><input type="number" value="'+p.cost+'" oninput="updatePrepCost('+i+',this.value)" style="width:100%;"></td>' +
-      '<td id="prep-fee-'+i+'">$'+Math.round(p.cost*0.30).toLocaleString()+'</td>' +
+      '<td id="prep-fee-'+i+'">$'+Math.round(p.cost*currentPrepFeeRate()).toLocaleString()+'</td>' +
       '<td><button class="icon-btn del" onclick="removePrepItem('+i+')">✕</button></td></tr>' +
       // Scope note — what to tell this vendor when you call for a quote (captured on the
       // walkthrough since there's no room-by-room grid for a prep job).
@@ -3268,14 +3279,14 @@ function updatePrepNote(i, val) {
 function updatePrepCost(i, val) {
   prepItems[i].cost = parseFloat(val)||0;
   var feeCell = document.getElementById('prep-fee-'+i);
-  if (feeCell) feeCell.textContent = '$'+Math.round(prepItems[i].cost*0.30).toLocaleString();
+  if (feeCell) feeCell.textContent = '$'+Math.round(prepItems[i].cost*currentPrepFeeRate()).toLocaleString();
   calcPrepTotals();
   calcAll();
 }
 
 function calcPrepTotals() {
   var totalCost = prepItems.reduce(function(a,p){ return a+p.cost; }, 0);
-  var totalFee = Math.round(totalCost * 0.30);
+  var totalFee = Math.round(totalCost * currentPrepFeeRate());
   var tcHrs = getPrepTCHrs();
   var c = document.getElementById('prep-total-cost');
   var f = document.getElementById('prep-total-fee');
@@ -3287,7 +3298,16 @@ function calcPrepTotals() {
 }
 
 function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost; }, 0); }
-function getPrepFee()  { return Math.round(getPrepCost() * 0.30); }
+
+// Home Prep for Sale fee is engagement-scoped. Booked on its own ('prep' service) it
+// is a full GC project — a flat 30% on managed vendor spend, no billed labor. Ridden
+// on a downsizing/estate job, the prep vendors fold in with every other coordinated
+// third-party vendor at the standard 15% SMF (the extra TC coordination hours still
+// bill on top). Any service other than 'prep' is a bundled add-on.
+function prepFeeRate(svc) { return svc === 'prep' ? 0.30 : 0.15; }
+function currentSvc() { var el = document.getElementById('e-svc'); return el ? el.value : 'cleanout'; }
+function currentPrepFeeRate() { return prepFeeRate(currentSvc()); }
+function getPrepFee(svc)  { return Math.round(getPrepCost() * prepFeeRate(svc || currentSvc())); }
 
 // ─── INTAKE ───────────────────────────────────────────────────────────────────
 function isWeekend(dateStr) {
@@ -4355,7 +4375,7 @@ function renderClientEstimate() {
         '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody>' +
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
-        '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">GC / Site Management Fee (30%) is included in the Havellin Services section above.</td></tr>' +
+        '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">Coordination of these vendors is included in the 15% Service Management Fee above.</td></tr>' +
         '</table>';
     })() : '') +
 
@@ -4385,7 +4405,9 @@ function renderClientEstimate() {
       : '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
         '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
         '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
-        '<li>A 15% Service Management Fee applies to all third-party vendors coordinated by Havellin. Home Prep for Sale vendors are subject to a 30% GC / Site Management Fee.</li>' +
+        (e.svc === 'prep'
+          ? '<li>Havellin\'s fee for this project is a 30% GC / Site Management Fee on managed vendor spend; third-party vendors are billed to you directly at cost.</li>'
+          : '<li>A 15% Service Management Fee applies to all third-party vendors coordinated by Havellin, including any home-prep vendors managed as part of this engagement.</li>') +
         '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>') +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     '<li>Havellin Palm Beach is licensed, insured, and bonded.</li>' +
@@ -7938,11 +7960,17 @@ function getVendorActuals(job, est) {
     });
   }
 
+  // Fees are engagement-scoped, matching the estimate: a standalone Home Prep job
+  // ('prep' service) bills a 30% GC fee on prep vendors; on a bundled downsizing/estate
+  // job the prep vendors fold in with all other coordinated vendors at the 15% SMF.
+  var standalonePrep = ((est.svc || job.svc) === 'prep');
+  var smfBase = tp.total + (standalonePrep ? 0 : pr.total);
   return {
-    thirdParty: tp.lines, thirdPartyTotal: tp.total, thirdPartyAnyEst: tp.anyEst,
-    smf: Math.round(tp.total * 0.15),
+    thirdParty: tp.lines, thirdPartyTotal: tp.total,
+    thirdPartyAnyEst: tp.anyEst || (!standalonePrep && pr.anyEst),
+    smf: Math.round(smfBase * 0.15),
     prep: pr.lines, prepTotal: pr.total, prepAnyEst: pr.anyEst,
-    prepFee: Math.round(pr.total * 0.30)
+    prepFee: standalonePrep ? Math.round(pr.total * 0.30) : 0
   };
 }
 
@@ -9392,7 +9420,7 @@ function renderVendorSourcing(jobId, job, est) {
         '</div>' + _vendorRefLine(rec) +
       '</div>';
     }).join('');
-    html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Prep vendors are paid directly by the client; Havellin\'s 30% GC / Site Management Fee is calculated on these actuals at invoicing.</div>';
+    html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Prep vendors are paid directly by the client; Havellin\'s ' + (((est.svc || job.svc) === 'prep') ? '30% GC / Site Management Fee' : '15% Service Management Fee (folded in with all coordinated vendors)') + ' is calculated on these actuals at invoicing.</div>';
   }
 
   if (colls.length) {
