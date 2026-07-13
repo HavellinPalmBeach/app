@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 2:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 3:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -571,6 +571,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
           <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
         </div>
+        </div>
+        <div id="move-mgmt-card" style="display:none;">
+          <div class="sec" style="margin-top:12px;">Move Management</div>
+          <div id="move-dest-readout" style="font-size:11px;color:var(--gray);margin-bottom:6px;"></div>
+          <div class="toggle-wrap">
+            <div class="toggle-info"><div class="toggle-title">Art hanging / window treatments / styling?</div><div class="toggle-sub">Adds 8 PS hrs — hanging art, drapes &amp; final styling</div></div>
+            <label class="toggle"><input type="checkbox" id="e-move-styling" onchange="calcAll()"><span class="slider"></span></label>
+          </div>
         </div>
         <!-- Property value, square footage, and years in home are captured at Client Intake
              and applied to the estimate behind the scenes — kept here (hidden) so calcAll still reads them. -->
@@ -2062,7 +2070,7 @@ function roomDefault(name){ return ROOM_DEFAULTS[name] || {vol:3, cplx:3}; }
 // coefficients — no separate concierge multiplier.
 var JOB_STEPS = {
   downsizing:        {triage:[0.30,0.15], pack:[0.15,0.85], disposition:[0.06,0.19]},
-  downsizing_move:   {triage:[0.30,0.15], pack:[0.15,0.85], disposition:[0.06,0.19], move:true},
+  downsizing_move:   {triage:[0.30,0.15], pack:[0.15,0.85], disposition:[0.06,0.19]},  // move-in labor is added in calcAll from the destination sqft, not here
   home_cleanout:     {triage:[0.10,0.25], pack:[0.06,0.75], disposition:[0.06,0.76]},
   cleanout:          {triage:[0.12,0.25], document:[0.12,0.90], pack:[0.06,0.70], disposition:[0.09,0.74]},
   probate:           {triage:[0.12,0.25], document:[0.12,1.25], pack:[0.06,0.70], disposition:[0.09,0.79], legal:[0.10,0]},
@@ -2122,7 +2130,6 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
   // (tc/ps) is unchanged: hands-on + overhead.
   var tc=0, ps=0, roomTC=0, roomPS=0;
   for (var L in steps){
-    if (L==='move'){ tc += 6 + load*0.24; ps += 2 + load*0.13; continue; }  // overhead
     var cf = ENGINE_CAREFUL[L] ? cpxFactor : 1;
     var stepTC = load*steps[L][0]*cf;
     var stepPS = load*steps[L][1];
@@ -2630,9 +2637,26 @@ function calcAll() {
     if (svcKey === 'cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Estate Settlement: adds full item documentation for the §733.604 inventory.</div>';
     else if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate: documentation + legal / chain-of-custody work.</div>';
     else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: heavier documentation, legal, and disposition load for multiple heirs/attorneys is built into the rates — no separate heir uplift.</div>';
-    else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: move-day coordination added (scales with home size).</div>';
+    else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: TC move-day + PS new-home unpacking, scaled to the destination sq ft.</div>';
     else if (svcKey === 'home_cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Home Cleanout: full disposition of all contents (haul / donate / sell / shred).</div>';
     svcBadgeEl.innerHTML = svcBadgeTxt;
+  }
+
+  // Move Management card (styling toggle + destination-sqft readout) — visible only for
+  // Downsizing + Move Management. Move-in hours scale with the new home's sqft, captured
+  // in Client Intake; warn here when it hasn't been set so the estimator goes and fills it.
+  var moveCard = document.getElementById('move-mgmt-card');
+  if (moveCard) {
+    var _isMoveSvc = (svcKey === 'downsizing_move');
+    moveCard.style.display = _isMoveSvc ? 'block' : 'none';
+    if (_isMoveSvc) {
+      var _mvJob = jobs.find(function(j){ return j.id === (parseInt(document.getElementById('e-job').value) || 0); });
+      var _mvDest = _mvJob && _mvJob.destSqft ? (parseFloat(_mvJob.destSqft) || 0) : 0;
+      var _mvRo = document.getElementById('move-dest-readout');
+      if (_mvRo) _mvRo.innerHTML = _mvDest > 0
+        ? 'New home: <strong>' + _mvDest.toLocaleString() + ' sq ft</strong> — move-in labor scales with this (set in Client Intake).'
+        : '<span style="color:#A32D2D;font-weight:600;">&#9888; New home sq ft not set — enter it in Client Intake so move-in labor can be priced.</span>';
+    }
   }
 
   var access = document.getElementById('adj-access').checked;
@@ -2676,6 +2700,21 @@ function calcAll() {
   var loadedJob = jobs.find(function(j){ return j.id === loadedJobId; });
   var jobStartStr = loadedJob && loadedJob.start ? loadedJob.start : null;
 
+  // ── Downsizing + Move Management: destination (move-in) labor ──────────────────
+  // Keyed to the NEW home's square footage (Client Intake → i-dest-sqft, stored on
+  // the job), NOT the origin. Move day is TC-only — a full ~8h day supervising the
+  // movers at both ends (load-out, drive, placement); no PS on move day. The 2-PS
+  // crew works only the unpack day(s), and those PS hours scale with the new home.
+  // The optional styling toggle adds art/drape/hang hours (PS). destTC/destPS were
+  // declared 0 above and feed the itemized "Move Management — Destination Setup"
+  // line on the client estimate.
+  if (svcKey === 'downsizing_move') {
+    var _destSqft = loadedJob && loadedJob.destSqft ? (parseFloat(loadedJob.destSqft) || 0) : 0;
+    var _moveStyling = document.getElementById('e-move-styling') && document.getElementById('e-move-styling').checked;
+    destTC = Math.round((8 + _destSqft * 0.002) * 10) / 10;
+    destPS = Math.round((_destSqft * 0.009 + (_moveStyling ? 8 : 0)) * 10) / 10;
+  }
+
   // Probate documentation is priced inside the engine (work-step model). No separate
   // inventory multiplier — that would double-count the documentation hours.
   var probateInvBadgeEl = document.getElementById('probate-inv-badge');
@@ -2706,7 +2745,10 @@ function calcAll() {
   // separate Home Prep line. The extra TC coordination hours still bill on top.
   if (prepEnabled && !isPrep) { smf += prepFee; prepFee = 0; }
   if (isPrep) { totTC = 0; totPS = 0; baseTCHrs = 0; basePSHrs = 0; }
-  totTC = Math.round((totTC + prepTCHrs) * 10) / 10;
+  // Fold in bundled-prep TC coordination and move-management destination hours.
+  // Move day (destTC) is TC-only; the unpack crew hours (destPS) join the PS total.
+  totTC = Math.round((totTC + prepTCHrs + destTC) * 10) / 10;
+  totPS = Math.round((totPS + destPS) * 10) / 10;
   tcFee = Math.round(totTC * tcRate);
   var svcType = document.getElementById('e-svc').value;
   var coordDays = 0, vendorTotal = 0, gcFee = 0, stagerCost = 0, stagerGcFee = 0;
@@ -3072,7 +3114,8 @@ function calcAll() {
     coordDays: coordDays, vendorTotal: vendorTotal,
     gcFee: gcFee, stagerCost: stagerCost, stagerGcFee: stagerGcFee,
     prepEnabled: prepEnabled, prepItems: JSON.parse(JSON.stringify(prepItems)),
-    prepCost: prepCost, prepFee: prepFee, prepTCHrs: prepTCHrs
+    prepCost: prepCost, prepFee: prepFee, prepTCHrs: prepTCHrs,
+    moveStyling: document.getElementById('e-move-styling') ? document.getElementById('e-move-styling').checked : false
   };
 
   // Re-attach the immutable lock snapshot. Prefer the in-session value (same
@@ -3868,6 +3911,10 @@ function saveEstimateAndPreview() {
     var propValEl = document.getElementById('e-propval');
     if (!propValEl || !propValEl.value || propValEl.value === '0') {
       showFB('e-fb','warn','Property value is required — set the approximate home value in Client Intake for this client, then reopen the estimate.');
+      return;
+    }
+    if (currentEstimate.svc === 'downsizing_move' && !(parseFloat(job.destSqft) > 0)) {
+      showFB('e-fb','warn','Enter the New home sq ft in Client Intake for this client — Move Management pricing needs it.');
       return;
     }
   }
@@ -5390,6 +5437,8 @@ function restoreEstimateToUI(est) {
   if (prepChkR) prepChkR.checked = est.prepEnabled || false;
   if (prepContentR) prepContentR.style.display = est.prepEnabled ? 'block' : 'none';
   renderPrepItems();
+  var moveStylingR = document.getElementById('e-move-styling');
+  if (moveStylingR) moveStylingR.checked = est.moveStyling || false;
 
   window._suppressEstimateAutoSave = false;
   calcAll(); // one clean save with fully-restored state
