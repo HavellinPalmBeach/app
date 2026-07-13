@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 2:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 2:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3287,14 +3287,22 @@ function updatePrepCost(i, val) {
 function calcPrepTotals() {
   var totalCost = prepItems.reduce(function(a,p){ return a+p.cost; }, 0);
   var totalFee = Math.round(totalCost * currentPrepFeeRate());
-  var tcHrs = getPrepTCHrs();
+  var isPrepSvc = (currentSvc() === 'prep');
+  // A standalone prep engagement bills NO separate TC hours — coordination is baked into
+  // the 30% GC fee (see the !isPrep gate in calcAll). Only a bundled add-on actually adds
+  // the coordination hours on top of the base job's labor, so only then is the raw helper
+  // meaningful for the badge.
+  var tcHrs = isPrepSvc ? 0 : getPrepTCHrs();
   var c = document.getElementById('prep-total-cost');
   var f = document.getElementById('prep-total-fee');
   if (c) c.textContent = '$'+totalCost.toLocaleString();
   if (f) f.textContent = '$'+totalFee.toLocaleString();
   var badge = document.getElementById('prep-tc-badge');
-  if (badge && prepItems.length > 0) badge.textContent = 'Est. TC coordination: ' + tcHrs.toFixed(1) + ' hrs added to TC total';
-  else if (badge) badge.textContent = '';
+  if (badge && prepItems.length > 0) {
+    badge.textContent = isPrepSvc
+      ? 'Coordination & oversight are included in the 30% GC fee — no separate TC hours billed.'
+      : 'Est. TC coordination: ' + tcHrs.toFixed(1) + ' hrs added to TC total';
+  } else if (badge) badge.textContent = '';
 }
 
 function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost; }, 0); }
