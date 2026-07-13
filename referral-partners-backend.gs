@@ -22,9 +22,14 @@
  */
 
 var SHEET_NAME = 'Partners';
+// Base identity/lifecycle columns come first (unchanged, so existing deployments keep
+// their layout); the richer prospecting-intel columns are appended after 'notes'.
 var COLUMNS = [
   'first_name', 'last_name', 'partner_name', 'partner_type', 'firm', 'primary_contact',
-  'phone', 'email', 'website', 'status', 'owner', 'last_contacted', 'notes'
+  'phone', 'email', 'website', 'status', 'owner', 'last_contacted', 'notes',
+  'title', 'street', 'suite', 'city', 'state', 'zip', 'phone_type',
+  'credentials', 'board_cert', 'actec', 'council', 'council_role', 'email_status',
+  'channel', 'priority', 'warm_path'
 ];
 
 function setupSheet() {
