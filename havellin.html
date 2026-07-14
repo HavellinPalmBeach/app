@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.13 · 8:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 8:57am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -785,6 +785,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
                   <option>Appliance Service / Repair</option>
                   <option>Carpet Cleaning</option>
                   <option>Deep Clean / Move-Out Clean</option>
+                  <option>Floor Refinishing / Restoration</option>
                   <option>Full Interior Paint</option>
                   <option>Handyman Services</option>
                   <option>HVAC Service</option>
@@ -1338,8 +1339,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option>Property Preparation</option>
         </select>
         <label>Category</label>
-        <input type="text" id="v-category" list="v-cat-list" placeholder="e.g. Junk Removal &amp; Dumpster">
+        <input type="text" id="v-category" list="v-cat-list" placeholder="e.g. Junk Removal &amp; Dumpster — or type a new one">
         <datalist id="v-cat-list"></datalist>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Pick an existing category or type a new one to create it — new specialty categories (e.g. stone/hardwood floor refinishing) are added just by typing them here.</div>
         <label>Primary contact</label>
         <input type="text" id="v-contact" placeholder="Name / title">
         <label>Phone</label>
@@ -3304,6 +3306,7 @@ var PREP_TC_HRS = {
   'Appliance Service / Repair':  0.5,
   'Carpet Cleaning':             1.0,
   'Deep Clean / Move-Out Clean': 1.0,
+  'Floor Refinishing / Restoration': 1.5,
   'Full Interior Paint':         2.0,
   'Handyman Services':           1.0,
   'HVAC Service':                0.5,
@@ -9835,6 +9838,13 @@ function initVendorsTab() {
   renderVendorsTab();
 }
 
+// Categories that a Job Plan task-slot expects but that no directory vendor uses yet.
+// Seeding them into the Add-Vendor autocomplete lets a new specialty vendor be filed
+// under the EXACT label its slot expects, so the identity fallback in
+// vendorCategoriesForSlot() auto-populates that slot. Keep each string identical to the
+// matching prep-item / service label (e.g. the "Floor Refinishing / Restoration" prep type).
+var VENDOR_CATEGORY_SEED = ['Floor Refinishing / Restoration'];
+
 // Fill the category filter select and the intake category datalist from the live
 // directory, preserving whatever the user already had selected.
 function populateVendorFilters() {
@@ -9846,8 +9856,12 @@ function populateVendorFilters() {
     cSel.innerHTML = '<option value="">All categories</option>' + Object.keys(cats).sort().map(function(c){
       return '<option' + (cv===c?' selected':'') + '>' + esc(c) + '</option>'; }).join('');
   }
+  // The intake datalist also offers slot-backed categories not yet used by any vendor
+  // (the filter select above stays limited to categories that actually have vendors).
+  var dcats = {}; Object.keys(cats).forEach(function(c){ dcats[c] = 1; });
+  VENDOR_CATEGORY_SEED.forEach(function(c){ dcats[c] = 1; });
   var dl = document.getElementById('v-cat-list');
-  if (dl) dl.innerHTML = Object.keys(cats).sort().map(function(c){ return '<option value="' + esc(c) + '">'; }).join('');
+  if (dl) dl.innerHTML = Object.keys(dcats).sort().map(function(c){ return '<option value="' + esc(c) + '">'; }).join('');
 }
 
 function getFilteredVendors() {
