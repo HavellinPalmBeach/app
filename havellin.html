@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 8:57am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 9:58am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -745,14 +745,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <tbody id="vendor-body"></tbody>
             <tfoot>
               <tr>
-                <td><select id="new-vendor-type" style="width:100%;"><option value="">Add vendor...</option>
-                  <option>Appraiser(s)</option><option>Firearms / FFL Transfer</option><option>Auction House</option><option>Dumpster Rental</option>
-                  <option>Estate Sale Company</option><option>Junk Removal / Hauling</option>
-                  <option>Moving Company</option><option>Professional Cleaning</option>
-                  <option>Specialty Vendor (art handler, etc.)</option>
-                  <option>Document Shredding</option>
-                  <option>Handyman / General Repairs</option><option>Pest Inspection / Treatment</option>
-                </select></td>
+                <td><select id="new-vendor-type" style="width:100%;"><option value="">Add vendor...</option></select></td>
                 <td><input type="number" id="new-vendor-cost" placeholder="0" style="width:100%;"></td>
                 <td style="color:var(--gray);" id="new-smf">$0</td>
                 <td><button class="icon-btn" onclick="addVendor()">+ Add</button></td>
@@ -781,23 +774,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <tbody id="prep-body"></tbody>
             <tfoot>
               <tr>
-                <td><select id="new-prep-type" style="width:100%;"><option value="">Add item...</option>
-                  <option>Appliance Service / Repair</option>
-                  <option>Carpet Cleaning</option>
-                  <option>Deep Clean / Move-Out Clean</option>
-                  <option>Floor Refinishing / Restoration</option>
-                  <option>Full Interior Paint</option>
-                  <option>Handyman Services</option>
-                  <option>HVAC Service</option>
-                  <option>Landscaping / Curb Appeal</option>
-                  <option>Minor Repairs</option>
-                  <option>Pest Inspection / Treatment</option>
-                  <option>Pool / Spa Service</option>
-                  <option>Pressure Washing</option>
-                  <option>Professional Staging</option>
-                  <option>Touch-Up / Interior Paint</option>
-                  <option>Window Cleaning</option>
-                </select></td>
+                <td><select id="new-prep-type" style="width:100%;"><option value="">Add item...</option></select></td>
                 <td><input type="number" id="new-prep-cost" placeholder="0" style="width:100%;"></td>
                 <td style="color:var(--gray);" id="new-prep-fee">$0</td>
                 <td><button class="icon-btn" onclick="addPrepItem()">+ Add</button></td>
@@ -1329,8 +1306,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div>
         <label>Vendor name <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <input type="text" id="v-name" placeholder="e.g. Junk King Palm Beach">
-        <label>Category group</label>
-        <select id="v-group">
+        <label>Category group <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        <select id="v-group" onchange="refreshVendorCategoryList()">
           <option value="">— select —</option>
           <option>Asset Liquidation &amp; Valuation</option>
           <option>Disposal &amp; Waste Management</option>
@@ -1339,9 +1316,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option>Property Preparation</option>
         </select>
         <label>Category</label>
-        <input type="text" id="v-category" list="v-cat-list" placeholder="e.g. Junk Removal &amp; Dumpster — or type a new one">
+        <input type="text" id="v-category" list="v-cat-list" placeholder="pick a group first, then choose or type a category">
         <datalist id="v-cat-list"></datalist>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Pick an existing category or type a new one to create it — new specialty categories (e.g. stone/hardwood floor refinishing) are added just by typing them here.</div>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Pick from the chosen group's categories, or type a new one to create it under that group — new specialty categories (e.g. Floor Refinishing) are added just by typing them here. The group decides which job menu the vendor feeds (Property Preparation → Home Prep; the rest → Service Vendors).</div>
         <label>Primary contact</label>
         <input type="text" id="v-contact" placeholder="Name / title">
         <label>Phone</label>
@@ -3306,7 +3283,7 @@ var PREP_TC_HRS = {
   'Appliance Service / Repair':  0.5,
   'Carpet Cleaning':             1.0,
   'Deep Clean / Move-Out Clean': 1.0,
-  'Floor Refinishing / Restoration': 1.5,
+  'Floor Refinishing':           1.5,
   'Full Interior Paint':         2.0,
   'Handyman Services':           1.0,
   'HVAC Service':                0.5,
@@ -7983,6 +7960,7 @@ function loadVendorDirectory() {
   try { var s = localStorage.getItem('hav_vendor_dir'); if (s) vendorDirectory = JSON.parse(s); } catch(e) {}
   try { var u = localStorage.getItem('hav_vendor_url') || ''; if (u) VENDOR_SYNC_URL = u; } catch(e) {}
   normalizeVendorDir();
+  if (typeof populateJobMenus === 'function') populateJobMenus();
   var warn = document.getElementById('vendors-url-warn');
   if (!VENDOR_SYNC_URL) {
     setVendorDirStatus('No URL set yet', false);
@@ -8000,6 +7978,7 @@ function loadVendorDirectory() {
       if (data && Array.isArray(data.vendors) && !data.error) {
         vendorDirectory = data.vendors;
         normalizeVendorDir();
+        if (typeof populateJobMenus === 'function') populateJobMenus();
         try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
         showSyncBadge('Loaded ' + vendorDirectory.length + ' vendor' + (vendorDirectory.length !== 1 ? 's' : '') + ' from directory ✓');
         setVendorDirStatus('✓ ' + vendorDirectory.length + ' vendors loaded', false);
@@ -9324,18 +9303,21 @@ var VENDOR_SLOT_CATEGORY_MAP = {
   'Professional Cleaning': ['Deep Cleaning','Carpet Cleaning','Window Cleaning','Pressure Washing'],
   'Specialty Vendor (art handler, etc.)': ['Specialty Packing & Shipping'],
   'Document Shredding': ['Document Shredding'],
-  'Handyman / General Repairs': ['Handyman Services','General Contractor'],
+  'Handyman / General Repairs': ['Handyman','General Contractor'],
   'Pest Inspection / Treatment': ['Pest Inspection / Treatment'],
   // End-of-Job Logistics labels (see LOGISTICS_CATEGORIES)
   'Donation Organization': ['Donation Pickup'],
   'Move-Out / Final Cleaning': ['Deep Cleaning','Carpet Cleaning'],
-  // Home-Prep item types
+  // Home-Prep item types — friendly labels that differ from the directory category
+  // name (identity fallback covers the ones that already match, e.g. Carpet Cleaning).
   'Appliance Service / Repair': ['Appliance Repair'],
+  'Handyman Services': ['Handyman'],
+  'HVAC Service': ['HVAC'],
   'Deep Clean / Move-Out Clean': ['Deep Cleaning'],
   'Full Interior Paint': ['Painting'],
   'Touch-Up / Interior Paint': ['Painting'],
   'Landscaping / Curb Appeal': ['Landscaper'],
-  'Minor Repairs': ['Handyman Services','General Contractor'],
+  'Minor Repairs': ['Handyman','General Contractor'],
   'Professional Staging': ['Home Staging'],
   'Pool / Spa Service': ['Pool & Spa Service'],
   // Collection dispositions (COL_DISP_LABELS keys)
@@ -9838,30 +9820,112 @@ function initVendorsTab() {
   renderVendorsTab();
 }
 
-// Categories that a Job Plan task-slot expects but that no directory vendor uses yet.
-// Seeding them into the Add-Vendor autocomplete lets a new specialty vendor be filed
-// under the EXACT label its slot expects, so the identity fallback in
-// vendorCategoriesForSlot() auto-populates that slot. Keep each string identical to the
-// matching prep-item / service label (e.g. the "Floor Refinishing / Restoration" prep type).
-var VENDOR_CATEGORY_SEED = ['Floor Refinishing / Restoration'];
+// ── VENDOR TAXONOMY (group → category → job menu) ────────────────────────────
+// The 5 Category groups are the stable top-level taxonomy; the categories under
+// them are learned live from the directory — no hardcoded category list to edit
+// when a new specialty vendor turns up. GROUP_JOB_MENU is the ONE fixed routing
+// decision: which estimate menu (and therefore which fee) each group feeds.
+//   'prep'    → Home Prep items      (flat 30% GC fee)
+//   'service' → estimate Service Vendors (flat 15% SMF)
+// A group absent here contributes to neither menu.
+var GROUP_JOB_MENU = {
+  'Property Preparation':          'prep',
+  'Asset Liquidation & Valuation': 'service',
+  'Disposal & Waste Management':   'service',
+  'Moving & Logistics':            'service',
+  'Professional Services':         'service'
+};
 
-// Fill the category filter select and the intake category datalist from the live
-// directory, preserving whatever the user already had selected.
+// Distinct categories used by directory vendors, optionally scoped to one Category
+// group (constrains the intake picker) or to a job menu via GROUP_JOB_MENU (builds
+// the prep / service dropdowns). Returned sorted.
+function directoryCategories(opts) {
+  opts = opts || {};
+  var set = {};
+  vendorDirectory.forEach(function(v){
+    var g = String(v.category_group || '').trim();
+    var c = String(v.category || '').trim();
+    if (!c) return;
+    if (opts.group != null && g !== opts.group) return;
+    if (opts.menu  != null && GROUP_JOB_MENU[g] !== opts.menu) return;
+    set[c] = 1;
+  });
+  return Object.keys(set).sort();
+}
+
+// Fill the category filter select (all categories in use) and the intake category
+// datalist (scoped to the group chosen in the Add-Vendor form). Scoping the intake
+// list to the group is what stops nonsensical group/category pairings — and a new
+// category typed here is created under whatever group is selected.
 function populateVendorFilters() {
-  var cats = {};
-  vendorDirectory.forEach(function(v){ if (v.category) cats[String(v.category).trim()] = 1; });
+  var cats = directoryCategories();
   var cSel = document.getElementById('v-filter-cat');
   if (cSel) {
     var cv = cSel.value;
-    cSel.innerHTML = '<option value="">All categories</option>' + Object.keys(cats).sort().map(function(c){
+    cSel.innerHTML = '<option value="">All categories</option>' + cats.map(function(c){
       return '<option' + (cv===c?' selected':'') + '>' + esc(c) + '</option>'; }).join('');
   }
-  // The intake datalist also offers slot-backed categories not yet used by any vendor
-  // (the filter select above stays limited to categories that actually have vendors).
-  var dcats = {}; Object.keys(cats).forEach(function(c){ dcats[c] = 1; });
-  VENDOR_CATEGORY_SEED.forEach(function(c){ dcats[c] = 1; });
+  refreshVendorCategoryList();
+}
+
+// Rebuild the intake datalist for the group currently selected in the form (all
+// categories if none is chosen yet). Called on load and whenever the group changes.
+function refreshVendorCategoryList() {
   var dl = document.getElementById('v-cat-list');
-  if (dl) dl.innerHTML = Object.keys(dcats).sort().map(function(c){ return '<option value="' + esc(c) + '">'; }).join('');
+  if (!dl) return;
+  var g = _getV('v-group');
+  var cats = g ? directoryCategories({group: g}) : directoryCategories();
+  dl.innerHTML = cats.map(function(c){ return '<option value="' + esc(c) + '">'; }).join('');
+}
+
+// ── ESTIMATE JOB MENUS (data-driven from the taxonomy) ───────────────────────
+// The "add line" dropdowns = curated base task labels PLUS any live directory
+// category (routed by group) not already reachable through a base label. Because
+// each added option's text IS the category string, the Job Plan identity match is
+// exact by construction, so a newly-added specialty vendor auto-populates its slot
+// with zero code. Base labels stay for the standard, differently-phrased tasks
+// (e.g. "Full Interior Paint" → the Painting category).
+var PREP_BASE_TYPES = [
+  'Appliance Service / Repair','Carpet Cleaning','Deep Clean / Move-Out Clean',
+  'Full Interior Paint','Handyman Services','HVAC Service','Landscaping / Curb Appeal',
+  'Minor Repairs','Pest Inspection / Treatment','Pool / Spa Service','Pressure Washing',
+  'Professional Staging','Touch-Up / Interior Paint','Window Cleaning'
+];
+var SERVICE_BASE_TYPES = [
+  'Appraiser(s)','Firearms / FFL Transfer','Auction House','Dumpster Rental',
+  'Estate Sale Company','Junk Removal / Hauling','Moving Company','Professional Cleaning',
+  'Specialty Vendor (art handler, etc.)','Document Shredding','Handyman / General Repairs',
+  'Pest Inspection / Treatment'
+];
+// Lower-cased categories already reachable through a base label (via the slot map or
+// identity fallback), so live categories aren't listed a second time.
+function _coveredCats(baseTypes) {
+  var set = {};
+  baseTypes.forEach(function(lbl){
+    vendorCategoriesForSlot('type', lbl).forEach(function(c){ set[String(c).trim().toLowerCase()] = 1; });
+  });
+  return set;
+}
+function _jobMenuHTML(baseTypes, menu, placeholder) {
+  var covered = _coveredCats(baseTypes);
+  var baseLower = {}; baseTypes.forEach(function(t){ baseLower[t.toLowerCase()] = 1; });
+  var extra = directoryCategories({menu: menu}).filter(function(c){
+    return !covered[c.toLowerCase()] && !baseLower[c.toLowerCase()];
+  });
+  var html = '<option value="">' + esc(placeholder) + '</option>' +
+    baseTypes.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join('');
+  if (extra.length) html += '<optgroup label="From directory">' +
+    extra.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('') + '</optgroup>';
+  return html;
+}
+// Rebuild both estimate "add line" dropdowns from the current directory, preserving
+// any in-progress selection. Safe to call anytime; runs on directory load and after
+// a vendor is saved (so a brand-new category appears immediately).
+function populateJobMenus() {
+  var p = document.getElementById('new-prep-type');
+  if (p) { var pv = p.value; p.innerHTML = _jobMenuHTML(PREP_BASE_TYPES, 'prep', 'Add item...'); if (pv) p.value = pv; }
+  var s = document.getElementById('new-vendor-type');
+  if (s) { var sv = s.value; s.innerHTML = _jobMenuHTML(SERVICE_BASE_TYPES, 'service', 'Add vendor...'); if (sv) s.value = sv; }
 }
 
 function getFilteredVendors() {
@@ -10136,6 +10200,7 @@ function postVendorWrite(type, payload, cb) {
 function saveVendor() {
   var name = _getV('v-name');
   if (!name) { showFB('v-fb','warn','Vendor name is required.'); return; }
+  if (!_getV('v-group')) { showFB('v-fb','warn','Category group is required — it decides which job menu (and fee) this vendor feeds.'); return; }
   if (!VENDOR_SYNC_URL) { showFB('v-fb','err','Set the Vendor Directory URL in Settings first — vendors are saved to the shared sheet.'); return; }
   var fields = {};
   Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ fields[VENDOR_FORM_MAP[fid]] = _getV(fid); });
@@ -10152,7 +10217,7 @@ function saveVendor() {
       try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
       if (st){ st.textContent = 'Saved ✓'; st.style.color = 'var(--ok-tx)'; }
       document.getElementById('add-vendor-card').style.display = 'none';
-      populateVendorFilters(); renderVendorsTab();
+      populateVendorFilters(); populateJobMenus(); renderVendorsTab();
     });
   } else {
     postVendorWrite('addVendor', { fields: fields }, function(ok, d){
@@ -10165,7 +10230,7 @@ function saveVendor() {
       try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
       if (st){ st.textContent = 'Added ✓'; st.style.color = 'var(--ok-tx)'; }
       document.getElementById('add-vendor-card').style.display = 'none';
-      populateVendorFilters(); renderVendorsTab();
+      populateVendorFilters(); populateJobMenus(); renderVendorsTab();
     });
   }
 }
