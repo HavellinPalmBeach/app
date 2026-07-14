@@ -30,10 +30,13 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-07-08** (added Home Prep for Sale as a
-  standalone service + streamlined Job Plan, Referral Partners tab, Vendor Directory
-  section, beds/full/half baths, referral-source linkage, nav order incl. Win/Loss first,
-  Vendor + Referral Apps Script URLs in Settings).
+- Last reconciled against the app: **2026-07-14** (added §13a Category Group &
+  Category taxonomy — group required and dictates category, self-serve new categories,
+  group→estimate-menu/fee routing table; noted the data-driven "From directory" options
+  in the §5d third-party-vendor and §6a Home Prep item dropdowns). Prior pass 2026-07-08
+  (Home Prep for Sale standalone + streamlined Job Plan, Referral Partners tab, Vendor
+  Directory section, beds/full/half baths, referral-source linkage, nav order incl.
+  Win/Loss first, Vendor + Referral Apps Script URLs in Settings).
   Still thin / deferred until the app is fully built: Inventory and Win / Loss tabs, and
   the full labor-job Job Plan phase playbook detail.
 

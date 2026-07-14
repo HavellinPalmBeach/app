@@ -105,6 +105,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <h3>5d. Moving Materials &amp; Third-Party Vendors</h3>
   <p>Add third-party vendors with estimated costs. A <strong>15% Service Management Fee</strong> is automatically calculated on vendor totals. Vendor costs are estimates only — actual invoices billed directly to client at cost.</p>
+  <p>The vendor-type dropdown lists the standard estate/clearing service types plus, under a <strong>From directory</strong> group, any category from the Vendor Directory in the estate-side groups (Asset Liquidation, Disposal, Moving, Professional Services). So a new category added to the directory shows up here automatically — see Section 13a.</p>
 
   <h3>5e. Home Prep for Sale (as an add-on)</h3>
   <p>On a labor-based job you can also check <strong>Include in estimate</strong> in the Home Prep section to add show-ready prep as an add-on. Prep vendors carry a <strong>30% GC / Site Management Fee</strong> (not the 15% vendor SMF). When Home Prep is the <em>only</em> service, use the standalone flow in Section 6 instead.</p>
@@ -122,7 +123,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <h3>6a. Building the estimate</h3>
   <ul>
     <li>Select the job (Service Type = <em>Home Prep for Sale</em>). The estimator hides room scoring, crew, and labor entirely — the <strong>Home Prep for Sale — Managed Vendors</strong> card sits beside the Job details.</li>
-    <li>Add each prep item/vendor with an estimated cost. The 30% fee is shown per line and in total.</li>
+    <li>Add each prep item/vendor with an estimated cost. The 30% fee is shown per line and in total. The item dropdown lists the standard prep tasks plus, under a <strong>From directory</strong> group, any <em>Property Preparation</em> category from the Vendor Directory — so a newly-added prep specialty (e.g. Floor Refinishing) appears here automatically (Section 13a).</li>
     <li><strong>Scope notes:</strong> each vendor line has a scope field — capture on the walkthrough exactly what to tell that trade (e.g. "5 bedrooms + hallway, walls &amp; ceilings; front &amp; back landscaping"). These carry through to the Job Plan sourcing.</li>
     <li>No property value is required.</li>
   </ul>
@@ -216,9 +217,26 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <p><strong>Tab: Vendors.</strong> The curated network of trades and service providers (painters, landscapers, movers, appraisers, haulers, etc.), stored in its own Google Sheet. Work each vendor through its lifecycle: <em>Identified → Contacted → Qualified → Vetting → Contracted → Active</em>. Only <strong>Active</strong> vendors can be assigned to a job in the Job Plan sourcing.</p>
   <ul>
     <li><strong>☎ Log contact</strong> — stamps the last-contacted date (used for follow-up cadence).</li>
-    <li><strong>Edit</strong> — intake/vetting fields: contact, pricing structure, ballpark, minimum job, lead time, COI on file, license, service area, notes.</li>
+    <li><strong>Edit</strong> — intake/vetting fields: category group, category, contact, pricing structure, ballpark, minimum job, lead time, COI on file, license, service area, notes.</li>
     <li>Performance is rated post-job (a rolling average), kept separate from the curated fields so a vetting edit never wipes performance history.</li>
   </ul>
+
+  <h3>13a. Category Group &amp; Category (how a vendor is filed)</h3>
+  <p>Every vendor is filed under a <strong>Category group</strong> (required) and a <strong>Category</strong>. The five groups are the fixed top-level taxonomy; categories live underneath them and are <em>open-ended</em> — you add a new one just by typing it.</p>
+  <ul>
+    <li><strong>The group dictates the category.</strong> Pick a group first; the Category field then offers only that group's existing categories. This prevents nonsensical pairings (e.g. a mover filed under "Document Shredding").</li>
+    <li><strong>Adding a new category is self-serve.</strong> If none of the group's categories fit a new specialty vendor (e.g. a stone/hardwood <em>Floor Refinishing</em> outfit), just type the new category name — it's created under the selected group. No developer/code change needed.</li>
+    <li><strong>The group decides which estimate menu — and fee — the vendor feeds</strong> (see table). A category added under a group automatically shows up in that group's estimate menu and, once a vendor in it is <strong>Active</strong>, auto-populates the matching Job Plan sourcing slot.</li>
+  </ul>
+  <table>
+    <tr><th>Category group</th><th>Feeds estimate menu</th><th>Fee</th></tr>
+    <tr><td>Property Preparation</td><td>Home Prep items (Section 5e / 6a)</td><td>30% GC / Site Management</td></tr>
+    <tr><td>Asset Liquidation &amp; Valuation</td><td>Third-Party / Service Vendors (Section 5d)</td><td>15% SMF</td></tr>
+    <tr><td>Disposal &amp; Waste Management</td><td>Third-Party / Service Vendors + End-of-Job Logistics</td><td>15% SMF</td></tr>
+    <tr><td>Moving &amp; Logistics</td><td>Third-Party / Service Vendors</td><td>15% SMF</td></tr>
+    <tr><td>Professional Services</td><td>Third-Party / Service Vendors</td><td>15% SMF</td></tr>
+  </table>
+  <p class="note">What stays fixed: the five groups and the group→menu routing above. Everything below them — the categories — is self-serve, so onboarding a new type of vendor never requires a code change.</p>
 
   <h2>14. Referral Partners</h2>
   <p><strong>Tab: Referral Partners.</strong> A CRM for the network of attorneys, realtors, trust officers, and Douglas Elliman agents who refer business. Mirrors the Vendor Directory: its own Google Sheet + Apps Script, kept apart from job data.</p>
@@ -256,7 +274,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-08
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-14
   </div>
 
 </div>
