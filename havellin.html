@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 12:28pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 3:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1321,7 +1321,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <label>Primary contact</label>
         <input type="text" id="v-contact" placeholder="Name / title">
         <label>Phone</label>
-        <input type="tel" id="v-phone" placeholder="(561) 000-0000">
+        <input type="tel" id="v-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
         <label>Email</label>
         <input type="email" id="v-email" placeholder="vendor@email.com">
         <label>Website</label>
@@ -9403,7 +9403,7 @@ function _vendorRefLine(rec) {
   if (v.lead_time)     rest.push('Lead ' + v.lead_time);
   var head = ['<strong>' + esc(name) + '</strong>'];
   if (contact) head.push('<strong>' + esc(contact) + '</strong>');
-  if (phone)   head.push('<strong>' + esc(phone) + '</strong>');
+  if (phone)   head.push('<strong>' + esc(fmtPhoneDisplay(phone)) + '</strong>');
   return '<div style="font-size:12px;color:var(--gray-dk);margin-top:5px;line-height:1.5;">' +
     head.join(' · ') +
     (rest.length ? ' <span style="color:var(--gray);font-weight:400;">· ' + rest.map(esc).join(' · ') + '</span>' : '') +
@@ -10072,7 +10072,8 @@ function vendorCardHtml(v) {
   // Highlighted contact + service-area block — the primary reason to open a card.
   var cbits = [];
   if (v.primary_contact) cbits.push('<strong>' + esc(v.primary_contact) + '</strong>');
-  if (v.phone) cbits.push('☎ ' + esc(v.phone));
+  var vph = fmtPhoneDisplay(v.phone);
+  if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a>');
   if (v.email) cbits.push('✉ <a href="mailto:' + esc(v.email) + '" style="color:var(--bronze);">' + esc(v.email) + '</a>');
   var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
   var addrRow = v.physical_address ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Address</span> ' + esc(v.physical_address) + '</div>' : '';
