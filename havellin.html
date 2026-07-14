@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 11:42am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 12:28pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -328,8 +328,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <option>Family</option>
             <option>Friend</option>
             <option>Google / SEO</option>
-            <option>Realtor — Douglas Elliman</option>
-            <option>Realtor — Other</option>
+            <option>Realtor</option>
             <option>Senior living community</option>
             <option>Social media</option>
             <option>Trust officer</option>
@@ -346,7 +345,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div id="i-refpartner-wrap" style="display:none;">
         <label>Referral partner <span style="font-weight:400;color:var(--gray);">(who specifically)</span></label>
         <select id="i-refpartner"><option value="">— none / not a named partner —</option></select>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — link this job to a specific attorney, trust officer, wealth manager, realtor, or allied vendor so referrals are tracked. Manage the list in the Referral Partners tab.</div>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — lists only the partners matching the referral source selected above, so the specific referrer is tracked. Manage the list in the Referral Partners tab.</div>
       </div>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
@@ -1547,12 +1546,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <label>Partner type <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <select id="r-type">
           <option value="">&mdash; select &mdash;</option>
+          <option>Allied vendor</option>
+          <option>Country club / golf community</option>
           <option>Estate attorney</option>
+          <option>Realtor</option>
+          <option>Senior living community</option>
           <option>Trust officer</option>
           <option>Wealth manager</option>
-          <option>Realtor &mdash; Douglas Elliman</option>
-          <option>Realtor &mdash; Other</option>
-          <option>Allied vendor</option>
           <option>Other</option>
         </select>
         <label>Phone</label>
@@ -10662,7 +10662,7 @@ function onReferralSourceChange(){
   if (!src) return;
   var pWrap = document.getElementById('i-refpartner-wrap');
   var rbWrap = document.getElementById('i-referredby-wrap');
-  var pro = ['Estate attorney','Trust officer','Wealth manager','Realtor — Douglas Elliman','Realtor — Other','Allied vendor'];
+  var pro = ['Estate attorney','Trust officer','Wealth manager','Realtor','Country club / golf community','Senior living community','Allied vendor'];
   var personal = ['Family','Friend','Existing client referral'];
   var isPro = pro.indexOf(src.value) >= 0;
   if (pWrap) pWrap.style.display = isPro ? 'block' : 'none';
@@ -10671,11 +10671,19 @@ function onReferralSourceChange(){
 }
 function populateReferralPicker(){
   var sel = document.getElementById('i-refpartner'); if (!sel) return;
+  // Scope the named-partner list to the referral source chosen above: an "Estate
+  // attorney" source only lists estate attorneys, etc. Source labels and partner_type
+  // use identical strings for the professional types, so it's an exact-type match.
+  var srcEl = document.getElementById('i-src');
+  var src = srcEl ? String(srcEl.value || '').trim() : '';
   var cur = sel.value;
-  var list = referralDirectory.filter(function(p){ return String(p.status||'') !== 'Do Not Use'; })
-    .slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
-  sel.innerHTML = '<option value="">— none / not a named partner —</option>' + list.map(function(p){
-    var id = referralIdOf(p); var lbl = esc(p.partner_name||'') + (p.partner_type ? ' (' + esc(p.partner_type) + ')' : '');
+  var list = referralDirectory.filter(function(p){
+    if (String(p.status||'') === 'Do Not Use') return false;
+    return src ? String(p.partner_type||'').trim() === src : true;
+  }).slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
+  var none = src ? '— none / not a named ' + src.toLowerCase() + ' —' : '— none / not a named partner —';
+  sel.innerHTML = '<option value="">' + esc(none) + '</option>' + list.map(function(p){
+    var id = referralIdOf(p); var lbl = esc(p.partner_name||'');
     return '<option value="' + esc(id) + '">' + lbl + '</option>';
   }).join('');
   if (cur) sel.value = cur;
