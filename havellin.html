@@ -24,6 +24,7 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .hdr-sub{font-size:10px;color:var(--tan);margin-top:1px;letter-spacing:.08em;text-transform:uppercase;}
 .hdr-ct{font-size:11px;color:var(--tan);}
 .nav{background:var(--white);display:flex;border-bottom:1px solid var(--border);padding:0 1.5rem;}
+.topbar{position:sticky;top:0;z-index:100;}
 .nb{padding:12px 18px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--gray);font-family:'Raleway',sans-serif;transition:all .15s;}
 .nb.active{color:var(--gray-dk);border-bottom-color:var(--bronze);}
 .nb:hover{color:var(--gray-dk);}
@@ -144,7 +145,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
 /* PIN MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;}
-.modal-box{background:var(--white);border-radius:10px;padding:2rem;width:340px;border-top:3px solid var(--bronze);}
+.modal-box{background:var(--white);border-radius:10px;padding:2rem;width:340px;border-top:3px solid var(--bronze);max-height:90vh;overflow-y:auto;}
 .modal-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;margin-bottom:6px;}
 .modal-sub{font-size:12px;color:var(--gray);margin-bottom:1.25rem;}
 .pin-input{font-size:20px;letter-spacing:.3em;text-align:center;padding:12px;border:1.5px solid var(--border-md);border-radius:6px;background:var(--cream);}
@@ -251,10 +252,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 </head>
 <body>
 
+<div class="topbar">
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -277,6 +279,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <button class="nb" onclick="showPanel('vendors',this)">Vendors</button>
   <button class="nb" onclick="showPanel('referrals',this)">Referral Partners</button>
 </div>
+</div><!-- /topbar -->
 
 <div class="main">
 
@@ -812,7 +815,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
     </div>
 
-    <div style="position:sticky;top:1rem;">
+    <div style="position:sticky;top:calc(var(--topbar-h, 96px) + 1rem);">
       <div class="card">
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
@@ -13878,6 +13881,14 @@ function renderVehicles() {
 
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
+// Publish the sticky top-bar's height so sticky content below (e.g. the estimate
+// summary) can sit just beneath it instead of tucking under.
+function setTopbarHeight() {
+  var t = document.querySelector('.topbar');
+  if (t) document.documentElement.style.setProperty('--topbar-h', t.offsetHeight + 'px');
+}
+setTopbarHeight();
+window.addEventListener('resize', setTopbarHeight);
 populateCollDispSelect();
 loadJobs();
 loadEstimateState();
