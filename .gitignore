@@ -1,0 +1,4 @@
+# Local test tooling only (jsdom for DOM verification) — the app itself is build-less.
+node_modules/
+package-lock.json
+.DS_Store
