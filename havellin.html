@@ -254,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7115,12 +7115,13 @@ function loadPhotoRefs(jobId) {
 function savePhotoRefs(jobId) {
   try {
     var refs = (_photoRefs[jobId] || []).map(function(r) {
-      return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId,
+      return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId, manual:r.manual,
                seq:r.seq, objectName:r.objectName, category:r.category, disposition:r.disposition,
                qty:r.qty, condition:r.condition, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
-               dispDate:r.dispDate, receiptDoc:r.receiptDoc,
+               dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr,
+               sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
@@ -7763,6 +7764,156 @@ function printAppraisalWorklist(jobId) {
   pt.innerHTML = '';
 }
 
+// ── Collections / Vehicles → Inventory bridge ─────────────────────────────────
+// Estate-flagged collections and vehicles live on the estimate snapshot, on a
+// separate rail from the item manifest. This brings them in as manual inventory
+// lines so they appear in the manifest, the summary, and the appraisal worklist.
+// Each imported line carries its source id so it can't be added twice.
+
+function _collDispToInv(disp) {
+  switch (disp) {
+    case 'auction': return 'Auction';
+    case 'consign': return 'Consign';
+    case 'appraise': return 'Hold';   // held pending the appraisal decision
+    case 'firearms': return 'Hold';
+    case 'ebay': case 'replacements': case 'dealer': return 'Sell';
+    default: return '';
+  }
+}
+
+// Best-guess taxonomy category from a collection's name/disposition, so the import
+// panel pre-selects the right appraiser routing. The TC can override before adding.
+function _guessCategory(name, disp) {
+  if (disp === 'firearms') return 'Firearms';
+  var n = (name || '').toLowerCase();
+  if (/gun|firearm|rifle|pistol|shotgun|ammo/.test(n))            return 'Firearms';
+  if (/paint|art|sculpt|print|canvas|d[eé]cor|lithograph/.test(n))return 'Art & Décor';
+  if (/jewel|ring|watch|necklace|bracelet|diamond|brooch/.test(n))return 'Jewelry & Watches';
+  if (/silver|sterling|flatware|silverware/.test(n))             return 'Silver & Precious Metal';
+  if (/rug|carpet|tapestry|kilim/.test(n))                       return 'Rugs & Carpets';
+  if (/coin|stamp|numismat|collectib|trading card|memorabil/.test(n)) return 'Collectibles';
+  if (/wine|spirit|liquor|cellar|bottle/.test(n))                return 'Wine & Spirits';
+  if (/piano|guitar|violin|cello|instrument/.test(n))            return 'Musical Instruments';
+  if (/antique/.test(n))                                         return 'Antiques';
+  if (/sofa|table|chair|armoire|dresser|furnitur|cabinet/.test(n))return 'Furniture';
+  return 'General/Household';
+}
+
+function _numOrBlank(v) {
+  if (v == null) return '';
+  var n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+  return (isNaN(n) || n <= 0) ? '' : n;
+}
+
+// Ids already pulled into the manifest, so we never import the same source twice.
+function _importedSourceSet(jobId) {
+  var s = { coll: {}, veh: {} };
+  (_photoRefs[jobId] || []).forEach(function(r) {
+    if (r.sourceCollId != null) s.coll[r.sourceCollId] = true;
+    if (r.sourceVehId != null) s.veh[r.sourceVehId] = true;
+  });
+  return s;
+}
+
+function _importableFromEstimate(jobId) {
+  var rec = estimateStore[jobId];
+  var est = rec && rec.estimate;
+  if (!est) return { collections: [], vehicles: [] };
+  var done = _importedSourceSet(jobId);
+  return {
+    collections: (est.collections || []).filter(function(c){ return !done.coll[c.id]; }),
+    vehicles:    (est.vehicles || []).filter(function(v){ return !done.veh[v.id]; })
+  };
+}
+
+// Push a manual inventory line (same shape as addInventoryManualItem's rows).
+function _pushInvLine(jobId, o) {
+  o.roomIdx = null; o.label = 'inventory'; o.manual = true; o.status = 'manual';
+  o.filename = ''; o.driveFileUrl = null;
+  if (o.category == null) o.category = INV_DEFAULT_CATEGORY;
+  if (o.qty == null) o.qty = '1';
+  _setPhotoRef(jobId, o);
+}
+
+function materializeCollection(jobId, collId) {
+  var rec = estimateStore[jobId];
+  var est = rec && rec.estimate;
+  var coll = est && (est.collections || []).find(function(c){ return c.id === collId; });
+  if (!coll) return;
+  var cat  = (document.getElementById('imp-cat-'  + collId) || {}).value || _guessCategory(coll.name, coll.disp);
+  var mode = (document.getElementById('imp-mode-' + collId) || {}).value || 'lot';
+  var qty  = Math.max(1, parseInt((document.getElementById('imp-qty-' + collId) || {}).value, 10) || 1);
+  var disp = _collDispToInv(coll.disp);
+  var ts = Date.now();
+  if (mode === 'itemize') {
+    for (var i = 1; i <= qty; i++) {
+      _pushInvLine(jobId, { stableId: jobId + '_col' + collId + '_' + i + '_' + ts,
+        objectName: coll.name + ' #' + i, category: cat, disposition: disp, qty: '1',
+        fmv: '', sourceCollId: collId, ts: ts + i });
+    }
+  } else {
+    _pushInvLine(jobId, { stableId: jobId + '_col' + collId + '_lot_' + ts,
+      objectName: coll.name, category: cat, disposition: disp, qty: String(qty),
+      fmv: _numOrBlank(coll.value), sourceCollId: collId, ts: ts });
+  }
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+}
+
+function materializeVehicle(jobId, vehId) {
+  var rec = estimateStore[jobId];
+  var est = rec && rec.estimate;
+  var veh = est && (est.vehicles || []).find(function(v){ return v.id === vehId; });
+  if (!veh) return;
+  var name = [veh.year, veh.desc].filter(Boolean).join(' ') || 'Vehicle';
+  var ts = Date.now();
+  _pushInvLine(jobId, { stableId: jobId + '_veh' + vehId + '_' + ts,
+    objectName: name, category: 'Vehicles & Watercraft', disposition: '', qty: '1',
+    condition: veh.condition || '', needsAppr: !!veh.collector, sourceVehId: vehId, ts: ts });
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+}
+
+function _renderInventoryImportPanel(jobId) {
+  var imp = _importableFromEstimate(jobId);
+  var total = imp.collections.length + imp.vehicles.length;
+  if (!total) return '';
+  var rows = '';
+  imp.collections.forEach(function(c) {
+    var guess = _guessCategory(c.name, c.disp);
+    var catSel = '<select id="imp-cat-' + c.id + '" style="font-size:11px;padding:2px 4px;">'
+      + INV_CATEGORIES.map(function(x){ return '<option' + (x === guess ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>';
+    var defMode = (guess === 'Art & Décor' || guess === 'Jewelry & Watches') ? 'itemize' : 'lot';
+    var modeSel = '<select id="imp-mode-' + c.id + '" style="font-size:11px;padding:2px 4px;">'
+      + '<option value="lot"' + (defMode === 'lot' ? ' selected' : '') + '>Keep as lot</option>'
+      + '<option value="itemize"' + (defMode === 'itemize' ? ' selected' : '') + '>Itemize</option></select>';
+    var qtyGuess = parseInt(c.qty, 10) || 1;
+    rows += '<tr>'
+      + '<td style="font-size:11px;"><strong>' + esc(c.name) + '</strong>' + (c.value && c.value !== 'Unknown' ? ' <span style="color:var(--gray);">&middot; ' + esc(fmtColVal(c.value)) + '</span>' : '') + '</td>'
+      + '<td>' + catSel + '</td>'
+      + '<td>' + modeSel + '</td>'
+      + '<td><input type="number" id="imp-qty-' + c.id + '" value="' + qtyGuess + '" min="1" style="width:50px;font-size:11px;padding:2px 4px;text-align:center;"></td>'
+      + '<td><button class="btn-s" onclick="materializeCollection(' + jobId + ',' + c.id + ')">Add &rarr;</button></td>'
+      + '</tr>';
+  });
+  imp.vehicles.forEach(function(v) {
+    var name = [v.year, v.desc].filter(Boolean).join(' ') || 'Vehicle';
+    rows += '<tr>'
+      + '<td style="font-size:11px;"><strong>' + esc(name) + '</strong> <span style="color:var(--gray);">&middot; vehicle</span>' + (v.collector ? ' <span style="color:var(--bronze);font-weight:700;">collector</span>' : '') + '</td>'
+      + '<td style="font-size:11px;color:var(--gray);">Vehicles &amp; Watercraft</td>'
+      + '<td colspan="2" style="font-size:10px;color:var(--gray);">' + (v.collector ? '&#9873; &rarr; Vehicle / Boat appraiser' : 'book value (KBB / NADA)') + '</td>'
+      + '<td><button class="btn-s" onclick="materializeVehicle(' + jobId + ',' + v.id + ')">Add &rarr;</button></td>'
+      + '</tr>';
+  });
+  return '<div class="card" style="margin-bottom:1rem;border:1px solid var(--bronze);">'
+    + '<div class="sec" style="margin-bottom:4px;">From the Estimate Walkthrough <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(' + total + ' to add)</span></div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Bring flagged collections and vehicles into the inventory. Collections can be itemized (one row each) or kept as a lot; the category sets the appraiser routing.</div>'
+    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Item</th><th>Category</th><th>Add as</th><th>Qty</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '</div>';
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -7805,7 +7956,7 @@ function renderInventoryTab() {
     + '</div>'
     + inner
     + '</div>';
-  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + table;
+  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + table;
 }
 
 // ── Build 3: push the manifest to the per-client Google workbook ───────────────
