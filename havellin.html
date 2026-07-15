@@ -254,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7243,7 +7243,7 @@ var INV_TAXONOMY = [
   {cat:'Electronics & Appliances',appraiser:'',                              intrinsic:false},
   {cat:'General/Household',      appraiser:'',                               intrinsic:false}
 ];
-var INV_CATEGORIES = INV_TAXONOMY.map(function(t){ return t.cat; });
+var INV_CATEGORIES = INV_TAXONOMY.map(function(t){ return t.cat; }).sort();  // alphabetized for the dropdowns
 var INV_DEFAULT_CATEGORY = 'General/Household';
 var INV_APPRAISAL_THRESHOLD = 3000;  // single-item value that triggers a formal-appraisal recommendation
 
@@ -7395,7 +7395,7 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
 // photo time; app-manage columns (valuation, disposition detail, proceeds) become
 // editable in the next build. Mirrors Havellin_Estate_Inventory_Master.xlsx.
 var INV_CONDITIONS  = ['Excellent','Good','Fair','Poor','Salvage'];
-var INV_VAL_SOURCES = ['Appraisal','Dealer quote','Auction comps','Online comps','PR estimate'];
+var INV_VAL_SOURCES = ['Appraisal','Auction comps','Dealer quote','Online comps','PR estimate'];
 var INVENTORY_COLUMNS = [
   {key:'seq',          header:'Item #',              kind:'capture'},
   {key:'room',         header:'Room',                kind:'capture'},
@@ -13604,14 +13604,15 @@ function formatPhone(input) {
 var collectionsData = [];
 var vehiclesData = [];
 
+// Alphabetized by label (Other kept last by convention). Object key order drives the
+// dropdown order everywhere COL_DISP_LABELS is iterated.
 var COL_DISP_LABELS = {
-  auction:'Auction House', online_auction:'Online Auction', estate_sale:'Estate Sale',
-  consign:'Consignment', appraise:'Appraise',
-  coin:'Coin / Currency Buyer', goldsilver:'Gold & Silver Buyer',
-  jewelry:'Jewelry / Watch Buyer', books:'Rare Books / Manuscripts',
-  dealer:'Specialized Dealer', firearms:'Firearms — Licensed FFL',
-  ebay:'eBay Store', replacements:'Replacements.com',
-  donate:'Donate', other:'Other'
+  appraise:'Appraise', auction:'Auction House', coin:'Coin / Currency Buyer',
+  consign:'Consignment', donate:'Donate', ebay:'eBay Store', estate_sale:'Estate Sale',
+  firearms:'Firearms — Licensed FFL', goldsilver:'Gold & Silver Buyer',
+  jewelry:'Jewelry / Watch Buyer', online_auction:'Online Auction',
+  books:'Rare Books / Manuscripts', replacements:'Replacements.com',
+  dealer:'Specialized Dealer', other:'Other'
 };
 
 // Populate the add-row disposition picker from COL_DISP_LABELS so it stays in sync
@@ -13619,7 +13620,7 @@ var COL_DISP_LABELS = {
 function populateCollDispSelect() {
   var sel = document.getElementById('new-col-disp');
   if (!sel) return;
-  var cur = sel.value;
+  var cur = sel.value || 'auction';   // sensible default even though 'Appraise' sorts first
   sel.innerHTML = Object.keys(COL_DISP_LABELS).map(function(k){
     return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + COL_DISP_LABELS[k] + '</option>';
   }).join('');
@@ -13787,7 +13788,7 @@ function renderCollections() {
 // book value (KBB/NADA) as of the date of death; collectors/classics/boats route to
 // a Vehicle/Boat appraiser. Vehicles don't affect the labor estimate — they're an
 // asset record that rides along in the estimate snapshot and feeds the inventory.
-var VEH_TYPES = ['Car','SUV / Van','Truck','Motorcycle','Boat','Personal watercraft','RV / Motorhome','Trailer','Golf cart','ATV / UTV','Other'];
+var VEH_TYPES = ['ATV / UTV','Boat','Car','Golf cart','Motorcycle','Personal watercraft','RV / Motorhome','SUV / Van','Trailer','Truck','Other'];
 
 function _vehTypeOptions(sel) {
   return '<option value="">Type…</option>' + VEH_TYPES.map(function(t){
