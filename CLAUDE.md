@@ -30,15 +30,28 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-07-14** (added §13a Category Group &
-  Category taxonomy — group required and dictates category, self-serve new categories,
-  group→estimate-menu/fee routing table; noted the data-driven "From directory" options
-  in the §5d third-party-vendor and §6a Home Prep item dropdowns). Prior pass 2026-07-08
-  (Home Prep for Sale standalone + streamlined Job Plan, Referral Partners tab, Vendor
-  Directory section, beds/full/half baths, referral-source linkage, nav order incl.
-  Win/Loss first, Vendor + Referral Apps Script URLs in Settings).
-  Still thin / deferred until the app is fully built: Inventory and Win / Loss tabs, and
-  the full labor-job Job Plan phase playbook detail.
+- Last reconciled against the app: **2026-07-15** (estate documentation build, Phases 1–3:
+  documentation-level switch at intake §4 + chain-of-custody now driven by it not the
+  premium rate §11; §5b collapsible/launch-collapsed room sections; §5f vendor-mapped
+  15-option disposition list; new §5g Vehicles & Watercraft (Saving → §5h); §10 item
+  inventory capture on room cards + the 13-category taxonomy; new **§10a Estate Inventory**
+  tab — manifest, estimate→inventory bridge, appraiser roster, $3k guardrail, valuation
+  basis + §2032 alternate valuation date, asset-track, custody log, snapshots, and the
+  Court Inventory / Disposition Ledger / Appraisal Worklist exports; §1 interface notes
+  for sticky nav, scrollable modals, alphabetized dropdowns).
+  **Deferred (not yet built):** the Drive folder consolidation (merge Photos + Asset
+  Documentation → one shared "Estate Inventory" folder) and in-app counsel sharing — both
+  need Apps Script changes + a naming decision, so §4/§15 Drive-folder docs still describe
+  the current Photos + Asset Documentation layout.
+  Prior pass 2026-07-14 (added §13a Category Group & Category taxonomy — group required and
+  dictates category, self-serve new categories, group→estimate-menu/fee routing table;
+  noted the data-driven "From directory" options in the §5d third-party-vendor and §6a Home
+  Prep item dropdowns). Prior pass 2026-07-08 (Home Prep for Sale standalone + streamlined
+  Job Plan, Referral Partners tab, Vendor Directory section, beds/full/half baths,
+  referral-source linkage, nav order incl. Win/Loss first, Vendor + Referral Apps Script
+  URLs in Settings).
+  Still thin / deferred until the app is fully built: Win / Loss tab, and the full
+  labor-job Job Plan phase playbook detail.
 
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home

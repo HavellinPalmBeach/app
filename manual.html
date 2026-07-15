@@ -47,6 +47,7 @@
   <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Approvals require a manager PIN. Client signatures via DocuSign. Payments via Stripe (planned — not yet live).</p>
   <p><strong>Navigation tabs (in order):</strong> Win / Loss · Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Referral Partners</p>
   <p class="note">The app opens on the <strong>Client Dashboard</strong> even though Win / Loss is the first tab.</p>
+  <p style="font-size:12px;color:#6B6B72;">Interface notes: the header + navigation bar stay pinned to the top while you scroll; dialogs (e.g. Settings) scroll internally so their buttons are always reachable; and reference dropdowns (categories, dispositions, types, roles) are alphabetized — scale/pipeline lists (Condition, Priority, statuses, service tiers, Year) keep their meaningful order.</p>
 
   <h2>2. Initial Setup (one time per device)</h2>
   <p>Open <strong>Settings</strong> (gear icon) and enter:</p>
@@ -74,6 +75,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <p><strong>Property Types:</strong> Apartment · Town Home · Patio Home · Single Family Home · Estate. (Property type is a label; square footage drives sizing.)</p>
   <p><strong>Home details:</strong> Square footage, <strong>Bedrooms</strong>, <strong>Full baths</strong>, and <strong>Half baths</strong> are captured separately (so "5 baths" is never ambiguous), plus years in home and approximate property value.</p>
   <p><strong>Estate / Probate</strong> jobs require an authorized representative (executor, POA, administrator) — name, role, phone, email. <strong>Probate</strong> additionally requires case number and attorney details.</p>
+  <p><strong>Documentation level</strong> — choose <em>Auto</em>, <em>Standard</em>, or <em>Formal — court &amp; attorney grade</em>. Auto resolves by service type (Contested Probate = Formal, everything else Standard). Formal turns on the item-appraisal guardrails and makes chain-of-custody tracking mandatory. This is a <em>documentation</em> decision, kept separate from the Premium-estate <em>rate</em> toggle (§5c) — a premium job is not automatically a court-grade one, and vice-versa.</p>
   <p><strong>Referral source:</strong> Intake records how the job came in. Professional referral types (attorney, realtor, trust officer, etc.) link to a specific <strong>Referral Partner</strong> from that directory, so referrals are attributed on the partner leaderboard. Personal sources (family, friend, existing client) use a free-text "Referred by" name instead.</p>
   <p>Drive folder structure created automatically per job:</p>
   <div class="flow">Photos · Walkthrough Notes · Estimate · Agreement · Change Orders · Asset Documentation</div>
@@ -94,6 +96,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <tr><td>5</td><td>Completely full</td><td>High-value / fragile / specialty handling</td></tr>
   </table>
   <p>Check <strong>Special Items</strong> if the room contains artwork, antiques, or items requiring specialty care. TC and PS hours calculate automatically, and a working-day timeline is generated.</p>
+  <p>Room sections launch <strong>collapsed</strong> so the estimate opens compact — open each section as you walk that part of the house. Use <em>Expand all / Collapse all / Hide empty</em> at the top of the assessment; each section header shows a live in-scope count. Reopening a scored estimate auto-reveals the sections that have rooms in scope.</p>
 
   <h3>5c. Job Settings</h3>
   <ul>
@@ -111,9 +114,19 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <p>On a labor-based job you can also check <strong>Include in estimate</strong> in the Home Prep section to add show-ready prep as an add-on. Prep vendors carry a <strong>30% GC / Site Management Fee</strong> (not the 15% vendor SMF). When Home Prep is the <em>only</em> service, use the standalone flow in Section 6 instead.</p>
 
   <h3>5f. Notable Collections</h3>
-  <p>Add significant asset collections (artwork, jewelry, antiques, silver, etc.) requiring disposition planning. Set name, estimated value, quantity, and proposed disposition: Auction · Appraise · Consign · Ebay · Replacements.com · Specialized Dealer · Firearms (Licensed FFL) · Other. Collections appear in the client-facing estimate under <em>Notable Collections — Disposition Plan</em>.</p>
+  <p>Add significant asset collections (artwork, jewelry, antiques, silver, etc.) requiring disposition planning. Set name, estimated value, quantity, and a proposed disposition. The disposition list is now vendor-mapped — each option scopes the Job Plan partner picker to the matching Vendor Directory category:</p>
+  <p style="font-size:12px;">Appraise · Auction House · Coin / Currency Buyer · Consignment · Donate · eBay Store · Estate Sale · Firearms — Licensed FFL · Gold &amp; Silver Buyer · Jewelry / Watch Buyer · Online Auction · Rare Books / Manuscripts · Replacements.com · Specialized Dealer · Other.</p>
+  <p>Collections appear in the client-facing estimate under <em>Notable Collections — Disposition Plan</em>, and can be pulled into the <strong>Estate Inventory</strong> manifest on site (as a lot or itemized — see §10a).</p>
 
-  <h3>5g. Saving</h3>
+  <h3>5g. Vehicles &amp; Watercraft</h3>
+  <p>Capture cars, boats, motorcycles, and other vehicles as estate assets. Add each by description, then fill in the detail panel: <strong>Type</strong> (Car, SUV/Van, Truck, Motorcycle, Boat, Personal watercraft, RV, Trailer, Golf cart, ATV/UTV, Other), <strong>Year</strong>, VIN/HIN, mileage/hours, condition, and two flags — <strong>Collector / classic</strong> and <strong>Title located</strong>.</p>
+  <ul>
+    <li><strong>Ordinary vehicles</strong> are valued from a book value (KBB / NADA) as of the date of death — Havellin can do that in-house.</li>
+    <li><strong>Collector / classic</strong> vehicles (and boats) route to a Vehicle / Boat appraiser.</li>
+  </ul>
+  <p>Vehicles ride along in the estimate snapshot (they don't affect the labor estimate) and can be pulled into the Estate Inventory on site (§10a).</p>
+
+  <h3>5h. Saving</h3>
   <p>Hit <strong>Save &amp; Preview Client Estimate</strong>. Estimate saves and syncs to Google Sheets, then opens in the Client Estimate preview. Editable until approved.</p>
 
   <h2>6. Home Prep for Sale (Standalone Service)</h2>
@@ -202,9 +215,48 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <li><strong>📷 Asset photos</strong> — condition/identification photography. Uploads to <strong>Asset Documentation</strong> as <code>HVL-YYMM-XXXX_ASSET_CollectionName_001.jpg</code></li>
     <li><strong>📄 Appraisal</strong> — upload PDF or image of appraisal document. Saves as <code>HVL-YYMM-XXXX_APPRSL_CollectionName_2026-05-01.pdf</code></li>
   </ul>
+  <h3>Item Inventory Capture (room cards)</h3>
+  <p>On each Job Plan room card, use <strong>Capture item</strong> to photograph individual objects for the estate inventory. Type the object name, pick a <strong>category</strong>, and set a disposition before the shot; each photo is saved with a self-identifying filename. Items in an "intrinsic" category (art, jewelry, silver, antiques, rugs, coins, firearms, wine, instruments) that carry real value show a <strong>⚑ needs-a-specialist</strong> flag. Captured items flow straight into the Estate Inventory manifest.</p>
+
+  <h2>10a. Estate Inventory (Tab)</h2>
+  <p><strong>Tab: Inventory</strong> → select a client. A per-client tangible-personal-property manifest and the estate documentation workspace. It assembles from three sources: items captured on Job Plan room cards, <strong>+ Add line item</strong> (an asset with no photo — cash, account, a vehicle), and <strong>import from the estimate</strong> (below).</p>
+
+  <h3>Categories &amp; appraiser routing</h3>
+  <p>Every item has a category from the shared taxonomy. Each category knows which specialist appraiser it routes to and whether it's subject to the IRS <strong>$3,000</strong> formal-appraisal rule for art/jewelry/etc. Categories: Antiques · Art &amp; Décor · Collectibles · Electronics &amp; Appliances · Firearms · Furniture · General/Household · Jewelry &amp; Watches · Musical Instruments · Rugs &amp; Carpets · Silver &amp; Precious Metal · Vehicles &amp; Watercraft · Wine &amp; Spirits.</p>
+
+  <h3>From the estimate walkthrough (the bridge)</h3>
+  <p>When flagged collections or vehicles exist on the estimate, a <strong>From the Estimate Walkthrough</strong> panel offers to add them to the manifest. Collections can be <strong>itemized</strong> (one row per piece) or kept as a <strong>lot</strong>; a guessed category pre-selects the appraiser routing. Collector vehicles carry a needs-appraisal flag. Imported items can't be added twice.</p>
+
+  <h3>Appraisers (per estate)</h3>
+  <p>Add a roster of named appraisers — name, firm, <strong>credential</strong> (ISA / ASA / AAA / USPAP / GIA), <strong>independence</strong>, and effective (value) / report dates. An item whose valuation source is <em>Appraisal</em> is linked to a roster appraiser from the manifest's <em>Appraisal Doc</em> cell, replacing free-text with a defensible record.</p>
+
+  <h3>The $3,000 appraisal guardrail</h3>
+  <p>Items flagged for appraisal that aren't yet linked to an appraiser surface a panel: a <strong>soft amber nudge on Standard</strong> jobs, a <strong>red block on Formal</strong> jobs (the inventory isn't complete until each is appraised). Per-item <strong>Waive</strong> logs a reason. On a Formal job, the Court Inventory export stamps <em>DRAFT</em> until every flagged item is appraised or waived.</p>
+
+  <h3>Valuation basis &amp; date</h3>
+  <ul>
+    <li><strong>Valuation Basis</strong> — the level of value the whole schedule is stated on (defaults to Fair Market Value, as estate/probate requires).</li>
+    <li><strong>Value as of</strong> — normally the date of death. Toggle the <strong>§2032 alternate valuation date</strong> (six months after death, for taxable estates) and item value-dates and the Court Inventory follow it.</li>
+    <li><strong>Asset Track</strong> — Probate / Trust / Non-probate / Homestead / Exempt (default Probate). Only Probate-track items appear on the Court Inventory, so the probate schedule doesn't overstate the estate.</li>
+  </ul>
+
+  <h3>Chain of custody &amp; snapshots</h3>
+  <ul>
+    <li><strong>🔗 custody log</strong> (per item) — record each transfer: released / received / transferred / returned · party · date · method · receipt. A badge shows the event count.</li>
+    <li><strong>Snapshot</strong> — capture a labeled point-in-time copy of the manifest (the amended-inventory / what-changed trail); print any snapshot as an as-of schedule.</li>
+  </ul>
+
+  <h3>Exports (work product)</h3>
+  <ul>
+    <li><strong>Court Inventory</strong> — a §733.604-style schedule grouped by category with date-of-death FMV, exempt property (§732.402) separated, a valuation-basis header and attestation line, and <em>no</em> internal figures. Stamps DRAFT / FINAL per the guardrail. Feeds counsel's filing (Havellin does not file it).</li>
+    <li><strong>Disposition Ledger</strong> — the fiduciary accounting: gross / fees / net to the estate / receipts. Havellin's own service fee never appears here.</li>
+    <li><strong>Appraisal Worklist</strong> — a per-specialist packet of every flagged item (photo, room, condition) to hand each appraiser.</li>
+  </ul>
+  <div class="note">All inventory valuations are documentation support, not a legal or appraisal opinion — the estate attorney and a credentialed appraiser remain the authority on any estate.</div>
 
   <h2>11. Job Plan &amp; Log Hours</h2>
   <p><strong>Tab: Job Plan</strong> → select job. Generates once the estimate is approved. For labor-based services it runs the phase playbook (Phase 0 Pre-Job → Phase 4 Close-Out), vendor &amp; partner sourcing, and daily hours logging. For <strong>Home Prep for Sale</strong> it is the streamlined vendor/budget/checklist view described in Section 6c.</p>
+  <p>The plan header shows the <strong>documentation level</strong> on estate/formal jobs. <strong>Chain of custody is mandatory</strong> when that level is Formal or the job is any probate — it is driven by the documentation level (§4), <em>not</em> the Premium-estate rate. Estate/probate jobs also carry the §733.604 documentation stream.</p>
   <h3>Log Hours (labor jobs)</h3>
   <p>Log each working session: date, team member, role (TC / PS / Specialty), hours, task description. Hours accumulate against the estimate and drive the forward-variance projection. Log daily — do not batch at end of job.</p>
   <h3>Vendor &amp; Partner Sourcing</h3>
@@ -274,7 +326,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-14
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-15
   </div>
 
 </div>
