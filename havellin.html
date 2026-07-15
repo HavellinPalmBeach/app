@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1116,6 +1116,27 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
 <!-- PRINT TARGET (hidden, used for PDF output) -->
 <div id="print-target"></div>
+
+<!-- Chain-of-custody log for a single inventory item -->
+<div id="custody-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+  <div class="modal-box" style="width:540px;max-width:94%;">
+    <div class="modal-title" id="custody-modal-title">Chain of Custody</div>
+    <div class="modal-sub">Log each transfer of this item — who released it, who received it, when, method, and receipt.</div>
+    <div id="custody-list" style="margin:10px 0;"></div>
+    <div class="sec" style="margin-top:8px;">Add event</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <select id="cust-action"><option>Released</option><option>Received</option><option>Transferred</option><option>Returned</option></select>
+      <input type="text" id="cust-party" placeholder="Party (to / from whom)">
+      <input type="date" id="cust-date">
+      <input type="text" id="cust-method" placeholder="Method (hand-carry, courier, FFL…)">
+      <input type="text" id="cust-receipt" placeholder="Receipt / doc reference" style="grid-column:1/3;">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn-s" onclick="closeCustodyModal()">Close</button>
+      <button class="btn-p" onclick="addCustodyEvent()">Add event</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════ AGREEMENT ══════════════════════════════ -->
 <div class="panel" id="panel-agreement">
@@ -7133,7 +7154,7 @@ function savePhotoRefs(jobId) {
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
                dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
-               apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason, assetTrack:r.assetTrack,
+               apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason, assetTrack:r.assetTrack, custodyLog:r.custodyLog,
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
@@ -7710,6 +7731,8 @@ function _invCell(jobId, ref, col, job, seq) {
       s += ' <span style="font-size:8px;color:var(--bronze);font-weight:700;" title="Manual line item (no photo)">M</span>'
         +  ' <a href="#" onclick="removeInventoryManualItem(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Remove line item" style="color:#c0392b;text-decoration:none;font-weight:700;">✕</a>';
     }
+    var nC = (ref.custodyLog || []).length;
+    s += ' <a href="#" onclick="openCustodyModal(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Chain of custody log" style="text-decoration:none;">&#128279;' + (nC ? '<span style="font-size:8px;color:var(--bronze);font-weight:700;">' + nC + '</span>' : '') + '</a>';
     return s;
   }
   if (col.key === 'net') return '<span id="inv-net-' + ref.stableId + '">' + _invNetDisplay(ref) + '</span>';
@@ -7792,6 +7815,111 @@ function _apprEstimateFlags(jobId) {
   var colls = (est.collections || []).filter(function(c){ return c.disp === 'appraise' || c.disp === 'firearms'; }).length;
   var vehs  = (est.vehicles || []).filter(function(v){ return v.collector; }).length;
   return { collections: colls, vehicles: vehs };
+}
+
+// ── Inventory snapshots (amended-inventory / as-of trail) ─────────────────────
+// Capture a point-in-time copy of the manifest so you can show a trust officer what
+// the inventory looked like on a given date and what changed since.
+function takeInventorySnapshot(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var items = _jobInvRefs(jobId);
+  var label = (window.prompt('Label for this snapshot (e.g. "Filed with court", "As of walkthrough"):', '') || '').trim();
+  var totalFMV = 0;
+  var snapItems = items.map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) totalFMV += n;
+    return { object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r) }; });
+  if (!job.invSnapshots) job.invSnapshots = [];
+  job.invSnapshots.push({ ts: Date.now(), label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: totalFMV, items: snapItems });
+  saveJobs();
+  if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+  renderInventoryTab();
+}
+function removeInventorySnapshot(jobId, ts) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || !job.invSnapshots) return;
+  if (!window.confirm('Remove this snapshot?')) return;
+  job.invSnapshots = job.invSnapshots.filter(function(s){ return String(s.ts) !== String(ts); });
+  saveJobs(); renderInventoryTab();
+}
+function _renderInventorySnapshots(job) {
+  var snaps = (job.invSnapshots || []).slice().sort(function(a,b){ return b.ts - a.ts; });
+  if (!snaps.length) return '';
+  var rows = snaps.map(function(s){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
+      + '<span>' + esc(_invDateTime(s.ts)) + (s.label ? ' <strong>· ' + esc(s.label) + '</strong>' : '') + ' <span style="color:var(--gray);">· ' + s.count + ' items · ' + (_money(s.totalFMV) || '$0') + '</span></span>'
+      + '<span style="display:flex;gap:6px;"><button class="btn-s" onclick="printInventorySnapshot(' + job.id + ',' + s.ts + ')">Print</button>'
+      + '<button class="icon-btn del" onclick="removeInventorySnapshot(' + job.id + ',' + s.ts + ')">Remove</button></span>'
+      + '</div>';
+  }).join('');
+  return '<div class="card" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Snapshots <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(point-in-time inventory records)</span></div>'
+    + rows + '</div>';
+}
+function printInventorySnapshot(jobId, ts) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var pt = document.getElementById('print-target');
+  if (!job || !pt) return;
+  var snap = (job.invSnapshots || []).find(function(s){ return String(s.ts) === String(ts); });
+  if (!snap) return;
+  var rows = snap.items.map(function(it, i){
+    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + (i + 1) + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.object || '—') + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.category || '—') + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.track || '—') + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(it.fmv) + '</td></tr>';
+  }).join('');
+  pt.innerHTML = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Snapshot</h2>'
+    + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Captured ' + esc(_invDateTime(snap.ts)) + (snap.label ? ' &middot; ' + esc(snap.label) : '') + ' &middot; ' + snap.count + ' items &middot; total ' + (_invMoney(snap.totalFMV)) + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">#</th><th style="padding:2px 6px;">Object</th><th style="padding:2px 6px;">Category</th><th style="padding:2px 6px;">Track</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '</div>';
+  window.print();
+  pt.innerHTML = '';
+}
+
+// ── Chain-of-custody event log (per item) ─────────────────────────────────────
+var _custodyCtx = { jobId: null, stableId: null };
+function openCustodyModal(jobId, stableId) {
+  _custodyCtx = { jobId: jobId, stableId: stableId };
+  var ref = _getPhotoRef(jobId, stableId);
+  var t = document.getElementById('custody-modal-title');
+  if (t) t.textContent = 'Chain of Custody — ' + ((ref && ref.objectName) ? ref.objectName : 'item');
+  _renderCustodyList();
+  var m = document.getElementById('custody-modal'); if (m) m.style.display = 'flex';
+}
+function closeCustodyModal() { var m = document.getElementById('custody-modal'); if (m) m.style.display = 'none'; }
+function _renderCustodyList() {
+  var ref = _getPhotoRef(_custodyCtx.jobId, _custodyCtx.stableId);
+  var log = (ref && ref.custodyLog) || [];
+  var el = document.getElementById('custody-list');
+  if (!el) return;
+  el.innerHTML = log.length ? log.map(function(e, i){
+    return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:3px 0;border-bottom:0.5px solid var(--border);">'
+      + '<span><strong>' + esc(e.action) + '</strong>' + (e.party ? ' &middot; ' + esc(e.party) : '') + (e.date ? ' &middot; ' + esc(fmtDate2(e.date)) : '') + (e.method ? ' &middot; ' + esc(e.method) : '') + (e.receipt ? ' &middot; ' + esc(e.receipt) : '') + '</span>'
+      + '<a href="#" onclick="removeCustodyEvent(' + i + ');return false;" style="color:#c0392b;text-decoration:none;">&#10007;</a></div>';
+  }).join('') : '<div style="font-size:11px;color:var(--gray);font-style:italic;">No custody events logged yet.</div>';
+}
+function addCustodyEvent() {
+  var ref = _getPhotoRef(_custodyCtx.jobId, _custodyCtx.stableId);
+  if (!ref) return;
+  var g = function(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  var party = g('cust-party');
+  if (!party) { alert('Enter the party (to / from whom).'); return; }
+  if (!ref.custodyLog) ref.custodyLog = [];
+  ref.custodyLog.push({ action: (document.getElementById('cust-action')||{}).value || 'Released', party: party, date: g('cust-date'), method: g('cust-method'), receipt: g('cust-receipt') });
+  _setPhotoRef(_custodyCtx.jobId, ref); savePhotoRefs(_custodyCtx.jobId);
+  ['cust-party','cust-date','cust-method','cust-receipt'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
+  _renderCustodyList();
+  renderInventoryTab();                 // refresh the per-item custody count badge
+  _scheduleInventorySync(_custodyCtx.jobId);
+}
+function removeCustodyEvent(idx) {
+  var ref = _getPhotoRef(_custodyCtx.jobId, _custodyCtx.stableId);
+  if (!ref || !ref.custodyLog) return;
+  ref.custodyLog.splice(idx, 1);
+  _setPhotoRef(_custodyCtx.jobId, ref); savePhotoRefs(_custodyCtx.jobId);
+  _renderCustodyList(); renderInventoryTab(); _scheduleInventorySync(_custodyCtx.jobId);
 }
 
 // ── Work-product exports ──────────────────────────────────────────────────────
@@ -8257,12 +8385,13 @@ function renderInventoryTab() {
     + '<button class="btn-s" onclick="printCourtInventory(' + jobId + ')" title="§733.604-style court / attorney inventory — date-of-death FMV, exempt property separated, no internal figures">Court Inventory</button>'
     + '<button class="btn-s" onclick="printDispositionLedger(' + jobId + ')" title="Disposition &amp; accounting ledger — proceeds, fees, net to estate, receipts">Disposition Ledger</button>'
     + '<button class="btn-s" onclick="printAppraisalWorklist(' + jobId + ')" title="Print a per-specialist packet of every item flagged for appraisal">Appraisal Worklist</button>'
+    + '<button class="btn-s" onclick="takeInventorySnapshot(' + jobId + ')" title="Capture a point-in-time copy of the inventory">Snapshot</button>'
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
     + '</div>'
     + '</div>'
     + inner
     + '</div>';
-  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>' + table;
+  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>' + _renderInventorySnapshots(job) + table;
 }
 
 // ── Build 3: push the manifest to the per-client Google workbook ───────────────
