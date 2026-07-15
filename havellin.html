@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7133,6 +7133,7 @@ function savePhotoRefs(jobId) {
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
                dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
+               apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason,
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
@@ -7686,6 +7687,8 @@ function _invEdit(jobId, stableId, key, el) {
   if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','disposition','category','qty'].indexOf(key) >= 0) {
     _invRefreshSummary(jobId);
   }
+  // FMV / category changes can move an item in or out of the appraisal guardrail.
+  if (key === 'fmv' || key === 'category') _invRefreshGuardrail(jobId);
   _scheduleInventorySync(jobId);
 }
 
@@ -7989,7 +7992,7 @@ function _invSetAppraiser(jobId, stableId, apprId) {
   ref.apprId = apprId || '';
   ref.apprDoc = a ? _apprLabel(a) : '';
   _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
-  _invRefreshSummary(jobId);
+  _invRefreshGuardrail(jobId); _invRefreshSummary(jobId);
   _scheduleInventorySync(jobId);
 }
 
@@ -8019,6 +8022,52 @@ function _renderAppraiserRoster(job) {
     + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
     + '<td><button class="icon-btn" onclick="addAppraiser(' + job.id + ')">+ Add</button></td>'
     + '</tr></tfoot></table></div>';
+}
+
+// ── $3k appraisal guardrail ───────────────────────────────────────────────────
+// An item flagged for appraisal is "covered" once it links to a roster appraiser.
+// On a Standard job, uncovered items are a soft nudge; on a Formal job they're a
+// blocker (the estate's inventory isn't complete until each is appraised or waived
+// with a logged reason). The actual export gate arrives with the Phase 3 exports.
+function _invHasAppraisal(jobId, ref) {
+  if (!ref || !ref.apprId) return false;
+  return _jobAppraisers(jobId).some(function(a){ return String(a.id) === String(ref.apprId); });
+}
+function _invGuardrailItems(jobId) {
+  return _jobInvRefs(jobId).filter(function(r){
+    return invNeedsAppraisal(r) && !_invHasAppraisal(jobId, r) && !r.apprWaived;
+  });
+}
+function waiveAppraisal(jobId, stableId) {
+  var reason = (window.prompt('Waive the appraisal requirement for this item.\nLog who authorized it and why:') || '').trim();
+  if (!reason) return;
+  var ref = _getPhotoRef(jobId, stableId); if (!ref) return;
+  ref.apprWaived = true; ref.apprWaiveReason = reason;
+  _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
+  _invRefreshGuardrail(jobId); _invRefreshSummary(jobId); _scheduleInventorySync(jobId);
+}
+function _invRefreshGuardrail(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var el = document.getElementById('inv-guardrail');
+  if (job && el) el.innerHTML = _renderAppraisalGuardrail(job);
+}
+function _renderAppraisalGuardrail(job) {
+  var items = _invGuardrailItems(job.id);
+  if (!items.length) return '';
+  var formal = isFormalDoc(job);
+  var rows = items.map(function(r){
+    var fmv = (r.fmv != null && r.fmv !== '') ? '$' + Number(r.fmv).toLocaleString() : 'no value yet';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
+      + '<span>' + esc(r.objectName || '(unnamed)') + ' <span style="color:var(--gray);">· ' + esc(r.category || '') + ' · ' + fmv + ' · ' + esc(invAppraiserFor(r.category) || 'specialist') + '</span></span>'
+      + '<button class="btn-s" onclick="waiveAppraisal(' + job.id + ',\'' + r.stableId + '\')" title="Log a reason and waive the requirement for this item">Waive</button>'
+      + '</div>';
+  }).join('');
+  var head = formal
+    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need a qualified appraiser record before this estate&rsquo;s inventory is complete. Link each to an appraiser above, or Waive with a logged reason.'
+    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal don&rsquo;t have an appraiser record yet. Add appraisers above and link them, or leave as reasonable estimates on a standard job.';
+  return '<div class="card" style="margin-bottom:1rem;border:1px solid ' + (formal ? '#E3B7B7' : 'var(--border-md)') + ';">'
+    + '<div class="alert ' + (formal ? 'a-err' : 'a-warn') + '" style="font-size:11.5px;margin-bottom:8px;">' + head + '</div>'
+    + rows + '</div>';
 }
 
 function renderInventoryTab() {
@@ -8063,7 +8112,7 @@ function renderInventoryTab() {
     + '</div>'
     + inner
     + '</div>';
-  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + table;
+  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>' + table;
 }
 
 // ── Build 3: push the manifest to the per-client Google workbook ───────────────
