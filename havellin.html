@@ -254,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -362,15 +362,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <div><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
             <select id="i-executor-role">
               <option value="">Select role</option>
+              <option value="Estate Attorney">Estate Attorney</option>
               <option value="Executor">Executor</option>
+              <option value="Family Member">Family Member</option>
               <option value="Personal Representative">Personal Representative</option>
               <option value="Power of Attorney">Power of Attorney</option>
-              <option value="Estate Attorney">Estate Attorney</option>
-              <option value="Family Member">Family Member</option>
               <option value="Trustee">Trustee</option>
               <optgroup label="Court-appointed (contested)">
-                <option value="Curator">Curator (Fla. Stat. 733.501)</option>
                 <option value="Administrator ad litem">Administrator ad litem (733.308)</option>
+                <option value="Curator">Curator (Fla. Stat. 733.501)</option>
                 <option value="Guardian ad litem">Guardian ad litem (Rule 5.120)</option>
               </optgroup>
               <option value="Other">Other</option>
@@ -426,10 +426,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <select id="i-ptype">
             <option value="">Select type</option>
             <option>Apartment</option>
-            <option>Town Home</option>
+            <option>Estate</option>
             <option>Patio Home</option>
             <option>Single Family Home</option>
-            <option>Estate</option>
+            <option>Town Home</option>
           </select>
         </div>
         <div>
@@ -1493,9 +1493,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <label>Reason for change</label>
     <select id="co-reason">
       <option value="timeline">Accelerated timeline — rush adjustment</option>
+      <option value="crew">Crew upgrade — Senior Property Specialist required</option>
       <option value="scope_add">Scope addition — new rooms or services</option>
       <option value="scope_remove">Scope reduction — rooms removed</option>
-      <option value="crew">Crew upgrade — Senior Property Specialist required</option>
       <option value="vendor">Vendor cost change</option>
       <option value="other">Other</option>
     </select>
@@ -1828,10 +1828,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <select id="closeout-reason" style="width:100%;margin-bottom:10px;">
       <option value="">— Select a reason —</option>
       <option value="price">Price / estimate too high</option>
-      <option value="timing">Timing — client not ready yet</option>
-      <option value="competitor">Went with a competitor</option>
       <option value="scope">Scope changed / no longer needed</option>
+      <option value="timing">Timing — client not ready yet</option>
       <option value="unresponsive">Unresponsive / went cold</option>
+      <option value="competitor">Went with a competitor</option>
       <option value="other">Other</option>
     </select>
     <textarea id="closeout-note" placeholder="Optional note (e.g. competitor name, price gap)…" style="width:100%;min-height:56px;margin-bottom:1rem;"></textarea>
@@ -10275,10 +10275,10 @@ var PREP_BASE_TYPES = [
   'Professional Staging','Touch-Up / Interior Paint','Window Cleaning'
 ];
 var SERVICE_BASE_TYPES = [
-  'Appraiser(s)','Firearms / FFL Transfer','Auction House','Dumpster Rental',
-  'Estate Sale Company','Junk Removal / Hauling','Moving Company','Professional Cleaning',
-  'Specialty Vendor (art handler, etc.)','Document Shredding','Handyman / General Repairs',
-  'Pest Inspection / Treatment'
+  'Appraiser(s)','Auction House','Document Shredding','Dumpster Rental',
+  'Estate Sale Company','Firearms / FFL Transfer','Handyman / General Repairs',
+  'Junk Removal / Hauling','Moving Company','Pest Inspection / Treatment',
+  'Professional Cleaning','Specialty Vendor (art handler, etc.)'
 ];
 // Lower-cased categories already reachable through a base label (via the slot map or
 // identity fallback), so live categories aren't listed a second time.
