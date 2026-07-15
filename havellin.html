@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7416,7 +7416,7 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
       _photoRetryData[stableId] = dataUrl;
       if (nameEl) nameEl.value = '';
       _updateRoomInventoryEl(jobId, roomIdx);
-      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Photos', function() {
+      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
         _updateRoomInventoryEl(jobId, roomIdx);
         _scheduleInventorySync(jobId);
       });
@@ -8346,6 +8346,40 @@ function _renderAppraisalGuardrail(job) {
     + rows + '</div>';
 }
 
+// ── Share the Estate Inventory folder with counsel (named viewer, revocable) ──
+function shareInventoryWithCounsel(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  if (!SHEETS_SYNC_URL) { alert('Google Sheets sync URL is not set (Settings).'); return; }
+  if (!job.driveFolder) { alert('This job has no Drive folder yet.'); return; }
+  var email = window.prompt('Share the Estate Inventory folder (read-only) with counsel:', job.probateAttyEmail || job.executorEmail || '');
+  if (!email) return;
+  email = email.trim();
+  resolveSubfolderId(job, 'Estate Inventory', function(folderId) {
+    if (!folderId) { alert('The Estate Inventory folder was not found yet — capture an item or run a sync first so the folder exists in Drive.'); return; }
+    fetch(SHEETS_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'shareFolder', folderId: folderId, email: email }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ alert((d && d.ok) ? ('Shared the Estate Inventory folder (read-only) with ' + email + '.') : ('Share failed: ' + ((d && d.error) || 'unknown error'))); })
+      .catch(function(){ alert('Share failed — check the sync URL and your connection.'); });
+  });
+}
+function unshareInventory(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || !SHEETS_SYNC_URL || !job.driveFolder) { alert('Nothing to unshare.'); return; }
+  var email = window.prompt('Remove Estate Inventory access for:', job.probateAttyEmail || '');
+  if (!email) return;
+  email = email.trim();
+  resolveSubfolderId(job, 'Estate Inventory', function(folderId) {
+    if (!folderId) { alert('Folder not found.'); return; }
+    fetch(SHEETS_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'unshareFolder', folderId: folderId, email: email }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ alert((d && d.ok) ? ('Removed Estate Inventory access for ' + email + '.') : ('Failed: ' + ((d && d.error) || 'unknown error'))); })
+      .catch(function(){ alert('Failed — check your connection.'); });
+  });
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -8386,6 +8420,8 @@ function renderInventoryTab() {
     + '<button class="btn-s" onclick="printDispositionLedger(' + jobId + ')" title="Disposition &amp; accounting ledger — proceeds, fees, net to estate, receipts">Disposition Ledger</button>'
     + '<button class="btn-s" onclick="printAppraisalWorklist(' + jobId + ')" title="Print a per-specialist packet of every item flagged for appraisal">Appraisal Worklist</button>'
     + '<button class="btn-s" onclick="takeInventorySnapshot(' + jobId + ')" title="Capture a point-in-time copy of the inventory">Snapshot</button>'
+    + '<button class="btn-s" onclick="shareInventoryWithCounsel(' + jobId + ')" title="Give the attorney / trust officer read-only access to the Estate Inventory Drive folder">Share w/ Counsel</button>'
+    + '<button class="btn-s" onclick="unshareInventory(' + jobId + ')" title="Revoke an emails access to the Estate Inventory folder">Revoke</button>'
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
     + '</div>'
     + '</div>'
@@ -8529,7 +8565,7 @@ function attachJobPlanPhoto(input, jobId, roomIdx, label) {
       savePhotoRefs(jobId);
       _photoRetryData[stableId] = dataUrl;
       _updatePhotoStatusEl(jobId, roomIdx, label);
-      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Photos', function() {
+      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
         _updatePhotoStatusEl(jobId, roomIdx, label);
       });
     });
@@ -8562,7 +8598,7 @@ function attachJobPlanCollectionPhoto(input, jobId, collId) {
       savePhotoRefs(jobId);
       _photoRetryData[stableId] = dataUrl;
       _updateCollPhotoStatus(jobId, collId);
-      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Asset Documentation', function() {
+      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
         _updateCollPhotoStatus(jobId, collId);
       });
     });
@@ -8615,7 +8651,7 @@ function retryPhotoUpload(jobId, stableId) {
   if (!ref) return;
   ref.status = 'uploading';
   _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
-  var subfolder = ref.collId ? 'Asset Documentation' : 'Photos';
+  var subfolder = 'Estate Inventory';
   if (ref.label === 'appraisal') {
     _updateCollDocs(jobId, ref.collId);
     _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
@@ -8687,7 +8723,7 @@ function attachCollectionDoc(input, jobId, collId) {
     _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
     _photoRetryData[stableId] = ev.target.result;
     _updateCollDocs(jobId, collId);
-    _doPhotoUpload(jobId, ev.target.result, filename, stableId, 'Asset Documentation', function() {
+    _doPhotoUpload(jobId, ev.target.result, filename, stableId, 'Estate Inventory', function() {
       _updateCollDocs(jobId, collId);
     });
   };
@@ -12132,7 +12168,8 @@ function _subfolderId(job, name) {
 }
 function resolveSubfolderId(job, name, cb) {
   // Aliases keep older jobs working after a folder rename (Estimate → Estimates).
-  var ALIASES = { 'Estimates': ['Estimate'], 'Estimate': ['Estimates'] };
+  var ALIASES = { 'Estimates': ['Estimate'], 'Estimate': ['Estimates'],
+                  'Estate Inventory': ['Photos', 'Asset Documentation'] };  // older jobs' merged sources
   function look() {
     var id = _subfolderId(job, name);
     if (!id && ALIASES[name]) {
@@ -12419,7 +12456,7 @@ function createDriveJobFolder(job) {
       hvlId: job.hvlId || '',
       clientName: job.name || '',
       svc: job.svc || '',
-      subfolders: ['Photos','Walkthrough Notes','Estimates','Agreement','Change Orders','Asset Documentation','Invoice']
+      subfolders: ['Estate Inventory','Walkthrough Notes','Estimates','Agreement','Change Orders','Invoice']
     })
   })
   .then(function(r){ return r.json(); })

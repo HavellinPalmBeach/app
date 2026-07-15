@@ -43,10 +43,12 @@ function saveInventory(payload) {
 
     var clientFolder = DriveApp.getFolderById(folderId);
 
-    // Prefer the "Asset Documentation" subfolder so the workbook ships with the
-    // diligence data-room share; fall back to the client root if it's missing.
+    // Ship the workbook inside the shareable "Estate Inventory" subfolder (falling back
+    // to the older "Asset Documentation" folder for jobs created before the merge, then
+    // to the client root if neither exists).
     var target = clientFolder;
-    var subs = clientFolder.getFoldersByName('Asset Documentation');
+    var subs = clientFolder.getFoldersByName('Estate Inventory');
+    if (!subs.hasNext()) subs = clientFolder.getFoldersByName('Asset Documentation');
     if (subs.hasNext()) target = subs.next();
 
     var name = 'Estate Inventory — ' + (payload.hvlId || payload.jobId);

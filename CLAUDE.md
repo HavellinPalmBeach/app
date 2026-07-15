@@ -39,10 +39,13 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   basis + §2032 alternate valuation date, asset-track, custody log, snapshots, and the
   Court Inventory / Disposition Ledger / Appraisal Worklist exports; §1 interface notes
   for sticky nav, scrollable modals, alphabetized dropdowns).
-  **Deferred (not yet built):** the Drive folder consolidation (merge Photos + Asset
-  Documentation → one shared "Estate Inventory" folder) and in-app counsel sharing — both
-  need Apps Script changes + a naming decision, so §4/§15 Drive-folder docs still describe
-  the current Photos + Asset Documentation layout.
+  Also built: the **Drive folder consolidation** (Photos + Asset Documentation merged into
+  one shareable **Estate Inventory** subfolder) and **in-app counsel sharing** (named-viewer
+  Share w/ Counsel + Revoke on the Inventory tab). §4/§15 Drive-folder docs updated to match.
+  **ACTION REQUIRED:** redeploy both Apps Scripts (`apps-script/main-sync.gs`,
+  `apps-script/saveInventory.gs`) for the merged folder + share actions to take effect — the
+  .gs edits are committed but can't be tested from here. A backward-compat alias keeps any
+  pre-merge job folders working.
   Prior pass 2026-07-14 (added §13a Category Group & Category taxonomy — group required and
   dictates category, self-serve new categories, group→estimate-menu/fee routing table;
   noted the data-driven "From directory" options in the §5d third-party-vendor and §6a Home

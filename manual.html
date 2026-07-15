@@ -78,7 +78,8 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <p><strong>Documentation level</strong> — choose <em>Auto</em>, <em>Standard</em>, or <em>Formal — court &amp; attorney grade</em>. Auto resolves by service type (Contested Probate = Formal, everything else Standard). Formal turns on the item-appraisal guardrails and makes chain-of-custody tracking mandatory. This is a <em>documentation</em> decision, kept separate from the Premium-estate <em>rate</em> toggle (§5c) — a premium job is not automatically a court-grade one, and vice-versa.</p>
   <p><strong>Referral source:</strong> Intake records how the job came in. Professional referral types (attorney, realtor, trust officer, etc.) link to a specific <strong>Referral Partner</strong> from that directory, so referrals are attributed on the partner leaderboard. Personal sources (family, friend, existing client) use a free-text "Referred by" name instead.</p>
   <p>Drive folder structure created automatically per job:</p>
-  <div class="flow">Photos · Walkthrough Notes · Estimate · Agreement · Change Orders · Asset Documentation</div>
+  <div class="flow">Estate Inventory · Walkthrough Notes · Estimate · Agreement · Change Orders · Invoice · Job Log</div>
+  <p style="font-size:12px;color:#6B6B72;">Room photos, item photos, collection photos/appraisals, and the inventory workbook all live in one <strong>Estate Inventory</strong> subfolder — the single package you share with counsel (§10a). Financial folders (Estimate, Agreement, Change Orders, Invoice) stay private.</p>
 
   <h2>5. Estimate (Labor-Based Services)</h2>
   <p><strong>Tab: Build Estimate</strong> → select job from dropdown. This section covers the labor-based services (Downsizing, Cleanout, Estate Settlement, Probate). Home Prep for Sale uses the fee-only flow in Section 6.</p>
@@ -206,13 +207,13 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <h3>Room Documentation</h3>
   <p>Each room row shows the walkthrough note from the estimate as a gray italic reference. Capture buttons per room:</p>
   <ul>
-    <li><strong>📷</strong> — tap to add/review photos. Uploads automatically to the <strong>Photos</strong> Drive subfolder</li>
+    <li><strong>📷</strong> — tap to add/review photos. Uploads automatically to the <strong>Estate Inventory</strong> Drive subfolder</li>
     <li><strong>🎥</strong> — capture video walkthrough footage</li>
   </ul>
   <p>Photo naming: <code>HVL-YYMM-XXXX_RoomName_001.jpg</code></p>
   <h3>Notable Collections — Asset Documentation</h3>
   <ul>
-    <li><strong>📷 Asset photos</strong> — condition/identification photography. Uploads to <strong>Asset Documentation</strong> as <code>HVL-YYMM-XXXX_ASSET_CollectionName_001.jpg</code></li>
+    <li><strong>📷 Asset photos</strong> — condition/identification photography. Uploads to <strong>Estate Inventory</strong> as <code>HVL-YYMM-XXXX_ASSET_CollectionName_001.jpg</code></li>
     <li><strong>📄 Appraisal</strong> — upload PDF or image of appraisal document. Saves as <code>HVL-YYMM-XXXX_APPRSL_CollectionName_2026-05-01.pdf</code></li>
   </ul>
   <h3>Item Inventory Capture (room cards)</h3>
@@ -251,6 +252,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <li><strong>Court Inventory</strong> — a §733.604-style schedule grouped by category with date-of-death FMV, exempt property (§732.402) separated, a valuation-basis header and attestation line, and <em>no</em> internal figures. Stamps DRAFT / FINAL per the guardrail. Feeds counsel's filing (Havellin does not file it).</li>
     <li><strong>Disposition Ledger</strong> — the fiduciary accounting: gross / fees / net to the estate / receipts. Havellin's own service fee never appears here.</li>
     <li><strong>Appraisal Worklist</strong> — a per-specialist packet of every flagged item (photo, room, condition) to hand each appraiser.</li>
+    <li><strong>Share w/ Counsel</strong> — grants the estate attorney or trust officer <em>read-only</em> access to the whole <strong>Estate Inventory</strong> Drive folder (all photos + the workbook), pre-filled from the attorney email. <strong>Revoke</strong> removes it. Named-person access, never a public link — financial folders stay private.</li>
   </ul>
   <div class="note">All inventory valuations are documentation support, not a legal or appraisal opinion — the estate attorney and a credentialed appraiser remain the authority on any estate.</div>
 
@@ -306,8 +308,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <tr><td>Walkthrough Notes</td><td>Voice/typed notes per room (.txt)</td><td>During estimate walkthrough</td></tr>
     <tr><td>Estimate</td><td>Approved estimate document</td><td>On estimate save/approval</td></tr>
     <tr><td>Agreement</td><td>Signed agreement (via DocuSign)</td><td>On DocuSign completion</td></tr>
-    <tr><td>Photos</td><td>Room condition and documentation photos</td><td>During active job</td></tr>
-    <tr><td>Asset Documentation</td><td>Collection photos + appraisal documents</td><td>During active job</td></tr>
+    <tr><td>Estate Inventory</td><td>All room + item + collection photos, appraisal docs, and the inventory workbook — the shareable package</td><td>During active job</td></tr>
     <tr><td>Change Orders</td><td>Approved change order documents</td><td>As needed</td></tr>
   </table>
 

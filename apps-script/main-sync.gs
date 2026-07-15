@@ -57,6 +57,8 @@ function doPost(e) {
     if (data.action === 'uploadFile')    { return jsonOut(uploadFileToDrive(data.folderId, data.filename, data.dataUrl)); }
     if (data.action === 'uploadHtml')    { return jsonOut(uploadHtmlToDrive(data.folderId, data.filename, data.html)); }
     if (data.action === 'getSubfolders') { return handleGetSubfolders(data); }
+    if (data.action === 'shareFolder')   { return jsonOut(shareFolder(data.folderId, data.email)); }
+    if (data.action === 'unshareFolder') { return jsonOut(unshareFolder(data.folderId, data.email)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -442,7 +444,7 @@ function createJobFolder(hvlId, clientName, svc, subfolderNames, parentFolderId)
     var existing = rootFolder.getFoldersByName(folderName);
     var reused = existing.hasNext();
     var clientFolder = reused ? existing.next() : rootFolder.createFolder(folderName);
-    var names = subfolderNames || ['Photos', 'Walkthrough Notes', 'Estimate', 'Agreement', 'Change Orders', 'Asset Documentation', 'Invoice', 'Job Log'];
+    var names = subfolderNames || ['Estate Inventory', 'Walkthrough Notes', 'Estimate', 'Agreement', 'Change Orders', 'Invoice', 'Job Log'];
     var subfolders = {};
     names.forEach(function(name) {
       // Same reuse-by-name rule for each subfolder, so re-running never duplicates them.
@@ -501,5 +503,29 @@ function handleGetSubfolders(data) {
     return jsonOut({ ok: true, subfolders: result });
   } catch(e) {
     return jsonOut({ ok: false, error: e.message });
+  }
+}
+
+// Grant a person read-only (Viewer) access to one folder — used to share the merged
+// "Estate Inventory" folder with an estate attorney or trust officer. Named-person
+// share, not "anyone with the link", so it can be revoked with unshareFolder.
+function shareFolder(folderId, email) {
+  try {
+    if (!folderId || !email) return { ok: false, success: false, error: 'Missing folderId or email' };
+    var folder = DriveApp.getFolderById(folderId);
+    folder.addViewer(email);
+    return { ok: true, success: true, url: folder.getUrl() };
+  } catch (e) {
+    return { ok: false, success: false, error: String(e) };
+  }
+}
+function unshareFolder(folderId, email) {
+  try {
+    if (!folderId || !email) return { ok: false, success: false, error: 'Missing folderId or email' };
+    var folder = DriveApp.getFolderById(folderId);
+    folder.removeViewer(email);
+    return { ok: true, success: true };
+  } catch (e) {
+    return { ok: false, success: false, error: String(e) };
   }
 }
