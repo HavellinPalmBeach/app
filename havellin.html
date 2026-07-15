@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -505,6 +505,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
             <option value="yes">Yes — art, antiques, wine</option>
           </select>
         </div>
+      </div>
+
+      <div>
+        <label>Documentation level</label>
+        <select id="i-doclevel">
+          <option value="">Auto — set by service type</option>
+          <option value="standard">Standard</option>
+          <option value="formal">Formal — court &amp; attorney grade</option>
+        </select>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Choose <strong>Formal</strong> when the job needs court-grade records — a contested estate, a large estate that may owe estate tax, or when the attorney or trust officer asks for it. Formal turns on the item-appraisal guardrails and makes chain-of-custody tracking mandatory. (Contested probate is Formal automatically.)</div>
       </div>
 
       <div id="downsizing-dest-fields" style="display:none;">
@@ -3697,6 +3707,7 @@ function saveIntake() {
     priority:document.getElementById('i-pri').value,
     re:document.getElementById('i-re').value,
     premium:document.getElementById('i-prem').value==='yes',
+    docLevel:(document.getElementById('i-doclevel')||{}).value||'',
     status:'new',
     havellinEst:null, totalEst:null, inRange:null, approved:false,
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
@@ -3737,7 +3748,7 @@ function clearIntakeForm() {
   });
   var _pd = document.getElementById('i-probate-deadline'); if (_pd) delete _pd.dataset.userEdited;
   var _dfb = document.getElementById('i-deadline-fb'); if (_dfb) _dfb.textContent = '';
-  ['i-svc','i-ptype','i-src','i-tc','i-pri','i-probate-sale','i-site-visit-by','i-home-value'].forEach(function(id){
+  ['i-svc','i-ptype','i-src','i-tc','i-pri','i-probate-sale','i-site-visit-by','i-home-value','i-doclevel'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('i-pri').value = 'normal';
@@ -3756,7 +3767,7 @@ function clearIntake() {
   var _pd2 = document.getElementById('i-probate-deadline'); if (_pd2) delete _pd2.dataset.userEdited;
   var _dfb2 = document.getElementById('i-deadline-fb'); if (_dfb2) _dfb2.textContent='';
   var erEl = document.getElementById('i-executor-role'); if(erEl) erEl.value='';
-  ['i-zip','i-src','i-svc','i-ptype','i-tc','i-start','i-home-value'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  ['i-zip','i-src','i-svc','i-ptype','i-tc','i-start','i-home-value','i-doclevel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   ['i-dest-addr','i-dest-city','i-dest-zip','i-dest-sqft','i-dest-beds','i-dest-baths'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('i-pri').value='normal';
   document.getElementById('i-re').value='unknown';
@@ -11195,6 +11206,18 @@ function renderPrepJobPlan(jobId, job, est) {
   return budgetCard + sourcingCard + checklistCard;
 }
 
+// Documentation rigor: 'standard' (reasonable estimates, dealer/auction assessments)
+// vs 'formal' (court/attorney grade — item appraisals + mandatory chain of custody).
+// Defaults from service type when unset: contested probate is always formal; every
+// other job is standard until a TC sets it. This is a documentation decision, kept
+// deliberately separate from the Premium-estate *rate* toggle.
+function resolveDocLevel(job) {
+  if (!job) return 'standard';
+  if (job.docLevel === 'formal' || job.docLevel === 'standard') return job.docLevel;
+  return (job.svc === 'contested_probate') ? 'formal' : 'standard';
+}
+function isFormalDoc(job) { return resolveDocLevel(job) === 'formal'; }
+
 function renderJobPlan(jobId, job, est) {
   var plan   = getJobPlan(jobId);
   var svc    = est.svc || job.svc || '';
@@ -11210,8 +11233,10 @@ function renderJobPlan(jobId, job, est) {
   var hasPlaybook  = isDownsizing || isDisposal;
   var vendors     = est.vendors     || [];
   var collections = est.collections || [];
-  var prem   = !!est.prem;
-  var hasCOC = prem || collections.length > 0 || isDocJob; // chain of custody mandatory for estate/probate
+  var prem   = !!est.prem;                    // Premium-estate RATE toggle — no longer drives custody
+  var formal = isFormalDoc(job);              // Documentation level (court/attorney grade)
+  var custodyMandatory = formal || isProbate; // mandatory on formal jobs + all probate; NOT on premium-rate alone
+  var hasCOC = formal || collections.length > 0 || isDocJob; // show the custody section
   var psNames = (est.psSlots && est.psSlots.length)
     ? est.psSlots.map(function(s){
         return (s.label && !s.label.startsWith('contractor_')) ? s.label
@@ -11274,6 +11299,9 @@ function renderJobPlan(jobId, job, est) {
   if (isMM && job.destAddr) {
     _hdrBits.push(['New Home', esc([job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') + (job.destSqft ? ' · '+job.destSqft+' sqft':''))]);
   }
+  if (formal || isDocJob) {
+    _hdrBits.push(['Documentation', formal ? 'Formal (court / attorney grade)' : 'Standard']);
+  }
   var hdr = '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
     '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
     _hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
@@ -11281,7 +11309,7 @@ function renderJobPlan(jobId, job, est) {
     '</div>' +
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
-    (prem       ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
+    (custodyMandatory ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
     '</div>';
 
   // Client info renders at the top of the Job Plan tab (above Log Hours), not inline
@@ -11371,7 +11399,7 @@ function renderJobPlan(jobId, job, est) {
   var p1 = planSubsec('Rooms — Sort & Lock (ordered by complexity)') + p1rooms +
     planSubsec('Phase Gates') +
     chks('p1_gate_', p1gates) +
-    (hasCOC ? planSubsec('Chain of Custody'+((prem||isDocJob)?' — Mandatory':'')) +
+    (hasCOC ? planSubsec('Chain of Custody'+(custodyMandatory?' — Mandatory':'')) +
       chks('p1_coc_',['Photograph high-value item in place before it moves',
         'Logged: description, '+(isDocJob?'date-of-death FMV estimate':'client\'s stated value')+', condition, photo reference',
         (isDocJob?'PR acknowledgment of the room\'s inventory before items leave it':'Client acknowledgment of the room\'s inventory before items leave it'),
