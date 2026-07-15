@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7133,7 +7133,7 @@ function savePhotoRefs(jobId) {
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
                dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
-               apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason,
+               apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason, assetTrack:r.assetTrack,
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
@@ -7427,6 +7427,32 @@ function setValBasis(jobId, v) {
   _invRefreshSummary(jobId);
   _scheduleInventorySync(jobId);
 }
+// Which pot each item belongs to. Only Probate (and blank, treated as probate) belongs
+// on the §733.604 court inventory; Trust / Non-probate / Homestead are segregated so
+// the probate schedule doesn't overstate the estate. Exempt overlaps the §732.402 flag.
+var INV_ASSET_TRACKS = ['Probate','Trust','Non-probate','Homestead','Exempt'];
+function _invTrack(ref) { return (ref && ref.assetTrack) || 'Probate'; }
+function _invIsProbateAsset(ref) { var t = _invTrack(ref); return t === 'Probate'; }
+// §2032 alternate valuation date: a taxable estate may elect to value assets as of six
+// months after death. estateValueDate() is the date item values peg to when the item
+// has no explicit valuation date.
+function _avdDate(job) {
+  if (!job || !job.deathDate) return '';
+  var d = new Date(job.deathDate + 'T00:00:00'); d.setMonth(d.getMonth() + 6);
+  return d.toISOString().slice(0, 10);
+}
+function estateValueDate(job) {
+  if (!job) return '';
+  return (job.avd && job.deathDate) ? _avdDate(job) : (job.deathDate || '');
+}
+function setEstateAVD(jobId, on) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  job.avd = !!on; saveJobs();
+  if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+}
 var INVENTORY_COLUMNS = [
   {key:'seq',          header:'Item #',              kind:'capture'},
   {key:'room',         header:'Room',                kind:'capture'},
@@ -7452,7 +7478,8 @@ var INVENTORY_COLUMNS = [
   {key:'fees',         header:'Fees',                kind:'manage',  edit:'currency'},
   {key:'net',          header:'Net to Estate',       kind:'formula'},
   {key:'dispDate',     header:'Date of Disposition', kind:'manage',  edit:'date'},
-  {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text'}
+  {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text'},
+  {key:'assetTrack',   header:'Asset Track',         kind:'manage',  edit:'trackSelect'}
 ];
 
 function _jobInvRefs(jobId) {
@@ -7517,9 +7544,11 @@ function _invCellRead(ref, col, job, displaySeq) {
       if (isNaN(g) && isNaN(f)) return '—';
       return _money((isNaN(g)?0:g) - (isNaN(f)?0:f));
     }
-    case 'valDate':
+    case 'valDate': {
       if (ref.valDate) return esc(fmtDate2(ref.valDate));
-      return job.deathDate ? '<span style="color:var(--gray);font-style:italic;" title="Defaults to date of death">' + esc(fmtDate2(job.deathDate)) + '</span>' : '—';
+      var evd = estateValueDate(job);
+      return evd ? '<span style="color:var(--gray);font-style:italic;" title="Defaults to the estate valuation date' + (job.avd ? ' (alternate valuation date)' : ' (date of death)') + '">' + esc(fmtDate2(evd)) + '</span>' : '—';
+    }
     case 'approvalDate': case 'dispDate': return ref[col.key] ? esc(fmtDate2(ref[col.key])) : '—';
     case 'fmv': case 'gross': case 'fees': { var m = _money(ref[col.key]); return m || '—'; }
     case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '—';
@@ -7556,6 +7585,7 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Property Address', esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—'))
     + hdrRow('Date of Death', dt(job.deathDate))
     + hdrRow('Valuation Basis', '<select onchange="setValBasis(' + job.id + ',this.value)" style="font-size:11px;padding:2px 4px;">' + INV_VAL_BASES.map(function(b){ return '<option' + (b === resolveValBasis(job) ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>')
+    + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;justify-content:flex-end;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>')
     + hdrRow('Letters Issued', dt(job.lettersDate))
     + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))
     + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
@@ -7655,6 +7685,10 @@ function _invInput(jobId, ref, col, job) {
     case 'catSelect': {
       var oc = INV_CATEGORIES.map(function(x){ return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
       return '<select ' + on + ' ' + base + '>' + oc + '</select>';
+    }
+    case 'trackSelect': {
+      var ot = INV_ASSET_TRACKS.map(function(x){ return '<option' + ((v || 'Probate') === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      return '<select ' + on + ' ' + base + '>' + ot + '</select>';
     }
     case 'flag':
       return '<input type="checkbox" ' + (v ? 'checked' : '') + ' onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--gray-dk);">';
@@ -7777,7 +7811,10 @@ function printCourtInventory(jobId) {
   var draft = formal && guard.length > 0;
   var status = draft ? 'DRAFT — ' + guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal' : 'FINAL';
   var basis = resolveValBasis(job);
-  var dod = job.deathDate ? fmtDate2(job.deathDate) : '—';
+  var vdate = estateValueDate(job);
+  var vdateStr = vdate ? fmtDate2(vdate) : '—';
+  var vlabel = job.avd ? 'the alternate valuation date' : 'date of death';
+  var excluded = items.filter(function(r){ return !_invIsProbateAsset(r) && !r.flagExempt; });
   var total = 0;
   function section(title, list) {
     if (!list.length) return '';
@@ -7797,17 +7834,18 @@ function printCourtInventory(jobId) {
     });
     return h;
   }
-  var body = section('Tangible Personal Property', items.filter(function(r){ return !r.flagExempt; }))
+  var body = section('Tangible Personal Property', items.filter(function(r){ return _invIsProbateAsset(r) && !r.flagExempt; }))
            + section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return r.flagExempt; }));
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Tangible Personal Property</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + (job.probateCase ? ' &middot; Case ' + esc(job.probateCase) : '') + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
-    + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of date of death (' + esc(dod) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
     + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
     + body
     + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">Total tangible personal property (' + esc(basis) + '): &nbsp;' + _invMoney(total) + '</div>'
-    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated fair market value as of the date of death.</div>'
+    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged Trust / Non-probate / Homestead ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule.</div>' : '')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>'
     + '</div>';
   pt.innerHTML = html;
@@ -8238,7 +8276,7 @@ function _invExportValue(ref, col, job, seq) {
     case 'ts': return ref.ts ? new Date(ref.ts).toISOString() : '';
     case 'driveFileUrl': return ref.driveFileUrl || '';
     case 'net': return '';
-    case 'valDate': return ref.valDate || job.deathDate || '';
+    case 'valDate': return ref.valDate || estateValueDate(job) || '';
     case 'qty': return (ref.qty != null && ref.qty !== '') ? ref.qty : 1;
     case 'fmv': case 'gross': case 'fees': { var n = parseFloat(ref[col.key]); return isNaN(n) ? '' : n; }
     case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '';
