@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7414,6 +7414,19 @@ var INV_VAL_SOURCES = ['Appraisal','Auction comps','Dealer quote','Online comps'
 // Personal-property appraiser credential bodies (ISA/ASA/AAA), gemology (GIA), and the
 // USPAP standard a qualified appraisal follows.
 var INV_APPRAISER_CREDS = ['ISA','ASA','AAA','USPAP-compliant','GIA','Other'];
+// The level-of-value the whole inventory is stated on. Estate/probate work is Fair
+// Market Value (as of the date of death); the others exist for insurance/liquidation.
+var INV_VAL_BASES = ['Fair Market Value','Marketable Cash Value','Replacement Value','Liquidation Value'];
+function resolveValBasis(job) { return (job && job.valBasis) || 'Fair Market Value'; }
+function setValBasis(jobId, v) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  job.valBasis = v;
+  saveJobs();
+  if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+  _invRefreshSummary(jobId);
+  _scheduleInventorySync(jobId);
+}
 var INVENTORY_COLUMNS = [
   {key:'seq',          header:'Item #',              kind:'capture'},
   {key:'room',         header:'Room',                kind:'capture'},
@@ -7542,6 +7555,7 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Job ID', esc(job.hvlId || '—'))
     + hdrRow('Property Address', esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—'))
     + hdrRow('Date of Death', dt(job.deathDate))
+    + hdrRow('Valuation Basis', '<select onchange="setValBasis(' + job.id + ',this.value)" style="font-size:11px;padding:2px 4px;">' + INV_VAL_BASES.map(function(b){ return '<option' + (b === resolveValBasis(job) ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>')
     + hdrRow('Letters Issued', dt(job.lettersDate))
     + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))
     + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
@@ -8153,6 +8167,7 @@ function buildInventoryPayload(jobId) {
     lettersDate: job.lettersDate || '',
     deadline: job.probateDeadline || '',
     preparedBy: 'Havellin Palm Beach, LLC',
+    valBasis: resolveValBasis(job),
     driveFolder: job.driveFolder || '',
     lastUpdated: new Date().toISOString(),
     columns: columns,
