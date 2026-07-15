@@ -254,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7682,6 +7682,78 @@ function removeInventoryManualItem(jobId, stableId) {
   _scheduleInventorySync(jobId);
 }
 
+// ── Appraisal worklist ────────────────────────────────────────────────────────
+// Group every manifest item flagged for a specialist by its appraiser type, so each
+// appraiser can be handed a clean packet of just their items (photos + condition +
+// room). This is the payoff of the shared taxonomy's appraiser routing.
+function _apprGroups(jobId) {
+  var groups = {};
+  _jobInvRefs(jobId).forEach(function(r) {
+    if (!invNeedsAppraisal(r)) return;
+    var a = invAppraiserFor(r.category) || 'Specialist Appraiser';
+    (groups[a] = groups[a] || []).push(r);
+  });
+  return groups;
+}
+
+// Items flagged at the estimate (collections marked appraise/firearms, collector
+// vehicles) that haven't been brought into the manifest yet — so the worklist can
+// nudge the user to add them via the Job Plan.
+function _apprEstimateFlags(jobId) {
+  var rec = estimateStore[jobId];
+  var est = rec && rec.estimate;
+  if (!est) return { collections: 0, vehicles: 0 };
+  var colls = (est.collections || []).filter(function(c){ return c.disp === 'appraise' || c.disp === 'firearms'; }).length;
+  var vehs  = (est.vehicles || []).filter(function(v){ return v.collector; }).length;
+  return { collections: colls, vehicles: vehs };
+}
+
+function printAppraisalWorklist(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var pt = document.getElementById('print-target');
+  if (!job || !pt) return;
+  var groups = _apprGroups(jobId);
+  var names = Object.keys(groups).sort();
+  var dod = job.deathDate ? ' (' + esc(fmtDate2(job.deathDate)) + ')' : '';
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:4px;">Appraisal Worklist</h2>'
+    + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
+    + '<div style="font-size:11px;color:#888;margin-bottom:16px;">Items flagged for specialist appraisal &middot; value as of date of death' + dod + ' &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>';
+  if (!names.length) {
+    html += '<div style="font-size:12px;color:#888;">No items are currently flagged for appraisal. Flag intrinsic items (art, jewelry, silver, rugs, etc.) in the manifest or capture them on the Job Plan.</div>';
+  } else {
+    names.forEach(function(a) {
+      var rows = groups[a].map(function(r, i) {
+        return '<tr>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + (i + 1) + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '(unnamed)') + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.category || '') + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + (r.driveFileUrl ? '<a href="' + esc(r.driveFileUrl) + '">photo</a>' : '—') + '</td>'
+          + '</tr>';
+      }).join('');
+      html += '<div style="margin-bottom:18px;">'
+        + '<h3 style="font-family:\'Cormorant Garamond\',serif;color:#8a6d3b;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:6px;">' + esc(a) + ' <span style="font-size:12px;color:#888;">(' + groups[a].length + ')</span></h3>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+        + '<thead><tr style="text-align:left;color:#888;"><th style="padding:3px 6px;">#</th><th style="padding:3px 6px;">Object</th><th style="padding:3px 6px;">Category</th><th style="padding:3px 6px;">Room</th><th style="padding:3px 6px;">Condition</th><th style="padding:3px 6px;">Photo</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody></table></div>';
+    });
+  }
+  var f = _apprEstimateFlags(jobId);
+  if (f.collections || f.vehicles) {
+    var bits = [];
+    if (f.collections) bits.push(f.collections + ' collection' + (f.collections > 1 ? 's' : '') + ' flagged to appraise');
+    if (f.vehicles) bits.push(f.vehicles + ' collector vehicle' + (f.vehicles > 1 ? 's' : ''));
+    html += '<div style="margin-top:10px;font-size:11px;color:#8a6d3b;font-style:italic;">Note: ' + bits.join(' and ')
+      + ' from the estimate ' + ((f.collections + f.vehicles) > 1 ? 'are' : 'is') + ' not yet in the inventory — add them on the Job Plan to include them here.</div>';
+  }
+  html += '</div>';
+  pt.innerHTML = html;
+  window.print();
+  pt.innerHTML = '';
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -7717,7 +7789,10 @@ function renderInventoryTab() {
   var table = '<div class="card">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
     + '<div class="sec" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Inventory — Tangible Personal Property</div>'
+    + '<div style="display:flex;gap:6px;">'
+    + '<button class="btn-s" onclick="printAppraisalWorklist(' + jobId + ')" title="Print a per-specialist packet of every item flagged for appraisal">Appraisal Worklist</button>'
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
+    + '</div>'
     + '</div>'
     + inner
     + '</div>';
