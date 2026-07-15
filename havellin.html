@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7132,7 +7132,7 @@ function savePhotoRefs(jobId) {
                qty:r.qty, condition:r.condition, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
-               dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr,
+               dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
@@ -7410,6 +7410,9 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
 // editable in the next build. Mirrors Havellin_Estate_Inventory_Master.xlsx.
 var INV_CONDITIONS  = ['Excellent','Good','Fair','Poor','Salvage'];
 var INV_VAL_SOURCES = ['Appraisal','Auction comps','Dealer quote','Online comps','PR estimate'];
+// Personal-property appraiser credential bodies (ISA/ASA/AAA), gemology (GIA), and the
+// USPAP standard a qualified appraisal follows.
+var INV_APPRAISER_CREDS = ['ISA','ASA','AAA','USPAP-compliant','GIA','Other'];
 var INVENTORY_COLUMNS = [
   {key:'seq',          header:'Item #',              kind:'capture'},
   {key:'room',         header:'Room',                kind:'capture'},
@@ -7601,6 +7604,16 @@ function _invInputStyle(ctrl, key) {
 function _invInput(jobId, ref, col, job) {
   if (col.key === 'room') {
     return '<select onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'roomIdx\',this)" ' + _invInputStyle('room', 'room') + '>' + _invRoomOptions(jobId, ref.roomIdx) + '</select>';
+  }
+  if (col.key === 'apprDoc') {
+    var apprs = _jobAppraisers(jobId);
+    if (apprs.length) {
+      var ao = '<option value="">— none —</option>' + apprs.map(function(a){
+        return '<option value="' + a.id + '"' + (String(ref.apprId) === String(a.id) ? ' selected' : '') + '>' + esc(_apprLabel(a)) + '</option>';
+      }).join('');
+      return '<select onchange="_invSetAppraiser(' + jobId + ',\'' + ref.stableId + '\',this.value)" ' + _invInputStyle('select', 'apprDoc') + '>' + ao + '</select>';
+    }
+    return '<input type="text" value="' + esc(ref.apprDoc || '') + '" onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'apprDoc\',this)" ' + _invInputStyle('text', 'apprDoc') + '>';
   }
   var on = 'onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)"';
   var ctrl = col.edit || (col.key === 'category' ? 'catSelect' : 'text');
@@ -7930,6 +7943,84 @@ function _renderInventoryImportPanel(jobId) {
     + '</div>';
 }
 
+// ── Appraiser roster (per estate) ─────────────────────────────────────────────
+// A qualified appraisal needs a named, credentialed, independent appraiser — not a
+// free-text note. Appraisers are held on the job and linked to items whose valuation
+// source is "Appraisal", so the manifest carries a defensible record.
+function _jobAppraisers(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  return (job && job.appraisers) || [];
+}
+function _apprLabel(a) {
+  return a ? (a.name + (a.firm ? ' · ' + a.firm : '') + (a.credential ? ' (' + a.credential + ')' : '')) : '';
+}
+function addAppraiser(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var g = function(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  var name = g('appr-name');
+  if (!name) { alert('Enter the appraiser\'s name.'); return; }
+  if (!job.appraisers) job.appraisers = [];
+  job.appraisers.push({
+    id: Date.now(), name: name, firm: g('appr-firm'),
+    credential: (document.getElementById('appr-cred')||{}).value || '',
+    independent: !!(document.getElementById('appr-indep')||{}).checked,
+    effectiveDate: g('appr-effdate'), reportDate: g('appr-rptdate')
+  });
+  saveJobs();
+  if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+  renderInventoryTab();
+}
+function removeAppraiser(jobId, apprId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || !job.appraisers) return;
+  if (!window.confirm('Remove this appraiser? Items linked to them will lose the link.')) return;
+  job.appraisers = job.appraisers.filter(function(a){ return String(a.id) !== String(apprId); });
+  // Unlink any items pointing at the removed appraiser.
+  (_photoRefs[jobId] || []).forEach(function(r){ if (String(r.apprId) === String(apprId)) { r.apprId = ''; r.apprDoc = ''; } });
+  saveJobs(); savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+}
+// Link an item to a roster appraiser; mirror a readable label into apprDoc for export.
+function _invSetAppraiser(jobId, stableId, apprId) {
+  var ref = _getPhotoRef(jobId, stableId); if (!ref) return;
+  var a = _jobAppraisers(jobId).find(function(x){ return String(x.id) === String(apprId); });
+  ref.apprId = apprId || '';
+  ref.apprDoc = a ? _apprLabel(a) : '';
+  _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
+  _invRefreshSummary(jobId);
+  _scheduleInventorySync(jobId);
+}
+
+function _renderAppraiserRoster(job) {
+  var apprs = job.appraisers || [];
+  var credOpts = '<option value="">Credential…</option>' + INV_APPRAISER_CREDS.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
+  var rows = apprs.length ? apprs.map(function(a){
+    return '<tr>'
+      + '<td style="font-size:11px;"><strong>' + esc(a.name) + '</strong>' + (a.firm ? ' <span style="color:var(--gray);">· ' + esc(a.firm) + '</span>' : '') + '</td>'
+      + '<td style="font-size:11px;">' + esc(a.credential || '—') + '</td>'
+      + '<td style="font-size:11px;">' + (a.independent ? '<span style="color:var(--ok-tx);font-weight:600;">Independent</span>' : '<span style="color:#c0392b;">Not independent</span>') + '</td>'
+      + '<td style="font-size:11px;">' + (a.effectiveDate ? esc(fmtDate2(a.effectiveDate)) : '—') + '</td>'
+      + '<td style="font-size:11px;">' + (a.reportDate ? esc(fmtDate2(a.reportDate)) : '—') + '</td>'
+      + '<td><button class="icon-btn del" onclick="removeAppraiser(' + job.id + ',' + a.id + ')">Remove</button></td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:8px;">No appraisers yet — add one to link Appraisal-sourced items to a named, credentialed record.</td></tr>';
+  return '<div class="card" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link to Appraisal items)</span></div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date.</div>'
+    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th></th></tr></thead>'
+    + '<tbody>' + rows + '</tbody>'
+    + '<tfoot><tr>'
+    + '<td><input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></td>'
+    + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
+    + '<td style="font-size:11px;"><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
+    + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
+    + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
+    + '<td><button class="icon-btn" onclick="addAppraiser(' + job.id + ')">+ Add</button></td>'
+    + '</tr></tfoot></table></div>';
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -7972,7 +8063,7 @@ function renderInventoryTab() {
     + '</div>'
     + inner
     + '</div>';
-  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + table;
+  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + table;
 }
 
 // ── Build 3: push the manifest to the per-client Google workbook ───────────────
