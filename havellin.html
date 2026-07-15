@@ -254,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 4:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -717,16 +717,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
               <td><input type="text" id="new-col-name" placeholder="e.g. China set, coin collection, firearms..." style="font-size:11px;"></td>
               <td><input type="number" id="new-col-value" placeholder="0" min="0" style="font-size:11px;"></td>
               <td><input type="number" id="new-col-qty" placeholder="0" min="0" style="font-size:11px;width:100%;min-width:70px;"></td>
-              <td><select id="new-col-disp" style="font-size:11px;width:100%;">
-                <option value="auction">Auction House</option>
-                <option value="appraise">Appraise</option>
-                <option value="consign">Consign</option>
-                <option value="ebay">Ebay Store</option>
-                <option value="replacements">Replacements.com</option>
-                <option value="dealer">Specialized Dealer</option>
-                <option value="firearms">Firearms — Licensed FFL</option>
-                <option value="other">Other</option>
-              </select></td>
+              <td><select id="new-col-disp" style="font-size:11px;width:100%;"><!-- options populated from COL_DISP_LABELS by populateCollDispSelect() --></select></td>
               <td><button class="icon-btn" onclick="addCollection()">+ Add</button></td>
             </tr>
           </tfoot>
@@ -2430,12 +2421,19 @@ function svcTypeChanged() {
 // PS = physical execution: stage/organize, pack accepted items, transport if offsite drop
 var COLLECTION_HOURS = {
   auction:      {tc:2,   ps:2},  // TC: schedule + walkthrough + follow-up. PS: stage, pack accepted lots
+  online_auction:{tc:2,  ps:2},  // TC: consign to online house, follow-up. PS: stage, pack, ship lots
+  estate_sale:  {tc:1,   ps:2},  // TC: engage estate-sale company, coordinate on-site sale. PS: stage/organize
   appraise:     {tc:2,   ps:1},  // TC: schedule + present during appraisal + review with client. PS: organize/stage
   consign:      {tc:1,   ps:3},  // TC: identify shop, coordinate intake. PS: pack, transport, handle shop intake
+  coin:         {tc:1.5, ps:0.5},// TC: research buyer, schedule visit, be present. PS: organize/stage
+  goldsilver:   {tc:1.5, ps:0.5},// TC: research buyer, schedule visit, be present. PS: organize/stage
+  jewelry:      {tc:1.5, ps:0.5},// TC: research buyer, schedule visit, be present. PS: organize/stage
+  books:        {tc:1.5, ps:1},  // TC: research specialist, schedule visit. PS: organize/stage
   ebay:         {tc:0.5, ps:2},  // TC: confirm drop-off only. PS: box items, transport to store
   replacements: {tc:1,   ps:3},  // TC: submit inquiry, confirm acceptance list. PS: careful pack + ship
   dealer:        {tc:2,   ps:1},    // TC: research dealer, schedule visit, be present. PS: organize/stage
   firearms:      {tc:3,   ps:0.5}, // TC: coordinate licensed FFL transfer/sale, be present. PS: locate, organize for inspection
+  donate:        {tc:0.5, ps:1.5},// TC: schedule donation pickup, get receipt. PS: stage/load for pickup
   other:         {tc:1,   ps:1}    // Generic fallback
 };
 function collectionsHours() {
@@ -4170,7 +4168,7 @@ function paymentSplit(total) {
 // firearms transfer) are billed at the provider's cost. Returns the clause(s) that
 // apply to the dispositions actually present, appended to a lead sentence by callers.
 function collectionsDispositionNote(cols) {
-  var saleDisps = {auction:1, consign:1, ebay:1, replacements:1, dealer:1};
+  var saleDisps = {auction:1, online_auction:1, estate_sale:1, consign:1, coin:1, goldsilver:1, jewelry:1, books:1, ebay:1, replacements:1, dealer:1};
   var costDisps = {appraise:1, firearms:1};
   var hasSale = (cols || []).some(function(c){ return saleDisps[c.disp]; });
   var hasCost = (cols || []).some(function(c){ return costDisps[c.disp]; });
@@ -7772,10 +7770,11 @@ function printAppraisalWorklist(jobId) {
 
 function _collDispToInv(disp) {
   switch (disp) {
-    case 'auction': return 'Auction';
-    case 'consign': return 'Consign';
-    case 'appraise': return 'Hold';   // held pending the appraisal decision
-    case 'firearms': return 'Hold';
+    case 'auction': case 'online_auction': return 'Auction';
+    case 'consign': case 'estate_sale': return 'Consign';
+    case 'appraise': case 'firearms': return 'Hold';   // held pending the appraisal / transfer decision
+    case 'donate': return 'Donate';
+    case 'coin': case 'goldsilver': case 'jewelry': case 'books':
     case 'ebay': case 'replacements': case 'dealer': return 'Sell';
     default: return '';
   }
@@ -7785,6 +7784,9 @@ function _collDispToInv(disp) {
 // panel pre-selects the right appraiser routing. The TC can override before adding.
 function _guessCategory(name, disp) {
   if (disp === 'firearms') return 'Firearms';
+  if (disp === 'coin' || disp === 'books') return 'Collectibles';
+  if (disp === 'goldsilver') return 'Silver & Precious Metal';
+  if (disp === 'jewelry') return 'Jewelry & Watches';
   var n = (name || '').toLowerCase();
   if (/gun|firearm|rifle|pistol|shotgun|ammo/.test(n))            return 'Firearms';
   if (/paint|art|sculpt|print|canvas|d[eé]cor|lithograph/.test(n))return 'Art & Décor';
@@ -9696,12 +9698,19 @@ var VENDOR_SLOT_CATEGORY_MAP = {
   'Pool / Spa Service': ['Pool & Spa Service'],
   // Collection dispositions (COL_DISP_LABELS keys)
   '__disp_auction': ['Auction House'],
+  '__disp_online_auction': ['Online Auction House'],
+  '__disp_estate_sale': ['Estate Sale Company'],
   '__disp_appraise': ['Antiques & Furniture Appraiser','Art Appraiser','Jewelry & Watch Appraiser','Wine Appraiser','Vehicle / Boat Appraiser'],
   '__disp_consign': ['Estate Sale Company','Auction House'],
-  '__disp_ebay': ['Specialty Packing & Shipping'],
-  '__disp_replacements': ['Specialty Packing & Shipping'],
+  '__disp_coin': ['Coin Buyer'],
+  '__disp_goldsilver': ['Gold & Silver Buyer'],
+  '__disp_jewelry': ['Jewelry & Watch Buyer'],
+  '__disp_books': ['Rare Books & Manuscripts'],
   '__disp_dealer': ['Coin Buyer','Gold & Silver Buyer','Jewelry & Watch Buyer','Rare Books & Manuscripts'],
   '__disp_firearms': ['Firearms Dealer (FFL)'],
+  '__disp_ebay': ['Online Reseller'],
+  '__disp_replacements': ['Replacements / Matching Service'],
+  '__disp_donate': ['Donation Pickup'],
   '__disp_other': []
 };
 function vendorCategoriesForSlot(kind, label) {
@@ -13596,10 +13605,25 @@ var collectionsData = [];
 var vehiclesData = [];
 
 var COL_DISP_LABELS = {
-  auction:'Auction House', appraise:'Appraise', consign:'Consign',
-  ebay:'Ebay Store', replacements:'Replacements.com', dealer:'Specialized Dealer',
-  firearms:'Firearms — Licensed FFL', other:'Other'
+  auction:'Auction House', online_auction:'Online Auction', estate_sale:'Estate Sale',
+  consign:'Consignment', appraise:'Appraise',
+  coin:'Coin / Currency Buyer', goldsilver:'Gold & Silver Buyer',
+  jewelry:'Jewelry / Watch Buyer', books:'Rare Books / Manuscripts',
+  dealer:'Specialized Dealer', firearms:'Firearms — Licensed FFL',
+  ebay:'eBay Store', replacements:'Replacements.com',
+  donate:'Donate', other:'Other'
 };
+
+// Populate the add-row disposition picker from COL_DISP_LABELS so it stays in sync
+// with the per-collection dropdown (which is already data-driven).
+function populateCollDispSelect() {
+  var sel = document.getElementById('new-col-disp');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = Object.keys(COL_DISP_LABELS).map(function(k){
+    return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + COL_DISP_LABELS[k] + '</option>';
+  }).join('');
+}
 
 function addCollection() {
   var name = document.getElementById('new-col-name').value.trim();
@@ -13853,6 +13877,7 @@ function renderVehicles() {
 
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
+populateCollDispSelect();
 loadJobs();
 loadEstimateState();
 loadLogData();
