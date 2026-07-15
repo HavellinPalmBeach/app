@@ -254,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 2:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -734,6 +734,30 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="margin-top:8px;padding:9px 12px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--gray);">
           <strong style="color:var(--gray-dk);">TC Advisory (say on site):</strong> "We'll identify the right partner for each collection — auction houses, appraisers, and dealers typically come to the property at no charge to assess what they'll take. Our coordination and hands-on time is included in your estimate. We handle everything on your behalf and pass any proceeds directly to you — we don't take a percentage of any sales, consignments, or auction results."
         </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem;" id="est-vehicles-card">
+        <div class="sec">Vehicles &amp; Watercraft <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(cars &amp; boats — flag collectors for appraisal)</span></div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Ordinary cars are valued from a book value (KBB / NADA) as of the date of death — we can do that ourselves. Collectors, classics, and boats route to a Vehicle / Boat appraiser.</div>
+        <table class="vtbl" id="vehicles-tbl">
+          <thead><tr>
+            <th style="min-width:150px;">Vehicle / Watercraft</th>
+            <th style="width:60px;">Year</th>
+            <th style="width:150px;">Flags</th>
+            <th style="width:60px;"></th>
+          </tr></thead>
+          <tbody id="vehicles-body">
+            <tr id="vehicles-empty-row"><td colspan="4" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No vehicles or watercraft — add below if applicable.</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td><input type="text" id="new-veh-desc" placeholder="e.g. Lexus RX 350, Boston Whaler 210" style="font-size:11px;"></td>
+              <td><input type="number" id="new-veh-year" placeholder="Year" min="1900" max="2100" style="font-size:11px;width:100%;"></td>
+              <td style="font-size:10px;color:var(--gray);">Set collector / title after adding</td>
+              <td><button class="icon-btn" onclick="addVehicle()">+ Add</button></td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       <div class="card" style="margin-top:1rem;" id="est-materials-card">
@@ -3193,6 +3217,7 @@ function calcAll() {
       : Math.round(grandTotal),
     vendors:JSON.parse(JSON.stringify(vendors)),
     collections:JSON.parse(JSON.stringify(collectionsData)),
+    vehicles:JSON.parse(JSON.stringify(vehiclesData)),
     rooms:includedRooms,
     rush:false, access:access, heirs:heirs,
     jobId: parseInt(document.getElementById('e-job').value) || null,
@@ -3940,6 +3965,8 @@ function clearEstimateTab() {
   clearAllRooms();
   collectionsData = [];
   renderCollections();
+  vehiclesData = [];
+  renderVehicles();
   resetEstimateExtras();   // package + third-party vendors + home prep
   currentEstimate = null;
   estimateApproved = false;
@@ -5525,6 +5552,10 @@ function restoreEstimateToUI(est) {
     collectionsData = JSON.parse(JSON.stringify(est.collections));
     renderCollections();
   }
+
+  // Restore vehicles & watercraft
+  vehiclesData = est.vehicles ? JSON.parse(JSON.stringify(est.vehicles)) : [];
+  renderVehicles();
 
   // Restore vendors
   vendors = est.vendors ? JSON.parse(JSON.stringify(est.vendors)) : [];
@@ -13327,6 +13358,7 @@ function formatPhone(input) {
 
 // ─── COLLECTIONS TABLE ─────────────────────────────────────────────────────────
 var collectionsData = [];
+var vehiclesData = [];
 
 var COL_DISP_LABELS = {
   auction:'Auction House', appraise:'Appraise', consign:'Consign',
@@ -13487,6 +13519,83 @@ function renderCollections() {
         '</div>' +
       '</td>' +
     '</tr>';
+  });
+  tbody.innerHTML = h;
+}
+
+// ─── VEHICLES & WATERCRAFT ────────────────────────────────────────────────────
+// Assets captured at the estimate walkthrough. Ordinary vehicles are valued from a
+// book value (KBB/NADA) as of the date of death; collectors/classics/boats route to
+// a Vehicle/Boat appraiser. Vehicles don't affect the labor estimate — they're an
+// asset record that rides along in the estimate snapshot and feeds the inventory.
+function addVehicle() {
+  var descEl = document.getElementById('new-veh-desc');
+  var yearEl = document.getElementById('new-veh-year');
+  var desc = descEl ? descEl.value.trim() : '';
+  var year = yearEl ? yearEl.value.trim() : '';
+  if (!desc) { alert('Please enter a vehicle or watercraft description.'); return; }
+  vehiclesData.push({ id: Date.now(), desc: desc, year: year, vin: '', mileage: '',
+                      condition: '', collector: false, titleLocated: false, note: '' });
+  if (descEl) descEl.value = '';
+  if (yearEl) yearEl.value = '';
+  renderVehicles();
+  calcAll();
+}
+
+function removeVehicle(id) {
+  vehiclesData = vehiclesData.filter(function(v){ return v.id !== id; });
+  renderVehicles();
+  calcAll();
+}
+
+// Text fields update in place (no re-render, keeps focus). Discrete flags recompute
+// so the change lands in the saved estimate snapshot; the collector flag also
+// re-renders to flip the routing hint.
+function updateVehicleField(id, field, val) {
+  var v = vehiclesData.find(function(x){ return x.id === id; });
+  if (!v) return;
+  v[field] = val;
+  if (field === 'collector') renderVehicles();
+  if (field === 'collector' || field === 'titleLocated' || field === 'condition') calcAll();
+}
+
+function renderVehicles() {
+  var tbody = document.getElementById('vehicles-body');
+  if (!tbody) return;
+  if (vehiclesData.length === 0) {
+    tbody.innerHTML = '<tr id="vehicles-empty-row"><td colspan="4" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No vehicles or watercraft — add below if applicable.</td></tr>';
+    return;
+  }
+  var condOpts = function(sel) {
+    return '<option value="">Condition…</option>' + INV_CONDITIONS.map(function(x){
+      return '<option' + (x === sel ? ' selected' : '') + '>' + x + '</option>';
+    }).join('');
+  };
+  var h = '';
+  vehiclesData.forEach(function(v) {
+    var routeHint = v.collector
+      ? '<span style="color:var(--bronze);font-weight:700;font-size:10px;">&#9873; Collector → Vehicle / Boat appraiser</span>'
+      : '<span style="color:var(--gray);font-size:10px;">Ordinary → book value (KBB / NADA)</span>';
+    h += '<tr>' +
+      '<td><input value="' + esc(v.desc || '') + '" oninput="updateVehicleField(' + v.id + ',\'desc\',this.value)" style="width:100%;font-size:12px;padding:3px 5px;"></td>' +
+      '<td><input type="number" value="' + esc(v.year || '') + '" oninput="updateVehicleField(' + v.id + ',\'year\',this.value)" style="width:52px;font-size:12px;padding:3px 5px;text-align:center;"></td>' +
+      '<td style="font-size:10px;line-height:1.5;">' +
+        '<label style="display:block;cursor:pointer;"><input type="checkbox"' + (v.collector ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'collector\',this.checked)"> Collector / classic</label>' +
+        '<label style="display:block;cursor:pointer;"><input type="checkbox"' + (v.titleLocated ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'titleLocated\',this.checked)"> Title located</label>' +
+      '</td>' +
+      '<td><button class="icon-btn del" onclick="removeVehicle(' + v.id + ')">Remove</button></td>' +
+    '</tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px 10px;background:var(--tan);">' +
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;">' +
+        '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">VIN / HIN</span>' +
+        '<input value="' + esc(v.vin || '') + '" oninput="updateVehicleField(' + v.id + ',\'vin\',this.value)" placeholder="VIN or hull ID" style="flex:1;min-width:140px;font-size:11px;padding:3px 6px;">' +
+        '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">Miles / hrs</span>' +
+        '<input value="' + esc(v.mileage || '') + '" oninput="updateVehicleField(' + v.id + ',\'mileage\',this.value)" placeholder="e.g. 48,000" style="width:84px;font-size:11px;padding:3px 6px;">' +
+        '<select onchange="updateVehicleField(' + v.id + ',\'condition\',this.value)" style="font-size:11px;padding:3px 4px;">' + condOpts(v.condition) + '</select>' +
+      '</div>' +
+      '<div style="margin-bottom:5px;">' + routeHint + '</div>' +
+      '<textarea rows="2" placeholder="Notes — location (driveway / garage / offsite), keys, lien, running condition…" oninput="updateVehicleField(' + v.id + ',\'note\',this.value)" style="width:100%;font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:inherit;background:#fff;">' + esc(v.note || '') + '</textarea>' +
+    '</td></tr>';
   });
   tbody.innerHTML = h;
 }
