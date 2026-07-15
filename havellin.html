@@ -75,6 +75,10 @@ textarea{height:70px;resize:vertical;}
 input:checked+.slider{background:var(--gray-dk);}
 input:checked+.slider:before{transform:translateX(18px);}
 .sec-hdr{background:var(--gray-dk);color:var(--cream);padding:7px 12px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:4px 4px 0 0;margin-top:12px;}
+.sec-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;}
+.sec-toggle:hover{background:#3a3a42;}
+.sec-caret{display:inline-block;width:9px;font-size:9px;color:var(--tan);}
+.sec-count{margin-left:auto;font-size:9px;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--tan);opacity:.85;}
 .rtable{width:100%;border-collapse:collapse;}
 .rtable th{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);padding:7px 8px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;}
 .rtable td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
@@ -250,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 2:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 2:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -682,6 +686,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div style="padding:.9rem 1.1rem .5rem;">
           <div class="sec" style="margin-bottom:4px;">Room-by-Room Assessment</div>
           <div style="font-size:11px;color:var(--gray);">Check a room to include it (auto-scores 3/3). Adjust Volume &amp; Complexity (1–5). Special Items = fragile/high-value (bumps this room's complexity for extra careful handling).</div>
+          <div style="display:flex;gap:12px;margin-top:7px;font-size:11px;">
+            <span style="color:var(--gray);">Sections:</span>
+            <a href="#" onclick="setAllRoomSections(false);return false;" style="color:var(--bronze);text-decoration:none;">Expand all</a>
+            <a href="#" onclick="setAllRoomSections(true);return false;" style="color:var(--bronze);text-decoration:none;">Collapse all</a>
+            <a href="#" onclick="collapseEmptyRoomSections();return false;" style="color:var(--bronze);text-decoration:none;" title="Collapse sections with no rooms in scope">Hide empty</a>
+          </div>
         </div>
         <div id="room-table-wrap"></div>
         <div id="room-overhead-line" style="display:none;padding:.6rem 1.1rem .9rem;border-top:1px solid var(--border);font-size:11px;color:var(--gray-dk);background:var(--cream);"></div>
@@ -2193,8 +2203,15 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
 function buildRoomTable() {
   var html = '';
   var ri = 0;
-  ROOMS.forEach(function(sec) {
-    html += '<div class="sec-hdr">' + sec.section + '</div>';
+  _secRoomIds = {};
+  ROOMS.forEach(function(sec, si) {
+    _secRoomIds[si] = [];
+    html += '<div class="room-sec" id="room-sec-' + si + '">';
+    html += '<div class="sec-hdr sec-toggle" onclick="toggleRoomSection(' + si + ')">'
+          + '<span class="sec-caret" id="sec-caret-' + si + '">&#9662;</span>'
+          + '<span>' + sec.section + '</span>'
+          + '<span class="sec-count" id="sec-count-' + si + '"></span></div>';
+    html += '<div class="sec-body" id="sec-body-' + si + '">';
     html += '<table class="rtable"><thead><tr>' +
       '<th style="width:34px" title="Tap to cycle: blank → include in scope (✓) → homeowner-handled / out of scope (✕)">Scope</th><th style="min-width:140px;">Room</th>' +
       '<th style="width:68px">Volume <button onclick="document.getElementById(\'icd-modal\').style.display=\'flex\'" style="font-size:9px;padding:1px 4px;border:1px solid var(--border-md);border-radius:3px;background:var(--cream);cursor:pointer;color:var(--bronze);font-weight:700;vertical-align:middle;">?</button></th><th style="width:82px">Complexity <button onclick="document.getElementById(\'icd-modal\').style.display=\'flex\'" style="font-size:9px;padding:1px 4px;border:1px solid var(--border-md);border-radius:3px;background:var(--cream);cursor:pointer;color:var(--bronze);font-weight:700;vertical-align:middle;">?</button></th>' +
@@ -2205,6 +2222,7 @@ function buildRoomTable() {
       '</tr></thead><tbody>';
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
+      _secRoomIds[si].push(id);
       html += '<tr id="row-'+id+'" class="inactive">' +
         '<td><button type="button" class="scope-toggle" id="chk-'+id+'" data-state="off" onclick="cycleRoom(\''+id+'\')" title="Tap: include (✓) → homeowner-handled (✕) → off">&#9744;</button></td>' +
         '<td>' + (r.custom ?
@@ -2228,6 +2246,7 @@ function buildRoomTable() {
       ri++;
     });
     html += '</tbody></table>';
+    html += '</div></div>';   // close .sec-body and .room-sec
   });
   document.getElementById('room-table-wrap').innerHTML = html;
   // Single delegated listener for all note textareas
@@ -2248,6 +2267,50 @@ function buildRoomTable() {
       removeRoomPhoto(btn.getAttribute('data-rmid'));
     }
   });
+  applyRoomSectionState();
+  updateRoomSectionCounts();
+}
+
+// ── Collapsible estimate room sections ────────────────────────────────────────
+// Rooms stay in the DOM when a section is collapsed (only the section body is
+// hidden), so calcAll keeps reading every vol/cplx/scope input. Collapse state is
+// remembered for the session so a recompute/rebuild doesn't reset it.
+var _secRoomIds = {};        // sectionIndex -> [roomId,...], rebuilt by buildRoomTable
+var _roomSecCollapsed = {};  // sectionIndex -> true when collapsed
+
+function toggleRoomSection(si) {
+  _roomSecCollapsed[si] = !_roomSecCollapsed[si];
+  applyRoomSectionState(si);
+}
+function applyRoomSectionState(only) {
+  Object.keys(_secRoomIds).forEach(function(si) {
+    if (only != null && String(si) !== String(only)) return;
+    var body  = document.getElementById('sec-body-' + si);
+    var caret = document.getElementById('sec-caret-' + si);
+    var collapsed = !!_roomSecCollapsed[si];
+    if (body)  body.style.display = collapsed ? 'none' : '';
+    if (caret) caret.innerHTML = collapsed ? '&#9656;' : '&#9662;';  // ▸ collapsed / ▾ open
+  });
+}
+function updateRoomSectionCounts() {
+  Object.keys(_secRoomIds).forEach(function(si) {
+    var n = _secRoomIds[si].filter(function(id) { return roomState(id) !== 'off'; }).length;
+    var el = document.getElementById('sec-count-' + si);
+    if (el) el.textContent = n ? '· ' + n + ' in scope' : '';
+  });
+}
+function setAllRoomSections(collapsed) {
+  Object.keys(_secRoomIds).forEach(function(si) { _roomSecCollapsed[si] = collapsed; });
+  applyRoomSectionState();
+}
+// Tidy: collapse sections with nothing in scope, expand those with rooms. Handy once
+// an estimate is loaded/scored so the left column shows only what's relevant.
+function collapseEmptyRoomSections() {
+  Object.keys(_secRoomIds).forEach(function(si) {
+    var n = _secRoomIds[si].filter(function(id) { return roomState(id) !== 'off'; }).length;
+    _roomSecCollapsed[si] = (n === 0);
+  });
+  applyRoomSectionState();
 }
 
 // Scope tri-state: 'off' (not in job) → 'in' (priced) → 'excl' (homeowner-handled,
@@ -2308,6 +2371,7 @@ function setRoomState(id, state) {
   }
   row.className = state === 'in' ? 'active-row' : state === 'excl' ? 'excluded-row' : 'inactive';
   if (nameEl.tagName === 'SPAN') nameEl.className = state === 'excl' ? 'rname excl' : active ? 'rname' : 'rname dim';
+  updateRoomSectionCounts();
   calcAll();
 }
 
