@@ -250,7 +250,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.14 · 3:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 2:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7119,8 +7119,47 @@ function _updatePhotoStatusEl(jobId, roomIdx, label) {
 // objectName + category baked into the Drive filename, so each file is self-identifying
 // for a §733.604 court inventory. Disposition is an editable decision kept as metadata
 // (not in the filename, since the app can't rename a file already in Drive).
-var INV_CATEGORIES = ['Art & Décor','Collectibles','Electronics & Appliances','Furniture','General/Household','Jewelry & Watches'];
+// ── Shared tangible-personal-property taxonomy ────────────────────────────────
+// Single source of truth for item categories. Each category knows (a) which
+// specialist appraiser it routes to and (b) whether items in it can carry enough
+// value to need a formal appraisal ("intrinsic" — the art/jewelry/silver family
+// the IRS wants appraised once a single piece clears $3,000). Consumed by the
+// room-card capture, Notable Collections, and the Estate Inventory tab so the
+// three stay in lockstep. Appraiser labels mirror the Vendor Directory types so a
+// worklist can be grouped and handed to the right partner.
+var INV_TAXONOMY = [
+  {cat:'Art & Décor',            appraiser:'Art Appraiser',                  intrinsic:true},
+  {cat:'Antiques',               appraiser:'Antiques & Furniture Appraiser', intrinsic:true},
+  {cat:'Jewelry & Watches',      appraiser:'Jewelry & Watch Appraiser',      intrinsic:true},
+  {cat:'Silver & Precious Metal',appraiser:'Antiques & Furniture Appraiser', intrinsic:true},
+  {cat:'Rugs & Carpets',         appraiser:'Antiques & Furniture Appraiser', intrinsic:true},
+  {cat:'Collectibles',           appraiser:'Specialized Dealer',             intrinsic:true},
+  {cat:'Firearms',               appraiser:'Firearms Specialist (FFL)',      intrinsic:true},
+  {cat:'Wine & Spirits',         appraiser:'Wine Appraiser',                 intrinsic:true},
+  {cat:'Musical Instruments',    appraiser:'Specialized Dealer',             intrinsic:true},
+  {cat:'Vehicles & Watercraft',  appraiser:'Vehicle / Boat Appraiser',       intrinsic:false},
+  {cat:'Furniture',              appraiser:'',                               intrinsic:false},
+  {cat:'Electronics & Appliances',appraiser:'',                              intrinsic:false},
+  {cat:'General/Household',      appraiser:'',                               intrinsic:false}
+];
+var INV_CATEGORIES = INV_TAXONOMY.map(function(t){ return t.cat; });
 var INV_DEFAULT_CATEGORY = 'General/Household';
+var INV_APPRAISAL_THRESHOLD = 3000;  // single-item value that triggers a formal-appraisal recommendation
+
+function invCatMeta(cat){
+  for (var i = 0; i < INV_TAXONOMY.length; i++) { if (INV_TAXONOMY[i].cat === cat) return INV_TAXONOMY[i]; }
+  return {cat:cat, appraiser:'', intrinsic:false};
+}
+function invAppraiserFor(cat){ return invCatMeta(cat).appraiser; }
+function invIsIntrinsic(cat){ return !!invCatMeta(cat).intrinsic; }
+// Should this item go to a specialist? Intrinsic category with no value entered yet,
+// or any value at/above the formal-appraisal threshold. (Vehicles route via their own
+// collector flag, not here, so an ordinary car doesn't nag for an appraisal.)
+function invNeedsAppraisal(ref){
+  if (!ref || !invIsIntrinsic(ref.category)) return false;
+  var v = parseFloat(ref.fmv);
+  return isNaN(v) || v >= INV_APPRAISAL_THRESHOLD;
+}
 var INV_DISPOSITIONS = ['Auction','Consign','Donate','Hold','Junk','Keep','Sell'];
 
 function _invRefs(jobId, roomIdx) {
@@ -7139,8 +7178,11 @@ function _renderRoomInventoryList(jobId, roomIdx) {
           ? '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>'
           : '<span style="color:var(--gray);">…</span>');
     var meta = [r.category, r.disposition].filter(Boolean).map(function(x){ return esc(x); }).join(' · ');
+    var apprFlag = invNeedsAppraisal(r)
+      ? ' <span title="Likely needs a specialist appraisal — routed to a ' + esc(invAppraiserFor(r.category) || 'specialist') + '" style="color:var(--bronze);font-weight:700;">&#9873;</span>'
+      : '';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:10px;padding:1px 0;">'
-      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.seq||'') + '. ' + esc(r.objectName||'(unnamed)')
+      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.seq||'') + '. ' + esc(r.objectName||'(unnamed)') + apprFlag
       + (meta ? ' <span style="color:var(--gray);">— ' + meta + '</span>' : '') + '</span>'
       + st + '</div>';
   }).join('');
@@ -7354,7 +7396,7 @@ function _invCellRead(ref, col, job, displaySeq) {
 function _renderInventorySummary(job, items) {
   var catAgg = {}; INV_CATEGORIES.forEach(function(c){ catAgg[c] = {fmv:0, count:0}; });
   var dispAgg = {}; INV_DISPOSITIONS.forEach(function(d){ dispAgg[d] = 0; });
-  var totalFMV = 0, awaiting = 0, nDisp = 0, nBequest = 0, nExempt = 0, gross = 0, fees = 0;
+  var totalFMV = 0, awaiting = 0, nDisp = 0, nBequest = 0, nExempt = 0, gross = 0, fees = 0, nAppr = 0;
   items.forEach(function(r){
     var cat = (r.category && catAgg[r.category]) ? r.category : 'General/Household';
     if (!catAgg[cat]) catAgg[cat] = {fmv:0, count:0};
@@ -7365,6 +7407,7 @@ function _renderInventorySummary(job, items) {
     if (r.flagDisputed || r.disposition === 'Hold') nDisp++;
     if (r.flagBequest) nBequest++;
     if (r.flagExempt) nExempt++;
+    if (invNeedsAppraisal(r)) nAppr++;
     var g = parseFloat(r.gross); if (!isNaN(g)) gross += g;
     var fe = parseFloat(r.fees);  if (!isNaN(fe)) fees += fe;
   });
@@ -7387,6 +7430,7 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Total Items', String(items.length))
     + hdrRow('Total Estimated FMV', _money(totalFMV) || '$0')
     + hdrRow('Items Awaiting Valuation', String(awaiting))
+    + hdrRow('Needs Specialist Appraisal', String(nAppr))
     + hdrRow('Disputed / Hold', String(nDisp))
     + hdrRow('Specific Bequests', String(nBequest))
     + hdrRow('Exempt §732.402', String(nExempt))
