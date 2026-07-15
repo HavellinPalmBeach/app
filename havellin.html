@@ -256,7 +256,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 5:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7760,6 +7760,102 @@ function _apprEstimateFlags(jobId) {
   return { collections: colls, vehicles: vehs };
 }
 
+// ── Work-product exports ──────────────────────────────────────────────────────
+// Two purpose-built documents: a §733.604-style Court/Attorney Inventory (DOD FMV,
+// homestead/exempt separated, NO internal figures) that feeds counsel's filing, and
+// a Disposition/Accounting Ledger (proceeds, fees, net, receipts, custody) for the
+// fiduciary accounting. Havellin's own margin never appears on either.
+function _invMoney(v) { var n = parseFloat(v); return isNaN(n) ? '—' : '$' + Math.round(n).toLocaleString(); }
+
+function printCourtInventory(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var pt = document.getElementById('print-target');
+  if (!job || !pt) return;
+  var items = _jobInvRefs(jobId);
+  var formal = isFormalDoc(job);
+  var guard = _invGuardrailItems(jobId);
+  var draft = formal && guard.length > 0;
+  var status = draft ? 'DRAFT — ' + guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal' : 'FINAL';
+  var basis = resolveValBasis(job);
+  var dod = job.deathDate ? fmtDate2(job.deathDate) : '—';
+  var total = 0;
+  function section(title, list) {
+    if (!list.length) return '';
+    var byCat = {};
+    list.forEach(function(r){ var c = r.category || 'General/Household'; (byCat[c] = byCat[c] || []).push(r); });
+    var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + esc(title) + '</div>';
+    Object.keys(byCat).sort().forEach(function(cat){
+      var sub = 0;
+      var rows = byCat[cat].map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) sub += n;
+        return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (parseInt(r.qty,10) > 1 ? ' <span style="color:#888;">(qty ' + esc(r.qty) + ')</span>' : '') + '</td>'
+          + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
+          + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
+      total += sub;
+      h += '<div style="font-size:11px;font-weight:700;color:#555;margin:7px 0 1px;">' + esc(cat) + '</div>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody>'
+        + '<tfoot><tr><td colspan="2" style="padding:2px 6px;text-align:right;font-weight:600;">' + esc(cat) + ' subtotal</td><td style="padding:2px 6px;text-align:right;font-weight:600;">' + _invMoney(sub) + '</td></tr></tfoot></table>';
+    });
+    return h;
+  }
+  var body = section('Tangible Personal Property', items.filter(function(r){ return !r.flagExempt; }))
+           + section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return r.flagExempt; }));
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Tangible Personal Property</h2>'
+    + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + (job.probateCase ? ' &middot; Case ' + esc(job.probateCase) : '') + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of date of death (' + esc(dod) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
+    + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
+    + body
+    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">Total tangible personal property (' + esc(basis) + '): &nbsp;' + _invMoney(total) + '</div>'
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated fair market value as of the date of death.</div>'
+    + '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>'
+    + '</div>';
+  pt.innerHTML = html;
+  window.print();
+  pt.innerHTML = '';
+}
+
+function printDispositionLedger(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var pt = document.getElementById('print-target');
+  if (!job || !pt) return;
+  var items = _jobInvRefs(jobId).filter(function(r){ return r.disposition || r.gross || r.channel || r.dispDate; });
+  var gross = 0, fees = 0;
+  var rows = items.map(function(r){
+    var g = parseFloat(r.gross), f = parseFloat(r.fees);
+    if (!isNaN(g)) gross += g; if (!isNaN(f)) fees += f;
+    var net = (isNaN(g) ? 0 : g) - (isNaN(f) ? 0 : f);
+    var hasNet = !isNaN(g) || !isNaN(f);
+    return '<tr>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.disposition || '—') + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.channel || '—') + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.authBy || '—') + (r.approvalDate ? ' <span style="color:#888;">' + esc(fmtDate2(r.approvalDate)) + '</span>' : '') + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.gross) + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fees) + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;text-align:right;">' + (hasNet ? _invMoney(net) : '—') + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.receiptDoc || '—') + '</td>'
+      + '</tr>';
+  }).join('');
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Disposition &amp; Accounting Ledger</h2>'
+    + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Fiduciary accounting of disposed items &middot; proceeds net to the estate &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
+    + (items.length
+        ? '<table style="width:100%;border-collapse:collapse;font-size:10.5px;"><thead><tr style="color:#888;text-align:left;">'
+          + ['Item','Disposition','Channel / recipient','Authorized by','Gross','Fees','Net','Date','Receipt'].map(function(h){ return '<th style="padding:2px 5px;">' + h + '</th>'; }).join('')
+          + '</tr></thead><tbody>' + rows + '</tbody>'
+          + '<tfoot><tr style="font-weight:700;border-top:2px solid #333;"><td colspan="4" style="padding:4px 5px;text-align:right;">Totals</td>'
+          + '<td style="padding:4px 5px;text-align:right;">' + _invMoney(gross) + '</td><td style="padding:4px 5px;text-align:right;">' + _invMoney(fees) + '</td><td style="padding:4px 5px;text-align:right;">' + _invMoney(gross - fees) + '</td><td colspan="2"></td></tr></tfoot></table>'
+        : '<div style="font-size:12px;color:#888;">No items have been disposed yet.</div>')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Proceeds are net to the estate less the partner&rsquo;s fees. Havellin charges no commission on sales, consignments, or auction results; Havellin service fees are billed separately and do not appear here.</div>'
+    + '</div>';
+  pt.innerHTML = html;
+  window.print();
+  pt.innerHTML = '';
+}
+
 function printAppraisalWorklist(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var pt = document.getElementById('print-target');
@@ -8119,7 +8215,9 @@ function renderInventoryTab() {
   var table = '<div class="card">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
     + '<div class="sec" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Inventory — Tangible Personal Property</div>'
-    + '<div style="display:flex;gap:6px;">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    + '<button class="btn-s" onclick="printCourtInventory(' + jobId + ')" title="§733.604-style court / attorney inventory — date-of-death FMV, exempt property separated, no internal figures">Court Inventory</button>'
+    + '<button class="btn-s" onclick="printDispositionLedger(' + jobId + ')" title="Disposition &amp; accounting ledger — proceeds, fees, net to estate, receipts">Disposition Ledger</button>'
     + '<button class="btn-s" onclick="printAppraisalWorklist(' + jobId + ')" title="Print a per-specialist packet of every item flagged for appraisal">Appraisal Worklist</button>'
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
     + '</div>'
