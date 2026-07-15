@@ -254,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 3:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -737,23 +737,19 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
 
       <div class="card" style="margin-top:1rem;" id="est-vehicles-card">
-        <div class="sec">Vehicles &amp; Watercraft <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(cars &amp; boats — flag collectors for appraisal)</span></div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Ordinary cars are valued from a book value (KBB / NADA) as of the date of death — we can do that ourselves. Collectors, classics, and boats route to a Vehicle / Boat appraiser.</div>
+        <div class="sec">Vehicles &amp; Watercraft <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(cars, boats, motorcycles — flag collectors for appraisal)</span></div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Ordinary vehicles are valued from a book value (KBB / NADA) as of the date of death — we can do that ourselves. Collectors, classics, and boats route to a Vehicle / Boat appraiser. Add each below, then fill in its details.</div>
         <table class="vtbl" id="vehicles-tbl">
           <thead><tr>
-            <th style="min-width:150px;">Vehicle / Watercraft</th>
-            <th style="width:60px;">Year</th>
-            <th style="width:150px;">Flags</th>
-            <th style="width:60px;"></th>
+            <th style="min-width:180px;">Vehicle / Watercraft</th>
+            <th style="width:70px;"></th>
           </tr></thead>
           <tbody id="vehicles-body">
-            <tr id="vehicles-empty-row"><td colspan="4" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No vehicles or watercraft — add below if applicable.</td></tr>
+            <tr id="vehicles-empty-row"><td colspan="2" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No vehicles or watercraft — add below if applicable.</td></tr>
           </tbody>
           <tfoot>
             <tr>
-              <td><input type="text" id="new-veh-desc" placeholder="e.g. Lexus RX 350, Boston Whaler 210" style="font-size:11px;"></td>
-              <td><input type="number" id="new-veh-year" placeholder="Year" min="1900" max="2100" style="font-size:11px;width:100%;"></td>
-              <td style="font-size:10px;color:var(--gray);">Set collector / title after adding</td>
+              <td><input type="text" id="new-veh-desc" placeholder="e.g. 2019 Lexus RX 350, Harley Softail, Boston Whaler 210" style="font-size:11px;"></td>
               <td><button class="icon-btn" onclick="addVehicle()">+ Add</button></td>
             </tr>
           </tfoot>
@@ -2291,6 +2287,12 @@ function buildRoomTable() {
       removeRoomPhoto(btn.getAttribute('data-rmid'));
     }
   });
+  // Launch collapsed on first build — the TC opens each section as they walk the
+  // house. Later rebuilds (recalcs) preserve whatever the user has expanded.
+  if (!_roomSecInit) {
+    Object.keys(_secRoomIds).forEach(function(si){ _roomSecCollapsed[si] = true; });
+    _roomSecInit = true;
+  }
   applyRoomSectionState();
   updateRoomSectionCounts();
 }
@@ -2301,6 +2303,7 @@ function buildRoomTable() {
 // remembered for the session so a recompute/rebuild doesn't reset it.
 var _secRoomIds = {};        // sectionIndex -> [roomId,...], rebuilt by buildRoomTable
 var _roomSecCollapsed = {};  // sectionIndex -> true when collapsed
+var _roomSecInit = false;    // false until the first build stamps the default-collapsed state
 
 function toggleRoomSection(si) {
   _roomSecCollapsed[si] = !_roomSecCollapsed[si];
@@ -5547,6 +5550,10 @@ function restoreEstimateToUI(est) {
     });
   });
 
+  // A loaded/scored estimate reveals the sections that actually have rooms in scope
+  // and keeps the rest collapsed, so revisiting a job doesn't require re-expanding.
+  collapseEmptyRoomSections();
+
   // Restore collections
   if (est.collections) {
     collectionsData = JSON.parse(JSON.stringify(est.collections));
@@ -7251,7 +7258,9 @@ function invIsIntrinsic(cat){ return !!invCatMeta(cat).intrinsic; }
 // or any value at/above the formal-appraisal threshold. (Vehicles route via their own
 // collector flag, not here, so an ordinary car doesn't nag for an appraisal.)
 function invNeedsAppraisal(ref){
-  if (!ref || !invIsIntrinsic(ref.category)) return false;
+  if (!ref) return false;
+  if (ref.needsAppr) return true;            // explicit flag (e.g. an imported collector vehicle)
+  if (!invIsIntrinsic(ref.category)) return false;
   var v = parseFloat(ref.fmv);
   return isNaN(v) || v >= INV_APPRAISAL_THRESHOLD;
 }
@@ -13603,16 +13612,28 @@ function renderCollections() {
 // book value (KBB/NADA) as of the date of death; collectors/classics/boats route to
 // a Vehicle/Boat appraiser. Vehicles don't affect the labor estimate — they're an
 // asset record that rides along in the estimate snapshot and feeds the inventory.
+var VEH_TYPES = ['Car','SUV / Van','Truck','Motorcycle','Boat','Personal watercraft','RV / Motorhome','Trailer','Golf cart','ATV / UTV','Other'];
+
+function _vehTypeOptions(sel) {
+  return '<option value="">Type…</option>' + VEH_TYPES.map(function(t){
+    return '<option' + (t === sel ? ' selected' : '') + '>' + t + '</option>';
+  }).join('');
+}
+function _vehYearOptions(sel) {
+  var now = new Date().getFullYear() + 1;
+  var o = '<option value="">Year…</option>';
+  for (var y = now; y >= 1920; y--) o += '<option' + (String(sel) === String(y) ? ' selected' : '') + '>' + y + '</option>';
+  o += '<option value="Older"' + (sel === 'Older' ? ' selected' : '') + '>Older / pre-1920</option>';
+  return o;
+}
+
 function addVehicle() {
   var descEl = document.getElementById('new-veh-desc');
-  var yearEl = document.getElementById('new-veh-year');
   var desc = descEl ? descEl.value.trim() : '';
-  var year = yearEl ? yearEl.value.trim() : '';
   if (!desc) { alert('Please enter a vehicle or watercraft description.'); return; }
-  vehiclesData.push({ id: Date.now(), desc: desc, year: year, vin: '', mileage: '',
+  vehiclesData.push({ id: Date.now(), desc: desc, vtype: '', year: '', vin: '', mileage: '',
                       condition: '', collector: false, titleLocated: false, note: '' });
   if (descEl) descEl.value = '';
-  if (yearEl) yearEl.value = '';
   renderVehicles();
   calcAll();
 }
@@ -13623,22 +13644,22 @@ function removeVehicle(id) {
   calcAll();
 }
 
-// Text fields update in place (no re-render, keeps focus). Discrete flags recompute
-// so the change lands in the saved estimate snapshot; the collector flag also
-// re-renders to flip the routing hint.
+// Text fields update in place (no re-render, keeps focus). Discrete fields recompute
+// so the change lands in the saved estimate snapshot; collector also re-renders to
+// flip the routing hint.
 function updateVehicleField(id, field, val) {
   var v = vehiclesData.find(function(x){ return x.id === id; });
   if (!v) return;
   v[field] = val;
   if (field === 'collector') renderVehicles();
-  if (field === 'collector' || field === 'titleLocated' || field === 'condition') calcAll();
+  if (['collector','titleLocated','condition','vtype','year'].indexOf(field) >= 0) calcAll();
 }
 
 function renderVehicles() {
   var tbody = document.getElementById('vehicles-body');
   if (!tbody) return;
   if (vehiclesData.length === 0) {
-    tbody.innerHTML = '<tr id="vehicles-empty-row"><td colspan="4" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No vehicles or watercraft — add below if applicable.</td></tr>';
+    tbody.innerHTML = '<tr id="vehicles-empty-row"><td colspan="2" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:10px;">No vehicles or watercraft — add below if applicable.</td></tr>';
     return;
   }
   var condOpts = function(sel) {
@@ -13646,29 +13667,33 @@ function renderVehicles() {
       return '<option' + (x === sel ? ' selected' : '') + '>' + x + '</option>';
     }).join('');
   };
+  // Labelled field: uppercase caption + control, kept together so they wrap as a unit.
+  var field = function(label, ctrl) {
+    return '<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">'
+      + '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">' + label + '</span>' + ctrl + '</span>';
+  };
   var h = '';
   vehiclesData.forEach(function(v) {
     var routeHint = v.collector
       ? '<span style="color:var(--bronze);font-weight:700;font-size:10px;">&#9873; Collector → Vehicle / Boat appraiser</span>'
       : '<span style="color:var(--gray);font-size:10px;">Ordinary → book value (KBB / NADA)</span>';
     h += '<tr>' +
-      '<td><input value="' + esc(v.desc || '') + '" oninput="updateVehicleField(' + v.id + ',\'desc\',this.value)" style="width:100%;font-size:12px;padding:3px 5px;"></td>' +
-      '<td><input type="number" value="' + esc(v.year || '') + '" oninput="updateVehicleField(' + v.id + ',\'year\',this.value)" style="width:52px;font-size:12px;padding:3px 5px;text-align:center;"></td>' +
-      '<td style="font-size:10px;line-height:1.5;">' +
-        '<label style="display:block;cursor:pointer;"><input type="checkbox"' + (v.collector ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'collector\',this.checked)"> Collector / classic</label>' +
-        '<label style="display:block;cursor:pointer;"><input type="checkbox"' + (v.titleLocated ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'titleLocated\',this.checked)"> Title located</label>' +
-      '</td>' +
-      '<td><button class="icon-btn del" onclick="removeVehicle(' + v.id + ')">Remove</button></td>' +
+      '<td><input value="' + esc(v.desc || '') + '" oninput="updateVehicleField(' + v.id + ',\'desc\',this.value)" style="width:100%;font-size:12px;padding:4px 6px;"></td>' +
+      '<td style="text-align:right;vertical-align:top;"><button class="icon-btn del" onclick="removeVehicle(' + v.id + ')">Remove</button></td>' +
     '</tr>' +
-    '<tr><td colspan="4" style="padding:6px 8px 10px;background:var(--tan);">' +
-      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;">' +
-        '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">VIN / HIN</span>' +
-        '<input value="' + esc(v.vin || '') + '" oninput="updateVehicleField(' + v.id + ',\'vin\',this.value)" placeholder="VIN or hull ID" style="flex:1;min-width:140px;font-size:11px;padding:3px 6px;">' +
-        '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">Miles / hrs</span>' +
-        '<input value="' + esc(v.mileage || '') + '" oninput="updateVehicleField(' + v.id + ',\'mileage\',this.value)" placeholder="e.g. 48,000" style="width:84px;font-size:11px;padding:3px 6px;">' +
-        '<select onchange="updateVehicleField(' + v.id + ',\'condition\',this.value)" style="font-size:11px;padding:3px 4px;">' + condOpts(v.condition) + '</select>' +
+    '<tr><td colspan="2" style="padding:8px 10px 10px;background:var(--tan);">' +
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:8px;">' +
+        field('Type',      '<select onchange="updateVehicleField(' + v.id + ',\'vtype\',this.value)" style="font-size:11px;padding:3px 4px;">' + _vehTypeOptions(v.vtype) + '</select>') +
+        field('Year',      '<select onchange="updateVehicleField(' + v.id + ',\'year\',this.value)" style="font-size:11px;padding:3px 4px;">' + _vehYearOptions(v.year) + '</select>') +
+        field('VIN / HIN', '<input value="' + esc(v.vin || '') + '" oninput="updateVehicleField(' + v.id + ',\'vin\',this.value)" placeholder="VIN or hull ID" style="width:150px;font-size:11px;padding:3px 6px;">') +
+        field('Miles / hrs','<input value="' + esc(v.mileage || '') + '" oninput="updateVehicleField(' + v.id + ',\'mileage\',this.value)" placeholder="48,000" style="width:78px;font-size:11px;padding:3px 6px;">') +
+        field('Condition', '<select onchange="updateVehicleField(' + v.id + ',\'condition\',this.value)" style="font-size:11px;padding:3px 4px;">' + condOpts(v.condition) + '</select>') +
       '</div>' +
-      '<div style="margin-bottom:5px;">' + routeHint + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:7px;">' +
+        '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--gray-dk);"><input type="checkbox"' + (v.collector ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'collector\',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--bronze);"> Collector / classic</label>' +
+        '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--gray-dk);"><input type="checkbox"' + (v.titleLocated ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'titleLocated\',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--bronze);"> Title located</label>' +
+        routeHint +
+      '</div>' +
       '<textarea rows="2" placeholder="Notes — location (driveway / garage / offsite), keys, lien, running condition…" oninput="updateVehicleField(' + v.id + ',\'note\',this.value)" style="width:100%;font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:inherit;background:#fff;">' + esc(v.note || '') + '</textarea>' +
     '</td></tr>';
   });
