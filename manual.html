@@ -60,6 +60,18 @@
   </table>
   <div class="note">Each directory (Vendors, Referral Partners) is its own Google Sheet with its own deployed Apps Script, kept walled off from job/estimate data. When you deploy or re-deploy a script, use <strong>Who has access: Anyone</strong> and paste the fresh <code>/exec</code> URL. If a save shows a login/HTML-page error, that access setting or a stale URL is the cause.</p>
 
+  <h2>2a. Quick Links</h2>
+  <div class="note"><strong>Internal — do not print or forward outside the team.</strong> These open the underlying Google files; access is still gated by your Google sign-in, so a link alone grants nothing to someone without permission.</div>
+  <table>
+    <tr><th>Opens</th><th>Paste into your browser</th></tr>
+    <tr><td>Google Drive — Havellin Jobs (all client folders)</td><td><code>https://drive.google.com/drive/folders/1X2bmAAjbruL5lLip-UgwwmPNo7y_Ubrb</code></td></tr>
+    <tr><td>Jobs &amp; estimates data — Google Sheet <span style="color:#A67C45;">(manager)</span></td><td><code>https://docs.google.com/spreadsheets/d/16Z3yiRYbhYLsia0aG4v5znWo_O2eDRnB0dcldECjAJM/edit</code></td></tr>
+    <tr><td>Vendor Directory — Google Sheet</td><td><em>add link</em></td></tr>
+    <tr><td>Referral Partners — Google Sheet</td><td><em>add link</em></td></tr>
+  </table>
+  <p>To open the <strong>Apps Script</strong> behind any of these sheets (to view, edit, or re-deploy the code): open the sheet, then <strong>Extensions → Apps Script</strong>. That's how you reach the main sync script (<code>main-sync.gs</code> + <code>saveInventory.gs</code>) and each directory's script.</p>
+  <div class="note">The Apps Script <code>/exec</code> web-app URLs are deliberately <strong>not</strong> listed here — they're live API endpoints (effectively keys) and pasting one in a browser just returns raw data, not a page. They live only in the app's <strong>Settings</strong>; keep them there, not in a printable doc.</div>
+
   <h2>3. End-to-End Job Workflow</h2>
   <div class="flow">
 Intake → Estimate → Manager Approval → Send to Client → Client Accepts<br>
