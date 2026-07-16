@@ -38,6 +38,16 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .chk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 18px;align-items:start;}
 @media (max-width:900px){.chk-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:600px){.chk-grid{grid-template-columns:1fr;}}
+/* Dense entry form — each field is its own auto-flowing cell so three columns stay
+   balanced (no tall single-column stacks) and inputs are cell-width, not page-width.
+   .fld-wide spans the full row for notes / section headers. Collapses gracefully. */
+.vform{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 18px;align-items:start;}
+.vform .fld{min-width:0;margin-bottom:6px;}
+.vform .fld label{margin-top:0;}
+.vform .fld-wide{grid-column:1/-1;}
+.vform .hint{font-size:10px;color:var(--gray);margin-top:3px;line-height:1.4;}
+@media (max-width:820px){.vform{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:560px){.vform{grid-template-columns:1fr;}}
 .card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.3rem;}
 .metric-card{background:var(--tan);border-radius:6px;padding:.9rem 1.1rem;}
 .metric-label{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
@@ -256,7 +266,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.15 · 6:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.16 · 7:49pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1356,10 +1366,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   <div id="add-vendor-card" class="card" style="margin-bottom:1rem;display:none;">
     <div class="sec" id="v-form-title">Add Vendor</div>
     <input type="hidden" id="v-edit-row" value="">
-    <div class="grid2">
-      <div>
+    <div class="vform">
+      <div class="fld">
         <label>Vendor name <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <input type="text" id="v-name" placeholder="e.g. Junk King Palm Beach">
+      </div>
+      <div class="fld">
         <label>Category group <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <select id="v-group" onchange="refreshVendorCategoryList()">
           <option value="">— select —</option>
@@ -1369,24 +1381,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option>Professional Services</option>
           <option>Property Preparation</option>
         </select>
-        <label>Category</label>
-        <input type="text" id="v-category" list="v-cat-list" placeholder="pick a group first, then choose or type a category">
-        <datalist id="v-cat-list"></datalist>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Pick from the chosen group's categories, or type a new one to create it under that group — new specialty categories (e.g. Floor Refinishing) are added just by typing them here. The group decides which job menu the vendor feeds (Property Preparation → Home Prep; the rest → Service Vendors).</div>
-        <label>Primary contact</label>
-        <input type="text" id="v-contact" placeholder="Name / title">
-        <label>Phone</label>
-        <input type="tel" id="v-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
-        <label>Email</label>
-        <input type="email" id="v-email" placeholder="vendor@email.com">
-        <label>Website</label>
-        <input type="text" id="v-website" placeholder="example.com">
-        <label>Physical address</label>
-        <input type="text" id="v-address" placeholder="City, FL">
-        <label>Service area</label>
-        <input type="text" id="v-area" placeholder="e.g. Palm Beach County + Treasure Coast">
       </div>
-      <div>
+      <div class="fld">
         <label>Status</label>
         <select id="v-status">
           <option value="Identified">Identified — sourced, not yet contacted</option>
@@ -1398,6 +1394,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option value="Backup">Backup — secondary option</option>
           <option value="Removed">Removed — do not use</option>
         </select>
+      </div>
+      <div class="fld">
+        <label>Category</label>
+        <input type="text" id="v-category" list="v-cat-list" placeholder="pick a group first, then choose or type">
+        <datalist id="v-cat-list"></datalist>
+        <div class="hint">Pick from the group's categories, or type a new one to create it under that group. The group decides the job menu (Property Preparation → Home Prep; the rest → Service Vendors).</div>
+      </div>
+      <div class="fld">
         <label>COI on file</label>
         <select id="v-coi">
           <option value="">—</option>
@@ -1405,44 +1409,83 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <option>Pending</option>
           <option>No</option>
         </select>
+      </div>
+      <div class="fld">
         <label>Reciprocity</label>
         <select id="v-recip">
           <option value="">—</option>
           <option>Possible</option>
           <option>No</option>
         </select>
+      </div>
+      <div class="fld">
+        <label>Primary contact</label>
+        <input type="text" id="v-contact" placeholder="Name / title">
+      </div>
+      <div class="fld">
+        <label>Phone</label>
+        <input type="tel" id="v-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+      </div>
+      <div class="fld">
+        <label>Email</label>
+        <input type="email" id="v-email" placeholder="vendor@email.com">
+      </div>
+      <div class="fld">
+        <label>Website</label>
+        <input type="text" id="v-website" placeholder="example.com">
+      </div>
+      <div class="fld">
+        <label>Physical address</label>
+        <input type="text" id="v-address" placeholder="City, FL">
+      </div>
+      <div class="fld">
+        <label>Service area</label>
+        <input type="text" id="v-area" placeholder="e.g. Palm Beach County + Treasure Coast">
+      </div>
+      <div class="fld">
         <label>License / cert</label>
         <input type="text" id="v-license" placeholder="e.g. FFL; ISA CAPP; state license #">
+      </div>
+      <div class="fld">
         <label>Reviews (rating + source)</label>
         <input type="text" id="v-reviews" placeholder="e.g. 4.7 Google (120 reviews)">
+      </div>
+      <div class="fld">
         <label>Last contacted</label>
         <input type="date" id="v-lastcontacted">
       </div>
-    </div>
 
-    <div class="divider"></div>
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin-bottom:8px;">Pricing &amp; Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— notes only; the TC applies rough math when estimating. Fees are trued up on real costs at final billing.</span></div>
-    <div class="grid2">
-      <div>
+      <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Pricing &amp; Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— notes only; the TC applies rough math when estimating. Fees are trued up on real costs at final billing.</span></div>
+      <div class="fld">
         <label>Pricing structure <span style="font-weight:400;color:var(--gray);">(how they charge)</span></label>
-        <input type="text" id="v-pricing" placeholder="e.g. Per sqft · Flat trip fee · Per truckload · Hourly">
+        <input type="text" id="v-pricing" placeholder="e.g. Per sqft · Flat · Per load · Hourly">
+      </div>
+      <div class="fld">
         <label>Ballpark rate</label>
-        <input type="text" id="v-estcost" placeholder="e.g. $2/sqft · $150/room · $550/load · $100 flat">
+        <input type="text" id="v-estcost" placeholder="e.g. $2/sqft · $150/room · $550/load">
+      </div>
+      <div class="fld">
         <label>Minimum job / fee</label>
         <input type="text" id="v-minjob" placeholder="e.g. $150 minimum">
       </div>
-      <div>
+      <div class="fld">
         <label>Rate detail <span style="font-weight:400;color:var(--gray);">(caveats)</span></label>
-        <input type="text" id="v-ratedetail" placeholder="e.g. interior walls only; 2-coat; ceilings +$0.50/sqft">
+        <input type="text" id="v-ratedetail" placeholder="e.g. 2-coat; ceilings +$0.50/sqft">
+      </div>
+      <div class="fld">
         <label>Lead time <span style="font-weight:400;color:var(--gray);">(to start work)</span></label>
         <input type="text" id="v-leadtime" placeholder="e.g. 3–5 days · 2 weeks">
+      </div>
+      <div class="fld">
         <label>Estimate turnaround <span style="font-weight:400;color:var(--gray);">(to return a quote)</span></label>
         <input type="text" id="v-turnaround" placeholder="e.g. 48 hrs after site visit">
       </div>
-    </div>
 
-    <label style="margin-top:10px;">Notes</label>
-    <textarea id="v-notes" placeholder="Credentials, specialties, relationship notes, red flags…"></textarea>
+      <div class="fld-wide">
+        <label>Notes</label>
+        <textarea id="v-notes" placeholder="Credentials, specialties, relationship notes, red flags…"></textarea>
+      </div>
+    </div>
 
     <div class="divider"></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -10813,12 +10856,26 @@ function renderVendorStats() {
     tile(counts.contacted + ' / ' + counts.total,'Contacted');
 }
 
-// The list is a category accordion, not a flat wall of 152: each category is a
-// collapsible section (collapsed by default) with counts, so you work one
-// category at a time. Any active filter auto-expands the matching sections so
-// results are never hidden behind a closed header.
+// The list is a two-level accordion, not a flat wall of 152: the top level is the
+// handful of high-level Category Groups, and each group opens to its individual
+// categories (each its own collapsible sub-section). Both levels are collapsed by
+// default so you start from ~5 group headers instead of dozens of categories; any
+// active filter auto-expands the matching sections so results are never hidden.
+var vendorExpandedGroups = {};
 var vendorExpandedCats = {};
+var _vendorGroupOrder = [];
 var _vendorCatOrder = [];
+// Canonical top-level order for the five Category Groups. Unknown groups sort after
+// these alphabetically; vendors with no group fall into an "Ungrouped" bucket last.
+var VENDOR_GROUP_ORDER = [
+  'Asset Liquidation & Valuation',
+  'Disposal & Waste Management',
+  'Moving & Logistics',
+  'Professional Services',
+  'Property Preparation'
+];
+function _vendorGroupRank(g){ var i = VENDOR_GROUP_ORDER.indexOf(g); return i < 0 ? VENDOR_GROUP_ORDER.length : i; }
+function _vendorCatKey(g, c){ return g + ' ' + c; }
 function vendorFiltersActive() {
   return !!((document.getElementById('v-filter-cat')||{}).value
     || (document.getElementById('v-filter-status')||{}).value
@@ -10844,15 +10901,43 @@ function vendorListComparator() {
   };
   return byName;
 }
-function toggleVendorCat(i) {
-  var cat = _vendorCatOrder[i];
-  if (cat == null) return;
-  vendorExpandedCats[cat] = !vendorExpandedCats[cat];
+function toggleVendorGroup(i) {
+  var g = _vendorGroupOrder[i];
+  if (g == null) return;
+  vendorExpandedGroups[g] = !vendorExpandedGroups[g];
   renderVendorsTab();
 }
-function setAllVendorCats(open) {
-  _vendorCatOrder.forEach(function(c){ vendorExpandedCats[c] = open; });
+function toggleVendorCat(i) {
+  var key = _vendorCatOrder[i];
+  if (key == null) return;
+  vendorExpandedCats[key] = !vendorExpandedCats[key];
   renderVendorsTab();
+}
+// Set every group AND category open/closed. Computed straight from the directory (not
+// the last-rendered order) so a single "Expand all" from a fully-collapsed state opens
+// both levels at once, rather than needing a second click to reach the categories.
+function setAllVendorCats(open) {
+  vendorDirectory.forEach(function(v){
+    var g = String(v.category_group||'').trim() || 'Ungrouped';
+    var c = String(v.category||'').trim() || 'Uncategorized';
+    vendorExpandedGroups[g] = open;
+    vendorExpandedCats[_vendorCatKey(g, c)] = open;
+  });
+  renderVendorsTab();
+}
+function _vendorCounts(list) {
+  return {
+    total: list.length,
+    active: list.filter(isActiveVendor).length,
+    contacted: list.filter(function(v){ return String(v.last_contacted||'').trim(); }).length
+  };
+}
+function _vendorCountsHtml(c) {
+  var apprTxt = c.active > 0
+    ? '<span style="color:var(--ok-tx);font-weight:600;">' + c.active + ' active</span>'
+    : '<span style="color:var(--gray);">0 active</span>';
+  return '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' +
+    c.total + ' vendor' + (c.total!==1?'s':'') + ' · ' + apprTxt + ' · ' + c.contacted + ' contacted</div>';
 }
 function renderVendorsTab() {
   renderVendorStats();
@@ -10865,30 +10950,60 @@ function renderVendorsTab() {
   }
   var rows = getFilteredVendors();
   var active = vendorFiltersActive();
-  var byCat = {};
-  rows.forEach(function(v){ var c = String(v.category||'').trim() || 'Uncategorized'; (byCat[c]=byCat[c]||[]).push(v); });
-  var cats = Object.keys(byCat).sort();
-  _vendorCatOrder = cats;
+  var comparator = vendorListComparator();
+
+  // Bucket into group → category → vendors.
+  var byGroup = {};
+  rows.forEach(function(v){
+    var g = String(v.category_group||'').trim() || 'Ungrouped';
+    var c = String(v.category||'').trim() || 'Uncategorized';
+    var grp = byGroup[g] = byGroup[g] || {};
+    (grp[c] = grp[c] || []).push(v);
+  });
+  var groups = Object.keys(byGroup).sort(function(a,b){
+    return (_vendorGroupRank(a) - _vendorGroupRank(b)) || a.localeCompare(b);
+  });
+  _vendorGroupOrder = groups;
+  var totalCats = groups.reduce(function(n,g){ return n + Object.keys(byGroup[g]).length; }, 0);
+
   var head = '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 8px;flex-wrap:wrap;gap:6px;">' +
-    '<span style="font-size:11px;color:var(--gray);">Showing ' + rows.length + ' of ' + vendorDirectory.length + ' vendors in ' + cats.length + ' categor' + (cats.length===1?'y':'ies') + '</span>' +
+    '<span style="font-size:11px;color:var(--gray);">Showing ' + rows.length + ' of ' + vendorDirectory.length + ' vendors in ' +
+      groups.length + ' group' + (groups.length===1?'':'s') + ' · ' + totalCats + ' categor' + (totalCats===1?'y':'ies') + '</span>' +
     '<span style="display:flex;gap:6px;"><button class="btn-s" onclick="setAllVendorCats(true)">Expand all</button><button class="btn-s" onclick="setAllVendorCats(false)">Collapse all</button></span>' +
   '</div>';
   if (!rows.length) { list.innerHTML = head + '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">No vendors match these filters.</div>'; return; }
-  var body = cats.map(function(cat, i){
-    var vs = byCat[cat].slice().sort(vendorListComparator());
-    var appr = vs.filter(isActiveVendor).length;
-    var contacted = vs.filter(function(v){ return String(v.last_contacted||'').trim(); }).length;
-    var open = active || !!vendorExpandedCats[cat];
-    var apprTxt = appr > 0
-      ? '<span style="color:var(--ok-tx);font-weight:600;">' + appr + ' active</span>'
-      : '<span style="color:var(--gray);">0 active</span>';
-    var header = '<div onclick="toggleVendorCat(' + i + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px;">' +
-        '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (open?'▾':'▸') + '</span>' + esc(cat) + '</div>' +
-        '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' + vs.length + ' vendor' + (vs.length!==1?'s':'') + ' · ' + apprTxt + ' · ' + contacted + ' contacted</div>' +
+
+  var catOrder = [];
+  var body = groups.map(function(g, gi){
+    var cats = Object.keys(byGroup[g]).sort();
+    var allInGroup = cats.reduce(function(a,c){ return a.concat(byGroup[g][c]); }, []);
+    var gcounts = _vendorCounts(allInGroup);
+    var gopen = active || !!vendorExpandedGroups[g];
+    var gHeader = '<div onclick="toggleVendorGroup(' + gi + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--tan);border:1px solid var(--border-md);border-radius:6px;padding:11px 13px;margin-bottom:6px;">' +
+        '<div style="font-weight:700;font-size:14px;color:var(--gray-dk);"><span style="color:var(--bronze);margin-right:8px;display:inline-block;width:10px;">' + (gopen?'▾':'▸') + '</span>' + esc(g) +
+          ' <span style="font-weight:400;font-size:11px;color:var(--gray);">· ' + cats.length + ' categor' + (cats.length===1?'y':'ies') + '</span></div>' +
+        _vendorCountsHtml(gcounts) +
       '</div>';
-    var section = open ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin:0 0 12px 12px;">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
-    return header + section;
+
+    var gBody = '';
+    if (gopen) {
+      gBody = cats.map(function(cat){
+        var key = _vendorCatKey(g, cat);
+        var ci = catOrder.length; catOrder.push(key);
+        var vs = byGroup[g][cat].slice().sort(comparator);
+        var copen = active || !!vendorExpandedCats[key];
+        var cHeader = '<div onclick="toggleVendorCat(' + ci + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:9px 12px;margin-bottom:6px;">' +
+            '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (copen?'▾':'▸') + '</span>' + esc(cat) + '</div>' +
+            _vendorCountsHtml(_vendorCounts(vs)) +
+          '</div>';
+        var section = copen ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin:0 0 12px 12px;">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
+        return cHeader + section;
+      }).join('');
+      gBody = '<div style="margin:0 0 14px 12px;">' + gBody + '</div>';
+    }
+    return gHeader + gBody;
   }).join('');
+  _vendorCatOrder = catOrder;
   list.innerHTML = head + body;
 }
 
