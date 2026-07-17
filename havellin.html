@@ -41,8 +41,12 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 /* Dense entry form — each field is its own auto-flowing cell so three columns stay
    balanced (no tall single-column stacks) and inputs are cell-width, not page-width.
    .fld-wide spans the full row for notes / section headers. Collapses gracefully. */
-.vform{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 18px;align-items:start;}
-.vform .fld{min-width:0;margin-bottom:6px;}
+.vform{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 18px;align-items:stretch;}
+/* Each field is a flex column and its control is pushed to the bottom of the cell.
+   Because the grid stretches every cell in a row to the same height, the inputs then
+   line up across the row no matter how many lines each example caption runs to. */
+.vform .fld{min-width:0;display:flex;flex-direction:column;}
+.vform .fld > input,.vform .fld > select,.vform .fld > textarea{margin-top:auto;}
 .vform .fld label{margin-top:0;}
 .vform .fld-wide{grid-column:1/-1;}
 .vform .hint{font-size:10px;color:var(--gray);margin-top:3px;line-height:1.4;}
@@ -271,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 9:09am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 9:20am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1400,7 +1404,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div class="fld">
         <label>Category</label>
-        <div class="eg">Pick a group first, then choose or type. New categories are created under that group; the group decides the job menu (Property Preparation → Home Prep; the rest → Service Vendors).</div>
+        <div class="eg">Pick from the group's list, or type a new one to create it under that group.</div>
         <input type="text" id="v-category" list="v-cat-list">
         <datalist id="v-cat-list"></datalist>
       </div>
