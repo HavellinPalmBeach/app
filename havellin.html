@@ -266,7 +266,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.16 · 7:49pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 9:05am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1351,7 +1351,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Vendor Directory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:660px;">Work the list through its lifecycle (Identified → Contacted → Qualified → Vetting → Contracted → Active), log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Active</strong> vendors can be assigned to a job.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:660px;">Work the list through its lifecycle (Identified → Vetting → Active, with Backup / Do Not Use as needed), log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Active</strong> vendors can be assigned to a job.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-s" onclick="loadVendorDirectory()">↻ Reload directory</button>
@@ -1385,14 +1385,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div class="fld">
         <label>Status</label>
         <select id="v-status">
-          <option value="Identified">Identified — sourced, not yet contacted</option>
-          <option value="Contacted">Contacted — outreach made</option>
-          <option value="Qualified">Qualified — a fit, worth vetting</option>
+          <option value="Identified">Identified — sourced, not yet vetted</option>
           <option value="Vetting">Vetting — checking COI, refs, pricing</option>
-          <option value="Contracted">Contracted — agreement in place</option>
           <option value="Active">Active — cleared for jobs</option>
           <option value="Backup">Backup — secondary option</option>
-          <option value="Removed">Removed — do not use</option>
+          <option value="Do Not Use">Do Not Use — off the list</option>
         </select>
       </div>
       <div class="fld">
@@ -1503,13 +1500,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
         <option value="">All statuses</option>
         <option value="Identified">Identified</option>
-        <option value="Contacted">Contacted</option>
-        <option value="Qualified">Qualified</option>
         <option value="Vetting">Vetting</option>
-        <option value="Contracted">Contracted</option>
         <option value="Active">Active</option>
         <option value="Backup">Backup</option>
-        <option value="Removed">Removed</option>
+        <option value="Do Not Use">Do Not Use</option>
         <option value="__none">(no status)</option>
       </select>
       <select id="v-filter-rating" onchange="renderVendorsTab()" style="flex:1;min-width:130px;" title="Rating comes from job performance; vendors read Unrated until they've been used">
@@ -10672,14 +10666,16 @@ function writeVendorScores(jobId) {
 // Writes go through the vendor web app (addVendor / updateVendor); the sheet stays
 // the source of truth and the local cache is updated in lock-step so the UI is live.
 // Vendor lifecycle — mirrors the Status data-validation dropdown in the sheet.
-var VENDOR_STATUSES = ['Identified','Contacted','Qualified','Vetting','Contracted','Active','Backup','Removed'];
+var VENDOR_STATUSES = ['Identified','Vetting','Active','Backup','Do Not Use'];
 function vendorStatusBadge(status) {
   var s = String(status || '').trim();
   if (!s) return '<span class="badge b-warn">No status</span>';
-  if (s === 'Removed') return '<span class="badge" style="background:var(--err-bg);color:var(--err-tx);">Removed</span>';
+  if (s === 'Do Not Use' || s === 'Removed') return '<span class="badge" style="background:var(--err-bg);color:var(--err-tx);">' + esc(s) + '</span>';
+  // Legacy statuses (Contacted/Qualified/Contracted) still render so pre-existing
+  // sheet rows don't break before they're re-saved onto the trimmed lifecycle.
   var map = {
-    'Identified':'b-info', 'Contacted':'b-info', 'Qualified':'b-bronze',
-    'Vetting':'b-warn', 'Contracted':'b-bronze', 'Active':'b-ok', 'Backup':'b-bronze'
+    'Identified':'b-info', 'Vetting':'b-warn', 'Active':'b-ok', 'Backup':'b-bronze',
+    'Contacted':'b-info', 'Qualified':'b-bronze', 'Contracted':'b-bronze'
   };
   return '<span class="badge ' + (map[s] || 'b-info') + '">' + esc(s) + '</span>';
 }
