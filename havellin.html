@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 9:31am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 12:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11054,6 +11054,19 @@ function vendorStatusSelect(v, idAttr) {
 }
 function setVendorStatusFromCard(id, val) { if (!val) return; _quickWriteVendor(id, { status: val }, 'Updating status…'); }
 
+// Normalize a stored website value (often just "faithfarm.org", no scheme) into a
+// clickable link: {href, label}. Prepends https:// when no scheme is present and
+// strips scheme/www/trailing slash for a clean label. Returns null if there's nothing
+// usable or it looks like an email/phone rather than a site.
+function _vendorWebUrl(raw) {
+  var s = String(raw || '').trim();
+  if (!s || s.indexOf('@') !== -1) return null;
+  var href = /^https?:\/\//i.test(s) ? s : 'https://' + s.replace(/^\/+/, '');
+  if (!/\.[a-z]{2,}/i.test(href)) return null; // no domain-looking token → skip
+  var label = s.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
+  return { href: href, label: label };
+}
+
 function vendorCardHtml(v) {
   var id = vendorIdOf(v);
   var idAttr = esc(String(id)).replace(/'/g, "\\'");
@@ -11065,6 +11078,8 @@ function vendorCardHtml(v) {
   var vph = fmtPhoneDisplay(v.phone);
   if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a>');
   if (v.email) cbits.push('✉ <a href="mailto:' + esc(v.email) + '" style="color:var(--bronze);">' + esc(v.email) + '</a>');
+  var web = _vendorWebUrl(v.website);
+  if (web) cbits.push('🌐 <a href="' + esc(web.href) + '" target="_blank" rel="noopener noreferrer" style="color:var(--bronze);">' + esc(web.label) + '</a>');
   var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
   var addrRow = v.physical_address ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Address</span> ' + esc(v.physical_address) + '</div>' : '';
   var areaRow = v.service_area ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Service area</span> <strong>' + esc(v.service_area) + '</strong></div>' : '';
