@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 9:20am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 9:31am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1461,13 +1461,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <input type="text" id="v-license">
       </div>
       <div class="fld">
-        <label>Reviews (rating + source)</label>
-        <div class="eg">e.g. 4.7 Google (120 reviews)</div>
-        <input type="text" id="v-reviews">
+        <label>Rating <span style="font-weight:400;color:var(--gray);">(from completed jobs)</span></label>
+        <div class="eg">Earned from job performance — not editable here. Google reviews got a vendor onto the list; this rating keeps them on it.</div>
+        <div id="v-rating-ro" style="margin-top:auto;padding:7px 0;font-size:12px;"></div>
       </div>
       <div class="fld">
         <label>Last contacted</label>
-        <input type="date" id="v-lastcontacted">
+        <div class="eg">Set by <b>☎ Log contact</b> on the vendor card — not editable here.</div>
+        <div id="v-lastcontacted-ro" style="margin-top:auto;padding:7px 0;font-size:12px;color:var(--gray-dk);"></div>
       </div>
 
       <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Pricing &amp; Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— notes only; the TC applies rough math when estimating. Fees are trued up on real costs at final billing.</span></div>
@@ -11074,12 +11075,20 @@ function vendorCardHtml(v) {
   var pricing = _vLine([['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]]);
   var timing = _vLine([['Lead time', v.lead_time], ['Quote turnaround', v.estimate_turnaround]]);
   var meta = _vLine([['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert]]);
+  var lcNote = String(v.last_contact_note || '').trim();
   var lastc = v.last_contacted
-    ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(v.last_contacted)) + '</span>'
+    ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(v.last_contacted)) +
+        (lcNote ? ' <span style="color:var(--gray-dk);">— ' + esc(lcNote) + '</span>' : '') + '</span>'
     : '<span style="font-size:10px;color:var(--warn-tx);">Not yet contacted</span>';
 
+  // Logging a contact is a deliberate event: type what you discussed, then log. It
+  // overwrites the single latest note and stamps today's date (single-note model).
+  var logRow = '<div class="vc-log" style="display:flex;gap:6px;align-items:center;margin-top:auto;padding-top:8px;">' +
+      '<input type="text" placeholder="What did you discuss?" onkeydown="if(event.key===\'Enter\'){logVendorContact(this,\'' + idAttr + '\');}" style="flex:1;min-width:0;font-size:11px;padding:5px 7px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' +
+      '<button class="btn-s" style="white-space:nowrap;" onclick="logVendorContact(this,\'' + idAttr + '\')">☎ Log contact</button>' +
+    '</div>';
+
   var actions = vendorStatusSelect(v, idAttr) +
-    '<button class="btn-s" onclick="stampVendorContacted(\'' + idAttr + '\')">☎ Log contact</button>' +
     '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>';
 
   return '<div class="card" style="margin:0;padding:0.85rem 1rem;display:flex;flex-direction:column;">' +
@@ -11093,7 +11102,8 @@ function vendorCardHtml(v) {
     '</div>' +
     contactBlock + pricing + timing + meta +
     (v.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(v.notes) + '</div>' : '') +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:8px;">' +
+    logRow +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;">' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + actions + '</div>' + lastc +
     '</div>' +
   '</div>';
@@ -11105,8 +11115,10 @@ var VENDOR_FORM_MAP = {
   'v-contact':'primary_contact', 'v-phone':'phone', 'v-email':'email',
   'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
   'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity',
-  'v-license':'license_cert', 'v-reviews':'reviews_rating_source',
-  'v-lastcontacted':'last_contacted',
+  'v-license':'license_cert',
+  // reviews_rating_source (bulk-imported) and last_contacted are intentionally NOT in
+  // this map: they're read-only in the form, so a vetting edit can never overwrite the
+  // imported review or the contact-log date. last_contacted is owned by ☎ Log contact.
   'v-pricing':'pricing_structure', 'v-estcost':'estimate_cost', 'v-minjob':'minimum_job',
   'v-ratedetail':'rate_detail', 'v-leadtime':'lead_time', 'v-turnaround':'estimate_turnaround',
   'v-notes':'notes'
@@ -11114,12 +11126,29 @@ var VENDOR_FORM_MAP = {
 function _setV(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
 function _getV(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
 
+// Fill the two read-only cells (job-based rating + last-contacted). Both are display
+// only — the rating is earned from completed jobs and last_contacted is owned by the
+// card's ☎ Log contact action, so neither is an editable input in this form.
+function _fillVendorReadOnly(v) {
+  v = v || {};
+  var r = document.getElementById('v-rating-ro');
+  if (r) r.innerHTML = vendorRatingHtml(v);
+  var lc = document.getElementById('v-lastcontacted-ro');
+  if (lc) {
+    var note = String(v.last_contact_note || '').trim();
+    lc.innerHTML = v.last_contacted
+      ? esc(fmtVendorDate(v.last_contacted)) + (note ? ' <span style="color:var(--gray);">— ' + esc(note) + '</span>' : '')
+      : '<span style="color:var(--warn-tx);">Not yet contacted</span>';
+  }
+}
+
 function showAddVendor() {
   var card = document.getElementById('add-vendor-card');
   Object.keys(VENDOR_FORM_MAP).forEach(function(id){ _setV(id, ''); });
   _setV('v-status', 'Identified');
   document.getElementById('v-edit-row').value = '';
   document.getElementById('v-form-title').textContent = 'Add Vendor';
+  _fillVendorReadOnly(null);
   var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('v-save-status'); if (st) st.textContent = '';
   populateVendorFilters(); // refresh category datalist
@@ -11131,6 +11160,7 @@ function editVendor(id) {
   var v = lookupVendorById(id);
   if (!v) return;
   Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ _setV(fid, v[VENDOR_FORM_MAP[fid]]); });
+  _fillVendorReadOnly(v);
   document.getElementById('v-edit-row').value = String(id);
   document.getElementById('v-form-title').textContent = 'Edit Vendor — ' + (v.vendor_name || '');
   var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
@@ -11242,9 +11272,16 @@ function _quickWriteVendor(id, patch, busyMsg, okMsg) {
     renderVendorsTab();
   });
 }
-function stampVendorContacted(id) {
+// Log a contact from the vendor card: read the note typed next to the button, stamp
+// today's date, and overwrite the single latest contact note. Both write together so
+// last_contacted always reflects the most recent logged conversation.
+function logVendorContact(btn, id) {
+  var wrap = btn && btn.closest ? btn.closest('.vc-log') : null;
+  var input = wrap ? wrap.querySelector('input') : null;
+  var note = input ? String(input.value || '').trim() : '';
   var today = new Date().toISOString().slice(0,10);
-  _quickWriteVendor(id, { last_contacted: today }, 'Logging outreach…', 'Outreach logged — last contacted set to today ✓');
+  _quickWriteVendor(id, { last_contacted: today, last_contact_note: note },
+    'Logging contact…', 'Contact logged — last contacted set to today ✓');
 }
 
 // ═══ REFERRAL PARTNERS DIRECTORY ═══════════════════════════════════════════════
