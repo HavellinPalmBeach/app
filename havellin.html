@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 6:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 7:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1372,7 +1372,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   </div>
 
   <!-- INTAKE / EDIT FORM -->
-  <div id="add-vendor-card" class="card" style="margin-bottom:1rem;display:none;">
+  <div class="modal-overlay" id="add-vendor-modal" style="display:none;" onclick="if(event.target===this)closeVendorForm()">
+  <div id="add-vendor-card" class="modal-box" style="width:660px;max-width:94%;text-align:left;">
     <div class="sec" id="v-form-title">Add Vendor</div>
     <input type="hidden" id="v-edit-row" value="">
     <div class="vform">
@@ -1513,11 +1514,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
     <div class="divider"></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <button class="btn-s" onclick="document.getElementById('add-vendor-card').style.display='none'">Cancel</button>
+      <button class="btn-s" onclick="closeVendorForm()">Cancel</button>
       <button class="btn-p" onclick="saveVendor()">Save Vendor</button>
       <span id="v-save-status" style="font-size:11px;color:var(--gray);"></span>
     </div>
     <div id="v-fb"></div>
+  </div>
   </div>
 
   <!-- TOOLBAR -->
@@ -1650,7 +1652,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div id="referrals-stats" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;"></div>
   </div>
 
-  <div id="add-referral-card" class="card" style="margin-bottom:1rem;display:none;">
+  <div class="modal-overlay" id="add-referral-modal" style="display:none;" onclick="if(event.target===this)closeReferralForm()">
+  <div id="add-referral-card" class="modal-box" style="width:660px;max-width:94%;text-align:left;">
     <div class="sec" id="r-form-title">Add Referral Partner</div>
     <input type="hidden" id="r-edit-row" value="">
     <div class="grid2">
@@ -1760,11 +1763,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <textarea id="r-notes" placeholder="Relationship notes, referral history, reciprocity, preferences&hellip;"></textarea>
     <div class="divider"></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <button class="btn-s" onclick="document.getElementById('add-referral-card').style.display='none'">Cancel</button>
+      <button class="btn-s" onclick="closeReferralForm()">Cancel</button>
       <button class="btn-p" onclick="saveReferral()">Save Partner</button>
       <span id="r-save-status" style="font-size:11px;color:var(--gray);"></span>
     </div>
     <div id="r-fb"></div>
+  </div>
   </div>
 
   <div id="referrals-leaderboard"></div>
@@ -11191,9 +11195,20 @@ function showAddVendor() {
   var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('v-save-status'); if (st) st.textContent = '';
   populateVendorFilters(); // refresh category datalist
-  card.style.display = 'block';
-  card.scrollIntoView({behavior:'smooth', block:'start'});
+  openVendorForm();
 }
+// The add/edit form is a modal over the list — opening it no longer scrolls the page,
+// so Save/Cancel leaves you exactly where you were in the directory.
+function openVendorForm(){ document.getElementById('add-vendor-modal').style.display = 'flex'; }
+function closeVendorForm(){ document.getElementById('add-vendor-modal').style.display = 'none'; }
+// Escape closes whichever directory form is open (matches the app's other modals).
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Escape') return;
+  ['add-vendor-modal','add-referral-modal'].forEach(function(mid){
+    var m = document.getElementById(mid);
+    if (m && m.style.display === 'flex') m.style.display = 'none';
+  });
+});
 
 function editVendor(id) {
   var v = lookupVendorById(id);
@@ -11205,9 +11220,7 @@ function editVendor(id) {
   var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('v-save-status'); if (st) st.textContent = '';
   populateVendorFilters();
-  var card = document.getElementById('add-vendor-card');
-  card.style.display = 'block';
-  card.scrollIntoView({behavior:'smooth', block:'start'});
+  openVendorForm();
 }
 
 // Apps Script /exec endpoints must return JSON. When the deployment's access isn't
@@ -11275,7 +11288,7 @@ function saveVendor() {
       normalizeVendorDir();
       try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
       if (st){ st.textContent = 'Saved ✓'; st.style.color = 'var(--ok-tx)'; }
-      document.getElementById('add-vendor-card').style.display = 'none';
+      closeVendorForm();
       populateVendorFilters(); populateJobMenus(); renderVendorsTab();
     });
   } else {
@@ -11288,7 +11301,7 @@ function saveVendor() {
       normalizeVendorDir();
       try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
       if (st){ st.textContent = 'Added ✓'; st.style.color = 'var(--ok-tx)'; }
-      document.getElementById('add-vendor-card').style.display = 'none';
+      closeVendorForm();
       populateVendorFilters(); populateJobMenus(); renderVendorsTab();
     });
   }
@@ -11602,8 +11615,11 @@ function showAddReferral(){
   document.getElementById('r-form-title').textContent = 'Add Referral Partner';
   var fb = document.getElementById('r-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('r-save-status'); if (st) st.textContent = '';
-  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'start'});
+  openReferralForm();
 }
+// Partner add/edit form is a modal over the list — same as the Vendor form.
+function openReferralForm(){ document.getElementById('add-referral-modal').style.display = 'flex'; }
+function closeReferralForm(){ document.getElementById('add-referral-modal').style.display = 'none'; }
 function editReferral(id){
   var p = lookupReferralById(id); if (!p) return;
   Object.keys(REFERRAL_FORM_MAP).forEach(function(fid){ _setR(fid, p[REFERRAL_FORM_MAP[fid]]); });
@@ -11614,7 +11630,7 @@ function editReferral(id){
   document.getElementById('r-form-title').textContent = 'Edit Partner — ' + (p.partner_name || '');
   var fb = document.getElementById('r-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('r-save-status'); if (st) st.textContent = '';
-  var card = document.getElementById('add-referral-card'); card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'start'});
+  openReferralForm();
 }
 function postReferralWrite(type, payload, cb){
   if (!REFERRAL_SYNC_URL) { cb(false, {error:'No Referral Partners URL set'}); return; }
@@ -11644,7 +11660,7 @@ function saveReferral(){
       Object.keys(fields).forEach(function(k){ existing[k] = fields[k]; });
       try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
       if (st){ st.textContent = 'Saved ✓'; st.style.color = 'var(--ok-tx)'; }
-      document.getElementById('add-referral-card').style.display = 'none';
+      closeReferralForm();
       renderReferralsTab(); populateReferralPicker();
     });
   } else {
@@ -11654,7 +11670,7 @@ function saveReferral(){
       referralDirectory.push(rec);
       try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
       if (st){ st.textContent = 'Added ✓'; st.style.color = 'var(--ok-tx)'; }
-      document.getElementById('add-referral-card').style.display = 'none';
+      closeReferralForm();
       renderReferralsTab(); populateReferralPicker();
     });
   }
