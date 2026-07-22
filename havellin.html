@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 5:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 6:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11483,13 +11483,28 @@ function referralChannelHtml(ch){
   return '<div style="font-size:11px;font-weight:600;color:' + col + ';margin-top:3px;">' + icon + esc(ch) + '</div>';
 }
 var REFERRAL_STATUSES = ['Identified','Contacted','Intro Meeting','Active Partner','Dormant','Do Not Use'];
-// Inline status dropdown on a card — pick the stage right where you're looking,
-// mirrors the Vendor Directory card. The top-right badge stays for at-a-glance colour.
+// Status → pill colors, mirroring the Vendor card. Matches the badge palette but
+// gives Contacted its own teal (distinct from Intro Meeting) and Identified the same
+// blue vendors use, so the two directories read consistently.
+function referralStatusColors(s){
+  var map = {
+    'Identified':{bg:'var(--info-bg)',tx:'var(--info-tx)'},
+    'Contacted':{bg:'#dcefec',tx:'#1f6b5f'},
+    'Intro Meeting':{bg:'var(--tan)',tx:'var(--gray-dk)'},
+    'Active Partner':{bg:'var(--ok-bg)',tx:'var(--ok-tx)'},
+    'Dormant':{bg:'var(--warn-bg)',tx:'var(--warn-tx)'},
+    'Do Not Use':{bg:'var(--err-bg)',tx:'var(--err-tx)'}
+  };
+  return map[String(s||'').trim()] || {bg:'var(--white)',tx:'var(--gray-dk)'};
+}
+// Inline status dropdown on a card — now the single color-coded control that sets
+// status (the old duplicate top-right badge is gone), mirroring the Vendor card.
 function referralStatusSelect(p, idAttr){
   var cur = String(p.status||'');
+  var c = referralStatusColors(cur);
   var opts = '<option value="">— set status —</option>' + REFERRAL_STATUSES.map(function(s){
     return '<option value="' + esc(s) + '"' + (cur===s?' selected':'') + '>' + esc(s) + '</option>'; }).join('');
-  return '<select onchange="setReferralStatusFromCard(\'' + idAttr + '\',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' + opts + '</select>';
+  return '<select onchange="setReferralStatusFromCard(\'' + idAttr + '\',this.value)" style="font-size:11px;font-weight:600;padding:3px 7px;border:1px solid var(--border-md);border-radius:4px;background:' + c.bg + ';color:' + c.tx + ';font-family:inherit;">' + opts + '</select>';
 }
 function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferral(id, { status: val }, 'Updating status…', 'Status updated ✓'); }
 
@@ -11550,31 +11565,32 @@ function referralCardHtml(p){
   var stats = _rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:4px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' · ' + _rst.won + ' won · $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '';
   var dorm = _dorm.dormant ? '<div style="font-size:11px;color:var(--warn-tx);font-weight:600;margin-top:4px;">&#9200; ' + (_dorm.days == null ? 'No outreach logged' : _dorm.days + ' days quiet') + ' — time for a nudge</div>' : '';
 
-  var lastc = String(p.last_contacted||'').trim()
-    ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(p.last_contacted)) + '</span>'
-    : '<span style="font-size:10px;color:var(--warn-tx);">Not yet contacted</span>';
+  // Highlighted last-contact bar — sits right above the Log outreach button so you
+  // see the prior touch before you reach out. Cream with history, amber when never contacted.
+  var lastcBar = String(p.last_contacted||'').trim()
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-size:11px;color:var(--gray-dk);">' +
+        '<span style="color:var(--gray);">Last contacted</span> <strong>' + esc(fmtVendorDate(p.last_contacted)) + '</strong></div>'
+    : '<div style="background:var(--warn-bg);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-size:11px;color:var(--warn-tx);font-weight:600;">Not yet contacted</div>';
 
-  var actions = referralStatusSelect(p, idAttr) +
-    '<button class="btn-s" onclick="stampReferralContacted(\'' + idAttr + '\')">☎ Log outreach</button>' +
+  var actions = '<button class="btn-s" onclick="stampReferralContacted(\'' + idAttr + '\')">☎ Log outreach</button>' +
     '<button class="btn-s" onclick="editReferral(\'' + idAttr + '\')">Edit</button>';
 
   var _st = String(p.status||'');
   var _accent = _st === 'Do Not Use' ? 'border-left:3px solid var(--err-tx);' : (_st === 'Dormant' ? 'border-left:3px solid var(--warn-tx);' : '');
 
   return '<div class="card" style="margin:0;padding:0.85rem 1rem;display:flex;flex-direction:column;' + _accent + '">' +
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
-      '<div style="min-width:0;">' +
-        '<div style="font-weight:600;font-size:14px;">' + esc(p.partner_name||'—') + '</div>' +
-        '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(p.partner_type||'—') + '</div>' +
-      '</div>' +
-      '<div style="display:flex;gap:6px;align-items:center;white-space:nowrap;flex-shrink:0;">' + referralPriorityBadge(p.priority) + referralStatusBadge(p.status) + '</div>' +
+    '<div>' +
+      '<div style="font-weight:600;font-size:14px;">' + esc(p.partner_name||'—') + '</div>' +
+      '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(p.partner_type||'—') + '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">' + referralStatusSelect(p, idAttr) + referralPriorityBadge(p.priority) + '</div>' +
     '</div>' +
     contactBlock +
     referralChannelHtml(p.channel) +
     warm + stats + dorm +
     (p.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(p.notes) + '</div>' : '') +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:8px;">' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + actions + '</div>' + lastc +
+    '<div style="margin-top:auto;padding-top:8px;">' +
+      lastcBar +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' + actions + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -11658,7 +11674,13 @@ function _quickWriteReferral(id, patch, busyMsg, okMsg){
 }
 function stampReferralContacted(id){
   var today = new Date().toISOString().slice(0,10);
-  _quickWriteReferral(id, { last_contacted: today }, 'Logging outreach…', 'Outreach logged — last contacted set to today ✓');
+  var patch = { last_contacted: today };
+  // First outreach promotes a still-"Identified" (or status-less) partner to Contacted.
+  // Never downgrades one already at Intro Meeting / Active Partner / Dormant / Do Not Use.
+  var p = lookupReferralById(id);
+  var cur = String(p && p.status || '').trim();
+  if (!cur || cur === 'Identified') patch.status = 'Contacted';
+  _quickWriteReferral(id, patch, 'Logging outreach…', 'Outreach logged — last contacted set to today ✓');
 }
 
 // ── Dormancy: flag engaged partners who've gone quiet (no outreach or referral in
