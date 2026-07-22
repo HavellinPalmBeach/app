@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.17 · 12:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 5:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1360,7 +1360,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Vendor Directory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:660px;">Work the list through its lifecycle (Identified → Vetting → Active, with Backup / Do Not Use as needed), log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Active</strong> vendors can be assigned to a job.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:660px;">Work the list through its lifecycle (Identified → Contacted → Vetting → Active, with Backup / Do Not Use as needed), log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Active</strong> vendors can be assigned to a job.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-s" onclick="loadVendorDirectory()">↻ Reload directory</button>
@@ -1395,7 +1395,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div class="fld">
         <label>Status</label>
         <select id="v-status">
-          <option value="Identified">Identified — sourced, not yet vetted</option>
+          <option value="Identified">Identified — sourced, not yet contacted</option>
+          <option value="Contacted">Contacted — first outreach made</option>
           <option value="Vetting">Vetting — checking COI, refs, pricing</option>
           <option value="Active">Active — cleared for jobs</option>
           <option value="Backup">Backup — secondary option</option>
@@ -1526,6 +1527,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
         <option value="">All statuses</option>
         <option value="Identified">Identified</option>
+        <option value="Contacted">Contacted</option>
         <option value="Vetting">Vetting</option>
         <option value="Active">Active</option>
         <option value="Backup">Backup</option>
@@ -10692,7 +10694,7 @@ function writeVendorScores(jobId) {
 // Writes go through the vendor web app (addVendor / updateVendor); the sheet stays
 // the source of truth and the local cache is updated in lock-step so the UI is live.
 // Vendor lifecycle — mirrors the Status data-validation dropdown in the sheet.
-var VENDOR_STATUSES = ['Identified','Vetting','Active','Backup','Do Not Use'];
+var VENDOR_STATUSES = ['Identified','Contacted','Vetting','Active','Backup','Do Not Use'];
 function vendorStatusBadge(status) {
   var s = String(status || '').trim();
   if (!s) return '<span class="badge b-warn">No status</span>';
@@ -11044,13 +11046,37 @@ function fmtVendorDate(s) {
   var d = new Date(m[1] + '-' + m[2] + '-' + m[3] + 'T12:00:00');
   return isNaN(d) ? (m[1]+'-'+m[2]+'-'+m[3]) : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
 }
-// Inline status dropdown on a card — deliberate (pick the stage) and covers the
-// full lifecycle, replacing the accidental one-click "Approve".
+// Status → pill colors, matching the badge palette so the dropdown reads as a
+// colored status the way the old badge did. Contacted gets its own teal so it's
+// distinct from Identified (blue) at a glance.
+function vendorStatusColors(status){
+  var map = {
+    'Identified':{bg:'var(--info-bg)',tx:'var(--info-tx)'},
+    'Contacted':{bg:'#dcefec',tx:'#1f6b5f'},
+    'Vetting':{bg:'var(--warn-bg)',tx:'var(--warn-tx)'},
+    'Active':{bg:'var(--ok-bg)',tx:'var(--ok-tx)'},
+    'Backup':{bg:'#f4ead6',tx:'var(--bronze)'},
+    'Do Not Use':{bg:'var(--err-bg)',tx:'var(--err-tx)'},
+    'Removed':{bg:'var(--err-bg)',tx:'var(--err-tx)'},
+    'Qualified':{bg:'#f4ead6',tx:'var(--bronze)'},
+    'Contracted':{bg:'#f4ead6',tx:'var(--bronze)'}
+  };
+  return map[String(status||'').trim()] || {bg:'var(--white)',tx:'var(--gray-dk)'};
+}
+// Inline status dropdown on a card — deliberate (pick the stage), covers the full
+// lifecycle, and is now the single place status is set (the color-coded control
+// replaces the old top-right badge + this duplicate lower dropdown).
 function vendorStatusSelect(v, idAttr) {
   var cur = String(v.status||'');
+  var c = vendorStatusColors(cur);
   var opts = '<option value="">— set status —</option>' + VENDOR_STATUSES.map(function(s){
     return '<option value="' + esc(s) + '"' + (cur===s?' selected':'') + '>' + esc(s) + '</option>'; }).join('');
-  return '<select onchange="setVendorStatusFromCard(\'' + idAttr + '\',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' + opts + '</select>';
+  return '<select onchange="setVendorStatusFromCard(\'' + idAttr + '\',this.value)" style="font-size:11px;font-weight:600;padding:3px 7px;border:1px solid var(--border-md);border-radius:4px;background:' + c.bg + ';color:' + c.tx + ';font-family:inherit;">' + opts + '</select>';
+}
+// Compact rating for the status line: just "Unrated" when unrated (the full
+// "no jobs yet" phrasing still shows in the edit form), stars + jobs otherwise.
+function vendorRatingCompact(v){
+  return vendorPerf(v) == null ? '<span style="font-size:10px;color:var(--gray);">Unrated</span>' : vendorRatingHtml(v);
 }
 function setVendorStatusFromCard(id, val) { if (!val) return; _quickWriteVendor(id, { status: val }, 'Updating status…'); }
 
@@ -11070,7 +11096,6 @@ function _vendorWebUrl(raw) {
 function vendorCardHtml(v) {
   var id = vendorIdOf(v);
   var idAttr = esc(String(id)).replace(/'/g, "\\'");
-  var rating = vendorRatingHtml(v);
 
   // Highlighted contact + service-area block — the primary reason to open a card.
   var cbits = [];
@@ -11091,10 +11116,13 @@ function vendorCardHtml(v) {
   var timing = _vLine([['Lead time', v.lead_time], ['Quote turnaround', v.estimate_turnaround]]);
   var meta = _vLine([['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert]]);
   var lcNote = String(v.last_contact_note || '').trim();
-  var lastc = v.last_contacted
-    ? '<span style="font-size:10px;color:var(--gray);">Last contacted ' + esc(fmtVendorDate(v.last_contacted)) +
-        (lcNote ? ' <span style="color:var(--gray-dk);">— ' + esc(lcNote) + '</span>' : '') + '</span>'
-    : '<span style="font-size:10px;color:var(--warn-tx);">Not yet contacted</span>';
+  // Highlighted last-contact bar — sits right under the log box so you see the prior
+  // contact before you dial. Cream when there's a history, amber when never contacted.
+  var lastcBar = v.last_contacted
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:5px 9px;margin-top:6px;font-size:11px;color:var(--gray-dk);">' +
+        '<span style="color:var(--gray);">Last contacted</span> <strong>' + esc(fmtVendorDate(v.last_contacted)) + '</strong>' +
+        (lcNote ? ' — ' + esc(lcNote) : '') + '</div>'
+    : '<div style="background:var(--warn-bg);border:1px solid var(--border);border-radius:5px;padding:5px 9px;margin-top:6px;font-size:11px;color:var(--warn-tx);font-weight:600;">Not yet contacted</div>';
 
   // Logging a contact is a deliberate event: type what you discussed, then log. It
   // overwrites the single latest note and stamps today's date (single-note model).
@@ -11103,23 +11131,19 @@ function vendorCardHtml(v) {
       '<button class="btn-s" style="white-space:nowrap;" onclick="logVendorContact(this,\'' + idAttr + '\')">☎ Log contact</button>' +
     '</div>';
 
-  var actions = vendorStatusSelect(v, idAttr) +
-    '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>';
-
   return '<div class="card" style="margin:0;padding:0.85rem 1rem;display:flex;flex-direction:column;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
-      '<div style="min-width:0;">' +
-        '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
-        '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(v.category||'—') +
-          (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
-      '</div>' +
-      '<div style="display:flex;gap:8px;align-items:center;white-space:nowrap;">' + rating + vendorStatusBadge(v.status) + '</div>' +
+    '<div>' +
+      '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
+      '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(v.category||'—') +
+        (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">' + vendorStatusSelect(v, idAttr) + vendorRatingCompact(v) + '</div>' +
     '</div>' +
     contactBlock + pricing + timing + meta +
     (v.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(v.notes) + '</div>' : '') +
     logRow +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;">' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + actions + '</div>' + lastc +
+    lastcBar +
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
+      '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>' +
     '</div>' +
   '</div>';
 }
@@ -11295,7 +11319,14 @@ function logVendorContact(btn, id) {
   var input = wrap ? wrap.querySelector('input') : null;
   var note = input ? String(input.value || '').trim() : '';
   var today = new Date().toISOString().slice(0,10);
-  _quickWriteVendor(id, { last_contacted: today, last_contact_note: note },
+  var patch = { last_contacted: today, last_contact_note: note };
+  // First point of contact ONLY promotes a still-"Identified" (or status-less) vendor
+  // to Contacted. Anyone already further along (Vetting/Active/Backup/Do Not Use) keeps
+  // their status — logging a later call never drags an Active vendor back to Contacted.
+  var v = lookupVendorById(id);
+  var cur = String(v && v.status || '').trim();
+  if (!cur || cur === 'Identified') patch.status = 'Contacted';
+  _quickWriteVendor(id, patch,
     'Logging contact…', 'Contact logged — last contacted set to today ✓');
 }
 
