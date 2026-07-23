@@ -349,27 +349,47 @@ function saveAllJobsToSheet(jobsArr) {
   }
 }
 
+// Single-job upsert. Takes the SAME script lock and applies the SAME newest-wins
+// guard as saveAllJobsToSheet, so this per-record path (fired from ~20 edit sites)
+// can no longer race the bulk write and clobber a job row. Two devices editing two
+// different jobs are always safe; two editing the SAME job resolve by updatedAt.
 function saveJobToSheet(job) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Jobs');
-  if (!sheet) {
-    sheet = ss.insertSheet('Jobs');
-    sheet.appendRow(['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']);
-  }
-  var data = sheet.getDataRange().getValues();
-  var rowIndex = -1;
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === job.id) { rowIndex = i + 1; break; }
-  }
-  var rowData = [
-    job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',
-    job.addr || '', job.city || '', job.zip || '', job.svc || '', job.status || '',
-    job.created || new Date().toISOString(), JSON.stringify(job)
-  ];
-  if (rowIndex > 0) {
-    sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
-  } else {
-    sheet.appendRow(rowData);
+  if (!job || job.id == null) return;
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) {}
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Jobs');
+    if (!sheet) {
+      sheet = ss.insertSheet('Jobs');
+      sheet.appendRow(['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']);
+    }
+    var data = sheet.getDataRange().getValues();
+    var rowIndex = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(job.id)) { rowIndex = i + 1; break; }
+    }
+    // Newest-wins guard: if the stored row is newer than this write, leave it alone
+    // rather than overwriting fresher data with a stale edit from another device.
+    if (rowIndex > 0) {
+      var stored = null;
+      try { stored = JSON.parse(data[rowIndex - 1][11]); } catch (e) {}
+      var inT  = Number(job.updatedAt || 0);
+      var curT = stored ? Number(stored.updatedAt || 0) : -1;
+      if (curT > inT) return;
+    }
+    var rowData = [
+      job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',
+      job.addr || '', job.city || '', job.zip || '', job.svc || '', job.status || '',
+      job.created || new Date().toISOString(), JSON.stringify(job)
+    ];
+    if (rowIndex > 0) {
+      sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
 }
 
@@ -389,30 +409,37 @@ function deleteJobFromSheet(id) {
 // ══ ESTIMATES (one row per job — most current version) ═══════════════════════════
 
 function saveEstimateToSheet(estimate) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Estimates');
-  if (!sheet) {
-    sheet = ss.insertSheet('Estimates');
-    sheet.appendRow(['Job ID', 'Updated', 'Total TC', 'Total PS', 'Total Amount', 'Approved', 'Approved By', 'Approved At', 'Data JSON']);
-  }
+  if (!estimate) return;
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) {}
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Estimates');
+    if (!sheet) {
+      sheet = ss.insertSheet('Estimates');
+      sheet.appendRow(['Job ID', 'Updated', 'Total TC', 'Total PS', 'Total Amount', 'Approved', 'Approved By', 'Approved At', 'Data JSON']);
+    }
 
-  var rowData = [
-    estimate.jobId || '', new Date().toISOString(),
-    estimate.totTC || 0, estimate.totPS || 0,
-    estimate.havellinTotal || 0, estimate.approved || false,
-    estimate.approvedBy || '', estimate.approvedAt || '', JSON.stringify(estimate)
-  ];
+    var rowData = [
+      estimate.jobId || '', new Date().toISOString(),
+      estimate.totTC || 0, estimate.totPS || 0,
+      estimate.havellinTotal || 0, estimate.approved || false,
+      estimate.approvedBy || '', estimate.approvedAt || '', JSON.stringify(estimate)
+    ];
 
-  // Upsert by Job ID: update the existing row for this job, otherwise append.
-  var data = sheet.getDataRange().getValues();
-  var rowIndex = -1;
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(estimate.jobId)) { rowIndex = i + 1; break; }
-  }
-  if (rowIndex > 0) {
-    sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
-  } else {
-    sheet.appendRow(rowData);
+    // Upsert by Job ID under the lock: update the existing row for this job, else append.
+    var data = sheet.getDataRange().getValues();
+    var rowIndex = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(estimate.jobId)) { rowIndex = i + 1; break; }
+    }
+    if (rowIndex > 0) {
+      sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
 }
 

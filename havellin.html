@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 8:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.23 · 6:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8832,15 +8832,11 @@ function postSync(body) {
   }).then(function(r){ return r.json(); });
 }
 
-// Fire a verified write and show an honest badge based on the real response.
+// Fire a verified write. Delegates to the durable save queue below so a failed
+// write is never silently lost \u2014 it's retried with backoff and a persistent
+// indicator stays lit until it lands.
 function postSyncBadge(body, okMsg, failMsg) {
-  if (!SHEETS_SYNC_URL) return;
-  postSync(body)
-    .then(function(res){
-      if (res && res.ok) showSyncBadge(okMsg);
-      else showSyncBadge(failMsg + (res && res.error ? ' \u2014 ' + res.error : ''), true);
-    })
-    .catch(function(){ showSyncBadge(failMsg, true); });
+  queuedPostSync(body, okMsg, failMsg);
 }
 
 function syncToSheets(type, payload) {
@@ -8871,6 +8867,109 @@ function showSyncBadge(msg, isErr) {
   clearTimeout(el._hideT);
   el._hideT = setTimeout(function(){ el.style.display = 'none'; }, 4000);
 }
+
+// ─── DURABLE SAVE QUEUE ───────────────────────────────────────────────────────
+// Every cross-device write goes through queuedPostSync. It tries the write once;
+// on a network/endpoint failure the payload is NOT dropped — it's held in a
+// per-target queue and retried with backoff, and a persistent "unsaved — retrying"
+// indicator stays lit until the queue drains. Newest snapshot per target wins, so
+// a retry never resends stale data. This is what turns the old transient 4-second
+// toast into "every save confirms success or visibly, durably fails".
+var _pendingWrites = {};   // key -> { body, okMsg, failMsg }
+var _retryTimer = null;
+var _retryStep = 0;
+var _flushing = false;
+var _retryDelays = [2000, 5000, 15000, 30000, 60000];
+
+// Stable logical-target key: whole-store writes collapse to their type (a newer
+// full snapshot supersedes an older queued one); per-record writes key by type+id.
+function _writeKey(body) {
+  var t = (body && body.type) ? body.type : 'unknown';
+  var p = body && body.payload;
+  var id = '';
+  if (p && typeof p === 'object' && !Array.isArray(p)) {
+    if (p.id != null) id = p.id;
+    else if (p.jobId != null) id = p.jobId;
+  } else if (body && body.id != null) { id = body.id; }
+  return id !== '' ? (t + ':' + id) : t;
+}
+
+function _pendingCount() { return Object.keys(_pendingWrites).length; }
+
+// Persistent bottom-left chip; visible only while writes are outstanding. Tapping
+// it forces an immediate retry.
+function updatePendingIndicator() {
+  var el = document.getElementById('sync-pending');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sync-pending';
+    el.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;display:none;'
+      + 'padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;'
+      + 'background:var(--err-bg);color:var(--err-tx);box-shadow:0 2px 10px rgba(0,0,0,0.18);';
+    el.title = 'Unsaved changes not yet synced — tap to retry now';
+    el.onclick = function(){ _retryStep = 0; flushPendingWrites(); };
+    document.body.appendChild(el);
+  }
+  var n = _pendingCount();
+  if (n > 0) {
+    el.textContent = '⚠ ' + n + ' unsaved change' + (n > 1 ? 's' : '') + ' — retrying…';
+    el.style.display = 'inline-block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function _scheduleRetry() {
+  if (_retryTimer) return;
+  var delay = _retryDelays[Math.min(_retryStep, _retryDelays.length - 1)];
+  _retryTimer = setTimeout(function(){ _retryTimer = null; flushPendingWrites(); }, delay);
+}
+
+// Try to resend every queued write. Drops each one that lands; reschedules if any
+// remain. Guarded so overlapping triggers (timer + online + tap) don't double-run.
+function flushPendingWrites() {
+  if (_flushing) return;
+  var keys = Object.keys(_pendingWrites);
+  if (!keys.length) { updatePendingIndicator(); return; }
+  _flushing = true;
+  var attempts = keys.map(function(k){
+    var w = _pendingWrites[k];
+    return postSync(w.body)
+      .then(function(res){ if (res && res.ok) { delete _pendingWrites[k]; return true; } return false; })
+      .catch(function(){ return false; });
+  });
+  Promise.all(attempts).then(function(){
+    _flushing = false;
+    updatePendingIndicator();
+    if (_pendingCount() === 0) { _retryStep = 0; showSyncBadge('All changes saved ✓'); }
+    else { _retryStep++; _scheduleRetry(); }
+  });
+}
+
+// The one entry point for verified cross-device writes.
+function queuedPostSync(body, okMsg, failMsg) {
+  if (!SHEETS_SYNC_URL) return;
+  postSync(body)
+    .then(function(res){
+      if (res && res.ok) { if (okMsg) showSyncBadge(okMsg); }
+      else _enqueueWrite(body, okMsg, failMsg, res && res.error);
+    })
+    .catch(function(){ _enqueueWrite(body, okMsg, failMsg); });
+}
+
+function _enqueueWrite(body, okMsg, failMsg, errText) {
+  _pendingWrites[_writeKey(body)] = { body: body, okMsg: okMsg, failMsg: failMsg };
+  showSyncBadge((failMsg || 'Sync failed') + (errText ? ' — ' + errText : '') + ' — will retry', true);
+  updatePendingIndicator();
+  _scheduleRetry();
+}
+
+// Reconnect / tab-refocus are the moments a stuck queue can suddenly succeed —
+// flush eagerly instead of waiting out the backoff.
+window.addEventListener('online', function(){ _retryStep = 0; flushPendingWrites(); });
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden && _pendingCount()) { _retryStep = 0; flushPendingWrites(); }
+});
 
 // ── VENDOR DIRECTORY (separate Sheet + web app; read-only) ────────────────────
 // Lives in its own spreadsheet/web app so directory editors can never touch the
@@ -9188,8 +9287,7 @@ function saveLogEntry() {
     members: members
   });
 
-  saveLogData();
-  syncLogToSheets(jobId, jobLogs[jobId][jobLogs[jobId].length-1]);
+  saveLogData();             // authoritative, verified, merge-safe cloud write
   lockAssignedCrew(jobId);   // first save locks every assigned role for the whole job
   clearLogEntry();           // clears hours/date/activity — keeps crew names
   buildLogTeamRows();        // re-render so locked roles show fixed; crew names persist
@@ -12437,15 +12535,9 @@ function printJobPlan() {
   pt.innerHTML = '';
 }
 
-function syncLogToSheets(jobId, entry) {
-  if (!SHEETS_SYNC_URL) return;
-  var job = jobs.find(function(j){ return j.id===jobId; });
-  fetch(SHEETS_SYNC_URL, {
-    method: 'POST', mode: 'no-cors',
-    body: JSON.stringify({type:'log', payload:{jobId:jobId, jobName:job?job.name:'', entry:entry}}),
-    headers: {'Content-Type':'text/plain'}
-  }).catch(function(){});
-}
+// (Removed syncLogToSheets — a silent no-cors single-entry post the backend
+// explicitly ignored. Hours logs persist through saveLogData()'s verified,
+// merge-by-id saveAllLogs write, so nothing durable was lost by dropping it.)
 
 // ─── MEDIA COMPRESSION ────────────────────────────────────────────────────────
 function compressImage(dataUrl, maxW, quality, cb) {
