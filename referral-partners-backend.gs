@@ -105,13 +105,14 @@ function doPost(e) {
 
     // Permanently remove a partner by CLEARING its row (not deleteRow) so other
     // partners' _row references stay stable and the blank row is skipped on load.
-    // Verifies partner_name (COLUMNS[0]) so a stale _row can't clear the wrong
-    // partner; a mismatch or out-of-range row returns ok (idempotent — already gone).
+    // Verifies the partner_name column so a stale _row can't clear the wrong partner;
+    // a mismatch or out-of-range row returns ok (idempotent — already gone).
     if (type === 'deletePartner') {
       var dr = parseInt(payload._row, 10);
       if (!dr || dr < 2 || dr > sh.getLastRow()) return _json({ ok: true, already: true });
       if (payload.partner_name) {
-        var cur = String(sh.getRange(dr, 1).getValue()).trim();
+        var pnCol = COLUMNS.indexOf('partner_name') + 1; // 1-based column of partner_name
+        var cur = String(sh.getRange(dr, pnCol).getValue()).trim();
         if (cur !== String(payload.partner_name).trim()) return _json({ ok: true, already: true });
       }
       sh.getRange(dr, 1, 1, COLUMNS.length).clearContent();
