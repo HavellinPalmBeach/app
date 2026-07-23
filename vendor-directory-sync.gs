@@ -65,6 +65,9 @@ function doPost(e) {
     if (data.type === 'updateVendor') {
       return jsonOut(updateVendor(data.payload || {}));
     }
+    if (data.type === 'deleteVendor') {
+      return jsonOut(deleteVendor(data.payload || {}));
+    }
     return jsonOut({ ok: false, success: false, error: 'Unknown type: ' + data.type });
   } catch (error) {
     Logger.log('doPost error: ' + error.toString());
@@ -166,6 +169,38 @@ function updateVendor(p) {
     wrote++;
   });
   return { ok: true, success: true, _row: rowNum, wrote: wrote };
+}
+
+// Permanently remove a vendor by CLEARING its row (not deleteRow) so every other
+// vendor's _row stays stable and the blank row is reused by addVendor. Resolves the
+// row by _row (verified by name) or a name search — the same way updateVendor does.
+// Idempotent: a row that's already gone returns ok so a retry never hard-fails.
+function deleteVendor(p) {
+  var ss = SpreadsheetApp.openById(VENDOR_SHEET_ID);
+  var sheet = ss.getSheetByName(VENDOR_TAB);
+  if (!sheet) return { ok: false, success: false, error: 'Tab "' + VENDOR_TAB + '" not found' };
+  var values = sheet.getDataRange().getValues();
+  if (values.length < 2) return { ok: true, success: true, already: true };
+  var headers = values[0].map(vendorKey);
+  var nameCol = headers.indexOf('vendor_name');
+
+  var rowIdx = -1;
+  if (p._row && p._row >= 2 && p._row <= values.length) {
+    var r0 = p._row - 1;
+    if (!p.vendor_name || nameCol < 0 ||
+        String(values[r0][nameCol]).trim() === String(p.vendor_name).trim()) {
+      rowIdx = r0;
+    }
+  }
+  if (rowIdx === -1 && p.vendor_name && nameCol >= 0) {
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][nameCol]).trim() === String(p.vendor_name).trim()) { rowIdx = i; break; }
+    }
+  }
+  if (rowIdx === -1) return { ok: true, success: true, already: true }; // already removed
+
+  sheet.getRange(rowIdx + 1, 1, 1, sheet.getLastColumn()).clearContent();
+  return { ok: true, success: true, _row: rowIdx + 1 };
 }
 
 // Turn a header label ("Performance Score") into a stable object key

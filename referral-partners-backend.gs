@@ -103,6 +103,21 @@ function doPost(e) {
       return _json({ ok: true });
     }
 
+    // Permanently remove a partner by CLEARING its row (not deleteRow) so other
+    // partners' _row references stay stable and the blank row is skipped on load.
+    // Verifies partner_name (COLUMNS[0]) so a stale _row can't clear the wrong
+    // partner; a mismatch or out-of-range row returns ok (idempotent — already gone).
+    if (type === 'deletePartner') {
+      var dr = parseInt(payload._row, 10);
+      if (!dr || dr < 2 || dr > sh.getLastRow()) return _json({ ok: true, already: true });
+      if (payload.partner_name) {
+        var cur = String(sh.getRange(dr, 1).getValue()).trim();
+        if (cur !== String(payload.partner_name).trim()) return _json({ ok: true, already: true });
+      }
+      sh.getRange(dr, 1, 1, COLUMNS.length).clearContent();
+      return _json({ ok: true });
+    }
+
     return _json({ ok: false, error: 'unknown type' });
   } catch (err) {
     return _json({ ok: false, error: String(err) });

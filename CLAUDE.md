@@ -59,3 +59,15 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home
   walkthrough. `buildEstimateMailto()`.~~ **Done 2026-07-08.**
+- **Contractor tab — apply the directory upgrades (own session).** The card revamp
+  (status dropdown + rating under the name, highlighted last-contact bar), the
+  Contacted-on-first-outreach auto-advance, the edit-as-modal, and the PIN-gated delete
+  were all shipped for **Vendors** and **Referral Partners** but NOT the Contractors tab.
+  Much of it likely applies there too. Note: contractors live in the main sheet and the
+  backend already has a `deleteContractor` action (`apps-script/main-sync.gs`), so a
+  contractor delete is partly wired already.
+- **ACTION REQUIRED — redeploy the two directory Apps Scripts** for PIN-gated delete to
+  work live: `vendor-directory-sync.gs` (new `deleteVendor`) and
+  `referral-partners-backend.gs` (new `deletePartner`). The .gs edits are committed but
+  can't be tested from here. Both clear the row (not deleteRow), so row indices stay
+  stable. Front-end delete + history guard already live.

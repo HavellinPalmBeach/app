@@ -284,6 +284,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <li><strong>☎ Log contact</strong> — type what you discussed in the note field, then log it; this stamps today as the last-contacted date and stores the latest contact note (used for follow-up cadence). Logging the <em>first</em> contact auto-advances an <em>Identified</em> vendor to <em>Contacted</em> (it never moves a vendor already at Vetting/Active/etc.). The last-contacted date + note show in a highlighted bar right under the log box, so you see the prior touch before you call. Last-contacted is set only this way — it is read-only in the edit form. The old bulk-imported Google review is no longer shown or editable; what surfaces is the star rating earned from completed jobs.</li>
     <li><strong>Edit</strong> — intake/vetting fields: category group, category, contact, pricing structure, ballpark, minimum job, lead time, COI on file, license, service area, notes.</li>
     <li>Performance is rated post-job (a rolling average), kept separate from the curated fields so a vetting edit never wipes performance history.</li>
+    <li><strong>Delete (manager PIN)</strong> — inside the Edit form, <em>Delete this vendor permanently</em> removes the row from the app <em>and</em> the spreadsheet. It's PIN-gated (the same manager PIN as approvals/client-delete) and reserved for bulk-import errors or defunct companies — not a substitute for <em>Do Not Use</em>, which is for real vendors you're retiring. A vendor with job history (a rating or completed jobs) is blocked from deletion and pointed to Do Not Use instead, so a delete can't orphan performance history.</li>
   </ul>
 
   <h3>13a. Category Group &amp; Category (how a vendor is filed)</h3>
@@ -311,6 +312,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <li><strong>Log outreach</strong> — stamps last-contacted to today, and auto-advances a still-<em>Identified</em> partner to <em>Contacted</em> (never downgrades one further along). The last-contacted date shows in a highlighted bar right above the button.</li>
     <li><strong>Dormancy nudge</strong> — an engaged partner with no outreach or referral in 90 days is flagged "Needs Nudge."</li>
     <li><strong>Leaderboard</strong> — jobs are attributed to a partner when a professional referral source is linked at intake, so you can see who sends the most business.</li>
+    <li><strong>Delete (manager PIN)</strong> — inside the Edit form, <em>Delete this partner permanently</em> removes the row from the app <em>and</em> the spreadsheet, PIN-gated like the vendor delete. Reserved for bulk-import errors / defunct contacts, not a replacement for <em>Do Not Use</em>. A partner with referrals attributed to them is blocked from deletion (steered to Do Not Use) so the leaderboard history stays intact.</li>
   </ul>
 
   <h2>15. Drive Folder Reference</h2>

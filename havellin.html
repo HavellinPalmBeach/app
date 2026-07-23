@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 7:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.22 · 8:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1518,6 +1518,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <button class="btn-p" onclick="saveVendor()">Save Vendor</button>
       <span id="v-save-status" style="font-size:11px;color:var(--gray);"></span>
     </div>
+    <div id="v-delete-zone" style="display:none;margin-top:10px;padding-top:8px;border-top:1px dashed var(--border-md);">
+      <button type="button" onclick="requestDeleteVendor(document.getElementById('v-edit-row').value)" style="background:none;border:none;color:#B0413E;font-size:11px;cursor:pointer;text-decoration:underline;font-family:Raleway,sans-serif;padding:0;">Delete this vendor permanently (bulk-import error / defunct) — manager PIN</button>
+    </div>
     <div id="v-fb"></div>
   </div>
   </div>
@@ -1767,6 +1770,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <button class="btn-p" onclick="saveReferral()">Save Partner</button>
       <span id="r-save-status" style="font-size:11px;color:var(--gray);"></span>
     </div>
+    <div id="r-delete-zone" style="display:none;margin-top:10px;padding-top:8px;border-top:1px dashed var(--border-md);">
+      <button type="button" onclick="requestDeleteReferral(document.getElementById('r-edit-row').value)" style="background:none;border:none;color:#B0413E;font-size:11px;cursor:pointer;text-decoration:underline;font-family:Raleway,sans-serif;padding:0;">Delete this partner permanently (bulk-import error / defunct) — manager PIN</button>
+    </div>
     <div id="r-fb"></div>
   </div>
   </div>
@@ -1957,6 +1963,19 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div id="delete-pin-fb" style="margin-top:10px;"></div>
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="closeDeletePinModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN MODAL FOR VENDOR / REFERRAL-PARTNER DELETION -->
+<div class="modal-overlay" id="dir-delete-pin-modal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-title">Confirm Deletion</div>
+    <div class="modal-sub" id="dir-delete-sub">Permanent deletion removes this record from the app <em>and</em> the spreadsheet. Enter the manager PIN to confirm.</div>
+    <input type="password" class="pin-input" id="dir-delete-pin-input" maxlength="4" placeholder="&bull;&bull;&bull;&bull;" oninput="if(this.value.length===4) checkDirDeletePin()">
+    <div id="dir-delete-pin-fb" style="margin-top:10px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeDirDeletePinModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -11195,20 +11214,74 @@ function showAddVendor() {
   var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('v-save-status'); if (st) st.textContent = '';
   populateVendorFilters(); // refresh category datalist
+  var _dz = document.getElementById('v-delete-zone'); if (_dz) _dz.style.display = 'none';
   openVendorForm();
 }
 // The add/edit form is a modal over the list — opening it no longer scrolls the page,
 // so Save/Cancel leaves you exactly where you were in the directory.
 function openVendorForm(){ document.getElementById('add-vendor-modal').style.display = 'flex'; }
 function closeVendorForm(){ document.getElementById('add-vendor-modal').style.display = 'none'; }
-// Escape closes whichever directory form is open (matches the app's other modals).
+// Escape closes whichever directory form / confirm is open (matches the app's other modals).
 document.addEventListener('keydown', function(e){
   if (e.key !== 'Escape') return;
-  ['add-vendor-modal','add-referral-modal'].forEach(function(mid){
+  ['add-vendor-modal','add-referral-modal','dir-delete-pin-modal'].forEach(function(mid){
     var m = document.getElementById(mid);
     if (m && m.style.display === 'flex') m.style.display = 'none';
   });
 });
+
+// ─── Directory delete (vendors + referral partners) ────────────────────────────
+// PIN-gated permanent deletion, reusing the manager-PIN pattern the client delete uses.
+// Reserved for bulk-import errors / defunct records — real records with history
+// (a rated/used vendor, a partner with attributed referrals) are steered to "Do Not
+// Use" instead, so a delete can never orphan a rating or the referral leaderboard.
+var _dirDeleteTarget = null; // { kind:'vendor'|'referral', id, name }
+function _openDirDeletePin(){
+  var sub = document.getElementById('dir-delete-sub');
+  if (sub) sub.innerHTML = 'Permanently delete <strong>' + esc(_dirDeleteTarget.name) + '</strong> from the directory <em>and</em> the spreadsheet. This can’t be undone. Enter the manager PIN to confirm.';
+  var fb = document.getElementById('dir-delete-pin-fb'); if (fb) fb.innerHTML = '';
+  var inp = document.getElementById('dir-delete-pin-input'); if (inp) inp.value = '';
+  document.getElementById('dir-delete-pin-modal').style.display = 'flex';
+  if (inp) inp.focus();
+}
+function closeDirDeletePinModal(){ document.getElementById('dir-delete-pin-modal').style.display = 'none'; _dirDeleteTarget = null; }
+function checkDirDeletePin(){
+  var inp = document.getElementById('dir-delete-pin-input');
+  if (inp.value !== '3010'){
+    document.getElementById('dir-delete-pin-fb').innerHTML = '<span style="color:var(--err-tx);font-size:12px;">Incorrect PIN.</span>';
+    inp.value = ''; return;
+  }
+  document.getElementById('dir-delete-pin-modal').style.display = 'none';
+  var t = _dirDeleteTarget; _dirDeleteTarget = null;
+  if (!t) return;
+  if (t.kind === 'vendor') hardDeleteVendor(t.id); else hardDeleteReferral(t.id);
+}
+
+function requestDeleteVendor(id){
+  var v = lookupVendorById(id); if (!v) return;
+  // History guard: a rated or previously-used vendor is retired, not deleted.
+  if (vendorPerf(v) != null || parseFloat(v.jobs_rated) > 0){
+    alert('This vendor has job history (a performance rating or completed jobs). To keep your records intact, retire it by setting the status to “Do Not Use” instead of deleting.');
+    return;
+  }
+  _dirDeleteTarget = { kind:'vendor', id:String(id), name: v.vendor_name || 'this vendor' };
+  _openDirDeletePin();
+}
+function hardDeleteVendor(id){
+  var v = lookupVendorById(id);
+  if (!v) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  if (v._row == null || String(v._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this vendor, then retry', true); return; }
+  if (!VENDOR_SYNC_URL) { showSyncBadge('Set the Vendor Directory URL in Settings first', true); return; }
+  showSyncBadge('Deleting…');
+  postVendorWrite('deleteVendor', { _row: v._row, vendor_name: v.vendor_name }, function(ok, d){
+    if (!ok) { showSyncBadge('Delete failed: ' + (d.error||''), true); return; }
+    vendorDirectory = vendorDirectory.filter(function(x){ return String(vendorIdOf(x)) !== String(id); });
+    try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
+    showSyncBadge('Vendor deleted ✓');
+    closeVendorForm();
+    populateVendorFilters(); populateJobMenus(); renderVendorsTab();
+  });
+}
 
 function editVendor(id) {
   var v = lookupVendorById(id);
@@ -11220,6 +11293,7 @@ function editVendor(id) {
   var fb = document.getElementById('v-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('v-save-status'); if (st) st.textContent = '';
   populateVendorFilters();
+  var _dz = document.getElementById('v-delete-zone'); if (_dz) _dz.style.display = 'block';
   openVendorForm();
 }
 
@@ -11615,6 +11689,7 @@ function showAddReferral(){
   document.getElementById('r-form-title').textContent = 'Add Referral Partner';
   var fb = document.getElementById('r-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('r-save-status'); if (st) st.textContent = '';
+  var _dz = document.getElementById('r-delete-zone'); if (_dz) _dz.style.display = 'none';
   openReferralForm();
 }
 // Partner add/edit form is a modal over the list — same as the Vendor form.
@@ -11630,11 +11705,38 @@ function editReferral(id){
   document.getElementById('r-form-title').textContent = 'Edit Partner — ' + (p.partner_name || '');
   var fb = document.getElementById('r-fb'); if (fb) fb.innerHTML = '';
   var st = document.getElementById('r-save-status'); if (st) st.textContent = '';
+  var _dz = document.getElementById('r-delete-zone'); if (_dz) _dz.style.display = 'block';
   openReferralForm();
 }
 function postReferralWrite(type, payload, cb){
   if (!REFERRAL_SYNC_URL) { cb(false, {error:'No Referral Partners URL set'}); return; }
   _appsScriptPost(REFERRAL_SYNC_URL, { type:type, payload:payload }, cb, type !== 'addPartner');
+}
+function requestDeleteReferral(id){
+  var p = lookupReferralById(id); if (!p) return;
+  // History guard: a partner with jobs attributed (the leaderboard) is retired, not deleted.
+  var stats = referralPartnerStats(p._row);
+  if (stats && stats.count > 0){
+    alert('This partner has ' + stats.count + ' referral' + (stats.count===1?'':'s') + ' attributed to them. To keep your leaderboard intact, retire them by setting the status to “Do Not Use” instead of deleting.');
+    return;
+  }
+  _dirDeleteTarget = { kind:'referral', id:String(referralIdOf(p)), name: p.partner_name || 'this partner' };
+  _openDirDeletePin();
+}
+function hardDeleteReferral(id){
+  var p = lookupReferralById(id);
+  if (!p) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  if (p._row == null || String(p._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this partner, then retry', true); return; }
+  if (!REFERRAL_SYNC_URL) { showSyncBadge('Set the Referral Partners URL in Settings first', true); return; }
+  showSyncBadge('Deleting…');
+  postReferralWrite('deletePartner', { _row: p._row, partner_name: p.partner_name }, function(ok, d){
+    if (!ok) { showSyncBadge('Delete failed: ' + (d.error||''), true); return; }
+    referralDirectory = referralDirectory.filter(function(x){ return String(referralIdOf(x)) !== String(id); });
+    try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
+    showSyncBadge('Partner deleted ✓');
+    closeReferralForm();
+    renderReferralsTab(); populateReferralPicker();
+  });
 }
 function saveReferral(){
   var fname = _getR('r-fname'), lname = _getR('r-lname');
