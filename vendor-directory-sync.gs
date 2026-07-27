@@ -88,6 +88,11 @@ function addVendor(p) {
   if (!fields.vendor_name || !String(fields.vendor_name).trim()) {
     return { ok: false, success: false, error: 'Vendor Name is required' };
   }
+  // CRM sync foundation: give every new row a stable id (the key Bigin / Zoho Flow
+  // matches on — never the sheet row) plus write-recency and origin metadata.
+  if (!fields.uid) fields.uid = Utilities.getUuid();
+  fields.updated_at = new Date().toISOString();
+  fields.source = p.source || fields.source || 'app';
   var ss = SpreadsheetApp.openById(VENDOR_SHEET_ID);
   var sheet = ss.getSheetByName(VENDOR_TAB);
   if (!sheet) return { ok: false, success: false, error: 'Tab "' + VENDOR_TAB + '" not found' };
@@ -121,7 +126,7 @@ function addVendor(p) {
       sheet.getRange(targetRow, c + 1).setValue(fields[key]);
     }
   });
-  return { ok: true, success: true, _row: targetRow };
+  return { ok: true, success: true, _row: targetRow, uid: fields.uid };
 }
 
 // Overwrite curated fields on an existing vendor. Resolves the row by _row
@@ -129,6 +134,11 @@ function addVendor(p) {
 // `p.fields`, skipping the rating-owned columns. Creates missing columns.
 function updateVendor(p) {
   var fields = p.fields || {};
+  // Never let an edit overwrite the immutable id; stamp recency + origin so the CRM
+  // sync layer can resolve conflicts and skip its own echoes.
+  delete fields.uid;
+  fields.updated_at = new Date().toISOString();
+  fields.source = p.source || 'app';
   var ss = SpreadsheetApp.openById(VENDOR_SHEET_ID);
   var sheet = ss.getSheetByName(VENDOR_TAB);
   if (!sheet) return { ok: false, success: false, error: 'Tab "' + VENDOR_TAB + '" not found' };
@@ -285,4 +295,39 @@ function rateVendor(p) {
     sheet.getRange(rowNum, logCol + 1).setValue(existing ? (existing + '\n' + entry) : entry);
   }
   return { ok: true, success: true };
+}
+
+// ── CRM SYNC BACKFILL (one-time) ─────────────────────────────────────────────
+// Run ONCE from the Apps Script editor (Run ▸ backfillIds) after deploying this
+// version. Creates the uid / updated_at / source columns if missing and gives every
+// existing vendor a stable uid plus a baseline recency/origin. Safe to re-run — it
+// only fills blanks, never overwrites an existing uid. Not exposed over HTTP.
+function backfillIds() {
+  var ss = SpreadsheetApp.openById(VENDOR_SHEET_ID);
+  var sheet = ss.getSheetByName(VENDOR_TAB);
+  if (!sheet) return 'no tab';
+  var values = sheet.getDataRange().getValues();
+  if (values.length < 2) return 'empty';
+  var headers = values[0].map(vendorKey);
+  function ensureCol(key, label) {
+    var c = headers.indexOf(key);
+    if (c === -1) { c = headers.length; headers.push(key); sheet.getRange(1, c + 1).setValue(label); }
+    return c;
+  }
+  var uidCol = ensureCol('uid', 'UID');
+  var updCol = ensureCol('updated_at', 'Updated At');
+  var srcCol = ensureCol('source', 'Source');
+  var nameCol = headers.indexOf('vendor_name');
+  var now = new Date().toISOString(), n = 0;
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    if (nameCol >= 0 && !String(row[nameCol] != null ? row[nameCol] : '').trim()) continue; // skip blank rows
+    var curUid = (uidCol < row.length) ? row[uidCol] : '';
+    if (!String(curUid || '').trim()) { sheet.getRange(r + 1, uidCol + 1).setValue(Utilities.getUuid()); n++; }
+    var curUpd = (updCol < row.length) ? row[updCol] : '';
+    if (!String(curUpd || '').trim()) sheet.getRange(r + 1, updCol + 1).setValue(now);
+    var curSrc = (srcCol < row.length) ? row[srcCol] : '';
+    if (!String(curSrc || '').trim()) sheet.getRange(r + 1, srcCol + 1).setValue('app');
+  }
+  return 'backfilled ' + n + ' uid(s)';
 }
