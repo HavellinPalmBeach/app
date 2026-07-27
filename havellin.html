@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.23 · 6:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.27 · 1:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1428,9 +1428,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </select>
       </div>
       <div class="fld">
-        <label>Primary contact</label>
-        <div class="eg">e.g. Name / title</div>
-        <input type="text" id="v-contact">
+        <label>Contact first name</label>
+        <div class="eg">e.g. Alicia</div>
+        <input type="text" id="v-contact-first">
+      </div>
+      <div class="fld">
+        <label>Contact last name</label>
+        <div class="eg">e.g. Weaver</div>
+        <input type="text" id="v-contact-last">
       </div>
       <div class="fld">
         <label>Phone</label>
@@ -11220,7 +11225,8 @@ function vendorCardHtml(v) {
 
   // Highlighted contact + service-area block — the primary reason to open a card.
   var cbits = [];
-  if (v.primary_contact) cbits.push('<strong>' + esc(v.primary_contact) + '</strong>');
+  var _cname = ((v.contact_first || '') + ' ' + (v.contact_last || '')).trim() || v.primary_contact || '';
+  if (_cname) cbits.push('<strong>' + esc(_cname) + '</strong>');
   var vph = fmtPhoneDisplay(v.phone);
   if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a>');
   if (v.email) cbits.push('✉ <a href="mailto:' + esc(v.email) + '" style="color:var(--bronze);">' + esc(v.email) + '</a>');
@@ -11272,7 +11278,7 @@ function vendorCardHtml(v) {
 // Map form-field ids → sheet column keys (as produced by the sync script's vendorKey).
 var VENDOR_FORM_MAP = {
   'v-name':'vendor_name', 'v-group':'category_group', 'v-category':'category',
-  'v-contact':'primary_contact', 'v-phone':'phone', 'v-email':'email',
+  'v-contact-first':'contact_first', 'v-contact-last':'contact_last', 'v-phone':'phone', 'v-email':'email',
   'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
   'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity',
   'v-license':'license_cert',
@@ -11385,6 +11391,9 @@ function editVendor(id) {
   var v = lookupVendorById(id);
   if (!v) return;
   Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ _setV(fid, v[VENDOR_FORM_MAP[fid]]); });
+  // Legacy fallback: a vendor saved before the split may carry only primary_contact and
+  // no first/last — surface it in the first-name box so the editor can fix it, not lose it.
+  if (!v.contact_first && !v.contact_last && v.primary_contact) _setV('v-contact-first', v.primary_contact);
   _fillVendorReadOnly(v);
   document.getElementById('v-edit-row').value = String(id);
   document.getElementById('v-form-title').textContent = 'Edit Vendor — ' + (v.vendor_name || '');
@@ -11448,6 +11457,10 @@ function saveVendor() {
   if (!VENDOR_SYNC_URL) { showFB('v-fb','err','Set the Vendor Directory URL in Settings first — vendors are saved to the shared sheet.'); return; }
   var fields = {};
   Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ fields[VENDOR_FORM_MAP[fid]] = _getV(fid); });
+  // Keep the legacy single 'primary_contact' column in sync as "First Last" so every
+  // reader still bound to it (vendor card, estimate/job pickers, any external consumer)
+  // stays correct while we transition to the split first/last fields. Retire later.
+  fields.primary_contact = ((fields.contact_first || '') + ' ' + (fields.contact_last || '')).trim();
   var editId = document.getElementById('v-edit-row').value;
   var st = document.getElementById('v-save-status');
   if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
