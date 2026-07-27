@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.27 · 3:01pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.27 · 5:59pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11771,13 +11771,20 @@ function referralCardHtml(p){
 
   // Highlighted last-contact bar — sits right above the Log outreach button so you
   // see the prior touch before you reach out. Cream with history, amber when never contacted.
+  var _rcNote = String(p.last_contact_note || '').trim();
   var lastcBar = String(p.last_contacted||'').trim()
     ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-size:11px;color:var(--gray-dk);">' +
-        '<span style="color:var(--gray);">Last contacted</span> <strong>' + esc(fmtVendorDate(p.last_contacted)) + '</strong></div>'
+        '<span style="color:var(--gray);">Last contacted</span> <strong>' + esc(fmtVendorDate(p.last_contacted)) + '</strong>' +
+        (_rcNote ? ' — ' + esc(_rcNote) : '') + '</div>'
     : '<div style="background:var(--warn-bg);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-size:11px;color:var(--warn-tx);font-weight:600;">Not yet contacted</div>';
 
-  var actions = '<button class="btn-s" onclick="stampReferralContacted(\'' + idAttr + '\')">☎ Log outreach</button>' +
-    '<button class="btn-s" onclick="editReferral(\'' + idAttr + '\')">Edit</button>';
+  // Log a specific outreach with a note (mirrors the vendor card): type what you
+  // discussed, then log — stamps today and overwrites the single latest note.
+  var logRow = '<div class="rc-log" style="display:flex;gap:6px;align-items:center;margin-top:8px;">' +
+      '<input type="text" placeholder="What did you discuss?" onkeydown="if(event.key===\'Enter\'){logReferralContact(this,\'' + idAttr + '\');}" style="flex:1;min-width:0;font-size:11px;padding:5px 7px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' +
+      '<button class="btn-s" style="white-space:nowrap;" onclick="logReferralContact(this,\'' + idAttr + '\')">☎ Log outreach</button>' +
+    '</div>';
+  var actions = '<button class="btn-s" onclick="editReferral(\'' + idAttr + '\')">Edit</button>';
 
   var _st = String(p.status||'');
   var _accent = _st === 'Do Not Use' ? 'border-left:3px solid var(--err-tx);' : (_st === 'Dormant' ? 'border-left:3px solid var(--warn-tx);' : '');
@@ -11794,6 +11801,7 @@ function referralCardHtml(p){
     (p.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(p.notes) + '</div>' : '') +
     '<div style="margin-top:auto;padding-top:8px;">' +
       lastcBar +
+      logRow +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' + actions + '</div>' +
     '</div>' +
   '</div>';
@@ -11907,9 +11915,15 @@ function _quickWriteReferral(id, patch, busyMsg, okMsg){
     showSyncBadge(okMsg || 'Partner updated ✓'); renderReferralsTab(); populateReferralPicker();
   });
 }
-function stampReferralContacted(id){
+// Log an outreach from the referral card: read the note typed next to the button,
+// stamp today's date, and overwrite the single latest note (mirrors logVendorContact).
+// Both write together so last_contacted always reflects the most recent conversation.
+function logReferralContact(btn, id){
+  var wrap = btn && btn.closest ? btn.closest('.rc-log') : null;
+  var input = wrap ? wrap.querySelector('input') : null;
+  var note = input ? String(input.value || '').trim() : '';
   var today = new Date().toISOString().slice(0,10);
-  var patch = { last_contacted: today };
+  var patch = { last_contacted: today, last_contact_note: note };
   // First outreach promotes a still-"Identified" (or status-less) partner to Contacted.
   // Never downgrades one already at Intro Meeting / Active Partner / Dormant / Do Not Use.
   var p = lookupReferralById(id);

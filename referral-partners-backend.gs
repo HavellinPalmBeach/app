@@ -31,7 +31,9 @@ var COLUMNS = [
   'credentials', 'board_cert', 'actec', 'council', 'council_role', 'email_status',
   'channel', 'priority', 'warm_path',
   // CRM sync foundation — APPEND ONLY, never reorder (the backend reads by position).
-  'uid', 'updated_at', 'source'
+  'uid', 'updated_at', 'source',
+  // Contact-logging note — owned by the card's ☎ Log outreach action (mirrors Vendors).
+  'last_contact_note'
 ];
 
 function setupSheet() {
@@ -149,11 +151,13 @@ function backfillIds() {
   var uidC = COLUMNS.indexOf('uid') + 1;
   var updC = COLUMNS.indexOf('updated_at') + 1;
   var srcC = COLUMNS.indexOf('source') + 1;
+  var lcnC = COLUMNS.indexOf('last_contact_note') + 1;
   var emailC = COLUMNS.indexOf('email') + 1;
   var pnC = COLUMNS.indexOf('partner_name') + 1;
   sh.getRange(1, uidC).setValue('uid');
   sh.getRange(1, updC).setValue('updated_at');
   sh.getRange(1, srcC).setValue('source');
+  sh.getRange(1, lcnC).setValue('last_contact_note');
   var now = new Date().toISOString(), n = 0;
   for (var r = 2; r <= last; r++) {
     var first = String(sh.getRange(r, 1).getValue()).trim();
