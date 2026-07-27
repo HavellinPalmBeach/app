@@ -275,7 +275,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.27 · 1:42pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.27 · 3:01pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10315,6 +10315,14 @@ function vendorStatusOptions(sel) {
   }).join('');
 }
 function vendorIdOf(v) { return v && (v._row != null ? v._row : v.vendor_name); }
+// Display name for a vendor's primary contact — prefers the split first/last fields,
+// falls back to the legacy primary_contact for any row not yet migrated (safe to
+// keep after the primary_contact column is deleted; the fallback just yields '').
+function _vendorContact(v) {
+  if (!v) return '';
+  var n = ((v.contact_first || '') + ' ' + (v.contact_last || '')).trim();
+  return n || v.primary_contact || '';
+}
 function lookupVendorById(id) {
   if (id == null || id === '') return null;
   for (var i = 0; i < vendorDirectory.length; i++) {
@@ -10437,7 +10445,7 @@ function _vendorRefLine(rec) {
   var v = lookupVendorById(rec.vendorId) || {};
   var name = v.vendor_name || rec.vendorName || '';
   if (!name) return '';
-  var contact = v.primary_contact || rec.contact || '';
+  var contact = _vendorContact(v) || rec.contact || '';
   var phone   = v.phone || rec.phone || '';
   var rest = [];
   if (v.license_cert) rest.push(v.license_cert);
@@ -10631,7 +10639,7 @@ function setJobVendor(jobId, i, val) {
   var job = _svcJob(jobId, i); if (!job) return;
   var rec = job.vendorSourcing[i], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
-  rec.contact = v ? (v.primary_contact||'') : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
   saveJobs(); refreshVendorSourcing(jobId);
 }
 function setJobVendorQuote(jobId, i, val) {
@@ -10653,7 +10661,7 @@ function setPrepVendor(jobId, i, val) {
   var job = _prepJob(jobId, i); if (!job) return;
   var rec = job.prepSourcing[i], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
-  rec.contact = v ? (v.primary_contact||'') : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
   saveJobs(); refreshVendorSourcing(jobId);
 }
 function setPrepVendorQuote(jobId, i, val) {
@@ -10675,7 +10683,7 @@ function setCollVendor(jobId, collId, val) {
   var job = _collJob(jobId, collId); if (!job) return;
   var rec = job.collSourcing[collId], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
-  rec.contact = v ? (v.primary_contact||'') : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
   saveJobs(); refreshVendorSourcing(jobId);
 }
 function setCollFee(jobId, collId, val) {
@@ -10693,7 +10701,7 @@ function setLogisticsVendor(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
   var rec = job.logisticsSourcing[key], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
-  rec.contact = v ? (v.primary_contact||'') : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
   saveJobs(); refreshVendorSourcing(jobId);
 }
 function setLogisticsQuote(jobId, key, val) {
@@ -11225,7 +11233,7 @@ function vendorCardHtml(v) {
 
   // Highlighted contact + service-area block — the primary reason to open a card.
   var cbits = [];
-  var _cname = ((v.contact_first || '') + ' ' + (v.contact_last || '')).trim() || v.primary_contact || '';
+  var _cname = _vendorContact(v);
   if (_cname) cbits.push('<strong>' + esc(_cname) + '</strong>');
   var vph = fmtPhoneDisplay(v.phone);
   if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a>');
@@ -11457,10 +11465,8 @@ function saveVendor() {
   if (!VENDOR_SYNC_URL) { showFB('v-fb','err','Set the Vendor Directory URL in Settings first — vendors are saved to the shared sheet.'); return; }
   var fields = {};
   Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ fields[VENDOR_FORM_MAP[fid]] = _getV(fid); });
-  // Keep the legacy single 'primary_contact' column in sync as "First Last" so every
-  // reader still bound to it (vendor card, estimate/job pickers, any external consumer)
-  // stays correct while we transition to the split first/last fields. Retire later.
-  fields.primary_contact = ((fields.contact_first || '') + ' ' + (fields.contact_last || '')).trim();
+  // primary_contact is retired — the app no longer writes it (contact now lives in the
+  // split contact_first / contact_last fields), so the legacy column can be deleted.
   var editId = document.getElementById('v-edit-row').value;
   var st = document.getElementById('v-save-status');
   if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
