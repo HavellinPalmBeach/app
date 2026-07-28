@@ -57,9 +57,12 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .vform .fld label{margin-top:0;}
 .vform .fld-wide{grid-column:1/-1;}
 .vform .hint{font-size:10px;color:var(--gray);margin-top:3px;line-height:1.4;}
-/* Example / guidance caption that sits in the white space between the label and the
-   input — so sample text ("e.g. $150 minimum") never lives inside the cream box and
-   can't be mistaken for entered data. An empty box is then visibly empty. */
+/* Guidance caption sitting in the white space between a label and its input. Reserved
+   for behaviour the field can't convey on its own — that a category can be created by
+   typing, that a value is set elsewhere. NOT for examples: a form where every field
+   carries a sample answer reads as noise and pushes the inputs out of alignment. If a
+   field needs an example to be understood, rename the field. Captions stay outside the
+   input on purpose, so sample text can never be mistaken for entered data. */
 .vform .eg{font-size:10px;color:var(--gray);margin:0 0 4px;line-height:1.35;}
 .vform .eg b{font-weight:600;color:var(--gray-dk);}
 @media (max-width:820px){.vform{grid-template-columns:repeat(2,minmax(0,1fr));}}
@@ -441,7 +444,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 5:22pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 5:34pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1595,7 +1598,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div class="vform">
       <div class="fld">
         <label>Vendor name <span style="color:#A32D2D;font-weight:700;">*</span></label>
-        <div class="eg">e.g. Junk King Palm Beach</div>
         <input type="text" id="v-name">
       </div>
       <div class="fld">
@@ -1622,7 +1624,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div class="fld">
         <label>Category</label>
-        <div class="eg">Pick from the group's list, or type a new one to create it under that group.</div>
+        <div class="eg">Or type a new one to create it under this group.</div>
         <input type="text" id="v-category" list="v-cat-list">
         <datalist id="v-cat-list"></datalist>
       </div>
@@ -1645,90 +1647,74 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div class="fld">
         <label>Contact first name</label>
-        <div class="eg">e.g. Alicia</div>
         <input type="text" id="v-contact-first">
       </div>
       <div class="fld">
         <label>Contact last name</label>
-        <div class="eg">e.g. Weaver</div>
         <input type="text" id="v-contact-last">
       </div>
       <div class="fld">
         <label>Phone</label>
-        <div class="eg">e.g. (561) 000-0000</div>
         <input type="tel" id="v-phone" oninput="formatPhone(this)" maxlength="14">
       </div>
       <div class="fld">
         <label>Email</label>
-        <div class="eg">e.g. vendor@email.com</div>
         <input type="email" id="v-email">
       </div>
       <div class="fld">
         <label>Website</label>
-        <div class="eg">e.g. example.com</div>
         <input type="text" id="v-website">
       </div>
       <div class="fld">
         <label>Physical address</label>
-        <div class="eg">e.g. City, FL</div>
         <input type="text" id="v-address">
       </div>
       <div class="fld">
         <label>Service area</label>
-        <div class="eg">e.g. Palm Beach County + Treasure Coast</div>
         <input type="text" id="v-area">
       </div>
       <div class="fld">
         <label>License / cert</label>
-        <div class="eg">e.g. FFL; ISA CAPP; state license #</div>
         <input type="text" id="v-license">
       </div>
       <div class="fld">
         <label>Rating <span style="font-weight:400;color:var(--gray);">(from completed jobs)</span></label>
-        <div class="eg">Earned from job performance — not editable here. Google reviews got a vendor onto the list; this rating keeps them on it.</div>
         <div id="v-rating-ro" style="margin-top:auto;padding:7px 0;font-size:12px;"></div>
       </div>
       <div class="fld">
         <label>Last contacted</label>
-        <div class="eg">Set by <b>☎ Log contact</b> on the vendor card — not editable here.</div>
+        <div class="eg">Set by <b>☎ Log contact</b> on the vendor card.</div>
         <div id="v-lastcontacted-ro" style="margin-top:auto;padding:7px 0;font-size:12px;color:var(--gray-dk);"></div>
       </div>
 
       <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Pricing &amp; Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— notes only; the TC applies rough math when estimating. Fees are trued up on real costs at final billing.</span></div>
       <div class="fld">
         <label>Pricing structure <span style="font-weight:400;color:var(--gray);">(how they charge)</span></label>
-        <div class="eg">e.g. Per sqft · Flat · Per load · Hourly</div>
         <input type="text" id="v-pricing">
       </div>
       <div class="fld">
         <label>Ballpark rate</label>
-        <div class="eg">e.g. $2/sqft · $150/room · $550/load</div>
         <input type="text" id="v-estcost">
       </div>
       <div class="fld">
         <label>Minimum job / fee</label>
-        <div class="eg">e.g. $150 minimum</div>
         <input type="text" id="v-minjob">
       </div>
       <div class="fld">
         <label>Rate detail <span style="font-weight:400;color:var(--gray);">(caveats)</span></label>
-        <div class="eg">e.g. 2-coat; ceilings +$0.50/sqft</div>
         <input type="text" id="v-ratedetail">
       </div>
       <div class="fld">
         <label>Lead time <span style="font-weight:400;color:var(--gray);">(to start work)</span></label>
-        <div class="eg">e.g. 3–5 days · 2 weeks</div>
         <input type="text" id="v-leadtime">
       </div>
       <div class="fld">
         <label>Estimate turnaround <span style="font-weight:400;color:var(--gray);">(to return a quote)</span></label>
-        <div class="eg">e.g. 48 hrs after site visit</div>
         <input type="text" id="v-turnaround">
       </div>
 
       <div class="fld-wide">
         <label>Notes</label>
-        <div class="eg">e.g. Credentials, specialties, relationship notes, red flags…</div>
         <textarea id="v-notes"></textarea>
       </div>
     </div>
