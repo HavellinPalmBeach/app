@@ -441,7 +441,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 3:08pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 3:36pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1788,6 +1788,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="Do Not Use">Do Not Use</option>
         <option value="__none">(no status)</option>
       </select>
+      <select id="v-filter-fit" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="First-contact read — how the outreach call felt, before any job">
+        <option value="">Any fit read</option>
+        <option value="eager">🟢 Eager only</option>
+        <option value="neutral">🟡 Neutral</option>
+        <option value="difficult">🔴 Difficult</option>
+        <option value="__none">No read yet</option>
+      </select>
       <select id="v-filter-rating" onchange="renderVendorsTab()" style="flex:1;min-width:130px;" title="Rating comes from job performance; vendors read Unrated until they've been used">
         <option value="">Any rating</option>
         <option value="5">★★★★★ only</option>
@@ -1798,6 +1805,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </select>
       <select id="v-filter-sort" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="Sort within each category">
         <option value="name">Sort: Name A–Z</option>
+        <option value="fit">Sort: Best fit first</option>
         <option value="rating">Sort: Highest rating</option>
         <option value="used">Sort: Recently used</option>
         <option value="contacted">Sort: Least recently contacted</option>
@@ -11122,6 +11130,62 @@ function writeVendorScores(jobId) {
 // the source of truth and the local cache is updated in lock-step so the UI is live.
 // Vendor lifecycle — mirrors the Status data-validation dropdown in the sheet.
 var VENDOR_STATUSES = ['Identified','Contacted','Vetting','Active','Backup','Do Not Use'];
+
+// ═══ PRE-ENGAGEMENT FIT ═══════════════════════════════════════════════════════
+// How the outreach call felt, captured before we've ever given a vendor work. This
+// is NOT the star rating — that one is earned from completed jobs (performance_score)
+// and always wins once it exists. Deliberately three levels, not five: this is a gut
+// read taken ~150 times, and a 5-point scale collapses toward the middle and stops
+// discriminating. Deliberately not stars either, so the two signals can sit on the
+// same card without anyone having to work out which is which.
+// Stored in `fit` — the backend's ensureCol() creates the column on first write, so
+// no Apps Script redeploy is needed.
+var VENDOR_FIT = {
+  eager:     { rank:3, dot:'🟢', label:'Eager',     short:'Eager',  bg:'var(--ok-bg)',   tx:'var(--ok-tx)',
+               hint:'Appreciative, wants the work, looking forward to intros' },
+  neutral:   { rank:2, dot:'🟡', label:'Neutral',   short:'OK',     bg:'var(--warn-bg)', tx:'var(--warn-tx)',
+               hint:'Fine — no signal either way' },
+  difficult: { rank:1, dot:'🔴', label:'Difficult', short:'Tough',  bg:'var(--err-bg)',  tx:'var(--err-tx)',
+               hint:'Standoffish or high-friction — going to be work' }
+};
+var VENDOR_FIT_ORDER = ['eager','neutral','difficult'];
+function vendorFit(v){ var k = String(v && v.fit || '').trim().toLowerCase(); return VENDOR_FIT[k] ? k : ''; }
+function vendorFitRank(v){ var k = vendorFit(v); return k ? VENDOR_FIT[k].rank : 0; }
+// Full chip for a card with no earned rating yet — this is the primary signal then.
+function vendorFitChip(v){
+  var k = vendorFit(v);
+  if (!k) return '<span style="font-size:10px;color:var(--gray);">No fit read</span>';
+  var f = VENDOR_FIT[k];
+  return '<span title="' + esc(f.hint) + '" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;' +
+    'background:' + f.bg + ';color:' + f.tx + ';white-space:nowrap;">' + f.dot + ' ' + esc(f.label) + '</span>';
+}
+// Muted mark for a card that HAS earned stars — the stars lead, this stays as
+// calibration history (did the phone read predict the performance?).
+function vendorFitMark(v){
+  var k = vendorFit(v);
+  if (!k) return '';
+  var f = VENDOR_FIT[k];
+  return '<span title="First-contact read: ' + esc(f.label) + ' — ' + esc(f.hint) + '" ' +
+    'style="font-size:10px;color:var(--gray);white-space:nowrap;margin-left:6px;opacity:.85;">' +
+    f.dot + ' ' + esc(f.short) + '</span>';
+}
+// Set from the card. Standalone action so a fit read can be corrected later without
+// having to log a fresh contact.
+function setVendorFit(id, val){
+  if (val && !VENDOR_FIT[val]) return;
+  _quickWriteVendor(id, { fit: val || '' }, 'Saving read…',
+    val ? ('Marked ' + VENDOR_FIT[val].label + ' ✓') : 'Fit read cleared ✓');
+}
+function vendorFitSelect(v, idAttr){
+  var cur = vendorFit(v);
+  var f = cur ? VENDOR_FIT[cur] : null;
+  var opts = '<option value="">— first-contact read —</option>' + VENDOR_FIT_ORDER.map(function(k){
+    return '<option value="' + k + '"' + (cur===k?' selected':'') + '>' + VENDOR_FIT[k].dot + ' ' + VENDOR_FIT[k].label + '</option>';
+  }).join('');
+  return '<select onchange="setVendorFit(\'' + idAttr + '\',this.value)" title="How the outreach call felt — before any job"' +
+    ' style="font-size:11px;font-weight:600;padding:3px 7px;border:1px solid var(--border-md);border-radius:4px;font-family:inherit;' +
+    'background:' + (f?f.bg:'var(--white)') + ';color:' + (f?f.tx:'var(--gray)') + ';">' + opts + '</select>';
+}
 function vendorStatusBadge(status) {
   var s = String(status || '').trim();
   if (!s) return '<span class="badge b-warn">No status</span>';
@@ -11287,6 +11351,8 @@ function vendorSearchBlob(v) {
     v.vendor_name, v.category, v.category_group, v.contact_first, v.contact_last,
     v.email, v.website, v.physical_address, v.service_area, v.notes,
     v.status, v.license_cert, v.pricing_structure,
+    // Fit label so typing "eager" pulls up the first-call shortlist.
+    (VENDOR_FIT[vendorFit(v)] || {}).label,
     String(v.phone||'').replace(/\D/g,'')
   ].filter(Boolean).join(' ').toLowerCase();
 }
@@ -11312,9 +11378,12 @@ function getFilteredVendors() {
   var fc = (document.getElementById('v-filter-cat')||{}).value || '';
   var fs = (document.getElementById('v-filter-status')||{}).value || '';
   var frating = (document.getElementById('v-filter-rating')||{}).value || '';
+  var ffit = (document.getElementById('v-filter-fit')||{}).value || '';
   var q = vendorSearchQuery();
   return vendorDirectory.filter(function(v){
     if (!vendorMatchesQuery(v, q)) return false;
+    if (ffit === '__none') { if (vendorFit(v)) return false; }
+    else if (ffit && vendorFit(v) !== ffit) return false;
     if (fc && String(v.category||'').trim() !== fc) return false;
     if (fs === '__none') { if (String(v.status||'').trim()) return false; }
     else if (fs && String(v.status||'').trim() !== fs) return false;
@@ -11327,11 +11396,12 @@ function getFilteredVendors() {
 function renderVendorStats() {
   var el = document.getElementById('vendors-stats');
   if (!el) return;
-  var counts = { total: vendorDirectory.length, Active:0, Vetting:0, Backup:0, contacted:0 };
+  var counts = { total: vendorDirectory.length, Active:0, Vetting:0, Backup:0, contacted:0, eager:0 };
   vendorDirectory.forEach(function(v){
     var s = String(v.status||'').trim();
     if (counts[s] != null) counts[s]++;
     if (String(v.last_contacted||'').trim()) counts.contacted++;
+    if (vendorFit(v) === 'eager') counts.eager++;
   });
   function tile(n, label, color){
     return '<div style="min-width:70px;"><div style="font-size:20px;font-weight:600;color:' + (color||'var(--gray-dk)') + ';">' + n + '</div>' +
@@ -11339,7 +11409,8 @@ function renderVendorStats() {
   }
   el.innerHTML = tile(counts.total,'Total') + tile(counts.Active,'Active','var(--ok-tx)') +
     tile(counts.Vetting,'Vetting','var(--warn-tx)') + tile(counts.Backup,'Backup','var(--bronze)') +
-    tile(counts.contacted + ' / ' + counts.total,'Contacted');
+    tile(counts.contacted + ' / ' + counts.total,'Contacted') +
+    tile(counts.eager,'🟢 Eager','var(--ok-tx)');
 }
 
 // The list is a two-level accordion, not a flat wall of 152: the top level is the
@@ -11366,6 +11437,7 @@ function vendorFiltersActive() {
   return !!(vendorSearchQuery()
     || (document.getElementById('v-filter-cat')||{}).value
     || (document.getElementById('v-filter-status')||{}).value
+    || (document.getElementById('v-filter-fit')||{}).value
     || (document.getElementById('v-filter-rating')||{}).value);
 }
 // Within-category comparator for the chosen sort. Default is plain alphabetical;
@@ -11377,6 +11449,15 @@ function vendorListComparator() {
     var pa = vendorPerf(a), pb = vendorPerf(b);
     var va = (pa==null?-1:pa), vb = (pb==null?-1:pb);
     return (vb - va) || byName(a,b);
+  };
+  // "Best fit first" — who to send the first job to, before anyone has a track
+  // record. An earned rating still outranks a fit read: a vendor with real stars is
+  // a known quantity and belongs above a good first impression.
+  if (mode === 'fit') return function(a,b){
+    var pa = vendorPerf(a), pb = vendorPerf(b);
+    if ((pa!=null) !== (pb!=null)) return pa!=null ? -1 : 1;
+    if (pa!=null && pb!=null && pb!==pa) return pb - pa;
+    return (vendorFitRank(b) - vendorFitRank(a)) || byName(a,b);
   };
   if (mode === 'used') return function(a,b){
     var ua = String(a.last_used||''), ub = String(b.last_used||'');
@@ -11416,15 +11497,19 @@ function _vendorCounts(list) {
   return {
     total: list.length,
     active: list.filter(isActiveVendor).length,
-    contacted: list.filter(function(v){ return String(v.last_contacted||'').trim(); }).length
+    contacted: list.filter(function(v){ return String(v.last_contacted||'').trim(); }).length,
+    eager: list.filter(function(v){ return vendorFit(v) === 'eager'; }).length
   };
 }
 function _vendorCountsHtml(c) {
   var apprTxt = c.active > 0
     ? '<span style="color:var(--ok-tx);font-weight:600;">' + c.active + ' active</span>'
     : '<span style="color:var(--gray);">0 active</span>';
+  // Eager count on the header answers "is there anyone in this category worth
+  // starting with?" without expanding it.
+  var eagerTxt = c.eager > 0 ? ' · <span style="color:var(--ok-tx);font-weight:600;">🟢 ' + c.eager + '</span>' : '';
   return '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' +
-    c.total + ' vendor' + (c.total!==1?'s':'') + ' · ' + apprTxt + ' · ' + c.contacted + ' contacted</div>';
+    c.total + ' vendor' + (c.total!==1?'s':'') + ' · ' + apprTxt + eagerTxt + ' · ' + c.contacted + ' contacted</div>';
 }
 function renderVendorsTab() {
   renderVendorStats();
@@ -11538,8 +11623,14 @@ function vendorStatusSelect(v, idAttr) {
 }
 // Compact rating for the status line: just "Unrated" when unrated (the full
 // "no jobs yet" phrasing still shows in the edit form), stars + jobs otherwise.
+// Rating slot on the card. Until a vendor has completed jobs there IS no earned
+// rating, so the first-contact fit read takes that slot and is the signal you sort
+// and choose on. Once stars exist they lead and the fit read demotes to a muted
+// mark beside them — kept, not discarded, because whether the phone read predicted
+// the performance is the only way to calibrate the read itself.
 function vendorRatingCompact(v){
-  return vendorPerf(v) == null ? '<span style="font-size:10px;color:var(--gray);">Unrated</span>' : vendorRatingHtml(v);
+  if (vendorPerf(v) == null) return vendorFitChip(v);
+  return vendorRatingHtml(v) + vendorFitMark(v);
 }
 function setVendorStatusFromCard(id, val) { if (!val) return; _quickWriteVendor(id, { status: val }, 'Updating status…'); }
 
@@ -11607,6 +11698,14 @@ function vendorCardHtml(v) {
       '<button class="btn-s" style="white-space:nowrap;" onclick="logVendorContact(this,\'' + idAttr + '\')">☎ Log contact</button>' +
     '</div>';
 
+  // The fit read sits directly under Log contact because that's the moment it's
+  // known — she's just hung up and is already typing the note. Anywhere else and it
+  // won't get filled in across 150 vendors.
+  var fitRow = '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;">' +
+      '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);white-space:nowrap;">First-contact read</span>' +
+      vendorFitSelect(v, idAttr) +
+    '</div>';
+
   return '<div class="card" style="margin:0;padding:0.85rem 1rem;display:flex;flex-direction:column;">' +
     '<div>' +
       '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
@@ -11617,6 +11716,7 @@ function vendorCardHtml(v) {
     contactBlock + tapRow + pricing + timing + meta +
     (v.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(v.notes) + '</div>' : '') +
     logRow +
+    fitRow +
     lastcBar +
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
       '<button class="btn-s" onclick="quickEditVendor(\'' + idAttr + '\')">Quick edit</button>' +
