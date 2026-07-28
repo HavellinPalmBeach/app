@@ -441,7 +441,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 3:36pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 3:46pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1788,8 +1788,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="Do Not Use">Do Not Use</option>
         <option value="__none">(no status)</option>
       </select>
-      <select id="v-filter-fit" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="First-contact read — how the outreach call felt, before any job">
-        <option value="">Any fit read</option>
+      <select id="v-filter-fit" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="Our read — how they are to deal with. Set it on the first call and keep it current as the relationship develops.">
+        <option value="">Any read</option>
         <option value="eager">🟢 Eager only</option>
         <option value="neutral">🟡 Neutral</option>
         <option value="difficult">🔴 Difficult</option>
@@ -1804,8 +1804,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="unrated">Unrated only</option>
       </select>
       <select id="v-filter-sort" onchange="renderVendorsTab()" style="flex:1;min-width:150px;" title="Sort within each category">
+        <option value="best">Sort: Best first (our read + stars)</option>
         <option value="name">Sort: Name A–Z</option>
-        <option value="fit">Sort: Best fit first</option>
         <option value="rating">Sort: Highest rating</option>
         <option value="used">Sort: Recently used</option>
         <option value="contacted">Sort: Least recently contacted</option>
@@ -11131,13 +11131,22 @@ function writeVendorScores(jobId) {
 // Vendor lifecycle — mirrors the Status data-validation dropdown in the sheet.
 var VENDOR_STATUSES = ['Identified','Contacted','Vetting','Active','Backup','Do Not Use'];
 
-// ═══ PRE-ENGAGEMENT FIT ═══════════════════════════════════════════════════════
-// How the outreach call felt, captured before we've ever given a vendor work. This
-// is NOT the star rating — that one is earned from completed jobs (performance_score)
-// and always wins once it exists. Deliberately three levels, not five: this is a gut
-// read taken ~150 times, and a 5-point scale collapses toward the middle and stops
-// discriminating. Deliberately not stars either, so the two signals can sit on the
-// same card without anyone having to work out which is which.
+// ═══ OUR READ ═════════════════════════════════════════════════════════════════
+// How a vendor is to deal with. Seeded on the outreach call — which is the only
+// signal that exists before we've given anyone work — but it is a LIVE value, not a
+// first-impression snapshot: update it whenever the relationship changes.
+//
+// This is a different axis from the star rating, not a placeholder for it:
+//   performance_score → how well they do the work   (earned from completed jobs)
+//   fit               → how they are to work with   (subjective, ours, ongoing)
+// They don't collapse into each other — a vendor can do excellent work and be
+// exhausting to coordinate, or be a pleasure and merely adequate — so both stay on
+// the card once jobs exist, with stars leading.
+//
+// Deliberately three levels, not five: it's a gut read taken ~150 times, and a
+// 5-point scale collapses toward the middle and stops discriminating. Deliberately
+// not stars either, so the two signals can sit together without anyone having to
+// work out which is which.
 // Stored in `fit` — the backend's ensureCol() creates the column on first write, so
 // no Apps Script redeploy is needed.
 var VENDOR_FIT = {
@@ -11151,6 +11160,27 @@ var VENDOR_FIT = {
 var VENDOR_FIT_ORDER = ['eager','neutral','difficult'];
 function vendorFit(v){ var k = String(v && v.fit || '').trim().toLowerCase(); return VENDOR_FIT[k] ? k : ''; }
 function vendorFitRank(v){ var k = vendorFit(v); return k ? VENDOR_FIT[k].rank : 0; }
+
+// ── Combined ranking ────────────────────────────────────────────────────────
+// Blends the two axes into one 0–1 score so a category self-sorts best-first.
+// A strict hierarchy (all rated above all unrated) is wrong: it floats a 1-star
+// vendor nobody likes above the unproven one we're impressed by. Both signals have
+// to actually trade off.
+//
+// Quality carries more weight than rapport once it's known — 65/35 — because a
+// vendor who does the work well is worth more than one who is merely pleasant.
+// An unrated vendor scores a neutral 0.5 on quality rather than 0: unproven is not
+// the same as bad, so a promising unknown sits mid-table instead of at the bottom.
+// No read yet scores slightly below Neutral — absence of a read is weak evidence,
+// not neutral evidence.
+var VENDOR_READ_SCORE = { eager:1, neutral:0.55, difficult:0.15 };
+function vendorScore(v){
+  var p = vendorPerf(v);
+  var quality = (p == null) ? 0.5 : Math.max(0, Math.min(1, p / 5));
+  var k = vendorFit(v);
+  var read = k ? VENDOR_READ_SCORE[k] : 0.4;
+  return 0.65 * quality + 0.35 * read;
+}
 // Full chip for a card with no earned rating yet — this is the primary signal then.
 function vendorFitChip(v){
   var k = vendorFit(v);
@@ -11165,7 +11195,7 @@ function vendorFitMark(v){
   var k = vendorFit(v);
   if (!k) return '';
   var f = VENDOR_FIT[k];
-  return '<span title="First-contact read: ' + esc(f.label) + ' — ' + esc(f.hint) + '" ' +
+  return '<span title="Our read: ' + esc(f.label) + ' — ' + esc(f.hint) + '" ' +
     'style="font-size:10px;color:var(--gray);white-space:nowrap;margin-left:6px;opacity:.85;">' +
     f.dot + ' ' + esc(f.short) + '</span>';
 }
@@ -11179,10 +11209,10 @@ function setVendorFit(id, val){
 function vendorFitSelect(v, idAttr){
   var cur = vendorFit(v);
   var f = cur ? VENDOR_FIT[cur] : null;
-  var opts = '<option value="">— first-contact read —</option>' + VENDOR_FIT_ORDER.map(function(k){
+  var opts = '<option value="">— our read —</option>' + VENDOR_FIT_ORDER.map(function(k){
     return '<option value="' + k + '"' + (cur===k?' selected':'') + '>' + VENDOR_FIT[k].dot + ' ' + VENDOR_FIT[k].label + '</option>';
   }).join('');
-  return '<select onchange="setVendorFit(\'' + idAttr + '\',this.value)" title="How the outreach call felt — before any job"' +
+  return '<select onchange="setVendorFit(\'' + idAttr + '\',this.value)" title="How they are to deal with — set it on the first call, then keep it current"' +
     ' style="font-size:11px;font-weight:600;padding:3px 7px;border:1px solid var(--border-md);border-radius:4px;font-family:inherit;' +
     'background:' + (f?f.bg:'var(--white)') + ';color:' + (f?f.tx:'var(--gray)') + ';">' + opts + '</select>';
 }
@@ -11443,21 +11473,17 @@ function vendorFiltersActive() {
 // Within-category comparator for the chosen sort. Default is plain alphabetical;
 // rating/used key off real job performance (unrated/unused sort last).
 function vendorListComparator() {
-  var mode = (document.getElementById('v-filter-sort')||{}).value || 'name';
+  var mode = (document.getElementById('v-filter-sort')||{}).value || 'best';
   function byName(a,b){ return String(a.vendor_name||'').localeCompare(String(b.vendor_name||'')); }
+  if (mode === 'name') return byName;
   if (mode === 'rating') return function(a,b){
     var pa = vendorPerf(a), pb = vendorPerf(b);
     var va = (pa==null?-1:pa), vb = (pb==null?-1:pb);
     return (vb - va) || byName(a,b);
   };
-  // "Best fit first" — who to send the first job to, before anyone has a track
-  // record. An earned rating still outranks a fit read: a vendor with real stars is
-  // a known quantity and belongs above a good first impression.
-  if (mode === 'fit') return function(a,b){
-    var pa = vendorPerf(a), pb = vendorPerf(b);
-    if ((pa!=null) !== (pb!=null)) return pa!=null ? -1 : 1;
-    if (pa!=null && pb!=null && pb!==pa) return pb - pa;
-    return (vendorFitRank(b) - vendorFitRank(a)) || byName(a,b);
+  if (mode === 'best') return function(a,b){
+    var d = vendorScore(b) - vendorScore(a);
+    return (Math.abs(d) > 1e-9 ? d : 0) || byName(a,b);
   };
   if (mode === 'used') return function(a,b){
     var ua = String(a.last_used||''), ub = String(b.last_used||'');
@@ -11467,7 +11493,12 @@ function vendorListComparator() {
     var ca = String(a.last_contacted||''), cb = String(b.last_contacted||'');
     return (ca===cb ? 0 : ca.localeCompare(cb)) || byName(a,b); // never-contacted first, then oldest
   };
-  return byName;
+  // Default is the blended score, so a category puts its best vendors on top
+  // without anyone having to pick a sort.
+  return function(a,b){
+    var d = vendorScore(b) - vendorScore(a);
+    return (Math.abs(d) > 1e-9 ? d : 0) || byName(a,b);
+  };
 }
 function toggleVendorGroup(i) {
   var g = _vendorGroupOrder[i];
@@ -11702,7 +11733,7 @@ function vendorCardHtml(v) {
   // known — she's just hung up and is already typing the note. Anywhere else and it
   // won't get filled in across 150 vendors.
   var fitRow = '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;">' +
-      '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);white-space:nowrap;">First-contact read</span>' +
+      '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);white-space:nowrap;">Our read</span>' +
       vendorFitSelect(v, idAttr) +
     '</div>';
 
