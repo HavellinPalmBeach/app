@@ -364,6 +364,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      the case that bites (the button is hidden until a job loads, so a tab-level
      overflow sweep won't catch it); let these rows wrap so the button drops below. */
   .card div{flex-wrap:wrap;}
+  /* An inline flex-shrink:0 keeps a button cluster at its full single-line width, so
+     it never wraps and spills the card — the Client Dashboard drilldown's action bar
+     (Estimate / Change Order / Edit Client / …) is 501px that way. Released only for
+     elements that actually declare it, so nothing else changes behaviour. */
+  .card div[style*="flex-shrink:0"]{flex-shrink:1!important;}
 }
 
 @media print {
@@ -422,7 +427,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 2:19pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 2:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -592,13 +597,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       <div class="row">
         <div>
           <label>Property type <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <!-- Deliberately NOT alphabetical: property type is ordered smallest to
+               largest, so the list reads as a scale and you pick by size rather than
+               hunting a name. Matches the Client Dashboard edit form's order. -->
           <select id="i-ptype">
             <option value="">Select type</option>
             <option>Apartment</option>
-            <option>Estate</option>
+            <option>Town Home</option>
             <option>Patio Home</option>
             <option>Single Family Home</option>
-            <option>Town Home</option>
+            <option>Estate</option>
           </select>
         </div>
         <div>
