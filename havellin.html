@@ -71,7 +71,12 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .sec{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border);}
 label{display:block;font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;margin-top:12px;}
 label:first-child{margin-top:0;}
-input[type=date]{width:100%;box-sizing:border-box;}
+/* Cap the field at its container. iOS sizes a date input from its native picker
+   widget, which is wider than the box it often sits in; min-width:0 releases the
+   flexbox automatic minimum so width:100% can actually win. Deliberately NOT
+   resetting -webkit-appearance — the sizing caps are enough, and the reset changes
+   how the picker renders on iOS. */
+input[type=date]{width:100%;max-width:100%;min-width:0;box-sizing:border-box;}
 input,select,textarea{width:100%;padding:7px 10px;border:1px solid var(--border-md);border-radius:4px;font-family:'Raleway',sans-serif;font-size:12px;color:var(--gray-dk);background:var(--cream);outline:none;transition:border-color .15s;}
 input:focus,select:focus,textarea:focus{border-color:var(--bronze);background:var(--white);}
 textarea{height:70px;resize:vertical;}
@@ -82,7 +87,12 @@ textarea{height:70px;resize:vertical;}
    the same trick .vform .fld uses. */
 .row{display:flex;gap:10px;}
 .row>*{flex:1;min-width:0;display:flex;flex-direction:column;}
-.row>*>input,.row>*>select,.row>*>textarea{margin-top:auto;}
+/* min-width:0 is load-bearing, not decoration. Making the cell a flex column turns
+   these controls into flex items, and a flex item defaults to min-width:auto — it
+   refuses to shrink below its min-content width. iOS gives input[type=date] a wide
+   intrinsic size for its native picker, so without this the date box ignores
+   width:100% and spills out past the card's right edge. */
+.row>*>input,.row>*>select,.row>*>textarea{margin-top:auto;min-width:0;max-width:100%;}
 .btn-p{background:var(--gray-dk);color:var(--cream);border:none;padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:background .15s;}
 .btn-p:hover{background:var(--bronze);}
 .btn-s{background:none;color:var(--gray);border:1px solid var(--border-md);padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:all .15s;}
@@ -327,11 +337,33 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      the tab, but it shouldn't sit between search and the partner cards on a phone. */
   #referrals-leaderboard{order:2;}
 
-  /* Job Plan's job picker carries min-width:320px, which plus the Print button was
-     the only thing pushing that tab off-screen. Let it take the full row and drop
-     the print button below it — printing is a desk action anyway. */
-  #plan-job{min-width:0!important;max-width:100%!important;width:100%!important;}
-  #panel-job-plan .card select{min-width:0!important;}
+  /* 22 controls across the app carry a hard inline width/min-width sized for a desk
+     (a 340px job picker, a 320px plan picker, 150px filter dropdowns…). One of those
+     in a ~339px card spills the card, widening the document and producing the
+     cut-off-header look. max-width:100% alone can't fix it — the control's parent is
+     itself a flex item that grew to fit it, so 100% of a too-wide parent is still too
+     wide. The inline width has to be overridden outright, so standalone controls go
+     fluid on a phone. min-width:0 also releases the flexbox automatic minimum, which
+     is what lets iOS's wide native date/select widgets shrink at all. */
+     Forcing width:100% is safe everywhere, including inside tables — the base rule
+     already sizes controls that way, so a table cell's control simply fills its cell
+     exactly as before. (Do NOT use width:auto as the table exception: auto is the
+     control's intrinsic size, which for a text input with a long placeholder is far
+     WIDER than 100%, and it blows the table out rather than containing it.) */
+  input,select,textarea{width:100%!important;max-width:100%!important;min-width:0!important;}
+  /* Checkboxes and radios must keep their intrinsic box — never stretch them. */
+  input[type=checkbox],input[type=radio]{width:auto!important;}
+  /* Capping the control isn't enough on its own: its wrapper is usually a flex item
+     that already grew to fit the desk-sized control, so `width:100%` just resolves
+     against a too-wide parent and nothing moves. Releasing the wrappers' automatic
+     minimum lets that chain collapse. Scoped to divs, so table cells keep the column
+     minimums that make their tables scroll rather than crush. */
+  .card div,.modal-box div{min-width:0;}
+  /* A control forced to 100% leaves no room for a button sitting beside it, and a
+     flex row that can't wrap then overflows. Job Plan's picker + "Print Job Plan" is
+     the case that bites (the button is hidden until a job loads, so a tab-level
+     overflow sweep won't catch it); let these rows wrap so the button drops below. */
+  .card div{flex-wrap:wrap;}
 }
 
 @media print {
@@ -390,7 +422,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 1:59pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 2:19pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
