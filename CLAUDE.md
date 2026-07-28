@@ -42,10 +42,8 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   Also built: the **Drive folder consolidation** (Photos + Asset Documentation merged into
   one shareable **Estate Inventory** subfolder) and **in-app counsel sharing** (named-viewer
   Share w/ Counsel + Revoke on the Inventory tab). §4/§15 Drive-folder docs updated to match.
-  **ACTION REQUIRED:** redeploy both Apps Scripts (`apps-script/main-sync.gs`,
-  `apps-script/saveInventory.gs`) for the merged folder + share actions to take effect — the
-  .gs edits are committed but can't be tested from here. A backward-compat alias keeps any
-  pre-merge job folders working.
+  ~~ACTION REQUIRED: redeploy `apps-script/main-sync.gs` + `apps-script/saveInventory.gs`.~~
+  **Redeployed 2026-07-28.** A backward-compat alias keeps any pre-merge job folders working.
   Prior pass 2026-07-14 (added §13a Category Group & Category taxonomy — group required and
   dictates category, self-serve new categories, group→estimate-menu/fee routing table;
   noted the data-driven "From directory" options in the §5d third-party-vendor and §6a Home
@@ -55,19 +53,47 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   URLs in Settings).
   Still thin / deferred until the app is fully built: Win / Loss tab, and the full
   labor-job Job Plan phase playbook detail.
+- **DRIFT SINCE LAST PASS (2026-07-28, mobile/field build):** Vendors, Referral Partners
+  and Contractors each gained a **search box** and a **Quick edit / Full edit** split
+  (Quick = contact details only; Full = the existing form). Vendor and partner cards and
+  the Contractors tab gained tap-to-call/text/email. Job Plan vendor sourcing shows the
+  assigned vendor's phone as a tap-to-dial link. Worth a reconciliation pass — the manual
+  still describes a single "Edit" button on those tabs and no search.
 
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home
   walkthrough. `buildEstimateMailto()`.~~ **Done 2026-07-08.**
-- **Contractor tab — apply the directory upgrades (own session).** The card revamp
-  (status dropdown + rating under the name, highlighted last-contact bar), the
-  Contacted-on-first-outreach auto-advance, the edit-as-modal, and the PIN-gated delete
-  were all shipped for **Vendors** and **Referral Partners** but NOT the Contractors tab.
-  Much of it likely applies there too. Note: contractors live in the main sheet and the
-  backend already has a `deleteContractor` action (`apps-script/main-sync.gs`), so a
-  contractor delete is partly wired already.
-- **ACTION REQUIRED — redeploy the two directory Apps Scripts** for PIN-gated delete to
-  work live: `vendor-directory-sync.gs` (new `deleteVendor`) and
-  `referral-partners-backend.gs` (new `deletePartner`). The .gs edits are committed but
-  can't be tested from here. Both clear the row (not deleteRow), so row indices stay
-  stable. Front-end delete + history guard already live.
+- **Contractor tab — remaining directory upgrades.** Search, tap-to-contact, and a
+  Quick/Full edit split shipped 2026-07-28. Still NOT ported from Vendors / Referral
+  Partners: the status dropdown + rating under the name, the highlighted last-contact
+  bar, Contacted-on-first-outreach auto-advance, edit-as-modal, and PIN-gated delete.
+  Contractors live in the main sheet and the backend already has a `deleteContractor`
+  action (`apps-script/main-sync.gs`), so a contractor delete is partly wired already.
+- ~~ACTION REQUIRED — redeploy `vendor-directory-sync.gs` (`deleteVendor`) and
+  `referral-partners-backend.gs` (`deletePartner`) for PIN-gated delete.~~
+  **Redeployed 2026-07-28.** Both clear the row (not deleteRow), so row indices stay
+  stable. Worth a live smoke test — first real execution was after this deploy.
+
+## Mobile / field use (built 2026-07-28)
+- A single `@media (max-width:820px)` block in `havellin.html` carries the mobile
+  layout: scrolling nav strip, bottom-sheet modals, 16px inputs (stops iOS zoom-on-
+  focus), stacked grids, thumb-sized buttons. It's additive and gated behind the
+  breakpoint — desktop is unaffected. Put new mobile rules here rather than scattering
+  breakpoints.
+- **The grid trap:** `1fr` is `minmax(auto,1fr)` and that auto floor is min-content, so
+  a column holding an unshrinkable child (a fixed-column table) grows wider than its
+  grid and drags the whole document past the viewport. The symptom is a header/nav that
+  render at viewport width against a wider scrolled page — a cut-off header with a blank
+  gap. `.grid2>*,.grid3>*,.grid4>*{min-width:0}` fixes it; wrap the wide table in
+  `.tbl-scroll` so it stays reachable. Reach for both together.
+- Vendors, Referral Partners and Contractors all follow the same field pattern:
+  free-text search (multi-word AND-ed, numeric queries match the digit-stripped phone)
+  → tap-to-call/text/email → **Quick edit** (contact details only, diff-only patch,
+  phones compared digit-wise) with a **Full edit** escape hatch. Keep new directories
+  consistent with this.
+- All 12 tabs verified at 390 / 768 / 1440px with zero horizontal overflow. Build
+  Estimate is deliberately desk/iPad-first for data entry — its room tables scroll
+  inside `.tbl-scroll` rather than being reflowed.
+- Not done: the table→card flip for the Client Dashboard client list (it sits in a
+  sideways-scrolling container today). Invoices + Inventory were only measured from an
+  empty state — re-check them with a populated job before calling them verified.
