@@ -211,6 +211,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .ce-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--gray-dk);text-align:center;letter-spacing:.06em;text-transform:uppercase;margin-bottom:1.25rem;}
 .ce-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem 2rem;margin-bottom:1.5rem;}
 .ce-hdr-row{display:grid;gap:.75rem 1.5rem;margin-bottom:.75rem;align-items:start;}
+/* Same `1fr` = minmax(auto,1fr) trap as .grid2: an unbreakable value (an email, a
+   long address) has a min-content width equal to the whole string, so its column
+   grows past the page and the estimate bleeds off the right edge. Release the floor
+   and let long values wrap inside their cell instead of widening it. */
+.ce-meta>*,.ce-hdr-row>*{min-width:0;}
+.ce-meta-val,.ce-meta-item{overflow-wrap:anywhere;}
 .ce-hdr-row-1{grid-template-columns:1.4fr 2fr 1fr 1.2fr;}
 .ce-hdr-row-2{grid-template-columns:1fr 1fr 1fr 1fr;}
 .ce-hdr-row-3{grid-template-columns:1fr;}
@@ -364,6 +370,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      the case that bites (the button is hidden until a job loads, so a tab-level
      overflow sweep won't catch it); let these rows wrap so the button drops below. */
   .card div{flex-wrap:wrap;}
+  /* The client estimate is a print document: a 780px page with 2.5rem padding and
+     4-column header rows. On a phone that leaves ~290px of usable width for four
+     columns, so the header collapses to two and the page padding comes back to
+     something a 390px screen can spare. */
+  .ce-page{padding:1.1rem .9rem;}
+  .ce-hdr-row-1,.ce-hdr-row-2{grid-template-columns:1fr 1fr;}
+  .ce-brand{font-size:28px;}
+  .ce-title{font-size:17px;}
   /* An inline flex-shrink:0 keeps a button cluster at its full single-line width, so
      it never wraps and spills the card — the Client Dashboard drilldown's action bar
      (Estimate / Change Order / Edit Client / …) is 501px that way. Released only for
@@ -427,7 +441,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 2:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 3:08pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -926,8 +940,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           </tbody>
           <tfoot>
             <tr>
-              <td><input type="text" id="new-veh-desc" placeholder="e.g. 2019 Lexus RX 350, Harley Softail, Boston Whaler 210" style="font-size:11px;"></td>
-              <td><button class="icon-btn" onclick="addVehicle()">+ Add</button></td>
+              <td colspan="2"><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
+                <input type="text" id="new-veh-desc" placeholder="e.g. 2019 Lexus RX 350, Harley Softail, Boston Whaler 210" style="font-size:11px;flex:1 1 100%;min-width:0;">
+                <button class="icon-btn" style="flex:0 0 auto;" onclick="addVehicle()">+ Add</button>
+              </div></td>
             </tr>
           </tfoot>
         </table>
@@ -15364,11 +15380,13 @@ function renderVehicles() {
   var h = '';
   vehiclesData.forEach(function(v) {
     var routeHint = v.collector
-      ? '<span style="color:var(--bronze);font-weight:700;font-size:10px;">&#9873; Collector → Vehicle / Boat appraiser</span>'
-      : '<span style="color:var(--gray);font-size:10px;">Ordinary → book value (KBB / NADA)</span>';
+      ? '<span style="color:var(--bronze);font-weight:700;font-size:10px;line-height:1;">&#9873; Collector → Vehicle / Boat appraiser</span>'
+      : '<span style="color:var(--gray);font-size:10px;line-height:1;">Ordinary → book value (KBB / NADA)</span>';
+    // The name box spans both columns so its edges line up exactly with the tan
+    // detail panel below it. Remove moves into that panel's top-right — parking it
+    // in a second column here is what used to cut the name box ~80px short.
     h += '<tr>' +
-      '<td><input value="' + esc(v.desc || '') + '" oninput="updateVehicleField(' + v.id + ',\'desc\',this.value)" style="width:100%;font-size:12px;padding:4px 6px;"></td>' +
-      '<td style="text-align:right;vertical-align:top;"><button class="icon-btn del" onclick="removeVehicle(' + v.id + ')">Remove</button></td>' +
+      '<td colspan="2"><input value="' + esc(v.desc || '') + '" oninput="updateVehicleField(' + v.id + ',\'desc\',this.value)" style="width:100%;font-size:12px;padding:4px 6px;"></td>' +
     '</tr>' +
     '<tr><td colspan="2" style="padding:8px 10px 10px;background:var(--tan);">' +
       '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:8px;">' +
@@ -15377,10 +15395,11 @@ function renderVehicles() {
         field('VIN / HIN', '<input value="' + esc(v.vin || '') + '" oninput="updateVehicleField(' + v.id + ',\'vin\',this.value)" placeholder="VIN or hull ID" style="width:150px;font-size:11px;padding:3px 6px;">') +
         field('Miles / hrs','<input value="' + esc(v.mileage || '') + '" oninput="updateVehicleField(' + v.id + ',\'mileage\',this.value)" placeholder="48,000" style="width:78px;font-size:11px;padding:3px 6px;">') +
         field('Condition', '<select onchange="updateVehicleField(' + v.id + ',\'condition\',this.value)" style="font-size:11px;padding:3px 4px;">' + condOpts(v.condition) + '</select>') +
+        '<button class="icon-btn del" style="margin-left:auto;" onclick="removeVehicle(' + v.id + ')">Remove</button>' +
       '</div>' +
       '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:7px;">' +
-        '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--gray-dk);"><input type="checkbox"' + (v.collector ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'collector\',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--bronze);"> Collector / classic</label>' +
-        '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--gray-dk);"><input type="checkbox"' + (v.titleLocated ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'titleLocated\',this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--bronze);"> Title located</label>' +
+        '<label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:11px;line-height:1;color:var(--gray-dk);"><input type="checkbox"' + (v.collector ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'collector\',this.checked)" style="width:15px;height:15px;margin:0;flex:0 0 auto;cursor:pointer;accent-color:var(--bronze);"> Collector / classic</label>' +
+        '<label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:11px;line-height:1;color:var(--gray-dk);"><input type="checkbox"' + (v.titleLocated ? ' checked' : '') + ' onchange="updateVehicleField(' + v.id + ',\'titleLocated\',this.checked)" style="width:15px;height:15px;margin:0;flex:0 0 auto;cursor:pointer;accent-color:var(--bronze);"> Title located</label>' +
         routeHint +
       '</div>' +
       '<textarea rows="2" placeholder="Notes — location (driveway / garage / offsite), keys, lien, running condition…" oninput="updateVehicleField(' + v.id + ',\'note\',this.value)" style="width:100%;font-size:11px;padding:4px 6px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:inherit;background:#fff;">' + esc(v.note || '') + '</textarea>' +
