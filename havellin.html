@@ -75,7 +75,14 @@ input[type=date]{width:100%;box-sizing:border-box;}
 input,select,textarea{width:100%;padding:7px 10px;border:1px solid var(--border-md);border-radius:4px;font-family:'Raleway',sans-serif;font-size:12px;color:var(--gray-dk);background:var(--cream);outline:none;transition:border-color .15s;}
 input:focus,select:focus,textarea:focus{border-color:var(--bronze);background:var(--white);}
 textarea{height:70px;resize:vertical;}
-.row{display:flex;gap:10px;}.row>*{flex:1;}
+/* Paired form fields. Each cell is a label stacked over its control, so when two
+   labels wrap to different line counts the controls drift out of line with each
+   other. Making the cell a flex column and pushing the control to the bottom keeps
+   every control in a row on the same baseline no matter how tall its label runs —
+   the same trick .vform .fld uses. */
+.row{display:flex;gap:10px;}
+.row>*{flex:1;min-width:0;display:flex;flex-direction:column;}
+.row>*>input,.row>*>select,.row>*>textarea{margin-top:auto;}
 .btn-p{background:var(--gray-dk);color:var(--cream);border:none;padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:background .15s;}
 .btn-p:hover{background:var(--bronze);}
 .btn-s{background:none;color:var(--gray);border:1px solid var(--border-md);padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:all .15s;}
@@ -251,6 +258,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      rather than wrapping into a 3-line block that eats the whole screen. */
   .hdr{padding:.7rem .9rem;}
   .hdr-brand{font-size:17px;}
+  /* The version stamp was wrapping mid-string, leaving a stranded "ET" on its own
+     line. Give it its own line and keep it unbroken — it's the thing you read to
+     confirm the phone isn't showing a cached build. */
+  .hdr-ver{display:block;margin-left:0!important;white-space:nowrap;}
   .nav{padding:0 .5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .nav::-webkit-scrollbar{display:none;}
   .nb{flex:0 0 auto;padding:12px 13px;}
@@ -271,6 +282,20 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   /* 16px inputs stop iOS Safari from auto-zooming the page on focus — the single
      biggest cause of "the app jumps around when I tap a field". */
   input,select,textarea{font-size:16px!important;}
+  /* iOS gives date inputs a different intrinsic height than selects and text boxes,
+     so a date sitting beside a dropdown looks like a mistake. Pin them all to one
+     height and the row reads as a row. */
+  input,select{min-height:44px;}
+  input[type=date]{min-height:44px;line-height:normal;}
+
+  /* Paired fields stack on a phone. Two fields side by side at 390px leaves ~170px
+     each, which wraps a label like "Hard target date (optional — closing date, court
+     date, etc.)" to four lines and strands its input far below its neighbour's.
+     Short numeric groups (sqft/years, beds/baths) stay inline via .row-tight — they
+     read better as a compact set and their labels don't wrap. */
+  .row{flex-wrap:wrap;}
+  .row>*{flex:1 1 100%;}
+  .row.row-tight>*{flex:1 1 0;min-width:0;}
   /* Thumb-sized controls. */
   .btn-s,.btn-p,.btn-bronze,.icon-btn{min-height:38px;}
   .fb{min-height:34px;}
@@ -365,7 +390,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 11:13am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 1:59pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -554,11 +579,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           </select>
         </div>
       </div>
-      <div class="row">
+      <div class="row row-tight">
         <div><label>Approx. sqft <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="number" id="i-sqft" placeholder="e.g. 4500"></div>
         <div><label>Years in home</label><input type="number" id="i-years-in-home" placeholder="e.g. 12" min="0" max="99"></div>
       </div>
-      <div class="row">
+      <div class="row row-tight">
         <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
         <div><label>Full baths</label><input type="number" id="i-baths" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
         <div><label>Half baths</label><input type="number" id="i-half-baths" placeholder="e.g. 2" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
