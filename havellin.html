@@ -444,7 +444,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 5:34pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 5:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1677,19 +1677,22 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <label>License / cert</label>
         <input type="text" id="v-license">
       </div>
-      <div class="fld">
-        <label>Rating <span style="font-weight:400;color:var(--gray);">(from completed jobs)</span></label>
-        <div id="v-rating-ro" style="margin-top:auto;padding:7px 0;font-size:12px;"></div>
-      </div>
-      <div class="fld">
+      <!-- Rating is not in this form: it's earned from completed jobs and can never be
+           edited, so it has no business on an edit card. It renders on the vendor card
+           itself via vendorRatingCompact(), which is the read view. -->
+      <!-- Full-width, and last in the contact block on purpose. It's a read-only cell
+           whose value runs to several lines, and the grid sizes every row to its
+           tallest cell — sharing a row with ordinary inputs pushed those inputs to the
+           bottom of a tall row and opened a gap above them. -->
+      <div class="fld fld-wide">
         <label>Last contacted</label>
         <div class="eg">Set by <b>☎ Log contact</b> on the vendor card.</div>
-        <div id="v-lastcontacted-ro" style="margin-top:auto;padding:7px 0;font-size:12px;color:var(--gray-dk);"></div>
+        <div id="v-lastcontacted-ro" style="padding:4px 0 0;font-size:12px;color:var(--gray-dk);"></div>
       </div>
 
-      <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Pricing &amp; Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— notes only; the TC applies rough math when estimating. Fees are trued up on real costs at final billing.</span></div>
+      <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Pricing &amp; Timing</div>
       <div class="fld">
-        <label>Pricing structure <span style="font-weight:400;color:var(--gray);">(how they charge)</span></label>
+        <label>Pricing structure</label>
         <input type="text" id="v-pricing">
       </div>
       <div class="fld">
@@ -1701,15 +1704,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <input type="text" id="v-minjob">
       </div>
       <div class="fld">
-        <label>Rate detail <span style="font-weight:400;color:var(--gray);">(caveats)</span></label>
+        <label>Rate detail</label>
         <input type="text" id="v-ratedetail">
       </div>
       <div class="fld">
-        <label>Lead time <span style="font-weight:400;color:var(--gray);">(to start work)</span></label>
+        <label>Lead time</label>
         <input type="text" id="v-leadtime">
       </div>
       <div class="fld">
-        <label>Estimate turnaround <span style="font-weight:400;color:var(--gray);">(to return a quote)</span></label>
+        <label>Estimate turnaround</label>
         <input type="text" id="v-turnaround">
       </div>
 
@@ -11905,13 +11908,12 @@ var VENDOR_FORM_MAP = {
 function _setV(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
 function _getV(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
 
-// Fill the two read-only cells (job-based rating + last-contacted). Both are display
-// only — the rating is earned from completed jobs and last_contacted is owned by the
-// card's ☎ Log contact action, so neither is an editable input in this form.
+// Fill the one read-only cell in the form: last-contacted, which is owned by the
+// card's ☎ Log contact action rather than typed here. The job-based rating used to
+// sit alongside it, but a value that can never be edited doesn't belong on an edit
+// card — it renders on the vendor card via vendorRatingCompact() instead.
 function _fillVendorReadOnly(v) {
   v = v || {};
-  var r = document.getElementById('v-rating-ro');
-  if (r) r.innerHTML = vendorRatingHtml(v);
   var lc = document.getElementById('v-lastcontacted-ro');
   if (lc) {
     var note = String(v.last_contact_note || '').trim();
