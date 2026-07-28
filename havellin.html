@@ -219,6 +219,75 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .approval-banner{background:var(--warn-bg);border:1.5px solid var(--bronze-lt);border-radius:6px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
 .approval-banner.approved{background:var(--ok-bg);border-color:var(--sage-dk);}
 
+/* Directory card grids (vendors + referral partners). Indented under their accordion
+   header on desktop; the indent is reclaimed on mobile so cards get full width. */
+.dir-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin:0 0 12px 12px;}
+.dir-group-body{margin:0 0 14px 12px;}
+/* The vendor filter row is a plain flex strip on desktop — .vt-row is a passthrough
+   wrapper that only becomes a real (two-up) grid at the mobile breakpoint. */
+.vt-row{display:contents;}
+
+/* ═══ FIELD / MOBILE ═══════════════════════════════════════════════════════════
+   Phone-sized layout for working a job site: the nav scrolls instead of wrapping,
+   modals become bottom sheets, and tap targets grow to thumb size. Everything here
+   is additive and gated behind the breakpoint — the desktop app is untouched.
+   The vendor card's Call/Text/Email row (.vc-tap) lives here too: it's rendered
+   always but only shown on mobile, so the desktop card keeps its tighter layout. */
+.vc-tap{display:none;}
+@media (max-width:820px) {
+  /* Header + nav. 12 tabs is ~1400px of buttons — let the strip scroll sideways
+     rather than wrapping into a 3-line block that eats the whole screen. */
+  .hdr{padding:.7rem .9rem;}
+  .hdr-brand{font-size:17px;}
+  .nav{padding:0 .5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .nav::-webkit-scrollbar{display:none;}
+  .nb{flex:0 0 auto;padding:12px 13px;}
+  .main{padding:.85rem .7rem;}
+
+  /* Stack the fixed multi-column grids. grid3/grid4 keep two columns so metric
+     tiles stay scannable instead of becoming a tall ribbon. */
+  .grid2{grid-template-columns:1fr;gap:.8rem;}
+  .grid3,.grid4{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .card{padding:.85rem .9rem;}
+
+  /* Modals become bottom sheets — anchored to the thumb, full width, and always
+     scrollable. The inline width:NNNpx on individual boxes has to be overridden. */
+  .modal-overlay{align-items:flex-end;}
+  .modal-box{width:100%!important;max-width:100%!important;padding:1.1rem 1rem 1.4rem;
+    border-radius:12px 12px 0 0;max-height:92vh;}
+
+  /* 16px inputs stop iOS Safari from auto-zooming the page on focus — the single
+     biggest cause of "the app jumps around when I tap a field". */
+  input,select,textarea{font-size:16px!important;}
+  /* Thumb-sized controls. */
+  .btn-s,.btn-p,.btn-bronze,.icon-btn{min-height:38px;}
+  .fb{min-height:34px;}
+
+  /* Vendor + referral cards go single-column and surface their tap-to-contact row.
+     The accordion indent is dropped so a card isn't squeezed into ~300px. */
+  .dir-cards{grid-template-columns:1fr;margin-left:0;}
+  .dir-group-body{margin-left:0;}
+  .vc-tap{display:flex;}
+  /* Note field over the button rather than beside it — side by side leaves ~150px
+     to type into on a phone. */
+  .vc-log,.rc-log{flex-direction:column;align-items:stretch!important;}
+  .vc-log .btn-s,.rc-log .btn-s{width:100%;}
+
+  /* The vendor toolbar filters stack: search gets its own full-width row, then the
+     four dropdowns go two-up so none of them collapses to an unreadable sliver. */
+  .vtoolbar{flex-direction:column;align-items:stretch!important;}
+  .vtoolbar .vt-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .vtoolbar select{min-width:0!important;width:100%;}
+
+  /* Search first. On a phone the desk-bound header (title + how-it-works blurb +
+     stat tiles) pushed the search box most of a screen down — in the field the
+     search box IS the tab, so the toolbar is hoisted above the header card and the
+     explanatory blurb (which nobody reads standing in a driveway) is dropped. */
+  #panel-vendors.active{display:flex;flex-direction:column;}
+  .vdir-toolbar{order:-1;}
+  .vdir-blurb{display:none;}
+}
+
 @media print {
   /* Printed page margins: 1in top, 0.5in bottom/sides — keeps content off the paper
      edges on every page, including across page breaks. Requires the print dialog's
@@ -275,7 +344,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.27 · 5:59pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 10:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1360,7 +1429,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Vendor Directory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:660px;">Work the list through its lifecycle (Identified → Contacted → Vetting → Active, with Backup / Do Not Use as needed), log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Active</strong> vendors can be assigned to a job.</div>
+        <div class="vdir-blurb" style="font-size:11px;color:var(--gray);margin-top:2px;max-width:660px;">Work the list through its lifecycle (Identified → Contacted → Vetting → Active, with Backup / Do Not Use as needed), log outreach, and add new vendors. Pricing &amp; lead-time notes captured here surface to the Transition Concierge in Job Plan sourcing. Only <strong>Active</strong> vendors can be assigned to a job.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-s" onclick="loadVendorDirectory()">↻ Reload directory</button>
@@ -1530,9 +1599,50 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   </div>
   </div>
 
+  <!-- QUICK EDIT — the field path. The full form is 25+ fields across three columns;
+       this is just the contact details you actually change standing in someone's
+       driveway ("the owner gave me his direct email"). Writes through the same
+       updateVendor patch endpoint, so it can't drift from the full form. -->
+  <div class="modal-overlay" id="v-quick-modal" style="display:none;" onclick="if(event.target===this)closeVendorQuickEdit()">
+  <div class="modal-box" style="width:460px;max-width:94%;text-align:left;">
+    <div class="sec" style="margin-bottom:2px;">Quick edit</div>
+    <div id="vq-name" style="font-size:13px;font-weight:600;color:var(--bronze);margin-bottom:10px;"></div>
+    <input type="hidden" id="vq-id" value="">
+    <label>Contact first name</label>
+    <input type="text" id="vq-contact-first" autocomplete="off">
+    <label>Contact last name</label>
+    <input type="text" id="vq-contact-last" autocomplete="off">
+    <label>Phone</label>
+    <input type="tel" id="vq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Email</label>
+    <input type="email" id="vq-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="owner@company.com">
+    <label>Website</label>
+    <input type="text" id="vq-website" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label>Service area</label>
+    <input type="text" id="vq-area" autocomplete="off">
+    <label>Notes</label>
+    <textarea id="vq-notes" rows="3" style="width:100%;"></textarea>
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-p" onclick="saveVendorQuickEdit()">Save</button>
+      <button class="btn-s" onclick="closeVendorQuickEdit()">Cancel</button>
+      <button class="btn-s" onclick="openFullEditFromQuick()" style="margin-left:auto;">Full edit →</button>
+    </div>
+    <div id="vq-fb" style="font-size:11px;color:var(--gray);margin-top:8px;"></div>
+  </div>
+  </div>
+
   <!-- TOOLBAR -->
-  <div class="card" style="margin-bottom:1rem;padding:0.8rem 1rem;">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+  <div class="card vdir-toolbar" style="margin-bottom:1rem;padding:0.8rem 1rem;">
+    <!-- Free-text search runs across name, category, contact, phone, email, service
+         area and notes. It's the fastest path to one vendor out of 150+ in the field,
+         where scrolling a two-level accordion on a phone isn't practical. Any match
+         auto-expands the sections holding it. -->
+    <input type="search" id="v-filter-q" oninput="renderVendorsTab()" onsearch="renderVendorsTab()"
+      placeholder="Search vendors — name, contact, phone, category…" style="margin-bottom:8px;"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="vtoolbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <div class="vt-row">
       <select id="v-filter-cat" onchange="renderVendorsTab()" style="flex:2;min-width:220px;" title="Start here — pick a category (type to jump)"><option value="">All categories</option></select>
       <select id="v-filter-status" onchange="renderVendorsTab()" style="flex:1;min-width:130px;">
         <option value="">All statuses</option>
@@ -1558,6 +1668,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <option value="used">Sort: Recently used</option>
         <option value="contacted">Sort: Least recently contacted</option>
       </select>
+      </div>
     </div>
   </div>
 
@@ -10455,7 +10566,9 @@ function _vendorRefLine(rec) {
   if (v.lead_time)     rest.push('Lead ' + v.lead_time);
   var head = ['<strong>' + esc(name) + '</strong>'];
   if (contact) head.push('<strong>' + esc(contact) + '</strong>');
-  if (phone)   head.push('<strong>' + esc(fmtPhoneDisplay(phone)) + '</strong>');
+  // Tappable from the job site — this is the number you reach for when an assigned
+  // vendor hasn't shown up, so it has to dial rather than just display.
+  if (phone)   head.push('<a href="tel:' + esc(phone) + '" style="color:var(--bronze);text-decoration:none;font-weight:700;">☎ ' + esc(fmtPhoneDisplay(phone)) + '</a>');
   return '<div style="font-size:12px;color:var(--gray-dk);margin-top:5px;line-height:1.5;">' +
     head.join(' · ') +
     (rest.length ? ' <span style="color:var(--gray);font-weight:400;">· ' + rest.map(esc).join(' · ') + '</span>' : '') +
@@ -10982,11 +11095,46 @@ function populateJobMenus() {
   if (s) { var sv = s.value; s.innerHTML = _jobMenuHTML(SERVICE_BASE_TYPES, 'service', 'Add vendor...'); if (sv) s.value = sv; }
 }
 
+// Free-text search over the fields you'd actually recall in the field: who they are,
+// what they do, and how to reach them. Multi-word queries are AND-ed so "junk boca"
+// narrows rather than widens. A query of digits also matches the phone with its
+// formatting stripped, so "5612340000" and "(561) 234-0000" both hit.
+// Built fresh on every keystroke rather than memoized onto the vendor: the directory
+// is ~150 rows, so the scan is free, and a cached blob would go stale the moment a
+// card edit patched a field (and would get persisted into the localStorage cache).
+function vendorSearchBlob(v) {
+  return [
+    v.vendor_name, v.category, v.category_group, v.contact_first, v.contact_last,
+    v.email, v.website, v.physical_address, v.service_area, v.notes,
+    v.status, v.license_cert, v.pricing_structure,
+    String(v.phone||'').replace(/\D/g,'')
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+function vendorMatchesQuery(v, q) {
+  if (!q) return true;
+  var blob = vendorSearchBlob(v);
+  return q.split(/\s+/).every(function(term){
+    if (!term) return true;
+    // A purely numeric term is matched against the digit-stripped phone too.
+    return blob.indexOf(term) !== -1;
+  });
+}
+function vendorSearchQuery() {
+  var raw = (document.getElementById('v-filter-q')||{}).value || '';
+  raw = raw.trim().toLowerCase();
+  // Digits-and-separators only → treat as a phone fragment and strip formatting so it
+  // lines up with the digit-stripped phone in the blob.
+  if (raw && /^[\d\s().+-]+$/.test(raw)) raw = raw.replace(/\D/g,'');
+  return raw;
+}
+
 function getFilteredVendors() {
   var fc = (document.getElementById('v-filter-cat')||{}).value || '';
   var fs = (document.getElementById('v-filter-status')||{}).value || '';
   var frating = (document.getElementById('v-filter-rating')||{}).value || '';
+  var q = vendorSearchQuery();
   return vendorDirectory.filter(function(v){
+    if (!vendorMatchesQuery(v, q)) return false;
     if (fc && String(v.category||'').trim() !== fc) return false;
     if (fs === '__none') { if (String(v.status||'').trim()) return false; }
     else if (fs && String(v.status||'').trim() !== fs) return false;
@@ -11035,7 +11183,8 @@ var VENDOR_GROUP_ORDER = [
 function _vendorGroupRank(g){ var i = VENDOR_GROUP_ORDER.indexOf(g); return i < 0 ? VENDOR_GROUP_ORDER.length : i; }
 function _vendorCatKey(g, c){ return g + ' ' + c; }
 function vendorFiltersActive() {
-  return !!((document.getElementById('v-filter-cat')||{}).value
+  return !!(vendorSearchQuery()
+    || (document.getElementById('v-filter-cat')||{}).value
     || (document.getElementById('v-filter-status')||{}).value
     || (document.getElementById('v-filter-rating')||{}).value);
 }
@@ -11154,10 +11303,10 @@ function renderVendorsTab() {
             '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (copen?'▾':'▸') + '</span>' + esc(cat) + '</div>' +
             _vendorCountsHtml(_vendorCounts(vs)) +
           '</div>';
-        var section = copen ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin:0 0 12px 12px;">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
+        var section = copen ? '<div class="dir-cards">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
         return cHeader + section;
       }).join('');
-      gBody = '<div style="margin:0 0 14px 12px;">' + gBody + '</div>';
+      gBody = '<div class="dir-group-body">' + gBody + '</div>';
     }
     return gHeader + gBody;
   }).join('');
@@ -11259,6 +11408,18 @@ function vendorCardHtml(v) {
         (lcNote ? ' — ' + esc(lcNote) : '') + '</div>'
     : '<div style="background:var(--warn-bg);border:1px solid var(--border);border-radius:5px;padding:5px 9px;margin-top:6px;font-size:11px;color:var(--warn-tx);font-weight:600;">Not yet contacted</div>';
 
+  // Mobile-only tap-to-contact strip (.vc-tap is display:none until the breakpoint).
+  // The inline contact block above already carries tel:/mailto: links, but they're
+  // 11px text — these are thumb-sized targets for calling from a job site. Text uses
+  // sms: so a "where are you?" to a no-show vendor is one tap.
+  var tapBits = [];
+  if (v.phone) {
+    tapBits.push('<a href="tel:' + esc(v.phone) + '" class="btn-p" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">☎ Call</a>');
+    tapBits.push('<a href="sms:' + esc(v.phone) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">✉ Text</a>');
+  }
+  if (v.email) tapBits.push('<a href="mailto:' + esc(v.email) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">@ Email</a>');
+  var tapRow = tapBits.length ? '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + tapBits.join('') + '</div>' : '';
+
   // Logging a contact is a deliberate event: type what you discussed, then log. It
   // overwrites the single latest note and stamps today's date (single-note model).
   var logRow = '<div class="vc-log" style="display:flex;gap:6px;align-items:center;margin-top:auto;padding-top:8px;">' +
@@ -11273,12 +11434,13 @@ function vendorCardHtml(v) {
         (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
       '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">' + vendorStatusSelect(v, idAttr) + vendorRatingCompact(v) + '</div>' +
     '</div>' +
-    contactBlock + pricing + timing + meta +
+    contactBlock + tapRow + pricing + timing + meta +
     (v.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(v.notes) + '</div>' : '') +
     logRow +
     lastcBar +
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
-      '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Edit</button>' +
+      '<button class="btn-s" onclick="quickEditVendor(\'' + idAttr + '\')">Quick edit</button>' +
+      '<button class="btn-s" onclick="editVendor(\'' + idAttr + '\')">Full edit</button>' +
     '</div>' +
   '</div>';
 }
@@ -11333,10 +11495,63 @@ function showAddVendor() {
 // so Save/Cancel leaves you exactly where you were in the directory.
 function openVendorForm(){ document.getElementById('add-vendor-modal').style.display = 'flex'; }
 function closeVendorForm(){ document.getElementById('add-vendor-modal').style.display = 'none'; }
+
+// ─── QUICK EDIT (field) ─────────────────────────────────────────────────────
+// Contact-detail-only editor for working on the road. Deliberately a subset of the
+// full form: only fields you'd correct in front of the vendor. Everything else
+// (status lifecycle, pricing, COI, category) stays on the full form so a hurried
+// field edit can never blank out vetting data.
+var VENDOR_QUICK_MAP = {
+  'vq-contact-first':'contact_first', 'vq-contact-last':'contact_last',
+  'vq-phone':'phone', 'vq-email':'email', 'vq-website':'website',
+  'vq-area':'service_area', 'vq-notes':'notes'
+};
+function quickEditVendor(id) {
+  var v = lookupVendorById(id);
+  if (!v) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  document.getElementById('vq-id').value = String(id);
+  document.getElementById('vq-name').textContent = v.vendor_name || 'Vendor';
+  Object.keys(VENDOR_QUICK_MAP).forEach(function(fid){ _setV(fid, v[VENDOR_QUICK_MAP[fid]]); });
+  // Show the phone the way it reads on the card. Stored values are a mix of raw
+  // digits (bulk import) and formatted (typed in) — saveVendorQuickEdit compares
+  // phones digit-wise so displaying it formatted never fabricates a change.
+  _setV('vq-phone', fmtPhoneDisplay(v.phone) || v.phone || '');
+  var fb = document.getElementById('vq-fb'); if (fb) fb.textContent = '';
+  document.getElementById('v-quick-modal').style.display = 'flex';
+}
+function closeVendorQuickEdit(){ document.getElementById('v-quick-modal').style.display = 'none'; }
+// Escape hatch: if the quick fields aren't enough, hand off to the full form on the
+// same vendor rather than making them close, find the card, and tap Edit again.
+function openFullEditFromQuick() {
+  var id = document.getElementById('vq-id').value;
+  closeVendorQuickEdit();
+  if (id) editVendor(id);
+}
+function saveVendorQuickEdit() {
+  var id = document.getElementById('vq-id').value;
+  var v = lookupVendorById(id);
+  if (!v) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  // Only send what actually changed — a patch of untouched fields would needlessly
+  // bump updated_at on the CRM-sync columns for every quick save.
+  var patch = {};
+  Object.keys(VENDOR_QUICK_MAP).forEach(function(fid){
+    var key = VENDOR_QUICK_MAP[fid];
+    var val = _getV(fid);
+    var cur = String(v[key] == null ? '' : v[key]).trim();
+    // Phone is compared on digits only, so re-displaying "5615550100" as
+    // "(561) 555-0100" isn't mistaken for an edit.
+    if (key === 'phone') { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
+    else if (val === cur) return;
+    patch[key] = val;
+  });
+  if (!Object.keys(patch).length) { closeVendorQuickEdit(); showSyncBadge('No changes'); return; }
+  closeVendorQuickEdit();
+  _quickWriteVendor(id, patch, 'Saving…', 'Vendor updated ✓');
+}
 // Escape closes whichever directory form / confirm is open (matches the app's other modals).
 document.addEventListener('keydown', function(e){
   if (e.key !== 'Escape') return;
-  ['add-vendor-modal','add-referral-modal','dir-delete-pin-modal'].forEach(function(mid){
+  ['add-vendor-modal','v-quick-modal','add-referral-modal','dir-delete-pin-modal'].forEach(function(mid){
     var m = document.getElementById(mid);
     if (m && m.style.display === 'flex') m.style.display = 'none';
   });
@@ -11656,7 +11871,7 @@ function renderReferralsTab(){
         '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' + ps.length + ' partner' + (ps.length!==1?'s':'') + ' · ' + activeTxt + ' · ' + contacted + ' contacted</div>' +
       '</div>';
     var section = open
-      ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;align-items:stretch;margin:0 0 12px 12px;">' + ps.map(referralCardHtml).join('') + '</div>'
+      ? '<div class="dir-cards">' + ps.map(referralCardHtml).join('') + '</div>'
       : '';
     return header + section;
   }).join('');
@@ -11765,6 +11980,16 @@ function referralCardHtml(p){
     ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + roleRow + contactRow + locRow + councilRow + '</div>'
     : '';
 
+  // Mobile-only tap-to-contact strip, same as the vendor card (.vc-tap is hidden
+  // until the breakpoint) — thumb-sized targets for reaching a partner in the field.
+  var tapBits = [];
+  if (p.phone) {
+    tapBits.push('<a href="tel:' + esc(p.phone) + '" class="btn-p" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">☎ Call</a>');
+    tapBits.push('<a href="sms:' + esc(p.phone) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">✉ Text</a>');
+  }
+  if (p.email) tapBits.push('<a href="mailto:' + esc(p.email) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">@ Email</a>');
+  var tapRow = tapBits.length ? '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + tapBits.join('') + '</div>' : '';
+
   var warm = String(p.warm_path||'').trim() ? '<div style="font-size:11px;color:var(--bronze);margin-top:4px;">Warm path: ' + esc(p.warm_path) + '</div>' : '';
   var stats = _rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:4px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' · ' + _rst.won + ' won · $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '';
   var dorm = _dorm.dormant ? '<div style="font-size:11px;color:var(--warn-tx);font-weight:600;margin-top:4px;">&#9200; ' + (_dorm.days == null ? 'No outreach logged' : _dorm.days + ' days quiet') + ' — time for a nudge</div>' : '';
@@ -11795,7 +12020,7 @@ function referralCardHtml(p){
       '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(p.partner_type||'—') + '</div>' +
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">' + referralStatusSelect(p, idAttr) + referralPriorityBadge(p.priority) + '</div>' +
     '</div>' +
-    contactBlock +
+    contactBlock + tapRow +
     referralChannelHtml(p.channel) +
     warm + stats + dorm +
     (p.notes ? '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:5px;line-height:1.6;">' + esc(p.notes) + '</div>' : '') +
