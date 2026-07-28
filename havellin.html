@@ -289,6 +289,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   /* Referral leaderboard is a wide desktop table — it stays reachable by scrolling
      the tab, but it shouldn't sit between search and the partner cards on a phone. */
   #referrals-leaderboard{order:2;}
+
+  /* Job Plan's job picker carries min-width:320px, which plus the Print button was
+     the only thing pushing that tab off-screen. Let it take the full row and drop
+     the print button below it — printing is a desk action anyway. */
+  #plan-job{min-width:0!important;max-width:100%!important;width:100%!important;}
+  #panel-job-plan .card select{min-width:0!important;}
 }
 
 @media print {
@@ -347,7 +353,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 10:50am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 11:02am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
