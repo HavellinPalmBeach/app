@@ -53,6 +53,19 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   URLs in Settings).
   Still thin / deferred until the app is fully built: Win / Loss tab, and the full
   labor-job Job Plan phase playbook detail.
+- **DRIFT SINCE LAST PASS (2026-07-28, working-supervisor pricing):** The hours engine no
+  longer derives concierge hours from content volume. `JOB_STEPS` columns now mean
+  *off-site coordination* and *hands-on work pool* — NOT TC hours and PS hours. The
+  concierge is on site for every crew hour and works alongside the crew, so the pool is
+  cleared by `(n + α)` pairs of hands: `H = W / (n + α)`, billed PS = `n × H`, billed TC =
+  `H + off-site`. α (concierge production rate, default 50%) is a new Settings knob.
+  Difficult access now lifts the work pool only; multiple-heirs lifts coordination only.
+  The 2-concierge rule is no longer premium-gated — it fires on a load check
+  (`TC_DAY_CAP`, 10 hrs/day, with coordination spread over `COORD_SPREAD_DAYS`). Duration
+  is PS-gated; off-site coordination no longer stretches the calendar. The margin panel
+  now costs the concierge at engaged hours, not billed hours. Estimate summary rows and
+  the client-estimate concierge line were rewritten. **Needs a manual reconciliation pass
+  — §11 rates/hours, the crew-sizing and timeline sections, and Settings.**
 - **DRIFT SINCE LAST PASS (2026-07-28, mobile/field build):** Vendors, Referral Partners
   and Contractors each gained a **search box** and a **Quick edit / Full edit** split
   (Quick = contact details only; Full = the existing form). Vendor and partner cards and

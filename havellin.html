@@ -441,7 +441,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 3:46pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 5:22pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -767,7 +767,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div id="est-adjustments">
         <div class="sec" style="margin-top:12px;">Adjustments</div>
         <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to all hours</div></div>
+          <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to the hands-on work pool — lengthens the job, so concierge hours follow</div></div>
           <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <div class="toggle-wrap" id="adj-heirs-wrap">
@@ -1019,10 +1019,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
         <table class="stbl" id="s-hours-table">
-          <tr><td class="muted">Base room hours — Transition Concierge</td><td class="num" id="s-base-tc">0.0</td></tr>
-          <tr><td class="muted">Base room hours — Property Specialist (total)</td><td class="num" id="s-base-ps">0.0</td></tr>
-          <tr><td class="muted">Other adjustments — Transition Concierge</td><td class="num" id="s-adj-tc">0.0</td></tr>
-          <tr><td class="muted">Other adjustments — Property Specialist</td><td class="num" id="s-adj-ps">0.0</td></tr>
+          <tr><td class="muted">Hands-on work pool — all roles</td><td class="num" id="s-base-ps">0.0</td></tr>
+          <tr><td class="muted" style="padding-left:16px;">&#8627; Difficult-access uplift</td><td class="num" id="s-adj-ps">0.0</td></tr>
+          <tr><td class="muted">Concierge on site — works the crew days</td><td class="num" id="s-tc-onsite">0.0</td></tr>
+          <tr><td class="muted">Concierge off-site coordination</td><td class="num" id="s-base-tc">0.0</td></tr>
+          <tr><td class="muted" style="padding-left:16px;">&#8627; Heirs / premium specialty coordination</td><td class="num" id="s-adj-tc">0.0</td></tr>
           <tr id="s-prep-tc-sum-row" style="display:none;"><td class="muted">Home-prep coordination — Transition Concierge</td><td class="num" id="s-prep-tc-sum">0.0</td></tr>
           <tr class="total-row"><td>Total Transition Concierge hours</td><td class="num big" id="s-tot-tc">0.0</td></tr>
           <tr class="total-row"><td>Total Property Specialist hours</td><td class="num big" id="s-tot-ps">0.0</td></tr>
@@ -1447,6 +1448,18 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
     <label>Stripe Secret Key — via Apps Script URL</label>
     <input type="text" id="set-stripe-script" placeholder="https://script.google.com/macros/s/...">
+
+    <div class="sec" style="margin-top:14px;">Pricing Engine</div>
+
+    <label>Concierge production rate — % of on-site hours spent on hands-on work</label>
+    <input type="number" id="set-tc-alpha" min="0" max="100" step="5" placeholder="50" style="width:110px;">
+    <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">
+      The Transition Concierge is on site for every crew hour. This is the share of those hours they spend
+      packing, photographing, and handling rather than directing — work that comes out of the same pool the
+      specialists draw from, so it is billed once, on the concierge line. Higher = fewer specialist hours and
+      a shorter job. <strong>50%</strong> is the default. Dial it down on trophy estates where the concierge is
+      mostly directing; up on straightforward downsizings where they work the whole day.
+    </div>
 
     <div class="sec" style="margin-top:14px;">Walkthrough Notes</div>
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
@@ -2538,11 +2551,25 @@ var ROOM_DEFAULTS = {
 function roomDefault(name){ return ROOM_DEFAULTS[name] || {vol:3, cplx:3}; }
 
 // Work-step rates [concierge/TC, specialist/PS] per content unit, by service type.
-// NASMM-aligned split: the specialist (hands-on) side carries the bulk of the hours
-// and the concierge/TC side is the lighter coordination layer, so calendar duration
-// reflects crew throughput rather than ballooning on the TC line. 'move' = scaling
-// move-day overhead (unchanged formula). Contested-probate load is carried by its own
-// coefficients — no separate concierge multiplier.
+//
+// WORKING-SUPERVISOR MODEL (2026-07-28). These two columns no longer mean "TC hours"
+// and "PS hours" — that was the old model's mistake. It derived both roles from the
+// same content-volume number at a fixed ratio (Estate Settlement: 0.39 vs 2.59, i.e.
+// 1:6.6), which said concierge time scales with how much *stuff* is in the house. It
+// doesn't. It scales with how many *days* the crew is on site. A 5,000 sqft house and
+// a 2,000 sqft house both need the concierge there every day the crew is there — the
+// big one just has more days. The result was estimates like 31 TC hrs against 207 PS
+// hrs over ten working days, which no one could actually staff.
+//
+// Under the new model the two columns mean:
+//   [0] OFF-SITE COORDINATION — attorney and heir calls, vendor sourcing, appraiser
+//       scheduling, disposition paperwork, pre-mobilization and post-job
+//       reconciliation. Work done away from the property, around the crew days.
+//   [1] HANDS-ON WORK POOL (W) — the total physical hours the job requires, whoever
+//       performs them. This is NOT the billed PS figure.
+//
+// The concierge is on site for every crew hour and works alongside the crew, so the
+// pool is cleared by (n + α) pairs of hands, not n. See computeWorkingSupervisor().
 var JOB_STEPS = {
   downsizing:        {triage:[0.30,0.15], pack:[0.15,0.85], disposition:[0.06,0.19]},
   downsizing_move:   {triage:[0.30,0.15], pack:[0.15,0.85], disposition:[0.06,0.19]},  // move-in labor is added in calcAll from the destination sqft, not here
@@ -2618,11 +2645,14 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
   // scored" interior weight (PERROOM_REF) so the breakdown accrues bottom-up as the
   // walkthrough proceeds instead of dumping everything on the first room; once enough
   // rooms are scored (iVolW ≥ PERROOM_REF) it falls back to the actual ticked weight.
+  // Each room returns a single hands-on figure — the room's share of the work pool.
+  // Splitting it between the concierge and the crew is calcAll's job, because the
+  // split depends on crew size, which isn't known here.
   var iDenom = Math.max(PERROOM_REF, iVolW) || 1;
   var perRoom = rb.map(function(b){
     var share = b.ext ? (load>0 ? b.raw/load : 0)
                       : (load>0 ? (b.raw/iDenom)*interiorLoad/load : 0);
-    return { tcH: Math.round(roomTC*share*10)/10, psH: Math.round(roomPS*share*10)/10 };
+    return { work: Math.round(roomPS*share*10)/10 };
   });
   return { totTC:tc, totPS:ps, roomTC:Math.round(roomTC*10)/10, roomPS:Math.round(roomPS*10)/10,
            load:Math.round(load*10)/10, days:days,
@@ -2917,32 +2947,79 @@ function addWorkingDays(startDateStr, days) {
   return d.toISOString().slice(0, 10);
 }
 
-// ─── REQUIRED CREW ───────────────────────────────────────────────────────────
-// Target-driven staffing. Rather than reporting a duration that balloons on trophy
-// estates, we size the crew to land the job near a fixed working-day target and lead
-// with that recommended team.
-//   PS recommendation = ceil(totPS / (TARGET_DAYS * 7)), floor 2, cap 6
-//   TC count          = 1, or 2 on premium jobs whose solo-TC time exceeds the target
-//   Duration          = max(TC-gated days, PS-gated days, mobilization floor)
-// If the job still exceeds the target at maximum staffing (2 TC + 6 PS), the honest
-// day count is reported with a plain scope-driven note — no phasing, no error state.
+// ─── WORKING-SUPERVISOR STAFFING & HOURS ─────────────────────────────────────
+// The concierge is on site for every hour the crew is, and works alongside them —
+// packing boxes, photographing items — while directing the job. So they are not a
+// coordination line bolted onto the crew; they are the (n + α)th pair of hands.
+//
+//   W = total hands-on work hours (the engine's work pool)
+//   n = Property Specialist crew size
+//   α = fraction of a concierge's on-site hour spent on production (TC_ONSITE_ALPHA)
+//   H = concierge on-site hours
+//
+// Crew and concierge clear the pool together:   H × (n + α) = W   →   H = W / (n + α)
+//
+// From that one identity everything else falls out:
+//   concierge on-site  = H          (with α = 0 this is exactly "PS hrs per specialist")
+//   billed PS hours    = n × H      (the crew's share — the concierge's share is not
+//                                    billed twice, it moves to the TC line)
+//   duration           = ceil(H / 7), floored at the service mobilization minimum
+//   concierge billed   = H + off-site coordination
+//
+// Crew size is the smallest n that lands the job inside the working-day target.
+// Off-site coordination no longer gates the calendar — it happens around the crew
+// days, before mobilization and after the last truck. Instead it feeds a load check:
+// past TC_DAY_CAP hours/day one concierge can't carry the job and a second is
+// recommended. Billing is still total concierge hours, so the second concierge
+// shortens the calendar rather than raising the fee.
 var TARGET_DAYS = 10;
-function computeRequiredCrew(totPS, totTC, premium, svc) {
-  var floor    = ENGINE_FLOOR[svc] || 2;
-  var recPS    = Math.min(6, Math.max(2, Math.ceil(totPS / (TARGET_DAYS * 7))));
-  var tcCount  = (premium && Math.ceil(totTC / 7) > TARGET_DAYS) ? 2 : 1;  // 2 TCs: premium only
-  var tcDays   = Math.ceil(totTC / (tcCount * 7));
-  var psDays   = Math.ceil(totPS / (recPS * 7));
-  var days     = Math.max(tcDays, psDays, floor);
-  var atMaxCrew = tcCount >= (premium ? 2 : 1) && recPS >= 6;
+var PRODUCTIVE_HRS_PER_DAY = 7;   // billable hours in a crew day (setup/travel/breaks excluded)
+var TC_ONSITE_ALPHA_DEFAULT = 0.5;
+var TC_ONSITE_ALPHA = TC_ONSITE_ALPHA_DEFAULT;   // settings-backed; see loadSettings()
+var TC_DAY_CAP = 10;              // concierge hrs/day above which a 2nd TC is recommended
+// Off-site coordination doesn't compress into the crew days — a two-day condo
+// downsizing still carries weeks of attorney, vendor and disposition contact around
+// it. Spread it over at least this many working days when testing concierge load, or
+// short jobs look impossibly heavy and every one of them asks for a second concierge.
+var COORD_SPREAD_DAYS = 10;
+
+// Concierge hours per day, used only to decide whether one person can carry the job.
+// On-site presence is fixed to the crew days; coordination spreads over the wider
+// engagement window.
+function conciergeLoad(onsiteHrs, offsiteHrs, days) {
+  if (!(days > 0)) return 0;
+  return Math.round((onsiteHrs / days + offsiteHrs / Math.max(days, COORD_SPREAD_DAYS)) * 10) / 10;
+}
+
+function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS) {
+  var a     = TC_ONSITE_ALPHA;
+  var floor = ENGINE_FLOOR[svc] || 2;
+  var W     = workPool > 0 ? workPool : 0;
+  var n;
+  if (forcedPS && forcedPS >= 2) {
+    n = Math.min(6, forcedPS);
+  } else {
+    n = 2;
+    while (n < 6 && Math.ceil(W / ((n + a) * PRODUCTIVE_HRS_PER_DAY)) > TARGET_DAYS) n++;
+  }
+  var H       = W > 0 ? W / (n + a) : 0;
+  var days    = W > 0 ? Math.max(Math.ceil(H / PRODUCTIVE_HRS_PER_DAY), floor) : 0;
+  var tcHrs   = H + (offsiteTC || 0);
+  var tcLoad  = conciergeLoad(H, offsiteTC || 0, days);
   return {
-    tcDays:      days,
+    requiredPS:  n,
+    psNeeded:    n,
+    alpha:       a,
+    onsiteTC:    Math.round(H * 10) / 10,
+    tcHrs:       Math.round(tcHrs * 10) / 10,
+    psHrs:       Math.round(n * H * 10) / 10,
+    offsiteTC:   Math.round((offsiteTC || 0) * 10) / 10,
     days:        days,
-    requiredPS:  recPS,
-    psNeeded:    recPS,
-    tcCount:     tcCount,
+    tcDays:      days,
+    tcCount:     tcLoad > TC_DAY_CAP ? 2 : 1,
+    tcLoad:      tcLoad,
     overTarget:  days > TARGET_DAYS,
-    maxedOut:    days > TARGET_DAYS && atMaxCrew
+    maxedOut:    days > TARGET_DAYS && n >= 6
   };
 }
 
@@ -3141,30 +3218,14 @@ function calcAll() {
   var yearsInHomeVal = _ejob ? _ejob.yearsInHome : '';
   var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal);
   if (isPrep) eng = {totTC:0, totPS:0, roomTC:0, roomPS:0, load:0, days:0, perRoom:[], volFactor:1, cpxFactor:1};
+  // Under the working-supervisor model these two are NOT the billed TC/PS figures.
+  // baseTCHrs = off-site coordination; basePSHrs = the hands-on work pool (W).
+  // Both are billed only after computeWorkingSupervisor() splits the pool between the
+  // concierge and the crew — see the "WORKING-SUPERVISOR SOLVE" block below.
   baseTCHrs = eng.totTC;
   basePSHrs = eng.totPS;
 
-  // Per-room display + includedRooms (hours distributed by the engine)
-  roomMeta.forEach(function(m, i) {
-    var pr = eng.perRoom[i] || {tcH:0, psH:0};
-    var elapsed = Math.round((pr.tcH + pr.psH) * 10) / 10;
-    var elEl = document.getElementById('el-'+m.id);
-    elEl.textContent = elapsed.toFixed(1); elEl.className = 'calc on';
-    var tcEl = document.getElementById('tc-'+m.id);
-    tcEl.textContent = pr.tcH.toFixed(1) + ' TC'; tcEl.className = 'calc on'; tcEl.style.color = 'var(--bronze)';
-    var psEl = document.getElementById('ps-'+m.id);
-    psEl.textContent = pr.psH.toFixed(1) + ' PS'; psEl.className = 'calc on'; psEl.style.color = 'var(--gray)';
-    includedRooms.push({idx:m.ri, name:m.name, vol:m.vol, cplx:m.cplx, spcl:m.spcl, mult:1,
-      elapsed:elapsed, tcH:pr.tcH, psH:pr.psH,
-      roomDollar:Math.round(pr.tcH*tcRate + pr.psH*psRate), note:m.note, section:m.section});
-  });
-
-  // Excluded (homeowner-handled) rooms — carried through with zero hours/dollars so
-  // they show up flagged in the client estimate, agreements, and job plan.
-  excludedMeta.forEach(function(m) {
-    includedRooms.push({idx:m.ri, name:m.name, vol:0, cplx:0, spcl:false, mult:1,
-      elapsed:0, tcH:0, psH:0, roomDollar:0, note:m.note, section:m.section, excluded:true});
-  });
+  // Per-room display runs after the solve (it needs the concierge/crew split ratio).
 
   // Compatibility vars retained for the snapshot/ref box (no longer applied to hours).
   // Square footage and service type now live inside the engine; property value drives
@@ -3228,18 +3289,24 @@ function calcAll() {
     ? 'Built into contested-probate rates — no separate uplift'
     : 'Adds 20% to Transition Concierge hours only';
   var heirs = heirsEl ? heirsEl.checked : false;
-  var adjTCpct = (access ? 0.15 : 0);
-  var adjPSpct = (access ? 0.15 : 0);
-  var adjTCheirs = heirs ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;
-  var adjTC = Math.round((baseTCHrs * adjTCpct + adjTCheirs) * 10) / 10;
-  var adjPS = Math.round(basePSHrs * adjPSpct * 10) / 10;
-  // Change 3: premium-estate specialty coordination (auction house, appraiser,
-  // wine/art logistics) — a flat +25 TC hours, not scaled by the access/heir uplifts.
+  // ── ADJUSTMENT ROUTING (working-supervisor model) ──────────────────────────────
+  // Difficult access is physical difficulty: it makes the hands-on work take longer,
+  // which lengthens the job, which lengthens concierge presence — automatically, via
+  // the solve. So it lifts the WORK POOL only; also lifting the concierge line would
+  // double-count it. Multiple decision-makers / heirs is pure coordination (more
+  // calls, more sign-offs, no extra boxes), so it lifts OFF-SITE COORDINATION only.
+  // Premium-estate specialty coordination (auction house, appraiser, wine/art
+  // logistics) is a flat +25 coordination hours, unscaled by either uplift.
+  var adjPS = access ? Math.round(basePSHrs * 0.15 * 10) / 10 : 0;   // work-pool uplift
+  var adjTC = heirs  ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;   // coordination uplift
   var premiumSpecialtyTC = prem ? 25 : 0;
-  var totTC = Math.round((baseTCHrs + adjTC + premiumSpecialtyTC) * 10) / 10;
-  var totPS = Math.round((basePSHrs + adjPS) * 10) / 10;
+  var workPool = Math.round((basePSHrs + adjPS) * 10) / 10;
+  var coordTC  = Math.round((baseTCHrs + adjTC + premiumSpecialtyTC) * 10) / 10;
+  // Billed hours — assigned by the working-supervisor solve further down, once the
+  // destination and home-prep hours are folded in and the crew size is known.
+  var totTC = 0, totPS = 0;
   var days = eng.days;
-  var crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
+  var crewDays = Math.round(basePSHrs / (8 * crewSize) * 10) / 10;
 
   // Timeline — projected completion is derived from the engine (max of concierge
   // time, specialist-crew time, and the logistics/mobilization floor)
@@ -3294,12 +3361,56 @@ function calcAll() {
   // smf so the estimate shows a single vendor-coordination fee rather than a
   // separate Home Prep line. The extra TC coordination hours still bill on top.
   if (prepEnabled && !isPrep) { smf += prepFee; prepFee = 0; }
-  if (isPrep) { totTC = 0; totPS = 0; baseTCHrs = 0; basePSHrs = 0; }
-  // Fold in bundled-prep TC coordination and move-management destination hours.
-  // Move day (destTC) is TC-only; the unpack crew hours (destPS) join the PS total.
-  totTC = Math.round((totTC + prepTCHrs + destTC) * 10) / 10;
-  totPS = Math.round((totPS + destPS) * 10) / 10;
-  tcFee = Math.round(totTC * tcRate);
+  if (isPrep) { baseTCHrs = 0; basePSHrs = 0; workPool = 0; coordTC = 0; }
+  // Fold bundled-prep coordination and the move-management destination hours in.
+  // Both sit OUTSIDE the origin-property work pool: prep coordination is off-site
+  // vendor management, and move day happens at the new home. destPS is crew work at
+  // the destination, billed straight through rather than shared with the concierge.
+  coordTC = Math.round((coordTC + prepTCHrs + destTC) * 10) / 10;
+
+  // ─── WORKING-SUPERVISOR SOLVE ──────────────────────────────────────────────
+  // Size the crew to the working-day target, then split the hands-on work pool
+  // between the concierge and that crew. Solve once at the recommended crew size;
+  // if the estimator has manually scheduled more specialists than recommended,
+  // re-solve at the actual count — a larger crew finishes sooner, so the concierge
+  // is on site fewer hours and the estimate comes down slightly.
+  var _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, 0);
+  var _recommendedPS = _sup.requiredPS;
+  var _actualPS = Math.max(getScheduledPSCount(), _recommendedPS);
+  if (!isPrep && _actualPS > _recommendedPS) {
+    _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, _actualPS);
+  }
+  var tcOnsiteHrs = isPrep ? 0 : _sup.onsiteTC;
+  totTC = isPrep ? 0 : _sup.tcHrs;
+  totPS = isPrep ? 0 : Math.round((_sup.psHrs + destPS) * 10) / 10;
+  // Share of the hands-on pool each side carries. The per-room breakdown is split by
+  // the same ratio as the job totals, so the two always reconcile.
+  var _psShare = _sup.requiredPS / (_sup.requiredPS + _sup.alpha);
+  var _tcShare = 1 - _psShare;
+
+  // ── Per-room display + includedRooms ───────────────────────────────────────
+  roomMeta.forEach(function(m, i) {
+    var work = (eng.perRoom[i] && eng.perRoom[i].work) || 0;
+    var tcH = Math.round(work * _tcShare * 10) / 10;
+    var psH = Math.round(work * _psShare * 10) / 10;
+    var elapsed = Math.round((tcH + psH) * 10) / 10;
+    var elEl = document.getElementById('el-'+m.id);
+    elEl.textContent = elapsed.toFixed(1); elEl.className = 'calc on';
+    var tcEl = document.getElementById('tc-'+m.id);
+    tcEl.textContent = tcH.toFixed(1) + ' TC'; tcEl.className = 'calc on'; tcEl.style.color = 'var(--bronze)';
+    var psEl = document.getElementById('ps-'+m.id);
+    psEl.textContent = psH.toFixed(1) + ' PS'; psEl.className = 'calc on'; psEl.style.color = 'var(--gray)';
+    includedRooms.push({idx:m.ri, name:m.name, vol:m.vol, cplx:m.cplx, spcl:m.spcl, mult:1,
+      elapsed:elapsed, tcH:tcH, psH:psH,
+      roomDollar:Math.round(tcH*tcRate + psH*psRate), note:m.note, section:m.section});
+  });
+  // Excluded (homeowner-handled) rooms — carried through with zero hours/dollars so
+  // they show up flagged in the client estimate, agreements, and job plan.
+  excludedMeta.forEach(function(m) {
+    includedRooms.push({idx:m.ri, name:m.name, vol:0, cplx:0, spcl:false, mult:1,
+      elapsed:0, tcH:0, psH:0, roomDollar:0, note:m.note, section:m.section, excluded:true});
+  });
+
   var svcType = document.getElementById('e-svc').value;
   var coordDays = 0, vendorTotal = 0, gcFee = 0, stagerCost = 0, stagerGcFee = 0;
 
@@ -3334,13 +3445,13 @@ function calcAll() {
   }
 
   // ─── CREW / TIMELINE STATUS ────────────────────────────────────────────────
-  // TC hours are the hard floor — PS cannot compress below the TC-gated duration.
-  // Projected completion is derived from the estimate, not taken from the client.
-  // The optional hard target (job.completion) triggers a warning if we can't meet it.
-  var crew = computeRequiredCrew(totPS, totTC, prem, svcKey);
-  // Use the engine's duration (max of concierge, specialist-crew, logistics floor)
-  // for the projected completion, rather than the raw concierge-hours/7.
-  crew.tcDays = daysNeeded;
+  // Duration comes straight out of the working-supervisor solve: the concierge's
+  // on-site hours ARE the calendar (they're there every crew day), floored at the
+  // service mobilization minimum. Off-site coordination no longer stretches the
+  // schedule — it happens around the crew days — it drives the concierge load check
+  // instead. Projected completion is derived from the estimate, not taken from the
+  // client; the optional hard target (job.completion) warns if we can't meet it.
+  var crew = _sup;
   // Enforce the recommended crew on the PS dropdowns (up to the raised cap of 6).
   var curPS = getScheduledPSCount();
   if (!isPrep && curPS < crew.requiredPS) {
@@ -3350,30 +3461,29 @@ function calcAll() {
         slotEl.value = 'contractor_standard';
       }
     }
-    crewSize = crew.requiredPS;
-    crewDays = Math.round(baseTCHrs / (8 * crewSize) * 10) / 10;
+    crewDays = Math.round(basePSHrs / (8 * crew.requiredPS) * 10) / 10;
   }
-  // Unify the projected duration with the Client Estimate. Compute working days from
-  // the FINAL billable hours (which include access/heirs adjustments, the premium
-  // specialty block, and prep coordination), not just the base engine room hours —
-  // otherwise the estimate tab and the client document disagree (e.g. 8 vs 9 days).
-  // Duration is target-driven (Change 4): TC gated by the recommended TC count, PS
-  // gated by the actual/recommended crew, floored at the service mobilization minimum.
-  // Both the timeline badge below and the Client Estimate read this one value via e.days.
-  var _psForDays = Math.max(getScheduledPSCount(), crew.requiredPS, 1);
-  var _tcForDays = crew.tcCount || 1;
+  crewSize = crew.requiredPS;
+  // The destination (move-in) day is additive on top of the origin-property calendar.
   var _mobFloor  = ENGINE_FLOOR[svcKey] || 2;
-  daysNeeded = isPrep ? 0 : Math.max(Math.ceil(totTC / (_tcForDays * 7)), Math.ceil(totPS / (_psForDays * 7)), _mobFloor);
+  daysNeeded = isPrep ? 0 : Math.max(crew.days, destPS > 0 ? crew.days + Math.ceil(destPS / (crewSize * PRODUCTIVE_HRS_PER_DAY)) : 0, _mobFloor);
   days = daysNeeded;
   crew.tcDays = daysNeeded;
   crew.overTarget = daysNeeded > TARGET_DAYS;
-  // Second Transition Concierge: nudge the estimator to name a second concierge when
-  // the engine recommends two (premium jobs whose solo-TC time exceeds the target).
+  // Re-derive the concierge load against the FINAL day count. The solve doesn't know
+  // about the move-management destination day, so on a move job its own figure spreads
+  // the same hours over too few days and over-recommends a second concierge.
+  crew.tcLoad  = conciergeLoad(tcOnsiteHrs, coordTC, daysNeeded);
+  crew.tcCount = crew.tcLoad > TC_DAY_CAP ? 2 : 1;
+  // Second Transition Concierge: recommended when one person can't carry the load —
+  // on-site presence plus off-site coordination past TC_DAY_CAP hours/day. Contested
+  // probate and heavy-documentation estates are what trip this, which is correct.
   var tc2Hint = document.getElementById('e-tc2-hint');
   var tc2Sel = document.getElementById('e-prepared-by-2');
   if (tc2Hint) {
     if (crew.tcCount >= 2 && !(tc2Sel && tc2Sel.value)) {
-      tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">Engine recommends 2 concierges for this scope</span> — assign a second here so both are tracked on the job.';
+      tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">Engine recommends 2 concierges for this scope</span> — '
+        + crew.tcLoad.toFixed(1) + ' concierge hrs/day across ' + daysNeeded + ' working days is more than one person can carry. Assign a second here so both are tracked on the job.';
     } else if (tc2Sel && tc2Sel.value) {
       tc2Hint.textContent = 'Both concierges will be tracked in the crew and Log Hours. Billing is total TC hours — a second concierge shortens the calendar, not the fee.';
     } else {
@@ -3432,10 +3542,16 @@ function calcAll() {
   }
 
 
-  document.getElementById('s-base-tc').textContent = baseTCHrs.toFixed(1) + ' hrs';
+  // The work pool is what the job physically requires; the concierge and the crew
+  // split it. So "hands-on work pool" + "concierge on site" do NOT sum to the totals —
+  // the pool is the input, the two role lines below it are the output. Off-site
+  // coordination is the only concierge time that sits outside the crew days.
   document.getElementById('s-base-ps').textContent = basePSHrs.toFixed(1) + ' hrs';
-  document.getElementById('s-adj-tc').textContent = adjTC.toFixed(1) + ' hrs';
   document.getElementById('s-adj-ps').textContent = adjPS.toFixed(1) + ' hrs';
+  var sTcOnsiteEl = document.getElementById('s-tc-onsite');
+  if (sTcOnsiteEl) sTcOnsiteEl.textContent = tcOnsiteHrs.toFixed(1) + ' hrs';
+  document.getElementById('s-base-tc').textContent = baseTCHrs.toFixed(1) + ' hrs';
+  document.getElementById('s-adj-tc').textContent = (adjTC + premiumSpecialtyTC).toFixed(1) + ' hrs';
   // Show home-prep coordination hours in the hours breakdown so base + adj + prep
   // = total is obvious at a glance (the prep hours are folded into Total TC).
   var sPrepTCSumRow = document.getElementById('s-prep-tc-sum-row');
@@ -3567,7 +3683,7 @@ function calcAll() {
     if (_mp) _mp.innerHTML = '<div style="font-size:11px;color:var(--gray);">Fee-only service — Havellin\'s margin is the full 30% GC fee (third-party vendors billed to the client at cost).</div>';
   } else {
     updateRefBox(havellinTotalDiscounted);
-    updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct);
+    updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct, crewSize);
   }
 
   // Update PS cost badge
@@ -3587,13 +3703,24 @@ function calcAll() {
   var reasonWrap = document.getElementById('ps-reason-wrap');
   if (crewBadge && totPS > 0 && crewSize > 0) {
     var psHrsPerPerson = Math.round((totPS / crewSize) * 10) / 10;
-    var psDays = Math.ceil(psHrsPerPerson / 7);
+    var psDays = Math.ceil(psHrsPerPerson / PRODUCTIVE_HRS_PER_DAY);
     var effectiveDays = Math.max(daysNeeded, psDays);
     var dailyHrsPerPS = effectiveDays > 0 ? Math.round((totPS / crewSize / effectiveDays) * 10) / 10 : 0;
+    var _alphaPct = Math.round(_sup.alpha * 100);
     var effClass, effMsg;
     if (crewSize < 2) {
       effClass = 'a-err';
       effMsg = '⚠ Minimum 2 PS required — add a second specialist.';
+    } else if (crewSize > _recommendedPS) {
+      // Under the working-supervisor model crew size moves the price: a larger crew
+      // finishes sooner, so the concierge is on site fewer hours. That's correct, but
+      // it must never happen silently — a crew left over from a previous, larger
+      // estimate would quietly discount this one.
+      effClass = 'a-warn';
+      effMsg = crewSize + ' PS assigned but only ' + _recommendedPS + ' recommended for this scope — '
+        + dailyHrsPerPS + ' hrs/day each over ' + effectiveDays + ' days. The extra specialist shortens the job, '
+        + 'so the concierge is on site less and the estimate is lower than it would be at ' + _recommendedPS + ' PS. '
+        + 'Drop back to ' + _recommendedPS + ' unless simultaneous handling is genuinely required.';
     } else if (dailyHrsPerPS < 3 && crewSize > 2) {
       effClass = 'a-warn';
       effMsg = crewSize + ' PS assigned — each averages ' + dailyHrsPerPS + ' hrs/day over ' + effectiveDays + ' days. Consider reducing to ' + (crewSize - 1) + ' PS unless simultaneous handling is required.';
@@ -3602,7 +3729,12 @@ function calcAll() {
       effMsg = crewSize + ' PS assigned — ' + dailyHrsPerPS + ' hrs/day per specialist. Consider adding a PS to reduce individual workload.';
     } else {
       effClass = 'a-ok';
-      effMsg = crewSize + ' PS assigned — ' + psHrsPerPerson + ' hrs each over ' + effectiveDays + ' working day' + (effectiveDays !== 1 ? 's' : '') + ' (' + dailyHrsPerPS + ' hrs/day per specialist). Billing: ' + totPS.toFixed(1) + ' total PS hrs × $' + psRate + ' regardless of crew size.';
+      effMsg = crewSize + ' PS + the concierge on site — ' + psHrsPerPerson + ' hrs each over ' + effectiveDays
+        + ' working day' + (effectiveDays !== 1 ? 's' : '') + ' (' + dailyHrsPerPS + ' hrs/day per specialist). '
+        + 'The concierge is on site all ' + tcOnsiteHrs.toFixed(1) + ' of those hours and works alongside the crew at '
+        + _alphaPct + '% production, which is why ' + workPool.toFixed(1) + ' hrs of hands-on work bills as '
+        + totPS.toFixed(1) + ' PS hrs — the rest moves to the concierge line, not billed twice. '
+        + 'Adding a specialist shortens the job and lowers the estimate.';
     }
     crewBadge.innerHTML = '<div class="alert ' + effClass + '" style="margin-top:0;font-size:11px;">' + effMsg + '</div>';
     if (reasonWrap) reasonWrap.style.display = crewSize >= 3 ? 'block' : 'none';
@@ -3627,6 +3759,12 @@ function calcAll() {
     sqft:sqftVal, sqftMult:sqftMult,
     baseTCHrs:baseTCHrs, basePSHrs:basePSHrs, vcHrs:vcHrs,
     adjTC:adjTC, adjPS:adjPS, totTC:totTC, totPS:totPS, days:days,
+    // Working-supervisor model provenance. Stamped so a reopened estimate can be
+    // told apart from one priced under the old volume-ratio model, and so the
+    // concierge split can be shown without re-deriving it.
+    hoursModel:'v4-working-supervisor', tcAlpha:_sup.alpha,
+    workPool:workPool, tcOnsite:tcOnsiteHrs, tcOffsite:coordTC,
+    tcCount:crew.tcCount, tcLoad:crew.tcLoad,
     tcFee:tcFee, psFee:psFee, pkgCost:pkgCost, pkgLabel:pkgLabel,
     smf:smf, vendorCost:vendorCost,
     havellinTotalFull:havellinTotal,
@@ -4929,7 +5067,7 @@ function renderClientEstimate() {
       // Home Prep for Sale is fee-only — no on-site TC/PS labor lines (they would print $0).
       ((e.svc === 'prep') ? '' :
         '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
-        '<tr><td>Transition Concierge — On-site project oversight, client liaison, vendor coordination &amp; QC</td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
+        '<tr><td>Transition Concierge — On site for the full duration of the project. Directs the crew, acts as your single point of contact, coordinates vendors and QCs the work — and handles, packs and documents alongside the specialists throughout.<br><span style="font-size:11px;color:var(--gray);">Present for every working hour listed below, not on call. Hours the concierge spends on hands-on work are billed here and are not also billed on the specialist line.</span></td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
         '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + _onsitePsHrs + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_onsitePsFee) + '</td></tr>') +
       (_isMove ?
         '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
@@ -7325,7 +7463,7 @@ function loadEstimateForJob(jobId) {
 
 
 // ─── MARGIN PANEL ────────────────────────────────────────────────────────────
-function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem) {
+function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, discountAmt, discountPct, nps) {
   var panel = document.getElementById('margin-panel');
   if (!panel) return;
   if (havellinTotal === 0) { panel.innerHTML = '<div style="font-size:11px;color:var(--gray);">Score rooms to see margin analysis.</div>'; return; }
@@ -7344,7 +7482,15 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem) {
     if (matchedTC && matchedTC.rate) tcCost = matchedTC.rate;
   }
 
-  var totalCost = Math.round(totTC * tcCost + totPS * psCost);
+  // Cost the concierge at every hour they are actually engaged. Under the old
+  // volume-ratio model this line multiplied *billed* TC hours by the cost rate while
+  // the concierge was really on site for the whole job — on a 10-day estate that was
+  // 31 billed hours against ~69 hours actually paid for, overstating margin by about
+  // nine points and pushing the walk-away floor below what the job really costs.
+  // Billed TC hours now include on-site presence, so the two agree; the max() keeps
+  // that honest for estimates saved under the old model and reopened here.
+  var tcEngagedHrs = Math.max(totTC, (totPS > 0 && nps > 0) ? totPS / nps : 0);
+  var totalCost = Math.round(tcEngagedHrs * tcCost + totPS * psCost);
   var grossProfit = havellinTotal - totalCost;
   var margin = Math.round((grossProfit / havellinTotal) * 100);
 
@@ -7355,7 +7501,7 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem) {
   // Per-role breakdown
   var tcBilled = Math.round(totTC * tcRate);
   var psBilled = Math.round(totPS * psRate);
-  var tcCostTotal = Math.round(totTC * tcCost);
+  var tcCostTotal = Math.round(tcEngagedHrs * tcCost);
   var psCostTotal = Math.round(totPS * psCost);
   var tcMargin = tcBilled > 0 ? Math.round(((tcBilled - tcCostTotal) / tcBilled) * 100) : 0;
   var psMargin = psBilled > 0 ? Math.round(((psBilled - psCostTotal) / psBilled) * 100) : 0;
@@ -7390,7 +7536,7 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem) {
     '</div>' +
     '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
     '<tr style="background:var(--tan);"><td style="padding:5px 8px;font-weight:600;">Role</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Hours</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Cost</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Billed</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Margin</td></tr>' +
-    '<tr><td style="padding:5px 8px;">Transition Concierge (@$' + tcCost + '/hr cost)</td><td style="padding:5px 8px;text-align:right;">' + totTC.toFixed(1) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(tcCostTotal) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(tcBilled) + '</td><td style="padding:5px 8px;text-align:right;color:var(--ok-tx);">' + tcMargin + '%</td></tr>' +
+    '<tr><td style="padding:5px 8px;">Transition Concierge (@$' + tcCost + '/hr cost)</td><td style="padding:5px 8px;text-align:right;">' + tcEngagedHrs.toFixed(1) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(tcCostTotal) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(tcBilled) + '</td><td style="padding:5px 8px;text-align:right;color:var(--ok-tx);">' + tcMargin + '%</td></tr>' +
     '<tr><td style="padding:5px 8px;">Property Specialist (@$' + psCost + '/hr blended cost)</td><td style="padding:5px 8px;text-align:right;">' + totPS.toFixed(1) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(psCostTotal) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(psBilled) + '</td><td style="padding:5px 8px;text-align:right;color:var(--ok-tx);">' + psMargin + '%</td></tr>' +
     '</table>' +
     '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
@@ -13646,6 +13792,8 @@ function openSettings() {
   setReferralDirStatus(REFERRAL_SYNC_URL ? (referralDirectory.length ? ('✓ ' + referralDirectory.length + ' partners loaded') : 'URL set — click Reload partners to load') : 'No URL set yet', false);
   var reqEl = document.getElementById('set-require-notes');
   if (reqEl) reqEl.checked = REQUIRE_WALKTHROUGH_NOTES;
+  var alphaEl = document.getElementById('set-tc-alpha');
+  if (alphaEl) alphaEl.value = Math.round(TC_ONSITE_ALPHA * 100);
 }
 
 function saveSettings() {
@@ -13657,6 +13805,13 @@ function saveSettings() {
   var rUrlEl2 = document.getElementById('set-referral-url'); if (rUrlEl2) REFERRAL_SYNC_URL = rUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
+  // Concierge production rate. Clamped to 0–100%: past 100 the concierge would be
+  // outproducing a full-time specialist while also running the job.
+  var alphaEl = document.getElementById('set-tc-alpha');
+  if (alphaEl && alphaEl.value !== '') {
+    var _a = parseFloat(alphaEl.value);
+    if (isFinite(_a)) TC_ONSITE_ALPHA = Math.min(1, Math.max(0, _a / 100));
+  }
   try {
     localStorage.setItem('hav_stripe_pk',     STRIPE_PK);
     localStorage.setItem('hav_stripe_script', STRIPE_SCRIPT_URL);
@@ -13665,7 +13820,9 @@ function saveSettings() {
     localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
     localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
+    localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));
   } catch(e) {}
+  if (typeof calcAll === 'function') calcAll();   // reprice against the new production rate
   document.getElementById('settings-modal').style.display = 'none';
   showSyncBadge('Settings saved \u2713');
   loadVendorDirectory();   // pull the directory right away when the URL is set/changed
@@ -13682,6 +13839,8 @@ function loadSettings() {
     REFERRAL_SYNC_URL = localStorage.getItem('hav_referral_url')  || '';
     try { var _rd = localStorage.getItem('hav_referral_dir'); if (_rd) referralDirectory = JSON.parse(_rd); } catch(e) {}
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';
+    var _sa = parseFloat(localStorage.getItem('hav_tc_alpha'));
+    TC_ONSITE_ALPHA = (isFinite(_sa) && _sa >= 0 && _sa <= 1) ? _sa : TC_ONSITE_ALPHA_DEFAULT;
   } catch(e) {}
 }
 
