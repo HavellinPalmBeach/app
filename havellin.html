@@ -283,9 +283,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      stat tiles) pushed the search box most of a screen down — in the field the
      search box IS the tab, so the toolbar is hoisted above the header card and the
      explanatory blurb (which nobody reads standing in a driveway) is dropped. */
-  #panel-vendors.active{display:flex;flex-direction:column;}
-  .vdir-toolbar{order:-1;}
+  #panel-vendors.active,#panel-referrals.active{display:flex;flex-direction:column;}
+  .vdir-toolbar,.rdir-toolbar{order:-1;}
   .vdir-blurb{display:none;}
+  /* Referral leaderboard is a wide desktop table — it stays reachable by scrolling
+     the tab, but it shouldn't sit between search and the partner cards on a phone. */
+  #referrals-leaderboard{order:2;}
 }
 
 @media print {
@@ -344,7 +347,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 10:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 10:50am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1367,10 +1370,43 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:13px;font-weight:600;">Contractor Directory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Transition Concierge and Property Specialist contractors — names feed all dropdowns in the app.</div>
+        <div class="vdir-blurb" style="font-size:11px;color:var(--gray);margin-top:2px;">Transition Concierge and Property Specialist contractors — names feed all dropdowns in the app.</div>
       </div>
       <button class="btn-p" onclick="showAddContractor()">+ Add Contractor</button>
     </div>
+    <input type="search" id="c-filter-q" oninput="renderContractors()" onsearch="renderContractors()"
+      placeholder="Search crew — name, phone, email, specialty…" style="margin-top:10px;"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  </div>
+
+  <!-- QUICK EDIT — field path. Contractors live in the main sheet (not a separate
+       directory backend), so this writes straight through saveContractors(). -->
+  <div class="modal-overlay" id="c-quick-modal" style="display:none;" onclick="if(event.target===this)closeContractorQuickEdit()">
+  <div class="modal-box" style="width:460px;max-width:94%;text-align:left;">
+    <div class="sec" style="margin-bottom:2px;">Quick edit</div>
+    <div id="cq-name" style="font-size:13px;font-weight:600;color:var(--bronze);margin-bottom:10px;"></div>
+    <input type="hidden" id="cq-id" value="">
+    <label>Phone</label>
+    <input type="tel" id="cq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Email</label>
+    <input type="email" id="cq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label>Rate ($/hr — your cost)</label>
+    <input type="number" id="cq-rate" inputmode="decimal">
+    <label>Status</label>
+    <select id="cq-status">
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+      <option value="vetting">Vetting</option>
+    </select>
+    <label>Specialty / notes</label>
+    <textarea id="cq-notes" rows="3"></textarea>
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-p" onclick="saveContractorQuickEdit()">Save</button>
+      <button class="btn-s" onclick="closeContractorQuickEdit()">Cancel</button>
+      <button class="btn-s" onclick="openFullContractorEditFromQuick()" style="margin-left:auto;">Full edit →</button>
+    </div>
+  </div>
   </div>
 
   <div id="add-contractor-card" class="card" style="margin-bottom:1rem;display:none;">
@@ -1760,7 +1796,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Referral Partners</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;max-width:680px;">Build and work your referral network — estate attorneys, realtors, trust officers. Move each partner through the outreach lifecycle (Identified &rarr; Contacted &rarr; Intro Meeting &rarr; Active Partner), log outreach, and add new partners. Link a partner to a job at intake so referrals are tracked.</div>
+        <div class="vdir-blurb" style="font-size:11px;color:var(--gray);margin-top:2px;max-width:680px;">Build and work your referral network — estate attorneys, realtors, trust officers. Move each partner through the outreach lifecycle (Identified &rarr; Contacted &rarr; Intro Meeting &rarr; Active Partner), log outreach, and add new partners. Link a partner to a job at intake so referrals are tracked.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-s" onclick="loadReferralDirectory()">&#8635; Reload</button>
@@ -1891,6 +1927,45 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     </div>
     <div id="r-fb"></div>
   </div>
+  </div>
+
+  <!-- QUICK EDIT — field path, mirrors the vendor card. First/last name are
+       deliberately absent: partner_name is derived from them on save, so renaming
+       belongs on the full form where that derivation runs. -->
+  <div class="modal-overlay" id="r-quick-modal" style="display:none;" onclick="if(event.target===this)closeReferralQuickEdit()">
+  <div class="modal-box" style="width:460px;max-width:94%;text-align:left;">
+    <div class="sec" style="margin-bottom:2px;">Quick edit</div>
+    <div id="rq-name" style="font-size:13px;font-weight:600;color:var(--bronze);margin-bottom:10px;"></div>
+    <input type="hidden" id="rq-id" value="">
+    <label>Title</label>
+    <input type="text" id="rq-title" autocomplete="off">
+    <label>Firm / brokerage</label>
+    <input type="text" id="rq-firm" autocomplete="off">
+    <label>Phone</label>
+    <input type="tel" id="rq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Email</label>
+    <input type="email" id="rq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label>Website</label>
+    <input type="text" id="rq-website" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label>City</label>
+    <input type="text" id="rq-city" autocomplete="off">
+    <label>Notes</label>
+    <textarea id="rq-notes" rows="3"></textarea>
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-p" onclick="saveReferralQuickEdit()">Save</button>
+      <button class="btn-s" onclick="closeReferralQuickEdit()">Cancel</button>
+      <button class="btn-s" onclick="openFullReferralEditFromQuick()" style="margin-left:auto;">Full edit →</button>
+    </div>
+  </div>
+  </div>
+
+  <!-- Search mirrors the Vendor Directory: same field-first reasoning, same
+       auto-expand-on-match behaviour. -->
+  <div class="card rdir-toolbar" style="margin-bottom:1rem;padding:0.8rem 1rem;">
+    <input type="search" id="r-filter-q" oninput="renderReferralsTab()" onsearch="renderReferralsTab()"
+      placeholder="Search partners — name, firm, title, phone, city…" style="margin:0;"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
 
   <div id="referrals-leaderboard"></div>
@@ -11551,7 +11626,7 @@ function saveVendorQuickEdit() {
 // Escape closes whichever directory form / confirm is open (matches the app's other modals).
 document.addEventListener('keydown', function(e){
   if (e.key !== 'Escape') return;
-  ['add-vendor-modal','v-quick-modal','add-referral-modal','dir-delete-pin-modal'].forEach(function(mid){
+  ['add-vendor-modal','v-quick-modal','add-referral-modal','r-quick-modal','c-quick-modal','dir-delete-pin-modal'].forEach(function(mid){
     var m = document.getElementById(mid);
     if (m && m.style.display === 'flex') m.style.display = 'none';
   });
@@ -11841,6 +11916,31 @@ function setAllReferralCats(open){
   _referralCatOrder.forEach(function(t){ referralExpandedCats[t] = open; });
   renderReferralsTab();
 }
+// Free-text partner search — same contract as the vendor directory: multi-word terms
+// are AND-ed, and a numeric query matches the phone with formatting stripped.
+function referralSearchBlob(p) {
+  return [
+    p.partner_name, p.first_name, p.last_name, p.title, p.firm, p.partner_type,
+    p.email, p.website, p.city, p.state, p.council, p.council_role, p.credentials,
+    p.notes, p.warm_path, p.status, p.owner,
+    String(p.phone||'').replace(/\D/g,'')
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+function referralSearchQuery() {
+  var raw = (document.getElementById('r-filter-q')||{}).value || '';
+  raw = raw.trim().toLowerCase();
+  if (raw && /^[\d\s().+-]+$/.test(raw)) raw = raw.replace(/\D/g,'');
+  return raw;
+}
+function getFilteredReferrals() {
+  var q = referralSearchQuery();
+  if (!q) return referralDirectory.slice();
+  return referralDirectory.filter(function(p){
+    var blob = referralSearchBlob(p);
+    return q.split(/\s+/).every(function(t){ return !t || blob.indexOf(t) !== -1; });
+  });
+}
+
 function renderReferralsTab(){
   renderReferralStats();
   renderReferralLeaderboard();
@@ -11850,19 +11950,23 @@ function renderReferralsTab(){
       (REFERRAL_SYNC_URL ? 'No partners loaded yet — click “+ Add Partner” or “↻ Reload”.' : 'Set the Referral Partners URL in Settings, then add partners.') + '</div>';
     return;
   }
+  // An active search auto-expands every matching category, so a hit is never buried
+  // in a collapsed section (mirrors the vendor directory).
+  var q = referralSearchQuery();
+  var rows = getFilteredReferrals();
   var byType = {};
-  referralDirectory.forEach(function(p){ var t = String(p.partner_type||'').trim() || 'Uncategorized'; (byType[t]=byType[t]||[]).push(p); });
+  rows.forEach(function(p){ var t = String(p.partner_type||'').trim() || 'Uncategorized'; (byType[t]=byType[t]||[]).push(p); });
   var types = Object.keys(byType).sort();
   _referralCatOrder = types;
   var head = '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 8px;flex-wrap:wrap;gap:6px;">' +
-    '<span style="font-size:11px;color:var(--gray);">' + referralDirectory.length + ' partner' + (referralDirectory.length!==1?'s':'') + ' in ' + types.length + ' categor' + (types.length===1?'y':'ies') + '</span>' +
+    '<span style="font-size:11px;color:var(--gray);">' + (q ? 'Showing ' + rows.length + ' of ' + referralDirectory.length : referralDirectory.length) + ' partner' + (referralDirectory.length!==1?'s':'') + ' in ' + types.length + ' categor' + (types.length===1?'y':'ies') + '</span>' +
     '<span style="display:flex;gap:6px;"><button class="btn-s" onclick="setAllReferralCats(true)">Expand all</button><button class="btn-s" onclick="setAllReferralCats(false)">Collapse all</button></span>' +
   '</div>';
   var body = types.map(function(t, i){
     var ps = byType[t].slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
     var active = ps.filter(isActivePartner).length;
     var contacted = ps.filter(function(p){ return String(p.last_contacted||'').trim(); }).length;
-    var open = !!referralExpandedCats[t];
+    var open = !!q || !!referralExpandedCats[t];
     var activeTxt = active > 0
       ? '<span style="color:var(--ok-tx);font-weight:600;">' + active + ' active</span>'
       : '<span style="color:var(--gray);">0 active</span>';
@@ -11875,6 +11979,10 @@ function renderReferralsTab(){
       : '';
     return header + section;
   }).join('');
+  if (!rows.length) {
+    list.innerHTML = head + '<div class="card" style="text-align:center;color:var(--gray);font-size:12px;padding:1.5rem;">No partners match that search.</div>';
+    return;
+  }
   list.innerHTML = head + body;
 }
 // Status is a read-only, colour-coded badge on the list card — Do Not Use is red,
@@ -11926,6 +12034,47 @@ function referralStatusSelect(p, idAttr){
   return '<select onchange="setReferralStatusFromCard(\'' + idAttr + '\',this.value)" style="font-size:11px;font-weight:600;padding:3px 7px;border:1px solid var(--border-md);border-radius:4px;background:' + c.bg + ';color:' + c.tx + ';font-family:inherit;">' + opts + '</select>';
 }
 function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferral(id, { status: val }, 'Updating status…', 'Status updated ✓'); }
+
+// ─── QUICK EDIT (field) ─────────────────────────────────────────────────────
+// Contact-detail subset for working on the road, mirroring quickEditVendor. Status,
+// priority, channel and the prospecting intel stay on the full form.
+var REFERRAL_QUICK_MAP = {
+  'rq-title':'title', 'rq-firm':'firm', 'rq-phone':'phone', 'rq-email':'email',
+  'rq-website':'website', 'rq-city':'city', 'rq-notes':'notes'
+};
+function quickEditReferral(id) {
+  var p = lookupReferralById(id);
+  if (!p) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  document.getElementById('rq-id').value = String(id);
+  document.getElementById('rq-name').textContent = p.partner_name || 'Partner';
+  Object.keys(REFERRAL_QUICK_MAP).forEach(function(fid){ _setR(fid, p[REFERRAL_QUICK_MAP[fid]]); });
+  _setR('rq-phone', fmtPhoneDisplay(p.phone) || p.phone || '');
+  document.getElementById('r-quick-modal').style.display = 'flex';
+}
+function closeReferralQuickEdit(){ document.getElementById('r-quick-modal').style.display = 'none'; }
+function openFullReferralEditFromQuick() {
+  var id = document.getElementById('rq-id').value;
+  closeReferralQuickEdit();
+  if (id) editReferral(id);
+}
+function saveReferralQuickEdit() {
+  var id = document.getElementById('rq-id').value;
+  var p = lookupReferralById(id);
+  if (!p) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  var patch = {};
+  Object.keys(REFERRAL_QUICK_MAP).forEach(function(fid){
+    var key = REFERRAL_QUICK_MAP[fid];
+    var val = _getR(fid);
+    var cur = String(p[key] == null ? '' : p[key]).trim();
+    // Phone compared digit-wise so re-displaying it formatted isn't seen as an edit.
+    if (key === 'phone') { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
+    else if (val === cur) return;
+    patch[key] = val;
+  });
+  if (!Object.keys(patch).length) { closeReferralQuickEdit(); showSyncBadge('No changes'); return; }
+  closeReferralQuickEdit();
+  _quickWriteReferral(id, patch, 'Saving…', 'Partner updated ✓');
+}
 
 // Priority normalized to a clean High / Medium / Low badge. Reads either the simplified
 // words or the imported tier strings ("1 - Warm", "6 - Secondary"): tier 1–2 → High,
@@ -12009,7 +12158,8 @@ function referralCardHtml(p){
       '<input type="text" placeholder="What did you discuss?" onkeydown="if(event.key===\'Enter\'){logReferralContact(this,\'' + idAttr + '\');}" style="flex:1;min-width:0;font-size:11px;padding:5px 7px;border:1px solid var(--border-md);border-radius:4px;background:var(--white);font-family:inherit;">' +
       '<button class="btn-s" style="white-space:nowrap;" onclick="logReferralContact(this,\'' + idAttr + '\')">☎ Log outreach</button>' +
     '</div>';
-  var actions = '<button class="btn-s" onclick="editReferral(\'' + idAttr + '\')">Edit</button>';
+  var actions = '<button class="btn-s" onclick="quickEditReferral(\'' + idAttr + '\')">Quick edit</button>' +
+    '<button class="btn-s" onclick="editReferral(\'' + idAttr + '\')">Full edit</button>';
 
   var _st = String(p.status||'');
   var _accent = _st === 'Do Not Use' ? 'border-left:3px solid var(--err-tx);' : (_st === 'Dormant' ? 'border-left:3px solid var(--warn-tx);' : '');
@@ -14379,37 +14529,114 @@ function toggleContractorStatus(id) {
   renderContractors();
 }
 
+// Free-text crew search — same contract as the vendor and partner directories.
+function contractorSearchQuery() {
+  var raw = (document.getElementById('c-filter-q')||{}).value || '';
+  raw = raw.trim().toLowerCase();
+  if (raw && /^[\d\s().+-]+$/.test(raw)) raw = raw.replace(/\D/g,'');
+  return raw;
+}
+function contractorMatchesQuery(c, q) {
+  if (!q) return true;
+  var blob = [c.name, c.email, c.role, c.status, c.notes, c.bio, String(c.phone||'').replace(/\D/g,'')]
+    .filter(Boolean).join(' ').toLowerCase();
+  return q.split(/\s+/).every(function(t){ return !t || blob.indexOf(t) !== -1; });
+}
+
 function renderContractors() {
-  var allTC = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
-    .concat(contractors.filter(function(c){ return c.role==='TC'; }));
-  var allPS = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS'; })
-    .concat(contractors.filter(function(c){ return c.role==='PS'; }));
+  var q = contractorSearchQuery();
+  function pool(role) {
+    return DEFAULT_CONTRACTORS.filter(function(c){ return c.role===role; })
+      .concat(contractors.filter(function(c){ return c.role===role; }))
+      .filter(function(c){ return contractorMatchesQuery(c, q); });
+  }
+  var allTC = pool('TC');
+  var allPS = pool('PS');
 
   function cardHtml(c, isDefault) {
     var statusColors = {active:'b-ok', inactive:'b-warn', vetting:'b-info'};
+    var idAttr = esc(String(c.id)).replace(/'/g, "\\'");
+    // Contact line is tappable — this is the crew you're calling to ask where they
+    // are. Mirrors the vendor card: inline links plus a mobile-only thumb-sized row.
+    var cbits = [];
+    var ph = fmtPhoneDisplay(c.phone) || c.phone;
+    if (ph) cbits.push('☎ <a href="tel:' + esc(c.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(ph) + '</a>');
+    if (c.email) cbits.push('✉ <a href="mailto:' + esc(c.email) + '" style="color:var(--bronze);">' + esc(c.email) + '</a>');
+    var tapBits = [];
+    if (c.phone) {
+      tapBits.push('<a href="tel:' + esc(c.phone) + '" class="btn-p" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">☎ Call</a>');
+      tapBits.push('<a href="sms:' + esc(c.phone) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">✉ Text</a>');
+    }
+    if (c.email) tapBits.push('<a href="mailto:' + esc(c.email) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">@ Email</a>');
+    var tapRow = tapBits.length ? '<div class="vc-tap" style="gap:6px;margin:6px 0 2px;">' + tapBits.join('') + '</div>' : '';
+
     return '<div style="background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
-      '<div style="font-weight:600;font-size:13px;">' + c.name + (isDefault ? ' <span class="badge b-bronze">Team</span>' : '') + '</div>' +
-      '<div style="display:flex;gap:4px;align-items:center;">' +
-      '<span class="badge ' + (statusColors[c.status]||'b-info') + '">' + c.status + '</span>' +
-      '<button class="icon-btn" onclick="editContractor(\'' + c.id + '\')">Edit</button>' +
-      (!isDefault ? '<button class="icon-btn" onclick="toggleContractorStatus(\'' + c.id + '\')">Toggle</button>' : '') +
-      (!isDefault ? '<button class="icon-btn del" onclick="deleteContractor(\'' + c.id + '\')">✕</button>' : '') +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:6px;flex-wrap:wrap;">' +
+      '<div style="font-weight:600;font-size:13px;">' + esc(c.name||'—') + (isDefault ? ' <span class="badge b-bronze">Team</span>' : '') + '</div>' +
+      '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">' +
+      '<span class="badge ' + (statusColors[c.status]||'b-info') + '">' + esc(c.status||'—') + '</span>' +
+      '<button class="icon-btn" onclick="quickEditContractor(\'' + idAttr + '\')">Quick edit</button>' +
+      '<button class="icon-btn" onclick="editContractor(\'' + idAttr + '\')">Full edit</button>' +
+      (!isDefault ? '<button class="icon-btn" onclick="toggleContractorStatus(\'' + idAttr + '\')">Toggle</button>' : '') +
+      (!isDefault ? '<button class="icon-btn del" onclick="deleteContractor(\'' + idAttr + '\')">✕</button>' : '') +
       '</div></div>' +
-      '<div style="font-size:11px;color:var(--gray);">' +
-      (c.phone ? c.phone + '  ·  ' : '') + (c.email || '') +
-      '</div>' +
-      '<div style="font-size:11px;color:var(--gray);">Cost: $' + (c.rate||'—') + '/hr</div>' +
-      (c.notes ? '<div style="font-size:11px;color:var(--gray);margin-top:2px;font-style:italic;">' + c.notes + '</div>' : '') +
-      (c.bio && c.role === 'TC' ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;padding-top:4px;border-top:1px solid var(--border);line-height:1.5;">' + c.bio + '</div>' : '') +
+      (cbits.length ? '<div style="font-size:11px;color:var(--gray);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '') +
+      tapRow +
+      '<div style="font-size:11px;color:var(--gray);">Cost: $' + esc(String(c.rate||'—')) + '/hr</div>' +
+      (c.notes ? '<div style="font-size:11px;color:var(--gray);margin-top:2px;font-style:italic;">' + esc(c.notes) + '</div>' : '') +
+      (c.bio && c.role === 'TC' ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;padding-top:4px;border-top:1px solid var(--border);line-height:1.5;">' + esc(c.bio) + '</div>' : '') +
       '</div>';
   }
 
   var tcHtml = allTC.map(function(c){ return cardHtml(c, c.id.startsWith('default')); }).join('');
   var psHtml = allPS.map(function(c){ return cardHtml(c, c.id.startsWith('default')); }).join('');
 
-  document.getElementById('tc-list').innerHTML = tcHtml || '<div class="empty-state">No TCs yet.</div>';
-  document.getElementById('ps-list').innerHTML = psHtml || '<div class="empty-state">No PS contractors yet.</div>';
+  var noneTC = q ? 'No TCs match that search.' : 'No TCs yet.';
+  var nonePS = q ? 'No PS contractors match that search.' : 'No PS contractors yet.';
+  document.getElementById('tc-list').innerHTML = tcHtml || '<div class="empty-state">' + noneTC + '</div>';
+  document.getElementById('ps-list').innerHTML = psHtml || '<div class="empty-state">' + nonePS + '</div>';
+}
+
+// ─── CONTRACTOR QUICK EDIT (field) ──────────────────────────────────────────
+// Contractors live in the main sheet, split across DEFAULT_CONTRACTORS (the built-in
+// team, editable and persisted separately) and the `contractors` array. This patches
+// whichever holds the record, then reuses saveContractors() so the localStorage write
+// and the cross-device Sheet push both happen exactly as they do on the full form.
+function _lookupContractor(id) {
+  return DEFAULT_CONTRACTORS.concat(contractors).find(function(c){ return String(c.id) === String(id); }) || null;
+}
+function quickEditContractor(id) {
+  var c = _lookupContractor(id);
+  if (!c) return;
+  document.getElementById('cq-id').value = String(id);
+  document.getElementById('cq-name').textContent = c.name || 'Contractor';
+  document.getElementById('cq-phone').value  = fmtPhoneDisplay(c.phone) || c.phone || '';
+  document.getElementById('cq-email').value  = c.email || '';
+  document.getElementById('cq-rate').value   = c.rate || '';
+  document.getElementById('cq-status').value = c.status || 'active';
+  document.getElementById('cq-notes').value  = c.notes || '';
+  document.getElementById('c-quick-modal').style.display = 'flex';
+}
+function closeContractorQuickEdit(){ document.getElementById('c-quick-modal').style.display = 'none'; }
+function openFullContractorEditFromQuick() {
+  var id = document.getElementById('cq-id').value;
+  closeContractorQuickEdit();
+  if (id) editContractor(id);
+}
+function saveContractorQuickEdit() {
+  var id = document.getElementById('cq-id').value;
+  var c = _lookupContractor(id);
+  if (!c) return;
+  c.phone  = document.getElementById('cq-phone').value.trim();
+  c.email  = document.getElementById('cq-email').value.trim();
+  c.rate   = parseFloat(document.getElementById('cq-rate').value) || 0;
+  c.status = document.getElementById('cq-status').value;
+  c.notes  = document.getElementById('cq-notes').value.trim();
+  c.updatedAt = Date.now();  // recency stamp so this edit wins the cross-device merge
+  closeContractorQuickEdit();
+  saveContractors();
+  renderContractors();
+  rebuildDropdowns();  // status/name changes feed every TC/PS dropdown in the app
 }
 
 function getAllActiveTC() {
