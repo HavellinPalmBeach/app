@@ -20,12 +20,8 @@
  *   POST { type:'addPartner',    payload:{ fields } }              -> { ok:true, _row }
  *   POST { type:'updatePartner', payload:{ _row, partner_name, fields } } -> { ok:true }
  *
- * It also carries the Quo contact sync (see syncQuoContacts near the bottom). It is
- * deliberately NOT exposed over HTTP — it's run from the Apps Script editor, so a
- * push to the live directory is always a deliberate act rather than a stray request.
- *   Run ▸ testQuoAuth      proves the key + host, touches nothing
- *   Run ▸ dryRunQuoSync    prints the plan, writes nothing
- *   Run ▸ pushQuoSync      the only one that writes
+ * The Quo contact sync used to live here. It now sits in the `Quo` file of this same
+ * project, because it covers vendors and clients too and has to group them together.
  */
 
 var SHEET_NAME = 'Partners';
@@ -41,10 +37,9 @@ var COLUMNS = [
   'uid', 'updated_at', 'source',
   // Contact-logging note — owned by the card's ☎ Log outreach action (mirrors Vendors).
   'last_contact_note',
-  // Quo contact id, written back by the contact sync below. Owning the id locally is
-  // what makes the sync deterministic — see the note above syncQuoContacts. The
-  // external id it was created under is stored beside it, so an id is only ever reused
-  // for the same identity (see the reuse rule in syncQuoContacts).
+  // Written by the first version of the Quo sync, which cached each contact id here.
+  // The current sync derives that mapping from Quo itself, so these are now historical
+  // — kept because removing a column would be a schema change for no gain.
   'quo_contact_id', 'quo_external_id'
 ];
 
@@ -151,276 +146,12 @@ function doPost(e) {
   }
 }
 
-// ── QUO CONTACT SYNC ─────────────────────────────────────────────────────────
-// Pushes partners into Quo so the office line shows a name on caller ID. One way:
-// the sheet is the source of truth and Quo is a downstream mirror, because a
-// two-way sync would have a Quo edit and an app edit fight over the same record.
-//
-// Determinism comes from owning the Quo id locally. Each partner already carries a
-// stable `uid`, which goes up as Quo's `externalId`; the id Quo returns is written
-// back to `quo_contact_id`. A row with an id is PATCHed, a row without is POSTed.
-// That branch is ours, so it holds regardless of whether Quo's POST happens to
-// dedupe on externalId — a behaviour that isn't worth depending on either way.
-//
-// SETUP: Apps Script ▸ Project Settings ▸ Script Properties ▸ add QUO_API_KEY.
-// Never put the key in havellin.html — that file is served from public GitHub Pages.
-//
-// USAGE: Run ▸ dryRunQuoSync first and read the log. Nothing is written to Quo
-// until you run pushQuoSync.
-
-// Both CONFIRMED 2026-07-28 against the Authentication doc's curl example:
-//   curl --request GET --url https://api.quo.com/v1/phone-numbers \
-//        --header 'Authorization: YOUR_API_KEY'
-// The host moved to api.quo.com in the rebrand — the old api.openphone.com would have
-// failed in a way that reads like a bad key. The header carries the raw key with no
-// 'Bearer ' prefix, which is likewise a 401 if you get it wrong.
-var QUO_API_BASE = 'https://api.quo.com/v1';
-var QUO_AUTH_BEARER = false;
-
-var QUO_SOURCE = 'Havellin';
-var QUO_THROTTLE_MS = 250;     // polite spacing; well inside the 6-min execution limit
-var QUO_MAX_RETRIES = 4;
-
-function _quoKey() {
-  var k = PropertiesService.getScriptProperties().getProperty('QUO_API_KEY');
-  if (!k) throw new Error('QUO_API_KEY is not set in Script Properties.');
-  return k;
-}
-
-// Retries on 429 and on 5xx with exponential backoff. Returns { code, body }.
-function _quoFetch(method, path, payload) {
-  var opts = {
-    method: method,
-    muteHttpExceptions: true,
-    contentType: 'application/json',
-    headers: { Authorization: (QUO_AUTH_BEARER ? 'Bearer ' : '') + _quoKey() }
-  };
-  if (payload) opts.payload = JSON.stringify(payload);
-
-  var wait = 1000;
-  for (var attempt = 0; attempt <= QUO_MAX_RETRIES; attempt++) {
-    var res = UrlFetchApp.fetch(QUO_API_BASE + path, opts);
-    var code = res.getResponseCode();
-    if (code !== 429 && code < 500) {
-      var text = res.getContentText();
-      var parsed = null;
-      try { parsed = text ? JSON.parse(text) : null; } catch (e) { parsed = { raw: text }; }
-      return { code: code, body: parsed };
-    }
-    if (attempt === QUO_MAX_RETRIES) return { code: code, body: { error: 'retries exhausted' } };
-    Utilities.sleep(wait);
-    wait *= 2;
-  }
-}
-
-// US/Canada-centric E.164. Returns '' when there aren't enough digits to dial, which
-// is the signal to skip the row rather than push an unusable number.
-function _e164(raw) {
-  var s = String(raw == null ? '' : raw).trim();
-  if (!s) return '';
-  if (s.charAt(0) === '+') {
-    var kept = '+' + s.slice(1).replace(/\D/g, '');
-    return kept.length >= 8 ? kept : '';
-  }
-  var d = s.replace(/\D/g, '');
-  if (d.length === 11 && d.charAt(0) === '1') return '+' + d;
-  if (d.length === 10) return '+1' + d;
-  return '';
-}
-
-// Quo wants a name; a firm with no named contact still deserves a caller-ID hit, so
-// fall back to the firm rather than dropping the row.
-function _partnerToQuo(rec) {
-  var first = String(rec.first_name || '').trim();
-  var last = String(rec.last_name || '').trim();
-  if (!first && !last) first = String(rec.firm || rec.partner_name || '').trim();
-
-  var fields = { firstName: first, lastName: last };
-  var company = String(rec.firm || rec.partner_name || '').trim();
-  var role = String(rec.title || rec.partner_type || '').trim();
-  if (company) fields.company = company;
-  if (role) fields.role = role;
-
-  var phone = _e164(rec.phone);
-  if (phone) fields.phoneNumbers = [{ name: 'Work', value: phone }];
-  var email = String(rec.email || '').trim();
-  if (email) fields.emails = [{ name: 'Work', value: email }];
-
-  return { defaultFields: fields, externalId: String(rec.uid || ''), source: QUO_SOURCE };
-}
-
-// A switchboard shared by several partners becomes ONE contact named for the firm.
-// Naming it after any single partner would be wrong three times out of four on an
-// inbound call; naming it after the firm is right every time. The individuals keep
-// their own contacts whenever they have a direct line.
-function _firmToQuo(firm, phone) {
-  return {
-    defaultFields: {
-      firstName: firm,          // display name on caller ID — the firm, not a person
-      lastName: '',
-      company: firm,
-      role: 'Main line',
-      phoneNumbers: [{ name: 'Main', value: phone }]
-      // No email: a switchboard record has no one inbox behind it.
-    },
-    externalId: 'firm:' + phone,   // synthetic + stable; not borrowed from any partner
-    source: QUO_SOURCE
-  };
-}
-
-// dryRun true  -> returns the plan, writes nothing to Quo and nothing to the sheet.
-// dryRun false -> creates/updates in Quo and writes each id back to quo_contact_id.
-function syncQuoContacts(dryRun) {
-  var sh = _sheet();
-  var last = sh.getLastRow();
-  var idCol = COLUMNS.indexOf('quo_contact_id') + 1;
-  var extCol = COLUMNS.indexOf('quo_external_id') + 1;
-  sh.getRange(1, idCol).setValue('quo_contact_id');     // no-op once the header exists
-  sh.getRange(1, extCol).setValue('quo_external_id');
-  var plan = { ok: true, dryRun: !!dryRun, create: [], update: [], skip: [], firms: [], conflict: [], orphan: [], failed: [] };
-  if (last < 2) return plan;
-
-  var nCols = Math.max(COLUMNS.length, sh.getLastColumn());
-  var values = sh.getRange(2, 1, last - 1, nCols).getValues();
-
-  // Pass 1 — read the eligible rows and bucket them by dialable number.
-  var byPhone = {}, order = [];
-  for (var i = 0; i < values.length; i++) {
-    var row = values[i];
-    var rec = { _row: i + 2 };
-    for (var c = 0; c < COLUMNS.length; c++) rec[COLUMNS[c]] = (c < row.length ? row[c] : '');
-    if (String(rec.first_name).trim() === '' && String(rec.firm).trim() === '') continue;
-
-    rec._label = (String(rec.first_name || '') + ' ' + String(rec.last_name || '')).trim() ||
-                 String(rec.firm || '(unnamed)');
-    rec._phone = _e164(rec.phone);
-    rec._firm = String(rec.firm || rec.partner_name || '').trim();
-
-    if (!rec._phone) { plan.skip.push({ row: rec._row, name: rec._label, why: 'no dialable phone' }); continue; }
-    if (!String(rec.uid || '').trim()) { plan.skip.push({ row: rec._row, name: rec._label, why: 'no uid — run backfillIds first' }); continue; }
-
-    if (!byPhone[rec._phone]) { byPhone[rec._phone] = []; order.push(rec._phone); }
-    byPhone[rec._phone].push(rec);
-  }
-
-  // Pass 2 — one Quo contact per number, so inbound caller ID is never ambiguous.
-  for (var g = 0; g < order.length; g++) {
-    var phone = order[g];
-    var members = byPhone[phone];
-    var payload, entry;
-
-    if (members.length === 1) {
-      payload = _partnerToQuo(members[0]);
-      entry = { rows: [members[0]._row], name: members[0]._label, phone: phone, company: members[0]._firm, kind: 'person' };
-    } else {
-      // Only collapse to a firm when the members agree on who they are. If they don't,
-      // the shared number is a data problem — say so rather than invent a firm name.
-      var firms = {}, firmName = '';
-      members.forEach(function (m) { if (m._firm) { firms[m._firm] = 1; firmName = m._firm; } });
-      var distinct = Object.keys(firms);
-      if (distinct.length !== 1) {
-        plan.conflict.push({
-          phone: phone, names: members.map(function (m) { return m._label; }),
-          firms: distinct, why: 'shared number, no single firm — left unsynced'
-        });
-        continue;
-      }
-      payload = _firmToQuo(firmName, phone);
-      entry = { rows: members.map(function (m) { return m._row; }), name: firmName, phone: phone, company: firmName, kind: 'firm' };
-      plan.firms.push({ firm: firmName, phone: phone, folded: members.map(function (m) { return m._label; }) });
-    }
-
-    // Reuse a recorded id ONLY if it was created under this same external id. A row's
-    // stored id belongs to the identity it was synced as, not to the row — when four
-    // partners come off a shared switchboard onto direct dials, each still carries the
-    // firm's id, and reusing it blindly would have all four PATCH the firm contact in
-    // turn, each overwriting the last. A mismatch means "not mine": create fresh.
-    var wantExt = payload.externalId;
-    var existingId = '';
-    for (var m = 0; m < members.length && !existingId; m++) {
-      if (String(members[m].quo_external_id || '').trim() === wantExt) {
-        existingId = String(members[m].quo_contact_id || '').trim();
-      }
-    }
-    // Ids the group is walking away from. The contact still exists in Quo holding a
-    // number nobody claims here any more — reported so it can be deleted by hand.
-    // One entry per abandoned contact, not per row that referenced it — four partners
-    // leaving one switchboard leave one contact behind, not four.
-    members.forEach(function (mm) {
-      var hadExt = String(mm.quo_external_id || '').trim();
-      var hadId = String(mm.quo_contact_id || '').trim();
-      if (!hadExt || !hadId || hadExt === wantExt) return;
-      for (var o = 0; o < plan.orphan.length; o++) if (plan.orphan[o].contactId === hadId) return;
-      plan.orphan.push({ row: mm._row, name: mm._label, wasExternalId: hadExt, contactId: hadId });
-    });
-
-    if (dryRun) { (existingId ? plan.update : plan.create).push(entry); continue; }
-
-    var res = existingId
-      ? _quoFetch('patch', '/contacts/' + encodeURIComponent(existingId), payload)
-      : _quoFetch('post', '/contacts', payload);
-
-    if (res.code >= 200 && res.code < 300) {
-      var newId = (res.body && (res.body.id || (res.body.data && res.body.data.id))) || existingId;
-      // Stamp the id AND the identity it was created under on every member row, so a
-      // later run PATCHes once instead of re-creating the firm contact from whichever
-      // row happens to come first — and so a row that later changes identity can tell
-      // that the id it is holding is no longer its own.
-      if (newId) entry.rows.forEach(function (r) {
-        sh.getRange(r, idCol).setValue(newId);
-        sh.getRange(r, extCol).setValue(wantExt);
-      });
-      (existingId ? plan.update : plan.create).push(entry);
-    } else {
-      entry.code = res.code;
-      entry.error = res.body && (res.body.message || res.body.error || JSON.stringify(res.body).slice(0, 200));
-      plan.failed.push(entry);
-    }
-    Utilities.sleep(QUO_THROTTLE_MS);
-  }
-  return plan;
-}
-
-function _logQuoPlan(p) {
-  Logger.log((p.dryRun ? 'DRY RUN — nothing written.' : 'LIVE — pushed to Quo.') +
-    '  create=' + p.create.length + '  update=' + p.update.length +
-    '  skip=' + p.skip.length + '  conflict=' + p.conflict.length + '  failed=' + p.failed.length);
-  if (p.firms.length) Logger.log('  ' + p.firms.length + ' switchboard(s) synced as the firm, not a person:');
-  p.firms.forEach(function (f) { Logger.log('    FIRM    ' + f.phone + '  ' + f.firm + '  ← ' + f.folded.join(', ')); });
-  p.create.forEach(function (e) { Logger.log('  CREATE  [' + e.kind + '] ' + e.name + '  ' + e.phone); });
-  p.update.forEach(function (e) { Logger.log('  UPDATE  [' + e.kind + '] ' + e.name + '  ' + e.phone); });
-  p.skip.forEach(function (e) { Logger.log('  SKIP    row ' + e.row + '  ' + e.name + '  — ' + e.why); });
-  p.conflict.forEach(function (e) { Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why); });
-  if (p.orphan.length) Logger.log('  ' + p.orphan.length + ' contact(s) left behind in Quo — delete by hand if the number is dead:');
-  p.orphan.forEach(function (e) { Logger.log('    ORPHAN  ' + e.contactId + '  was ' + e.wasExternalId + '  (row ' + e.row + ', ' + e.name + ')'); });
-  p.failed.forEach(function (e) { Logger.log('  FAILED  ' + e.name + '  HTTP ' + e.code + '  ' + e.error); });
-  return p;
-}
-
-// Cheapest possible proof that the key and host are right: a read-only GET that
-// touches no contacts. Run this FIRST — it separates "auth is wrong" from "the sync
-// is wrong", which otherwise both surface as a wall of failures in the dry run.
-function testQuoAuth() {
-  var res = _quoFetch('get', '/phone-numbers', null);
-  if (res.code === 200) {
-    var list = (res.body && (res.body.data || res.body)) || [];
-    Logger.log('OK — authenticated against ' + QUO_API_BASE);
-    Logger.log('  ' + (list.length || 0) + ' phone number(s) on the workspace:');
-    (list.length ? list : []).forEach(function (n) {
-      Logger.log('    ' + (n.number || n.phoneNumber || '?') + '  ' + (n.name || ''));
-    });
-  } else if (res.code === 401 || res.code === 403) {
-    Logger.log('HTTP ' + res.code + ' — the key was rejected. Check QUO_API_KEY in ' +
-               'Project Settings ▸ Script Properties (exact name, no stray spaces).');
-  } else {
-    Logger.log('HTTP ' + res.code + ' — ' + JSON.stringify(res.body).slice(0, 300));
-  }
-  return res.code;
-}
-
-// Run these from the Apps Script editor. Dry run first, always.
-function dryRunQuoSync() { return _logQuoPlan(syncQuoContacts(true)); }
-function pushQuoSync() { return _logQuoPlan(syncQuoContacts(false)); }
+// ── QUO CONTACT SYNC ───────────────────────────────────────────────────────
+// Moved to the `Quo` file in this same project, which syncs partners, vendors and
+// clients together. It has to live in one place: grouping is global across all
+// three sources, so a number appearing in two sheets still becomes one contact.
+// Do NOT paste the old per-partner version back alongside it — Apps Script shares
+// global scope across files in a project, and the duplicate definitions collide.
 
 // ── CRM SYNC BACKFILL (one-time) ─────────────────────────────────────────────
 // Run ONCE from the Apps Script editor (Run ▸ backfillIds) after deploying this

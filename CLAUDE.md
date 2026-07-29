@@ -104,8 +104,32 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   "Main line") because naming it after one of them is wrong on most inbound calls.
   Members keep individual contacts whenever they have a direct line. If members of a
   shared number disagree on firm, it's reported as a conflict and left unsynced.
-- Dry run verified against the 79-row seed offline: 63 contacts (58 people + 5 firms)
-  from 79 rows, 8 skipped for no dialable phone, 0 conflicts. No UI button yet.
+- **LIVE since 2026-07-29.** First push created 63 partner contacts (58 people +
+  5 firms); verified from the Quo side, not just the log.
+- **Now covers all three directories.** The sync moved OUT of `referral-partners-backend.gs`
+  into `apps-script/quo-sync.gs`, which is added as a SECOND FILE (`Quo`) in the same
+  Apps Script project — partners via the bound sheet, vendors and jobs via openById.
+  One key, one project, one run. Never paste the old per-partner version back beside
+  it: Apps Script shares global scope across a project's files and they collide.
+- Grouping is **global across all three sources**, not per-sheet — a number in both the
+  vendor and client sheets is still one number, and two contacts holding it would
+  reintroduce the ambiguity the firm collapse exists to remove.
+- **No write-back any more.** The run starts by reading Quo for everything under our
+  sources and building externalId -> id. Derived state can't drift from what Quo holds,
+  and nothing is written to a source sheet — which matters for jobs, whose fields live
+  in a JSON blob owned by main-sync. `quo_contact_id`/`quo_external_id` in the Partners
+  sheet are now historical.
+- `source` is set per type (`Havellin Referral Partner` / `Vendor` / `Client`) because
+  list-contacts filters on it. The old flat `Havellin` value is still matched on read so
+  the original 63 update rather than duplicate.
+- Vendors with status `Do Not Use` are excluded — a vendor you decided not to call does
+  not belong in the dialer. Client names are split first/last, suffix-aware (`Pressly Jr.`,
+  `Hennessey III` keep the suffix on the surname).
+- **Tags are supported** — a workspace custom property, created in the Quo app, then
+  addressed by key. Run `listQuoCustomFields` (or `dumpQuoContact` on a contact with a
+  tag set by hand), paste the key into `QUO_TAGS_FIELD_KEY`, and tags flow on the next
+  push. Until then everything else works and the log says tags are off. The
+  `customFields` payload shape is UNVERIFIED against the live API.
 
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home
