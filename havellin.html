@@ -172,11 +172,20 @@ input:checked+.slider:before{transform:translateX(18px);}
 .rate-tbl th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);background:var(--tan);}
 .active-pill{display:inline-block;background:var(--gray-dk);color:var(--cream);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;}
 .jtbl{width:100%;border-collapse:collapse;}
-.d-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;}
-.d-grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px 16px;}
+/* Dashboard field grids. minmax(0,1fr) rather than a bare 1fr: the auto floor is
+   min-content, so one unbreakable value (a long rep email) would otherwise widen its
+   own column and squeeze its neighbours to nothing. See the grid trap note up top. */
+.d-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;}
+.d-grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 16px;}
+.d-grid2>*,.d-grid4>*{min-width:0;}
+/* Two half-width blocks side by side (probate attorney/executor, the hours-log
+   pair). A class rather than an inline grid so the phone rule can unstack it. */
+.d-split2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
 .df{margin-bottom:0;}
 .dfl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:2px;}
-.dfv{font-size:13px;font-weight:600;color:var(--gray-dk);}
+/* Field values are data, not prose — an email or a case number that can't fit its
+   column should break inside the word rather than spill over the next column. */
+.dfv{font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;}
 .d-sec-hdr{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--gray);}
 .fin-r{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px;}
 .fin-r:last-child{border-bottom:none;}
@@ -296,6 +305,28 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   .grid3,.grid4{grid-template-columns:repeat(2,minmax(0,1fr));}
   .card{padding:.85rem .9rem;}
 
+  /* The Client Dashboard's field grids were never stacked, so .d-grid4 still ran
+     four columns inside a ~339px card — about 80px each. Every value shattered:
+     "HVL-2607-RRC4" broke over three lines, "AUTHORIZED REP" and "LETTERS OF ADMIN"
+     ran together with no visible gutter, and the rep email overflowed its 80px track
+     straight across the name beside it. Two columns (~161px) is the widest that
+     actually fits, and it holds every label on one line. */
+  .d-grid4{grid-template-columns:repeat(2,minmax(0,1fr));}
+  /* .d-split2 goes single-file instead: it holds whole blocks (an attorney's four
+     fields, an hours-log progress bar), and halving 161px again to fit a nested
+     .d-grid2 inside gives ~68px per field — narrower than the labels themselves.
+     The inline gap has to be overridden or the stacked halves touch (gap:0 24px sets
+     no row gap, which is invisible only while they sit side by side). */
+  .d-split2{grid-template-columns:1fr;gap:12px!important;}
+  /* The lifecycle strip scrolls rather than reflows — stacking eight steps vertically
+     would cost most of a screen, and this card is deliberately hoisted above the fold
+     as the "where do we stand" glance. 78px a step is the narrowest that keeps a
+     caption off its neighbour. Both selectors have to out-specify .card div, which
+     sets flex-wrap:wrap (the strip would break into rows instead of scrolling) and
+     min-width:0 (the steps would collapse back to ~42px). */
+  .tbl-scroll .tl-strip{flex-wrap:nowrap;}
+  .tl-strip .tl-step{min-width:78px;}
+
   /* Modals become bottom sheets — anchored to the thumb, full width, and always
      scrollable. The inline width:NNNpx on individual boxes has to be overridden. */
   .modal-overlay{align-items:flex-end;}
@@ -357,7 +388,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      itself a flex item that grew to fit it, so 100% of a too-wide parent is still too
      wide. The inline width has to be overridden outright, so standalone controls go
      fluid on a phone. min-width:0 also releases the flexbox automatic minimum, which
-     is what lets iOS's wide native date/select widgets shrink at all. */
+     is what lets iOS's wide native date/select widgets shrink at all.
      Forcing width:100% is safe everywhere, including inside tables — the base rule
      already sizes controls that way, so a table cell's control simply fills its cell
      exactly as before. (Do NOT use width:auto as the table exception: auto is the
@@ -448,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 6:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.28 · 8:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6648,7 +6679,7 @@ function renderClientDashboard(jobId) {
     h += field('Property sale', job.probateSale||'—');
     h += field('Authorization', authOk ? '<span style="color:#1D9E75;">'+( job.executorAuth==='notneeded'?'Not required':'Received')+'</span>' : '<span style="color:#A32D2D;font-weight:600;">'+dot('#A32D2D')+'Pending</span>');
     h += '</div>';
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin-top:12px;">';
+    h += '<div class="d-split2" style="gap:0 24px;margin-top:12px;">';
     // Attorney
     h += '<div>';
     h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">Probate Attorney</div>';
@@ -6711,10 +6742,15 @@ function renderClientDashboard(jobId) {
     {name:'Final invoice', done:job.status==='closed', dt:(hav?fmtMoney(fin2):'—'), sub:'on completion', subColor:'var(--gray)', pay:true},
   ];
   if (job.svc==='probate') steps.push({name:'Court deadline', done:false, dt:fmtDate2(job.probateDeadline), active:false, deadline:true});
-  h += '<div style="border-top:0.5px solid var(--border);padding-top:14px;"><div style="display:flex;">';
+  // Eight steps (nine on probate) sharing the card width. On a phone that's ~42px a
+  // step against labels like "First deposit" and "$24,100", so every caption ran into
+  // the one beside it. The strip keeps its full-width proportional layout on a desk
+  // and scrolls sideways below the breakpoint — see .tl-strip in the phone block.
+  h += '<div style="border-top:0.5px solid var(--border);padding-top:14px;">';
+  h += '<div class="tbl-scroll"><div class="tl-strip" style="display:flex;">';
   steps.forEach(function(s, i){
     var isLast = i === steps.length-1;
-    h += '<div style="flex:1;position:relative;">';
+    h += '<div class="tl-step" style="flex:1;position:relative;">';
     if (!isLast) h += '<div style="position:absolute;top:9px;left:50%;width:100%;height:1.5px;background:'+(s.done?'#1D9E75':'var(--border)')+'"></div>';
     h += '<div style="display:flex;flex-direction:column;align-items:center;position:relative;">';
     var dotBg = s.deadline ? '#A32D2D' : (s.done ? '#1D9E75' : (s.active ? 'white' : 'white'));
@@ -6728,7 +6764,7 @@ function renderClientDashboard(jobId) {
     if (s.sub) h += '<div style="font-size:9px;color:'+(s.subColor||'var(--gray)')+';text-align:center;margin-top:1px;">'+s.sub+'</div>';
     h += '</div></div>';
   });
-  h += '</div></div>';  // close timeline flex + bar wrapper
+  h += '</div></div></div>';  // close timeline flex + .tbl-scroll + bar wrapper
   h += '</div>';  // close card
   // (Estimate total and the deposit/midpoint/final amounts now live on the timeline
   // steps above; the standalone payments grid and "Balance due" line are retired.)
@@ -6773,7 +6809,7 @@ function renderClientDashboard(jobId) {
   h += '<button class="btn-p" style="font-size:11px;padding:4px 12px;" onclick="goToJobLog('+jobId+')">+ Log Hours Today</button>';
   h += '</div>';
   // Progress bars
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+  h += '<div class="d-split2" style="gap:8px;margin-bottom:12px;">';
   [
     {label:'Transition Concierge', act: actuals.actTC, est: tcEst, pct: tcPct, color: tcBarColor},
     {label:'Property Specialists', act: actuals.actPS, est: psEst, pct: psPct, color: psBarColor}
@@ -6796,6 +6832,12 @@ function renderClientDashboard(jobId) {
   }
   // Log entries
   if (logs.length > 0) {
+    // Five columns of which four are fixed — 324px of track before Activity gets a
+    // pixel. It can't reflow on a phone, so it scrolls sideways inside .tbl-scroll
+    // rather than crushing Activity to nothing or dragging the document wider than
+    // the viewport. min-width is inline because the phone rule .card div{min-width:0}
+    // would otherwise outrank a class and collapse it right back.
+    h += '<div class="tbl-scroll"><div style="min-width:420px;">';
     h += '<div style="font-size:10px;display:grid;grid-template-columns:90px 1fr 70px 70px 70px;gap:6px;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding-bottom:6px;border-bottom:0.5px solid var(--border);">';
     h += '<span>Date</span><span>Activity</span><span style="text-align:right;">TC Hrs</span><span style="text-align:right;">PS Hrs</span><span style="text-align:right;">Total</span></div>';
     logs.slice().reverse().forEach(function(entry){
@@ -6809,6 +6851,7 @@ function renderClientDashboard(jobId) {
       h += '<span style="text-align:right;font-weight:600;">'+(tcH+psH).toFixed(1)+'</span>';
       h += '</div>';
     });
+    h += '</div></div>';   // close min-width wrapper + .tbl-scroll
   } else {
     h += '<div style="font-size:12px;color:var(--gray);text-align:center;padding:14px 0;">No hours logged yet for this job.</div>';
   }
