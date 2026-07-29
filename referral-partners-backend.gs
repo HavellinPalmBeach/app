@@ -39,8 +39,10 @@ var COLUMNS = [
   // Contact-logging note — owned by the card's ☎ Log outreach action (mirrors Vendors).
   'last_contact_note',
   // Quo contact id, written back by the contact sync below. Owning the id locally is
-  // what makes the sync deterministic — see the note above syncQuoContacts.
-  'quo_contact_id'
+  // what makes the sync deterministic — see the note above syncQuoContacts. The
+  // external id it was created under is stored beside it, so an id is only ever reused
+  // for the same identity (see the reuse rule in syncQuoContacts).
+  'quo_contact_id', 'quo_external_id'
 ];
 
 function setupSheet() {
@@ -267,8 +269,10 @@ function syncQuoContacts(dryRun) {
   var sh = _sheet();
   var last = sh.getLastRow();
   var idCol = COLUMNS.indexOf('quo_contact_id') + 1;
-  sh.getRange(1, idCol).setValue('quo_contact_id');   // no-op once the header exists
-  var plan = { ok: true, dryRun: !!dryRun, create: [], update: [], skip: [], firms: [], conflict: [], failed: [] };
+  var extCol = COLUMNS.indexOf('quo_external_id') + 1;
+  sh.getRange(1, idCol).setValue('quo_contact_id');     // no-op once the header exists
+  sh.getRange(1, extCol).setValue('quo_external_id');
+  var plan = { ok: true, dryRun: !!dryRun, create: [], update: [], skip: [], firms: [], conflict: [], orphan: [], failed: [] };
   if (last < 2) return plan;
 
   var nCols = Math.max(COLUMNS.length, sh.getLastColumn());
@@ -321,9 +325,29 @@ function syncQuoContacts(dryRun) {
       plan.firms.push({ firm: firmName, phone: phone, folded: members.map(function (m) { return m._label; }) });
     }
 
-    // Any id already recorded against the group identifies the contact to PATCH.
+    // Reuse a recorded id ONLY if it was created under this same external id. A row's
+    // stored id belongs to the identity it was synced as, not to the row — when four
+    // partners come off a shared switchboard onto direct dials, each still carries the
+    // firm's id, and reusing it blindly would have all four PATCH the firm contact in
+    // turn, each overwriting the last. A mismatch means "not mine": create fresh.
+    var wantExt = payload.externalId;
     var existingId = '';
-    for (var m = 0; m < members.length && !existingId; m++) existingId = String(members[m].quo_contact_id || '').trim();
+    for (var m = 0; m < members.length && !existingId; m++) {
+      if (String(members[m].quo_external_id || '').trim() === wantExt) {
+        existingId = String(members[m].quo_contact_id || '').trim();
+      }
+    }
+    // Ids the group is walking away from. The contact still exists in Quo holding a
+    // number nobody claims here any more — reported so it can be deleted by hand.
+    // One entry per abandoned contact, not per row that referenced it — four partners
+    // leaving one switchboard leave one contact behind, not four.
+    members.forEach(function (mm) {
+      var hadExt = String(mm.quo_external_id || '').trim();
+      var hadId = String(mm.quo_contact_id || '').trim();
+      if (!hadExt || !hadId || hadExt === wantExt) return;
+      for (var o = 0; o < plan.orphan.length; o++) if (plan.orphan[o].contactId === hadId) return;
+      plan.orphan.push({ row: mm._row, name: mm._label, wasExternalId: hadExt, contactId: hadId });
+    });
 
     if (dryRun) { (existingId ? plan.update : plan.create).push(entry); continue; }
 
@@ -333,9 +357,14 @@ function syncQuoContacts(dryRun) {
 
     if (res.code >= 200 && res.code < 300) {
       var newId = (res.body && (res.body.id || (res.body.data && res.body.data.id))) || existingId;
-      // Stamp the id on every member row, so a later run PATCHes once instead of
-      // re-creating the firm contact from whichever row happens to come first.
-      if (newId) entry.rows.forEach(function (r) { sh.getRange(r, idCol).setValue(newId); });
+      // Stamp the id AND the identity it was created under on every member row, so a
+      // later run PATCHes once instead of re-creating the firm contact from whichever
+      // row happens to come first — and so a row that later changes identity can tell
+      // that the id it is holding is no longer its own.
+      if (newId) entry.rows.forEach(function (r) {
+        sh.getRange(r, idCol).setValue(newId);
+        sh.getRange(r, extCol).setValue(wantExt);
+      });
       (existingId ? plan.update : plan.create).push(entry);
     } else {
       entry.code = res.code;
@@ -357,6 +386,8 @@ function _logQuoPlan(p) {
   p.update.forEach(function (e) { Logger.log('  UPDATE  [' + e.kind + '] ' + e.name + '  ' + e.phone); });
   p.skip.forEach(function (e) { Logger.log('  SKIP    row ' + e.row + '  ' + e.name + '  — ' + e.why); });
   p.conflict.forEach(function (e) { Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why); });
+  if (p.orphan.length) Logger.log('  ' + p.orphan.length + ' contact(s) left behind in Quo — delete by hand if the number is dead:');
+  p.orphan.forEach(function (e) { Logger.log('    ORPHAN  ' + e.contactId + '  was ' + e.wasExternalId + '  (row ' + e.row + ', ' + e.name + ')'); });
   p.failed.forEach(function (e) { Logger.log('  FAILED  ' + e.name + '  HTTP ' + e.code + '  ' + e.error); });
   return p;
 }

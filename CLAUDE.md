@@ -87,6 +87,16 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   so these could not be read from the docs — confirm against the Authentication page.
 - Also needs `QUO_API_KEY` in Script Properties. Not exposed over HTTP yet, by design:
   run `dryRunQuoSync` from the Apps Script editor first, then `pushQuoSync`.
+- **The app's tap-to-call/text buttons stay on `tel:` / `sms:` — do NOT route them to
+  Quo.** Decided 2026-07-28. In the field you're on a job and want your own cell: "hey,
+  I'm on site, where are you?" Quo is the deliberate opposite move — open the Quo app to
+  introduce yourself to a new vendor or partner from the office line and look official.
+  Two tools, two moments; wiring the app buttons to Quo would collapse them.
+- An id is reused only when the row's `quo_external_id` matches the identity being
+  synced now. Without that, four partners coming off a shared switchboard onto direct
+  dials would each PATCH the firm contact in turn, each overwriting the last. A contact
+  the directory walks away from is reported once as an `orphan` (Quo has no verified
+  DELETE — remove it by hand in the app if the number is dead).
 - **One Quo contact per NUMBER, not per partner.** A switchboard shared by several
   partners syncs as the firm (`externalId` `firm:+1…`, display name = firm, role
   "Main line") because naming it after one of them is wrong on most inbound calls.
