@@ -13,7 +13,7 @@
  * run — rather than three copies of this logic drifting apart in three projects.
  *
  *   Run ▸ testQuoAuth           proves the key + host, touches nothing
- *   Run ▸ listQuoCustomFields   prints custom-field keys (needed for tags)
+ *   Run ▸ testQuoTags           proves the tag payload on ONE contact
  *   Run ▸ dryRunQuoAll          prints the plan, writes nothing
  *   Run ▸ pushQuoAll            the only one that writes
  *
@@ -70,10 +70,11 @@ var QUO_JOBS_TAB      = 'Jobs';
 // is needed; the collector, name splitting and grouping are already built and tested.
 var QUO_SYNC_CLIENTS = false;
 
-// Tags are a workspace custom property, so they have to be created in the Quo app
-// first and then addressed by key. Run listQuoCustomFields, paste the key here,
-// and tags start flowing on the next push. Left blank, everything else still works.
-var QUO_TAGS_FIELD_KEY = '';
+// The workspace "Tags" custom property, read off a live contact 2026-07-29. It is an
+// opaque id rather than the display name, so renaming the property in the Quo app
+// will not break this. Its type is multi-select, which is why the value goes as a list.
+// Blank it to turn tagging off without changing anything else.
+var QUO_TAGS_FIELD_KEY = '6a6a05ce6910765c2ebc68b6';
 
 function _quoKey() {
   var k = PropertiesService.getScriptProperties().getProperty('QUO_API_KEY');
@@ -504,6 +505,37 @@ function dumpQuoContact(contactId) {
   Logger.log('HTTP ' + res.code);
   Logger.log(JSON.stringify(res.body, null, 2).slice(0, 3000));
   return res.body;
+}
+
+// Tag the FIRST already-synced vendor and read it straight back. The customFields
+// payload shape is the one part of this integration not taken from the API docs, so
+// it gets proven on a single contact before 199 of them depend on it. Sends the real
+// sync payload, not a hand-built one — including defaultFields, so a PATCH that
+// replaces rather than merges cannot blank the name while we are testing.
+function testQuoTags() {
+  if (!QUO_TAGS_FIELD_KEY) { Logger.log('QUO_TAGS_FIELD_KEY is empty — nothing to test.'); return; }
+  var existing = _quoLoadExisting();
+  var vendors = _collectVendors(), target = null;
+  for (var i = 0; i < vendors.length && !target; i++) {
+    if (vendors[i].phone && existing[vendors[i].extId]) target = vendors[i];
+  }
+  if (!target) { Logger.log('No already-synced vendor found — run pushQuoAll first.'); return; }
+
+  var id = existing[target.extId];
+  Logger.log('Tagging ' + target.label + '  ->  ' + JSON.stringify(target.tags));
+  var res = _quoFetch('patch', '/contacts/' + encodeURIComponent(id), _quoPayload(target));
+  Logger.log('PATCH -> HTTP ' + res.code);
+  if (res.code < 200 || res.code >= 300) {
+    Logger.log('  REJECTED: ' + JSON.stringify(res.body).slice(0, 400));
+    Logger.log('  The key is confirmed good, so this is the payload shape. Paste this log.');
+    return res.code;
+  }
+  var back = _quoFetch('get', '/contacts/' + encodeURIComponent(id), null);
+  var b = (back.body && back.body.data) || back.body || {};
+  Logger.log('read back — name: ' + JSON.stringify(b.defaultFields && b.defaultFields.firstName));
+  Logger.log('read back — customFields: ' + JSON.stringify(b.customFields));
+  Logger.log('If the tags are listed above AND the name survived, run pushQuoAll.');
+  return res.code;
 }
 
 function dryRunQuoAll() { return _logQuoAll(syncQuoAll(true)); }

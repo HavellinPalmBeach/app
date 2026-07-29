@@ -152,11 +152,14 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `category_group` (5 values) + `category` (42 values), giving a coarse and a precise
   filter without choosing between them; clients get `Client`. 53 distinct tags, max 3
   per contact. `role` stays as display text — it is free text and Quo cannot filter it.
-- **Tags are supported** — a workspace custom property, created in the Quo app, then
-  addressed by key. Run `listQuoCustomFields` (or `dumpQuoContact` on a contact with a
-  tag set by hand), paste the key into `QUO_TAGS_FIELD_KEY`, and tags flow on the next
-  push. Until then everything else works and the log says tags are off. The
-  `customFields` payload shape is UNVERIFIED against the live API.
+- **Tags wired 2026-07-29.** The workspace "Tags" property is a multi-select custom
+  field, key `6a6a05ce6910765c2ebc68b6` — an opaque id, NOT the display name, so
+  renaming the property in the Quo app is safe. Blank `QUO_TAGS_FIELD_KEY` to turn
+  tagging off without touching anything else.
+- The `customFields` payload shape is the only part not taken from the docs, so
+  `testQuoTags` proves it on ONE already-synced vendor (real sync payload, defaultFields
+  included so a replace-style PATCH can't blank a name) before 199 contacts depend on it.
+  Run it before the first tagged `pushQuoAll`.
 
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home
