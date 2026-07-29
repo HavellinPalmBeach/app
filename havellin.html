@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 2:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 12:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1303,7 +1303,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
-        <select id="inv-job" onchange="loadInvoice()" style="width:340px;font-size:12px;">
+        <select id="invoice-job" onchange="loadInvoice()" style="width:340px;font-size:12px;">
           <option value="">Select job</option>
         </select>
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">STAGE</span>
@@ -2243,6 +2243,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         <span style="color:var(--gray);">Original approved total</span>
         <span id="dm-original" style="font-weight:600;color:var(--gray-dk);">—</span>
       </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="color:var(--gray);" id="dm-basis-label">Discount</span>
+        <span id="dm-amount" style="font-weight:600;color:var(--ok-tx);">—</span>
+      </div>
       <div style="display:flex;justify-content:space-between;">
         <span style="color:var(--gray);">Revised total</span>
         <span id="dm-revised" style="font-weight:700;color:var(--bronze);">—</span>
@@ -2999,6 +3003,17 @@ var TARGET_DAYS = 10;
 var PRODUCTIVE_HRS_PER_DAY = 7;   // billable hours in a crew day (setup/travel/breaks excluded)
 var TC_ONSITE_ALPHA_DEFAULT = 0.5;
 var TC_ONSITE_ALPHA = TC_ONSITE_ALPHA_DEFAULT;   // settings-backed; see loadSettings()
+// A SAVED estimate is pinned to the α it was priced under, held here for as long as
+// that estimate is loaded. α is a Settings knob living in per-device localStorage, and
+// restoreEstimateToUI ends in calcAll() — so without this pin, reopening an estimate on
+// a device whose α differs silently reprices it: new concierge hours, new crew size,
+// new duration, new total, on a document the client may already have accepted. That is
+// the same failure the access / multiple-heirs toggles had before they were restored
+// from the snapshot (see restoreEstimateToUI). Changing α is a pricing-policy decision
+// and applies to NEW estimates; an existing quote never moves under it.
+// null = no estimate pinned, price at the current Settings value.
+var _estimateAlphaPin = null;
+function activeAlpha() { return _estimateAlphaPin != null ? _estimateAlphaPin : TC_ONSITE_ALPHA; }
 var TC_DAY_CAP = 10;              // concierge hrs/day above which a 2nd TC is recommended
 // Off-site coordination doesn't compress into the crew days — a two-day condo
 // downsizing still carries weeks of attorney, vendor and disposition contact around
@@ -3015,7 +3030,7 @@ function conciergeLoad(onsiteHrs, offsiteHrs, days) {
 }
 
 function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS) {
-  var a     = TC_ONSITE_ALPHA;
+  var a     = activeAlpha();   // pinned to the saved estimate's α when one is loaded
   var floor = ENGINE_FLOOR[svc] || 2;
   var W     = workPool > 0 ? workPool : 0;
   var n;
@@ -3759,6 +3774,13 @@ function calcAll() {
         + totPS.toFixed(1) + ' PS hrs — the rest moves to the concierge line, not billed twice. '
         + 'Adding a specialist shortens the job and lowers the estimate.';
     }
+    // When this estimate is pinned to a production rate that differs from the current
+    // Settings value, say so — otherwise its hours look inexplicably different from a
+    // fresh build on the same property and the estimator has no way to tell why.
+    if (_estimateAlphaPin != null && Math.abs(_estimateAlphaPin - TC_ONSITE_ALPHA) > 0.0001) {
+      effMsg += ' <em>Held at the ' + _alphaPct + '% concierge production rate this estimate was priced under; Settings is now '
+        + Math.round(TC_ONSITE_ALPHA * 100) + '%. A saved quote is never repriced by a settings change.</em>';
+    }
     crewBadge.innerHTML = '<div class="alert ' + effClass + '" style="margin-top:0;font-size:11px;">' + effMsg + '</div>';
     if (reasonWrap) reasonWrap.style.display = crewSize >= 3 ? 'block' : 'none';
   } else if (crewBadge) {
@@ -4311,43 +4333,52 @@ function saveIntake() {
   }, 800);
 }
 
-function clearIntakeForm() {
-  ['i-fname','i-lname','i-name','i-phone','i-email','i-addr','i-city','i-zip','i-sqft','i-beds','i-baths','i-half-baths','i-notes',
-   'i-walkthrough','i-start','i-completion',
-   'i-date-of-death','i-letters-date','i-probate-deadline',
-   'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
-   'i-probate-atty-phone','i-probate-atty-email',
-   'i-executor-fname','i-executor-lname','i-executor-phone','i-executor-email'].forEach(function(id){
-    var el = document.getElementById(id); if (el) el.value = '';
+// Every field on the Client Intake form, and the three that reset to something other
+// than blank. ONE list, shared by the post-save clear and the Clear button.
+//
+// These were two separately hand-maintained lists and they had drifted apart. The
+// post-save path was missing i-years-in-home, i-referredby, i-refpartner,
+// i-executor-role and the whole i-dest-* block, so the NEXT client created in the same
+// session silently inherited the previous client's tenure, referral attribution,
+// executor role and destination property. Two of those feed pricing directly —
+// yearsInHome drives tenureMultiplier() (up to x1.30 on interior load) and destSqft
+// drives move-management labour — so the leak produced wrong money, not just wrong
+// text. The Clear button's list was missing a different five.
+//
+// Add new intake fields HERE and both paths stay correct.
+var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no' };
+var INTAKE_FIELDS = [
+  'i-svc', 'i-fname', 'i-lname', 'i-phone', 'i-email', 'i-addr', 'i-city', 'i-zip',
+  'i-src', 'i-referredby', 'i-refpartner',
+  'i-executor-fname', 'i-executor-lname', 'i-executor-role', 'i-executor-phone', 'i-executor-email',
+  'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
+  'i-probate-atty-phone', 'i-probate-atty-email',
+  'i-date-of-death', 'i-letters-date', 'i-probate-case', 'i-probate-deadline', 'i-probate-sale',
+  'i-notes', 'i-ptype', 'i-tc',
+  'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
+  'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
+  'i-pri', 'i-re', 'i-prem', 'i-doclevel',
+  'i-dest-addr', 'i-dest-city', 'i-dest-zip', 'i-dest-sqft', 'i-dest-beds', 'i-dest-baths'
+];
+
+// Reset the intake form to its blank state.
+function resetIntakeFields() {
+  INTAKE_FIELDS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = INTAKE_FIELD_DEFAULTS[id] || '';
   });
-  var _pd = document.getElementById('i-probate-deadline'); if (_pd) delete _pd.dataset.userEdited;
-  var _dfb = document.getElementById('i-deadline-fb'); if (_dfb) _dfb.textContent = '';
-  ['i-svc','i-ptype','i-src','i-tc','i-pri','i-probate-sale','i-site-visit-by','i-home-value','i-doclevel'].forEach(function(id){
-    var el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('i-pri').value = 'normal';
-  document.getElementById('i-re').value = 'unknown';
-  document.getElementById('i-prem').value = 'no';
-  var pf = document.getElementById('probate-fields');
-  if (pf) pf.style.display = 'none';
-  document.getElementById('i-fb').innerHTML = '';
+  var pd = document.getElementById('i-probate-deadline'); if (pd) delete pd.dataset.userEdited;
+  var dfb = document.getElementById('i-deadline-fb'); if (dfb) dfb.textContent = '';
+  var fb = document.getElementById('i-fb'); if (fb) fb.innerHTML = '';
+  // Re-collapse the conditional blocks (probate, authorized rep, downsizing
+  // destination) and re-enable the phone/email fields off the now-blank service type,
+  // rather than hiding one section by hand and leaving the rest showing.
+  if (typeof toggleIntakeFields === 'function') toggleIntakeFields();
 }
-function clearIntake() {
-  ['i-fname','i-lname','i-phone','i-email','i-addr','i-city','i-notes','i-sqft','i-years-in-home','i-beds','i-baths','i-half-baths',
-   'i-date-of-death','i-letters-date','i-probate-deadline',
-   'i-probate-case','i-probate-atty-fname','i-probate-atty-lname','i-probate-atty-firm',
-   'i-probate-atty-phone','i-probate-atty-email',
-   'i-executor-fname','i-executor-lname','i-executor-phone','i-executor-email'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-  var _pd2 = document.getElementById('i-probate-deadline'); if (_pd2) delete _pd2.dataset.userEdited;
-  var _dfb2 = document.getElementById('i-deadline-fb'); if (_dfb2) _dfb2.textContent='';
-  var erEl = document.getElementById('i-executor-role'); if(erEl) erEl.value='';
-  ['i-zip','i-src','i-svc','i-ptype','i-tc','i-start','i-home-value','i-doclevel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-  ['i-dest-addr','i-dest-city','i-dest-zip','i-dest-sqft','i-dest-beds','i-dest-baths'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-  document.getElementById('i-pri').value='normal';
-  document.getElementById('i-re').value='unknown';
-  document.getElementById('i-prem').value='no';
-  document.getElementById('i-fb').innerHTML='';
-}
+
+// Called after a successful save, and by the Clear button. Same job, one implementation.
+function clearIntakeForm() { resetIntakeFields(); }
+function clearIntake()     { resetIntakeFields(); }
 
 // ─── ESTIMATE SAVE ────────────────────────────────────────────────────────────
 // Synchronously drop the previously-loaded job's rooms, vendors, and Home Prep items
@@ -4359,6 +4390,10 @@ function clearIntake() {
 // stale). The async applyOpenedEstimate then fills in the real saved estimate.
 function neutralizeEstimateView() {
   window._suppressEstimateAutoSave = true;
+  // Drop any pinned α from the previously-loaded estimate. If the job being opened
+  // has a saved estimate, restoreEstimateToUI re-pins it from that record; if it
+  // doesn't, this is a fresh build and should price at the current Settings value.
+  _estimateAlphaPin = null;
   clearAllRooms();
   resetEstimateExtras();
   window._suppressEstimateAutoSave = false;
@@ -4514,6 +4549,7 @@ function applyOpenedEstimate(jobId, job, status) {
   // No saved estimate — clear all rooms AND the non-room extras (package, third-
   // party vendors, home prep) so this new client starts clean instead of inheriting
   // the last estimate's selections.
+  _estimateAlphaPin = null;   // fresh build — price at the current Settings α
   window._suppressEstimateAutoSave = true;
   clearAllRooms();
   resetEstimateExtras();
@@ -4557,6 +4593,7 @@ function clearEstimateTab() {
   vehiclesData = [];
   renderVehicles();
   resetEstimateExtras();   // package + third-party vendors + home prep
+  _estimateAlphaPin = null;   // nothing loaded — back to the current Settings α
   currentEstimate = null;
   estimateApproved = false;
   estimateSubmitted = false;
@@ -5509,10 +5546,39 @@ function markEstimateSent() {
   showSyncBadge('Estimate marked as sent ✓');
 }
 
+// Resolve a proposed discount % into { original, discount, revised } using the SAME
+// base the estimator and the invoice use, so the modal's preview and the figure that
+// actually gets applied can never diverge.
+//
+// HOURLY JOBS discount the LABOR fees only. That is what calcAll() does
+// (laborBase = tcFee + psFee), what renderInvoice() bills against (_netLabor), and
+// what the client estimate tells the client ("Applied to Havellin labor fees"). This
+// modal used to discount the full Havellin total — labor PLUS moving materials, the
+// 15% vendor SMF and any prep fee — so a 10% offer took more off the approved total
+// than the invoice later credited, and the client was billed above what they accepted.
+//
+// FIXED-PRICE JOBS have no client-facing labor lines: the flat fee IS the whole
+// Havellin charge, and the client estimate suppresses the discount rows entirely for
+// them. So the discount is baked straight into the fee rather than carried as a
+// percentage — which also keeps calcAll() from dropping it, since it ignores
+// discountPct in fixed mode and just echoes fixedAmount.
+function discountPreview(est, pct) {
+  if (!est) return { original: 0, discount: 0, revised: 0, fixed: false };
+  pct = Math.min(30, Math.max(0, pct || 0));
+  if (est.fixedPrice) {
+    var baseFixed = Math.round(est.fixedAmount || est.havellinTotal || 0);
+    var dFixed = Math.round(baseFixed * pct / 100);
+    return { original: baseFixed, discount: dFixed, revised: baseFixed - dFixed, fixed: true };
+  }
+  var fullTotal = Math.round(est.havellinTotalFull || (est.havellinTotal + (est.discountAmt || 0)));
+  var laborBase = Math.round((est.tcFee || 0) + (est.psFee || 0));
+  var d = Math.round(laborBase * pct / 100);
+  return { original: fullTotal, discount: d, revised: fullTotal - d, fixed: false };
+}
+
 function openDiscountModal() {
   if (!currentEstimate) return;
-  var baseTotal = currentEstimate.havellinTotalFull || (currentEstimate.havellinTotal + (currentEstimate.discountAmt || 0));
-  document.getElementById('dm-original').textContent = '$' + Math.round(baseTotal).toLocaleString();
+  document.getElementById('dm-original').textContent = '$' + discountPreview(currentEstimate, 0).original.toLocaleString();
   document.getElementById('dm-pct').value = currentEstimate.discountPct > 0 ? currentEstimate.discountPct : 5;
   updateDiscountModal();
   document.getElementById('discount-modal').style.display = 'flex';
@@ -5521,11 +5587,15 @@ function openDiscountModal() {
 
 function updateDiscountModal() {
   if (!currentEstimate) return;
-  var baseTotal = currentEstimate.havellinTotalFull || (currentEstimate.havellinTotal + (currentEstimate.discountAmt || 0));
   var pct = Math.min(30, Math.max(0, parseInt(document.getElementById('dm-pct').value) || 0));
-  var newAmt = Math.round(baseTotal * pct / 100);
-  var newTotal = Math.round(baseTotal - newAmt);
-  document.getElementById('dm-revised').textContent = '$' + newTotal.toLocaleString();
+  var p = discountPreview(currentEstimate, pct);
+  // Name the base explicitly — a manager approving this needs to see that on an
+  // hourly job the % comes off labor, not off materials and vendor fees too.
+  var basisEl = document.getElementById('dm-basis-label');
+  if (basisEl) basisEl.textContent = p.fixed ? 'Discount (fixed fee)' : 'Discount (labor fees only)';
+  var amtEl = document.getElementById('dm-amount');
+  if (amtEl) amtEl.textContent = p.discount > 0 ? '- $' + p.discount.toLocaleString() : '—';
+  document.getElementById('dm-revised').textContent = '$' + p.revised.toLocaleString();
 }
 
 function closeDiscountModal() {
@@ -5536,15 +5606,25 @@ function applyDiscountRevision() {
   if (!currentEstimate) return;
   var pct = Math.min(30, Math.max(1, parseInt(document.getElementById('dm-pct').value) || 0));
   if (!pct) { alert('Enter a discount % between 1 and 30.'); return; }
-  var baseTotal = currentEstimate.havellinTotalFull || (currentEstimate.havellinTotal + (currentEstimate.discountAmt || 0));
-  var newDiscountAmt = Math.round(baseTotal * pct / 100);
-  var newHavellinTotal = baseTotal - newDiscountAmt;
+  // Same helper the modal previews with, so what the manager saw is what gets applied.
+  var p = discountPreview(currentEstimate, pct);
+  var baseTotal = p.original;
+  var newDiscountAmt = p.discount;
+  var newHavellinTotal = p.revised;
   // Store previous approved total for the re-approval banner
   currentEstimate.prevApprovedTotal = currentEstimate.havellinTotal;
-  currentEstimate.discountPct = pct;
-  currentEstimate.discountAmt = newDiscountAmt;
+  if (p.fixed) {
+    // Baked into the flat fee — see discountPreview. discountPct stays 0 so a later
+    // recompute can't apply it a second time on top of the reduced fee.
+    currentEstimate.fixedAmount = newHavellinTotal;
+    currentEstimate.discountPct = 0;
+    currentEstimate.discountAmt = 0;
+  } else {
+    currentEstimate.discountPct = pct;
+    currentEstimate.discountAmt = newDiscountAmt;
+    currentEstimate.havellinTotalFull = baseTotal;
+  }
   currentEstimate.havellinTotal = newHavellinTotal;
-  currentEstimate.havellinTotalFull = baseTotal;
   // Recalculate grandTotal (havellinTotal + non-labor costs unchanged)
   var nonLabor = (currentEstimate.grandTotal || 0) - ((currentEstimate.prevApprovedTotal || 0));
   currentEstimate.grandTotal = newHavellinTotal + nonLabor;
@@ -5983,6 +6063,15 @@ function editEstimateForJob(jobId) {
 
 function restoreEstimateToUI(est) {
   if (!est || !est.rooms) return;
+
+  // Pin the concierge production rate to whatever this estimate was priced under, so
+  // the calcAll() at the end of this function reproduces the saved figures instead of
+  // repricing them against this device's Settings value. See _estimateAlphaPin.
+  // Estimates saved before α was stamped (no tcAlpha) fall back to the default it was
+  // introduced with, NOT the current setting — same reasoning: don't move an old quote.
+  _estimateAlphaPin = (typeof est.tcAlpha === 'number' && isFinite(est.tcAlpha) && est.tcAlpha >= 0)
+    ? est.tcAlpha
+    : (est.hoursModel === 'v4-working-supervisor' ? TC_ONSITE_ALPHA_DEFAULT : null);
 
   // Set service type (read-only display)
   var svcEl = document.getElementById('e-svc');
@@ -6920,7 +7009,7 @@ function docPdf(jobId, docType) {
     if (sel2) { sel2.value = jobId; loadAgreement(); }
     navToPanel('agreement', 4);
   } else if (docType === 'invoice') {
-    var sel3 = document.getElementById('inv-job');
+    var sel3 = document.getElementById('invoice-job');
     if (sel3) { sel3.value = jobId; loadInvoice(); }
     navToPanel('invoice', 6);
     setTimeout(function(){ printInvoice(); }, 400);
@@ -9931,7 +10020,12 @@ function defaultInvStage(job) {
 }
 
 function loadInvoice() {
-  var jobId = parseInt(document.getElementById('inv-job').value);
+  // NOTE: 'invoice-job' — NOT 'inv-job', which is the Estate Inventory tab's client
+  // picker. The two shared an id until 2026-07-29; because the Inventory panel is
+  // earlier in the document, getElementById always returned that one, so the Invoice
+  // tab's own picker was never populated and selecting a job here did nothing.
+  var invSel = document.getElementById('invoice-job');
+  var jobId = invSel ? parseInt(invSel.value) : 0;
   currentInvJobId = jobId || null;
   invApproved = false;
   var job = jobs.find(function(j){ return j.id === currentInvJobId; });
@@ -12830,7 +12924,7 @@ function openInvoiceFor(jobId, stage) {
   stage = stage || 'midpoint';
   var navBtn = document.querySelector('.nb[onclick*="\'invoice\'"]');
   if (navBtn) showPanel('invoice', navBtn);
-  var jobSel = document.getElementById('inv-job');
+  var jobSel = document.getElementById('invoice-job');
   if (jobSel) jobSel.value = String(jobId);
   loadInvoice();
   var stageSel = document.getElementById('inv-stage');
@@ -13766,17 +13860,17 @@ function createDriveJobFolder(job) {
 // ─── POPULATE SELECTS FOR NEW PANELS ─────────────────────────────────────────
 function populateLogAndInvSelects() {
   var selLog  = document.getElementById('log-job');
-  var selInv  = document.getElementById('inv-job');
+  var selInv  = document.getElementById('invoice-job');
   var selPlan = document.getElementById('plan-job');
-  var curInv = selInv.value, curPlan = selPlan ? selPlan.value : '';
-  selInv.innerHTML  = '<option value="">Select job</option>';
+  var curInv = selInv ? selInv.value : '', curPlan = selPlan ? selPlan.value : '';
+  if (selInv) selInv.innerHTML  = '<option value="">Select job</option>';
   if (selPlan) selPlan.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
     var opt = '<option value="'+j.id+'">'+esc(j.name||('Job '+j.id))+(j.hvlId?' · '+esc(j.hvlId):'')+'</option>';
-    selInv.innerHTML  += opt;
+    if (selInv) selInv.innerHTML += opt;
     if (selPlan) selPlan.innerHTML += opt;
   });
-  if (curInv)  selInv.value  = curInv;
+  if (selInv && curInv) selInv.value = curInv;
   if (selPlan && curPlan) selPlan.value = curPlan;
 }
 
@@ -13856,7 +13950,10 @@ function saveSettings() {
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
     localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));
   } catch(e) {}
-  if (typeof calcAll === 'function') calcAll();   // reprice against the new production rate
+  // Reprice against the new production rate. Note this only moves a FRESH build — an
+  // estimate loaded from a saved record stays pinned to the α it was priced under
+  // (see _estimateAlphaPin), so a settings change can't silently restate a live quote.
+  if (typeof calcAll === 'function') calcAll();
   document.getElementById('settings-modal').style.display = 'none';
   showSyncBadge('Settings saved \u2713');
   loadVendorDirectory();   // pull the directory right away when the URL is set/changed
