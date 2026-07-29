@@ -145,6 +145,13 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   duplicate vendor rows — Alicia Weaver (rows 4 + 15) and Gander & White (rows 28 + 142);
   and O'Hara Landscape & O'Hara Pest Control share +1 561-655-9011, so that number is
   reported as a conflict and left unsynced until one of them gets its own line.
+- **Tag taxonomy** (built from closed-list fields only — `title` is deliberately NOT
+  tagged: 54 distinct free-text values across 79 partners would be 54 unfilterable tags):
+  partners get `Referral Partner` + `partner_type` title-cased (Estate Attorney 35,
+  Wealth Manager 22, Trust Officer 21, Allied Vendor 1); vendors get `Vendor` +
+  `category_group` (5 values) + `category` (42 values), giving a coarse and a precise
+  filter without choosing between them; clients get `Client`. 53 distinct tags, max 3
+  per contact. `role` stays as display text — it is free text and Quo cannot filter it.
 - **Tags are supported** — a workspace custom property, created in the Quo app, then
   addressed by key. Run `listQuoCustomFields` (or `dumpQuoContact` on a contact with a
   tag set by hand), paste the key into `QUO_TAGS_FIELD_KEY`, and tags flow on the next

@@ -124,6 +124,28 @@ function _normKey(h) {
   return String(h).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
+// partner_type is stored sentence-case ('Estate attorney'); vendor categories are
+// already title-case ('Wine Appraiser'). Tags from both sit in one list, so they are
+// normalised to match rather than reading as two different conventions.
+function _titleCase(s) {
+  return String(s == null ? '' : s).trim().toLowerCase().replace(/\b[a-z]/g, function (m) {
+    return m.toUpperCase();
+  });
+}
+
+// Tag lists are built from several fields, any of which can be blank or repeat the
+// one before it. Blank tags and duplicates are both noise on a contact card.
+function _tags() {
+  var out = [], seen = {};
+  for (var i = 0; i < arguments.length; i++) {
+    var t = String(arguments[i] == null ? '' : arguments[i]).trim();
+    if (!t || seen[t.toLowerCase()]) continue;
+    seen[t.toLowerCase()] = 1;
+    out.push(t);
+  }
+  return out;
+}
+
 // Read a tab into objects keyed by its own header row, so a column added or moved
 // in any of the three sheets can't silently shift the field this sync reads.
 function _readTab(ss, tabName) {
@@ -198,7 +220,10 @@ function _collectPartners() {
       role: String(r.title || r.partner_type || '').trim(),
       phone: _e164(r.phone), email: String(r.email || '').trim(),
       src: QUO_SRC_PARTNER, srcRow: r._row, kind: 'partner',
-      tags: ['Referral Partner']
+      // partner_type is a closed list of four values, so it makes a filterable tag.
+      // title is deliberately NOT tagged — 54 distinct free-text values across 79 rows
+      // would be 54 tags nobody can filter by.
+      tags: _tags('Referral Partner', _titleCase(r.partner_type))
     });
   }
   return out;
@@ -215,8 +240,9 @@ function _collectVendors() {
     if (String(r.status || '').trim().toLowerCase().indexOf('do not use') === 0) continue;
     var first = String(r.contact_first || '').trim(), lastN = String(r.contact_last || '').trim();
     var cat = String(r.category || '').trim();
-    var tags = ['Vendor'];
-    if (cat) tags.push(cat);
+    // Group and category both go on, giving a coarse filter (the 5 groups) and a
+    // precise one (42 categories) without having to pick which matters more.
+    var tags = _tags('Vendor', r.category_group, cat);
     out.push({
       // The sheet carries a UID per vendor (verified populated and distinct on all
       // 152 rows), so identity comes from that rather than the row index — a cleared
