@@ -331,10 +331,10 @@ function _quoPayload(rec) {
   return p;
 }
 
-function _firmPayload(company, phone, src, tags) {
+function _firmPayload(company, phone, src, tags, role) {
   var p = {
     defaultFields: {
-      firstName: company, lastName: '', company: company, role: 'Main line',
+      firstName: company, lastName: '', company: company, role: role || 'Main line',
       phoneNumbers: [{ name: 'Main', value: phone }]
     },
     externalId: 'firm:' + phone, source: src
@@ -349,7 +349,7 @@ function _firmPayload(company, phone, src, tags) {
 function syncQuoAll(dryRun) {
   var plan = {
     ok: true, dryRun: !!dryRun, counts: {},
-    create: [], update: [], skip: [], firms: [], dupe: [], conflict: [], stale: [], failed: []
+    create: [], update: [], skip: [], firms: [], merged: [], conflict: [], stale: [], failed: []
   };
 
   var partners = _collectPartners(), vendors = _collectVendors();
@@ -393,25 +393,44 @@ function syncQuoAll(dryRun) {
         srcs[m.src] = 1;
         (m.tags || []).forEach(function (t) { tags[t] = 1; });
       });
-      if (Object.keys(names).length !== 1) {
+      // Several business names on one number is usually one operation trading under
+      // more than one banner — O'Hara Landscape and O'Hara Pest Control answer the
+      // same line. Leaving it unsynced meant neither was reachable at all, which is a
+      // worse outcome than a long display name, so the contact carries every name and
+      // every category. Still reported: two genuinely unrelated businesses sharing a
+      // line is a data problem, and this is where you would see it.
+      var distinctNames = Object.keys(names);
+      if (distinctNames.length !== 1) {
         plan.conflict.push({
           phone: phone, names: members.map(function (m) { return m.label + ' (' + m.kind + ')'; }),
-          companies: Object.keys(names), why: 'shared number, no single owner — left unsynced'
+          companies: distinctNames,
+          why: 'one number, several business names — synced under the combined name'
         });
-        continue;
       }
-      // Same company AND same person on one number is not a switchboard — it is the
-      // same record entered twice. Collapsing it to a "Main line" org contact would
-      // paper over a duplicate row, so sync one of them as the person and say so.
+      // Same company AND same person on one number is not a switchboard — it is one
+      // vendor listed on several rows. The directory carries one category per row, so
+      // two rows is how a vendor that does two things is expressed (Prestige Estate
+      // Services appraises both antiques and art; Gander & White does storage and
+      // specialty packing). Keeping only the first row's category would throw half of
+      // what they do on the floor, so the rows merge: every category becomes a tag,
+      // and the role names all of them.
       var labels = {};
       members.forEach(function (m) { labels[m.label] = 1; });
       if (Object.keys(labels).length === 1) {
-        plan.dupe.push({
-          phone: phone, name: members[0].label, company: company,
-          rows: members.map(function (m) { return m.kind + ' row ' + m.srcRow; })
+        var merged = {}, roles = [], tagArgs = [];
+        for (var f in members[0]) if (Object.prototype.hasOwnProperty.call(members[0], f)) merged[f] = members[0][f];
+        members.forEach(function (m) {
+          if (m.role && roles.indexOf(m.role) < 0) roles.push(m.role);
+          (m.tags || []).forEach(function (t) { tagArgs.push(t); });
         });
-        payload = _quoPayload(members[0]);
-        entry = { name: members[0].label, phone: phone, kind: members[0].kind, ext: payload.externalId };
+        merged.role = roles.join(' / ');
+        merged.tags = _tags.apply(null, tagArgs);
+        plan.merged.push({
+          phone: phone, name: merged.label, company: company, roles: roles,
+          tags: merged.tags, rows: members.map(function (m) { return m.kind + ' row ' + m.srcRow; })
+        });
+        payload = _quoPayload(merged);
+        entry = { name: merged.label, phone: phone, kind: merged.kind, ext: payload.externalId };
         var existingDup = existing[payload.externalId] || '';
         delete unseen[payload.externalId];
         if (dryRun) { (existingDup ? plan.update : plan.create).push(entry); continue; }
@@ -423,10 +442,17 @@ function syncQuoAll(dryRun) {
         Utilities.sleep(QUO_THROTTLE_MS);
         continue;
       }
+      // One name on the number reads as a switchboard, so the role stays "Main line".
+      // Several names means the line answers for several trades, and naming them is
+      // more use on an incoming call than the words "Main line".
+      var orgName = distinctNames.length === 1 ? company : distinctNames.join(' / ');
+      var orgRoles = [];
+      members.forEach(function (m) { if (m.role && orgRoles.indexOf(m.role) < 0) orgRoles.push(m.role); });
       var srcList = Object.keys(srcs);
-      payload = _firmPayload(company, phone, srcList.length === 1 ? srcList[0] : QUO_SRC_PARTNER, Object.keys(tags));
-      entry = { name: company, phone: phone, kind: 'firm', ext: payload.externalId };
-      plan.firms.push({ company: company, phone: phone, folded: members.map(function (m) { return m.label; }) });
+      payload = _firmPayload(orgName, phone, srcList.length === 1 ? srcList[0] : QUO_SRC_PARTNER,
+                             Object.keys(tags), distinctNames.length === 1 ? 'Main line' : orgRoles.join(' / '));
+      entry = { name: orgName, phone: phone, kind: 'firm', ext: payload.externalId };
+      plan.firms.push({ company: orgName, phone: phone, folded: members.map(function (m) { return m.label; }) });
     }
 
     var existingId = existing[payload.externalId] || '';
@@ -468,8 +494,12 @@ function _logQuoAll(p) {
   var noPhone = p.skip.length;
   if (noPhone) Logger.log('  ' + noPhone + ' skipped for no dialable phone (first 20):');
   p.skip.slice(0, 20).forEach(function (e) { Logger.log('    SKIP    [' + e.src + '] ' + e.name); });
-  if (p.dupe.length) Logger.log('  ' + p.dupe.length + ' duplicate row(s) in the source sheet — synced once, worth cleaning up:');
-  p.dupe.forEach(function (e) { Logger.log('    DUPE    ' + e.phone + '  ' + e.name + '  (' + e.rows.join(', ') + ')'); });
+  if (p.merged.length) Logger.log('  ' + p.merged.length + ' vendor(s) listed on several rows — merged into one contact carrying every category:');
+  p.merged.forEach(function (e) {
+    Logger.log('    MERGED  ' + e.phone + '  ' + e.name + '  (' + e.rows.join(' + ') + ')');
+    Logger.log('              role: ' + e.roles.join(' / '));
+    Logger.log('              tags: ' + e.tags.join(', '));
+  });
   p.conflict.forEach(function (e) { Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why); });
   if (p.stale.length) Logger.log('  ' + p.stale.length + ' contact(s) in Quo no longer in any directory — delete by hand:');
   p.stale.forEach(function (e) { Logger.log('    STALE   ' + e.contactId + '  was ' + e.externalId); });

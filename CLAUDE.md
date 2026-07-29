@@ -157,10 +157,18 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Verified against the real exported sheets 2026-07-29: 79 partners + 152 vendors →
   **199 contacts** (63 partner + 136 vendor), 20 skipped for no dialable phone, 2
   duplicate vendor rows, 1 conflict. No number appears in more than one source.
-- **Two data problems the dry run surfaced, both still in the sheets:**
-  duplicate vendor rows — Alicia Weaver (rows 4 + 15) and Gander & White (rows 28 + 142);
-  and O'Hara Landscape & O'Hara Pest Control share +1 561-655-9011, so that number is
-  reported as a conflict and left unsynced until one of them gets its own line.
+- **A vendor on several rows is NOT a duplicate.** The directory carries one category
+  per row, so two rows is how a vendor that does two things is expressed — Prestige
+  Estate Services appraises antiques *and* art, Gander & White does storage *and*
+  specialty packing. Rows sharing a number and a name merge into one contact carrying
+  every category as a tag, with the role naming all of them. An earlier version kept
+  only the first row's category and called the rest a duplicate to clean up; that was
+  wrong and threw away half of what those vendors do.
+- **Several business names on one number also merge**, under the combined name
+  (`O'Hara Landscape & Maintenance / O'Hara Pest Control`, role `Landscaper / Pest
+  Inspection / Treatment`). Leaving it unsynced meant neither was reachable at all,
+  which is worse than a long display name. It is still reported, because two genuinely
+  unrelated businesses sharing a line would be a data problem worth seeing.
 - **Tag taxonomy** (built from closed-list fields only — `title` is deliberately NOT
   tagged: 54 distinct free-text values across 79 partners would be 54 unfilterable tags):
   partners get `Referral Partner` + `partner_type` title-cased (Estate Attorney 35,
