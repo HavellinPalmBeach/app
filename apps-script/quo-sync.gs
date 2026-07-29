@@ -64,6 +64,12 @@ var QUO_JOBS_ID       = '16Z3yiRYbhYLsia0aG4v5znWo_O2eDRnB0dcldECjAJM';
 var QUO_JOBS_TAB      = 'Jobs';
 
 // ── Tags ─────────────────────────────────────────────────────────────────────
+// Clients are PLUMBED BUT NOT LIVE. The jobs sheet still holds dummy records while
+// the app is being tuned, and a test client in the dialer is worse than no client.
+// Flip to true once real jobs are flowing (planned October 2026) — no other change
+// is needed; the collector, name splitting and grouping are already built and tested.
+var QUO_SYNC_CLIENTS = false;
+
 // Tags are a workspace custom property, so they have to be created in the Quo app
 // first and then addressed by key. Run listQuoCustomFields, paste the key here,
 // and tags start flowing on the next push. Left blank, everything else still works.
@@ -212,9 +218,10 @@ function _collectVendors() {
     var tags = ['Vendor'];
     if (cat) tags.push(cat);
     out.push({
-      // Vendors have no uid column, so the row is the identity. Rows are cleared,
-      // never deleted, by deleteVendor — so an index stays stable for a given vendor.
-      extId: 'vendor:' + r._row,
+      // The sheet carries a UID per vendor (verified populated and distinct on all
+      // 152 rows), so identity comes from that rather than the row index — a cleared
+      // row that later gets reused would otherwise inherit the old vendor's contact.
+      extId: 'vendor:' + (String(r.uid || '').trim() || ('row' + r._row)),
       label: (first + ' ' + lastN).trim() || name,
       first: first || name, last: first ? lastN : '',
       company: name, role: cat,
@@ -235,7 +242,10 @@ function _collectClients() {
     var j = r;
     if (r.data_json) { try { j = JSON.parse(r.data_json); } catch (e) { j = r; } }
     var nm = _splitName(j.name || r.name);
-    var id = String(j.id || r.id || '').trim();
+    // Job ids are numeric timestamps. A sheet read can hand one back as a float
+    // ("1785263972989.0"), which would make the same job a different contact than
+    // the JSON blob's integer id, so the trailing .0 is normalised away.
+    var id = String(j.id || r.id || '').trim().replace(/\.0+$/, '');
     if (!id || (!nm.first && !nm.last)) continue;
     out.push({
       extId: 'client:' + id,
@@ -310,11 +320,15 @@ function _firmPayload(company, phone, src, tags) {
 function syncQuoAll(dryRun) {
   var plan = {
     ok: true, dryRun: !!dryRun, counts: {},
-    create: [], update: [], skip: [], firms: [], conflict: [], failed: []
+    create: [], update: [], skip: [], firms: [], dupe: [], conflict: [], failed: []
   };
 
-  var partners = _collectPartners(), vendors = _collectVendors(), clients = _collectClients();
-  plan.counts = { partners: partners.length, vendors: vendors.length, clients: clients.length };
+  var partners = _collectPartners(), vendors = _collectVendors();
+  var clients = QUO_SYNC_CLIENTS ? _collectClients() : [];
+  plan.counts = {
+    partners: partners.length, vendors: vendors.length,
+    clients: clients.length, clientsGated: !QUO_SYNC_CLIENTS
+  };
   var all = partners.concat(vendors).concat(clients);
 
   // Group by number across ALL sources — one number is one contact, whatever sheet
@@ -351,6 +365,28 @@ function syncQuoAll(dryRun) {
         });
         continue;
       }
+      // Same company AND same person on one number is not a switchboard — it is the
+      // same record entered twice. Collapsing it to a "Main line" org contact would
+      // paper over a duplicate row, so sync one of them as the person and say so.
+      var labels = {};
+      members.forEach(function (m) { labels[m.label] = 1; });
+      if (Object.keys(labels).length === 1) {
+        plan.dupe.push({
+          phone: phone, name: members[0].label, company: company,
+          rows: members.map(function (m) { return m.kind + ' row ' + m.srcRow; })
+        });
+        payload = _quoPayload(members[0]);
+        entry = { name: members[0].label, phone: phone, kind: members[0].kind, ext: payload.externalId };
+        var existingDup = existing[payload.externalId] || '';
+        if (dryRun) { (existingDup ? plan.update : plan.create).push(entry); continue; }
+        var resD = existingDup
+          ? _quoFetch('patch', '/contacts/' + encodeURIComponent(existingDup), payload)
+          : _quoFetch('post', '/contacts', payload);
+        if (resD.code >= 200 && resD.code < 300) { (existingDup ? plan.update : plan.create).push(entry); }
+        else { entry.code = resD.code; entry.error = JSON.stringify(resD.body).slice(0, 200); plan.failed.push(entry); }
+        Utilities.sleep(QUO_THROTTLE_MS);
+        continue;
+      }
       var srcList = Object.keys(srcs);
       payload = _firmPayload(company, phone, srcList.length === 1 ? srcList[0] : QUO_SRC_PARTNER, Object.keys(tags));
       entry = { name: company, phone: phone, kind: 'firm', ext: payload.externalId };
@@ -380,8 +416,8 @@ function _logQuoAll(p) {
   Logger.log((p.dryRun ? 'DRY RUN — nothing written.' : 'LIVE — pushed to Quo.') +
     '  create=' + p.create.length + '  update=' + p.update.length +
     '  skip=' + p.skip.length + '  conflict=' + p.conflict.length + '  failed=' + p.failed.length);
-  Logger.log('  read: ' + p.counts.partners + ' partners, ' + p.counts.vendors +
-             ' vendors, ' + p.counts.clients + ' clients');
+  Logger.log('  read: ' + p.counts.partners + ' partners, ' + p.counts.vendors + ' vendors, ' +
+             (p.counts.clientsGated ? 'clients GATED OFF (QUO_SYNC_CLIENTS)' : p.counts.clients + ' clients'));
   if (!QUO_TAGS_FIELD_KEY) Logger.log('  (tags OFF — set QUO_TAGS_FIELD_KEY, see listQuoCustomFields)');
   if (p.firms.length) Logger.log('  ' + p.firms.length + ' shared number(s) synced as the organisation:');
   p.firms.forEach(function (f) { Logger.log('    FIRM    ' + f.phone + '  ' + f.company + '  ← ' + f.folded.join(', ')); });
@@ -390,6 +426,8 @@ function _logQuoAll(p) {
   var noPhone = p.skip.length;
   if (noPhone) Logger.log('  ' + noPhone + ' skipped for no dialable phone (first 20):');
   p.skip.slice(0, 20).forEach(function (e) { Logger.log('    SKIP    [' + e.src + '] ' + e.name); });
+  if (p.dupe.length) Logger.log('  ' + p.dupe.length + ' duplicate row(s) in the source sheet — synced once, worth cleaning up:');
+  p.dupe.forEach(function (e) { Logger.log('    DUPE    ' + e.phone + '  ' + e.name + '  (' + e.rows.join(', ') + ')'); });
   p.conflict.forEach(function (e) { Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why); });
   p.failed.forEach(function (e) { Logger.log('  FAILED  ' + e.name + '  HTTP ' + e.code + '  ' + e.error); });
   return p;

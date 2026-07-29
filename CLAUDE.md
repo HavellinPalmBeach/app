@@ -125,6 +125,19 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Vendors with status `Do Not Use` are excluded — a vendor you decided not to call does
   not belong in the dialer. Client names are split first/last, suffix-aware (`Pressly Jr.`,
   `Hennessey III` keep the suffix on the surname).
+- **Clients are gated OFF** (`QUO_SYNC_CLIENTS = false`). Plumbed and tested, but the
+  jobs sheet still holds dummy records while the app is tuned. Flip to true when real
+  jobs are flowing — target October 2026. Nothing else needs changing.
+- Vendor identity is the sheet's `UID` column (verified populated + distinct on all 152
+  rows), not the row index — a cleared row that gets reused would otherwise inherit the
+  previous vendor's contact.
+- Verified against the real exported sheets 2026-07-29: 79 partners + 152 vendors →
+  **199 contacts** (63 partner + 136 vendor), 20 skipped for no dialable phone, 2
+  duplicate vendor rows, 1 conflict. No number appears in more than one source.
+- **Two data problems the dry run surfaced, both still in the sheets:**
+  duplicate vendor rows — Alicia Weaver (rows 4 + 15) and Gander & White (rows 28 + 142);
+  and O'Hara Landscape & O'Hara Pest Control share +1 561-655-9011, so that number is
+  reported as a conflict and left unsynced until one of them gets its own line.
 - **Tags are supported** — a workspace custom property, created in the Quo app, then
   addressed by key. Run `listQuoCustomFields` (or `dumpQuoContact` on a contact with a
   tag set by hand), paste the key into `QUO_TAGS_FIELD_KEY`, and tags flow on the next
