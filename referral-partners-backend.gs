@@ -165,12 +165,13 @@ function doPost(e) {
 // USAGE: Run ▸ dryRunQuoSync first and read the log. Nothing is written to Quo
 // until you run pushQuoSync.
 
-// UNVERIFIED — confirm both against the Authentication doc before the first live run.
-// quo.com is blocked from the machine this was written on, so these are the
-// pre-rebrand OpenPhone values. If the base URL moved to api.quo.com, or the header
-// wants a 'Bearer ' prefix, this is the only place either needs changing.
+// QUO_API_BASE is UNVERIFIED — quo.com is blocked from the machine this was written
+// on, so it is still the pre-rebrand OpenPhone host. If the API moved to api.quo.com,
+// this line is the only place that needs changing.
 var QUO_API_BASE = 'https://api.openphone.com/v1';
-var QUO_AUTH_BEARER = false;   // OpenPhone took the raw key, with no 'Bearer ' prefix.
+// CONFIRMED 2026-07-28 against the Authentication doc: the header carries the raw key,
+// with no 'Bearer ' prefix. Getting this wrong returns 401, which reads like a bad key.
+var QUO_AUTH_BEARER = false;
 
 var QUO_SOURCE = 'Havellin';
 var QUO_THROTTLE_MS = 250;     // polite spacing; well inside the 6-min execution limit
