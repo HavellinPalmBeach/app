@@ -107,6 +107,18 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - All 12 tabs verified at 390 / 768 / 1440px with zero horizontal overflow. Build
   Estimate is deliberately desk/iPad-first for data entry — its room tables scroll
   inside `.tbl-scroll` rather than being reflowed.
+- **The dashboard drilldown was missed by the original sweep** (fixed 2026-07-28). The
+  tab-level overflow check passes on an *empty* Client Dashboard — the drilldown only
+  renders once you open a job, so none of its grids were ever measured. `.d-grid4` was
+  still running four ~80px columns on a phone and the 8-step lifecycle strip ~42px a
+  step, so labels overlapped outright. Now: `.d-grid4` → 2 columns, `.d-split2` (a new
+  class replacing two inline `1fr 1fr` grids) → single-file, and the lifecycle strip +
+  hours-log table scroll inside `.tbl-scroll`. **When measuring a tab, populate it and
+  open its detail view first** — an empty state proves nothing.
+- Two selectors in the phone block are load-bearing against everything else in it:
+  `.card div{min-width:0}` and `.card div{flex-wrap:wrap}`. Anything that needs a real
+  minimum width or a nowrap flex row has to out-specify them (`.tl-strip .tl-step`) or
+  set it inline — a bare single-class rule silently loses.
 - Not done: the table→card flip for the Client Dashboard client list (it sits in a
   sideways-scrolling container today). Invoices + Inventory were only measured from an
   empty state — re-check them with a populated job before calling them verified.
