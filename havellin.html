@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 6:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 7:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1497,6 +1497,35 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       specialists draw from, so it is billed once, on the concierge line. Higher = fewer specialist hours and
       a shorter job. <strong>50%</strong> is the default. Dial it down on trophy estates where the concierge is
       mostly directing; up on straightforward downsizings where they work the whole day.
+    </div>
+
+    <div class="sec" style="margin-top:14px;">Labour Cost Rates — what we pay</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:10px;">
+      Internal only. These drive the margin panel and the walk-away floor — they are <strong>never</strong> shown to a
+      client and never billed. A named person in the Contractors directory is paid their own rate on their own record;
+      these four cover the founders and the unnamed placeholder slots used before a specific contractor is assigned.
+    </div>
+    <div class="grid2" style="gap:10px;">
+      <div>
+        <label style="margin-top:0;">Founder concierge — $/hr</label>
+        <input type="number" id="set-cost-founder-tc" min="0" step="5" placeholder="100" style="width:110px;">
+      </div>
+      <div>
+        <label style="margin-top:0;">Contractor concierge — $/hr</label>
+        <input type="number" id="set-cost-contractor-tc" min="0" step="5" placeholder="60" style="width:110px;">
+      </div>
+      <div>
+        <label style="margin-top:0;">Contractor PS, Standard — $/hr</label>
+        <input type="number" id="set-cost-ps-standard" min="0" step="5" placeholder="30" style="width:110px;">
+      </div>
+      <div>
+        <label style="margin-top:0;">Contractor PS, Senior — $/hr</label>
+        <input type="number" id="set-cost-ps-senior" min="0" step="5" placeholder="35" style="width:110px;">
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-top:6px;margin-bottom:8px;">
+      Raising a cost rate lowers margin and raises the walk-away floor on every <em>fresh</em> estimate. Saved
+      estimates keep the crew cost they were priced with.
     </div>
 
     <div class="sec" style="margin-top:14px;">Walkthrough Notes</div>
@@ -3003,6 +3032,34 @@ var TARGET_DAYS = 10;
 var PRODUCTIVE_HRS_PER_DAY = 7;   // billable hours in a crew day (setup/travel/breaks excluded)
 var TC_ONSITE_ALPHA_DEFAULT = 0.5;
 var TC_ONSITE_ALPHA = TC_ONSITE_ALPHA_DEFAULT;   // settings-backed; see loadSettings()
+
+// ─── LABOUR COST RATES — what we PAY, never what we bill ──────────────────────
+// Internal only. These feed the margin panel and the walk-away floor; the client
+// billing rates (tcRate / psRate) are a separate pair of numbers and must never be
+// sourced from here. Confusing the two is expensive in both directions — billing a
+// client at cost, or paying a contractor at the billing rate.
+//
+// Founders and contractors are paid differently for the SAME role, so cost follows
+// the person, not the job title: a named individual in the contractor directory
+// carries their own `rate`, and the values below are the rates for the unnamed
+// placeholder slots used before a specific person is assigned.
+// Settings-backed — see loadSettings() / saveSettings().
+var COST_RATES_DEFAULT = {
+  founderTC:    100,   // Anthony Sr, Ashley — also the conservative fallback, see getTCCostRate
+  contractorTC:  60,   // an outside concierge
+  psStandard:    30,   // "Contractor — Standard"
+  psSenior:      35    // "Contractor — Senior"
+};
+var COST_RATES = {
+  founderTC:    COST_RATES_DEFAULT.founderTC,
+  contractorTC: COST_RATES_DEFAULT.contractorTC,
+  psStandard:   COST_RATES_DEFAULT.psStandard,
+  psSenior:     COST_RATES_DEFAULT.psSenior
+};
+// Stand-in for an outside concierge whose name isn't known yet. Held as display text,
+// not a machine key, so it reads correctly wherever a crew name is shown (log history,
+// invoice team table) without every one of those places needing a lookup.
+var CONTRACTOR_TC_NAME = 'Contractor — TC';
 // A SAVED estimate is pinned to the α it was priced under, held here for as long as
 // that estimate is loaded. α is a Settings knob living in per-device localStorage, and
 // restoreEstimateToUI ends in calcAll() — so without this pin, reopening an estimate on
@@ -7594,17 +7651,11 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
 
   // Cost rates — look up assigned TC's actual rate from contractor directory
   var psCost = Math.round(getBlendedPSCost() * 10) / 10;  // blended from actual PS slots
-  var tcCostDefault = 60;
   var loadedJobId2 = document.getElementById('e-job') ? (parseInt(document.getElementById('e-job').value)||0) : 0;
   var loadedJob2 = jobs.find(function(j){ return j.id === loadedJobId2; });
   var assignedTCName = loadedJob2 ? loadedJob2.tc : null;
-  var tcCost = tcCostDefault;
-  if (assignedTCName) {
-    var allTCList = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
-      .concat(contractors.filter(function(c){ return c.role==='TC'; }));
-    var matchedTC = allTCList.find(function(c){ return c.name === assignedTCName; });
-    if (matchedTC && matchedTC.rate) tcCost = matchedTC.rate;
-  }
+  var tcCost = getTCCostRate(assignedTCName);
+  var tcCostAssumed = !isTCCostResolved(assignedTCName);   // fell back — flagged below
 
   // Cost the concierge at every hour they are actually engaged. Under the old
   // volume-ratio model this line multiplied *billed* TC hours by the cost rate while
@@ -7666,7 +7717,14 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
     '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
     (negotiationRoom <= 0 ? '<span class="badge b-warn">AT or BELOW floor — hold firm</span>' : '') +
     '</div>' +
-    '<div style="margin-top:6px;font-size:10px;color:var(--gray);font-style:italic;">Internal only — not shown on client estimate. Rates: Transition Concierge $' + tcCost + '/hr (founder), Property Specialist $' + psCost + '/hr avg blended.</div>';
+    '<div style="margin-top:6px;font-size:10px;color:var(--gray);font-style:italic;">Internal only — not shown on client estimate. Rates: Transition Concierge $' + tcCost + '/hr'
+      + (tcCostAssumed ? '' : ' (' + esc(costRateLabel(assignedTCName)) + ')')
+      + ', Property Specialist $' + psCost + '/hr avg blended.</div>'
+    + (tcCostAssumed
+        ? '<div class="alert warn" style="margin-top:6px;font-size:10px;">Concierge cost is an assumption, not a lookup — '
+          + (assignedTCName ? '<strong>' + esc(assignedTCName) + '</strong> has no rate in the contractor directory' : 'no concierge is assigned to this job yet')
+          + '. Costed at the founder rate ($' + COST_RATES.founderTC + '/hr) so the walk-away floor is not understated. Assign the concierge, or set their rate on the Contractors tab, for a real margin.</div>'
+        : '');
 }
 
 
@@ -9787,10 +9845,20 @@ function seedCrewFromEstimate(job, est) {
   var crew = { tc: { name: (est && est.preparedBy) || job.tc || '', locked: false },
                tc2: { name: (est && est.preparedBy2) || '', locked: false }, ps: [] };
   var slots = (est && est.psSlots) ? est.psSlots : [];
+  // A named person can only fill one slot. Estimate slots legitimately repeat — two
+  // "Contractor — Standard" entries mean two contractors at that rate — but a real name
+  // appearing twice would seed a crew where one specialist holds several roles, and
+  // every hours entry for that job would then start out un-saveable.
+  var _seeded = {};
   slots.forEach(function(s) {
     var isTier = !!TIERS[s.type];
+    var nm = isTier ? (s.type === 'aj' ? 'Anthony Graziano Jr' : '') : (s.type || '');
+    if (nm && !isCrewPlaceholder(nm)) {
+      if (_seeded[nm]) nm = '';                 // keep the slot, drop the repeated name
+      else _seeded[nm] = true;
+    }
     crew.ps.push({
-      name: isTier ? (s.type === 'aj' ? 'Anthony Graziano Jr' : '') : (s.type || ''),
+      name: nm,
       tier: isTier ? s.type : '',
       costRate: s.costRate || 0,
       locked: false
@@ -9845,6 +9913,45 @@ function lockAssignedCrew(jobId) {
   saveJobs();
 }
 
+// Names that may legitimately appear in more than one slot at once, because they stand
+// for "somebody we haven't named yet" rather than a person. Everyone else is a real
+// human who can only be in one place at a time.
+var LOG_PLACEHOLDER_NAMES = ['Contractor TBD', CONTRACTOR_TC_NAME];
+function isCrewPlaceholder(name) { return !name || LOG_PLACEHOLDER_NAMES.indexOf(name) >= 0; }
+
+// How many PS slots the log form shows. Driven by the approved estimate rather than a
+// flat six: a job priced for 3 specialists showing 6 empty slots invites logging hours
+// for crew that was never planned or paid for, and the estimate is the thing the final
+// invoice trues up against.
+//
+// Always shows at least the slots already carrying an assigned name, so a crew member
+// added deliberately beyond plan (or locked by an earlier save) never disappears from
+// the form — hiding an assigned person would drop their hours silently.
+function plannedPSCount(jobId, crew) {
+  var est = (jobId && typeof estimateStore !== 'undefined' && estimateStore[jobId])
+    ? estimateStore[jobId].estimate : null;
+  var planned = est ? (est.psCount || est.nps || 0) : 0;
+  var assigned = 0;
+  if (crew && crew.ps) {
+    crew.ps.forEach(function(p, idx){ if (p && p.name) assigned = idx + 1; });
+  }
+  // No approved estimate yet → 2, matching seedCrewFromEstimate's floor.
+  if (!planned) planned = 2;
+  return Math.max(1, Math.min(6, Math.max(planned, assigned)));
+}
+
+// Slots revealed beyond the planned crew size, via "add a specialist". Not persisted —
+// it resets on reload, which is correct: it is a per-session override of the plan, and
+// anyone assigned into one of those slots is held by plannedPSCount from then on.
+var _logExtraPSSlots = 0;
+function addLogPSSlot() {
+  var jobId = parseInt((document.getElementById('log-job')||{}).value) || 0;
+  var crew = jobId ? getJobCrew(jobId) : null;
+  if (plannedPSCount(jobId, crew) + _logExtraPSSlots >= 6) return;
+  _logExtraPSSlots++;
+  buildLogTeamRows();
+}
+
 function buildLogTeamRows() {
   // Build TC and PS name options from live contractor directory
   var tcNames = getAllActiveTC().map(function(c){ return c.name; });
@@ -9855,14 +9962,38 @@ function buildLogTeamRows() {
   var jobId = parseInt((document.getElementById('log-job')||{}).value) || 0;
   var crew = jobId ? getJobCrew(jobId) : null;
   var lockTag = ' <span style="font-size:9px;color:var(--ok-tx);font-weight:700;">🔒 locked for job</span>';
-  function optList(names, sel) {
-    var html = names.map(function(n){ return '<option' + (n===sel?' selected':'') + '>' + n + '</option>'; }).join('');
+
+  // Every real person already spoken for elsewhere on this entry. A name in here is
+  // omitted from the OTHER selects, so one specialist cannot be booked into six roles
+  // — the duplicate becomes unreachable rather than merely rejected on save.
+  function takenBy(exceptKey) {
+    var out = [];
+    function add(key, nm) { if (key !== exceptKey && !isCrewPlaceholder(nm)) out.push(nm); }
+    if (crew) {
+      add('tc', crew.tc && crew.tc.name);
+      add('tc2', crew.tc2 && crew.tc2.name);
+      (crew.ps || []).forEach(function(p, idx){ add('ps' + idx, p && p.name); });
+    }
+    return out;
+  }
+  // sel is always offered even when taken, so a pre-existing duplicate (seeded from an
+  // estimate built before this rule) still renders and can be seen and corrected.
+  function optList(names, sel, exceptKey) {
+    var taken = takenBy(exceptKey);
+    var html = names.filter(function(n){ return n === sel || taken.indexOf(n) < 0; })
+      .map(function(n){ return '<option' + (n===sel?' selected':'') + '>' + n + '</option>'; }).join('');
     // Preserve a previously-assigned name that's no longer in the active list.
-    if (sel && names.indexOf(sel) < 0 && sel !== 'Contractor TBD') html += '<option selected>' + sel + '</option>';
+    if (sel && names.indexOf(sel) < 0 && !isCrewPlaceholder(sel)) html += '<option selected>' + sel + '</option>';
     return html;
   }
 
   var rowStyle = 'display:grid;grid-template-columns:2fr 80px;gap:8px;align-items:end;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);';
+  // Unnamed outside concierge — carries COST_RATES.contractorTC in the margin panel.
+  // Stored under its display name (like "Contractor TBD") rather than a machine key, so
+  // it reads correctly in the log history and the invoice team table with no mapping.
+  var tcContractorOpt = function(sel) {
+    return '<option' + (sel===CONTRACTOR_TC_NAME?' selected':'') + '>' + CONTRACTOR_TC_NAME + '</option>';
+  };
 
   var html = '';
 
@@ -9874,7 +10005,8 @@ function buildLogTeamRows() {
       '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge' + (tcLocked ? lockTag : '') + '</label>' +
       '<select id="log-m0-name"' + (tcLocked ? ' disabled' : '') + ' onchange="setCrewTC(' + jobId + ',this.value)" style="margin-top:4px;">' +
         '<option value="">Select TC</option>' +
-        optList(tcNames, tcName) +
+        optList(tcNames, tcName, 'tc') +
+        tcContractorOpt(tcName) +
       '</select>' +
     '</div>' +
     '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
@@ -9892,27 +10024,32 @@ function buildLogTeamRows() {
         '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge 2' + (tc2Locked ? lockTag : '') + '</label>' +
         '<select id="log-tc2-name"' + (tc2Locked ? ' disabled' : '') + ' onchange="setCrewTC2(' + jobId + ',this.value)" style="margin-top:4px;">' +
           '<option value="">Not on site</option>' +
-          optList(tcNames, tc2Name) +
+          optList(tcNames, tc2Name, 'tc2') +
+          tcContractorOpt(tc2Name) +
         '</select>' +
       '</div>' +
       '<div><label style="margin:0;">Hours</label><input type="number" id="log-tc2-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
     '</div>';
   }
 
-  // PS rows 1-6 (slot index = i-1) in a responsive 2-column grid to save space.
-  // Locked slots are fixed; empty slots stay addable.
+  // PS rows in a responsive 2-column grid to save space. Count follows the approved
+  // estimate (see plannedPSCount), not a flat six. Locked slots are fixed.
+  var plannedPS = plannedPSCount(jobId, crew);
+  var showPS = Math.min(6, plannedPS + _logExtraPSSlots);
   var psCells = '';
-  for (var i = 1; i <= 6; i++) {
+  for (var i = 1; i <= showPS; i++) {
     var slot = i - 1;
     var p = crew && crew.ps[slot] ? crew.ps[slot] : null;
     var psName = p ? p.name : '';
     var psLocked = !!(p && p.locked);
+    var overPlan = i > plannedPS;
     psCells += '<div style="padding-bottom:8px;border-bottom:1px solid var(--border);">' +
-      '<label style="margin:0;color:var(--gray);">Property Specialist ' + i + (psLocked ? lockTag : '') + '</label>' +
+      '<label style="margin:0;color:var(--gray);">Property Specialist ' + i + (psLocked ? lockTag : '') +
+        (overPlan ? ' <span style="font-size:9px;color:var(--warn-tx);font-weight:700;">beyond plan</span>' : '') + '</label>' +
       '<div style="display:grid;grid-template-columns:1fr 70px;gap:6px;align-items:end;margin-top:4px;">' +
         '<select id="log-m'+i+'-name"' + (psLocked ? ' disabled' : '') + ' onchange="setCrewPS(' + jobId + ',' + slot + ',this.value)">' +
           '<option value="">Not on site</option>' +
-          optList(psNames, psName) +
+          optList(psNames, psName, 'ps' + slot) +
           '<option value="Contractor TBD"' + (psName==='Contractor TBD'?' selected':'') + '>Contractor TBD</option>' +
         '</select>' +
         '<input type="number" id="log-m'+i+'-hrs" title="Hours" min="0" max="24" step="0.5" placeholder="hrs" style="text-align:right;">' +
@@ -9920,6 +10057,18 @@ function buildLogTeamRows() {
     '</div>';
   }
   html += '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin-top:8px;">' + psCells + '</div>';
+
+  if (showPS < 6) {
+    html += '<div style="margin-top:8px;">' +
+      '<button class="btn-s" onclick="addLogPSSlot()" style="font-size:11px;padding:5px 10px;">+ Add a specialist beyond plan</button>' +
+      '<div style="font-size:10px;color:var(--gray);margin-top:4px;">' +
+        (plannedPS && estRecLog
+          ? 'The estimate priced this job for <strong>' + plannedPS + '</strong> specialist' + (plannedPS === 1 ? '' : 's') +
+            '. Crew above that raises cost against a fixed quote — log it, but expect the projection to flag it.'
+          : 'No approved estimate for this job yet, so there is no planned crew size to check against.') +
+      '</div>' +
+    '</div>';
+  }
 
   document.getElementById('log-team-rows').innerHTML = html;
 }
@@ -9953,6 +10102,22 @@ function saveLogEntry() {
   }
 
   if (members.length === 0) { showFB('log-fb','warn','Enter at least one team member with hours.'); return; }
+
+  // One person, one set of hours per day. The selects already omit names taken by
+  // another slot, so this catches the cases they can't: a crew seeded with duplicates
+  // from an estimate built before that rule, and the same person appearing as both
+  // concierge and specialist — which under working-supervisor pricing is always wrong,
+  // since a concierge's on-site production is already inside their TC hours.
+  var _seen = {}, _dup = '';
+  members.forEach(function(m){
+    if (isCrewPlaceholder(m.name)) return;      // stands for "not named yet", may repeat
+    if (_seen[m.name]) _dup = m.name; else _seen[m.name] = true;
+  });
+  if (_dup) {
+    showFB('log-fb','err','<strong>' + esc(_dup) + '</strong> is entered in more than one role on this date. '
+      + 'One person logs one set of hours per day — combine them onto a single row, or correct the assignment.');
+    return;
+  }
 
   if (!jobLogs[jobId]) jobLogs[jobId] = [];
   jobLogs[jobId].push({
@@ -10935,6 +11100,10 @@ function loadJobPlanTab() {
   if (logSection) logSection.style.display = 'block';
   var logJobEl = document.getElementById('log-job');
   if (logJobEl) logJobEl.value = jobId;
+
+  // Beyond-plan slots are per-job: a previous job's extras must not carry over into
+  // this one's form, where they'd read as planned crew.
+  _logExtraPSSlots = 0;
 
   // Build team rows and dropdowns for the entry form
   buildLogTeamRows();
@@ -14129,7 +14298,20 @@ function openSettings() {
   if (reqEl) reqEl.checked = REQUIRE_WALKTHROUGH_NOTES;
   var alphaEl = document.getElementById('set-tc-alpha');
   if (alphaEl) alphaEl.value = Math.round(TC_ONSITE_ALPHA * 100);
+  COST_RATE_FIELDS.forEach(function(f){
+    var el = document.getElementById(f.el);
+    if (el) el.value = COST_RATES[f.key];
+  });
 }
+
+// Settings field ↔ COST_RATES key map, shared by populate / save / load so the four
+// rates cannot drift out of sync across the three functions.
+var COST_RATE_FIELDS = [
+  { el:'set-cost-founder-tc',    key:'founderTC',    ls:'hav_cost_founder_tc' },
+  { el:'set-cost-contractor-tc', key:'contractorTC', ls:'hav_cost_contractor_tc' },
+  { el:'set-cost-ps-standard',   key:'psStandard',   ls:'hav_cost_ps_standard' },
+  { el:'set-cost-ps-senior',     key:'psSenior',     ls:'hav_cost_ps_senior' }
+];
 
 function saveSettings() {
   STRIPE_PK          = document.getElementById('set-stripe-pk').value.trim();
@@ -14147,6 +14329,14 @@ function saveSettings() {
     var _a = parseFloat(alphaEl.value);
     if (isFinite(_a)) TC_ONSITE_ALPHA = Math.min(1, Math.max(0, _a / 100));
   }
+  // Labour cost rates. A blank field keeps the current value; 0 is rejected because a
+  // zero cost rate reads as infinite margin and would drop the walk-away floor to nil.
+  COST_RATE_FIELDS.forEach(function(f){
+    var el = document.getElementById(f.el);
+    if (!el || el.value === '') return;
+    var v = parseFloat(el.value);
+    if (isFinite(v) && v > 0) COST_RATES[f.key] = v;
+  });
   try {
     localStorage.setItem('hav_stripe_pk',     STRIPE_PK);
     localStorage.setItem('hav_stripe_script', STRIPE_SCRIPT_URL);
@@ -14156,6 +14346,7 @@ function saveSettings() {
     localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
     localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));
+    COST_RATE_FIELDS.forEach(function(f){ localStorage.setItem(f.ls, String(COST_RATES[f.key])); });
   } catch(e) {}
   // Reprice against the new production rate. Note this only moves a FRESH build — an
   // estimate loaded from a saved record stays pinned to the α it was priced under
@@ -14179,6 +14370,10 @@ function loadSettings() {
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';
     var _sa = parseFloat(localStorage.getItem('hav_tc_alpha'));
     TC_ONSITE_ALPHA = (isFinite(_sa) && _sa >= 0 && _sa <= 1) ? _sa : TC_ONSITE_ALPHA_DEFAULT;
+    COST_RATE_FIELDS.forEach(function(f){
+      var v = parseFloat(localStorage.getItem(f.ls));
+      COST_RATES[f.key] = (isFinite(v) && v > 0) ? v : COST_RATES_DEFAULT[f.key];
+    });
   } catch(e) {}
 }
 
@@ -15095,13 +15290,47 @@ function saveNotesModal() {
 // ─── PS SLOT HELPERS ─────────────────────────────────────────────────────────
 function getPSCostRate(name) {
   // Handle placeholder keys
-  if (name === 'contractor_standard') return 25;
-  if (name === 'contractor_senior') return 30;
+  if (name === 'contractor_standard') return COST_RATES.psStandard;
+  if (name === 'contractor_senior') return COST_RATES.psSenior;
   // Look up actual rate from contractor directory by name
   var allPS = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS'; })
     .concat(contractors.filter(function(c){ return c.role==='PS'; }));
   var match = allPS.find(function(c){ return c.name === name; });
-  return match ? (match.rate || 25) : 25;
+  return match ? (match.rate || COST_RATES.psStandard) : COST_RATES.psStandard;
+}
+
+// Concierge cost, mirroring getPSCostRate. Resolution order: the unnamed-contractor
+// placeholder, then the contractor directory (where a founder carries 100 and an
+// outside concierge 60), then a fallback.
+//
+// The fallback is deliberately the FOUNDER rate, not the contractor rate. This number
+// sets the walk-away floor, and the two error directions are not symmetric: costing a
+// founder at $60 quietly inflates margin and drops the floor below what the job
+// actually costs, which is how you discount into a loss. Costing a contractor at $100
+// only makes you look less profitable than you are. Overstate the cost.
+function getTCCostRate(name) {
+  if (name === CONTRACTOR_TC_NAME) return COST_RATES.contractorTC;
+  var allTC = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
+    .concat(contractors.filter(function(c){ return c.role==='TC'; }));
+  var match = allTC.find(function(c){ return c.name === name; });
+  return (match && match.rate) ? match.rate : COST_RATES.founderTC;
+}
+
+// Whether getTCCostRate found a real rate or fell back. The margin panel says so out
+// loud rather than presenting an assumed number as a measured one.
+function isTCCostResolved(name) {
+  if (!name) return false;
+  if (name === CONTRACTOR_TC_NAME) return true;
+  var allTC = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
+    .concat(contractors.filter(function(c){ return c.role==='TC'; }));
+  return !!allTC.find(function(c){ return c.name === name && c.rate; });
+}
+
+// Display label for a cost-rate key — the placeholder keys are machine values.
+function costRateLabel(name) {
+  if (name === 'contractor_standard') return 'Contractor — Standard';
+  if (name === 'contractor_senior')   return 'Contractor — Senior';
+  return name || '';
 }
 
 function getPSSlots() {
@@ -15141,7 +15370,7 @@ var contractors = [];
 var DEFAULT_CONTRACTORS = [
   {id:'default-1', name:'Anthony Graziano Sr', role:'TC', phone:'(561) 370-4700', email:'anthony@havellinpalmbeach.com', rate:100, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
   {id:'default-2', name:'Ashley Jerome', role:'TC', phone:'', email:'ashley@havellinpalmbeach.com', rate:100, status:'active', notes:'Partner, Client Relations', bio:'Ashley Jerome has spent 25 years as a trusted presence in the Palm Beach community — as a Pilates instructor at Squeeze in Royal Poinciana Plaza and as a parent at Palm Beach Day Academy. A licensed Douglas Elliman agent, Ashley brings warmth, discretion, and an intimate knowledge of Palm Beach families to every client relationship she manages.'},
-  {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:75, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
+  {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:60, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
 ];
 
 function showAddContractor() {

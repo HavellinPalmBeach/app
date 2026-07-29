@@ -66,6 +66,21 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   now costs the concierge at engaged hours, not billed hours. Estimate summary rows and
   the client-estimate concierge line were rewritten. **Needs a manual reconciliation pass
   — §11 rates/hours, the crew-sizing and timeline sections, and Settings.**
+- **DRIFT SINCE LAST PASS (2026-07-29, labour cost rates + crew integrity):** Cost rates
+  (what we PAY) are now a named `COST_RATES` block and four **Settings** knobs, separate from
+  the client billing rates: founder TC $100, contractor TC $60, contractor PS Standard $30,
+  Senior $35. Anthony Jr's directory rate corrected $75 → $60. The old hardcoded $25/$30
+  placeholder PS rates and the silent $60 TC fallback are gone — an unresolvable concierge
+  now costs at the **founder** rate (conservative, so the walk-away floor is never
+  understated) and the margin panel says out loud that the number is an assumption. New
+  "Contractor — TC" option on both concierge rows. The Log Hours form no longer shows a flat
+  six PS slots: it renders the **approved estimate's** crew size (widened to cover anyone
+  already assigned), with an explicit "+ Add a specialist beyond plan" and a *beyond plan*
+  tag on those rows. A named person can no longer hold two roles on one date — taken names
+  are omitted from the other selects, `saveLogEntry` refuses a duplicate outright, and
+  `seedCrewFromEstimate` de-dupes real names while still allowing repeated placeholders
+  ("Contractor TBD" / "Contractor — TC" legitimately repeat). **Needs a manual pass — §11
+  rates, the crew-sizing section, Log Hours, and Settings.**
 - **DRIFT SINCE LAST PASS (2026-07-28, mobile/field build):** Vendors, Referral Partners
   and Contractors each gained a **search box** and a **Quick edit / Full edit** split
   (Quick = contact details only; Full = the existing form). Vendor and partner cards and
