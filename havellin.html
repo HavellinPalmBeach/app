@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 12:42pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 12:52pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9395,16 +9395,36 @@ function attachCollectionDoc(input, jobId, collId) {
 
 // ─── GOOGLE SHEETS SYNC ───────────────────────────────────────────────────────
 
-// POST to the Sheets backend and actually read the JSON response so we can
-// confirm the write succeeded. Uses text/plain to avoid a CORS preflight; the
-// Apps Script web app returns Access-Control-Allow-Origin:* so cors can read it.
-function postSync(body) {
-  return fetch(SHEETS_SYNC_URL, {
+// The three Apps Script web apps this app writes to. Each is a separate deployment
+// with its own /exec URL held in Settings, so the queue below stores a TARGET NAME
+// rather than a URL and resolves it at send time. That matters: a write queued while
+// the URL was wrong or the deployment was down goes out against the CURRENT URL when
+// it retries, so pasting a corrected URL into Settings rescues the whole queue.
+var SYNC_TARGETS = {
+  main:     function(){ return SHEETS_SYNC_URL; },     // jobs, estimates, logs, plans, contractors
+  vendor:   function(){ return VENDOR_SYNC_URL; },     // vendor directory sheet
+  referral: function(){ return REFERRAL_SYNC_URL; }    // referral partners sheet
+};
+function _targetUrl(target) {
+  var f = SYNC_TARGETS[target || 'main'];
+  return f ? (f() || '') : '';
+}
+
+// POST to one of the Apps Script backends and read the JSON response so we can confirm
+// the write succeeded. Uses text/plain to avoid a CORS preflight; the web apps return
+// Access-Control-Allow-Origin:* so cors can read the body. Responses go through
+// _readAppsScriptJson, which turns a login/HTML interstitial into a named error rather
+// than the opaque "Unexpected token '<'" a blind r.json() throws.
+function postSyncTo(target, body) {
+  var url = _targetUrl(target);
+  if (!url) return Promise.reject(new Error('no URL configured for the ' + target + ' backend'));
+  return fetch(url, {
     method: 'POST', mode: 'cors', redirect: 'follow',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'text/plain' }
-  }).then(function(r){ return r.json(); });
+  }).then(_readAppsScriptJson);
 }
+function postSync(body) { return postSyncTo('main', body); }
 
 // Fire a verified write. Delegates to the durable save queue below so a failed
 // write is never silently lost \u2014 it's retried with backoff and a persistent
@@ -9449,7 +9469,7 @@ function showSyncBadge(msg, isErr) {
 // indicator stays lit until the queue drains. Newest snapshot per target wins, so
 // a retry never resends stale data. This is what turns the old transient 4-second
 // toast into "every save confirms success or visibly, durably fails".
-var _pendingWrites = {};   // key -> { body, okMsg, failMsg }
+var _pendingWrites = {};   // key -> { target, body, okMsg, failMsg }
 var _retryTimer = null;
 var _retryStep = 0;
 var _flushing = false;
@@ -9457,15 +9477,21 @@ var _retryDelays = [2000, 5000, 15000, 30000, 60000];
 
 // Stable logical-target key: whole-store writes collapse to their type (a newer
 // full snapshot supersedes an older queued one); per-record writes key by type+id.
-function _writeKey(body) {
+// The target name is part of the key because the three backends are independent — a
+// queued vendor write and a queued jobs write must never collapse onto each other.
+function _writeKey(body, target) {
   var t = (body && body.type) ? body.type : 'unknown';
   var p = body && body.payload;
   var id = '';
   if (p && typeof p === 'object' && !Array.isArray(p)) {
     if (p.id != null) id = p.id;
     else if (p.jobId != null) id = p.jobId;
+    // Directory writes address a SHEET ROW, not an id. Without this every queued
+    // updateVendor would collapse onto the bare key 'updateVendor', so editing two
+    // vendors while offline would silently discard the first one's write.
+    else if (p._row != null) id = 'row' + p._row;
   } else if (body && body.id != null) { id = body.id; }
-  return id !== '' ? (t + ':' + id) : t;
+  return (target || 'main') + '/' + (id !== '' ? (t + ':' + id) : t);
 }
 
 function _pendingCount() { return Object.keys(_pendingWrites).length; }
@@ -9508,8 +9534,17 @@ function flushPendingWrites() {
   _flushing = true;
   var attempts = keys.map(function(k){
     var w = _pendingWrites[k];
-    return postSync(w.body)
-      .then(function(res){ if (res && res.ok) { delete _pendingWrites[k]; return true; } return false; })
+    // Resolve the URL fresh on every attempt — see SYNC_TARGETS. A write queued while
+    // an endpoint was misconfigured lands as soon as the URL in Settings is corrected.
+    return postSyncTo(w.target, w.body)
+      .then(function(res){
+        if (res && res.ok) {
+          delete _pendingWrites[k];
+          if (typeof w.onLanded === 'function') { try { w.onLanded(res); } catch(e) {} }
+          return true;
+        }
+        return false;
+      })
       .catch(function(){ return false; });
   });
   Promise.all(attempts).then(function(){
@@ -9520,22 +9555,60 @@ function flushPendingWrites() {
   });
 }
 
-// The one entry point for verified cross-device writes.
+// The one entry point for verified cross-device writes to the MAIN sheet.
+// Directory writes use queuedDirectoryWrite below, which shares this same queue.
 function queuedPostSync(body, okMsg, failMsg) {
   if (!SHEETS_SYNC_URL) return;
   postSync(body)
     .then(function(res){
       if (res && res.ok) { if (okMsg) showSyncBadge(okMsg); }
-      else _enqueueWrite(body, okMsg, failMsg, res && res.error);
+      else _enqueueWrite('main', body, okMsg, failMsg, res && res.error);
     })
-    .catch(function(){ _enqueueWrite(body, okMsg, failMsg); });
+    .catch(function(e){ _enqueueWrite('main', body, okMsg, failMsg, e && e.message); });
 }
 
-function _enqueueWrite(body, okMsg, failMsg, errText) {
-  _pendingWrites[_writeKey(body)] = { body: body, okMsg: okMsg, failMsg: failMsg };
+function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded) {
+  _pendingWrites[_writeKey(body, target)] = {
+    target: target || 'main', body: body, okMsg: okMsg, failMsg: failMsg, onLanded: onLanded
+  };
   showSyncBadge((failMsg || 'Sync failed') + (errText ? ' — ' + errText : '') + ' — will retry', true);
   updatePendingIndicator();
   _scheduleRetry();
+}
+
+// ── Directory writes (vendor + referral-partner web apps) ────────────────────
+// These hit their own deployments, so before this they were one-shot fetches: a
+// failure set a line of red text and the edit was simply gone unless someone noticed
+// and pressed Save again. Now they share the same durable queue as the main sheet.
+//
+// Only IDEMPOTENT writes are queued. update / rate / delete all address a specific
+// sheet row, so re-sending one sets the same cells to the same values and a duplicate
+// delivery is harmless. Appends are NOT: addVendor and addPartner write into the first
+// blank row, and a network-level failure never tells you whether the request reached
+// Google — so retrying could append the same vendor twice. An append therefore fails
+// loudly and leaves the form open with the data intact for a deliberate manual retry.
+var IDEMPOTENT_DIR_WRITES = {
+  updateVendor: 1, rateVendor: 1, deleteVendor: 1,
+  updatePartner: 1, deletePartner: 1
+};
+
+// cb(ok, data, queued). `queued` is true when the write failed but was accepted into
+// the retry queue — callers treat that as "saved, still syncing" rather than "failed",
+// and apply their local update so the UI matches what will eventually land.
+// onLanded(res) fires later if a queued write finally succeeds.
+function queuedDirectoryWrite(target, body, cb, onLanded) {
+  var url = _targetUrl(target);
+  if (!url) {
+    cb(false, { error: 'No ' + (target === 'vendor' ? 'Vendor Directory' : 'Referral Partners') + ' URL set in Settings' }, false);
+    return;
+  }
+  var idempotent = !!IDEMPOTENT_DIR_WRITES[body && body.type];
+  _appsScriptPost(url, body, function(ok, d){
+    if (ok) { cb(true, d, false); return; }
+    if (!idempotent) { cb(false, d, false); return; }
+    _enqueueWrite(target, body, null, 'Directory sync failed', d && d.error, onLanded);
+    cb(false, d, true);
+  }, idempotent);
 }
 
 // Reconnect / tab-refocus are the moments a stuck queue can suddenly succeed —
@@ -9550,6 +9623,28 @@ document.addEventListener('visibilitychange', function(){
 // jobs/estimates sheet. The app reads it to populate vendor pickers; the sheet
 // stays the source of truth. Cached locally so it survives offline / failed loads.
 var vendorDirectory = [];
+// A directory whose last load FAILED is still rendered from the localStorage cache.
+// That is the right call — you can keep working a job site with no signal — but it was
+// only visible on the tab that shows the load status. populateJobMenus fills the Job
+// Plan's vendor-sourcing dropdowns from the very same cached array, so a concierge
+// could pick vendors off a stale snapshot with nothing on screen saying so. These flags
+// carry that fact to wherever the data actually gets consumed.
+var _dirStale = { vendor: false, referral: false };
+function markDirStale(kind, stale) {
+  var was = _dirStale[kind];
+  _dirStale[kind] = !!stale;
+  if (was === _dirStale[kind]) return;
+  var jp = document.getElementById('panel-job-plan');
+  if (jp && jp.classList.contains('active') && typeof loadJobPlanTab === 'function') loadJobPlanTab();
+}
+function dirStaleNotice(kind) {
+  if (!_dirStale[kind]) return '';
+  var what = kind === 'vendor' ? 'vendor directory' : 'referral partner list';
+  var tab  = kind === 'vendor' ? 'Vendors' : 'Referral Partners';
+  return '<div style="font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-bottom:8px;">'
+    + '&#9888; Showing a <strong>cached ' + what + '</strong> — the last load failed, so it may be out of date. '
+    + 'Reload it on the ' + tab + ' tab before relying on these entries.</div>';
+}
 // Category Score/Rank were one-time sourcing-sprint seeds — retired now that the
 // list is narrowed. Vendor quality is keyed off real job performance instead
 // (see vendorPerf). Kept as a harmless no-op so existing call sites don't break.
@@ -9585,12 +9680,14 @@ function loadVendorDirectory() {
       if (data && Array.isArray(data.vendors) && !data.error) {
         vendorDirectory = data.vendors;
         normalizeVendorDir();
+        markDirStale('vendor', false);   // live data — clear any stale marker
         if (typeof populateJobMenus === 'function') populateJobMenus();
         try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
         showSyncBadge('Loaded ' + vendorDirectory.length + ' vendor' + (vendorDirectory.length !== 1 ? 's' : '') + ' from directory ✓');
         setVendorDirStatus('✓ ' + vendorDirectory.length + ' vendors loaded', false);
       } else {
         var err = (data && data.error) ? data.error : 'no vendors returned';
+        markDirStale('vendor', vendorDirectory.length > 0);
         showSyncBadge('Vendor directory: ' + err, true);
         setVendorDirStatus('Error: ' + err, true);
       }
@@ -9598,6 +9695,9 @@ function loadVendorDirectory() {
     })
     .catch(function(e){
       var msg = (e && e.message) || 'check the URL / sharing';
+      // Whatever is on screen came from the cache, not the sheet — flag it so the Job
+      // Plan's sourcing dropdowns say so too.
+      markDirStale('vendor', vendorDirectory.length > 0);
       showSyncBadge('Vendor directory load failed — ' + msg, true);
       setVendorDirStatus('Load failed — ' + msg, true);
       refreshVendorsTabIfActive();
@@ -11069,6 +11169,10 @@ function renderVendorSourcing(jobId, job, est) {
   if (!vendorDirectory.length) {
     html += '<div style="font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-bottom:8px;">Vendor directory not loaded — set the Vendor Directory URL in Settings to pick vendors. You can still type a quote.</div>';
   }
+  // The dropdowns below are built from the cached directory. If the last load failed
+  // we are sourcing a live job off a snapshot, and until now nothing here said so —
+  // the load-failure message only ever appeared on the Vendors tab.
+  html += dirStaleNotice('vendor');
   var src  = job.vendorSourcing || {};
   var psrc = job.prepSourcing   || {};
   var csrc = job.collSourcing   || {};
@@ -12185,11 +12289,11 @@ function hardDeleteVendor(id){
   if (v._row == null || String(v._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this vendor, then retry', true); return; }
   if (!VENDOR_SYNC_URL) { showSyncBadge('Set the Vendor Directory URL in Settings first', true); return; }
   showSyncBadge('Deleting…');
-  postVendorWrite('deleteVendor', { _row: v._row, vendor_name: v.vendor_name }, function(ok, d){
-    if (!ok) { showSyncBadge('Delete failed: ' + (d.error||''), true); return; }
+  postVendorWrite('deleteVendor', { _row: v._row, vendor_name: v.vendor_name }, function(ok, d, queued){
+    if (!ok && !queued) { showSyncBadge('Delete failed: ' + (d.error||''), true); return; }
     vendorDirectory = vendorDirectory.filter(function(x){ return String(vendorIdOf(x)) !== String(id); });
     try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
-    showSyncBadge('Vendor deleted ✓');
+    if (!queued) showSyncBadge('Vendor deleted ✓');
     closeVendorForm();
     populateVendorFilters(); populateJobMenus(); renderVendorsTab();
   });
@@ -12238,13 +12342,28 @@ function _readAppsScriptJson(r) {
 // "worked once, failed the next time" flakiness). Retry is only safe for IDEMPOTENT
 // writes (update/rate) — never for an append (addVendor/addPartner), which a retry
 // could duplicate.
+// A transient failure worth one immediate re-send. Two shapes reach us here:
+//   - htmlResponse: Apps Script served a login / interstitial page instead of JSON.
+//   - a network-level TypeError ("Failed to fetch"), which is what a dropped
+//     connection, a blocked request, or a cross-origin redirect to the Google login
+//     page all look like — the browser rejects those before the body is readable, so
+//     the HTML sniffing above never gets a chance to run and name the real cause.
+// The second used to fall straight through to the error callback with no retry at all,
+// which is how a single blip on an idempotent update lost the edit outright.
+function _isTransientPostError(e) {
+  if (!e) return false;
+  if (e.htmlResponse) return true;
+  return e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(e.message || '');
+}
+
 function _appsScriptPost(url, bodyObj, cb, allowRetry) {
   function attempt(triesLeft) {
-    fetch(url, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(bodyObj) })
+    fetch(url, { method:'POST', mode:'cors', redirect:'follow',
+                 headers:{'Content-Type':'text/plain'}, body: JSON.stringify(bodyObj) })
       .then(_readAppsScriptJson)
       .then(function(d){ cb(!!(d && d.ok), d || {}); })
       .catch(function(e){
-        if (triesLeft > 0 && e && e.htmlResponse) { setTimeout(function(){ attempt(triesLeft - 1); }, 700); return; }
+        if (triesLeft > 0 && _isTransientPostError(e)) { setTimeout(function(){ attempt(triesLeft - 1); }, 700); return; }
         cb(false, { error: (e && e.message) || String(e) });
       });
   }
@@ -12253,9 +12372,8 @@ function _appsScriptPost(url, bodyObj, cb, allowRetry) {
 
 // POST a write to the vendor web app; cb(ok, data). Idempotent writes retry once on a
 // flaky HTML interstitial; addVendor does not (a retry could append a duplicate row).
-function postVendorWrite(type, payload, cb) {
-  if (!VENDOR_SYNC_URL) { cb(false, {error:'No Vendor Directory URL set'}); return; }
-  _appsScriptPost(VENDOR_SYNC_URL, { type:type, payload:payload }, cb, type !== 'addVendor');
+function postVendorWrite(type, payload, cb, onLanded) {
+  queuedDirectoryWrite('vendor', { type: type, payload: payload }, cb, onLanded);
 }
 
 function saveVendor() {
@@ -12273,12 +12391,18 @@ function saveVendor() {
 
   if (editId) {
     var existing = lookupVendorById(editId) || {};
-    postVendorWrite('updateVendor', { _row: existing._row, vendor_name: existing.vendor_name || name, fields: fields }, function(ok, d){
-      if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
+    postVendorWrite('updateVendor', { _row: existing._row, vendor_name: existing.vendor_name || name, fields: fields }, function(ok, d, queued){
+      // `queued` means the write didn't land but is in the durable retry queue, so the
+      // edit is not lost. Apply it locally and close the form exactly as on success —
+      // the pending-writes chip is what tells the user it hasn't reached the sheet yet.
+      if (!ok && !queued) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
       Object.keys(fields).forEach(function(k){ existing[k] = fields[k]; });
       normalizeVendorDir();
       try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
-      if (st){ st.textContent = 'Saved ✓'; st.style.color = 'var(--ok-tx)'; }
+      if (st){
+        st.textContent = queued ? 'Saved here — syncing…' : 'Saved ✓';
+        st.style.color = queued ? 'var(--warn-tx)' : 'var(--ok-tx)';
+      }
       closeVendorForm();
       populateVendorFilters(); populateJobMenus(); renderVendorsTab();
     });
@@ -12307,11 +12431,12 @@ function _quickWriteVendor(id, patch, busyMsg, okMsg) {
   if (v._row == null || String(v._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this vendor, then retry', true); return; }
   if (!VENDOR_SYNC_URL) { showSyncBadge('Set the Vendor Directory URL in Settings first', true); return; }
   showSyncBadge(busyMsg);
-  postVendorWrite('updateVendor', { _row: v._row, vendor_name: v.vendor_name, fields: patch }, function(ok, d){
-    if (!ok) { showSyncBadge('Vendor update failed: ' + (d.error||''), true); return; }
+  postVendorWrite('updateVendor', { _row: v._row, vendor_name: v.vendor_name, fields: patch }, function(ok, d, queued){
+    if (!ok && !queued) { showSyncBadge('Vendor update failed: ' + (d.error||''), true); return; }
     Object.keys(patch).forEach(function(k){ v[k] = patch[k]; });
     try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
-    showSyncBadge(okMsg || 'Vendor updated ✓');
+    // Queued writes keep their own persistent indicator, so don't claim "updated ✓".
+    if (!queued) showSyncBadge(okMsg || 'Vendor updated ✓');
     renderVendorsTab();
   });
 }
@@ -12387,16 +12512,19 @@ function loadReferralDirectory(){
     .then(function(data){
       if (data && Array.isArray(data.partners) && !data.error) {
         referralDirectory = data.partners;
+        markDirStale('referral', false);
         try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
         showSyncBadge('Loaded ' + referralDirectory.length + ' referral partner' + (referralDirectory.length!==1?'s':'') + ' ✓');
         setReferralDirStatus('✓ ' + referralDirectory.length + ' partners loaded', false);
       } else {
         var err = (data && data.error) ? data.error : 'no partners returned';
+        markDirStale('referral', referralDirectory.length > 0);
         showSyncBadge('Referral partners: ' + err, true); setReferralDirStatus('Error: ' + err, true);
       }
       refreshReferralsTabIfActive(); populateReferralPicker();
     })
     .catch(function(){
+      markDirStale('referral', referralDirectory.length > 0);
       showSyncBadge('Referral partners load failed — check the URL / sharing', true);
       setReferralDirStatus('Load failed — confirm the web app is shared to “Anyone” and you used the /exec URL', true);
       refreshReferralsTabIfActive();
@@ -12718,9 +12846,8 @@ function editReferral(id){
   var _dz = document.getElementById('r-delete-zone'); if (_dz) _dz.style.display = 'block';
   openReferralForm();
 }
-function postReferralWrite(type, payload, cb){
-  if (!REFERRAL_SYNC_URL) { cb(false, {error:'No Referral Partners URL set'}); return; }
-  _appsScriptPost(REFERRAL_SYNC_URL, { type:type, payload:payload }, cb, type !== 'addPartner');
+function postReferralWrite(type, payload, cb, onLanded){
+  queuedDirectoryWrite('referral', { type: type, payload: payload }, cb, onLanded);
 }
 function requestDeleteReferral(id){
   var p = lookupReferralById(id); if (!p) return;
@@ -12739,11 +12866,11 @@ function hardDeleteReferral(id){
   if (p._row == null || String(p._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this partner, then retry', true); return; }
   if (!REFERRAL_SYNC_URL) { showSyncBadge('Set the Referral Partners URL in Settings first', true); return; }
   showSyncBadge('Deleting…');
-  postReferralWrite('deletePartner', { _row: p._row, partner_name: p.partner_name }, function(ok, d){
-    if (!ok) { showSyncBadge('Delete failed: ' + (d.error||''), true); return; }
+  postReferralWrite('deletePartner', { _row: p._row, partner_name: p.partner_name }, function(ok, d, queued){
+    if (!ok && !queued) { showSyncBadge('Delete failed: ' + (d.error||''), true); return; }
     referralDirectory = referralDirectory.filter(function(x){ return String(referralIdOf(x)) !== String(id); });
     try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
-    showSyncBadge('Partner deleted ✓');
+    if (!queued) showSyncBadge('Partner deleted ✓');
     closeReferralForm();
     renderReferralsTab(); populateReferralPicker();
   });
@@ -12767,11 +12894,16 @@ function saveReferral(){
   var canUpdate = !!(existing && existing._row != null && String(existing._row).trim() !== '');
   var st = document.getElementById('r-save-status'); if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
   if (canUpdate) {
-    postReferralWrite('updatePartner', { _row: existing._row, partner_name: fields.partner_name, fields: fields }, function(ok, d){
-      if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
+    postReferralWrite('updatePartner', { _row: existing._row, partner_name: fields.partner_name, fields: fields }, function(ok, d, queued){
+      // See saveVendor: a queued write is held for retry, so the edit isn't lost —
+      // apply it locally and close, and let the pending-writes chip report the state.
+      if (!ok && !queued) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
       Object.keys(fields).forEach(function(k){ existing[k] = fields[k]; });
       try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
-      if (st){ st.textContent = 'Saved ✓'; st.style.color = 'var(--ok-tx)'; }
+      if (st){
+        st.textContent = queued ? 'Saved here — syncing…' : 'Saved ✓';
+        st.style.color = queued ? 'var(--warn-tx)' : 'var(--ok-tx)';
+      }
       closeReferralForm();
       renderReferralsTab(); populateReferralPicker();
     });
@@ -12793,11 +12925,12 @@ function _quickWriteReferral(id, patch, busyMsg, okMsg){
   if (p._row == null || String(p._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this partner, then retry', true); return; }
   if (!REFERRAL_SYNC_URL) { showSyncBadge('Set the Referral Partners URL in Settings first', true); return; }
   showSyncBadge(busyMsg);
-  postReferralWrite('updatePartner', { _row: p._row, partner_name: p.partner_name, fields: patch }, function(ok, d){
-    if (!ok) { showSyncBadge('Update failed: ' + (d.error||''), true); return; }
+  postReferralWrite('updatePartner', { _row: p._row, partner_name: p.partner_name, fields: patch }, function(ok, d, queued){
+    if (!ok && !queued) { showSyncBadge('Update failed: ' + (d.error||''), true); return; }
     Object.keys(patch).forEach(function(k){ p[k] = patch[k]; });
     try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
-    showSyncBadge(okMsg || 'Partner updated ✓'); renderReferralsTab(); populateReferralPicker();
+    if (!queued) showSyncBadge(okMsg || 'Partner updated ✓');
+    renderReferralsTab(); populateReferralPicker();
   });
 }
 // Log an outreach from the referral card: read the note typed next to the button,
