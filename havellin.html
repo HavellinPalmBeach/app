@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 7:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 7:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3047,8 +3047,13 @@ function addWorkingDays(startDateStr, days) {
 // Off-site coordination no longer gates the calendar — it happens around the crew
 // days, before mobilization and after the last truck. Instead it feeds a load check:
 // past TC_DAY_CAP hours/day one concierge can't carry the job and a second is
-// recommended. Billing is still total concierge hours, so the second concierge
-// shortens the calendar rather than raising the fee.
+// recommended. Billing is still total concierge hours, split between the two, so a
+// second concierge changes neither the fee nor the duration — it makes the schedule
+// coverable. Duration is set by the crew clearing the work pool and never by tcCount;
+// nothing here shortens the calendar for a second concierge, and the hint text must not
+// claim otherwise. The cost side assumes the two SPLIT the hours rather than both
+// attending: the margin panel costs one stream of engaged hours (see the tcEngagedHrs
+// line), so genuine simultaneous attendance would be real cost it never sees.
 var TARGET_DAYS = 10;
 var PRODUCTIVE_HRS_PER_DAY = 7;   // billable hours in a crew day (setup/travel/breaks excluded)
 var TC_ONSITE_ALPHA_DEFAULT = 0.5;
@@ -3632,7 +3637,7 @@ function calcAll() {
       tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">Engine recommends 2 concierges for this scope</span> — '
         + crew.tcLoad.toFixed(1) + ' concierge hrs/day across ' + daysNeeded + ' working days is more than one person can carry. Assign a second here so both are tracked on the job.';
     } else if (tc2Sel && tc2Sel.value) {
-      tc2Hint.textContent = 'Both concierges will be tracked in the crew and Log Hours. Billing is total TC hours — a second concierge shortens the calendar, not the fee.';
+      tc2Hint.textContent = 'Both concierges are tracked in the crew and Log Hours. Billing is total TC hours split between them, so a second concierge changes neither the fee nor the duration — it makes the schedule coverable without one person carrying 12-hour days.';
     } else {
       tc2Hint.textContent = '';
     }
@@ -3656,15 +3661,22 @@ function calcAll() {
         : '<strong>' + crew.requiredPS + ' PS recommended</strong>');
       var assigned = Math.max(getScheduledPSCount(), crew.requiredPS);
       if (assigned > crew.requiredPS) crewNote += ', ' + assigned + ' assigned';
-      var overNote = crew.overTarget
-        ? ' <span style="color:var(--gray);">— exceeds ' + TARGET_DAYS + '-day target at ' + (crew.maxedOut ? 'maximum' : 'recommended') + ' staffing; scope-driven.</span>'
-        : '';
+      // Past the internal 10-day preference. Worth an amber badge only when something can
+      // still be done about it — that is, when there is crew headroom left. Once the crew
+      // is maxed the duration is simply what the property is, and an amber on every large
+      // estate trains the estimator to ignore the one badge that does matter: the
+      // hard-target failure below, which is tied to a real client commitment.
+      var overFixable = crew.overTarget && crew.requiredPS < 6;
+      var overNote = !crew.overTarget ? ''
+        : overFixable
+          ? ' <span style="color:var(--gray);">— past ' + TARGET_DAYS + ' days; adding a specialist would pull it back.</span>'
+          : ' <span style="color:var(--gray);">— more than ' + TARGET_DAYS + ' days because of the size of the property, not staffing.</span>';
       if (hardTarget && projectedEnd > hardTarget) {
         var htFmt = new Date(hardTarget + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
         timelineBadge.innerHTML = '<div class="alert a-err" style="margin-top:0;"><strong>Cannot meet hard target.</strong> Projected completion is ' + projDateFmt + ' (' + crew.tcDays + ' working days, ' + crewNote + ') — ' + Math.round(workingDaysBetween(hardTarget, projectedEnd)) + ' working days past the ' + htFmt + ' deadline. Renegotiate scope or deadline before sending estimate.</div>';
       } else {
         var htNote = hardTarget ? ' Hard target ' + new Date(hardTarget + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ✓' : '';
-        timelineBadge.innerHTML = '<div class="alert ' + (crew.overTarget ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">Projected completion: <strong>' + projDateFmt + '</strong> (' + crew.tcDays + ' working days, ' + crewNote + ')' + htNote + overNote + '</div>';
+        timelineBadge.innerHTML = '<div class="alert ' + (overFixable ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">Projected completion: <strong>' + projDateFmt + '</strong> (' + crew.tcDays + ' working days, ' + crewNote + ')' + htNote + overNote + '</div>';
       }
     }
   }
