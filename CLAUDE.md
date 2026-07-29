@@ -109,6 +109,12 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   0 failed. Verified from the Quo side, not just the log — the Comiter firm contact
   kept its id with createdAt 13:03 / updatedAt 13:35, so the re-push matched rather
   than duplicated. **199 contacts live.**
+- **Stale contacts are reported.** Every run diffs what Quo holds under our sources
+  against what the directories still produce; anything left over is logged as `STALE`
+  with its contact id. Delete those by hand — the sync has no DELETE it can rely on,
+  and a removed vendor's contact would otherwise sit in the dialer forever. This first
+  showed up when the vendor sheet went 152 → 150 rows and the run reported `update=197`
+  against 199 live contacts.
 - Confirmed by that same check: a PATCH *does* honour a changed `source` — the partner
   contacts moved from the legacy `Havellin` to `Havellin Referral Partner` on update.
   Keep `QUO_SRC_LEGACY` in the read list anyway; it costs nothing and any contact

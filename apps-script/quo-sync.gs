@@ -347,7 +347,7 @@ function _firmPayload(company, phone, src, tags) {
 function syncQuoAll(dryRun) {
   var plan = {
     ok: true, dryRun: !!dryRun, counts: {},
-    create: [], update: [], skip: [], firms: [], dupe: [], conflict: [], failed: []
+    create: [], update: [], skip: [], firms: [], dupe: [], conflict: [], stale: [], failed: []
   };
 
   var partners = _collectPartners(), vendors = _collectVendors();
@@ -370,6 +370,12 @@ function syncQuoAll(dryRun) {
 
   var existing = dryRun ? {} : _quoLoadExisting();
   if (dryRun) { try { existing = _quoLoadExisting(); } catch (e) { existing = {}; } }
+  // Everything Quo holds under our sources. Anything still in here at the end of the
+  // run is a contact the directories no longer produce — a vendor row deleted, a
+  // partner removed, a switchboard that dissolved. The sync has no DELETE it can rely
+  // on, so the least it can do is name them instead of leaving them to rot silently.
+  var unseen = {};
+  for (var k in existing) if (Object.prototype.hasOwnProperty.call(existing, k)) unseen[k] = existing[k];
 
   for (var g = 0; g < order.length; g++) {
     var phone = order[g], members = byPhone[phone], payload, entry;
@@ -405,6 +411,7 @@ function syncQuoAll(dryRun) {
         payload = _quoPayload(members[0]);
         entry = { name: members[0].label, phone: phone, kind: members[0].kind, ext: payload.externalId };
         var existingDup = existing[payload.externalId] || '';
+        delete unseen[payload.externalId];
         if (dryRun) { (existingDup ? plan.update : plan.create).push(entry); continue; }
         var resD = existingDup
           ? _quoFetch('patch', '/contacts/' + encodeURIComponent(existingDup), payload)
@@ -421,6 +428,7 @@ function syncQuoAll(dryRun) {
     }
 
     var existingId = existing[payload.externalId] || '';
+    delete unseen[payload.externalId];
     if (dryRun) { (existingId ? plan.update : plan.create).push(entry); continue; }
 
     var res = existingId
@@ -435,6 +443,11 @@ function syncQuoAll(dryRun) {
       plan.failed.push(entry);
     }
     Utilities.sleep(QUO_THROTTLE_MS);
+  }
+  for (var u in unseen) {
+    if (Object.prototype.hasOwnProperty.call(unseen, u)) {
+      plan.stale.push({ externalId: u, contactId: unseen[u] });
+    }
   }
   return plan;
 }
@@ -456,6 +469,8 @@ function _logQuoAll(p) {
   if (p.dupe.length) Logger.log('  ' + p.dupe.length + ' duplicate row(s) in the source sheet — synced once, worth cleaning up:');
   p.dupe.forEach(function (e) { Logger.log('    DUPE    ' + e.phone + '  ' + e.name + '  (' + e.rows.join(', ') + ')'); });
   p.conflict.forEach(function (e) { Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why); });
+  if (p.stale.length) Logger.log('  ' + p.stale.length + ' contact(s) in Quo no longer in any directory — delete by hand:');
+  p.stale.forEach(function (e) { Logger.log('    STALE   ' + e.contactId + '  was ' + e.externalId); });
   p.failed.forEach(function (e) { Logger.log('  FAILED  ' + e.name + '  HTTP ' + e.code + '  ' + e.error); });
   return p;
 }
