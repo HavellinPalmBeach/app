@@ -87,8 +87,13 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   so these could not be read from the docs — confirm against the Authentication page.
 - Also needs `QUO_API_KEY` in Script Properties. Not exposed over HTTP yet, by design:
   run `dryRunQuoSync` from the Apps Script editor first, then `pushQuoSync`.
-- Dry run verified against the 79-row seed offline: 71 create, 8 skipped (no dialable
-  phone), 13 flagged as sharing a firm switchboard. No UI button yet.
+- **One Quo contact per NUMBER, not per partner.** A switchboard shared by several
+  partners syncs as the firm (`externalId` `firm:+1…`, display name = firm, role
+  "Main line") because naming it after one of them is wrong on most inbound calls.
+  Members keep individual contacts whenever they have a direct line. If members of a
+  shared number disagree on firm, it's reported as a conflict and left unsynced.
+- Dry run verified against the 79-row seed offline: 63 contacts (58 people + 5 firms)
+  from 79 rows, 8 skipped for no dialable phone, 0 conflicts. No UI button yet.
 
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home

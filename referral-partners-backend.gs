@@ -242,6 +242,25 @@ function _partnerToQuo(rec) {
   return { defaultFields: fields, externalId: String(rec.uid || ''), source: QUO_SOURCE };
 }
 
+// A switchboard shared by several partners becomes ONE contact named for the firm.
+// Naming it after any single partner would be wrong three times out of four on an
+// inbound call; naming it after the firm is right every time. The individuals keep
+// their own contacts whenever they have a direct line.
+function _firmToQuo(firm, phone) {
+  return {
+    defaultFields: {
+      firstName: firm,          // display name on caller ID — the firm, not a person
+      lastName: '',
+      company: firm,
+      role: 'Main line',
+      phoneNumbers: [{ name: 'Main', value: phone }]
+      // No email: a switchboard record has no one inbox behind it.
+    },
+    externalId: 'firm:' + phone,   // synthetic + stable; not borrowed from any partner
+    source: QUO_SOURCE
+  };
+}
+
 // dryRun true  -> returns the plan, writes nothing to Quo and nothing to the sheet.
 // dryRun false -> creates/updates in Quo and writes each id back to quo_contact_id.
 function syncQuoContacts(dryRun) {
@@ -249,53 +268,74 @@ function syncQuoContacts(dryRun) {
   var last = sh.getLastRow();
   var idCol = COLUMNS.indexOf('quo_contact_id') + 1;
   sh.getRange(1, idCol).setValue('quo_contact_id');   // no-op once the header exists
-  if (last < 2) return { ok: true, dryRun: !!dryRun, create: [], update: [], skip: [] };
+  var plan = { ok: true, dryRun: !!dryRun, create: [], update: [], skip: [], firms: [], conflict: [], failed: [] };
+  if (last < 2) return plan;
 
   var nCols = Math.max(COLUMNS.length, sh.getLastColumn());
   var values = sh.getRange(2, 1, last - 1, nCols).getValues();
-  var plan = { ok: true, dryRun: !!dryRun, create: [], update: [], skip: [], shared: [], failed: [] };
 
-  // Several partners at one firm often list the same switchboard. Outbound is fine —
-  // you pick the person, not the number — but INBOUND caller ID resolves by number, so
-  // a call from that switchboard will surface whichever contact Quo matches first.
-  // Flag them rather than skip: whether that's acceptable is a judgement about the
-  // directory, not something this sync should quietly decide.
-  var phoneCount = {};
-  for (var p = 0; p < values.length; p++) {
-    var pc = COLUMNS.indexOf('phone');
-    var pe = _e164(pc < values[p].length ? values[p][pc] : '');
-    if (pe) phoneCount[pe] = (phoneCount[pe] || 0) + 1;
-  }
-
+  // Pass 1 — read the eligible rows and bucket them by dialable number.
+  var byPhone = {}, order = [];
   for (var i = 0; i < values.length; i++) {
     var row = values[i];
-    var rec = {};
+    var rec = { _row: i + 2 };
     for (var c = 0; c < COLUMNS.length; c++) rec[COLUMNS[c]] = (c < row.length ? row[c] : '');
     if (String(rec.first_name).trim() === '' && String(rec.firm).trim() === '') continue;
 
-    var label = (String(rec.first_name || '') + ' ' + String(rec.last_name || '')).trim() ||
-                String(rec.firm || '(unnamed)');
+    rec._label = (String(rec.first_name || '') + ' ' + String(rec.last_name || '')).trim() ||
+                 String(rec.firm || '(unnamed)');
+    rec._phone = _e164(rec.phone);
+    rec._firm = String(rec.firm || rec.partner_name || '').trim();
 
-    if (!_e164(rec.phone)) { plan.skip.push({ row: i + 2, name: label, why: 'no dialable phone' }); continue; }
-    if (!String(rec.uid || '').trim()) { plan.skip.push({ row: i + 2, name: label, why: 'no uid — run backfillIds first' }); continue; }
+    if (!rec._phone) { plan.skip.push({ row: rec._row, name: rec._label, why: 'no dialable phone' }); continue; }
+    if (!String(rec.uid || '').trim()) { plan.skip.push({ row: rec._row, name: rec._label, why: 'no uid — run backfillIds first' }); continue; }
 
-    var existingId = String(rec.quo_contact_id || '').trim();
-    var entry = { row: i + 2, name: label, phone: _e164(rec.phone), company: String(rec.firm || '') };
-    if (phoneCount[entry.phone] > 1) plan.shared.push(entry);
+    if (!byPhone[rec._phone]) { byPhone[rec._phone] = []; order.push(rec._phone); }
+    byPhone[rec._phone].push(rec);
+  }
 
-    if (dryRun) {
-      (existingId ? plan.update : plan.create).push(entry);
-      continue;
+  // Pass 2 — one Quo contact per number, so inbound caller ID is never ambiguous.
+  for (var g = 0; g < order.length; g++) {
+    var phone = order[g];
+    var members = byPhone[phone];
+    var payload, entry;
+
+    if (members.length === 1) {
+      payload = _partnerToQuo(members[0]);
+      entry = { rows: [members[0]._row], name: members[0]._label, phone: phone, company: members[0]._firm, kind: 'person' };
+    } else {
+      // Only collapse to a firm when the members agree on who they are. If they don't,
+      // the shared number is a data problem — say so rather than invent a firm name.
+      var firms = {}, firmName = '';
+      members.forEach(function (m) { if (m._firm) { firms[m._firm] = 1; firmName = m._firm; } });
+      var distinct = Object.keys(firms);
+      if (distinct.length !== 1) {
+        plan.conflict.push({
+          phone: phone, names: members.map(function (m) { return m._label; }),
+          firms: distinct, why: 'shared number, no single firm — left unsynced'
+        });
+        continue;
+      }
+      payload = _firmToQuo(firmName, phone);
+      entry = { rows: members.map(function (m) { return m._row; }), name: firmName, phone: phone, company: firmName, kind: 'firm' };
+      plan.firms.push({ firm: firmName, phone: phone, folded: members.map(function (m) { return m._label; }) });
     }
 
-    var payload = _partnerToQuo(rec);
+    // Any id already recorded against the group identifies the contact to PATCH.
+    var existingId = '';
+    for (var m = 0; m < members.length && !existingId; m++) existingId = String(members[m].quo_contact_id || '').trim();
+
+    if (dryRun) { (existingId ? plan.update : plan.create).push(entry); continue; }
+
     var res = existingId
       ? _quoFetch('patch', '/contacts/' + encodeURIComponent(existingId), payload)
       : _quoFetch('post', '/contacts', payload);
 
     if (res.code >= 200 && res.code < 300) {
-      var newId = res.body && (res.body.id || (res.body.data && res.body.data.id));
-      if (newId && newId !== existingId) sh.getRange(i + 2, idCol).setValue(newId);
+      var newId = (res.body && (res.body.id || (res.body.data && res.body.data.id))) || existingId;
+      // Stamp the id on every member row, so a later run PATCHes once instead of
+      // re-creating the firm contact from whichever row happens to come first.
+      if (newId) entry.rows.forEach(function (r) { sh.getRange(r, idCol).setValue(newId); });
       (existingId ? plan.update : plan.create).push(entry);
     } else {
       entry.code = res.code;
@@ -310,12 +350,13 @@ function syncQuoContacts(dryRun) {
 function _logQuoPlan(p) {
   Logger.log((p.dryRun ? 'DRY RUN — nothing written.' : 'LIVE — pushed to Quo.') +
     '  create=' + p.create.length + '  update=' + p.update.length +
-    '  skip=' + p.skip.length + '  failed=' + p.failed.length);
-  if (p.shared.length) Logger.log('  ' + p.shared.length + ' contact(s) share a switchboard — inbound caller ID will be ambiguous:');
-  p.shared.forEach(function (e) { Logger.log('    SHARED  ' + e.phone + '  ' + e.name + '  ' + e.company); });
-  p.create.forEach(function (e) { Logger.log('  CREATE  ' + e.name + '  ' + e.phone + '  ' + e.company); });
-  p.update.forEach(function (e) { Logger.log('  UPDATE  ' + e.name + '  ' + e.phone + '  ' + e.company); });
+    '  skip=' + p.skip.length + '  conflict=' + p.conflict.length + '  failed=' + p.failed.length);
+  if (p.firms.length) Logger.log('  ' + p.firms.length + ' switchboard(s) synced as the firm, not a person:');
+  p.firms.forEach(function (f) { Logger.log('    FIRM    ' + f.phone + '  ' + f.firm + '  ← ' + f.folded.join(', ')); });
+  p.create.forEach(function (e) { Logger.log('  CREATE  [' + e.kind + '] ' + e.name + '  ' + e.phone); });
+  p.update.forEach(function (e) { Logger.log('  UPDATE  [' + e.kind + '] ' + e.name + '  ' + e.phone); });
   p.skip.forEach(function (e) { Logger.log('  SKIP    row ' + e.row + '  ' + e.name + '  — ' + e.why); });
+  p.conflict.forEach(function (e) { Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why); });
   p.failed.forEach(function (e) { Logger.log('  FAILED  ' + e.name + '  HTTP ' + e.code + '  ' + e.error); });
   return p;
 }
