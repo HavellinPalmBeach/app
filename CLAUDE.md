@@ -81,10 +81,12 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - `syncQuoContacts` lives in `referral-partners-backend.gs`. One-way push, sheet is the
   source of truth. Partner `uid` → Quo `externalId`; the returned Quo id is written back
   to a new `quo_contact_id` column, and that local id is what decides POST vs PATCH.
-- `QUO_AUTH_BEARER` **confirmed 2026-07-28**: raw key, no `Bearer ` prefix.
-  `QUO_API_BASE` is still **unverified** — the pre-rebrand `api.openphone.com/v1`.
-  `quo.com` is blocked by the sandbox network policy, so it could not be read from the
-  docs; confirm the host in the Authentication page's curl example.
+- Endpoint constants **both confirmed 2026-07-28** from the Authentication curl example:
+  host is `https://api.quo.com/v1` (it MOVED in the rebrand — `api.openphone.com` is
+  dead) and the header carries the raw key with no `Bearer ` prefix. Either one wrong
+  returns 401, which reads like a bad key.
+- Run `testQuoAuth` before anything else — a read-only `GET /phone-numbers` that proves
+  key + host without touching contacts, so auth failures don't masquerade as sync bugs.
 - Also needs `QUO_API_KEY` in Script Properties. Not exposed over HTTP yet, by design:
   run `dryRunQuoSync` from the Apps Script editor first, then `pushQuoSync`.
 - **The app's tap-to-call/text buttons stay on `tel:` / `sms:` — do NOT route them to

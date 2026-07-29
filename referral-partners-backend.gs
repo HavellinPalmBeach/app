@@ -165,12 +165,13 @@ function doPost(e) {
 // USAGE: Run ▸ dryRunQuoSync first and read the log. Nothing is written to Quo
 // until you run pushQuoSync.
 
-// QUO_API_BASE is UNVERIFIED — quo.com is blocked from the machine this was written
-// on, so it is still the pre-rebrand OpenPhone host. If the API moved to api.quo.com,
-// this line is the only place that needs changing.
-var QUO_API_BASE = 'https://api.openphone.com/v1';
-// CONFIRMED 2026-07-28 against the Authentication doc: the header carries the raw key,
-// with no 'Bearer ' prefix. Getting this wrong returns 401, which reads like a bad key.
+// Both CONFIRMED 2026-07-28 against the Authentication doc's curl example:
+//   curl --request GET --url https://api.quo.com/v1/phone-numbers \
+//        --header 'Authorization: YOUR_API_KEY'
+// The host moved to api.quo.com in the rebrand — the old api.openphone.com would have
+// failed in a way that reads like a bad key. The header carries the raw key with no
+// 'Bearer ' prefix, which is likewise a 401 if you get it wrong.
+var QUO_API_BASE = 'https://api.quo.com/v1';
 var QUO_AUTH_BEARER = false;
 
 var QUO_SOURCE = 'Havellin';
@@ -391,6 +392,27 @@ function _logQuoPlan(p) {
   p.orphan.forEach(function (e) { Logger.log('    ORPHAN  ' + e.contactId + '  was ' + e.wasExternalId + '  (row ' + e.row + ', ' + e.name + ')'); });
   p.failed.forEach(function (e) { Logger.log('  FAILED  ' + e.name + '  HTTP ' + e.code + '  ' + e.error); });
   return p;
+}
+
+// Cheapest possible proof that the key and host are right: a read-only GET that
+// touches no contacts. Run this FIRST — it separates "auth is wrong" from "the sync
+// is wrong", which otherwise both surface as a wall of failures in the dry run.
+function testQuoAuth() {
+  var res = _quoFetch('get', '/phone-numbers', null);
+  if (res.code === 200) {
+    var list = (res.body && (res.body.data || res.body)) || [];
+    Logger.log('OK — authenticated against ' + QUO_API_BASE);
+    Logger.log('  ' + (list.length || 0) + ' phone number(s) on the workspace:');
+    (list.length ? list : []).forEach(function (n) {
+      Logger.log('    ' + (n.number || n.phoneNumber || '?') + '  ' + (n.name || ''));
+    });
+  } else if (res.code === 401 || res.code === 403) {
+    Logger.log('HTTP ' + res.code + ' — the key was rejected. Check QUO_API_KEY in ' +
+               'Project Settings ▸ Script Properties (exact name, no stray spaces).');
+  } else {
+    Logger.log('HTTP ' + res.code + ' — ' + JSON.stringify(res.body).slice(0, 300));
+  }
+  return res.code;
 }
 
 // Run these from the Apps Script editor. Dry run first, always.
