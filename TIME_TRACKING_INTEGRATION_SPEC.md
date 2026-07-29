@@ -1,331 +1,379 @@
-# Time Tracking → Havellin — Integration Scope
+# Hours Review → QuickBooks — Design
 
-Status: **scoping. Vendor NOT chosen.** Drafted 2026-07-29.
+Status: **designed, not built.** Drafted 2026-07-29.
 
-Goal: crew and founders clock in on a time-tracking app in the field; that app feeds payroll
-and accounting; the Havellin app stops being a hand-keyed timesheet and becomes a consumer
-of tracked hours for billing.
-
-Originally scoped against QuickBooks Time. QBT is priced per user per month, which does not
-survive a 1099 crew that cycles in and out — see §0.
+Hours are logged in the Havellin app by the Transition Concierge, reviewed and signed off at
+the end of each job (or weekly on jobs that run longer than a week), and the reviewed hours
+push to QuickBooks Online for job costing and contractor pay.
 
 ---
 
-## 0. Vendor choice — open
+## 0. Decision: no third-party time tracker
 
-### 0a. First decide whether this is needed at all
+Evaluated and rejected. Kept in §9 for the record.
 
-**How are the PS crew actually paid?** This decides the whole project, and it should be
-settled before any vendor is.
+The app already holds everything a tracker would produce. Havellin's pricing bills
+`PS = n × H` — crew size × hours on site — and under the working-supervisor model the
+concierge is on site for every crew hour by design (`H = W / (n + α)`). So the facts billing
+needs are: how many crew, how many hours, which days. That is one entry, made by someone
+already standing there.
 
-Havellin's own pricing model bills `PS = n × H` — crew size × hours on site — and the
-concierge is on site for every crew hour by design (`H = W / (n + α)`). So for **billing**,
-the required facts are: how many crew, how many hours, which days. That is one entry, made
-by someone who is already standing there, which is exactly what the app does today.
+Three things decided it:
 
-Individual per-person tracking is only load-bearing for:
+1. **Per-seat pricing is the wrong shape for a churning 1099 roster.** QuickBooks Time and
+   most of the category price per user per month. Clockify's free tier was capped at 5 users
+   in April 2026 (most review articles still say "unlimited" and are stale).
+2. **The classification risk runs the wrong way.** Requiring 1099 contractors to clock in on
+   a company system on a company schedule with GPS is *behavioral control* — an IRS
+   common-law factor weighing toward employee classification. Not a prohibition, but not a
+   free move either, and worth ten minutes with counsel before it becomes standard practice.
+3. **A tracker buys no QuickBooks linkage we don't already have.** The push to QB is the same
+   work either way. A tracker would only change where the hours originate.
 
-1. **Paying the crew** — and only if they are paid *hourly*. A day rate or a per-job rate
-   needs no clock.
-2. **Dispute defence** — a contractor contesting hours.
+The TC owns the timesheet. That is defensible for what it is: time recorded by the person
+responsible for the job, at the moment, on a job where one concierge is present for every
+crew hour anyway. Not GPS proof — but accurate, and the accuracy is structural rather than
+a matter of trust.
 
-If the crew are on day rates, buying a seat-based tracker to reconstruct a number the
-concierge already knows is ceremony, and the honest recommendation is to buy nothing: keep
-the app's log for billing, and put only the founders on a tracker if they want personal
-records. If the crew are hourly, individual records are genuinely needed and §0b applies.
+**Revisit only if** contractors begin disputing hours as a pattern, or the roster grows past
+the point where one concierge is present for all crew time.
 
-### 0b. If individual tracking is needed — the market as of 2026-07-29
+---
 
-Per-seat pricing is the wrong *shape* for a roster that churns. Two shapes fit: free
-unlimited users, or flat per-location.
+## 1. What is already built — verified against the code
+
+Daily tracking and deviation detection are live. This section is the baseline; §2 is what's
+missing.
+
+`saveLogEntry()` (`havellin.html:9928`) writes one entry per date per job, `members[]` tagged
+`TC` / `PS`. Every save immediately fires `updateLogSummary()` and `renderProjection()`, so
+deviation recomputes as hours land rather than at invoicing.
+
+`computeProjection()` (`10712`) is the forward model: actual hours ÷ fraction of room hours
+complete, projected to completion, banded.
+
+| Band | Condition |
+|---|---|
+| red | (≥15% complete AND projected ≥ 140% of estimate) OR (≥35% complete AND projected > 115%) |
+| amber | projected > 105% of estimate |
+| preliminary | total logged below `PROJ_CREW_DAY` (7 hrs) — noise floor |
+| nodata | no room complete yet |
+
+Room completion is graded per role — `TC_DONE_STATUSES` counts `locked/packed/complete`,
+`PS_DONE_STATUSES` only `packed/complete` (`10709`) — so the two projections move
+independently. Rooms marked `excluded` (homeowner-handled) are dropped from both.
+
+Four places surface a deviation today:
+
+| Where | Basis | Threshold |
+|---|---|---|
+| Log Hours panel (`10049`) | hours-to-date vs estimate | >100% warn, >115% error |
+| Projection card (`10808`) | **projected** hours | bands above |
+| Client dashboard bars (`6919`) | hours-to-date, per role | 90% / 115% |
+| Final invoice PIN gate (`10539`) | **dollars**, ±15% of `est.havellinTotal` | manager PIN unlocks |
+
+Also shipped: `renderInvoice()` blocks an hourly final when no hours are logged rather than
+issuing a credit invoice (commit `755880b`), with fixed-price and fee-only jobs exempt.
+
+---
+
+## 2. Gaps found
+
+### 2a. The contractual 15% rule is on hours; the invoice gate is on dollars
+
+The agreement says (`5154`, `5214`):
+
+> If actual **hours** exceed the estimate by more than 15%, Havellin will notify the client
+> before proceeding.
+
+Hours, and the duty is *prospective* — during the job, before continuing work. The invoice
+gate is a *dollar* variance against `est.havellinTotal` (`10539`), which is a different
+measure of a different thing at a different time. They diverge in both directions: a job at
+118% of estimated hours with vendor actuals landing under estimate can stay inside ±15% on
+dollars, so the invoice stays quiet about a threshold the agreement already tripped mid-job.
+
+**Nothing records that the notice was given.** The app can detect the breach and cannot
+demonstrate compliance. This is the largest gap here — larger than the review question — and
+the cheapest to close.
+
+### 2b. Under-logging is indistinguishable from efficiency
+
+A job active eight days with three log entries reads as "under estimate, on track." It is the
+most dangerous false negative in the system, because the projection presents partial data as
+reassurance. Nothing compares logged days against elapsed days.
+
+### 2c. Every deviation notice is passive
+
+All four surfaces in §1 require someone to already be looking at that job's tab. An
+over-trending job is invisible from the client list.
+
+### 2d. No review state on hours
+
+Every entry is immediately live and billable. Entries can be deleted individually
+(`deleteLogEntry`, `9987`) but there is no sign-off, so nothing distinguishes a considered
+timesheet from a half-finished one — and the final bills both identically.
+
+### 2e. The midpoint invoice does not consult the log
+
+`totalMidBasis` (`10263`) bills 75% cumulative off the *estimate's* labor (`estLaborNet`);
+only the final uses `actLaborNet`. Vendor fees are trued from the midpoint on, labor only at
+the final. This is correct as designed, but it means a midpoint hours review is not a billing
+control — see §3b.
+
+---
+
+## 3. The review checkpoint
+
+### 3a. Cadence — job end, or weekly, whichever comes first
+
+Most estate jobs run days rather than weeks, so **job end is the common case** and the weekly
+rule is the overflow for long ones. A short job therefore reviews once, complete, rather than
+in two partial slices — which also makes its QB push a single write.
+
+Review at the end of a long job alone is not workable: three weeks of hours is unreviewable
+in practice, because nobody reconstructs day four. Weekly it is five rows against a fresh
+memory.
+
+New fields on each log entry:
+
+```js
+{
+  id: 1753800000000,
+  date: '2026-07-20',
+  activity: 'Pack out — primary suite',
+  members: [{ name: 'Anthony Graziano Sr', role: 'TC', hours: 7.97 }],
+  reviewed:   true,              // ← NEW
+  reviewedBy: 'Ashley …',        // ← NEW
+  reviewedAt: '2026-07-26T18:04:11Z',
+  period:     '2026-W30',        // ← NEW: review batch key; 'job-end' for short jobs
+  qbo:        { timeActivityId: '187', syncToken: '0', billId: null }   // ← NEW, see §5
+}
+```
+
+Reviewed entries render read-only in the log history (no `✕`). Corrections go through an
+explicit unlock, which clears `reviewed` and — critically — must also reverse anything
+already pushed (§5c).
+
+**Do not pre-round hours.** Store exact fractional hours. The existing code sums first and
+rounds once (`10168`), which is correct; rounding each row before summing compounds drift,
+and at $150/hr each 0.05h is $7.50.
+
+### 3b. Midpoint — acknowledgment, not a billing gate
+
+Because the midpoint bills off the estimate (§2e), gating it on hours review would be
+ceremony. Gate it on the *projection being looked at*: before the midpoint sends, surface
+hours-vs-plan and the projection band. Amber or red then becomes a change-order decision at
+the one point where it can still change the outcome. After the final it is a write-off
+argument.
+
+### 3c. Final — hard gate
+
+Unreviewed entries block the final. Same mechanism as the zero-hours guard already shipped
+(`invBlocked`, `10518`), and the same reasoning: the number isn't unusual, it's unfinished,
+and no approval makes it correct. The existing guard blocks a final with no hours; this
+extends it to a final with unsigned hours.
+
+Deliberately **not** routed through `invRequiresApproval` — that flag means "a manager can
+PIN this open," and a manager cannot PIN away a timesheet nobody has read.
+
+### 3d. Notice-of-overage capture
+
+When hours cross 115% of estimate, capture that the client was told: date, method, who, and
+what they were told. Stored on the job, rendered on the dashboard, and included in the job
+record. This is what turns §2a from a detectable breach into a demonstrable compliance step.
+
+---
+
+## 4. What review triggers
+
+Review is the authorization event. Reviewed hours become eligible for:
+
+1. **The final invoice** (§3c) — already the consumer of `actTC` / `actPS`.
+2. **The QuickBooks push** (§5).
+3. **The CSV export** (§6) — one row per person per day per job, reviewed rows only.
+
+Unreviewed hours still feed `computeProjection()` and every deviation surface. The projection
+must stay live as the job runs; withholding hours from it until sign-off would blind the one
+early-warning system that works.
+
+---
+
+## 5. The QuickBooks push
+
+### 5a. Two different writes
+
+"Push to QB" is two unrelated operations against different entities:
+
+| Purpose | QBO entity | Grain |
+|---|---|---|
+| Job costing / billable time | `TimeActivity` | one per person per day |
+| Paying the crew | `Bill` (or `Purchase`) | one per contractor per review period |
+
+`TimeActivity` records that someone worked and makes P&L-by-job real. It does **not** pay a
+1099 — that is the `Bill`, at the contractor's **cost** rate (`DEFAULT_CONTRACTORS[].rate`,
+`15141`), which is not the client billing rate: Anthony Sr carries `rate: 100` against a TC
+billing rate of $150. Building a `Bill` off the billing rate would overpay by 50%.
+
+Both are worth having. They fail differently, and only the second touches money owed, so they
+should be separately switchable rather than one operation.
+
+### 5b. It cannot run in the browser
+
+`havellin.html` is a static file on GitHub Pages. It cannot hold a client secret, complete an
+OAuth redirect, or store a refresh token. The push lives in Apps Script —
+`apps-script/qbo-sync.gs`, as an additional file in the existing project, following
+`quo-sync.gs` exactly: key material in Script Properties, `testQboAuth` before anything else,
+dry-run then commit, and **every entry point argument-free** because the Apps Script Run menu
+passes no arguments.
+
+So "automatically on review" resolves to: review writes the flag → `saveLogData()` already
+posts it to the sheet → a time-driven trigger picks up reviewed-and-unpushed entries. Near
+real time, not instant. Worth saying plainly so the behaviour isn't a surprise.
+
+### 5c. Write-back is mandatory here — unlike the Quo sync
+
+The Quo sync deliberately has **no write-back**: it reads Quo for everything under our
+sources, builds `externalId → id` in memory, and derived state cannot drift from what Quo
+holds. That design does not transfer. QBO has no equivalent searchable external key, and
+every QBO update requires the object's `Id` **and** its current `SyncToken`. Both must be
+stored per log entry (the `qbo` field in §3a).
+
+Consequences:
+
+- **Upsert against the stored `Id`, never append.** A corrected week must update, not
+  duplicate. Same failure shape as a double-counted import, except in the books rather than
+  on an invoice.
+- **A stale `SyncToken` fails the update.** QBO increments it on every write, including
+  writes made by a human in the QBO UI. Re-read before update, or handle the version error
+  by re-reading and retrying once.
+- **Unlocking a reviewed entry must reverse the push,** not just clear the flag. If the
+  period's `Bill` has already been paid, it cannot be silently amended — that case needs to
+  surface to a human rather than resolve itself.
+
+### 5d. The refresh token rotates
+
+QBO OAuth 2.0: access token ~1 hour, refresh token ~100 days, **and the refresh token rotates
+on use.** The new one must be written back to Script Properties on every refresh or the sync
+dies silently on its second run. This is the single most likely way this integration breaks,
+and it breaks quietly.
+
+Initial authorization needs a browser round-trip. Google's `apps-script-oauth2` library
+handles this and is the intended path.
+
+### 5e. Do not auto-push a job that is red on projection
+
+Reviewed hours on a job that has blown past 115% should not quietly become cost in the books
+before someone has decided about a change order. Otherwise the accounting system of record
+silently ratifies an overage nobody signed off on, and the change-order conversation happens
+after the cost is already booked.
+
+Gate the push on the projection band, or at minimum route red-band periods to a held queue
+that names what it is holding and why. Silence is the one unacceptable option.
+
+### 5f. Verify against the live API before building
+
+Taken from working knowledge of the QBO API and **not yet confirmed against a real token**.
+Confirm each before designing on it:
+
+- `TimeActivity` accepts `VendorRef` for a 1099 (vs `EmployeeRef`), and whether `NameOf` must
+  be set explicitly.
+- Whether `TimeActivity` exposes any usable external-id field — if it does, §5c gets simpler.
+- Which entity actually feeds contractor payments in this subscription (`Bill`, `Purchase`, or
+  the Contractor Payments add-on), and whether that add-on is present.
+- Whether `BillableStatus` on `TimeActivity` needs to be set for job costing to appear in the
+  reports that matter.
+- Sandbox first: `https://sandbox-quickbooks.api.intuit.com`, production
+  `https://quickbooks.api.intuit.com/v3/company/<realmId>/`.
+
+---
+
+## 6. CSV export
+
+One row per person per day per job, reviewed rows only. Worth building **even with the push
+running**: it is the reconciliation artifact when QB and the app disagree, and the fallback
+the first time the token rotation bites (§5d). It is also the cheap path — if the push slips,
+billing and payroll still work.
+
+---
+
+## 7. Phases
+
+**Phase 1 — review checkpoint (~1 day, no QB dependency)**
+1. `reviewed` / `reviewedBy` / `reviewedAt` / `period` on log entries; reviewed rows
+   read-only, with an explicit unlock.
+2. Review & sign-off UI on the Job Plan tab. Job-end and weekly batching, job-end default.
+3. Final-invoice hard gate on unreviewed entries (§3c).
+4. Logged-days vs elapsed-days reconciliation on the projection card, and a staleness flag
+   for an active job with no recent entry (§2b).
+5. Deviation chip on the client list row (§2c).
+
+**Phase 2 — notice capture (~half a day)**
+6. Overage notice record on the job: date, method, who, what was said (§3d).
+7. Align the invoice-stage language with the agreement's hours basis (§2a).
+
+**Phase 3 — CSV export (~half a day)**
+8. Reviewed-hours export, per job and per period.
+
+**Phase 4 — QBO push (~2–4 days, the OAuth is most of it)**
+9. `apps-script/qbo-sync.gs`. `testQboAuth`, then `dryRunQboPush`, then `pushQbo`.
+10. OAuth 2.0 with refresh-token write-back (§5d). Sandbox first.
+11. `TimeActivity` per person per day; store `Id` + `SyncToken` back on the entry.
+12. `Bill` per contractor per period at cost rate — separately switchable from 11.
+13. Red-band hold queue (§5e). Reversal path for unlocking a pushed entry (§5c).
+14. Time-driven trigger. Per-job "hours last pushed" timestamp, so a stale push is
+    distinguishable from a job nobody worked.
+
+Phases 1–3 are worth doing regardless of whether Phase 4 ever ships.
+
+---
+
+## 8. Open decisions
+
+1. **Does review push `TimeActivity` only, or `Bill` as well?** (§5a) The second one moves
+   money owed and probably wants a human between review and payment.
+2. **Who can sign off?** Any TC on their own hours, or only the assigned concierge? A TC
+   signing off on their own time is the norm in a two-founder firm but is worth stating
+   rather than defaulting into.
+3. **Can a TC unlock their own reviewed period,** or does that need the manager PIN? Leans
+   PIN once anything has been pushed.
+4. **Contractor cost rates** — `contractors[].rate` is already there. Confirm it is populated
+   and current before a `Bill` is built from it.
+5. **Which 15% is the contractual one** (§2a) — the agreement says hours; confirm that is
+   intended, since the invoice gate reads dollars.
+6. **Historical backfill** into QBO, or cutover-date forward only?
+
+---
+
+## 9. Appendix — the vendor evaluation, for the record
+
+Kept so the decision in §0 can be re-examined without redoing the work. Prices are as of
+2026-07-29 and approximate; the category is actively tightening free tiers, so re-check
+anything here before relying on it.
 
 | Tool | Free tier | Paid model | API on free/cheap tier | Auth |
 |---|---|---|---|---|
-| **Jibble** | **Unlimited users, incl. GPS** | ~$6–11/user/mo for Premium+ | Yes — personal access token | API key |
-| **Homebase** | 1 location, ~10–20 employees | **~$25/location/mo**, unlimited employees | Partner-oriented; assume CSV export only | — |
-| **Clockify** | **5 users** (cut from unlimited, Apr 2026) | ~$4–12/user/mo | Yes — `X-Api-Key` | API key |
-| **Connecteam** | ≤10 users | per user | **Expert tier only** — gated too high | `X-API-KEY` |
-| **QuickBooks Time** | none | per user/mo | Yes (own-account app) | OAuth 2.0 + refresh rotation |
+| Jibble | Unlimited users, incl. GPS | ~$6–11/user/mo | Yes — personal access token | API key |
+| Homebase | 1 location, ~10–20 employees | ~$25/location/mo, unlimited employees | Partner-oriented; assume CSV only | — |
+| Clockify | **5 users** (cut from unlimited, Apr 2026) | ~$4–12/user/mo | Yes — `X-Api-Key` | API key |
+| Connecteam | ≤10 users | per user | Expert tier only — gated too high | `X-API-KEY` |
+| QuickBooks Time | none | per user/mo | Yes (own-account app) | OAuth 2.0 + refresh rotation |
+
+If this is ever reopened, **Jibble** was the leading candidate — free unlimited users
+*including* GPS is a combination nobody else offers free, and API-key auth is materially
+simpler in Apps Script than OAuth. Two things were never confirmed first-hand (the vendor site
+blocks automated fetch): that the free tier is still uncapped on users, and that API access is
+genuinely on the free tier rather than quietly a paid feature.
+
+**QuickBooks Time** notes, verified 2026-07-29, in case the calculus changes:
 
-**Clockify's free plan was capped at 5 users in April 2026** — most review articles still say
-"unlimited" and are stale. Kiosk mode, billable hours, shared reports and report export also
-moved to paid, and free reports are limited to a one-month date range. Anyone choosing
-Clockify on the strength of its old free tier is choosing a paid plan.
-
-**Prices above are approximate and must be re-checked at signup.** The Clockify change is
-three months old; the whole category is tightening free tiers, so treat any free-tier claim
-in this table — including Jibble's — as needing confirmation before it is designed around.
-
-**Leading candidate: Jibble.** Free tier covers unlimited users *including* GPS, which is
-the combination nobody else offers free. Auth is a personal access token rather than OAuth,
-which is materially simpler in Apps Script and matches the pattern `quo-sync.gs` already
-runs in production.
-
-**Confirm before committing:** (a) the free tier is still uncapped on users, and (b) API
-access is genuinely on the free tier and not quietly a paid feature. Both were taken from
-search results citing Jibble's own help pages; the vendor site blocks automated fetch, so
-neither was read first-hand.
-
-**Homebase** is the hedge if per-location flat pricing is preferred to per-seat. Its pricing
-shape is right and it syncs to QuickBooks Online, but its API looks partner-oriented rather
-than open, which likely means CSV export only — Phase 1 forever, with no live mid-job
-projection (§4).
-
-### 0c. Worth raising before rolling any of this out to contractors
-
-Requiring 1099 contractors to clock in and out on a company system, on a company schedule,
-with GPS, is **behavioral control** — one of the IRS common-law factors weighing toward
-employee classification. It is one factor among several, not a prohibition, and plenty of
-legitimate contractor arrangements keep time records for billing. But adding
-surveillance-grade tracking to a cycling 1099 crew is not a free move, and it is worth ten
-minutes with counsel before it becomes standard practice. There are estate attorneys in the
-partner directory who will know who to ask.
-
-This also argues for the lightest tool that answers the billing question, rather than the
-one with the most control features.
-
----
-
-## 1. What this replaces — and what it does not
-
-The app has **two** unrelated things called "hours". Only one of them is in scope.
-
-| | What it does | A tracker replaces it? |
-|---|---|---|
-| **Estimator hours engine** (`JOB_STEPS`, work pool, `H = W / (n + α)`) | *Predicts* hours to price a job before work starts | **No.** No tracker has a forward model. Untouched. |
-| **Hours log** (`jobLogs`, Log Hours on the Job Plan tab) | *Records* actual hours per person per day, tagged TC or PS | **Yes.** This is the whole scope. |
-
-Worth being explicit because "use a time tracker not the hours calculator" reads like it
-targets the estimator. It doesn't — the estimator still prices the job, and the tracker just
-replaces the clipboard that records what actually happened.
-
-**What a tracker buys beyond killing double entry:** clock-in/out with GPS, overtime rules,
-break tracking, payroll export, and a defensible timesheet record per contractor. That last
-one is the real business case — a 1099 crew member disputing hours is currently answered by
-a number somebody typed into a phone. (See §0c for the other side of that coin.)
-
----
-
-## 2. The data contract — what the app actually needs back
-
-Vendor-independent. The final invoice needs two numbers per job: `actTC` and `actPS`
-(`havellin.html:10160`). But the log feeds three other things, and they need more than
-totals:
-
-- `computeProjection()` (`10638`) — projects the job to completion from hours-so-far ÷
-  rooms-complete, and throws the red **Change Order Required** flag at 115% of estimate.
-  Needs hours *accruing over time*, not a lump at the end.
-- The final invoice's per-person team table — needs **name, role, hours** per person.
-- `getJobActuals()` (`6559`) — client dashboard actuals, incl. distinct days worked.
-
-So the import needs **one row per person, per day, per job** — which is what every tracker in
-§0b produces. Shapes match regardless of vendor.
-
-Target shape, unchanged from today except the two new fields:
-
-```js
-jobLogs[jobId] = [{
-  id: 1753800000000,
-  date: '2026-07-20',
-  activity: 'Pack out — primary suite',   // ← tracker's note field
-  members: [{ name: 'Anthony Graziano Sr', role: 'TC', hours: 7.97 }],
-  extId: 'jibble:448812',                  // ← NEW: vendor-prefixed external id, the merge key
-  src: 'tracker'                           // ← NEW: 'tracker' | 'manual'
-}]
-```
-
-Prefix the external id with the vendor so a future migration cannot collide with ids already
-stored under a different system.
-
-**Do not pre-round hours.** Store exact fractional hours (trackers report seconds). The
-existing code already sums first and rounds once (`10168`), which is correct; rounding each
-row to 0.1h before summing would compound drift, and at $150/hr each 0.05h of error is $7.50.
-
----
-
-## 3. The mapping model
-
-Three things must map. Vendor-independent — every tool in §0b has some notion of a
-project/job code and a user.
-
-### 3a. Tracker project/jobcode → Havellin job — **one per job**
-
-Most trackers support nesting (`Parent : Child`). Two options: flat (one code per job), or
-nested with role underneath.
-
-**Recommend flat.** Under the working-supervisor pricing model the concierge bills at the TC
-rate for *all* on-site time, including hours spent working alongside the crew
-(`billed TC = H + off-site`). So role follows the *person*, never the task — a role
-sub-selection in the field would be a choice with no billing consequence and one more thing
-to get wrong at 7am. One tap, one code.
-
-Revisit only if travel or off-site coordination should appear separately on the invoice.
-
-Name the code with `hvlId` as a **prefix** so matching is a parse, not a fuzzy name-compare:
-`HVL-0001 — Pressly Estate`. Create it via the API when a job goes active so the format is
-guaranteed and nobody hand-types it.
-
-### 3b. Tracker user → crew member + TC/PS role — **already half built**
-
-`DEFAULT_CONTRACTORS` / `contractors` records already carry `name`, `role: 'TC'|'PS'`, and a
-cost `rate` (`havellin.html:15141`). One new field:
-
-```js
-{ id:'default-1', name:'Anthony Graziano Sr', role:'TC', trackerUserId: '…', ... }
-```
-
-Map by tracker user id, never by name — names drift, and a name-match failure would silently
-drop somebody's hours off an invoice rather than erroring.
-
-**An unmapped user must fail loudly.** Hours belonging to nobody must not vanish into a
-rounding difference. This matters more with a churning roster: a new crew member who was
-never mapped is the normal case, not the exception.
-
-### 3c. Duration → hours
-
-`hours = seconds / 3600`, kept at full precision per §2.
-
----
-
-## 4. Two paths
-
-### Option A — CSV import
-
-Every tracker exports timesheets to CSV. Add a paste-or-upload box on the Log Hours tab that
-parses, maps, and merges.
-
-- **Effort:** ~1 day. No OAuth, no Apps Script deploy, no token maintenance.
-- **Cons:** a manual step every billing cycle that somebody has to remember. Column headers
-  can drift with a vendor UI change and break the parser silently.
-- **The real cost:** hours only land when someone imports. **The mid-job projection and its
-  change-order trigger go dark** — that early-warning system depends on hours accruing while
-  the job runs, not arriving at invoicing time.
-
-### Option B — API pull via Apps Script
-
-A scheduled Apps Script trigger pulls timesheets for active jobs and merges them in.
-
-- **Effort:** ~2–4 days depending on auth. An API-key tracker (Jibble, Clockify) is at the
-  low end; OAuth with refresh rotation (QBT) at the high end.
-- **Pros:** hands-off, projection stays live, the tracker is unambiguously the source of
-  truth, same shape as the Quo sync already in production.
-
-**Where the code lives:** Apps Script, not the browser. `havellin.html` is a static file on
-GitHub Pages — it cannot hold a client secret, complete an OAuth redirect, or store a
-refresh token. Precedent is set: `apps-script/quo-sync.gs` sits as a second file in the same
-project, keys in Script Properties, `testQuoAuth` before anything else, dry-run then commit,
-every entry point argument-free because the Run menu passes none. Follow that shape exactly.
-
-**This is a real selection criterion.** An API-key tracker collapses Phase 2 to roughly the
-Quo sync's complexity. OAuth with rotating refresh tokens is the single largest chunk of work
-in this project and buys nothing functional.
-
-### Recommendation — **B, staged through A**
-
-Phase 1 builds the CSV import. Phase 2 swaps the *input* from a pasted CSV to an API pull and
-throws nothing away, because the parse → map → merge → write pipeline is identical.
-
-The reason to stage it this way isn't caution about the API — it's that the risky part is not
-the transport, it's the **merge semantics** (§5). Phase 1 proves that logic on the cheap
-path, against real exported data, with no auth in the way. It also **de-risks the vendor
-choice**: a CSV parser is a day's work to retarget, so Phase 1 can ship before the vendor is
-locked, and a wrong pick costs a day instead of a rebuild.
-
----
-
-## 5. Merge semantics — the part that will actually bite
-
-Everything else here is plumbing. This is the design, and it is vendor-independent.
-
-**Upsert by `extId`, never append.** Today `saveLogEntry` pushes (`9957`). An import that
-pushes would double every hour on any re-run or overlapping date range, and the failure mode
-is an over-billed client — the exact category of bug the §8 guard was added to stop.
-
-**Deletions must propagate.** A timesheet deleted or corrected in the tracker has to
-disappear here, or the two disagree and the tracker is right. Same reconciliation the Quo
-sync already does: diff what we hold against what the source produces, report the leftovers,
-prune on confirm.
-
-**Manual and imported entries must not both count.** Once a job is linked to a tracker code,
-someone logging by hand *and* clocking in double-bills. **Recommend locking the manual form
-for linked jobs with an explicit override** — a warning that only appears at invoicing time
-is a warning that gets read after the client already has the number.
-
-**Only closed entries.** Never import a running shift; its duration is a snapshot.
-
-**Approval state.** If the tracker has timesheet approval, decide whether a final may bill
-unapproved time. Recommend: import everything so the projection stays live, but flag
-unapproved hours on the *final* and let the ±15% PIN gate do the rest. Note that Clockify
-moved approvals to paid, so on its free tier this is moot.
-
----
-
-## 6. Phases
-
-**Phase 1 — CSV import (~1 day, vendor-agnostic)**
-1. `trackerUserId` on the contractor record + a mapping UI on the Contractors tab.
-2. Parser + mapper + the §5 merge, behind a paste box on the Log Hours tab.
-3. Import preview: rows in, rows matched, rows unmapped, hours by role — **before** commit.
-4. `extId` / `src` on log entries; imported rows render read-only in the log history.
-
-**Phase 2 — API pull (~2–4 days, vendor-specific)**
-5. Tracker API key into Script Properties.
-6. `apps-script/time-sync.gs` — `testTrackerAuth` first, then `dryRunPull`, then `pullHours`.
-7. Auto-create the job code when a job goes active; store `trackerJobId` on the job.
-8. Time-driven trigger, nightly. Stale/deleted-entry reconciliation.
-
-**Phase 3 — optional**
-9. Push job costing to QuickBooks Online, if the accounting side wants it.
-10. Retire the manual log form for linked jobs entirely.
-
----
-
-## 7. Decisions needed before building
-
-1. **How are the PS crew paid — hourly, day rate, or per job?** (§0a) Decides whether any of
-   this is needed. Answer this first.
-2. **Do the 1099 crew get logins at all?** If they won't install an app, this only ever
-   captures founder hours and the PS side stays hand-keyed — Phase 1 only, permanently.
-3. **Vendor** (§0b). Leading candidate Jibble, pending the two confirmations noted there.
-4. **Flat or nested job codes** (§3a). Recommend flat.
-5. **Lock the manual form** for linked jobs, or allow mixed sources with a flag? (§5)
-6. **Bill unapproved time on a final?** (§5)
-7. **Historical backfill**, or tracker-from-cutover-date only?
-
----
-
-## 8. If the choice is QuickBooks Time — verified notes
-
-Kept because QBT remains the best *payroll and accounting* fit even though its per-seat
-pricing is wrong for a churning roster. Relevant only if the crew turns out not to need seats
-(e.g. founders-only tracking, per §0a).
-
-**Verified 2026-07-29:**
 - API live and maintained; reference docs last updated 2026-05-19.
-- Base URL `https://rest.tsheets.com/api/v1`; OAuth 2.0 access token as a `Bearer` header.
-- Endpoints cover timesheets, jobcodes, users, customers, groups.
+- Base URL `https://rest.tsheets.com/api/v1`; OAuth 2.0 `Bearer` token.
 - **Own-account app creation needs no Intuit partner tier**: *Feature Add-ons → Manage
-  Add-ons → API Add-On → Install → Add a new application*, redirect URL
-  `http://localhost:33333`. The Gold/Platinum "Time API" partner tier in search results is a
-  *different* product — the ISV-facing Intuit platform API for shipping apps into other
-  people's QuickBooks accounts. Not needed here.
-- Jobcodes are hierarchical, rendered `Parent : Child`.
+  Add-ons → API Add-On → Install → Add a new application*, redirect `http://localhost:33333`.
+  The Gold/Platinum "Time API" partner tier in search results is a *different* product — the
+  ISV-facing platform API for shipping apps into other people's QuickBooks accounts.
+- Jobcodes are hierarchical, rendered `Parent : Child`. One per job would be the mapping,
+  flat rather than nested — under working-supervisor pricing the concierge bills TC for all
+  on-site time, so role follows the person, never the task, and a role sub-selection in the
+  field would be a choice with no billing consequence and one more thing to get wrong at 7am.
 - QBT is included with QuickBooks Workforce Premium and Elite.
-
-**Unconfirmed (docs block automated fetch — check against the live API with a real token):**
-- Exact timesheet field names — expected `id, user_id, jobcode_id, date, duration, notes,
-  type, on_the_clock, locked` — and filters `start_date / end_date / user_ids / jobcode_ids`.
-- Pagination (`page` / `per_page`, `more` flag).
-- **Whether the refresh token rotates on use.** If it does, the sync must write the new one
-  back to Script Properties on every refresh or it dies silently on the second run. Assume it
-  rotates until proven otherwise.
-
----
-
-## 9. Related change already shipped
-
-`renderInvoice()` now blocks an hourly final when no hours are logged, rather than issuing a
-credit invoice (commit `755880b`). That guard becomes *more* load-bearing once hours arrive
-over the wire, since a sync that silently fails presents exactly as an unlogged job. Phase 2
-should surface a per-job "hours last synced" timestamp so a stale pull is distinguishable
-from a job nobody worked.
