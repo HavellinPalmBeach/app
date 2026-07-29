@@ -4,7 +4,12 @@ Status: **designed, not built.** Drafted 2026-07-29.
 
 Hours are logged in the Havellin app by the Transition Concierge, reviewed and signed off at
 the end of each job (or weekly on jobs that run longer than a week), and the reviewed hours
-push to QuickBooks Online for job costing and contractor pay.
+push to QuickBooks Online as **raw hours carrying no rates**.
+
+Rates stay separated by system on purpose: QuickBooks holds what founders and contractors are
+**paid**; the app holds what clients are **billed**. Neither learns the other's numbers. See
+§5a — this works end-to-end for founders on payroll, and leaves one manual step for 1099s that
+no amount of code on our side removes.
 
 ---
 
@@ -200,22 +205,50 @@ early-warning system that works.
 
 ## 5. The QuickBooks push
 
-### 5a. Two different writes
+### 5a. Push raw hours only — no rates cross the wire
 
-"Push to QB" is two unrelated operations against different entities:
+**Decided 2026-07-29.** The push writes `TimeActivity` — person, day, job, hours — and carries
+**no rate of any kind**. Pay rates live in QuickBooks; client billing rates live in the app.
+Neither system learns the other's numbers.
 
-| Purpose | QBO entity | Grain |
+This is the right split, and it makes Phase 4 substantially smaller. But it only completes the
+picture for one of the two worker types, and the difference matters:
+
+| | Where the pay rate lives | Do hours become money automatically? |
 |---|---|---|
-| Job costing / billable time | `TimeActivity` | one per person per day |
-| Paying the crew | `Bill` (or `Purchase`) | one per contractor per review period |
+| **Founders on QB Payroll** | Employee record in QB | **Yes.** Hours → payroll → wages → W-2. Works exactly as intended. |
+| **1099 contractors** | Nowhere in QB | **No.** See below. |
 
-`TimeActivity` records that someone worked and makes P&L-by-job real. It does **not** pay a
-1099 — that is the `Bill`, at the contractor's **cost** rate (`DEFAULT_CONTRACTORS[].rate`,
-`15141`), which is not the client billing rate: Anthony Sr carries `rate: 100` against a TC
-billing rate of $150. Building a `Bill` off the billing rate would overpay by 50%.
+**QuickBooks generates a 1099 from payments made, not from hours logged.** The 1099 report
+reads bills paid, checks and expenses tagged to a vendor; it does not read `TimeActivity`. And
+a QBO vendor record has no hourly cost-rate field, so QB cannot turn 8 hours into $800 owed.
+(This is precisely the gap QuickBooks Time fills, and part of why it is priced per seat.)
 
-Both are worth having. They fail differently, and only the second touches money owed, so they
-should be separately switchable rather than one operation.
+So for the 1099 side, something must still create the payment. Two options, and the first is
+the recommended start:
+
+1. **A human enters the bills in QB each period.** Minutes of work, no code, and QB remains
+   the only place a contractor cost rate exists — which is the whole point of the decision
+   above.
+2. **The app pushes a `Bill` computed from `DEFAULT_CONTRACTORS[].rate`** (`15141`). Removes
+   the manual step but puts a cost rate back in the app. Deferred, not rejected.
+
+Either way the hours record lands in QB immediately. Note where the cost actually hits the
+P&L-by-job: it arrives with the **bill**, not with the time entry. `TimeActivity` for a vendor
+is a time record, not a cost — with no rate attached there is no dollar figure for it to
+contribute. Worth being clear about, because "push hours for job costing" implies otherwise.
+
+**The app still needs its own cost rate,** and that is not duplication. The margin panel costs
+the concierge at engaged hours during estimating — before anything exists in QB at all.
+Different purpose, different moment, and it must not be confused with what QB pays.
+
+### 5a-bis. Mark the pushed time NOT billable
+
+The app generates client invoices. If hours arrive in QBO flagged `Billable`, QBO will offer to
+invoice them as well — the same hours billed twice out of two systems, which is the exact
+failure the zero-hours final guard exists to prevent, one system further downstream.
+
+Set `BillableStatus: NotBillable`. Cheap to prevent, expensive to discover from a client.
 
 ### 5b. It cannot run in the browser
 
@@ -277,11 +310,11 @@ Confirm each before designing on it:
 
 - `TimeActivity` accepts `VendorRef` for a 1099 (vs `EmployeeRef`), and whether `NameOf` must
   be set explicitly.
+- **Whether `TimeActivity` will post with no rate at all** — §5a depends on this. If QBO
+  requires an `HourlyRate`, the no-rates decision needs revisiting rather than working around.
 - Whether `TimeActivity` exposes any usable external-id field — if it does, §5c gets simpler.
-- Which entity actually feeds contractor payments in this subscription (`Bill`, `Purchase`, or
-  the Contractor Payments add-on), and whether that add-on is present.
-- Whether `BillableStatus` on `TimeActivity` needs to be set for job costing to appear in the
-  reports that matter.
+- Whether the founders exist in QB as `Employee` or `Vendor`, since that determines which ref
+  the push uses per person and whether payroll picks the hours up at all (§8.2).
 - Sandbox first: `https://sandbox-quickbooks.api.intuit.com`, production
   `https://quickbooks.api.intuit.com/v3/company/<realmId>/`.
 
@@ -314,14 +347,18 @@ billing and payroll still work.
 **Phase 3 — CSV export (~half a day)**
 8. Reviewed-hours export, per job and per period.
 
-**Phase 4 — QBO push (~2–4 days, the OAuth is most of it)**
+**Phase 4 — QBO hours push (~2–4 days, the OAuth is most of it)**
 9. `apps-script/qbo-sync.gs`. `testQboAuth`, then `dryRunQboPush`, then `pushQbo`.
 10. OAuth 2.0 with refresh-token write-back (§5d). Sandbox first.
-11. `TimeActivity` per person per day; store `Id` + `SyncToken` back on the entry.
-12. `Bill` per contractor per period at cost rate — separately switchable from 11.
-13. Red-band hold queue (§5e). Reversal path for unlocking a pushed entry (§5c).
-14. Time-driven trigger. Per-job "hours last pushed" timestamp, so a stale push is
+11. `TimeActivity` per person per day, **no rate**, `BillableStatus: NotBillable` (§5a,
+    §5a-bis); store `Id` + `SyncToken` back on the entry.
+12. Red-band hold queue (§5e). Reversal path for unlocking a pushed entry (§5c).
+13. Time-driven trigger. Per-job "hours last pushed" timestamp, so a stale push is
     distinguishable from a job nobody worked.
+
+**Phase 5 — optional, deferred**
+14. `Bill` per contractor per period from `DEFAULT_CONTRACTORS[].rate`, if entering bills by
+    hand in QB becomes the bottleneck (§5a option 2).
 
 Phases 1–3 are worth doing regardless of whether Phase 4 ever ships.
 
@@ -329,15 +366,17 @@ Phases 1–3 are worth doing regardless of whether Phase 4 ever ships.
 
 ## 8. Open decisions
 
-1. **Does review push `TimeActivity` only, or `Bill` as well?** (§5a) The second one moves
-   money owed and probably wants a human between review and payment.
-2. **Who can sign off?** Any TC on their own hours, or only the assigned concierge? A TC
+1. ~~Does review push `TimeActivity` only, or `Bill` as well?~~ **Decided: `TimeActivity`
+   only, no rates** (§5a). Bills are Phase 5 and may never be needed.
+2. **Are the founders on QB Payroll as employees, or taking owner draws?** (§5a) Decides
+   whether the hours push completes the founder pay loop by itself or whether founder pay is
+   in the same manual position as the 1099s. Cheap to answer, and it changes nothing about
+   the build — but it changes what the push is *worth*.
+3. **Who can sign off?** Any TC on their own hours, or only the assigned concierge? A TC
    signing off on their own time is the norm in a two-founder firm but is worth stating
    rather than defaulting into.
-3. **Can a TC unlock their own reviewed period,** or does that need the manager PIN? Leans
+4. **Can a TC unlock their own reviewed period,** or does that need the manager PIN? Leans
    PIN once anything has been pushed.
-4. **Contractor cost rates** — `contractors[].rate` is already there. Confirm it is populated
-   and current before a `Bill` is built from it.
 5. **Which 15% is the contractual one** (§2a) — the agreement says hours; confirm that is
    intended, since the invoice gate reads dollars.
 6. **Historical backfill** into QBO, or cutover-date forward only?
