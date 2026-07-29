@@ -630,7 +630,9 @@ function pruneQuoStale(reallyDelete) {
     else { kept++; Logger.log('  FAILED  ' + s.contactId + '  HTTP ' + res.code); }
     Utilities.sleep(QUO_THROTTLE_MS);
   }
-  if (!reallyDelete) Logger.log('Nothing was deleted. Run pruneQuoStale(true) to actually remove them.');
+  // Names the function you can actually pick from the Run menu — the menu passes no
+  // arguments, so telling someone to run pruneQuoStale(true) sends them in a circle.
+  if (!reallyDelete) Logger.log('Nothing was deleted. Run pruneQuoStaleConfirm to actually remove them.');
   else Logger.log('deleted=' + gone + '  failed=' + kept);
   return plan.stale.length;
 }
