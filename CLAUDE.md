@@ -97,8 +97,8 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - An id is reused only when the row's `quo_external_id` matches the identity being
   synced now. Without that, four partners coming off a shared switchboard onto direct
   dials would each PATCH the firm contact in turn, each overwriting the last. A contact
-  the directory walks away from is reported once as an `orphan` (Quo has no verified
-  DELETE — remove it by hand in the app if the number is dead).
+  the directory walks away from is reported once as an `orphan`, and `pruneQuoStaleConfirm`
+  deletes it.
 - **One Quo contact per NUMBER, not per partner.** A switchboard shared by several
   partners syncs as the firm (`externalId` `firm:+1…`, display name = firm, role
   "Main line") because naming it after one of them is wrong on most inbound calls.
@@ -113,16 +113,17 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   sync identically, but the status keeps why-we-stopped in the app so nobody re-contacts
   them in six months. Deleting the row throws that away. Either way its Quo contact is
   reported `STALE` on the next run and removed with `pruneQuoStale(true)`.
-- `testQuoDelete` probes whether the API really deletes (some APIs 200 and only archive
-  — the follow-up GET returning 404 is the proof). With no argument it picks the first
+- **DELETE works — verified 2026-07-29.** `testQuoDelete` returned HTTP 204 and the
+  follow-up GET 404, so the contact is really gone rather than archived. That check is
+  worth keeping: an API that 200s and only archives would otherwise look identical. With no argument it picks the first
   STALE contact itself, because **the Apps Script Run menu passes no arguments** — any
   entry point meant to be run from that menu has to work argument-free. Same reason
   `pruneQuoStale` previews and `pruneQuoStaleConfirm` is what deletes. Pruning is kept
   OUT of `pushQuoAll` on purpose: a push runs often and should never remove anything.
 - **Stale contacts are reported.** Every run diffs what Quo holds under our sources
   against what the directories still produce; anything left over is logged as `STALE`
-  with its contact id. Delete those by hand — the sync has no DELETE it can rely on,
-  and a removed vendor's contact would otherwise sit in the dialer forever. This first
+  with its contact id, and `pruneQuoStaleConfirm` removes them. Without that, a
+  retired vendor's contact would sit in the dialer forever. This first
   showed up when the vendor sheet went 152 → 150 rows and the run reported `update=197`
   against 199 live contacts.
 - Confirmed by that same check: a PATCH *does* honour a changed `source` — the partner
