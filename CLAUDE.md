@@ -113,10 +113,12 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   sync identically, but the status keeps why-we-stopped in the app so nobody re-contacts
   them in six months. Deleting the row throws that away. Either way its Quo contact is
   reported `STALE` on the next run and removed with `pruneQuoStale(true)`.
-- `testQuoDelete(id)` probes whether the API really deletes (some APIs 200 and only
-  archive — the follow-up GET returning 404 is the proof). `pruneQuoStale()` previews;
-  only `pruneQuoStale(true)` deletes. Pruning is kept OUT of `pushQuoAll` on purpose:
-  a push runs often and should never remove anything.
+- `testQuoDelete` probes whether the API really deletes (some APIs 200 and only archive
+  — the follow-up GET returning 404 is the proof). With no argument it picks the first
+  STALE contact itself, because **the Apps Script Run menu passes no arguments** — any
+  entry point meant to be run from that menu has to work argument-free. Same reason
+  `pruneQuoStale` previews and `pruneQuoStaleConfirm` is what deletes. Pruning is kept
+  OUT of `pushQuoAll` on purpose: a push runs often and should never remove anything.
 - **Stale contacts are reported.** Every run diffs what Quo holds under our sources
   against what the directories still produce; anything left over is logged as `STALE`
   with its contact id. Delete those by hand — the sync has no DELETE it can rely on,

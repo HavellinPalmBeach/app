@@ -16,7 +16,8 @@
  *   Run ▸ testQuoTags           proves the tag payload on ONE contact
  *   Run ▸ dryRunQuoAll          prints the plan, writes nothing
  *   Run ▸ pushQuoAll            the only one that writes
- *   Run ▸ pruneQuoStale(true)   deletes contacts no directory produces any more
+ *   Run ▸ pruneQuoStale         previews contacts no directory produces any more
+ *   Run ▸ pruneQuoStaleConfirm  actually deletes them
  *
  * ── Design notes ───────────────────────────────────────────────────────────
  * ONE CONTACT PER NUMBER, ACROSS ALL THREE SOURCES. Grouping is global, not
@@ -559,8 +560,17 @@ function testQuoTags() {
 // contact you already want gone (a STALE id from the log) before trusting pruneQuoStale.
 // 200/204 means it works. 404 on the follow-up read is the confirmation that matters:
 // some APIs return success and only archive.
+// Callable straight from the Run menu, which passes no arguments — so with none it
+// picks the first stale contact itself. Those are exactly the ones already agreed to
+// be junk, which makes them the right thing to experiment on.
 function testQuoDelete(contactId) {
-  if (!contactId) { Logger.log('Pass a contact id — use a STALE id from dryRunQuoAll.'); return; }
+  if (!contactId) {
+    var plan = syncQuoAll(true);
+    if (!plan.stale.length) { Logger.log('Nothing stale to test on. Pass a contact id explicitly.'); return; }
+    contactId = plan.stale[0].contactId;
+    Logger.log('No id given — testing on the first stale contact: ' + contactId +
+               '  (was ' + plan.stale[0].externalId + ')');
+  }
   var res = _quoFetch('delete', '/contacts/' + encodeURIComponent(contactId), null);
   Logger.log('DELETE -> HTTP ' + res.code + (res.body ? '  ' + JSON.stringify(res.body).slice(0, 200) : ''));
   var back = _quoFetch('get', '/contacts/' + encodeURIComponent(contactId), null);
@@ -589,6 +599,11 @@ function pruneQuoStale(reallyDelete) {
   else Logger.log('deleted=' + gone + '  failed=' + kept);
   return plan.stale.length;
 }
+
+// The Run menu passes no arguments, so pruneQuoStale from the menu always previews.
+// Deleting needs this separately-named function — you have to pick the one that says
+// it deletes, which is the right amount of friction for an irreversible action.
+function pruneQuoStaleConfirm() { return pruneQuoStale(true); }
 
 function dryRunQuoAll() { return _logQuoAll(syncQuoAll(true)); }
 function pushQuoAll()   { return _logQuoAll(syncQuoAll(false)); }
