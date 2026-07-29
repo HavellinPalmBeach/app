@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 12:52pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 3:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9719,6 +9719,7 @@ var invApprovedAt = '';
 var currentInvJobId = null;
 var currentInvStage = 'final'; // 'deposit' | 'midpoint' | 'final'
 var invRequiresApproval = false; // set per-render: only a final outside ±15% needs PIN
+var invBlocked = false;          // set per-render: an hourly final with no hours logged
 
 // Resolve actual vendor / prep costs from the Job Plan sourcing (vendorSourcing /
 // prepSourcing), falling back to the estimate amount per line when no actual quote
@@ -10231,6 +10232,32 @@ function renderInvoice() {
   // orders (coTotal) are the only thing that adjusts a fixed price, added at the final.
   var _fixed = !!(est && est.fixedPrice);
   var _fixedTotal = _fixed ? (est.havellinTotal || 0) : 0;
+
+  // An hourly final bills labor at the logged hours and nothing else. With no hours
+  // logged that resolves to $0 labor, so the "actual" total lands BELOW the deposit +
+  // midpoint already collected and the balance renders as a large Credit — an invoice
+  // that refunds the client for a job that was worked. The ±15% variance gate below
+  // does fire (a -100% variance is well outside it), but a PIN is the wrong control
+  // here: the number isn't unusual, it's missing, and no approval makes it correct.
+  // So block the document outright rather than let it be approved.
+  // Fixed-price finals are exempt — they never consult the log (see the _fixed branch
+  // below), so an unlogged fixed job still invoices the agreed fee correctly.
+  // A job that never priced any labor legitimately finals with an empty log, and must
+  // not be blocked. Home Prep for Sale is the live case: it is fee-only (30% GC on
+  // vendor actuals, no room/labor engine — see isPrep in calcAll), and renderJobPlan
+  // hides plan-log-section for it outright, so there is no way to log hours even if
+  // you wanted to. Blocking it would be an inescapable dead end. Test the hours the
+  // estimate actually priced rather than the service code alone, so any future
+  // fee-only configuration is covered without another edit here.
+  var _feeOnly = (((est && est.svc) || job.svc) === 'prep') ||
+                 (!!est && ((est.totTC || 0) + (est.totPS || 0)) === 0);
+  var _noHours = (stage === 'final') && !_fixed && !_feeOnly && (actTC + actPS) === 0;
+  // Crew hours with no concierge hours is almost always a logging slip rather than a
+  // real shift: under the working-supervisor model the concierge is on site for every
+  // crew hour, so PS time without TC time means someone logged the crew and forgot
+  // themselves. It under-bills silently, so warn — but don't block, since a genuinely
+  // TC-free day (a subcontracted crew working unattended) is somebody's call, not ours.
+  var _noTCHours = (stage === 'final') && !_fixed && !_feeOnly && !_noHours && actTC === 0;
   var totalDepositBasis = _fixed ? _fixedTotal
                         : ((est && est.havellinTotal) ? est.havellinTotal
                           : (estLaborNet + materials + smfEst + prepFeeEst + legacyFees));
@@ -10413,6 +10440,29 @@ function renderInvoice() {
     ? (finalServices + coSection + finalPayment + vendorNote)
     : (advanceServices + advancePayment + vendorNote);
 
+  // Replace the body outright rather than just disabling the buttons — a rendered
+  // invoice showing $0 labor and a credit balance is the thing somebody screenshots,
+  // forwards, or reads a number off, and hiding the download does not stop any of that.
+  if (_noHours) {
+    var _estTC = est ? (est.totTC || 0) : 0;
+    var _estPS = est ? (est.totPS || 0) : 0;
+    bodyHtml =
+      '<div class="alert a-err" style="line-height:1.6;">' +
+      '<div style="font-weight:700;font-size:13px;margin-bottom:.35rem;">Final invoice unavailable — no hours logged</div>' +
+      'This job bills labor at the hours actually worked, and none have been recorded. Issuing the final now ' +
+      'would bill $0 of labor against the ' + fmt(alreadyPaid) + ' already billed at deposit and midpoint — ' +
+      'a credit back to the client rather than a balance due.' +
+      '</div>' +
+      '<div class="ce-section-hdr" style="margin-top:1.25rem;">To generate this invoice</div>' +
+      '<table class="ce-tbl"><tbody>' +
+      '<tr><td>Log the hours worked on the <strong>Job Plan</strong> tab, then return here.' +
+      (_estTC + _estPS > 0 ? ' The approved estimate projected <strong>' + _estTC.toFixed(1) + '</strong> concierge and <strong>' + _estPS.toFixed(1) + '</strong> crew hours.' : '') +
+      '</td></tr>' +
+      '<tr><td>If this engagement was agreed at a flat fee, set the estimate to <strong>fixed price</strong> instead — a fixed-price final bills the agreed fee and never consults the hours log.</td></tr>' +
+      '</tbody></table>' +
+      '<div class="ce-note">Deposit and midpoint invoices are unaffected — switch stage above to generate either one.</div>';
+  }
+
   // Contact line + Transition Concierge bio — placed at the top (matching the
   // Service Estimate) so every Havellin document leads with the same branding.
   var contactLine =
@@ -10460,13 +10510,36 @@ function renderInvoice() {
 
   content.innerHTML = html;
 
+  var mailEl = document.getElementById('btn-mailto-inv');
+
+  // Blocked finals are not approvable — no PIN, no PDF, no email. This is deliberately
+  // NOT routed through invRequiresApproval: that flag means "a manager can unlock this",
+  // and nobody can unlock a missing timesheet.
+  invBlocked = _noHours;
+  if (invBlocked) {
+    invRequiresApproval = false;
+    btnApprove.style.display = 'none';
+    btnPdf.style.display = 'none';
+    if (mailEl) mailEl.style.display = 'none';
+    badge.innerHTML = '<span class="badge b-pending">Blocked — no hours logged</span>';
+    banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div>' +
+      '<strong>No hours logged for this job</strong> — the final bills labor at the hours actually worked, ' +
+      'so it cannot be issued until they are recorded on the Job Plan tab.</div></div>';
+    return;
+  }
+
+  // Non-blocking: crew hours logged with no concierge hours against them.
+  var _warnBanner = _noTCHours ?
+    '<div class="alert a-warn" style="margin:0 0 1rem;"><strong>' + actPS.toFixed(1) + ' crew hours logged with no concierge hours.</strong> ' +
+    'The concierge is on site for every crew hour, so this final is likely under-billing ' + fmt(Math.round((est ? est.totTC : 0) * tcRate)) +
+    ' of concierge time. Check the log before sending.</div>' : '';
+
   // Approval UI — deposit & midpoint are formulaic from the approved estimate, so no
   // manager PIN. The final needs PIN only when it diverges from the estimate by more
   // than ±15% (change orders excluded — they're separately client-approved).
   var _variancePct = estHavellinTotal > 0 ? Math.abs(overUnder) / estHavellinTotal : 0;
   invRequiresApproval = (stage === 'final') && (_variancePct > 0.15);
   var unlocked = !invRequiresApproval || invApproved;
-  var mailEl = document.getElementById('btn-mailto-inv');
 
   btnApprove.style.display = (invRequiresApproval && !invApproved) ? 'inline-block' : 'none';
   btnPdf.style.display = unlocked ? 'inline-block' : 'none';
@@ -10478,14 +10551,14 @@ function renderInvoice() {
   if (!invRequiresApproval) {
     // The small "No approval required" badge says it all — no need for a full banner.
     badge.innerHTML = '<span class="badge b-approved">No approval required</span>';
-    banner.innerHTML = '';
+    banner.innerHTML = _warnBanner;
   } else {
     var _vpct = Math.round(_variancePct * 100);
     var _dir = overUnder >= 0 ? 'over' : 'under';
     badge.innerHTML = invApproved ? '<span class="badge b-approved">✓ Approved</span>' : '<span class="badge b-pending">Manager Approval Required</span>';
-    banner.innerHTML = invApproved ?
+    banner.innerHTML = _warnBanner + (invApproved ?
       '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Invoice approved</strong> — ' + invApprovedBy + ' · ' + invApprovedAt + '</div></div>' :
-      '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Final is ' + _vpct + '% ' + _dir + ' the estimate</strong> — outside the ±15% tolerance, so manager review is required. Enter PIN to approve and unlock.</div></div>';
+      '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Final is ' + _vpct + '% ' + _dir + ' the estimate</strong> — outside the ±15% tolerance, so manager review is required. Enter PIN to approve and unlock.</div></div>');
   }
 }
 
@@ -10531,6 +10604,7 @@ function checkInvPin() {
 }
 
 function printInvoice() {
+  if (invBlocked) { alert('No hours have been logged for this job, so the final invoice cannot be issued. Log the hours worked on the Job Plan tab first.'); return; }
   if (invRequiresApproval && !invApproved) { alert('This final invoice is outside the ±15% tolerance and needs manager approval before printing.'); return; }
   // @media print hides every .panel and shows only #print-target, so the invoice has
   // to be rendered into #print-target (same approach as the estimate/agreement) —
