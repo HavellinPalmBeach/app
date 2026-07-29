@@ -73,6 +73,23 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   assigned vendor's phone as a tap-to-dial link. Worth a reconciliation pass — the manual
   still describes a single "Edit" button on those tabs and no search.
 
+## Quo contact sync (started 2026-07-28)
+- Bigin is being retired. Quo is the dialer directory, not a CRM — the app already
+  holds the pipeline/status data. Calling from the office line with caller ID is the
+  whole point; texting is deliberately out of scope (metered per segment, and cold SMS
+  carries a TCPA/10DLC consent burden that calling does not).
+- `syncQuoContacts` lives in `referral-partners-backend.gs`. One-way push, sheet is the
+  source of truth. Partner `uid` → Quo `externalId`; the returned Quo id is written back
+  to a new `quo_contact_id` column, and that local id is what decides POST vs PATCH.
+- **BLOCKED on two unverified constants** at the top of the sync block: `QUO_API_BASE`
+  (still the pre-rebrand `api.openphone.com/v1`) and `QUO_AUTH_BEARER` (OpenPhone took a
+  raw key with no `Bearer ` prefix). `quo.com` is blocked by the sandbox network policy,
+  so these could not be read from the docs — confirm against the Authentication page.
+- Also needs `QUO_API_KEY` in Script Properties. Not exposed over HTTP yet, by design:
+  run `dryRunQuoSync` from the Apps Script editor first, then `pushQuoSync`.
+- Dry run verified against the 79-row seed offline: 71 create, 8 skipped (no dialable
+  phone), 13 flagged as sharing a firm switchboard. No UI button yet.
+
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home
   walkthrough. `buildEstimateMailto()`.~~ **Done 2026-07-08.**
