@@ -109,6 +109,14 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   0 failed. Verified from the Quo side, not just the log — the Comiter firm contact
   kept its id with createdAt 13:03 / updatedAt 13:35, so the re-push matched rather
   than duplicated. **199 contacts live.**
+- **Retiring a vendor: mark `Do Not Use`, don't delete the row.** Both drop it from the
+  sync identically, but the status keeps why-we-stopped in the app so nobody re-contacts
+  them in six months. Deleting the row throws that away. Either way its Quo contact is
+  reported `STALE` on the next run and removed with `pruneQuoStale(true)`.
+- `testQuoDelete(id)` probes whether the API really deletes (some APIs 200 and only
+  archive — the follow-up GET returning 404 is the proof). `pruneQuoStale()` previews;
+  only `pruneQuoStale(true)` deletes. Pruning is kept OUT of `pushQuoAll` on purpose:
+  a push runs often and should never remove anything.
 - **Stale contacts are reported.** Every run diffs what Quo holds under our sources
   against what the directories still produce; anything left over is logged as `STALE`
   with its contact id. Delete those by hand — the sync has no DELETE it can rely on,

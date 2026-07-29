@@ -16,6 +16,7 @@
  *   Run ▸ testQuoTags           proves the tag payload on ONE contact
  *   Run ▸ dryRunQuoAll          prints the plan, writes nothing
  *   Run ▸ pushQuoAll            the only one that writes
+ *   Run ▸ pruneQuoStale(true)   deletes contacts no directory produces any more
  *
  * ── Design notes ───────────────────────────────────────────────────────────
  * ONE CONTACT PER NUMBER, ACROSS ALL THREE SOURCES. Grouping is global, not
@@ -551,6 +552,42 @@ function testQuoTags() {
   Logger.log('read back — customFields: ' + JSON.stringify(b.customFields));
   Logger.log('If the tags are listed above AND the name survived, run pushQuoAll.');
   return res.code;
+}
+
+// Does the API support deleting a contact? Never verified — quo.com is blocked from
+// the machine this was written on, and the MCP toolset has no delete. Try it on ONE
+// contact you already want gone (a STALE id from the log) before trusting pruneQuoStale.
+// 200/204 means it works. 404 on the follow-up read is the confirmation that matters:
+// some APIs return success and only archive.
+function testQuoDelete(contactId) {
+  if (!contactId) { Logger.log('Pass a contact id — use a STALE id from dryRunQuoAll.'); return; }
+  var res = _quoFetch('delete', '/contacts/' + encodeURIComponent(contactId), null);
+  Logger.log('DELETE -> HTTP ' + res.code + (res.body ? '  ' + JSON.stringify(res.body).slice(0, 200) : ''));
+  var back = _quoFetch('get', '/contacts/' + encodeURIComponent(contactId), null);
+  Logger.log('read back -> HTTP ' + back.code +
+    (back.code === 404 ? '  (gone — delete is real)' : '  (still there — delete did NOT remove it)'));
+  return res.code;
+}
+
+// Delete every contact the directories no longer produce. Deliberately NOT part of
+// pushQuoAll: a push runs often and should never remove anything, while pruning is a
+// decision you make once you have read the STALE list and agree with it.
+function pruneQuoStale(reallyDelete) {
+  var plan = syncQuoAll(true);
+  if (!plan.stale.length) { Logger.log('Nothing stale — every Quo contact is still in a directory.'); return; }
+  Logger.log((reallyDelete ? 'DELETING ' : 'WOULD DELETE ') + plan.stale.length + ' stale contact(s):');
+  var gone = 0, kept = 0;
+  for (var i = 0; i < plan.stale.length; i++) {
+    var s = plan.stale[i];
+    if (!reallyDelete) { Logger.log('  ' + s.contactId + '  was ' + s.externalId); continue; }
+    var res = _quoFetch('delete', '/contacts/' + encodeURIComponent(s.contactId), null);
+    if (res.code >= 200 && res.code < 300) { gone++; Logger.log('  DELETED ' + s.contactId + '  was ' + s.externalId); }
+    else { kept++; Logger.log('  FAILED  ' + s.contactId + '  HTTP ' + res.code); }
+    Utilities.sleep(QUO_THROTTLE_MS);
+  }
+  if (!reallyDelete) Logger.log('Nothing was deleted. Run pruneQuoStale(true) to actually remove them.');
+  else Logger.log('deleted=' + gone + '  failed=' + kept);
+  return plan.stale.length;
 }
 
 function dryRunQuoAll() { return _logQuoAll(syncQuoAll(true)); }
