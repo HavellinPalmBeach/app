@@ -104,8 +104,15 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   "Main line") because naming it after one of them is wrong on most inbound calls.
   Members keep individual contacts whenever they have a direct line. If members of a
   shared number disagree on firm, it's reported as a conflict and left unsynced.
-- **LIVE since 2026-07-29.** First push created 63 partner contacts (58 people +
-  5 firms); verified from the Quo side, not just the log.
+- **LIVE since 2026-07-29.** Partners first (63 contacts: 58 people + 5 firms), then
+  the full push: 136 vendor contacts created and the 63 partners updated in place,
+  0 failed. Verified from the Quo side, not just the log — the Comiter firm contact
+  kept its id with createdAt 13:03 / updatedAt 13:35, so the re-push matched rather
+  than duplicated. **199 contacts live.**
+- Confirmed by that same check: a PATCH *does* honour a changed `source` — the partner
+  contacts moved from the legacy `Havellin` to `Havellin Referral Partner` on update.
+  Keep `QUO_SRC_LEGACY` in the read list anyway; it costs nothing and any contact
+  created before the rename still resolves.
 - **Now covers all three directories.** The sync moved OUT of `referral-partners-backend.gs`
   into `apps-script/quo-sync.gs`, which is added as a SECOND FILE (`Quo`) in the same
   Apps Script project — partners via the bound sheet, vendors and jobs via openById.
