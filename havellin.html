@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 7:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 8:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -659,7 +659,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           </select>
         </div>
         <div>
-          <label>Assigned Transition Concierge <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <label>Assigned Transition Concierge <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— optional, can be staffed later on the Job Plan</span></label>
           <select id="i-tc">
             <option value="">Unassigned</option>
             <option>Anthony Graziano Sr</option><option>Ashley Jerome</option>
@@ -1238,12 +1238,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <label>Activity summary</label>
           <input type="text" id="log-activity" placeholder="e.g. Primary suite sorting, kitchen packing, garage clearout">
           <div style="margin-top:14px;">
-            <div class="sec">Team Members &amp; Hours</div>
+            <div class="sec">Job Team &amp; Hours</div>
             <div id="log-team-rows"></div>
           </div>
           <div style="margin-top:1rem;display:flex;gap:8px;">
             <button class="btn-s" onclick="clearLogEntry()">Clear</button>
-            <button class="btn-p" onclick="saveLogEntry()">Save Hours Entry →</button>
+            <button class="btn-p" id="btn-save-hours" onclick="saveLogEntry()">Save Hours Entry →</button>
           </div>
           <div id="log-fb"></div>
         </div>
@@ -4279,7 +4279,10 @@ function saveIntake() {
   if (!ptype) missing.push('Property type');
   if (!src) missing.push('Referral source');
   if (!svc) missing.push('Service type');
-  if (!tc) missing.push('Assigned TC');
+  // The concierge is deliberately NOT required here. Intake often happens a fortnight
+  // before work starts, and nobody knows who is free that far out. Staffing belongs to
+  // the Job Plan, where the whole crew is named and signed off before work begins —
+  // and that sign-off is what actually gates hours logging (see confirmJobTeam).
   if (!start) missing.push('Target start date');
 
   // Authorized rep required for estate + probate
@@ -9876,6 +9879,15 @@ function getJobCrew(jobId) {
     var est = rec ? rec.estimate : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
     job.crew = seedCrewFromEstimate(job, est);
   }
+  // Migrate crews seeded before the team-confirmation step existed. An existing crew
+  // that already has logged hours is treated as confirmed — its team was settled in
+  // practice, and retroactively gating a job mid-flight would block the next entry.
+  if (job.crew && typeof job.crew.confirmed === 'undefined') {
+    var hadHours = !!(typeof jobLogs !== 'undefined' && jobLogs[jobId] && jobLogs[jobId].length);
+    job.crew.confirmed   = hadHours;
+    job.crew.confirmedBy = hadHours ? (job.tc || '') : '';
+    job.crew.confirmedAt = hadHours ? '(before team sign-off existed)' : '';
+  }
   // Migrate crews seeded before the second-concierge slot existed.
   if (job.crew && !job.crew.tc2) {
     var rec2 = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
@@ -9903,6 +9915,97 @@ function setCrewPS(jobId, slot, name) {
   crew.ps[slot].costRate = name ? getPSCostRate(name) : crew.ps[slot].costRate;
   saveJobs();
 }
+// ─── JOB TEAM SIGN-OFF ────────────────────────────────────────────────────────
+// The crew is named and confirmed BEFORE any hours are logged: while the agreement is
+// out for signature and before the deposit lands, each member's availability is
+// confirmed and the team is locked in here. Hours cannot be logged until that has
+// happened — otherwise the first entry silently becomes the moment the team was
+// decided, which is how you end up billing for a crew nobody actually confirmed.
+//
+// This covers the CONCIERGE as well as the specialists. Intake carries an optional
+// concierge through seedCrewFromEstimate, but it is not required there: intake often
+// runs a fortnight ahead of the work and nobody knows who is free that far out.
+// Staffing is a Job Plan decision made once the job is real enough to commit people to.
+
+// Has this person already logged hours on this job? A confirmed specialist who has
+// worked cannot be un-assigned — their hours are real and belong to them.
+function crewMemberHasHours(jobId, name) {
+  if (!name) return false;
+  var entries = (typeof jobLogs !== 'undefined' && jobLogs[jobId]) ? jobLogs[jobId] : [];
+  return entries.some(function(e){
+    return (e.members || []).some(function(m){ return m.name === name && (m.hours || 0) > 0; });
+  });
+}
+
+// Planned PS slots still missing a name. These are what the estimate priced, so an
+// unfilled one means the job is not fully staffed yet.
+function unfilledPlannedPS(jobId, crew) {
+  var planned = plannedPSCount(jobId, crew);
+  var out = [];
+  for (var i = 0; i < planned; i++) {
+    var p = crew && crew.ps[i] ? crew.ps[i] : null;
+    if (!p || !p.name) out.push(i + 1);
+  }
+  return out;
+}
+
+function confirmJobTeam(jobId) {
+  var crew = getJobCrew(jobId); if (!crew) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+
+  if (!crew.tc || !crew.tc.name) {
+    showFB('log-fb','warn','No Transition Concierge named yet. Pick one on the Transition Concierge row above, then confirm the team.');
+    return;
+  }
+  var missing = unfilledPlannedPS(jobId, crew);
+  if (missing.length) {
+    showFB('log-fb','warn','Specialist ' + missing.join(', ') + ' still ' + (missing.length > 1 ? 'have' : 'has')
+      + ' no name. The estimate priced this job for ' + plannedPSCount(jobId, crew)
+      + ' — name each one, or use “Contractor TBD” for a body you have not picked yet.');
+    return;
+  }
+  // A TBD slot is a confirmed need with an unconfirmed person. Allowed — you may have
+  // the headcount before the names — but it costs at a placeholder rate rather than a
+  // real one, so it is called out rather than waved through.
+  var tbd = crew.ps.filter(function(p){ return p && p.name === 'Contractor TBD'; }).length;
+  if (tbd && !confirm(tbd + ' specialist slot' + (tbd > 1 ? 's are' : ' is') + ' still “Contractor TBD”.\n\n'
+      + 'Those hours will cost at the placeholder contractor rate, not a named person\'s rate, '
+      + 'so margin on this job is an estimate until they are named.\n\nConfirm the team anyway?')) return;
+
+  crew.confirmed   = true;
+  crew.confirmedBy = crew.tc.name;
+  crew.confirmedAt = new Date().toISOString();
+  lockAssignedCrew(jobId);   // named slots fix; empty slots stay open for a mid-job add
+  saveJobs();
+  buildLogTeamRows();
+  showFB('log-fb','ok','Job team confirmed. Hours can now be logged for this job.');
+}
+
+// Reopen the team. Slots whose person has already logged hours stay locked — you can
+// add to a team mid-job, but you cannot retroactively remove someone who worked.
+function reviseJobTeam(jobId) {
+  var crew = getJobCrew(jobId); if (!crew) return;
+  var worked = [];
+  if (crew.tc && crew.tc.name && crewMemberHasHours(jobId, crew.tc.name)) worked.push(crew.tc.name);
+  if (crew.tc2 && crew.tc2.name && crewMemberHasHours(jobId, crew.tc2.name)) worked.push(crew.tc2.name);
+  (crew.ps || []).forEach(function(p){ if (p && p.name && crewMemberHasHours(jobId, p.name)) worked.push(p.name); });
+
+  if (!confirm('Reopen the job team for changes?\n\n'
+      + (worked.length
+          ? worked.length + ' member' + (worked.length > 1 ? 's have' : ' has') + ' already logged hours and will stay locked:\n  '
+            + worked.join('\n  ') + '\n\nEveryone else becomes editable.'
+          : 'No hours logged yet, so the whole team becomes editable.')
+      + '\n\nHours cannot be logged again until the team is re-confirmed.')) return;
+
+  crew.confirmed = false;
+  if (crew.tc && !crewMemberHasHours(jobId, crew.tc.name)) crew.tc.locked = false;
+  if (crew.tc2 && !crewMemberHasHours(jobId, crew.tc2.name)) crew.tc2.locked = false;
+  (crew.ps || []).forEach(function(p){ if (p && !crewMemberHasHours(jobId, p.name)) p.locked = false; });
+  saveJobs();
+  buildLogTeamRows();
+  showFB('log-fb','warn','Team reopened. Re-confirm it to resume logging hours.');
+}
+
 // Lock every currently-assigned (named) role; empty slots stay open. Called on
 // the first hours save and on each subsequent save (so a later-filled slot locks).
 function lockAssignedCrew(jobId) {
@@ -9995,6 +10098,11 @@ function buildLogTeamRows() {
     return '<option' + (sel===CONTRACTOR_TC_NAME?' selected':'') + '>' + CONTRACTOR_TC_NAME + '</option>';
   };
 
+  // Until the team is signed off, this form is a staffing sheet, not a timesheet: the
+  // hours boxes are inert so the two steps can't be done in one confused pass.
+  var teamOK = !!(crew && crew.confirmed);
+  var hrsAttr = teamOK ? '' : ' disabled title="Confirm the job team first"';
+
   var html = '';
 
   // TC row (always present)
@@ -10009,7 +10117,7 @@ function buildLogTeamRows() {
         tcContractorOpt(tcName) +
       '</select>' +
     '</div>' +
-    '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
+    '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
   '</div>';
 
   // Second TC row — shown when the estimate recommended two concierges or a second
@@ -10028,7 +10136,7 @@ function buildLogTeamRows() {
           tcContractorOpt(tc2Name) +
         '</select>' +
       '</div>' +
-      '<div><label style="margin:0;">Hours</label><input type="number" id="log-tc2-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"></div>' +
+      '<div><label style="margin:0;">Hours</label><input type="number" id="log-tc2-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
     '</div>';
   }
 
@@ -10043,16 +10151,22 @@ function buildLogTeamRows() {
     var psName = p ? p.name : '';
     var psLocked = !!(p && p.locked);
     var overPlan = i > plannedPS;
-    psCells += '<div style="padding-bottom:8px;border-bottom:1px solid var(--border);">' +
+    // A planned slot with nobody in it is what the estimate priced and the job still
+    // needs — flagged while staffing so it can't be overlooked, quiet once confirmed.
+    var needsName = !psName && !overPlan && !teamOK;
+    psCells += '<div style="padding-bottom:8px;border-bottom:1px solid var(--border);'
+      + (needsName ? 'background:var(--warn-bg);margin:0 -6px;padding:6px;border-radius:4px;' : '') + '">' +
       '<label style="margin:0;color:var(--gray);">Property Specialist ' + i + (psLocked ? lockTag : '') +
-        (overPlan ? ' <span style="font-size:9px;color:var(--warn-tx);font-weight:700;">beyond plan</span>' : '') + '</label>' +
+        (overPlan ? ' <span style="font-size:9px;color:var(--warn-tx);font-weight:700;">beyond plan</span>' : '') +
+        (needsName ? ' <span style="font-size:9px;color:var(--warn-tx);font-weight:700;">needs a name</span>' : '') + '</label>' +
       '<div style="display:grid;grid-template-columns:1fr 70px;gap:6px;align-items:end;margin-top:4px;">' +
         '<select id="log-m'+i+'-name"' + (psLocked ? ' disabled' : '') + ' onchange="setCrewPS(' + jobId + ',' + slot + ',this.value)">' +
-          '<option value="">Not on site</option>' +
+          // Before sign-off an empty slot is unstaffed; after, it means absent today.
+          '<option value="">' + (teamOK ? 'Not on site' : 'Select specialist') + '</option>' +
           optList(psNames, psName, 'ps' + slot) +
           '<option value="Contractor TBD"' + (psName==='Contractor TBD'?' selected':'') + '>Contractor TBD</option>' +
         '</select>' +
-        '<input type="number" id="log-m'+i+'-hrs" title="Hours" min="0" max="24" step="0.5" placeholder="hrs" style="text-align:right;">' +
+        '<input type="number" id="log-m'+i+'-hrs" title="Hours" min="0" max="24" step="0.5" placeholder="hrs" style="text-align:right;"' + hrsAttr + '>' +
       '</div>' +
     '</div>';
   }
@@ -10070,13 +10184,65 @@ function buildLogTeamRows() {
     '</div>';
   }
 
+  // ── Team sign-off bar ──────────────────────────────────────────────────────
+  // Sits below the roster because it is the closing action on it: name everyone, then
+  // commit. Once committed it becomes the record of who confirmed the team and when.
+  if (jobId) {
+    var missingNow = unfilledPlannedPS(jobId, crew);
+    if (teamOK) {
+      var whenTxt = crew.confirmedAt && crew.confirmedAt.indexOf('T') > 0
+        ? new Date(crew.confirmedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+        : (crew.confirmedAt || '');
+      html += '<div class="alert a-ok" style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:160px;font-size:11px;">' +
+          '<strong>Job team confirmed</strong>' +
+          (crew.confirmedBy ? ' by ' + esc(crew.confirmedBy) : '') + (whenTxt ? ' · ' + esc(whenTxt) : '') +
+          '<div style="margin-top:2px;color:var(--gray);">Hours can be logged. Named members are locked; an added specialist can still be assigned to an open slot.</div>' +
+        '</div>' +
+        '<button class="btn-s" onclick="reviseJobTeam(' + jobId + ')" style="font-size:11px;padding:5px 10px;">Revise team</button>' +
+      '</div>';
+    } else {
+      html += '<div class="alert a-warn" style="margin-top:12px;">' +
+        '<div style="font-size:11px;margin-bottom:8px;">' +
+          '<strong>Confirm the job team before logging hours.</strong> ' +
+          'Name each specialist once you have confirmed their availability — this fixes the team, ' +
+          'their rates, and what the job is costed at. ' +
+          (missingNow.length
+            ? '<span style="color:var(--warn-tx);font-weight:600;">Specialist ' + missingNow.join(', ') + ' still ' +
+              (missingNow.length > 1 ? 'need' : 'needs') + ' a name.</span>'
+            : 'Everyone is named — ready to confirm.') +
+        '</div>' +
+        '<button class="btn-p" onclick="confirmJobTeam(' + jobId + ')" style="font-size:11px;padding:6px 12px;">' +
+          'Save &amp; Confirm Job Team →</button>' +
+      '</div>';
+    }
+  }
+
   document.getElementById('log-team-rows').innerHTML = html;
+
+  // The save button is disabled outright rather than left to fail on click — a button
+  // that looks live and then refuses reads as a bug, not a workflow step.
+  var saveBtn = document.getElementById('btn-save-hours');
+  if (saveBtn) {
+    saveBtn.disabled = !teamOK;
+    saveBtn.style.opacity = teamOK ? '' : '0.45';
+    saveBtn.style.cursor = teamOK ? '' : 'not-allowed';
+    saveBtn.title = teamOK ? '' : 'Confirm the job team first';
+  }
 }
 
 
 function saveLogEntry() {
   var jobId = parseInt(document.getElementById('log-job').value);
   if (!jobId) { showFB('log-fb','warn','Select a job first.'); return; }
+  // The team must be signed off first. Backstop for the disabled button — a stale
+  // render, a keyboard submit or a direct call must not slip past the gate.
+  var _crew = getJobCrew(jobId);
+  if (!_crew || !_crew.confirmed) {
+    showFB('log-fb','err','The job team has not been confirmed. Name the specialists and confirm the team before logging hours.');
+    buildLogTeamRows();
+    return;
+  }
   var date = document.getElementById('log-date').value;
   if (!date) { showFB('log-fb','warn','Enter a date.'); return; }
   var activity = document.getElementById('log-activity').value.trim();

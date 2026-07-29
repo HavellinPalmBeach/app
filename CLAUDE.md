@@ -66,6 +66,22 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   now costs the concierge at engaged hours, not billed hours. Estimate summary rows and
   the client-estimate concierge line were rewritten. **Needs a manual reconciliation pass
   — §11 rates/hours, the crew-sizing and timeline sections, and Settings.**
+- **DRIFT SINCE LAST PASS (2026-07-29, job team sign-off):** Staffing is now an explicit
+  step gating hours. Workflow: estimate → agreement out for signature → **while waiting on
+  signature + deposit, staff the job** on the Job Plan (confirm availability, name each
+  person) → **Save & Confirm Job Team** → only then does *Save Hours Entry* become
+  available. Crew carries `confirmed` / `confirmedBy` / `confirmedAt`; confirming locks
+  every named member, and empty slots stay open for a mid-job addition. **Revise team**
+  reopens it, but anyone who has already logged hours stays locked — you can add to a team
+  mid-job, never retroactively remove someone who worked. Unfilled planned slots are
+  highlighted "needs a name" while staffing. **The concierge is no longer required at client
+  intake** — intake often runs a fortnight ahead and nobody knows who is free that far out,
+  so the TC is staffed on the Job Plan with everyone else (the intake field remains, marked
+  optional). Legacy jobs that already have logged hours migrate to confirmed so a live job
+  isn't blocked mid-flight. **Needs a manual pass — the Job Plan / Log Hours workflow and
+  the intake required-field list.**
+  *Open question:* should the Job Plan tab itself be gated on the agreement having been sent?
+  Discussed but NOT built — flagged rather than assumed.
 - **DRIFT SINCE LAST PASS (2026-07-29, labour cost rates + crew integrity):** Cost rates
   (what we PAY) are now a named `COST_RATES` block and four **Settings** knobs, separate from
   the client billing rates: founder TC $100, contractor TC $60, contractor PS Standard $30,
