@@ -158,11 +158,10 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   tagging off without touching anything else.
 - **A multi-select property only recognises values that exist as OPTIONS on it.** The
   API accepts and stores anything (HTTP 200, reads back fine), but the Quo app renders
-  an unregistered value struck through. Creating the option afterwards does NOT revive
-  it — the value has to be written again. So the order is: create every option first,
-  then re-run `pushQuoAll`. Never hand-fix contacts: editing the field in the app
-  rewrites the whole list, silently dropping any value not retyped (observed
-  2026-07-29 — a vendor lost its Home Staging tag that way).
+  an unregistered value struck through. Typing the value into the field in the Quo app
+  creates the option, and the struck-through chip then reads as valid. So the order is:
+  create every option first, then re-run `pushQuoAll` — one run rewrites all 199 against
+  a property that now recognises them, which beats fixing contacts by hand.
 - 54 options are needed for the full taxonomy: 3 top-level (Referral Partner / Vendor /
   Client) + 4 partner types + 5 vendor groups + 42 vendor categories.
 - The `customFields` payload shape is the only part not taken from the docs, so
