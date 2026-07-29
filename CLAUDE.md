@@ -164,11 +164,16 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   every category as a tag, with the role naming all of them. An earlier version kept
   only the first row's category and called the rest a duplicate to clean up; that was
   wrong and threw away half of what those vendors do.
-- **Several business names on one number also merge**, under the combined name
-  (`O'Hara Landscape & Maintenance / O'Hara Pest Control`, role `Landscaper / Pest
-  Inspection / Treatment`). Leaving it unsynced meant neither was reachable at all,
-  which is worse than a long display name. It is still reported, because two genuinely
-  unrelated businesses sharing a line would be a data problem worth seeing.
+- **Several business names on one number also merge**, under the combined name, and are
+  still reported — two genuinely unrelated businesses on one line is a data problem, and
+  that report is where it shows. Better is to fix the sheet: O'Hara's two rows were
+  renamed to one `O'Hara Landscape & Pest Control` on 2026-07-29, so it now syncs as a
+  clean single contact with no conflict.
+- **A shared number's role depends on who is behind it.** Partners on a switchboard get
+  `Main line` — their individual titles ("Partner / Shareholder") say nothing useful
+  about an incoming call. Vendors get their trades joined (`Landscaper / Pest Inspection
+  / Treatment`), because there the rows are services rather than people, and that tells
+  you what the call is about before you pick up.
 - **Tag taxonomy** (built from closed-list fields only — `title` is deliberately NOT
   tagged: 54 distinct free-text values across 79 partners would be 54 unfilterable tags):
   partners get `Referral Partner` + `partner_type` title-cased (Estate Attorney 35,

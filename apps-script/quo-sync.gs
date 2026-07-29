@@ -442,15 +442,20 @@ function syncQuoAll(dryRun) {
         Utilities.sleep(QUO_THROTTLE_MS);
         continue;
       }
-      // One name on the number reads as a switchboard, so the role stays "Main line".
-      // Several names means the line answers for several trades, and naming them is
-      // more use on an incoming call than the words "Main line".
       var orgName = distinctNames.length === 1 ? company : distinctNames.join(' / ');
       var orgRoles = [];
       members.forEach(function (m) { if (m.role && orgRoles.indexOf(m.role) < 0) orgRoles.push(m.role); });
+      // A shared number means two different things depending on who is behind it. For
+      // partners it is a switchboard with several people, whose individual titles
+      // ("Partner / Shareholder") say nothing useful about the call — "Main line" is
+      // the honest label. For vendors the rows are services, not people, so naming the
+      // trades tells you what the call is about before you pick up.
+      var allVendors = true;
+      members.forEach(function (m) { if (m.kind !== 'vendor') allVendors = false; });
+      var orgRole = (allVendors && orgRoles.length) ? orgRoles.join(' / ') : 'Main line';
       var srcList = Object.keys(srcs);
       payload = _firmPayload(orgName, phone, srcList.length === 1 ? srcList[0] : QUO_SRC_PARTNER,
-                             Object.keys(tags), distinctNames.length === 1 ? 'Main line' : orgRoles.join(' / '));
+                             Object.keys(tags), orgRole);
       entry = { name: orgName, phone: phone, kind: 'firm', ext: payload.externalId };
       plan.firms.push({ company: orgName, phone: phone, folded: members.map(function (m) { return m.label; }) });
     }
