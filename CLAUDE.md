@@ -30,7 +30,46 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-07-15** (estate documentation build, Phases 1–3:
+- Last reconciled against the app: **2026-07-29** — the working-supervisor pricing, job-team
+  sign-off, labour-cost-rate and mobile/field builds are all folded in. What changed:
+  - **§1** phone/field-use paragraph (scrolling nav, bottom-sheet dialogs, the three
+    directories' search + tap-to-contact + Quick edit, Build Estimate as the desk-first
+    exception).
+  - **§2** now documents the two *pricing-policy* Settings groups — concierge production
+    rate (α) and the four labour cost rates — plus the note that α is pinned per saved
+    estimate and never reprices an existing quote.
+  - **§3** workflow diagram carries **Staff the Job Team** between agreement-sent and signing.
+  - **§4** the assigned concierge is marked **optional at intake**.
+  - **§5b** per-room figures are hands-on only, with the *Project coordination & logistics*
+    line reconciling them to the totals.
+  - **§5c** rewritten: crew auto-sizing, the **"crew size moves the price"** warning (a
+    bigger crew finishes sooner so the concierge bills less — the estimate goes DOWN; never
+    carry a crew size between estimates), difficult access = work pool only, multiple heirs
+    = coordination only, premium = flat +25 coordination hrs.
+  - **§5f** dispositions add hours, split on-site/off-site by the comes-to-the-property vs
+    goes-out-to-them rule, and on-site presence counts against the day target.
+  - **NEW §5i "Hours, Crew Size & Timeline"** — the whole working-supervisor model in one
+    place: the three engine outputs, the four formulas, a row-by-row map of the Estimate
+    Summary panel, crew sizing + mobilization floors + the 7-hr crew day, the green/amber/red
+    badge semantics, the 2-concierge load check, and a **core-team reach table** (2 PS hold
+    the 10-day target to ~11,900 sqft Downsizing / 8,000 Cleanout / 5,400 Estate Settlement /
+    4,700 Probate / 3,600 Contested — computed from the live engine constants, not estimated;
+    recheck if `ENGINE_K`, `JOB_STEPS` PS coefficients, α, `TARGET_DAYS` or
+    `PRODUCTIVE_HRS_PER_DAY` move).
+  - **§11** new **"Staffing the job"** subsection (the gate, placeholders, locking, Revise
+    team, one-person-one-role-per-date) and Log Hours rewritten — it is a per-date team sheet
+    whose roles come from the roster, not the old "role (TC / PS / Specialty)" dropdown.
+  - **NEW §12a Contractors** — the tab had no section at all, and it is now load-bearing for
+    margin (a named person's own rate beats the Settings placeholder).
+  - **§13 / §14** search, tap-to-contact, Quick edit / Full edit split.
+  - **§16** split into *what we bill* and *what we pay*, incl. the founder-rate fallback for
+    an unresolvable concierge.
+  - Also fixed a pre-existing malformed `<div class="note">…</p>` in §2.
+  Still thin / deferred until the app is fully built: **Win / Loss** tab, and the full
+  labor-job Job Plan phase playbook detail.
+- *Open question (discussed, NOT built — flagged rather than assumed):* should the Job Plan
+  tab itself be gated on the agreement having been sent?
+- Prior pass **2026-07-15** (estate documentation build, Phases 1–3:
   documentation-level switch at intake §4 + chain-of-custody now driven by it not the
   premium rate §11; §5b collapsible/launch-collapsed room sections; §5f vendor-mapped
   15-option disposition list; new §5g Vehicles & Watercraft (Saving → §5h); §10 item
@@ -51,58 +90,17 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   Job Plan, Referral Partners tab, Vendor Directory section, beds/full/half baths,
   referral-source linkage, nav order incl. Win/Loss first, Vendor + Referral Apps Script
   URLs in Settings).
-  Still thin / deferred until the app is fully built: Win / Loss tab, and the full
-  labor-job Job Plan phase playbook detail.
-- **DRIFT SINCE LAST PASS (2026-07-28, working-supervisor pricing):** The hours engine no
-  longer derives concierge hours from content volume. `JOB_STEPS` columns now mean
-  *off-site coordination* and *hands-on work pool* — NOT TC hours and PS hours. The
-  concierge is on site for every crew hour and works alongside the crew, so the pool is
-  cleared by `(n + α)` pairs of hands: `H = W / (n + α)`, billed PS = `n × H`, billed TC =
-  `H + off-site`. α (concierge production rate, default 50%) is a new Settings knob.
-  Difficult access now lifts the work pool only; multiple-heirs lifts coordination only.
-  The 2-concierge rule is no longer premium-gated — it fires on a load check
-  (`TC_DAY_CAP`, 10 hrs/day, with coordination spread over `COORD_SPREAD_DAYS`). Duration
-  is PS-gated; off-site coordination no longer stretches the calendar. The margin panel
-  now costs the concierge at engaged hours, not billed hours. Estimate summary rows and
-  the client-estimate concierge line were rewritten. **Needs a manual reconciliation pass
-  — §11 rates/hours, the crew-sizing and timeline sections, and Settings.**
-- **DRIFT SINCE LAST PASS (2026-07-29, job team sign-off):** Staffing is now an explicit
-  step gating hours. Workflow: estimate → agreement out for signature → **while waiting on
-  signature + deposit, staff the job** on the Job Plan (confirm availability, name each
-  person) → **Save & Confirm Job Team** → only then does *Save Hours Entry* become
-  available. Crew carries `confirmed` / `confirmedBy` / `confirmedAt`; confirming locks
-  every named member, and empty slots stay open for a mid-job addition. **Revise team**
-  reopens it, but anyone who has already logged hours stays locked — you can add to a team
-  mid-job, never retroactively remove someone who worked. Unfilled planned slots are
-  highlighted "needs a name" while staffing. **The concierge is no longer required at client
-  intake** — intake often runs a fortnight ahead and nobody knows who is free that far out,
-  so the TC is staffed on the Job Plan with everyone else (the intake field remains, marked
-  optional). Legacy jobs that already have logged hours migrate to confirmed so a live job
-  isn't blocked mid-flight. **Needs a manual pass — the Job Plan / Log Hours workflow and
-  the intake required-field list.**
-  *Open question:* should the Job Plan tab itself be gated on the agreement having been sent?
-  Discussed but NOT built — flagged rather than assumed.
-- **DRIFT SINCE LAST PASS (2026-07-29, labour cost rates + crew integrity):** Cost rates
-  (what we PAY) are now a named `COST_RATES` block and four **Settings** knobs, separate from
-  the client billing rates: founder TC $100, contractor TC $60, contractor PS Standard $30,
-  Senior $35. Anthony Jr's directory rate corrected $75 → $60. The old hardcoded $25/$30
-  placeholder PS rates and the silent $60 TC fallback are gone — an unresolvable concierge
-  now costs at the **founder** rate (conservative, so the walk-away floor is never
-  understated) and the margin panel says out loud that the number is an assumption. New
-  "Contractor — TC" option on both concierge rows. The Log Hours form no longer shows a flat
-  six PS slots: it renders the **approved estimate's** crew size (widened to cover anyone
-  already assigned), with an explicit "+ Add a specialist beyond plan" and a *beyond plan*
-  tag on those rows. A named person can no longer hold two roles on one date — taken names
-  are omitted from the other selects, `saveLogEntry` refuses a duplicate outright, and
-  `seedCrewFromEstimate` de-dupes real names while still allowing repeated placeholders
-  ("Contractor TBD" / "Contractor — TC" legitimately repeat). **Needs a manual pass — §11
-  rates, the crew-sizing section, Log Hours, and Settings.**
-- **DRIFT SINCE LAST PASS (2026-07-28, mobile/field build):** Vendors, Referral Partners
-  and Contractors each gained a **search box** and a **Quick edit / Full edit** split
-  (Quick = contact details only; Full = the existing form). Vendor and partner cards and
-  the Contractors tab gained tap-to-call/text/email. Job Plan vendor sourcing shows the
-  assigned vendor's phone as a tap-to-dial link. Worth a reconciliation pass — the manual
-  still describes a single "Edit" button on those tabs and no search.
+- **The engine facts the manual now asserts** — if any of these change, §5i and §16 are wrong
+  and need editing in the same commit: `JOB_STEPS` columns are *off-site coordination* and
+  *hands-on work pool* (NOT TC hours and PS hours); the pool is cleared by `(n + α)` pairs of
+  hands, so `H = W/(n+α) + fixed on-site`, billed PS = `n × W/(n+α)`, billed TC =
+  `H + off-site`; duration is PS-gated off `H / PRODUCTIVE_HRS_PER_DAY`; collections on-site
+  presence (`COLLECTION_HOURS.on`) is added to `H` flat and never divided; the 2nd concierge
+  fires on `TC_DAY_CAP` (10 hrs/day, coordination spread over `COORD_SPREAD_DAYS`) and changes
+  neither fee nor duration; the timeline badge is amber only when over target *with* crew
+  headroom (`requiredPS < 6`); `COST_RATES` = founder TC $100 / contractor TC $60 / PS
+  Standard $30 / Senior $35, with a named contractor's own `rate` taking precedence and the
+  **founder** rate as the conservative fallback for an unresolvable concierge.
 
 ## Quo contact sync (started 2026-07-28)
 - Bigin is being retired. Quo is the dialer directory, not a CRM — the app already
