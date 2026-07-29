@@ -20,9 +20,12 @@
  *   POST { type:'addPartner',    payload:{ fields } }              -> { ok:true, _row }
  *   POST { type:'updatePartner', payload:{ _row, partner_name, fields } } -> { ok:true }
  *
- * It also carries the Quo contact sync (see syncQuoContacts near the bottom), which is
- * deliberately NOT exposed over HTTP yet — it's run from the Apps Script editor while
- * the endpoint constants are still unconfirmed.
+ * It also carries the Quo contact sync (see syncQuoContacts near the bottom). It is
+ * deliberately NOT exposed over HTTP — it's run from the Apps Script editor, so a
+ * push to the live directory is always a deliberate act rather than a stray request.
+ *   Run ▸ testQuoAuth      proves the key + host, touches nothing
+ *   Run ▸ dryRunQuoSync    prints the plan, writes nothing
+ *   Run ▸ pushQuoSync      the only one that writes
  */
 
 var SHEET_NAME = 'Partners';
