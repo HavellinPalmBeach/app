@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 5:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 6:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8372,7 +8372,13 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
   var grossProfit = havellinTotal - totalCost;
   var margin = Math.round((grossProfit / havellinTotal) * 100);
 
-  // Walk-away floor at 30% margin minimum
+  // Reference price at a 30% margin. Deliberately NOT called a floor or a minimum viable
+  // quote any more: 30% is an arbitrary line, and in practice a job that needs that much
+  // discount is one to walk away from rather than one to price down to. Labelling it
+  // "Min Viable Quote" with "Negotiation Room" beside it invited exactly the discount the
+  // panel exists to discourage — and contradicted the deposit-coverage line below, which
+  // warns that cost stops being covered under 50%. The panel is an indicative
+  // profitability readout with a flag on it, not a discounting tool.
   var walkAway = Math.round(totalCost / 0.70);
   var negotiationRoom = havellinTotal - walkAway;
 
@@ -8413,12 +8419,12 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
       '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;color:' + marginColor + ';">' + margin + '%</div>' +
     '</div>' +
     '<div style="background:var(--tan);border-radius:5px;padding:8px;text-align:center;">' +
-      '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Min Viable Quote</div>' +
+      '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;" title="Price at a 30% margin. A reference line, not a target.">Price at 30% Margin</div>' +
       '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;">' + fmt(walkAway) + '</div>' +
     '</div>' +
     '<div style="background:' + negBg + ';border-radius:5px;padding:8px;text-align:center;">' +
-      '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Negotiation Room</div>' +
-      '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;color:' + negColor + ';">' + (negotiationRoom > 0 ? fmt(negotiationRoom) : 'AT FLOOR') + '</div>' +
+      '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;" title="Distance to the 30% reference line — not an allowance to discount.">Above Reference</div>' +
+      '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;color:' + negColor + ';">' + (negotiationRoom > 0 ? fmt(negotiationRoom) : 'AT / BELOW') + '</div>' +
     '</div>' +
     '</div>' +
     '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
@@ -8427,7 +8433,7 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
     '<tr><td style="padding:5px 8px;">Property Specialist (@$' + psCost + '/hr blended cost)</td><td style="padding:5px 8px;text-align:right;">' + totPS.toFixed(1) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(psCostTotal) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(psBilled) + '</td><td style="padding:5px 8px;text-align:right;color:var(--ok-tx);">' + psMargin + '%</td></tr>' +
     '</table>' +
     '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
-    (negotiationRoom <= 0 ? '<span class="badge b-warn">AT or BELOW floor — hold firm</span>' : '') +
+    (negotiationRoom <= 0 ? '<span class="badge b-warn">At or below the 30% reference — hold firm</span>' : '') +
     '</div>' +
     // Deposit coverage — what the 50% up front actually pays for at this price.
     (depositCoverage >= 100

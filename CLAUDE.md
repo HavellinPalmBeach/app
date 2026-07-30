@@ -214,9 +214,16 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   real jobs and the first workaround would hollow out the rule permanently.
 - **Open, needs counsel:** the retained-deposit clause (§8.6). Model the state now; do not
   treat the money as earned until the agreement language exists.
-- **Open, needs Anthony:** the 50%-deposit invariant only holds at ≥50% margin, but the
-  walk-away floor is 30% (`walkAway = totalCost / 0.70`, `7752`) and the margin panel colours
-  35–50% amber. Either move the floor to 50% or show deposit coverage when discounting (§5a).
+- **RESOLVED 2026-07-30 — the 30% line stays, and it is a REFERENCE not a floor.** Anthony:
+  the 30% is arbitrary, the panel is there so a discount does not quietly eat the profit, and
+  in practice a job needing that discount is one to walk away from rather than price down to.
+  So no hard change to the number — but the labels were actively inviting the discount they
+  were meant to discourage, and contradicting the deposit-coverage line beside them:
+  *Min Viable Quote* asserted that quoting at 30% is viable, and *Negotiation Room* framed the
+  gap as budget to spend. Renamed to **Price at 30% Margin** and **Above Reference** (purely
+  descriptive), badge reads "At or below the 30% reference — hold firm", and `manual.html` §16
+  now states the panel is an indicative profitability readout with a flag, not a discounting
+  tool. `walkAway` / `negotiationRoom` keep their variable names; only the framing changed.
 - One correctness bug worth fixing regardless: `markDepositReceived` (`6420-6433`) sets
   `depositReceived` AND `agrSigned` from one button, and `6426` is the only `agrSigned` write
   site in the file. There is no `agrSent` field at all.

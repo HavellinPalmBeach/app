@@ -214,14 +214,18 @@ The app permits and actively assists pricing down to **30%**: the walk-away floo
 So the tool invites pricing into the region where the invariant fails. Two ways to resolve,
 and it is a pricing-policy decision rather than a bug:
 
-- **Move the floor to 50%** (`totalCost / 0.50`). The invariant becomes structural — the
-  deposit always covers cost, by construction, and the app stops offering room it should not.
-- **Keep the 30% floor** and accept that the invariant is a norm rather than a guarantee. Then
-  the margin panel should say what a discount does to deposit coverage, so the trade is
-  visible at the moment it is made.
+- **Move the floor to 50%** (`totalCost / 0.50`). The invariant becomes structural.
+- **Keep the 30% line** and accept that the invariant is a norm rather than a guarantee, with
+  the panel saying what a discount does to deposit coverage.
 
-Recommend the first. It costs one constant, and it makes a rule you already believe you have
-actually true.
+**Decided 2026-07-30: the second.** The 30% is an arbitrary line, and a job needing that much
+discount is one to walk away from rather than price down to — so hard-coding it as a floor
+was never the point. What *was* wrong: the tiles read **Min Viable Quote** and **Negotiation
+Room**, which asserted that quoting at 30% is viable and framed the gap as budget to spend —
+inviting exactly the discount the panel exists to discourage, and contradicting the
+deposit-coverage warning beside it. Now **Price at 30% Margin** and **Above Reference**:
+descriptive, asserting nothing. The panel is an indicative profitability readout with a flag
+on it, not a discounting tool.
 
 ---
 

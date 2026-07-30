@@ -77,7 +77,7 @@
   <table>
     <tr><th>Setting</th><th>Default</th><th>What it does</th></tr>
     <tr><td><strong>Concierge production rate</strong> (α)</td><td>50%</td><td>The share of the concierge's on-site hours spent physically handling contents rather than directing. Drives hours, crew size, and duration — see Section 5i. Dial down on trophy estates where the concierge mostly directs; up on straightforward downsizings.</td></tr>
-    <tr><td><strong>Labour cost rates</strong> — founder concierge / contractor concierge / contractor PS Standard / contractor PS Senior</td><td>$100 · $60 · $30 · $35</td><td>What we <em>pay</em>. Feeds the margin panel and the walk-away floor only. Never billed, never shown to a client. See Section 16.</td></tr>
+    <tr><td><strong>Labour cost rates</strong> — founder concierge / contractor concierge / contractor PS Standard / contractor PS Senior</td><td>$100 · $60 · $30 · $35</td><td>What we <em>pay</em>. Feeds the margin panel only. Never billed, never shown to a client. See Section 16.</td></tr>
   </table>
   <div class="note">Changing the concierge production rate applies to <strong>new</strong> estimates only. A saved estimate is pinned to the rate it was priced under, so reopening an old quote on a device with a different setting never silently reprices it — the crew badge says so when the two differ.</div>
   <div class="note">Each directory (Vendors, Referral Partners) is its own Google Sheet with its own deployed Apps Script, kept walled off from job/estimate data. When you deploy or re-deploy a script, use <strong>Who has access: Anyone</strong> and paste the fresh <code>/exec</code> URL. If a save shows a login/HTML-page error, that access setting or a stale URL is the cause.</div>
@@ -507,8 +507,13 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   </table>
   <p style="font-size:12px;color:#6B6B72;">The rush premium is charged on the Havellin services total after any Preferred Client Discount, and never on vendor costs. Hourly rates stay as published — the premium is a separate line, so a client comparing us to another firm sees standard NASMM-range rates plus a clearly-labelled expedite.</p>
 
+  <div class="note"><strong>The margin panel is an indicative profitability readout with a flag on it — not a discounting tool.</strong>
+    <em>Price at 30% Margin</em> is a reference line at an admittedly arbitrary margin, and <em>Above Reference</em> is simply
+    the distance to it. Neither is an allowance to spend. In practice a job that needs that much discount is one to walk away
+    from rather than one to price down to. The panel also shows what the 50% deposit covers at the quoted price, and warns in
+    dollars when it stops covering cost — that happens below a 50% margin.</div>
   <h3>What we pay — labour cost rates <span style="font-weight:400;color:#888780;">(internal, never billed)</span></h3>
-  <div class="note"><strong>These are a different set of numbers from the table above, and confusing the two is expensive in both directions</strong> — billing a client at cost, or paying a contractor at the billing rate. Cost rates feed the margin panel and the walk-away floor only. They are Settings knobs (Section 2); the values below are the defaults.</div>
+  <div class="note"><strong>These are a different set of numbers from the table above, and confusing the two is expensive in both directions</strong> — billing a client at cost, or paying a contractor at the billing rate. Cost rates feed the margin panel only. They are Settings knobs (Section 2); the values below are the defaults.</div>
   <table>
     <tr><th>Role</th><th>Cost</th><th>Applies to</th></tr>
     <tr><td>Founder concierge</td><td>$100/hr</td><td>Anthony Sr, Ashley</td></tr>
@@ -517,7 +522,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td>Contractor PS — Senior</td><td>$35/hr</td><td>The <em>Contractor — Senior</em> placeholder slot</td></tr>
   </table>
   <p><strong>Cost follows the person, not the job title.</strong> Founders and contractors are paid differently for the same role, so a named individual in the Contractors directory is always costed at <em>their own</em> rate (§12a). The four rates above cover only the unnamed placeholder slots you staff before a specific person is assigned.</p>
-  <p>If a concierge can't be resolved to a person at all, the margin panel costs them at the <strong>founder</strong> rate — deliberately the most expensive assumption, so the walk-away floor is never understated — and says on the panel that the figure is an assumption. Assign the concierge, or set their rate on the Contractors tab, to replace it with a real number.</p>
+  <p>If a concierge can't be resolved to a person at all, the margin panel costs them at the <strong>founder</strong> rate — deliberately the most expensive assumption, so margin is never overstated — and says on the panel that the figure is an assumption. Assign the concierge, or set their rate on the Contractors tab, to replace it with a real number.</p>
 
   <h2>16a. Win / Loss</h2>
   <p><strong>Tab: Win / Loss.</strong> Reads the <em>client's</em> decision, not ours. A job counts as won when it has been
