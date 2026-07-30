@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 1:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 3:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1497,6 +1497,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <label>Paid by <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the trust, estate account, firm, or client</span></label>
     <input type="text" id="dep-payer" placeholder="e.g. Pressly Family Trust">
 
+    <label>Photo of the cheque <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— filed to Drive as the record</span></label>
+    <input type="file" id="dep-evidence" accept="image/*" capture="environment" style="font-size:12px;">
+    <div style="font-size:10px;color:var(--gray);margin-top:3px;">
+      Five seconds now, and you want it before the cheque leaves your hands. This is what makes a
+      hand-recorded payment a document rather than an assertion.
+    </div>
+
+    <div id="dep-prior" style="margin-top:10px;"></div>
     <div id="dep-modal-hint" style="margin-top:10px;"></div>
     <div id="dep-fb" style="margin-top:8px;"></div>
 
@@ -6790,21 +6798,108 @@ function depositTargetFor(job) {
   return Math.round(total * 0.5);
 }
 
+// ─── PAYMENTS ─────────────────────────────────────────────────────────────────
+// A list, not a flag. One number cannot carry this: an elderly client may write a
+// cheque for less than the full 50%, or two cheques; a trust may send part and the
+// family the rest. `funded` is therefore computed by summing what actually arrived
+// against what was due, so a short payment stays visibly short instead of reading as
+// paid. See LIFECYCLE_AUDIT.md §6b.
+
+// Every payment on a job, oldest first. Migrates the single `job.deposit` object
+// written before this existed, and the bare `depositReceived` boolean before that —
+// neither carried an amount, so a legacy record is reconstructed at the 50% target and
+// marked as such rather than being quietly dropped or invented at full confidence.
+function jobPayments(job) {
+  if (!job) return [];
+  if (Array.isArray(job.payments)) return job.payments;
+  var out = [];
+  if (job.deposit && job.deposit.amount) {
+    out.push(Object.assign({ id: 1, stage: 'deposit' }, job.deposit));
+  } else if (job.depositReceived) {
+    out.push({
+      id: 1, stage: 'deposit',
+      amount: depositTargetFor(job),
+      receivedOn: job.depositReceivedAt || '',
+      method: '', reference: '', payer: '',
+      recordedBy: job.depositReceivedBy || '',
+      recordedAt: '', clearedOn: null, policyException: false,
+      reconstructed: true          // amount inferred from the 50% target, never observed
+    });
+  }
+  job.payments = out;
+  return out;
+}
+
+function depositPaidTotal(job) {
+  return jobPayments(job)
+    .filter(function(p){ return p.stage === 'deposit'; })
+    .reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
+}
+
+// The gate the whole job hangs off. True when deposit payments meet the 50% target;
+// the 1% tolerance absorbs rounding between the estimate total and what a client's bank
+// actually sent. With no target known, any recorded deposit counts — refusing to call a
+// job funded because its estimate is missing would strand it.
+function isJobFunded(job) {
+  if (!job) return false;
+  var target = depositTargetFor(job);
+  var paid = depositPaidTotal(job);
+  if (!target) return paid > 0;
+  return paid >= target * 0.99;
+}
+
+// Deposit money that has actually cleared the bank. Work starts on received, not
+// cleared (§6c), so this is for exposure reporting rather than gating.
+function depositClearedTotal(job) {
+  return jobPayments(job)
+    .filter(function(p){ return p.stage === 'deposit' && p.clearedOn; })
+    .reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
+}
+
+function paymentMethodLabel(m) {
+  return ({ check: 'Personal cheque', cashiers_check: "Cashier's cheque", wire: 'Wire transfer',
+            stripe: 'Card / Stripe', cash: 'Cash' })[m] || m || '—';
+}
+
 function openDepositModal() {
   var job = _agrJob();
   if (!job) { showFB('agr-fb','warn','Select a job first.'); return; }
   if (!job.agrSigned) { showFB('agr-fb','warn','Record the signed agreement before the deposit.'); return; }
   var target = depositTargetFor(job);
-  document.getElementById('dep-amount').value = target ? target : '';
+  var already = depositPaidTotal(job);
+  var outstanding = Math.max(0, target - already);
+  // Prefill what is still OUTSTANDING, not the full target — a second cheque completing
+  // a part-paid deposit is the common case and should not need arithmetic in the field.
+  document.getElementById('dep-amount').value = outstanding ? outstanding : (target || '');
   document.getElementById('dep-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('dep-method').value = '';
   document.getElementById('dep-reference').value = '';
   document.getElementById('dep-payer').value = '';
+  var _ev = document.getElementById('dep-evidence'); if (_ev) _ev.value = '';
   document.getElementById('dep-fb').innerHTML = '';
   document.getElementById('dep-modal-sub').innerHTML = target
-    ? 'Deposit due on this job is <strong>' + fmt(target) + '</strong> (50% of the approved total). '
-      + 'Recording it is what allows work to begin.'
+    ? 'Deposit due on this job is <strong>' + fmt(target) + '</strong> (50% of the approved total)'
+      + (already ? ', of which <strong>' + fmt(already) + '</strong> is already recorded.' : '. ')
+      + (outstanding ? ' Outstanding: <strong>' + fmt(outstanding) + '</strong>.' : '')
     : 'No approved estimate total found for this job, so the 50% target cannot be shown.';
+
+  // Show what has already come in, so a second entry is made in full knowledge of the
+  // first rather than duplicating it.
+  var prior = document.getElementById('dep-prior');
+  var list = jobPayments(job).filter(function(p){ return p.stage === 'deposit'; });
+  prior.innerHTML = list.length
+    ? '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">Already recorded on this job:</div>'
+      + list.map(function(p){
+          return '<div style="font-size:11px;padding:4px 8px;background:var(--tan);border-radius:3px;margin-bottom:3px;">'
+            + '<strong>' + fmt(p.amount) + '</strong> · ' + esc(paymentMethodLabel(p.method))
+            + (p.receivedOn ? ' · ' + esc(p.receivedOn) : '')
+            + (p.payer ? ' · ' + esc(p.payer) : '')
+            + (p.clearedOn ? '' : ' <span style="color:var(--warn-tx);font-weight:600;">uncleared</span>')
+            + (p.reconstructed ? ' <span style="color:var(--warn-tx);">(amount inferred — predates payment records)</span>' : '')
+            + '</div>';
+        }).join('')
+    : '';
+
   updateDepModalHints();
   document.getElementById('deposit-modal').style.display = 'flex';
 }
@@ -6847,17 +6942,25 @@ function saveDeposit() {
   if (!method)     { showFB('dep-fb','warn','Select how it was paid.'); return; }
 
   var target = depositTargetFor(job);
-  // A short deposit must be visible, not silently pass as paid. 1% tolerance absorbs
-  // rounding between the estimate total and what the client's bank actually sent.
-  if (target && amount < target * 0.99 &&
-      !confirm(fmt(amount) + ' is less than the ' + fmt(target) + ' deposit due on this job.\n\n'
+  var already = depositPaidTotal(job);
+  var afterThis = already + amount;
+  // A short deposit must be visible, not silently pass as paid. The comparison is on the
+  // RUNNING TOTAL, so a second cheque completing a part-paid deposit passes without a
+  // warning while a genuinely short total still raises one.
+  if (target && afterThis < target * 0.99 &&
+      !confirm((already ? fmt(afterThis) + ' total (' + fmt(already) + ' already recorded, '
+                          + fmt(amount) + ' now)' : fmt(amount))
+        + ' is less than the ' + fmt(target) + ' deposit due on this job.\n\n'
         + 'Record it as a partial payment anyway? Work is not meant to start until the full '
-        + '50% is in.')) return;
+        + '50% is in — this job will stay unfunded and hours cannot be logged against it.')) return;
 
-  // A cheque is not money until it clears. Wire and card are final on receipt.
+  // A cheque is not money until it clears. Wire, card and cash are final on receipt.
   var clearsOnReceipt = (method === 'wire' || method === 'stripe' || method === 'cash');
+  var list = jobPayments(job);
 
-  job.deposit = {
+  var payment = {
+    id: (list.reduce(function(m,p){ return Math.max(m, p.id || 0); }, 0) + 1),
+    stage: 'deposit',
     amount: amount,
     receivedOn: date,
     method: method,
@@ -6866,21 +6969,69 @@ function saveDeposit() {
     recordedBy: _actor(job),
     recordedAt: new Date().toISOString(),
     clearedOn: clearsOnReceipt ? date : null,
-    policyException: (amount >= LARGE_DEPOSIT_THRESHOLD && method === 'check')
+    policyException: (amount >= LARGE_DEPOSIT_THRESHOLD && method === 'check'),
+    evidence: null,        // Drive URL of the cheque photo, filled in below
+    qbMatchId: null        // set by QuickBooks reconciliation, when that exists
   };
-  job.depositReceived = true;
+  list.push(payment);
+  delete job.deposit;      // superseded by the list; jobPayments migrated it already
+
+  // depositReceived stays in sync as the derived flag — seven places still read it,
+  // including defaultInvStage. It is now a CONSEQUENCE of the payments rather than a
+  // thing anyone sets.
+  job.depositReceived = isJobFunded(job);
   job.depositReceivedAt = date;
   job.depositReceivedBy = _actor(job);
 
   saveJobs(); syncJobToSheets(job);
+
+  // File the evidence. A photograph is what makes a hand-entered payment trustworthy
+  // rather than an assertion — it is the honest substitute for an API confirmation.
+  var fileEl = document.getElementById('dep-evidence');
+  if (fileEl && fileEl.files && fileEl.files[0]) {
+    _attachPaymentEvidence(job, payment, fileEl.files[0]);
+  }
+
   document.getElementById('deposit-modal').style.display = 'none';
   updateAgrUI(); renderJobs();
   if (typeof loadInvoice === 'function' && document.getElementById('invoice-job')) {
     try { loadInvoice(); } catch(e) {}   // invoice stage advances off depositReceived
   }
-  showFB('agr-fb','ok', fmt(amount) + ' deposit recorded'
+  var funded = isJobFunded(job);
+  showFB('agr-fb', funded ? 'ok' : 'warn', fmt(amount) + ' recorded'
     + (clearsOnReceipt ? '' : ' — uncleared until the bank confirms')
-    + '. Work can now begin on this job.');
+    + (funded
+        ? '. Deposit is complete; work can begin on this job.'
+        : '. Still ' + fmt(Math.max(0, target - afterThis)) + ' short of the '
+          + fmt(target) + ' deposit — the job is not funded yet.'));
+}
+
+// Compress and file a cheque photo, then link it to the payment. Failure is reported
+// rather than swallowed: a payment believed to have evidence, that has none, is worse
+// than one openly recorded without it.
+function _attachPaymentEvidence(job, payment, file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    compressImage(e.target.result, 1400, 0.8, function(dataUrl) {
+      resolveSubfolderId(job, 'Invoice', function(folderId) {
+        var target = folderId || _jobRootFolderId(job);
+        if (!target) { showSyncBadge('Payment saved, but no Drive folder for the evidence', true); return; }
+        var name = (job.hvlId || 'JOB') + '_Payment_' + payment.id + '_'
+                 + (payment.method || 'evidence') + '.jpg';
+        uploadToDrive(target, name, dataUrl, function(ok, fileUrl) {
+          if (ok) {
+            payment.evidence = fileUrl || name;
+            saveJobs(); syncJobToSheets(job);
+            showSyncBadge('Payment evidence filed to Drive ✓');
+            if (typeof updateAgrUI === 'function') updateAgrUI();
+          } else {
+            showSyncBadge('Payment saved — evidence upload FAILED, re-attach it', true);
+          }
+        });
+      });
+    });
+  };
+  reader.readAsDataURL(file);
 }
 
 function closeChangeOrder() {
@@ -15894,7 +16045,9 @@ function updateAgrUI() {
   var bDep    = document.getElementById('btn-deposit-received');
   var _sent   = !!(_agrJ && _agrJ.agrSent);
   var _signed = !!(_agrJ && _agrJ.agrSigned);
-  var _paid   = !!(_agrJ && _agrJ.depositReceived);
+  // Funded, not "a payment exists" — a part-paid deposit must keep the button available
+  // so the second cheque can be recorded.
+  var _paid   = !!(_agrJ && isJobFunded(_agrJ));
   if (bSent)   bSent.style.display   = (agrApproved && !_sent)             ? 'inline-block' : 'none';
   if (bSigned) bSigned.style.display = (agrApproved && _sent && !_signed)  ? 'inline-block' : 'none';
   if (bDep)    bDep.style.display    = (agrApproved && _signed && !_paid)  ? 'inline-block' : 'none';
@@ -15904,14 +16057,27 @@ function updateAgrUI() {
     badge.innerHTML = '<span class="badge b-approved">✓ Approved</span>';
     // Progress line: where this job is in sent → signed → funded, with who and when.
     var _prog;
+    var _dPaid = _agrJ ? depositPaidTotal(_agrJ) : 0;
+    var _dTarget = _agrJ ? depositTargetFor(_agrJ) : 0;
     if (_paid) {
-      var _d = _agrJ.deposit || {};
-      _prog = '<strong>Deposit received</strong> — ' + (_d.amount ? fmt(_d.amount) : '')
-        + (_d.payer ? ' from ' + esc(_d.payer) : '')
-        + (_d.receivedOn ? ' on ' + esc(_d.receivedOn) : '')
-        + (_d.clearedOn ? '' : ' <span style="color:var(--warn-tx);font-weight:600;">· uncleared</span>')
-        + (_d.policyException ? ' <span style="color:var(--warn-tx);font-weight:600;">· policy exception</span>' : '')
-        + '<div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Work can begin. Invoicing has advanced past the deposit stage.</div>';
+      var _pays = jobPayments(_agrJ).filter(function(p){ return p.stage === 'deposit'; });
+      var _uncleared = _dPaid - depositClearedTotal(_agrJ);
+      var _exception = _pays.some(function(p){ return p.policyException; });
+      _prog = '<strong>Deposit received</strong> — ' + fmt(_dPaid)
+        + (_pays.length > 1 ? ' across ' + _pays.length + ' payments' : '')
+        + (_pays.length === 1 && _pays[0].payer ? ' from ' + esc(_pays[0].payer) : '')
+        + (_uncleared > 0 ? ' <span style="color:var(--warn-tx);font-weight:600;">· ' + fmt(_uncleared) + ' uncleared</span>' : '')
+        + (_exception ? ' <span style="color:var(--warn-tx);font-weight:600;">· policy exception</span>' : '')
+        + '<div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Work can begin. Invoicing has advanced past the deposit stage.'
+        + (_pays.some(function(p){ return !p.evidence && p.method !== 'stripe'; })
+            ? ' <span style="color:var(--warn-tx);">No photo on file for at least one payment.</span>' : '')
+        + '</div>';
+    } else if (_signed && _dPaid > 0) {
+      // Part-paid. The job is NOT funded and must not read as though it were.
+      _prog = '<strong>Deposit part-paid</strong> — ' + fmt(_dPaid) + ' of ' + fmt(_dTarget)
+        + '<div style="font-size:11px;color:var(--warn-tx);margin-top:2px;">'
+        + fmt(Math.max(0, _dTarget - _dPaid)) + ' still outstanding. The job is not funded and '
+        + 'work should not start until it is.</div>';
     } else if (_signed) {
       _prog = '<strong>Agreement signed</strong>'
         + (_agrJ.agrSignedAt ? ' — ' + esc(_agrJ.agrSignedAt) : '')
