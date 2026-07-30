@@ -2,8 +2,23 @@
 
 Drafted 2026-07-30. Decisions recorded 2026-07-30 (§8). **Audit only — no code was changed.**
 
-Status: findings verified, the six open decisions are answered, and §7a carries the build
-order those answers force. Ready to implement from Wave 1.
+**Status: Waves 1, 2 and 4 are BUILT and live, plus Wave 3 step 1.** All three of the
+firm's hard rules are now enforced in code:
+
+| Rule | Enforced by |
+|---|---|
+| No job starts until the 50% deposit is received | `saveLogEntry` refuses unless `isJobFunded()`; hours inputs and the save button are inert |
+| No job plan before the client accepts | `loadJobPlanTab` withholds staffing/hours until `isJobWon()` |
+| Don't tie up crew on unwon jobs | `confirmJobTeam` refuses an unwon job |
+
+Remaining, and blocked on credentials rather than design: **DocuSign** (→ `contracted` and
+a retained signed PDF), **Stripe** (sets `clearedOn` on cards), **QuickBooks** (the
+reconciler, §6d). Each attaches to `job.payments[]` rather than replacing it, so none is a
+prerequisite for the gates above — that is why Wave 4 shipped ahead of them.
+
+Still open and NOT code: the retained-deposit clause (§8.6, counsel) and the 30%-vs-50%
+walk-away floor (§5a, pricing policy — the margin panel now discloses deposit coverage
+either way).
 
 Method: eight parallel readers mapped one lifecycle segment each out of `havellin.html`,
 then every gate they claimed was a *hard* block was handed to a separate agent told to

@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 3:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 4:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10826,10 +10826,16 @@ function buildLogTeamRows() {
     return '<option' + (sel===CONTRACTOR_TC_NAME?' selected':'') + '>' + CONTRACTOR_TC_NAME + '</option>';
   };
 
-  // Until the team is signed off, this form is a staffing sheet, not a timesheet: the
-  // hours boxes are inert so the two steps can't be done in one confused pass.
-  var teamOK = !!(crew && crew.confirmed);
-  var hrsAttr = teamOK ? '' : ' disabled title="Confirm the job team first"';
+  // Two independent conditions, in the order they occur in real life. Staffing happens
+  // BEFORE the deposit on purpose — you have to commit people while the agreement is out
+  // or you are behind when the wire lands — so the team gate and the money gate are
+  // separate, and only the second one stops work.
+  var _logJob = jobId ? jobs.find(function(j){ return j.id === jobId; }) : null;
+  var teamOK  = !!(crew && crew.confirmed);
+  var fundedOK = !!(_logJob && isJobFunded(_logJob));
+  var canLogHours = teamOK && fundedOK;
+  var hrsAttr = canLogHours ? ''
+    : ' disabled title="' + (!teamOK ? 'Confirm the job team first' : 'Deposit not received') + '"';
 
   var html = '';
 
@@ -10917,6 +10923,22 @@ function buildLogTeamRows() {
   // commit. Once committed it becomes the record of who confirmed the team and when.
   if (jobId) {
     var missingNow = unfilledPlannedPS(jobId, crew);
+    // The deposit gate. Deliberately shown BELOW the team bar and only once the team is
+    // settled, so the two are read in sequence rather than as competing complaints.
+    var _depBar = '';
+    if (teamOK && !fundedOK) {
+      var _tgt = _logJob ? depositTargetFor(_logJob) : 0;
+      var _got = _logJob ? depositPaidTotal(_logJob) : 0;
+      _depBar = '<div class="alert a-err" style="margin-top:8px;font-size:11px;">'
+        + '<strong>The deposit has not been received, so hours cannot be logged.</strong>'
+        + '<div style="margin-top:3px;">'
+        + (_got > 0
+            ? fmt(_got) + ' of the ' + fmt(_tgt) + ' deposit is recorded — '
+              + fmt(Math.max(0, _tgt - _got)) + ' still outstanding.'
+            : (_tgt ? 'Deposit due is ' + fmt(_tgt) + ' (50% of the approved total).' : ''))
+        + ' Record it on the Agreement tab. The team above stays confirmed in the meantime —'
+        + ' staffing ahead of payment is deliberate, starting work is not.</div></div>';
+    }
     if (teamOK) {
       var whenTxt = crew.confirmedAt && crew.confirmedAt.indexOf('T') > 0
         ? new Date(crew.confirmedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
@@ -10928,7 +10950,7 @@ function buildLogTeamRows() {
           '<div style="margin-top:2px;color:var(--gray);">Hours can be logged. Named members are locked; an added specialist can still be assigned to an open slot.</div>' +
         '</div>' +
         '<button class="btn-s" onclick="reviseJobTeam(' + jobId + ')" style="font-size:11px;padding:5px 10px;">Revise team</button>' +
-      '</div>';
+      '</div>' + _depBar;
     } else {
       html += '<div class="alert a-warn" style="margin-top:12px;">' +
         '<div style="font-size:11px;margin-bottom:8px;">' +
@@ -10952,10 +10974,11 @@ function buildLogTeamRows() {
   // that looks live and then refuses reads as a bug, not a workflow step.
   var saveBtn = document.getElementById('btn-save-hours');
   if (saveBtn) {
-    saveBtn.disabled = !teamOK;
-    saveBtn.style.opacity = teamOK ? '' : '0.45';
-    saveBtn.style.cursor = teamOK ? '' : 'not-allowed';
-    saveBtn.title = teamOK ? '' : 'Confirm the job team first';
+    saveBtn.disabled = !canLogHours;
+    saveBtn.style.opacity = canLogHours ? '' : '0.45';
+    saveBtn.style.cursor = canLogHours ? '' : 'not-allowed';
+    saveBtn.title = canLogHours ? ''
+      : (!teamOK ? 'Confirm the job team first' : 'Deposit not received — record it on the Agreement tab');
   }
 }
 
@@ -10968,6 +10991,20 @@ function saveLogEntry() {
   var _crew = getJobCrew(jobId);
   if (!_crew || !_crew.confirmed) {
     showFB('log-fb','err','The job team has not been confirmed. Name the specialists and confirm the team before logging hours.');
+    buildLogTeamRows();
+    return;
+  }
+  // THE hard rule: no work is billed against a job that has not paid its deposit. This
+  // is the one gate in the app with no override, and that is only safe because the
+  // deposit is never waived — see LIFECYCLE_AUDIT.md §8.2. Staffing ahead of payment is
+  // deliberate and stays allowed; logging hours is where the line actually falls.
+  var _logJ = jobs.find(function(j){ return j.id === jobId; });
+  if (!isJobFunded(_logJ)) {
+    var _t = depositTargetFor(_logJ), _p = depositPaidTotal(_logJ);
+    showFB('log-fb','err','The deposit has not been received, so hours cannot be logged against this job.'
+      + (_p > 0 ? ' ' + fmt(_p) + ' of ' + fmt(_t) + ' is recorded; ' + fmt(Math.max(0, _t - _p)) + ' outstanding.'
+                : (_t ? ' ' + fmt(_t) + ' is due.' : ''))
+      + ' Record it on the Agreement tab.');
     buildLogTeamRows();
     return;
   }
