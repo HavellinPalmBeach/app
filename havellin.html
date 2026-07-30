@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 8:29am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 8:51am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -835,7 +835,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
       <div id="est-crew-col">
         <div class="sec">Property Specialists</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to complete all PS hours within the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation. Billing is total PS hours regardless of crew size — adding PS does not change the estimate.</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to the smallest crew that lands the job inside the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation — but note that a bigger crew finishes sooner, so the concierge is on site fewer hours and <strong>the estimate goes down</strong>. Never carry a crew size over from another job.</div>
         <div id="ps-slots">
           <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
             <select id="ps-slot-0" onchange="calcAll()" style="font-size:12px;"><option value="contractor_standard">Contractor — Standard</option></select>
@@ -892,6 +892,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <div id="prem-badge"></div>
+        <div class="sec" style="margin-top:8px;">Expedited Delivery</div>
+        <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Rush order?</div>
+            <div class="toggle-sub">Adds a flat 20% expedited-delivery premium to the Havellin services total — a second concierge and a larger crew working in parallel to compress the calendar. Shown as its own line; hourly rates are unchanged. Vendor costs stay at cost.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="rush-badge" style="margin-bottom:4px;"></div>
         <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
         <div class="toggle-wrap" id="fixed-toggle-wrap">
           <div class="toggle-info">
@@ -1077,6 +1086,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row" id="s-havellin-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
+          <tr id="s-rush-row" style="display:none;"><td style="color:var(--bronze);font-weight:600;" id="s-rush-label">Expedited delivery (20%)</td><td class="num" id="s-rush-amt" style="color:var(--bronze);font-weight:600;">$0</td></tr>
           <tr id="s-vendor-row"><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" id="s-grand-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
@@ -3198,20 +3208,19 @@ function fixedPriceBuffer(svcKey) {
   return 0.20;
 }
 
-// ─── RUSH MULTIPLIER ──────────────────────────────────────────────────────────
-// Applied AFTER the contingency buffer on a fixed-price fee, keyed to the runway
-// (calendar days from today to the client's hard-target deadline). Compressed
-// timelines cost more to staff. A <30-day runway also requires a written client
-// acknowledgment. Only meaningful when a hard target exists and the job is priced
-// fixed — time-and-materials engagements carry their margin in the hourly rate.
-function rushMultiplier(runwayDays) {
-  if (runwayDays == null || !isFinite(runwayDays)) return 1.00;
-  if (runwayDays >= 90) return 1.00;
-  if (runwayDays >= 60) return 1.12;
-  if (runwayDays >= 45) return 1.20;
-  if (runwayDays >= 30) return 1.32;
-  return 1.50;
-}
+// ─── EXPEDITED DELIVERY (RUSH) ────────────────────────────────────────────────
+// A flat premium on the Havellin services total, applied when the concierge marks the
+// job expedited. Deliberately NOT a markup on the TC/PS hourly rates: rates outside
+// NASMM norms read badly to a client comparing quotes, and a named line is both clearer
+// and easier to defend. It is also literally what the client is buying — a second
+// concierge and a larger crew working in parallel.
+//
+// This replaced a runway-keyed sliding scale (1.00 → 1.50 across 90/60/45/30 days to the
+// client's hard target) that had two problems: it measured calendar distance rather than
+// actual tightness, so a three-day condo with a 40-day runway was premiumed as a rush;
+// and it only ever reached the SUGGESTED fixed-price figure, so it did nothing at all on
+// a job left hourly — which is every job by default. One flat number, one mechanism.
+var RUSH_PCT = 0.20;
 
 // Fixed-price toggle: on enable, prefill the amount from the latest suggested fee
 // (computed in calcAll's fixed-price panel) unless the manager already typed one.
@@ -3717,7 +3726,16 @@ function calcAll() {
   var discountPct = Math.min(30, Math.max(0, parseInt(document.getElementById('e-discount') ? document.getElementById('e-discount').value : 0) || 0));
   var laborBase = tcFee + psFee;  // discount applies to labor only
   var discountAmt = Math.round(laborBase * discountPct / 100);
-  var havellinTotalDiscounted = havellinTotal - discountAmt;
+  // Expedited delivery premium (see RUSH_PCT). Charged on the Havellin services total
+  // AFTER the preferred-client discount, so the discount is never computed on the premium
+  // and the client reads "your service total, then expedited delivery". Vendor costs are
+  // outside it — pass-through at cost doesn't get more expensive because we compressed
+  // the calendar. Home Prep is excluded for the same reason fixed price is: its whole
+  // staffing column is hidden, so the toggle isn't reachable on those jobs.
+  var isRush = document.getElementById('e-rush') ? document.getElementById('e-rush').checked : false;
+  if (isPrep) isRush = false;
+  var rushAmt = isRush ? Math.round((havellinTotal - discountAmt) * RUSH_PCT) : 0;
+  var havellinTotalDiscounted = havellinTotal - discountAmt + rushAmt;
   var grandTotal = havellinTotalDiscounted + vendorCost + vendorTotal + stagerCost + (prepEnabled ? prepCost : 0);
 
   // Update discount badge
@@ -3781,6 +3799,22 @@ function calcAll() {
     if (sDiscAmt) sDiscAmt.textContent = '- $' + Math.round(discountAmt).toLocaleString();
   }
 
+  // Expedited-delivery premium row + badge
+  var sRushRow = document.getElementById('s-rush-row');
+  if (sRushRow) {
+    sRushRow.style.display = rushAmt > 0 ? '' : 'none';
+    var sRushLbl = document.getElementById('s-rush-label');
+    var sRushAmt = document.getElementById('s-rush-amt');
+    if (sRushLbl) sRushLbl.textContent = 'Expedited delivery (' + Math.round(RUSH_PCT * 100) + '%)';
+    if (sRushAmt) sRushAmt.textContent = '+ $' + rushAmt.toLocaleString();
+  }
+  var rushBadge = document.getElementById('rush-badge');
+  if (rushBadge) {
+    rushBadge.innerHTML = rushAmt > 0
+      ? '<div style="background:var(--tan);border-radius:4px;padding:5px 10px;font-size:12px;color:var(--bronze);font-weight:600;">Rush order — adding ' + fmt(rushAmt) + ' (' + Math.round(RUSH_PCT * 100) + '% of Havellin services)</div>'
+      : '';
+  }
+
   // Billing model: fixed-price (living jobs) vs itemized hourly / time-and-materials
   // (Estate Settlement, Probate, Contested) — the latter bill on actual logged hours
   // for Personal-Representative and court defensibility, with no fixed-price buffer.
@@ -3831,22 +3865,14 @@ function calcAll() {
         + '<span style="color:var(--gray-dk);">Internal reference: a fixed-price quote would run <strong>$' + _refFixed.toLocaleString() + '</strong> (incl. ' + Math.round(_refBuf * 100) + '% contingency).</span>';
     } else {
       var buf = fixedPriceBuffer(svcKey);
-      // Rush multiplier: keyed to the runway (calendar days from today to the hard
-      // target). Applied AFTER the buffer. No hard target = ample runway = ×1.00.
-      var _hardTarget = loadedJob && loadedJob.completion ? loadedJob.completion : null;
-      var _runwayDays = null;
-      if (_hardTarget) {
-        _runwayDays = Math.round((new Date(_hardTarget + 'T12:00:00') - new Date()) / 86400000);
-      }
-      var rush = rushMultiplier(_runwayDays);
-      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf) * rush);
+      // The expedited premium is already inside havellinTotalDiscounted, so it carries
+      // into the suggested fixed fee without being applied a second time here.
+      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf));
       window._fixedPriceSuggested = fpFee;
-      var rushPct = Math.round((rush - 1) * 100);
-      if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services × ' + Math.round(buf * 100) + '% contingency' + (rushPct > 0 ? ' × +' + rushPct + '% rush timeline' : '');
+      if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services × ' + Math.round(buf * 100) + '% contingency';
       if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
       if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
-        + (rushPct > 0 ? ' Includes a +' + rushPct + '% compressed-timeline adjustment (' + _runwayDays + '-day runway to the hard target).' : '')
-        + (_runwayDays != null && _runwayDays < 30 ? ' ⚠ Sub-30-day turnaround — requires written client acknowledgment before scheduling.' : '');
+        + (isRush ? ' Includes the ' + Math.round(RUSH_PCT * 100) + '% expedited-delivery premium.' : '');
     }
     // When fixed-price mode is ON, the panel reflects the CHOSEN flat fee (the number
     // the client will actually see) plus the margin vs. the hourly basis.
@@ -3902,7 +3928,10 @@ function calcAll() {
     var _mp = document.getElementById('margin-panel');
     if (_mp) _mp.innerHTML = '<div style="font-size:11px;color:var(--gray);">Fee-only service — Havellin\'s margin is the full 30% GC fee (third-party vendors billed to the client at cost).</div>';
   } else {
-    updateRefBox(havellinTotalDiscounted);
+    // Compared against typical fee ranges for the property size, so the expedited premium
+    // is held out — it is a delivery-speed surcharge, not evidence the job is overpriced
+    // for the house, and including it would flag every rush job as above range.
+    updateRefBox(havellinTotalDiscounted - rushAmt);
     updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct, crewSize);
   }
 
@@ -4008,6 +4037,7 @@ function calcAll() {
     fixedAmount: fixedAmount,
     discountAmt:Math.round(discountAmt),
     discountPct:discountPct,
+    rush:isRush, rushPct:RUSH_PCT, rushAmt:rushAmt,
     grandTotal: isFixed
       ? Math.round(fixedAmount + vendorCost + vendorTotal + stagerCost + (prepEnabled ? prepCost : 0))
       : Math.round(grandTotal),
@@ -4015,7 +4045,7 @@ function calcAll() {
     collections:JSON.parse(JSON.stringify(collectionsData)),
     vehicles:JSON.parse(JSON.stringify(vehiclesData)),
     rooms:includedRooms,
-    rush:false, access:access, heirs:heirs,
+    access:access, heirs:heirs,
     jobId: parseInt(document.getElementById('e-job').value) || null,
     svc: document.getElementById('e-svc').value,
     svcType: svcType,
@@ -4744,6 +4774,7 @@ function applyOpenedEstimate(jobId, job, status) {
   resetEstimateExtras();
   window._suppressEstimateAutoSave = false;
   document.getElementById('e-prem').checked = job.premium || false;
+  var _rshO = document.getElementById('e-rush'); if (_rshO) _rshO.checked = false;
   // Reset PS slots
   for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
@@ -4771,6 +4802,7 @@ function clearEstimateTab() {
   document.getElementById('e-prem').checked = false;
   var _fxN = document.getElementById('e-fixed'); if (_fxN) _fxN.checked = false;
   var _fxAN = document.getElementById('e-fixed-amount'); if (_fxAN) _fxAN.value = '';
+  var _rshN = document.getElementById('e-rush'); if (_rshN) _rshN.checked = false;
   var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
   for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
@@ -4943,8 +4975,12 @@ function resetEstimate() {
   document.getElementById('e-prem').checked = false;
   var _fxR = document.getElementById('e-fixed'); if (_fxR) _fxR.checked = false;
   var _fxAR = document.getElementById('e-fixed-amount'); if (_fxAR) _fxAR.value = '';
+  var _rshR = document.getElementById('e-rush'); if (_rshR) _rshR.checked = false;
   var _fxRowR = document.getElementById('fixed-amount-row'); if (_fxRowR) _fxRowR.style.display = 'none';
-  ['adj-rush','adj-access','adj-heirs'].forEach(function(id){ document.getElementById(id).checked=false; });
+  // 'adj-rush' used to be in this list and has no element — getElementById returned null
+  // and the assignment threw, so Reset died here and left everything after it un-reset.
+  // Guarded as well as corrected: a renamed toggle shouldn't be able to break Reset again.
+  ['adj-access','adj-heirs'].forEach(function(id){ var el=document.getElementById(id); if (el) el.checked=false; });
   document.getElementById('e-pkg').value=0;
   var coordEl = document.getElementById('e-coord-days'); if(coordEl) coordEl.value=0;
   var vendorEl = document.getElementById('e-vendor-total'); if(vendorEl) vendorEl.value=0;
@@ -5335,6 +5371,13 @@ function renderClientEstimate() {
     (!e.fixedPrice && e.discountPct > 0 ?
       '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt)) + '</td></tr>' +
       '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
+      : '') +
+    // Expedited delivery, itemized so the client can see exactly what the premium is and
+    // what it buys. Suppressed on a fixed-price quote, where the flat fee is presented as
+    // a single figure and the premium is already inside it — itemizing there would read as
+    // an addition on top of a number described as firm.
+    (!e.fixedPrice && e.rushAmt > 0
+      ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
       : '') +
     '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (!e.fixedPrice && e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
@@ -6283,6 +6326,12 @@ function restoreEstimateToUI(est) {
   // Restore discount
   var discEl = document.getElementById('e-discount');
   if (discEl) discEl.value = est.discountPct || 0;
+
+  // Restore the expedited-delivery premium. Same reason as the access / heirs toggles
+  // below: the recompute on open would otherwise drop the 20% and silently reprice a
+  // quote the client may already have accepted.
+  var rushEl = document.getElementById('e-rush');
+  if (rushEl) rushEl.checked = !!est.rush;
 
   // Restore fixed-price mode: toggle, amount, and the amount row's visibility.
   var fxEl = document.getElementById('e-fixed');

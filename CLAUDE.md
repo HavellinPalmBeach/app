@@ -240,13 +240,23 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   or trustee, no court reviews the fee. It used to be lumped in via a `courtBilled` flag
   that conflated "estate work" with "court-supervised"; do not put it back.
   Nothing changed about the default — `e-fixed` is unchecked for every service.
-- **DECIDED, NOT BUILT — the rush charge is a premium on the TOTAL, not a rate multiplier.**
-  Do not implement it by marking up the TC/PS hourly rates: hourly rates outside NASMM norms
-  read badly to a client comparing quotes, and a separate rush line is both more transparent
-  and easier to defend. Note the existing `rushMultiplier` already multiplies the total (not
-  rates) — but it only ever reaches `_fixedPriceSuggested`, so it does nothing on a job left
-  hourly, which is every job by default. **The premium curve is still undecided** — that's
-  the open question: what a compression from e.g. 8 days to 5, or to 3, should cost.
+- **BUILT — expedited delivery is a flat 20% premium on the TOTAL (`RUSH_PCT`), never a rate
+  multiplier.** Do not "improve" this into a markup on the TC/PS hourly rates: rates outside
+  NASMM norms read badly to a client comparing quotes, and a named line is clearer and easier
+  to defend. A manual `e-rush` toggle, charged on the Havellin services total **after** the
+  preferred-client discount (so the discount is never computed on the premium) and never on
+  vendor costs. Held out of the `updateRefBox` comparison, or every rush job would read as
+  above the range for its property size. Excluded on Home Prep for the same reason fixed
+  price is — its whole staffing column is hidden, so the toggle isn't reachable.
+  Independent of billing basis: rush applies on a T&M probate job too.
+  A **sliding scale was considered and rejected** — fine brackets invite a client two days
+  across a boundary to argue, and one flat number is what got chosen. If it ever gets tiered,
+  key it to **compression** (natural vs requested duration) and not to runway.
+  This **replaced** the runway-keyed `rushMultiplier` (1.00→1.50 over 90/60/45/30 days),
+  which measured calendar distance rather than tightness — a 3-day condo with a 40-day runway
+  was premiumed as a rush — and only ever reached `_fixedPriceSuggested`, so it did nothing
+  on a job left hourly, i.e. every job by default. Don't reintroduce it alongside the flat
+  premium; they would double-count.
 - **NOT BUILT — the crew-compression discount.** Adding specialists without adding a
   concierge LOWERS the quote (~15% going 2→6 PS), because the fee depends on the **TC:PS
   ratio, not the absolute crew size** — billed hours = headcount × elapsed, and elapsed is
