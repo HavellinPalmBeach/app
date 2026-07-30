@@ -113,6 +113,15 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   by hand; per-person PINs (Anthony, Ashley) replacing the literal `3010`; invoices always
   auto-filed to Drive; a job dying pre-payment is `lost`, post-payment is `closed_retained`
   with the deposit kept.
+- **Cheques are the NORMAL payment path, not an edge case** — elderly clients in person, trust
+  officers and law firms institutionally. So `funded` is **not** API-only: a founder or
+  concierge may record a payment *with evidence* (amount, date, method, reference, payer, and a
+  photo of the cheque, all attributed). The boolean `depositReceived` is replaced by a
+  `job.payments[]` list, and `funded` fires when deposit payments sum to =50% of contract total
+  — which handles partial and multiple cheques. Stripe sets `clearedOn` instantly for cards; QB
+  reconciles afterwards and flags anything that never banked or banked short. Work starts on
+  *received*, not *cleared* — waiting on clearing costs 3-5 days per job and collides with the
+  scheduling pressure that drove staffing-ahead. See §6a-6d.
 - **Build order is forced, not preferred** (§7a): correctness fixes → the `won` status model →
   DocuSign, then Stripe, then QB → *only then* the deposit gate. A hard gate with no override
   is unsafe until the field it reads is reliably populated; turning it on early would stall

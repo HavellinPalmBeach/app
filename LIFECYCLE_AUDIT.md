@@ -275,23 +275,96 @@ Every hard gate is friction and has to earn it. These four do:
 4. **Sending a client estimate requires manager approval.** Closes 3b. It already looks like
    a rule; make it one.
 
-### One risk in gating on the payment API
+### 6a. Cheques are the normal case, not the edge case
 
-`funded` observed only via Stripe/QB is right, but it creates a new failure mode: **a payment
-that arrives outside the integration stalls the job.** A client who wires straight to the bank
-or hands over a cheque has paid, and the app will refuse to let anyone log hours.
+**Corrected 2026-07-30.** An earlier draft of this section treated cheques as an awkward path
+and argued against manual entry. That is wrong for this client base: the clientele is elderly
+and often institutional — a trust officer, an estate account, or a law firm's trust account
+writes the cheque. A gate that only accepts Stripe would stall the majority of jobs.
 
-Stripe sees only what it processed. QuickBooks eventually sees everything — but only once the
-bank feed is reconciled, which lags by days. So the two sources trade off differently:
+The important distinction, which the earlier draft missed:
 
-- **Stripe** — near-instant, but blind to any payment it did not process.
-- **QuickBooks** — complete, but late, and dependent on someone reconciling.
+> **Recording a cheque is not bypassing the gate — it is satisfying it through another
+> channel.** What must be resisted is not manual entry; it is a bare *mark as paid* boolean
+> with no evidence behind it. That is precisely what exists today
+> (`markDepositReceived`, `6420-6433`), and it is why the current flag proves nothing.
 
-Recommend **reading both**: Stripe for the fast path, QB as the backstop that catches wires
-and cheques. That combination needs no manual override, which keeps the gate honest. If only
-one can be built first, Stripe covers the intended path and QB covers the awkward one — build
-Stripe first and accept that a wire waits for the QB backstop rather than adding a human
-bypass, since a bypass is exactly what the gate exists to prevent.
+So manual entry is a **first-class path**, and it earns its place by capturing evidence.
+
+### 6b. Replace the boolean with a payment record
+
+One flag cannot carry this. Partial payments are real — an elderly client may write a cheque
+for less than the full 50%, or two cheques, or the trust sends part and the family sends the
+rest. Model payments as a list:
+
+```js
+job.payments = [{
+  id, stage: 'deposit' | 'midpoint' | 'final',
+  amount,
+  receivedOn,                  // date the cheque was handed over / wire landed
+  method: 'check' | 'wire' | 'stripe' | 'cash' | 'card',
+  reference,                   // cheque number, wire confirmation, or Stripe payment id
+  payer,                       // WHO wrote it — trust, estate account, law firm, client
+  evidence,                    // Drive file id: photo of the cheque, or wire confirmation
+  recordedBy, recordedAt,      // actor + timestamp, always
+  clearedOn,                   // null until the bank/QB confirms
+  qbMatchId                    // set by reconciliation
+}]
+```
+
+`funded` fires when **deposit payments sum to ≥ 50% of the contract total** — not when someone
+ticks a box. That handles partial payment correctly and makes a short cheque visible instead of
+silently passing as full.
+
+**`payer` is not bureaucracy in this business.** In estate work the person paying is frequently
+not the client: a trust, an estate account, or an attorney's trust account. Recording it tells
+you the estate is funding the engagement properly, feeds accounting correctly, and settles the
+question if heirs later dispute who paid for what.
+
+**Require a photo of the cheque.** The camera path already exists for inventory
+(`_doPhotoUpload`), and the Drive folder tree is already per-job. A photograph turns *"Ashley
+says a cheque arrived"* into a document, which is the honest substitute for an API
+confirmation. Five seconds in the field, and you want it before the cheque leaves your hands
+anyway. This is what makes manual entry trustworthy rather than a hole.
+
+### 6c. Received vs cleared — and why work should start on received
+
+A cheque in hand is not money; it can bounce. So `clearedOn` is tracked separately. But
+**recommend work starts on `received`, not `cleared`**, because waiting for clearing costs
+3-5 days on every job — which collides directly with the scheduling pressure that drove the
+staffing change ("the wire lands and the client expects us to start in two days"). Gating on
+clearing would reintroduce exactly the delay staffing-ahead exists to avoid.
+
+Instead: start on received, show *uncleared* on the job dashboard until the bank confirms, and
+let reconciliation catch a bounce. A bounced deposit on an active job is rare, visible, and
+recoverable. A five-day delay on every job is neither.
+
+### 6d. Reconciliation is what keeps manual entry honest
+
+Every manual payment is provisional until QuickBooks agrees. When QB shows a deposit, match it
+to the recorded payment and set `clearedOn` + `qbMatchId`.
+
+Three outcomes, each meaningful:
+
+| QB vs recorded | Meaning |
+|---|---|
+| matches | cleared, done |
+| **no QB record after N days** | cheque never banked, lost, or bounced — **flag it** |
+| **amount differs** | short payment or a keying error — **flag it** |
+
+That loop is the real control. It does not block the job, and it means a manual entry cannot
+quietly be wrong forever — which is the only thing the "nobody may record it by hand" position
+was actually protecting against.
+
+**Sources, by role:**
+
+- **Stripe** — near-instant, authoritative for what it processed, sets `clearedOn` immediately.
+- **Manual entry + cheque photo** — the normal path for cheques and wires, provisional.
+- **QuickBooks** — sees everything eventually; the reconciler, not the gate.
+
+Build order within Wave 3 changes accordingly: **the manual payment record comes first**, since
+it is what the deposit gate actually reads on most jobs. Stripe and QB then attach to a
+structure that already exists.
 
 ### Which should stay SOFT
 
@@ -349,15 +422,23 @@ exist at all, so the order is not a preference:
 is the keystone: staffing gates on `won`, so rule #3 lands here. Independent of any external
 integration, so it need not wait for Stripe.
 
-**Wave 3 — external integrations, in this order.**
-1. **DocuSign** → `contracted` and a retained signed PDF (gap 4). Independent of payments.
-2. **Stripe** → `funded` on the intended payment path.
-3. **QuickBooks** → the backstop that catches wires and cheques (§6 risk note).
+**Wave 3 — the payment record, then the integrations that feed it.**
+1. **`job.payments` + the manual entry form with cheque photo** (§6b). First, because on most
+   jobs this *is* the payment path — not a fallback to it. Everything else attaches to this
+   structure.
+2. **DocuSign** → `contracted` and a retained signed PDF (gap 4). Independent of payments, so
+   it can run in parallel.
+3. **Stripe** → sets `clearedOn` immediately for cards it processed.
+4. **QuickBooks** → the reconciler (§6d): confirms cheques cleared, flags what never banked.
 
-**Wave 4 — the deposit gate.** Hours logging requires `funded`. **Cannot be built before
-Wave 3**, because a hard gate with no manual override is only safe once the thing it reads is
-reliably populated. Turning it on earlier would stall real jobs, and the first workaround
-someone invents would hollow out the rule permanently.
+**Wave 4 — the deposit gate.** Hours logging requires `funded`, computed from summed deposit
+payments rather than a flag. **Needs Wave 3 step 1 only** — not the integrations. Once payments
+are recorded with evidence, the gate can read them; Stripe and QB then improve confidence
+without being prerequisites.
+
+That ordering is the substantive change from treating cheques properly: the gate is no longer
+blocked behind two external integrations, because the manual record it reads is trustworthy on
+its own.
 
 **Not on the critical path:** the retained-deposit clause (§8.6) is counsel's, and
 `closed_retained` can be modelled before the language exists — just don't treat the money as
@@ -388,9 +469,17 @@ at ≥50% margin, and the app currently permits pricing to 30%.**
 
 **8.4 Invoices retained to Drive — yes, always, automatically.**
 
-**8.5 Who may record a deposit — nobody.** It comes from Stripe or QuickBooks over an API.
-This is the strongest available answer: the fact is observed, not asserted. See the API risk
-note in §6.
+**8.5 Who may record a deposit.** Original answer: nobody — Stripe or QuickBooks over an API.
+**Revised the same day**, because the client base pays by cheque: elderly clients in person,
+and trust officers or law firms institutionally. An API-only gate would stall most jobs.
+
+Settled position: **a founder or concierge may record a payment, but only with evidence** —
+amount, date, method, reference, payer, and a photo of the cheque, all attributed. Stripe still
+sets `clearedOn` instantly on the cards it processes; QuickBooks reconciles everything
+afterwards and flags anything that never banked or banked short. See §6a-6d.
+
+What is *not* acceptable is the thing that exists today: a bare boolean with no amount, no
+date, no evidence and no actor, which additionally lies about the signature.
 
 **8.6 A job that dies.**
 - **After signature, before payment** → killed. Status `lost`. Clean, nothing owed either way.
