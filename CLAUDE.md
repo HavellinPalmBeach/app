@@ -102,6 +102,49 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   Standard $30 / Senior $35, with a named contractor's own `rate` taking precedence and the
   **founder** rate as the conservative fallback for an unresolvable concierge.
 
+## Client lifecycle rebuild — Waves 1 + 2 BUILT 2026-07-30
+- **Wave 1 shipped.** Per-person PINs (`MANAGER_PINS`, `resolvePin`) — Anthony `3010`,
+  Ashley `4020`; approvals now record who actually typed the PIN instead of a constant.
+  Attribution, NOT security — the file is public, so the PINs are readable in source.
+  Unapproved estimates can no longer be emailed. Service type / sqft / premium freeze once
+  the estimate is approved (contact edits in the same save still go through). Agreement
+  stops filing blank templates on every render and files the approved one on approval;
+  client estimate and every invoice now auto-file to Drive. Margin panel states what the
+  50% deposit actually covers and warns in dollars when it does not cover cost — the 30%
+  walk-away floor is deliberately left alone (pricing policy, §5a).
+- **The deposit path was dead code**, worse than the audit found: `markDepositReceived`
+  read `agr-job-select` (no such element — the picker is `agr-job`) so it always bailed,
+  and its button's `display:none` was never cleared by anything. `depositReceived` could
+  never become true while SEVEN sites read it, so `defaultInvStage` pinned every job to the
+  deposit invoice forever and three blocker lists showed "Deposit not received" for life.
+  Now three ordered steps — mark sent → mark signed → record deposit — each recording who
+  and when, each refusing out of order. Deposit captures amount/date/method/reference/payer,
+  prefills 50% of the approved total, asks before accepting anything short. Cheques leave
+  `clearedOn` null; wire/card/cash set it. Personal cheque ≥ `LARGE_DEPOSIT_THRESHOLD`
+  ($10k) is recorded and flagged `policyException`, never refused.
+- **Also fixed:** `saveClientEdit` ended in `renderJobDetail()`, which does not exist — so
+  every client edit threw after saving, and the drilldown never refreshed. Repointed at
+  `renderClientDashboard`.
+- **Wave 2 shipped — the `won` model.** The app had no concept of won: win/loss reporting
+  counted `status==='active'||'closed'`, and `checkPin` set `active` the instant a MANAGER
+  approved OUR OWN estimate. The win rate measured how often we approved our own work.
+  Now `checkPin` sets **`approved`**, and a new **`won`** status is set by an explicit
+  client decision (`openWonModal`/`confirmMarkWon`) capturing method (email/call/text/in
+  person), date, the client's words, and who logged it — an undocumented phone call is
+  challenged, since the note is the only record it happened. `isJobWon()` is the single
+  reader and migrates legacy `active`/`closed`/`closed_retained` jobs as won.
+- **Statuses now:** `new → pending → approved → won → active → closed`, plus `lost`
+  (died before payment; also set when a won job withdraws — won-then-withdrawn is not a
+  win) and `closed_retained` (died after the deposit; keeps `won=true` because it produced
+  revenue). Both `activateOrCycle` and `cycleStatus` carry the transition map — they are
+  duplicates, change both. `active` still requires signature + deposit via their existing
+  blockers; `checkPin` used to bypass that entirely.
+- **Gates now live:** staffing (`confirmJobTeam`) refuses an unwon job; the Job Plan
+  withholds the staffing/hours section until won (it previously tested `estRec.approved` —
+  the manager's PIN — so it looked like this rule while enforcing a different one).
+- Remaining: Wave 3 (payment record → DocuSign → Stripe → QB), Wave 4 (hours gated on
+  `funded`). 222 jsdom checks green.
+
 ## Client lifecycle rebuild (decided 2026-07-30, NOT yet built)
 - Full findings + target state machine + build order: `LIFECYCLE_AUDIT.md`.
 - Audit found **all three hard business rules unenforced**: no deposit check anywhere in the

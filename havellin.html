@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 11:40am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 1:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2377,6 +2377,40 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     </div>
     <div style="border-top:1px solid var(--tan);margin-top:1rem;padding-top:0.85rem;text-align:center;">
       <button onclick="requestDeleteJob()" style="background:none;border:none;color:#B0413E;font-size:11px;cursor:pointer;text-decoration:underline;font-family:Raleway,sans-serif;">Delete entry permanently (test / mistake) — manager PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- MARK WON MODAL -->
+<!-- Client acceptance is informal — an email reply, a phone call, a text. The app cannot
+     verify any of those, so it records who heard it and how, which is what makes the
+     claim reviewable later. This is the moment a job becomes real: staffing unlocks here,
+     and nothing before it should commit a contractor's time. -->
+<div class="modal-overlay" id="won-modal" style="display:none;">
+  <div class="modal-box" style="width:420px;">
+    <div class="modal-title">Client Accepted the Estimate</div>
+    <div class="modal-sub">This marks the job <strong>won</strong> and unlocks staffing. Nothing is signed yet
+      — the agreement and deposit still follow.</div>
+
+    <label style="margin-top:0;">How did they accept?</label>
+    <select id="won-method">
+      <option value="">— Select —</option>
+      <option value="email">Email reply</option>
+      <option value="call">Phone call</option>
+      <option value="text">Text message</option>
+      <option value="in_person">In person</option>
+    </select>
+
+    <label>Date accepted</label>
+    <input type="date" id="won-date">
+
+    <label>What they said <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— paste the email, or note what was said on the call</span></label>
+    <textarea id="won-note" placeholder="e.g. &ldquo;We&rsquo;d like to go ahead — please send the agreement.&rdquo;" style="width:100%;min-height:60px;"></textarea>
+
+    <div id="won-fb" style="margin-top:10px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="document.getElementById('won-modal').style.display='none'">Cancel</button>
+      <button class="btn-p" style="flex:2;" onclick="confirmMarkWon()">Mark as Won →</button>
     </div>
   </div>
 </div>
@@ -6120,7 +6154,12 @@ function checkPin() {
     // update job status
     if (currentEstimate && currentEstimate.jobId) {
       var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
-      if (job) { job.status='active'; job.approved=true; saveJobs(); }
+      // 'approved' — NOT 'active'. Approving our own estimate is an internal event; it
+      // says nothing about whether the client accepted, signed, or paid. Setting 'active'
+      // here also bypassed the signature + deposit blockers that activateOrCycle and
+      // cycleStatus already enforce, so jobs went active without either.
+      if (job) { job.status = (job.status === 'active' || job.status === 'closed') ? job.status : 'approved';
+                 job.approved = true; saveJobs(); }
     }
     // An approval clears any prior denial marker so the "Denied" banner doesn't linger.
     if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
@@ -6207,8 +6246,8 @@ function renderJobs() {
     return;
   }
 
-  var sdot = {new:'s-new',pending:'s-pending',active:'s-active',closed:'s-closed',lost:'s-lost'};
-  var slabel = {new:'New',pending:'Pending Approval',active:'Active',closed:'Closed',lost:'Lost'};
+  var sdot = {new:'s-new',pending:'s-pending',approved:'s-pending',won:'s-active',active:'s-active',closed:'s-closed',closed_retained:'s-closed',lost:'s-lost'};
+  var slabel = {new:'New',pending:'Pending Approval',approved:'Approved — Awaiting Client',won:'Won',active:'Active',closed:'Closed',closed_retained:'Closed — Deposit Retained',lost:'Lost'};
   var pbadge = {high:'<span class="badge b-warn" style="margin-left:4px">High</span>',urgent:'<span class="badge" style="background:var(--err-bg);color:var(--err-tx);margin-left:4px">Urgent</span>'};
 
   var html = '';
@@ -7070,8 +7109,8 @@ function renderClientDashboard(jobId) {
   var cos = changeOrders.filter(function(c){ return c.jobId===jobId; });
 
   // ── Status badge colours
-  var statusColors = {new:'#888780',pending:'#A67C45',active:'#1D9E75',closed:'#3C3489',lost:'#B0413E'};
-  var statusLabels = {new:'New',pending:'Pending Approval',active:'Active',closed:'Closed',lost:'Lost'};
+  var statusColors = {new:'#888780',pending:'#A67C45',approved:'#A67C45',won:'#1D9E75',active:'#1D9E75',closed:'#3C3489',closed_retained:'#3C3489',lost:'#B0413E'};
+  var statusLabels = {new:'New',pending:'Pending Approval',approved:'Approved — Awaiting Client',won:'Won',active:'Active',closed:'Closed',closed_retained:'Closed — Deposit Retained',lost:'Lost'};
 
   // ── RE commission calc
   var reComm = null;
@@ -7128,6 +7167,12 @@ function renderClientDashboard(jobId) {
       : '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">Build Estimate</button>';
   if (estExists && !estSubmitted && !estApproved) {
     h += '<button class="btn-s" onclick="dashboardSubmitForApproval('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">Submit for Approval</button>';
+  }
+  // Won is offered once the estimate is approved and before the client has answered.
+  // It is the gate on staffing and on the Job Plan, so it sits with the other primary
+  // actions rather than buried — and it disappears the moment it has been answered.
+  if (estApproved && !isJobWon(job) && job.status !== 'lost') {
+    h += '<button class="btn-p" onclick="openWonModal('+jobId+')">&#10003; Client Accepted — Mark Won</button>';
   }
   h += '<button class="btn-s" onclick="openChangeOrder('+jobId+')">Change Order</button>';
   h += '<button class="btn-s" onclick="showEditClient('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">&#9998; Edit Client</button>';
@@ -7425,7 +7470,7 @@ function renderClientDashboard(jobId) {
 function activateOrCycle(jobId) {
   var j = jobs.find(function(x){ return x.id===jobId; });
   if (!j) return;
-  var next = {new:'active',pending:'active',active:'closed',closed:'new'}[j.status] || 'new';
+  var next = {new:'active',pending:'active',approved:'active',won:'active',active:'closed',closed:'new'}[j.status] || 'new';
   if (next === 'active') {
     var blockers = [];
     if (!j.agrSigned) blockers.push('Service agreement must be signed');
@@ -7528,7 +7573,7 @@ function docEmail(jobId, docType) {
 function cycleStatus(id) {
   var j = jobs.find(function(x){ return x.id===id; });
   if (!j) return;
-  var next = {new:'active',pending:'active',active:'closed',closed:'new'}[j.status] || 'new';
+  var next = {new:'active',pending:'active',approved:'active',won:'active',active:'closed',closed:'new'}[j.status] || 'new';
 
   // Enforce hard blockers before allowing Active
   if (next === 'active') {
@@ -7549,7 +7594,7 @@ function cycleStatus(id) {
 // ─── WIN / LOSS REPORT ───────────────────────────────────────────────────────
 function renderWinLoss() {
   var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
-  var won  = jobs.filter(function(j){ return j.status==='active'||j.status==='closed'; });
+  var won  = jobs.filter(isJobWon);
   var lost = jobs.filter(function(j){ return j.status==='lost'; });
   var total = won.length + lost.length;
   var convRate = total > 0 ? Math.round(won.length / total * 100) : 0;
@@ -7652,12 +7697,90 @@ var LOSS_REASONS = {
 };
 var closeoutJobId = 0;
 
+// ─── WON / LOST — the client's decision, as its own recorded fact ─────────────
+// Until now the app had no concept of *won*. Win/loss reporting counted a job as won
+// when `status` reached 'active' — and 'active' was set by checkPin the instant a
+// MANAGER approved OUR OWN estimate, before the client had seen it. So the win rate
+// measured how often we approved our own work.
+//
+// Three of the firm's rules depend on this distinction: don't build a job plan before
+// the client has accepted, don't commit crew to unwon jobs, and don't start work before
+// the deposit. None of them can be expressed without a recorded client decision.
+
+// Was this job won? Jobs that predate the field are treated as won if they reached
+// 'active' or 'closed' under the old model — they plainly were, and dropping them would
+// silently rewrite the win/loss history.
+function isJobWon(job) {
+  if (!job) return false;
+  if (job.won === true) return true;
+  if (job.won === false) return false;
+  return job.status === 'active' || job.status === 'closed' || job.status === 'closed_retained';
+}
+
+function openWonModal(id) {
+  var j = jobs.find(function(x){ return x.id === id; });
+  if (!j) return;
+  var rec = (typeof estimateStore !== 'undefined') ? estimateStore[id] : null;
+  if (!rec || !rec.approved) {
+    alert('Approve the estimate before recording the client’s acceptance.\n\n'
+      + 'A client cannot have accepted a figure that has not been approved internally.');
+    return;
+  }
+  _wonJobId = id;
+  document.getElementById('won-method').value = '';
+  document.getElementById('won-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('won-note').value = '';
+  document.getElementById('won-fb').innerHTML = '';
+  document.getElementById('won-modal').style.display = 'flex';
+}
+var _wonJobId = 0;
+
+function confirmMarkWon() {
+  var j = jobs.find(function(x){ return x.id === _wonJobId; });
+  if (!j) { document.getElementById('won-modal').style.display = 'none'; return; }
+  var method = document.getElementById('won-method').value;
+  var date = document.getElementById('won-date').value;
+  var note = (document.getElementById('won-note').value || '').trim();
+  if (!method) { showFB('won-fb','warn','Select how the client accepted.'); return; }
+  if (!date)   { showFB('won-fb','warn','Enter the date they accepted.'); return; }
+  // A phone call leaves no artefact, so the note is the only record that it happened.
+  if ((method === 'call' || method === 'in_person') && !note &&
+      !confirm('No note recorded for a ' + (method === 'call' ? 'phone call' : 'conversation in person') + '.\n\n'
+        + 'That leaves nothing describing what the client actually agreed to. Continue anyway?')) return;
+
+  j.won = true;
+  j.wonAt = date;
+  j.wonMethod = method;
+  j.wonNote = note;
+  j.wonBy = (typeof approvedBy !== 'undefined' && approvedBy) || j.tc || '';
+  // Clear any prior loss — a client who comes back is won, and the stale loss reason
+  // would otherwise keep showing on the record and in reporting.
+  j.status = 'won';
+  delete j.lostReason; delete j.lostReasonLabel; delete j.lostNote; delete j.lostAt; delete j.lostEst;
+  saveJobs(); syncJobToSheets(j);
+  document.getElementById('won-modal').style.display = 'none';
+  renderJobs();
+  if (typeof renderClientDashboard === 'function' && _dashboardJobId === j.id) renderClientDashboard(j.id);
+  showSyncBadge('Job marked won — staffing unlocked ✓');
+}
+
 function openCloseoutModal(id) {
   var j = jobs.find(function(x){ return x.id===id; });
   if (!j) return;
   closeoutJobId = id;
   var sub = document.getElementById('closeout-sub');
-  if (sub) sub.innerHTML = 'Mark <strong>' + (j.name||'this client') + '</strong> as Lost with a reason. The record is archived — never erased — so we keep a win/loss history.';
+  // A job that dies AFTER the deposit is not a loss — it was won, paid for, and then
+  // abandoned. Reporting them as one number would understate the win rate and overstate
+  // lost revenue at the same time, in opposite directions.
+  var _funded = !!j.depositReceived;
+  if (sub) sub.innerHTML = _funded
+    ? 'Close out <strong>' + esc(j.name||'this client') + '</strong>. The deposit has already been '
+      + 'received, so this is recorded as <strong>closed — deposit retained</strong>, not as a loss. '
+      + 'The record is archived, never erased.'
+    : 'Mark <strong>' + esc(j.name||'this client') + '</strong> as Lost with a reason. The record is '
+      + 'archived — never erased — so we keep a win/loss history.';
+  var _btn = document.querySelector('#closeout-modal button[onclick="confirmMarkLost()"]');
+  if (_btn) _btn.textContent = _funded ? 'Close — Retain Deposit' : 'Mark as Lost';
   var rs = document.getElementById('closeout-reason'); if (rs) rs.value = j.lostReason || '';
   var nt = document.getElementById('closeout-note'); if (nt) nt.value = j.lostNote || '';
   var fb = document.getElementById('closeout-fb'); if (fb) fb.innerHTML = '';
@@ -7672,7 +7795,11 @@ function confirmMarkLost() {
   if (!j) { closeCloseoutModal(); return; }
   var reason = document.getElementById('closeout-reason').value;
   if (!reason) { document.getElementById('closeout-fb').innerHTML = '<span style="color:var(--err-tx);font-size:12px;">Please select a reason.</span>'; return; }
-  j.status = 'lost';
+  // Post-deposit deaths keep the money and a distinct status; pre-deposit deaths are
+  // ordinary losses. See LIFECYCLE_AUDIT.md §8.6 — the retained-deposit position still
+  // needs agreement language before the money is treated as earned.
+  j.status = j.depositReceived ? 'closed_retained' : 'lost';
+  if (!j.depositReceived) j.won = false;   // won-then-withdrawn is not a win
   j.lostReason = reason;
   j.lostReasonLabel = LOSS_REASONS[reason] || reason;
   j.lostNote = (document.getElementById('closeout-note').value || '').trim();
@@ -10394,6 +10521,15 @@ function confirmJobTeam(jobId) {
   var crew = getJobCrew(jobId); if (!crew) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
 
+  // Do not commit people to a job that has not been won. Confirming a team is a real
+  // cost — a specialist held for these dates is a specialist turned down for others —
+  // and until the client has accepted there is nothing to hold them for.
+  if (!isJobWon(job)) {
+    showFB('log-fb','warn','This job has not been won yet. Record the client’s acceptance on the '
+      + 'Client Dashboard before committing anyone to it — staffing an unwon job ties up people '
+      + 'you may need elsewhere.');
+    return;
+  }
   if (!crew.tc || !crew.tc.name) {
     showFB('log-fb','warn','No Transition Concierge named yet. Pick one on the Transition Concierge row above, then confirm the team.');
     return;
@@ -11692,6 +11828,22 @@ function loadJobPlanTab() {
     var ls3 = document.getElementById('plan-log-section');
     if (ls3) ls3.style.display = 'none';
     empty('Job Plan generates once the estimate is approved and locked.'); return;
+  }
+  // The plan renders once the estimate is approved, but the STAFFING half of it stays
+  // shut until the client has accepted. Building a plan for a job you have not won is
+  // wasted effort; committing crew to one is worse. This gate reads the client's
+  // decision — the previous one read `estRec.approved`, which is the MANAGER's PIN and
+  // says nothing about the client, so it looked like this rule while enforcing another.
+  if (!isJobWon(job)) {
+    var ls4 = document.getElementById('plan-log-section');
+    if (ls4) ls4.style.display = 'none';
+    empty('<strong>This job has not been won yet.</strong><br><br>'
+      + 'The estimate is approved and ready to send, but the client has not accepted it. '
+      + 'Record their acceptance on the Client Dashboard to open staffing and hours logging.<br>'
+      + '<span style="font-size:11px;color:var(--gray);">You can review the plan below once the job is won — '
+      + 'nothing here is lost in the meantime.</span>');
+    if (printBtn) printBtn.style.display = 'none';
+    return;
   }
   var est = estRec.estimate;
   if (printBtn) printBtn.style.display = 'inline-block';
@@ -13835,7 +13987,7 @@ function referralPartnerStats(partnerRow){
   var key = String(partnerRow||'');
   if (!key) return { count:0, won:0, pipeline:0, wonRev:0, last:'' };
   var js = jobs.filter(function(j){ return String(j.refPartnerId||'') === key; });
-  var won = js.filter(function(j){ return j.status==='active' || j.status==='closed'; });
+  var won = js.filter(isJobWon);
   var pipeline = js.filter(function(j){ return j.status!=='lost'; }).reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
   var wonRev = won.reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
   var lastJob = js.slice().sort(function(a,b){ return (b.id||0) - (a.id||0); })[0];
