@@ -30,7 +30,38 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-07-29** — the working-supervisor pricing, job-team
+- Last reconciled against the app: **2026-07-30** — the lifecycle rebuild (Waves 1-4). What
+  changed, and the first item is the important one:
+  - **§3, §8 and §9 described automation that does not exist.** The workflow diagram had
+    "Send Agreement (DocuSign)" and "Deposit Auto-Charged (Stripe)", and §8 carried a whole
+    *"Automated Steps After Sending"* list — client signs via DocuSign, Stripe fires on
+    signature, status flips to Active by itself. None of it was ever built. Someone
+    following that manual would wait for automation that never comes. Replaced with the
+    manual steps that actually exist, plus an explicit not-yet-built note naming DocuSign,
+    Stripe and QuickBooks.
+  - **§3** now names the three hard gates (staffing needs Won · hours need the deposit ·
+    Job Plan staffing section needs Won) and says plainly that the app refuses rather than
+    warns.
+  - **§7** an unapproved estimate cannot be emailed, from either entry point.
+  - **§8** rewritten: approve → file to Drive → send → *Mark Sent* → *Mark Signed* →
+    *Record Deposit*, each recording who and when and refusing out of order. Deposit
+    section covers evidence capture, partial payments, received-vs-cleared, the $10k
+    instrument tier, and the certified-vs-cashier's distinction.
+  - **§9** status table rewritten for the real values (New · Pending Approval · Approved —
+    Awaiting Client · Won · Active · Closed · Lost · Closed — Deposit Retained), plus how
+    to mark a job Won and the two different closeout outcomes.
+  - **§11** the deposit gate alongside the team gate.
+  - **§12** invoices now file to Drive per stage; stage advances off the recorded deposit.
+  - **§15** retention table corrected — the signed agreement is **not** retained (no upload
+    path until DocuSign), the client estimate and invoices now are.
+  - **NEW §16a Win / Loss** — reads the client's decision, so jobs sitting at *Approved —
+    Awaiting Client* are no longer counted as won. Expect the number to read lower and truer.
+  - **§17** per-person PINs, and stated plainly that a PIN is attribution not security
+    since the file is public.
+  - **Also fixed a pre-existing defect:** the manual overflowed to 774px on a 390px phone
+    (a wide table plus unbreakable `<code>` paths). It is a field document; it now has a
+    `@media (max-width:820px)` block and measures clean at 390/768/1440.
+- Prior pass **2026-07-29** — the working-supervisor pricing, job-team
   sign-off, labour-cost-rate and mobile/field builds are all folded in. What changed:
   - **§1** phone/field-use paragraph (scrolling nav, bottom-sheet dialogs, the three
     directories' search + tap-to-contact + Quick edit, Build Estimate as the desk-first

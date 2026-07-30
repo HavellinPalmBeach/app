@@ -32,6 +32,20 @@
     h2{page-break-after:avoid;}
     table{page-break-inside:avoid;}
   }
+/* ── PHONE ──────────────────────────────────────────────────────────────────
+   This manual is read in the field — in a client's house, on a phone — so it has
+   to survive a 390px viewport. Two things broke it, both pre-dating this block:
+   a table forced to 693px by its content, and long <code> paths (Drive filename
+   patterns) that have no break opportunity and so set an unshrinkable floor.
+   The table scrolls sideways inside its own box rather than dragging the whole
+   document wider; code wraps mid-token. */
+@media (max-width:820px){
+  body{padding:1rem;}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}
+  td,th{white-space:normal;min-width:110px;}
+  code{word-break:break-all;}
+  .flow{font-size:11px;line-height:1.7;}
+}
 </style>
 </head>
 <body>
@@ -82,10 +96,21 @@
 
   <h2>3. End-to-End Job Workflow</h2>
   <div class="flow">
-Intake → Estimate → Manager Approval → Send to Client → Client Accepts<br>
-→ Send Agreement (DocuSign) → <strong>Staff the Job Team</strong> → Client Signs → Deposit Auto-Charged (Stripe)<br>
+Intake → Estimate → Manager Approval → Send to Client → <strong>Client Accepts → Mark Won</strong><br>
+→ Approve &amp; Send Agreement → <strong>Staff the Job Team</strong> → <strong>Mark Agreement Signed</strong> → <strong>Record Deposit</strong><br>
 → Job Active → Job Plan / Document Property → Log Hours → Invoices → Complete
   </div>
+  <div class="note"><strong>Three points in this flow are hard gates — the app refuses, it does not merely warn.</strong>
+    <ul style="margin:6px 0 0 18px;">
+      <li><strong>Staffing requires the job to be marked Won.</strong> Never commit a specialist to a job the client hasn't accepted — holding someone for these dates is turning down other work.</li>
+      <li><strong>Logging hours requires the deposit.</strong> This is the one gate with no override anywhere, and that is only safe <em>because</em> the deposit is never waived.</li>
+      <li><strong>The Job Plan's staffing and hours section stays shut until Won.</strong> Building a plan for a job you haven't won is wasted effort.</li>
+    </ul>
+  </div>
+  <div class="note" style="background:#FBF3E4;"><strong>Not yet built:</strong> DocuSign, Stripe auto-charge, and QuickBooks reconciliation.
+    Earlier versions of this manual described those as automatic — they are not. Every step above is recorded by hand today:
+    you mark the agreement sent, you mark it signed when it comes back, and you record the deposit when it arrives.
+    When those integrations land they will populate the same records; nothing about the sequence changes.</div>
   <p><strong>Staffing sits in the waiting period on purpose.</strong> Once the agreement is out for signature there's usually a few days of dead time — that's when you confirm who is actually available and name the crew on the Job Plan. <strong>Save &amp; Confirm Job Team</strong> is what unlocks hours logging, so a job can't reach its first working day with an unnamed crew (Section 11).</p>
   <p><strong>Home Prep for Sale</strong> follows a streamlined variant of this flow — no room scoring, no labor/hours, no crew. See Section 6.</p>
 
@@ -233,24 +258,36 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <h3>Approval</h3>
   <p>Hit <strong>Submit for Approval</strong> → manager enters PIN → estimate is locked and marked <em>Approved for Release</em>. PDF is unlocked. Estimate cannot be edited after approval — use a Change Order instead.</p>
   <h3>Sending to Client</h3>
+  <div class="note"><strong>An unapproved estimate cannot be emailed.</strong> The app refuses, from the Client Estimate tab and from the Client Dashboard shortcut alike. Approve it first — the figure isn't final until someone has signed off on it.</div>
   <p>Hit <strong>Email Estimate</strong> → opens a pre-drafted, warmly-worded email (referencing the in-home walkthrough) with the estimate to attach. Send to the client for review, then wait for them to confirm they want to proceed before taking further steps.</p>
 
   <h2>8. Service Agreement</h2>
   <p><strong>Tab: Agreement</strong> → select job</p>
-  <div class="note">Only initiate after the client has verbally or by email confirmed they want to proceed. Never send an agreement before the client has accepted the estimate.</div>
+  <div class="note"><strong>Never send an agreement before the client has accepted the estimate</strong> — verbally, by email, or by text. Record that acceptance on the Client Dashboard first (<strong>✓ Client Accepted — Mark Won</strong>, §9). That's the record the client actually said yes, and it's what unlocks staffing.</div>
   <h3>Generate &amp; Send</h3>
   <ol>
     <li>Select job → agreement auto-populates from approved estimate data</li>
-    <li>Manager enters PIN to approve for sending</li>
-    <li>Hit <strong>Send for Signature</strong> → DocuSign delivers agreement to client email</li>
+    <li>Manager enters PIN to approve for sending. <em>The approved agreement files itself to the Drive <strong>Agreement</strong> folder at this point</em> — approval is the first moment the document means anything.</li>
+    <li><strong>Print / Save PDF</strong> or <strong>Email to Client</strong>, then hit <strong>✉ Mark Agreement Sent</strong>.</li>
   </ol>
-  <h3>Automated Steps After Sending</h3>
+  <h3>Then, as each thing actually happens</h3>
+  <p>Three ordered steps, each recording who did it and when. Each button appears only at its own stage, and each refuses to run out of order — you can't mark a signature on an agreement that was never sent.</p>
+  <ol>
+    <li><strong>✉ Mark Agreement Sent</strong> — you've emailed or handed it over.</li>
+    <li><strong>✓ Mark Agreement Signed</strong> — the signed copy has come back. <em>Signing does not imply payment</em>; these are separate facts and the app keeps them separate.</li>
+    <li><strong>✓ Record Deposit</strong> — see below. This is what allows work to begin.</li>
+  </ol>
+  <h3>Recording the deposit</h3>
+  <p>The deposit is <strong>50% of the approved total</strong> and is <strong>never waived or varied</strong>. Recording it captures evidence, not a tick:</p>
   <ul>
-    <li>Client signs via DocuSign → agreement marked signed automatically</li>
-    <li>Stripe deposit invoice (50%) fires automatically upon signature</li>
-    <li>Client pays deposit → job status changes to <strong>Active</strong> automatically</li>
-    <li>TC receives notification that the job is active</li>
+    <li><strong>Amount</strong> — prefilled with what's still outstanding, so a second cheque needs no arithmetic in the field.</li>
+    <li><strong>Date received</strong>, <strong>method</strong>, and <strong>reference</strong> (cheque number, wire confirmation, Stripe id).</li>
+    <li><strong>Paid by</strong> — the trust, estate account, law firm, or the client. In estate work the payer is frequently <em>not</em> the client, and this is what tells you the estate is funding the engagement properly. It also settles the question if heirs later dispute who paid for what.</li>
+    <li><strong>Photo of the cheque</strong> — filed to Drive and linked to the payment. Five seconds, and you want it before the cheque leaves your hands. This is what makes a hand-recorded payment a document rather than an assertion.</li>
   </ul>
+  <p><strong>Partial payments are normal and handled.</strong> Two cheques, or a trust sending part and the family the rest, all work: the job stays <em>part-paid</em> and unfunded until the running total reaches the target, the bar shows what's outstanding, and the Record Deposit button stays available for the next one. A short total asks before it's accepted; a second cheque that completes the deposit passes without a warning.</p>
+  <div class="note"><strong>Work starts on <em>received</em>, not <em>cleared</em>.</strong> Waiting for cheques to clear costs three to five days on every job. Wires, cards and cash are marked cleared on receipt; cheques show as <em>uncleared</em> on the dashboard until the bank confirms. Above <strong>$10,000</strong> a personal cheque is no longer the accepted instrument — <strong>wire preferred, cashier's cheque accepted</strong>. Recording a large personal cheque anyway is allowed (the money is already in hand) but it is flagged as a <em>policy exception</em> and carries your name.</div>
+  <p style="font-size:12px;color:#6B6B72;">A <em>certified</em> cheque and a <em>cashier's</em> cheque are not the same thing: certified is drawn on the client's account with the bank only secondarily liable; a cashier's cheque is drawn on the bank's own account with the money already taken. Ask for the second one. Neither is bounce-proof — counterfeit cashier's cheques are a common fraud — so on a large deposit, phone the <em>issuing</em> bank on a number you look up yourself, not the one printed on the cheque.</p>
   <h3>Payment Schedule</h3>
   <table>
     <tr><th>Milestone</th><th>Amount</th><th>Timing</th></tr>
@@ -265,13 +302,35 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <table>
     <tr><th>Status</th><th>Meaning</th></tr>
     <tr><td>New</td><td>Intake complete, no estimate yet</td></tr>
-    <tr><td>Estimated</td><td>Estimate saved, not yet approved</td></tr>
-    <tr><td>Pending Approval</td><td>Submitted for manager PIN approval</td></tr>
-    <tr><td>Approved</td><td>Estimate approved, pending client acceptance</td></tr>
-    <tr><td>Agreement Sent</td><td>DocuSign envelope delivered to client</td></tr>
+    <tr><td>Pending Approval</td><td>Estimate submitted for manager PIN approval</td></tr>
+    <tr><td>Approved — Awaiting Client</td><td>We've approved our own estimate. <strong>The client has not answered.</strong> Nothing may be staffed yet.</td></tr>
+    <tr><td><strong>Won</strong></td><td>The client has accepted. Staffing unlocks here.</td></tr>
     <tr><td>Active</td><td>Signed + deposit received — work in progress</td></tr>
-    <tr><td>Complete</td><td>Final invoice paid and closed</td></tr>
+    <tr><td>Closed</td><td>Final invoice paid and closed</td></tr>
+    <tr><td>Lost</td><td>Died before any money arrived</td></tr>
+    <tr><td>Closed — Deposit Retained</td><td>Died <em>after</em> the deposit. We keep the money; it still counts as won because it produced revenue.</td></tr>
   </table>
+  <div class="note"><strong>"Approved" and "Won" are different things, and the difference is the point.</strong>
+    Approved means a manager signed off on our own figure. Won means the <em>client</em> said yes. Previously the app had no
+    way to tell them apart — it counted a job as won the moment we approved our own estimate, so the win rate measured how
+    often we approved our own work.</div>
+
+  <h3>Marking a job Won</h3>
+  <p>Once the estimate is approved, the dashboard shows <strong>✓ Client Accepted — Mark Won</strong>. Acceptance is informal — nothing is signed until the agreement — so the app records <em>how you know</em>:</p>
+  <ul>
+    <li><strong>Method</strong> — email reply · phone call · text · in person.</li>
+    <li><strong>Date</strong> they accepted.</li>
+    <li><strong>What they said</strong> — paste the email, or note what was said on the call.</li>
+  </ul>
+  <p>A phone call or in-person acceptance <strong>with no note</strong> is challenged before it's accepted. For those there is no email to fall back on: the note is the only thing recording what the client actually agreed to.</p>
+
+  <h3>Closing out a job that dies</h3>
+  <p>The <strong>✕</strong> button on a job card opens closeout. What it does depends on whether money has arrived:</p>
+  <ul>
+    <li><strong>Before the deposit</strong> → <em>Lost</em>, with a reason. A job that was marked Won and then withdraws flips back to not-won — a win that produced nothing isn't a win.</li>
+    <li><strong>After the deposit</strong> → the button changes to <strong>Close — Retain Deposit</strong> and the status becomes <em>Closed — Deposit Retained</em>. It still counts as won.</li>
+  </ul>
+  <div class="note">The retained-deposit position <strong>needs agreement language before the money is treated as earned</strong>. The app models the state; the clause is a question for counsel.</div>
   <p>The <strong>📁 Drive</strong> button opens the job's Google Drive folder directly.</p>
   <h3>Change Orders</h3>
   <p>If scope changes after estimate approval: <strong>Create Change Order</strong> → enter description and cost impact → manager approves → sent to client for sign-off via DocuSign.</p>
@@ -341,7 +400,12 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
     <li>Need a body beyond what was quoted? <strong>+ Add a specialist beyond plan</strong>. Those rows carry a <em>beyond plan</em> tag, because crew above plan raises cost against a fixed quote and the projection will flag it.</li>
     <li>Hit <strong>Save &amp; Confirm Job Team →</strong>.</li>
   </ol>
-  <p>Only then does <strong>Save Hours Entry</strong> become available. Until the team is signed off the hours boxes are inert on purpose — the roster is a staffing sheet at that point, not a timesheet, and doing both in one confused pass is how the wrong person ends up with the hours.</p>
+  <div class="note"><strong>Two separate gates, and only the second one stops work.</strong>
+    Confirming the team is the first. The second is the <strong>deposit</strong>: hours cannot be logged against a job that
+    hasn't paid. A confirmed team on an unfunded job keeps its confirmation and says plainly that the deposit is what's
+    missing — staffing ahead of payment is deliberate, starting work is not. If the deposit is part-paid the bar names what
+    has arrived and what is outstanding.</div>
+  <p>Only once <em>both</em> hold does <strong>Save Hours Entry</strong> become available. Until the team is signed off the hours boxes are inert on purpose — the roster is a staffing sheet at that point, not a timesheet, and doing both in one confused pass is how the wrong person ends up with the hours.</p>
   <ul>
     <li><strong>Placeholders.</strong> <em>Contractor TBD</em> (specialist) and <em>Contractor — TC</em> (an outside concierge) stand for a confirmed <em>need</em> with an unconfirmed <em>person</em>. Allowed — you often have the headcount before the names — but they cost at a placeholder rate, so the app says out loud that margin on the job is an estimate until they're named.</li>
     <li><strong>Confirming locks the named members.</strong> Empty slots stay open, so someone can still be added mid-job.</li>
@@ -356,6 +420,13 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <h2>12. Invoices</h2>
   <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
   <p>That describes a <strong>time-and-materials</strong> job, which is the default. On a job quoted <strong>fixed price</strong> (§5c) the flat fee <em>is</em> the Havellin services total — the stages split that number and labor is never trued to logged hours. Vendor and home-prep fees still true up to actual quotes either way, since those stay pass-through at cost.</p>
+
+  <div class="note"><strong>Every invoice you print is filed to Drive automatically</strong>, into the job's <strong>Invoice</strong>
+    folder, named per stage (<code>HVL-xxxx_Invoice_Deposit.html</code> and so on) so the three never overwrite each other.
+    Reprinting a stage replaces its own copy, which is what you want when a figure is corrected and reissued. Until recently
+    no invoice was retained anywhere in any form.</div>
+  <p>The invoice stage advances by itself as the job progresses — it reads the recorded deposit, so a job with no deposit
+    recorded stays on the Deposit stage.</p>
 
   <h2>12a. Contractors (Crew Directory)</h2>
   <p><strong>Tab: Contractors.</strong> The people who actually work the jobs — concierges and property specialists. This is where the crew that appears in every estimate's staffing dropdowns and every Job Plan roster comes from. Unlike Vendors and Referral Partners, contractors live in the <em>main</em> job sheet.</p>
@@ -415,8 +486,9 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <table>
     <tr><th>Subfolder</th><th>Contents</th><th>When populated</th></tr>
     <tr><td>Walkthrough Notes</td><td>Voice/typed notes per room (.txt)</td><td>During estimate walkthrough</td></tr>
-    <tr><td>Estimate</td><td>Approved estimate document</td><td>On estimate save/approval</td></tr>
-    <tr><td>Agreement</td><td>Signed agreement (via DocuSign)</td><td>On DocuSign completion</td></tr>
+    <tr><td>Estimate</td><td>Internal cost breakdown <em>and</em> the client-facing estimate</td><td>Both automatic on approval</td></tr>
+    <tr><td>Agreement</td><td>The <strong>approved</strong> agreement</td><td>Automatic on manager approval. <strong>A signed copy is not retained</strong> — there is no upload path for one until DocuSign lands.</td></tr>
+    <tr><td>Invoice</td><td>Every issued invoice, one file per stage, plus cheque photos for recorded payments</td><td>On print / on recording a payment</td></tr>
     <tr><td>Estate Inventory</td><td>All room + item + collection photos, appraisal docs, and the inventory workbook — the shareable package</td><td>During active job</td></tr>
     <tr><td>Change Orders</td><td>Approved change order documents</td><td>As needed</td></tr>
   </table>
@@ -447,12 +519,30 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   <p><strong>Cost follows the person, not the job title.</strong> Founders and contractors are paid differently for the same role, so a named individual in the Contractors directory is always costed at <em>their own</em> rate (§12a). The four rates above cover only the unnamed placeholder slots you staff before a specific person is assigned.</p>
   <p>If a concierge can't be resolved to a person at all, the margin panel costs them at the <strong>founder</strong> rate — deliberately the most expensive assumption, so the walk-away floor is never understated — and says on the panel that the figure is an assumption. Assign the concierge, or set their rate on the Contractors tab, to replace it with a real number.</p>
 
-  <h2>17. Manager PIN</h2>
-  <p>Required for: Estimate approval · Agreement approval · Invoice approval. Contact management for current PIN. Do not share or record in the app.</p>
+  <h2>16a. Win / Loss</h2>
+  <p><strong>Tab: Win / Loss.</strong> Reads the <em>client's</em> decision, not ours. A job counts as won when it has been
+    marked Won on the dashboard — or, for jobs that predate that step, when it reached Active or Closed under the old model,
+    so the existing history isn't rewritten.</p>
+  <p>What that changes in practice: a job sitting at <strong>Approved — Awaiting Client</strong> is <em>not</em> in the won
+    column. It used to be, which meant the win rate counted internal approvals. Expect the number to read lower and truer
+    than it did.</p>
+  <p>Loss reasons are captured at closeout — price, scope, timing, unresponsive, competitor, other — with an optional note
+    (competitor name, price gap). <em>Closed — Deposit Retained</em> jobs stay on the won side, because they produced revenue;
+    keeping them separate from ordinary losses is why the two statuses exist.</p>
+
+  <h2>17. Manager PINs</h2>
+  <p>Required for: estimate approval · estimate denial · agreement approval · invoice approval · deleting a client, vendor or partner.</p>
+  <p><strong>Each person has their own PIN, and the approval is recorded under whoever typed it.</strong> Previously there was
+    one shared code and the approver was stored as a fixed name, so an estimate Ashley approved was filed under Anthony's —
+    worse than recording nothing, because it read as evidence. Contact management for current PINs.</p>
+  <div class="note"><strong>A PIN here is attribution, not security.</strong> The app is a single file served from the web, so
+    anyone who views the page source can read the PINs. It raises the bar against the wrong person clicking approve; it does
+    not stop anyone determined. Real authentication needs a server and is a separate project. Don't treat a PIN as protecting
+    anything valuable on its own.</div>
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-29
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-30
   </div>
 
 </div>
