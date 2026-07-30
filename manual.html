@@ -127,6 +127,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
       <div class="note" style="margin:.4rem 0;"><strong>Crew size moves the price.</strong> Under the working-supervisor model a bigger crew finishes sooner, so the concierge is on site for fewer hours — which makes the estimate <em>lower</em>, not higher. That is correct, but it means a crew left over from a larger job will quietly discount this one, so the app flags any crew above the recommendation. Do not carry a crew size over between estimates. See Section 5i.</div></li>
     <li><strong>Difficult access</strong> (stairs, no elevator) — <strong>+15% to the hands-on work pool only</strong>. It makes the physical work take longer, which lengthens the job, which lengthens concierge presence automatically. Lifting the concierge line as well would double-count it.</li>
     <li><strong>Multiple heirs / decision-makers</strong> — <strong>+20% to off-site coordination only</strong>. More calls and sign-offs, not more boxes. Baked into contested-probate rates already, so the toggle greys out on those jobs.</li>
+    <li><strong>Quote as a fixed price</strong> — every service bills <strong>time-and-materials by default</strong>; the concierge may switch an individual estimate to a firm flat fee. The amount prefills from the suggested fee (hourly basis + contingency buffer) and is fully editable. <strong>Not available on Probate or Contested Probate</strong> — the toggle is disabled there, because those bill on actual logged hours for Personal-Representative and court defensibility. Estate Settlement is a private engagement with a family or trustee, so a flat quote <em>is</em> available on it.</li>
     <li><strong>Preferred Client Discount</strong> — percentage off Havellin labor fees only (max 30%)</li>
     <li><strong>Moving Materials Package</strong> — None, or an Estate tier (Basic $500 · Standard $750 · Premium $1,500) or Downsizing tier (Basic $200 · Standard $350 · Premium $550)</li>
   </ul>
@@ -353,6 +354,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
 
   <h2>12. Invoices</h2>
   <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
+  <p>That describes a <strong>time-and-materials</strong> job, which is the default. On a job quoted <strong>fixed price</strong> (§5c) the flat fee <em>is</em> the Havellin services total — the stages split that number and labor is never trued to logged hours. Vendor and home-prep fees still true up to actual quotes either way, since those stay pass-through at cost.</p>
 
   <h2>12a. Contractors (Crew Directory)</h2>
   <p><strong>Tab: Contractors.</strong> The people who actually work the jobs — concierges and property specialists. This is where the crew that appears in every estimate's staffing dropdowns and every Job Plan roster comes from. Unlike Vendors and Referral Partners, contractors live in the <em>main</em> job sheet.</p>
@@ -419,6 +421,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts<b
   </table>
 
   <h2>16. Rates &amp; Fees Reference</h2>
+  <div class="note"><strong>Billing basis.</strong> Every service bills <strong>time-and-materials</strong> by default — hours × rate, trued to what's logged. The concierge may quote any individual job as a firm fixed price instead, <em>except</em> <strong>Probate</strong> and <strong>Contested Probate</strong>, where the option is withheld: those expenses are reviewed by the court, and a flat fee that can't be tied back to logged time is what gets questioned. Home Prep for Sale is neither — it's fee-only on managed vendor spend (§6).</div>
   <h3>What we bill the client</h3>
   <table>
     <tr><th>Item</th><th>Standard</th><th>Premium Estate</th></tr>

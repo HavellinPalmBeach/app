@@ -228,6 +228,52 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   included so a replace-style PATCH can't blank a name) before 199 contacts depend on it.
   Run it before the first tagged `pushQuoAll`.
 
+## Pricing & billing basis (decided 2026-07-30)
+- **BUILT — T&M is the default on every service.** The concierge may quote an individual
+  estimate as a firm flat fee instead, on any job **except probate and contested probate**,
+  where the option is withheld outright: those expenses are court-reviewed and a flat fee
+  that can't be tied back to logged time is what gets questioned. `isTMOnly(svcKey)` is the
+  single source of that rule — the toggle is disabled, `calcAll` clears a stale checked box
+  and reports it, and `toggleFixedPrice` guards the one entry point that writes a fee.
+  Replaced a soft "confirm this is appropriate" warning that left the fee in place.
+  **Estate Settlement is deliberately NOT on the list** — private engagement with a family
+  or trustee, no court reviews the fee. It used to be lumped in via a `courtBilled` flag
+  that conflated "estate work" with "court-supervised"; do not put it back.
+  Nothing changed about the default — `e-fixed` is unchecked for every service.
+- **DECIDED, NOT BUILT — the rush charge is a premium on the TOTAL, not a rate multiplier.**
+  Do not implement it by marking up the TC/PS hourly rates: hourly rates outside NASMM norms
+  read badly to a client comparing quotes, and a separate rush line is both more transparent
+  and easier to defend. Note the existing `rushMultiplier` already multiplies the total (not
+  rates) — but it only ever reaches `_fixedPriceSuggested`, so it does nothing on a job left
+  hourly, which is every job by default. **The premium curve is still undecided** — that's
+  the open question: what a compression from e.g. 8 days to 5, or to 3, should cost.
+- **NOT BUILT — the crew-compression discount.** Adding specialists without adding a
+  concierge LOWERS the quote (~15% going 2→6 PS), because the fee depends on the **TC:PS
+  ratio, not the absolute crew size** — billed hours = headcount × elapsed, and elapsed is
+  inversely proportional to headcount, so scaling both sides is exactly fee-neutral while
+  halving the calendar. Correctly priced (a 1:6 job really does have less concierge
+  involvement) and it can't leak between jobs — a fresh job resets the slots to 2 and a
+  saved estimate restores its own crew. Remaining gap: **a floor on `_fixedPriceSuggested`**,
+  since the prefill is computed off the compressed solve, so toggling fixed-price *after*
+  staffing up prefills the discounted number.
+- **NOT BUILT — contractor concierges as real simultaneous coverage.** The highest-value
+  item discussed. 2 TC + 4 PS bills identically to 1 TC + 2 PS (same fee, same hours) in
+  **half the calendar**, and moves ~26 founder hours per mid-size estate onto a $60
+  contractor. Three parts that must ship together: the solve has to let a 2nd concierge
+  contribute production (`(n + tc·α)` — today `tcCount` is only a load check and never
+  touches hours or duration), crew sizing has to scale both sides, and **the margin panel
+  has to cost two engaged streams instead of one** or every dual-coverage job overstates
+  margin by ~$1k.
+- **NOT BUILT — α should decline with crew size.** It is a flat 50% at every crew size, which
+  claims the concierge is half hands-on while directing six people. A declining curve is more
+  honest and recovers roughly a third of the compression discount on its own.
+- **REJECTED — a disposal-vendor offset against the `disposition` hours. Do not re-propose.**
+  It looks like a double charge (disposition is 43% of the Home Cleanout pool, and haulers are
+  billed at cost + 15% on top) but it is not: Havellin is the fiduciary who must review every
+  item, the haulers only remove what they are told to, and Havellin often stages the discards
+  by room or into the garage for pickup. Those hours are real Havellin labor. The premise also
+  assumed a hoard-level volume score, and Havellin does not take hoards.
+
 ## Backlog / don't forget
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home
   walkthrough. `buildEstimateMailto()`.~~ **Done 2026-07-08.**

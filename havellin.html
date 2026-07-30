@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.29 · 8:14pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 8:29am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -893,10 +893,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
         </div>
         <div id="prem-badge"></div>
         <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
-        <div class="toggle-wrap">
+        <div class="toggle-wrap" id="fixed-toggle-wrap">
           <div class="toggle-info">
             <div class="toggle-title">Quote as a fixed price?</div>
-            <div class="toggle-sub">Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.</div>
+            <div class="toggle-sub" id="fixed-toggle-sub">Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.</div>
           </div>
           <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
         </div>
@@ -3167,10 +3167,30 @@ function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS, fixedOnsit
   };
 }
 
+// ─── BILLING BASIS ────────────────────────────────────────────────────────────
+// Every service bills time-and-materials by default. The concierge may choose to quote
+// a firm flat fee instead on any job EXCEPT probate and contested probate, where the
+// Personal Representative's expenses are reviewed by the court and the defensible
+// posture is itemized hours on the record — a flat fee that can't be tied back to
+// logged time is exactly what a judge or an heir's counsel questions.
+//
+// This is a hard rule, not a nudge. It used to be a warning that said "confirm this is
+// appropriate", which left the fee in place on a matter where it isn't defensible. The
+// toggle is now disabled for these two and the math ignores the flag even if a stale
+// checkbox arrives checked (a saved pre-rule estimate, or a service type changed after
+// the toggle was set).
+//
+// Estate Settlement is NOT on this list. It is a private engagement with a family or
+// trustee — no court reviews the fee — so a flat quote is available there, at the
+// concierge's discretion, like any other non-probate job.
+function isTMOnly(svcKey) {
+  return svcKey === 'probate' || svcKey === 'contested_probate';
+}
+
 // ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
-// Contingency buffer added on top of hourly estimate for fixed-price proposals.
-// Court-billed engagements (Estate Settlement / Probate / Contested) stay strictly
-// time-and-materials and never use this buffer — only living / fixed-price jobs do.
+// Contingency buffer added on top of the hourly estimate for fixed-price proposals.
+// Probate and contested probate keep a buffer figure because the panel still shows what
+// a flat quote WOULD run as an internal reference — it is never offered to the client.
 function fixedPriceBuffer(svcKey) {
   if (svcKey === 'contested_probate') return 0.35;
   if (svcKey === 'probate')           return 0.25;
@@ -3197,7 +3217,17 @@ function rushMultiplier(runwayDays) {
 // (computed in calcAll's fixed-price panel) unless the manager already typed one.
 // "Prefill + override" — the prefilled number is fully editable afterward.
 function toggleFixedPrice() {
-  var on = document.getElementById('e-fixed').checked;
+  var el = document.getElementById('e-fixed');
+  var on = el ? el.checked : false;
+  // The box is disabled on probate / contested matters, but guard here too: this is the
+  // only entry point that writes a fee, so a stale enabled checkbox must not be able to
+  // set one.
+  var svcEl = document.getElementById('e-svc');
+  if (on && svcEl && isTMOnly(svcEl.value)) {
+    if (el) el.checked = false;
+    on = false;
+    showFB('e-fb','warn','Probate and contested probate bill time-and-materials on actual logged hours — a fixed price is not available on these matters.');
+  }
   var row = document.getElementById('fixed-amount-row');
   var amt = document.getElementById('e-fixed-amount');
   if (on && amt && (!amt.value || parseFloat(amt.value) <= 0) && window._fixedPriceSuggested) {
@@ -3756,22 +3786,42 @@ function calcAll() {
   // for Personal-Representative and court defensibility, with no fixed-price buffer.
   // Fixed-price mode: quote a firm flat fee instead of hourly. Prep jobs are already
   // fee-only, so fixed mode doesn't apply there.
-  var isFixed = document.getElementById('e-fixed') ? document.getElementById('e-fixed').checked : false;
-  if (isPrep) isFixed = false;
+  // Billing basis. T&M is the default everywhere; the flat-fee option is withheld on
+  // probate / contested probate (see isTMOnly). Enforced in the UI as well as the math —
+  // a checked box sitting next to a fixed price the engine is ignoring reads as a bug,
+  // so clear it and say why rather than quietly discarding the number.
+  var _tmOnly = isTMOnly(svcKey);
+  var _fxEl = document.getElementById('e-fixed');
+  var _fixedCleared = false;
+  if (_fxEl) {
+    _fxEl.disabled = _tmOnly;
+    if (_tmOnly && _fxEl.checked) { _fxEl.checked = false; _fixedCleared = true; }
+  }
+  var _fxWrap = document.getElementById('fixed-toggle-wrap');
+  if (_fxWrap) _fxWrap.style.opacity = _tmOnly ? '0.55' : '';
+  var _fxSub = document.getElementById('fixed-toggle-sub');
+  if (_fxSub) _fxSub.textContent = _tmOnly
+    ? 'Not available on probate or contested probate — these bill time-and-materials on actual logged hours, itemized for the Personal Representative and the court.'
+    : 'Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.';
+  var isFixed = _fxEl ? _fxEl.checked : false;
+  if (isPrep || _tmOnly) isFixed = false;
+  if (_fixedCleared) {
+    var _fxRow = document.getElementById('fixed-amount-row');
+    if (_fxRow) _fxRow.style.display = 'none';
+  }
   var fixedAmount = isFixed ? Math.round(parseFloat(document.getElementById('e-fixed-amount') ? document.getElementById('e-fixed-amount').value : 0) || 0) : 0;
 
   var fpPanel = document.getElementById('fixed-price-panel');
   var fpLabel = document.getElementById('fixed-price-label');
   var fpVal   = document.getElementById('fixed-price-val');
   var fpNote  = document.getElementById('fixed-price-note');
-  var courtBilled = (svcKey === 'cleanout' || svcKey === 'probate' || svcKey === 'contested_probate');
   if (fpPanel && havellinTotalDiscounted > 0 && !isPrep) {
     fpPanel.style.display = 'block';
-    if (courtBilled) {
-      // Court-billed engagements bill on actual logged hours (T&M). We still surface
-      // what a fixed-price quote WOULD run, with the contingency buffer, as an
-      // internal manager reference — this panel is on the Build Estimate tab only,
-      // never on the client-facing document, and it does not change the billing.
+    if (_tmOnly) {
+      // Probate / contested probate bill on actual logged hours. We still surface what a
+      // fixed-price quote WOULD run, with the contingency buffer, as an internal manager
+      // reference — this panel is on the Build Estimate tab only, never on the
+      // client-facing document, and it does not change the billing.
       var _refBuf = fixedPriceBuffer(svcKey);
       var _refFixed = Math.round(havellinTotalDiscounted * (1 + _refBuf));
       window._fixedPriceSuggested = _refFixed;
@@ -3815,8 +3865,11 @@ function calcAll() {
   // Warning for probate / contested matters, which typically require T&M billing.
   var fpWarnEl = document.getElementById('fixed-price-warn');
   if (fpWarnEl) {
-    fpWarnEl.innerHTML = (isFixed && (svcKey === 'probate' || svcKey === 'contested_probate'))
-      ? '<div class="alert a-warn" style="font-size:11px;margin-top:0;">&#9888; Fixed pricing on a probate / contested matter may not be defensible to the court or Personal Representative, who typically require time-and-materials billing on actual logged hours. Confirm this is appropriate before presenting.</div>'
+    // The old text here warned that fixed pricing on a probate matter "may not be
+    // defensible" and asked the estimator to confirm — while leaving the fee in place.
+    // The rule is now enforced, so the only thing left to report is a flag we cleared.
+    fpWarnEl.innerHTML = _fixedCleared
+      ? '<div class="alert a-warn" style="font-size:11px;margin-top:0;">&#9888; Fixed pricing was turned off — this is a probate matter and bills time-and-materials on actual logged hours. Any flat fee entered has been discarded; the quote below is the hourly basis.</div>'
       : '';
   }
 
