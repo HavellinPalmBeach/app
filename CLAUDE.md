@@ -102,6 +102,30 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   Standard $30 / Senior $35, with a named contractor's own `rate` taking precedence and the
   **founder** rate as the conservative fallback for an unresolvable concierge.
 
+## Client lifecycle rebuild (decided 2026-07-30, NOT yet built)
+- Full findings + target state machine + build order: `LIFECYCLE_AUDIT.md`.
+- Audit found **all three hard business rules unenforced**: no deposit check anywhere in the
+  Job Plan/staffing/hours path; the Job Plan gate at `11244` tests the *manager's* PIN, not
+  client approval; and there is no concept of *won*. 82 claimed hard gates tested, 66 refuted.
+- **Decided:** acceptance is informal (email/call/text) so `won` and `contracted` stay separate
+  statuses; DocuSign for the signature record; deposit is **NEVER** waived, so the `funded`
+  gate is unconditional; `funded` is machine-observed via Stripe + QuickBooks and never keyed
+  by hand; per-person PINs (Anthony, Ashley) replacing the literal `3010`; invoices always
+  auto-filed to Drive; a job dying pre-payment is `lost`, post-payment is `closed_retained`
+  with the deposit kept.
+- **Build order is forced, not preferred** (§7a): correctness fixes → the `won` status model →
+  DocuSign, then Stripe, then QB → *only then* the deposit gate. A hard gate with no override
+  is unsafe until the field it reads is reliably populated; turning it on early would stall
+  real jobs and the first workaround would hollow out the rule permanently.
+- **Open, needs counsel:** the retained-deposit clause (§8.6). Model the state now; do not
+  treat the money as earned until the agreement language exists.
+- **Open, needs Anthony:** the 50%-deposit invariant only holds at ≥50% margin, but the
+  walk-away floor is 30% (`walkAway = totalCost / 0.70`, `7752`) and the margin panel colours
+  35–50% amber. Either move the floor to 50% or show deposit coverage when discounting (§5a).
+- One correctness bug worth fixing regardless: `markDepositReceived` (`6420-6433`) sets
+  `depositReceived` AND `agrSigned` from one button, and `6426` is the only `agrSigned` write
+  site in the file. There is no `agrSent` field at all.
+
 ## Quo contact sync (started 2026-07-28)
 - Bigin is being retired. Quo is the dialer directory, not a CRM — the app already
   holds the pipeline/status data. Calling from the office line with caller ID is the
