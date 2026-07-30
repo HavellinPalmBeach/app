@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 10:15am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 11:40am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6143,6 +6143,13 @@ function checkPin() {
     if (currentEstimate && currentEstimate.jobId) {
       var _apprEst = currentEstimate, _apprJobId = currentEstimate.jobId;
       setTimeout(function(){ exportEstimateToDrive(_apprJobId, _apprEst); }, 200);
+      // ALSO file the CLIENT-FACING document — the one the client actually receives.
+      // Until now only the internal cost breakdown was retained automatically (twice,
+      // in fact), while the client's copy reached Drive only if somebody remembered the
+      // "Save to Drive" button. That is the document you need if the price is ever
+      // disputed, so it cannot depend on remembering. renderClientEstimate() ran a few
+      // lines above; the delay lets that DOM settle before it is read.
+      setTimeout(function(){ saveFolderEstimate(true); }, 600);
     }
     // Write the frozen walkthrough notes to Drive as the searchable corpus.
     if (currentEstimate && currentEstimate.jobId) {
@@ -7486,7 +7493,17 @@ function docEmail(jobId, docType) {
   if (!job) return;
   if (docType === 'estimate') {
     var rec = estimateStore[jobId];
-    if (rec) { currentEstimate = rec.estimate; }
+    // An unapproved estimate must not reach a client. The Estimate tab hides its own
+    // send buttons until approval, but this dashboard shortcut bypassed that entirely —
+    // two clicks from the client list and a price nobody signed off was in the client's
+    // inbox. Hiding a button elsewhere is not a rule; this is.
+    if (!rec || !rec.approved) {
+      alert('This estimate has not been approved yet.\n\n'
+        + 'Approve it on the Client Estimate tab with a manager PIN before sending it to '
+        + 'the client — the figure is not final until someone has signed off on it.');
+      return;
+    }
+    currentEstimate = rec.estimate;
     window.location.href = buildEstimateMailto();
   } else if (docType === 'agreement') {
     // Navigate to Agreement tab — email is sent after approval from there
@@ -8081,6 +8098,15 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
   var walkAway = Math.round(totalCost / 0.70);
   var negotiationRoom = havellinTotal - walkAway;
 
+  // Deposit coverage. The firm's rule is that the 50% deposit covers job cost outright,
+  // so a job can never lose money — but that only holds at 50% margin or better. At the
+  // 30% floor above, cost is 70% of price and a 50% deposit covers just 71% of it. The
+  // floor is left where it is (a pricing-policy decision, see LIFECYCLE_AUDIT.md §5a);
+  // what changes here is that discounting toward it no longer hides the consequence.
+  var depositAtPrice = Math.round(havellinTotal * 0.5);
+  var depositCoverage = totalCost > 0 ? Math.round((depositAtPrice / totalCost) * 100) : 100;
+  var coverageShort = Math.max(0, totalCost - depositAtPrice);
+
   // Per-role breakdown
   var tcBilled = Math.round(totTC * tcRate);
   var psBilled = Math.round(totPS * psRate);
@@ -8125,6 +8151,16 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
     '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
     (negotiationRoom <= 0 ? '<span class="badge b-warn">AT or BELOW floor — hold firm</span>' : '') +
     '</div>' +
+    // Deposit coverage — what the 50% up front actually pays for at this price.
+    (depositCoverage >= 100
+      ? '<div style="margin-top:6px;font-size:10px;color:var(--ok-tx);">50% deposit ('
+        + fmt(depositAtPrice) + ') covers <strong>' + depositCoverage + '%</strong> of job cost — '
+        + 'the job is funded before work starts.</div>'
+      : '<div class="alert a-warn" style="margin-top:6px;font-size:10px;">At this price the 50% deposit ('
+        + fmt(depositAtPrice) + ') covers only <strong>' + depositCoverage + '%</strong> of the '
+        + fmt(totalCost) + ' job cost — <strong>' + fmt(coverageShort) + '</strong> of cost is '
+        + 'unfunded when work begins. Deposit-covers-cost holds at 50% margin and above; this job '
+        + 'is at ' + margin + '%.</div>') +
     '<div style="margin-top:6px;font-size:10px;color:var(--gray);font-style:italic;">Internal only — not shown on client estimate. Rates: Transition Concierge $' + tcCost + '/hr'
       + (tcCostAssumed ? '' : ' (' + esc(costRateLabel(assignedTCName)) + ')')
       + ', Property Specialist $' + psCost + '/hr avg blended.</div>'
@@ -11352,6 +11388,11 @@ function printInvoice() {
   var originalTitle = document.title;
   document.title = filename;
   var content = document.getElementById('inv-page-content').innerHTML;
+  // File a copy to Drive. Printing is the moment an invoice is actually issued, and it
+  // happens at every stage — deposit and midpoint invoices need no approval, so hanging
+  // retention off approval would have retained only some finals. Until now no invoice
+  // was retained anywhere, in any form: the firm could not produce what it had billed.
+  saveInvoiceToDrive(job, currentInvStage, content);
   var printTarget = document.getElementById('print-target');
   printTarget.innerHTML = '<div class="ce-page">' + content + '</div>';
   var allPanels = document.querySelectorAll('.panel');
@@ -14486,6 +14527,7 @@ function _subfolderId(job, name) {
 function resolveSubfolderId(job, name, cb) {
   // Aliases keep older jobs working after a folder rename (Estimate → Estimates).
   var ALIASES = { 'Estimates': ['Estimate'], 'Estimate': ['Estimates'],
+                  'Invoice': ['Invoices'], 'Invoices': ['Invoice'],
                   'Estate Inventory': ['Photos', 'Asset Documentation'] };  // older jobs' merged sources
   function look() {
     var id = _subfolderId(job, name);
@@ -14647,20 +14689,26 @@ function _exportDoc(title, innerHtml, extraCss) {
     + '</head><body>' + innerHtml + '</body></html>';
 }
 
-function saveFolderEstimate() {
-  if (!currentEstimate || !currentEstimate.jobId) { showSyncBadge('No estimate loaded', true); return; }
-  var btn = document.getElementById('btn-drive-est');
+// auto=true when called on approval rather than from the button (see checkPin). An
+// automatic run must not hijack the button's label or shout failures at someone who
+// did not ask for it — but it files the same document to the same place.
+function saveFolderEstimate(auto) {
+  if (!currentEstimate || !currentEstimate.jobId) {
+    if (!auto) showSyncBadge('No estimate loaded', true);
+    return;
+  }
+  var btn = auto ? null : document.getElementById('btn-drive-est');
   function _reset(){ if (btn) { btn.disabled = false; btn.innerHTML = '&#128193; Save to Drive'; } }
   if (btn) { btn.disabled = true; btn.textContent = '↻ Saving…'; }
   var jobId = currentEstimate.jobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) { showSyncBadge('Job not found', true); _reset(); return; }
-  showSyncBadge('Locating Drive folder…');
+  if (!job) { if (!auto) showSyncBadge('Job not found', true); _reset(); return; }
+  if (!auto) showSyncBadge('Locating Drive folder…');
   resolveSubfolderId(job, 'Estimates', function(folderId) {
     if (!folderId) {
       var found = job.driveSubfolders ? Object.keys(job.driveSubfolders) : [];
       console.warn('[Drive] Estimate subfolder unresolved. driveFolder=', job.driveFolder, ' subfolders=', job.driveSubfolders);
-      showSyncBadge(!job.driveFolder
+      if (!auto) showSyncBadge(!job.driveFolder
         ? 'No Drive folder — create it from Client Dashboard first'
         : (found.length
             ? 'No “Estimate” subfolder in Drive (found: ' + found.join(', ') + ')'
@@ -14673,10 +14721,39 @@ function saveFolderEstimate() {
     var html = _exportDoc('Estimate – '+(job.hvlId||''), el.innerHTML, '');
     uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate.html', html, function(ok) {
       _reset();
-      if (ok) showSyncBadge('Estimate saved to Drive ✓');
-      else showSyncBadge('Drive save failed', true);
+      if (ok) showSyncBadge(auto ? 'Client estimate filed to Drive ✓' : 'Estimate saved to Drive ✓');
+      else if (!auto) showSyncBadge('Drive save failed', true);
     });
   });
+}
+
+// Retain an issued invoice. Named per stage so the deposit, midpoint and final each keep
+// their own file rather than overwriting one another — the Apps Script overwrites by
+// filename, so a reprint of the same stage replaces its own copy in place, which is what
+// you want when a figure is corrected and reissued.
+function saveInvoiceToDrive(job, stage, innerHtml) {
+  if (!job || !job.id || !innerHtml) return;
+  var stageWord = stage === 'deposit' ? 'Deposit' : (stage === 'midpoint' ? 'Midpoint' : 'Final');
+  var html = _exportDoc('Invoice – ' + (job.hvlId || '') + ' – ' + stageWord, innerHtml,
+                        '.ce-page{max-width:800px;margin:0 auto;}');
+  resolveSubfolderId(job, 'Invoice', function(folderId) {
+    // Fall back to the job's root folder rather than dropping the document. Older jobs
+    // predate the Invoice subfolder, and a silently-unretained invoice is the exact
+    // failure this exists to fix.
+    var target = folderId || _jobRootFolderId(job);
+    if (!target) return;
+    uploadHtmlToDrive(target, (job.hvlId || 'INV') + '_Invoice_' + stageWord + '.html', html,
+      function(ok){ if (ok) showSyncBadge(stageWord + ' invoice filed to Drive ✓'); });
+  });
+}
+
+// The job folder's own id, parsed from the stored folder URL. Used only as the fallback
+// above; every normal path resolves a named subfolder.
+function _jobRootFolderId(job) {
+  var u = job && job.driveFolder;
+  if (!u) return null;
+  var m = String(u).match(/folders\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
 }
 
 var _agrExported = {};
@@ -15341,7 +15418,10 @@ function renderProbateAgreement() {
   content += '</div>';
   document.getElementById('agr-page-content').innerHTML = content;
   updateAgrUI();
-  setTimeout(function(){ exportAgreementToDrive(currentAgrJobId); }, 1200);
+  // NOT exported to Drive here. This fires on every render — opening the tab, changing
+  // the job picker — so it filed the BLANK, UNAPPROVED template, repeatedly, while the
+  // signed copy was never retained at all. The export now runs on approval only
+  // (checkAgrPin), which is the first moment the document means anything.
 }
 
 
@@ -15621,7 +15701,10 @@ function renderAgreement() {
 
   document.getElementById('agr-page-content').innerHTML = content;
   updateAgrUI();
-  setTimeout(function(){ exportAgreementToDrive(currentAgrJobId); }, 1200);
+  // NOT exported to Drive here. This fires on every render — opening the tab, changing
+  // the job picker — so it filed the BLANK, UNAPPROVED template, repeatedly, while the
+  // signed copy was never retained at all. The export now runs on approval only
+  // (checkAgrPin), which is the first moment the document means anything.
 }
 
 function agrSection(title, content) {
@@ -15730,6 +15813,11 @@ function checkAgrPin() {
     }
     document.getElementById('agr-pin-modal').style.display = 'none';
     renderAgreement();
+    // File the APPROVED agreement to Drive. Previously this fired on every render, so
+    // Drive collected copies of the blank unapproved template; now it runs once, here,
+    // on the version that was actually signed off. renderAgreement() has just rewritten
+    // the page, so the delay lets that settle before the DOM is read.
+    setTimeout(function(){ exportAgreementToDrive(currentAgrJobId); }, 400);
     // Notify the agreements group that a signature-ready agreement exists.
     if (job) {
       var agrTc = assignedTCContact(job);
@@ -16536,6 +16624,30 @@ function saveClientEdit(jobId) {
   var svc = document.getElementById('ec-svc').value;
   var svcLabels = SVC_LABELS;
 
+  // Pricing inputs are frozen once the estimate is approved. Service type, square
+  // footage and the premium flag all feed the hours engine, so changing them here
+  // silently desynchronises the job from the estimate the client accepted, the
+  // agreement drawn from it, and the invoice schedule — with no re-approval and no
+  // trace. Contact details stay editable throughout; only the three pricing fields
+  // are held, and only once someone has approved the number.
+  var _rec = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
+  var _locked = !!((_rec && _rec.approved) || job.approved || job.agrSigned || job.depositReceived);
+  if (_locked) {
+    var _changed = [];
+    if (svc !== job.svc) _changed.push('Service type');
+    if (String(document.getElementById('ec-sqft').value) !== String(job.sqft)) _changed.push('Approx. sqft');
+    if ((document.getElementById('ec-premium').value === 'yes') !== !!job.premium) _changed.push('Premium service');
+    if (_changed.length) {
+      alert(_changed.join(' and ') + ' cannot be changed on this job.\n\n'
+        + 'The estimate has been approved, so these feed a price the client has already been '
+        + 'given. Raise a change order instead — that reprices the job on the record rather '
+        + 'than behind it.\n\nEverything else you edited will still be saved.');
+    }
+    // Fall through rather than abort: contact-detail edits in the same save are
+    // legitimate and must not be lost just because a pricing field was also touched.
+    svc = job.svc;
+  }
+
   // Update core fields
   job.fname = fname;
   job.lname = lname;
@@ -16549,11 +16661,11 @@ function saveClientEdit(jobId) {
   job.svc   = svc;
   job.svcLabel = svcLabels[svc] || svc;
   job.tc    = document.getElementById('ec-tc').value;
-  job.sqft  = document.getElementById('ec-sqft').value;
+  if (!_locked) job.sqft = document.getElementById('ec-sqft').value;
   job.ptype = document.getElementById('ec-ptype').value;
   job.priority = document.getElementById('ec-priority').value;
   job.re    = document.getElementById('ec-re').value;
-  job.premium = document.getElementById('ec-premium').value === 'yes';
+  if (!_locked) job.premium = document.getElementById('ec-premium').value === 'yes';
 
   var isEstateEdit = (svc === 'probate' || svc === 'contested_probate' || svc === 'cleanout' || svc === 'estate');
   // Probate-only fields (attorney + case info)
@@ -16585,7 +16697,13 @@ function saveClientEdit(jobId) {
 
   saveJobs();
   document.getElementById('edit-client-modal').style.display = 'none';
-  renderJobDetail(jobId); // re-render dashboard with updated info
+  // Was renderJobDetail(jobId) — a function that does not exist anywhere in the file, so
+  // every client edit threw a ReferenceError here. The write and the modal close happen
+  // above it, so nothing was lost; but the drilldown never refreshed, which reads exactly
+  // like the edit failed to save. renderClientDashboard is the drilldown that hosts the
+  // Edit Client button in the first place (see its render at the button's call site).
+  if (typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
+  if (typeof renderJobs === 'function') renderJobs();   // client list may show a new name
 }
 
 function formatPhone(input) {
