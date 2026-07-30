@@ -228,6 +228,39 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `depositReceived` AND `agrSigned` from one button, and `6426` is the only `agrSigned` write
   site in the file. There is no `agrSent` field at all.
 
+## QuickBooks Online — setup decisions (2026-07-30, account not yet created)
+- Stripe is already set up. **Neither Stripe nor QBO is required to close the payment loop** —
+  the manual payment record with evidence already funds a job, unlocks hours and advances
+  invoicing. They add card acceptance and reconciliation, not the loop itself.
+- **Deposits are a LIABILITY until the work is performed** (customer deposits / unearned
+  revenue), not income on receipt. Anthony confirmed. Get the exact treatment signed off by
+  the accountant — it depends on cash vs accrual.
+- **Vendor work is PURE PASS-THROUGH.** The vendor bills the client directly; Havellin takes
+  only the fee on top. So vendor money never touches Havellin's books — not as revenue, not
+  as COGS. **The app already models this correctly**: `havellinTotal = tcFee + psFee +
+  pkgCost + smf + gcFee + stagerGcFee + prepFee` and `calcVendorTotals()` returns
+  `v.cost * 0.15` (the FEE, not the cost); vendor costs live only in `grandTotal`. Two things
+  follow correctly from that and must not be "fixed": the deposit is 50% of Havellin's fee
+  rather than of the vendors' money, and margin % is measured against Havellin revenue rather
+  than inflated by pass-through.
+- Chart of accounts that follows: **revenue** — concierge labour · specialist labour · moving
+  materials · vendor management fee (15% SMF) · general contracting fee (30% GC) · home prep
+  coordination fee. **Cost of services** — contractor labour (the 1099 spend) · materials
+  purchased. **Liability** — customer deposits. Expect the P&L to read much smaller than the
+  dollars moving through the jobs; that is correct.
+- **The boundary that keeps pass-through clean:** never pay a vendor and rebill the client,
+  even as a one-off convenience. That single transaction becomes gross revenue AND an expense
+  and breaks the agent position. If it ever happens it needs its own account so the accountant
+  can see it rather than having it buried in the management-fee line.
+- Contractors need **1099 flags on their vendor records from day one**; retrofitting in
+  January is miserable. Customers/jobs need setting up if P&L-by-job is wanted (it is — that
+  is most of the reason to connect QBO at all).
+- **Known defect to fix before anyone relies on it:** `generateStripeLink` posts with
+  `mode:'no-cors'`, so the response is opaque and unreadable. It reports *"Stripe payment link
+  generated and sent to billing@"* unconditionally — including when the Apps Script endpoint
+  is missing or erroring. Nothing reads back from Stripe at all; there is no webhook and no
+  write to `clearedOn`.
+
 ## Quo contact sync (started 2026-07-28)
 - Bigin is being retired. Quo is the dialer directory, not a CRM — the app already
   holds the pipeline/status data. Calling from the office line with caller ID is the
