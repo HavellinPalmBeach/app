@@ -122,6 +122,18 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   reconciles afterwards and flags anything that never banked or banked short. Work starts on
   *received*, not *cleared* — waiting on clearing costs 3-5 days per job and collides with the
   scheduling pressure that drove staffing-ahead. See §6a-6d.
+- **Large deposits tier the INSTRUMENT rather than delaying the job** (§6c). Above a threshold
+  (start $10k, a Settings value not a constant) a personal cheque is not accepted: **wire
+  preferred, cashier's cheque accepted**. Work still starts on received at every size. Three
+  things to get right in the agreement language: a *certified* cheque (drawn on the client's
+  account, bank secondarily liable) is NOT a *cashier's* cheque (drawn on the bank's own
+  account, bank primarily liable) — name the latter; neither is bounce-proof, since counterfeit
+  cashier's cheques are a common fraud and a bank can reverse weeks later on a forgery, so
+  verify large ones by phoning the ISSUING bank on an independently looked-up number; and a
+  wire beats both, being final on receipt — which is also what trust officers and law firms
+  do routinely, so it is the easier ask of exactly the payers sending the largest amounts.
+  The accepted methods must appear on the agreement AND the deposit invoice, or the tier never
+  reaches the client before they go to the bank.
 - **Build order is forced, not preferred** (§7a): correctness fixes → the `won` status model →
   DocuSign, then Stripe, then QB → *only then* the deposit gate. A hard gate with no override
   is unsafe until the field it reads is reliably populated; turning it on early would stall

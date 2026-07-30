@@ -327,17 +327,56 @@ says a cheque arrived"* into a document, which is the honest substitute for an A
 confirmation. Five seconds in the field, and you want it before the cheque leaves your hands
 anyway. This is what makes manual entry trustworthy rather than a hole.
 
-### 6c. Received vs cleared — and why work should start on received
+### 6c. Received vs cleared — decided by the instrument, not the calendar
 
-A cheque in hand is not money; it can bounce. So `clearedOn` is tracked separately. But
-**recommend work starts on `received`, not `cleared`**, because waiting for clearing costs
-3-5 days on every job — which collides directly with the scheduling pressure that drove the
-staffing change ("the wire lands and the client expects us to start in two days"). Gating on
-clearing would reintroduce exactly the delay staffing-ahead exists to avoid.
+A cheque in hand is not money; it can bounce. So `clearedOn` is tracked separately from
+`receivedOn`. But a blanket "wait for clearing" rule costs 3-5 days on **every** job, which
+collides with the scheduling pressure that drove staffing-ahead in the first place.
 
-Instead: start on received, show *uncleared* on the job dashboard until the bank confirms, and
-let reconciliation catch a bounce. A bounced deposit on an active job is rare, visible, and
-recoverable. A five-day delay on every job is neither.
+**Decided 2026-07-30: tier the accepted instrument by deposit size.** Above a threshold
+(starting point **$10,000**, held as a Settings value, not a constant — it will want tuning as
+job sizes move), a personal cheque is no longer accepted. That removes the exposure instead of
+waiting it out.
+
+| Deposit size | Accepted | Work starts |
+|---|---|---|
+| Under threshold | personal cheque, wire, card | on **received** |
+| **Over threshold** | **wire preferred; cashier's cheque accepted** | on **received** |
+| Any size | Stripe / card | on received (`clearedOn` set immediately) |
+
+So work always starts on received. The risk is managed by *what you accept* at size, not by
+delaying the job.
+
+**Three factual points that belong in the agreement language, and are easy to get wrong:**
+
+1. **"Certified" ≠ "cashier's".** A *certified* cheque is drawn on the client's account — the
+   bank verifies funds and certifies the signature, and is only secondarily liable. A
+   *cashier's* cheque is drawn on the **bank's own** account; the bank has already taken the
+   money and is primarily liable. Cashier's is materially stronger. Name the one intended,
+   because a bank will issue whichever is asked for.
+2. **Neither is bounce-proof.** Faster funds availability is not finality. Counterfeit
+   cashier's cheques are a common fraud precisely because people treat them as cash, and a
+   bank can reverse weeks later on a forged instrument. Practical mitigation on a large
+   deposit: telephone the **issuing** bank — on a number looked up independently, not the one
+   printed on the cheque — and verify before work starts.
+3. **A wire is strictly better than either**, and easier for the payers most likely to be
+   sending large amounts. Wires are final and irrevocable on receipt. A trust officer or law
+   firm wires money routinely; asking them for a cheque is the unusual request. Hence *wire
+   preferred* rather than cashier's cheque as the headline.
+
+**What the app should do about it:**
+
+- Compute the deposit amount when the agreement is generated, and state the accepted payment
+  methods **on the agreement and the deposit invoice** — the tier has to reach the client
+  before they go to the bank, or it is just an internal preference.
+- Flag a recorded payment whose `method` violates the tier for its amount (a $14k personal
+  cheque) as a policy exception. Not blocked — the money is real and already in hand — but
+  visible, because that is a decision someone made and should own.
+- Set `clearedOn` immediately for wire and Stripe. Leave it open for cheques of any kind, and
+  show the outstanding exposure on the dashboard until QuickBooks reconciles it (§6d).
+
+Below the threshold the residual risk is a bounced personal cheque on a small deposit: rare,
+visible, and recoverable. That is a fair trade for never delaying a job.
 
 ### 6d. Reconciliation is what keeps manual entry honest
 
