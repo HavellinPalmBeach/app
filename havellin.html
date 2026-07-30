@@ -1060,6 +1060,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
           <tr><td class="muted">Hands-on work pool — all roles</td><td class="num" id="s-base-ps">0.0</td></tr>
           <tr><td class="muted" style="padding-left:16px;">&#8627; Difficult-access uplift</td><td class="num" id="s-adj-ps">0.0</td></tr>
           <tr><td class="muted">Concierge on site — works the crew days</td><td class="num" id="s-tc-onsite">0.0</td></tr>
+          <tr id="s-col-onsite-row" style="display:none;"><td class="muted" style="padding-left:16px;">&#8627; Specialist visits attended (appraisers, dealers, FFL)</td><td class="num" id="s-col-onsite">0.0</td></tr>
           <tr><td class="muted">Concierge off-site coordination</td><td class="num" id="s-base-tc">0.0</td></tr>
           <tr><td class="muted" style="padding-left:16px;">&#8627; Heirs / premium specialty coordination</td><td class="num" id="s-adj-tc">0.0</td></tr>
           <tr id="s-prep-tc-sum-row" style="display:none;"><td class="muted">Home-prep coordination — Transition Concierge</td><td class="num" id="s-prep-tc-sum">0.0</td></tr>
@@ -2929,32 +2930,52 @@ function svcTypeChanged() {
 }
 
 // ─── COLLECTIONS HOURS (TC + PS) ──────────────────────────────────────────────
-// TC = on-site coordination: schedule partner, be present, follow up with client
-// PS = physical execution: stage/organize, pack accepted items, transport if offsite drop
+// PS = physical execution: stage/organize, pack accepted items, transport if offsite drop.
+//      Joins the hands-on work pool and is split between crew and concierge like any
+//      other pool hour.
+//
+// TC = concierge time for this disposition, split into two kinds, because under the
+// working-supervisor model the two behave completely differently:
+//
+//   on — hours the concierge is PHYSICALLY AT THE PROPERTY: letting the appraiser in,
+//        walking the collection with the auction house, standing there for the FFL
+//        transfer. These extend the calendar (days = on-site hrs / 7) and must be
+//        counted when sizing the crew, or the job silently overruns TARGET_DAYS.
+//   tc — the total; (tc - on) is the off-site remainder: researching the right buyer,
+//        scheduling, submitting inquiries, chasing receipts. Spread around the crew
+//        days, so it does NOT extend the calendar.
+//
+// The rule for the split: if the specialist comes TO the property, the concierge is
+// there. If the items go OUT to them (shipped, dropped off, consigned to a shop), the
+// concierge's time is phone and paperwork. Before 2026-07-29 every one of these hours
+// was booked as off-site coordination — which exempted ~half of them from the calendar
+// and let collection-heavy estates report 9 days when they needed 12.
 var COLLECTION_HOURS = {
-  auction:      {tc:2,   ps:2},  // TC: schedule + walkthrough + follow-up. PS: stage, pack accepted lots
-  online_auction:{tc:2,  ps:2},  // TC: consign to online house, follow-up. PS: stage, pack, ship lots
-  estate_sale:  {tc:1,   ps:2},  // TC: engage estate-sale company, coordinate on-site sale. PS: stage/organize
-  appraise:     {tc:2,   ps:1},  // TC: schedule + present during appraisal + review with client. PS: organize/stage
-  consign:      {tc:1,   ps:3},  // TC: identify shop, coordinate intake. PS: pack, transport, handle shop intake
-  coin:         {tc:1.5, ps:0.5},// TC: research buyer, schedule visit, be present. PS: organize/stage
-  goldsilver:   {tc:1.5, ps:0.5},// TC: research buyer, schedule visit, be present. PS: organize/stage
-  jewelry:      {tc:1.5, ps:0.5},// TC: research buyer, schedule visit, be present. PS: organize/stage
-  books:        {tc:1.5, ps:1},  // TC: research specialist, schedule visit. PS: organize/stage
-  ebay:         {tc:0.5, ps:2},  // TC: confirm drop-off only. PS: box items, transport to store
-  replacements: {tc:1,   ps:3},  // TC: submit inquiry, confirm acceptance list. PS: careful pack + ship
-  dealer:        {tc:2,   ps:1},    // TC: research dealer, schedule visit, be present. PS: organize/stage
-  firearms:      {tc:3,   ps:0.5}, // TC: coordinate licensed FFL transfer/sale, be present. PS: locate, organize for inspection
-  donate:        {tc:0.5, ps:1.5},// TC: schedule donation pickup, get receipt. PS: stage/load for pickup
-  other:         {tc:1,   ps:1}    // Generic fallback
+  auction:      {tc:2,   on:1,   ps:2},  // TC: schedule + walkthrough on site + follow-up. PS: stage, pack accepted lots
+  online_auction:{tc:2,  on:0,   ps:2},  // TC: consign to online house, follow-up — never attends. PS: stage, pack, ship lots
+  estate_sale:  {tc:1,   on:0.5, ps:2},  // TC: engage estate-sale company, coordinate the on-site sale. PS: stage/organize
+  appraise:     {tc:2,   on:1.5, ps:1},  // TC: schedule, then present throughout the appraisal. PS: organize/stage
+  consign:      {tc:1,   on:0,   ps:3},  // TC: identify shop, coordinate intake — goods go to them. PS: pack, transport, shop intake
+  coin:         {tc:1.5, on:1,   ps:0.5},// TC: research buyer, schedule, be present for the visit. PS: organize/stage
+  goldsilver:   {tc:1.5, on:1,   ps:0.5},// TC: research buyer, schedule, be present for the visit. PS: organize/stage
+  jewelry:      {tc:1.5, on:1,   ps:0.5},// TC: research buyer, schedule, be present for the visit. PS: organize/stage
+  books:        {tc:1.5, on:1,   ps:1},  // TC: research specialist, attend the on-site review. PS: organize/stage
+  ebay:         {tc:0.5, on:0,   ps:2},  // TC: confirm drop-off only. PS: box items, transport to store
+  replacements: {tc:1,   on:0,   ps:3},  // TC: submit inquiry, confirm acceptance list. PS: careful pack + ship
+  dealer:        {tc:2,   on:1.5, ps:1},   // TC: research dealer, schedule, be present for the visit. PS: organize/stage
+  firearms:      {tc:3,   on:2,   ps:0.5},// TC: coordinate licensed FFL transfer/sale, present for the handoff. PS: locate, organize for inspection
+  donate:        {tc:0.5, on:0.5, ps:1.5},// TC: schedule pickup, hand over on site, get receipt. PS: stage/load for pickup
+  other:         {tc:1,   on:0.5, ps:1}    // Generic fallback — assume half on site
 };
+// Returns {tc, onsite, ps}: tc is the concierge total, onsite the portion spent at the
+// property (a subset of tc, NOT an addition to it), ps the hands-on pool contribution.
 function collectionsHours() {
-  var tc = 0, ps = 0;
+  var tc = 0, onsite = 0, ps = 0;
   collectionsData.forEach(function(c) {
-    var h = COLLECTION_HOURS[c.disp] || {tc:1, ps:1};
-    tc += h.tc; ps += h.ps;
+    var h = COLLECTION_HOURS[c.disp] || {tc:1, on:0.5, ps:1};
+    tc += h.tc; onsite += (h.on || 0); ps += h.ps;
   });
-  return {tc: Math.round(tc*10)/10, ps: Math.round(ps*10)/10};
+  return {tc: Math.round(tc*10)/10, onsite: Math.round(onsite*10)/10, ps: Math.round(ps*10)/10};
 }
 
 // TC hour multiplier based on property value
@@ -3026,8 +3047,13 @@ function addWorkingDays(startDateStr, days) {
 // Off-site coordination no longer gates the calendar — it happens around the crew
 // days, before mobilization and after the last truck. Instead it feeds a load check:
 // past TC_DAY_CAP hours/day one concierge can't carry the job and a second is
-// recommended. Billing is still total concierge hours, so the second concierge
-// shortens the calendar rather than raising the fee.
+// recommended. Billing is still total concierge hours, split between the two, so a
+// second concierge changes neither the fee nor the duration — it makes the schedule
+// coverable. Duration is set by the crew clearing the work pool and never by tcCount;
+// nothing here shortens the calendar for a second concierge, and the hint text must not
+// claim otherwise. The cost side assumes the two SPLIT the hours rather than both
+// attending: the margin panel costs one stream of engaged hours (see the tcEngagedHrs
+// line), so genuine simultaneous attendance would be real cost it never sees.
 var TARGET_DAYS = 10;
 var PRODUCTIVE_HRS_PER_DAY = 7;   // billable hours in a crew day (setup/travel/breaks excluded)
 var TC_ONSITE_ALPHA_DEFAULT = 0.5;
@@ -3086,19 +3112,41 @@ function conciergeLoad(onsiteHrs, offsiteHrs, days) {
   return Math.round((onsiteHrs / days + offsiteHrs / Math.max(days, COORD_SPREAD_DAYS)) * 10) / 10;
 }
 
-function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS) {
+// fixedOnsiteTC — concierge hours spent AT the property that are not drawn from the work
+// pool: attending appraisals, dealer visits, FFL handoffs (see COLLECTION_HOURS.on). They
+// behave differently from every other term here, in two ways that both matter:
+//
+//   1. They extend the calendar. days is derived from concierge on-site hours, so these
+//      have to be inside that figure — and therefore inside the crew-sizing test too, or
+//      the loop happily returns a crew that overruns TARGET_DAYS while reporting success.
+//   2. They are NOT divided by (n + α). Standing next to an appraiser is not pool work a
+//      bigger crew can absorb — six specialists don't make the appraisal go faster. So
+//      they add to H flat, and psHrs is computed from the pool-derived share alone.
+//
+// A larger crew still helps indirectly: it shrinks the pool-derived share of H, which
+// buys back calendar room for the fixed hours. That is exactly what lets the sizing loop
+// solve a collection-heavy estate back inside the target.
+function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS, fixedOnsiteTC) {
   var a     = activeAlpha();   // pinned to the saved estimate's α when one is loaded
   var floor = ENGINE_FLOOR[svc] || 2;
   var W     = workPool > 0 ? workPool : 0;
+  var F     = fixedOnsiteTC > 0 ? fixedOnsiteTC : 0;
+  // Days at a given crew size — the single definition the sizing loop and the result
+  // below both use, so the crew the loop picks can never disagree with the days reported.
+  function daysAt(nps) {
+    var h = (W > 0 ? W / (nps + a) : 0) + F;
+    return h > 0 ? Math.max(Math.ceil(h / PRODUCTIVE_HRS_PER_DAY), floor) : 0;
+  }
   var n;
   if (forcedPS && forcedPS >= 2) {
     n = Math.min(6, forcedPS);
   } else {
     n = 2;
-    while (n < 6 && Math.ceil(W / ((n + a) * PRODUCTIVE_HRS_PER_DAY)) > TARGET_DAYS) n++;
+    while (n < 6 && daysAt(n) > TARGET_DAYS) n++;
   }
-  var H       = W > 0 ? W / (n + a) : 0;
-  var days    = W > 0 ? Math.max(Math.ceil(H / PRODUCTIVE_HRS_PER_DAY), floor) : 0;
+  var Hpool   = W > 0 ? W / (n + a) : 0;   // concierge hours clearing the hands-on pool
+  var H       = Hpool + F;                 // total concierge presence at the property
+  var days    = daysAt(n);
   var tcHrs   = H + (offsiteTC || 0);
   var tcLoad  = conciergeLoad(H, offsiteTC || 0, days);
   return {
@@ -3106,8 +3154,9 @@ function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS) {
     psNeeded:    n,
     alpha:       a,
     onsiteTC:    Math.round(H * 10) / 10,
+    onsiteFixed: Math.round(F * 10) / 10,
     tcHrs:       Math.round(tcHrs * 10) / 10,
-    psHrs:       Math.round(n * H * 10) / 10,
+    psHrs:       Math.round(n * Hpool * 10) / 10,
     offsiteTC:   Math.round((offsiteTC || 0) * 10) / 10,
     days:        days,
     tcDays:      days,
@@ -3331,9 +3380,14 @@ function calcAll() {
   var vcHrs = 0;
   var destTC = 0, destPS = 0;
 
-  // Collections TC + PS adder (sits on top of the engine output)
+  // Collections TC + PS adder (sits on top of the engine output). The concierge's
+  // presence hours are held OUT of baseTCHrs and carried separately: they belong to the
+  // crew days, and burying them in the off-site figure exempted them from the calendar.
+  // Keeping them out also means the heirs uplift below scales coordination only, which
+  // is what "more calls, more sign-offs" is supposed to mean.
   var colHrs = collectionsHours();
-  baseTCHrs = Math.round((baseTCHrs + colHrs.tc) * 10) / 10;
+  var colOnsiteTC = colHrs.onsite;
+  baseTCHrs = Math.round((baseTCHrs + colHrs.tc - colOnsiteTC) * 10) / 10;
   basePSHrs = Math.round((basePSHrs + colHrs.ps) * 10) / 10;
 
   // Service type multiplier badge
@@ -3456,7 +3510,7 @@ function calcAll() {
   // smf so the estimate shows a single vendor-coordination fee rather than a
   // separate Home Prep line. The extra TC coordination hours still bill on top.
   if (prepEnabled && !isPrep) { smf += prepFee; prepFee = 0; }
-  if (isPrep) { baseTCHrs = 0; basePSHrs = 0; workPool = 0; coordTC = 0; }
+  if (isPrep) { baseTCHrs = 0; basePSHrs = 0; workPool = 0; coordTC = 0; colOnsiteTC = 0; }
   // Fold bundled-prep coordination and the move-management destination hours in.
   // Both sit OUTSIDE the origin-property work pool: prep coordination is off-site
   // vendor management, and move day happens at the new home. destPS is crew work at
@@ -3469,11 +3523,14 @@ function calcAll() {
   // if the estimator has manually scheduled more specialists than recommended,
   // re-solve at the actual count — a larger crew finishes sooner, so the concierge
   // is on site fewer hours and the estimate comes down slightly.
-  var _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, 0);
+  // colOnsiteTC (appraiser / dealer / FFL attendance) is passed as fixed on-site time so
+  // the sizing loop counts it against TARGET_DAYS instead of discovering the overrun
+  // after the crew has already been chosen.
+  var _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, 0, colOnsiteTC);
   var _recommendedPS = _sup.requiredPS;
   var _actualPS = Math.max(getScheduledPSCount(), _recommendedPS);
   if (!isPrep && _actualPS > _recommendedPS) {
-    _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, _actualPS);
+    _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, _actualPS, colOnsiteTC);
   }
   var tcOnsiteHrs = isPrep ? 0 : _sup.onsiteTC;
   totTC = isPrep ? 0 : _sup.tcHrs;
@@ -3580,7 +3637,7 @@ function calcAll() {
       tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">Engine recommends 2 concierges for this scope</span> — '
         + crew.tcLoad.toFixed(1) + ' concierge hrs/day across ' + daysNeeded + ' working days is more than one person can carry. Assign a second here so both are tracked on the job.';
     } else if (tc2Sel && tc2Sel.value) {
-      tc2Hint.textContent = 'Both concierges will be tracked in the crew and Log Hours. Billing is total TC hours — a second concierge shortens the calendar, not the fee.';
+      tc2Hint.textContent = 'Both concierges are tracked in the crew and Log Hours. Billing is total TC hours split between them, so a second concierge changes neither the fee nor the duration — it makes the schedule coverable without one person carrying 12-hour days.';
     } else {
       tc2Hint.textContent = '';
     }
@@ -3604,15 +3661,22 @@ function calcAll() {
         : '<strong>' + crew.requiredPS + ' PS recommended</strong>');
       var assigned = Math.max(getScheduledPSCount(), crew.requiredPS);
       if (assigned > crew.requiredPS) crewNote += ', ' + assigned + ' assigned';
-      var overNote = crew.overTarget
-        ? ' <span style="color:var(--gray);">— exceeds ' + TARGET_DAYS + '-day target at ' + (crew.maxedOut ? 'maximum' : 'recommended') + ' staffing; scope-driven.</span>'
-        : '';
+      // Past the internal 10-day preference. Worth an amber badge only when something can
+      // still be done about it — that is, when there is crew headroom left. Once the crew
+      // is maxed the duration is simply what the property is, and an amber on every large
+      // estate trains the estimator to ignore the one badge that does matter: the
+      // hard-target failure below, which is tied to a real client commitment.
+      var overFixable = crew.overTarget && crew.requiredPS < 6;
+      var overNote = !crew.overTarget ? ''
+        : overFixable
+          ? ' <span style="color:var(--gray);">— past ' + TARGET_DAYS + ' days; adding a specialist would pull it back.</span>'
+          : ' <span style="color:var(--gray);">— more than ' + TARGET_DAYS + ' days because of the size of the property, not staffing.</span>';
       if (hardTarget && projectedEnd > hardTarget) {
         var htFmt = new Date(hardTarget + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
         timelineBadge.innerHTML = '<div class="alert a-err" style="margin-top:0;"><strong>Cannot meet hard target.</strong> Projected completion is ' + projDateFmt + ' (' + crew.tcDays + ' working days, ' + crewNote + ') — ' + Math.round(workingDaysBetween(hardTarget, projectedEnd)) + ' working days past the ' + htFmt + ' deadline. Renegotiate scope or deadline before sending estimate.</div>';
       } else {
         var htNote = hardTarget ? ' Hard target ' + new Date(hardTarget + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ✓' : '';
-        timelineBadge.innerHTML = '<div class="alert ' + (crew.overTarget ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">Projected completion: <strong>' + projDateFmt + '</strong> (' + crew.tcDays + ' working days, ' + crewNote + ')' + htNote + overNote + '</div>';
+        timelineBadge.innerHTML = '<div class="alert ' + (overFixable ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">Projected completion: <strong>' + projDateFmt + '</strong> (' + crew.tcDays + ' working days, ' + crewNote + ')' + htNote + overNote + '</div>';
       }
     }
   }
@@ -3645,6 +3709,14 @@ function calcAll() {
   document.getElementById('s-adj-ps').textContent = adjPS.toFixed(1) + ' hrs';
   var sTcOnsiteEl = document.getElementById('s-tc-onsite');
   if (sTcOnsiteEl) sTcOnsiteEl.textContent = tcOnsiteHrs.toFixed(1) + ' hrs';
+  // Attendance at specialist visits is inside the on-site figure above, not additional to
+  // it — shown as a sub-line so a jump in concierge presence is traceable to the
+  // collections list rather than looking like the pool split changed.
+  var sColOnsiteRow = document.getElementById('s-col-onsite-row');
+  if (sColOnsiteRow) {
+    sColOnsiteRow.style.display = (!isPrep && colOnsiteTC > 0) ? '' : 'none';
+    document.getElementById('s-col-onsite').textContent = colOnsiteTC.toFixed(1) + ' hrs';
+  }
   document.getElementById('s-base-tc').textContent = baseTCHrs.toFixed(1) + ' hrs';
   document.getElementById('s-adj-tc').textContent = (adjTC + premiumSpecialtyTC).toFixed(1) + ' hrs';
   // Show home-prep coordination hours in the hours breakdown so base + adj + prep
@@ -3826,10 +3898,14 @@ function calcAll() {
       effClass = 'a-ok';
       effMsg = crewSize + ' PS + the concierge on site — ' + psHrsPerPerson + ' hrs each over ' + effectiveDays
         + ' working day' + (effectiveDays !== 1 ? 's' : '') + ' (' + dailyHrsPerPS + ' hrs/day per specialist). '
-        + 'The concierge is on site all ' + tcOnsiteHrs.toFixed(1) + ' of those hours and works alongside the crew at '
+        + 'The concierge is on site for every one of those hours and works alongside the crew at '
         + _alphaPct + '% production, which is why ' + workPool.toFixed(1) + ' hrs of hands-on work bills as '
-        + totPS.toFixed(1) + ' PS hrs — the rest moves to the concierge line, not billed twice. '
-        + 'Adding a specialist shortens the job and lowers the estimate.';
+        + totPS.toFixed(1) + ' PS hrs — the rest moves to the concierge line, not billed twice.'
+        + (colOnsiteTC > 0
+            ? ' A further ' + colOnsiteTC.toFixed(1) + ' hrs of concierge presence covers the specialist visits '
+              + '(appraisers, dealers, FFL) — fixed time no crew size absorbs, counted against the day target.'
+            : '')
+        + ' Adding a specialist shortens the job and lowers the estimate.';
     }
     // When this estimate is pinned to a production rate that differs from the current
     // Settings value, say so — otherwise its hours look inexplicably different from a
