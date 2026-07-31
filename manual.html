@@ -277,6 +277,9 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <li><strong>✓ Mark Agreement Signed</strong> — the signed copy has come back. <em>Signing does not imply payment</em>; these are separate facts and the app keeps them separate.</li>
     <li><strong>✓ Record Deposit</strong> — see below. This is what allows work to begin.</li>
   </ol>
+  <h3>Recording a payment</h3>
+  <p>The same button records <strong>all three</strong> payments — deposit, midpoint and final. A <strong>Which payment is this?</strong> picker at the top of the dialog opens on the first stage that hasn't been satisfied, so in normal use you never touch it. Change it when you're recording a midpoint or final cheque.</p>
+  <div class="note"><strong>Only the deposit gates anything.</strong> Recording a midpoint or final payment captures the money so the job's paid total is complete — it doesn't unlock work, and a midpoint cheque of any size will never fund a job. That distinction is deliberate: the deposit is the one stage whose target the app can work out on its own (50% of the approved total). The midpoint and final amounts come off the invoice you actually sent, which is built from logged hours and real vendor quotes, so those stages prefill nothing and challenge nothing — type what arrived. <em>Until this was built, midpoint and final money was invoiced and then recorded nowhere at all.</em></div>
   <h3>Recording the deposit</h3>
   <p>The deposit is <strong>50% of the approved total</strong> and is <strong>never waived or varied</strong>. Recording it captures evidence, not a tick:</p>
   <ul>
@@ -306,10 +309,12 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td>Approved — Awaiting Client</td><td>We've approved our own estimate. <strong>The client has not answered.</strong> Nothing may be staffed yet.</td></tr>
     <tr><td><strong>Won</strong></td><td>The client has accepted. Staffing unlocks here.</td></tr>
     <tr><td>Active</td><td>Signed + deposit received — work in progress</td></tr>
-    <tr><td>Closed</td><td>Final invoice paid and closed</td></tr>
-    <tr><td>Lost</td><td>Died before any money arrived</td></tr>
-    <tr><td>Closed — Deposit Retained</td><td>Died <em>after</em> the deposit. We keep the money; it still counts as won because it produced revenue.</td></tr>
+    <tr><td>Closed</td><td>Final invoice paid and closed. <strong>Delivery is stamped here</strong> — see below.</td></tr>
+    <tr><td>Lost</td><td>Died before any money arrived. <strong>Terminal.</strong></td></tr>
+    <tr><td>Closed — Deposit Retained</td><td>Died <em>after</em> the deposit. We keep the money; it still counts as won because it produced revenue. <strong>Terminal.</strong></td></tr>
   </table>
+  <div class="note"><strong>Re-open resumes; it does not reset.</strong> The status button on a closed job reads <strong>Re-open</strong> and returns it to <em>Active</em>, where it left off. It used to send the job back to <em>New</em>, so one mis-tap on a phone threw a delivered job to the very start of the lifecycle. <em>Lost</em> and <em>Closed — Deposit Retained</em> are terminal and the button will not move them at all — previously it silently turned a lost job into a brand-new one. If a lost client comes back, start a new job.</div>
+  <div class="note"><strong>The handover date is recorded once.</strong> The first time a job is closed, the app stamps the delivery date, the time, and who closed it. Re-opening and re-closing does <em>not</em> move that date — it records when the work was actually handed over, not the last time somebody touched the button. Nothing in the app previously recorded delivery at all (the <em>completion date</em> on the intake form is a target, not an observation), and this is the field revenue recognition will read once the QuickBooks twin goes live.</div>
   <div class="note"><strong>"Approved" and "Won" are different things, and the difference is the point.</strong>
     Approved means a manager signed off on our own figure. Won means the <em>client</em> said yes. Previously the app had no
     way to tell them apart — it counted a job as won the moment we approved our own estimate, so the win rate measured how
@@ -425,8 +430,21 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     folder, named per stage (<code>HVL-xxxx_Invoice_Deposit.html</code> and so on) so the three never overwrite each other.
     Reprinting a stage replaces its own copy, which is what you want when a figure is corrected and reissued. Until recently
     no invoice was retained anywhere in any form.</div>
-  <p>The invoice stage advances by itself as the job progresses — it reads the recorded deposit, so a job with no deposit
-    recorded stays on the Deposit stage.</p>
+  <p>The invoice stage advances by itself as the job progresses, reading the payments you've recorded (§8): no deposit
+    recorded keeps it on <em>Deposit</em>, a funded deposit moves it to <em>Midpoint</em>, and a recorded midpoint payment
+    moves it to <em>Final</em>. Previously it read a flag that nothing ever set, so every funded job stuck on the Midpoint
+    stage and the Final invoice could only be reached by picking it from the Stage selector by hand.</p>
+
+  <div class="note"><strong>The expedited-delivery premium now appears on the midpoint and final invoices.</strong> On a rush
+    job (§5, §16) the 20% premium shows as its own line on all three stages. It previously appeared on the quote, the client
+    estimate and the deposit invoice, but was dropped from the midpoint and final — so a rush client was asked for a deposit
+    that included the premium and then billed a total that didn't, and a job that landed exactly on its estimate printed a
+    phantom <em>"came in under estimate — credit applied"</em> line for the premium amount. If you have invoiced a rush job
+    before now, re-print its midpoint and final stages and check the totals against what the client agreed.</div>
+  <p style="font-size:12px;color:#6B6B72;">The premium's <em>rate</em> is pinned to the estimate the client accepted, so
+    changing the standard 20% later never reprices a live job. The <em>amount</em> trues up with each stage like every other
+    fee, so the final invoice charges the premium on the services actually delivered. It is never charged on an approved
+    Change Order — those are priced when they're agreed — and on a fixed-price quote it is already inside the flat fee.</p>
 
   <h2>12a. Contractors (Crew Directory)</h2>
   <p><strong>Tab: Contractors.</strong> The people who actually work the jobs — concierges and property specialists. This is where the crew that appears in every estimate's staffing dropdowns and every Job Plan roster comes from. Unlike Vendors and Referral Partners, contractors live in the <em>main</em> job sheet.</p>
@@ -547,7 +565,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-30
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-31
   </div>
 
 </div>

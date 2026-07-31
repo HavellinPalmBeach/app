@@ -30,7 +30,22 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-07-30** — the lifecycle rebuild (Waves 1-4). What
+- Last reconciled against the app: **2026-07-31** — the unearned-revenue prerequisites. What
+  changed:
+  - **§8** the deposit button is now a three-stage payment recorder (deposit · midpoint · final),
+    with the picker defaulting to the first unsatisfied stage. States plainly that only the
+    deposit gates anything and why the other two prefill and challenge nothing — their targets
+    live in `renderInvoice` and are not reproducible in the payments module.
+  - **§9** Re-open resumes at *Active* rather than resetting to *New*; *Lost* and *Closed —
+    Deposit Retained* marked terminal (the button used to resurrect a lost job as new); new note
+    on the write-once delivery stamp and why it is not `completionDate`.
+  - **§12** stage advance now described off recorded payments rather than the dead flag, plus an
+    explicit note that the **expedited premium now reaches the midpoint and final invoices** —
+    including a *re-print and re-check any rush job invoiced before now* instruction, since real
+    money was under-billed.
+  - §5 and §16 already described the rush premium correctly; they were documenting intended
+    behaviour the invoice wasn't delivering, so they needed no edit.
+- Prior pass **2026-07-30** — the lifecycle rebuild (Waves 1-4). What
   changed, and the first item is the important one:
   - **§3, §8 and §9 described automation that does not exist.** The workflow diagram had
     "Send Agreement (DocuSign)" and "Deposit Auto-Charged (Stripe)", and §8 carried a whole
