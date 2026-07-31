@@ -428,11 +428,24 @@ the QuickBooks posting layer is deliberately NOT, pending Laura's September char
   number and a name merge into one contact carrying every category, with the role naming
   all of them. An early version kept only the first row's category and called the rest a
   duplicate to clean up; that was wrong and threw away half of what those vendors do.
-- ⚠️ **Vendors are keyed by ROW INDEX in the app** (`vendorIdOf` returns `v._row`), unlike
-  the Quo sync which correctly keys on the `uid` column. So a job's saved vendor points at
-  "row 7", not at a vendor. **Merging rows must CLEAR them, never delete** — deleting
-  shifts every row below and silently repoints live job assignments. Safe to migrate now
-  only because the jobs sheet is still dummy data; fix the identity before October.
+- **Vendors are keyed by ROW INDEX** (`vendorIdOf` returns `v._row`), so a job's saved
+  vendor points at "row 7", not at a vendor. Deleting a row shifts every row beneath it
+  and **re-sorting scrambles all of them** — either silently repoints an assignment at
+  whoever now occupies that number. This happened for real on 2026-07-31 during the
+  multi-category merge (rows deleted *and* re-sorted).
+  - **Fixed by making the NAME the identity.** Every write site already stored
+    `rec.vendorName` (plus contact/phone/pricing) at assignment time, so the row was only
+    ever a hint. `resolveJobVendor(rec)` trusts the name when the two disagree, breaks a
+    tie on phone, **repairs `rec.vendorId` in place** so it converges, and falls back to
+    the stored name if the vendor has left the directory entirely. `_vendorRefLine` and
+    all four Job Plan pickers go through it (`_selVendorId`).
+  - **Money was never exposed**: `getVendorActuals` reads `rec.quote` and `rec.vendorName`
+    off the job record and never looks a vendor up by row. A scrambled sheet could
+    misreport a *contact*, never a cost.
+  - `auditJobVendorRefs()` in the console lists any slot whose row no longer matches its
+    stored name. Re-sorting the sheet is now safe.
+  - Still worth doing eventually: key on the `uid` column like `quo-sync.gs` does. Less
+    urgent now that resolution is name-first.
 - **Several business names on one number also merge**, under the combined name, and are
   still reported — two genuinely unrelated businesses on one line is a data problem, and
   that report is where it shows. Better is to fix the sheet: O'Hara's two rows were

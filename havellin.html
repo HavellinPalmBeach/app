@@ -12594,9 +12594,84 @@ function vendorPickerOptions(selId, cats) {
 // Filled sourcing fields stay white (the default is cream, white only on focus),
 // so it's obvious at a glance which vendor/status/quote have been set.
 function _fldBg(set) { return set ? 'background:var(--white);' : ''; }
+// Resolve the vendor a job slot actually points at.
+//
+// `vendorId` is the sheet ROW INDEX, which is not an identity: deleting a row shifts
+// every row beneath it, and re-sorting the sheet scrambles all of them. Either one
+// silently repoints a saved assignment at whoever now occupies that row number.
+//
+// The saving grace is that every write site also stores `vendorName` (and contact,
+// phone and pricing) at the moment of assignment. So the NAME is the real identity and
+// the row is only a hint: when the two disagree, the name wins, the vendor is found
+// again by name, and the stale row number is repaired in place so it converges instead
+// of drifting further. Phone breaks a tie if two rows share a name.
+//
+// Money never depended on this — getVendorActuals reads the quote and name off the job
+// record and never looks a vendor up by row — so a scrambled sheet could misreport a
+// contact, never a cost.
+function resolveJobVendor(rec) {
+  if (!rec) return null;
+  var want = String(rec.vendorName || '').trim();
+  var byRow = lookupVendorById(rec.vendorId);
+  if (!want) return byRow;
+  if (byRow && String(byRow.vendor_name || '').trim() === want) return byRow;
+
+  var hits = vendorDirectory.filter(function(v){
+    return String(v.vendor_name || '').trim() === want;
+  });
+  if (hits.length > 1 && rec.phone) {
+    var digits = function(s){ return String(s||'').replace(/\D/g,''); };
+    var byPhone = hits.filter(function(v){ return digits(v.phone) === digits(rec.phone); });
+    if (byPhone.length) hits = byPhone;
+  }
+  if (!hits.length) return byRow;   // gone from the directory — keep what we had
+  var found = hits[0];
+  var fresh = vendorIdOf(found);
+  if (String(fresh) !== String(rec.vendorId)) {
+    rec.vendorId = fresh;           // self-heal: next read agrees without a lookup
+    if (typeof saveJobs === 'function') { try { saveJobs(); } catch(e) {} }
+  }
+  return found;
+}
+
+// Report every job vendor slot whose stored row number no longer matches the vendor it
+// was assigned to. Run `auditJobVendorRefs()` from the browser console after the sheet
+// has been re-sorted or had rows removed. Read-only — it names what drifted and what it
+// resolves to; opening the affected Job Plan is what repairs it.
+function auditJobVendorRefs() {
+  var out = [];
+  (jobs || []).forEach(function(job){
+    ['vendorSourcing','prepSourcing','logisticsSourcing','collSourcing'].forEach(function(bucket){
+      var src = job[bucket]; if (!src) return;
+      Object.keys(src).forEach(function(k){
+        var rec = src[k]; if (!rec || !rec.vendorName) return;
+        var atRow = lookupVendorById(rec.vendorId);
+        var atRowName = atRow ? String(atRow.vendor_name||'').trim() : '(no such row)';
+        if (atRowName === String(rec.vendorName).trim()) return;
+        var real = resolveJobVendor(rec);
+        out.push({ job: job.name || job.id, slot: bucket + '[' + k + ']',
+                   assigned: rec.vendorName, rowNowHolds: atRowName,
+                   resolvedTo: real ? real.vendor_name : '(not found by name)',
+                   repaired: !!(real && String(vendorIdOf(real)) === String(rec.vendorId)) });
+      });
+    });
+  });
+  if (!out.length) { console.log('No drifted vendor references — every job slot matches its row.'); return []; }
+  console.warn(out.length + ' drifted vendor reference(s):'); console.table(out);
+  return out;
+}
+
+// The id to mark selected in a slot's dropdown. Goes through the same resolution as the
+// reference line, so a moved row shows the vendor you actually chose rather than
+// whoever inherited its row number — and repairs the stored id on the way past.
+function _selVendorId(rec) {
+  var v = resolveJobVendor(rec);
+  return v ? vendorIdOf(v) : ((rec && rec.vendorId) || '');
+}
+
 function _vendorRefLine(rec) {
   if (!rec || (!rec.vendorId && !rec.vendorName)) return '';
-  var v = lookupVendorById(rec.vendorId) || {};
+  var v = resolveJobVendor(rec) || {};
   var name = v.vendor_name || rec.vendorName || '';
   if (!name) return '';
   var contact = _vendorContact(v) || rec.contact || '';
@@ -12671,7 +12746,7 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:11px;color:var(--gray);">Budgeted: ' + (budget ? '$'+Number(budget).toLocaleString() : '—') + '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setJobVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('type', v.type)) + '</select>' +
+          '<select onchange="setJobVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(_selVendorId(rec), vendorCategoriesForSlot('type', v.type)) + '</select>' +
           '<select onchange="setJobVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
@@ -12695,7 +12770,7 @@ function renderVendorSourcing(jobId, job, est) {
     return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
       '<div style="font-size:12px;font-weight:600;">' + cat.label + '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-        '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('logistics', cat.label)) + '</select>' +
+        '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(_selVendorId(rec), vendorCategoriesForSlot('logistics', cat.label)) + '</select>' +
         '<select onchange="setLogisticsStatus(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
         '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
         '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setLogisticsQuote(' + jobId + ',\'' + cat.key + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(quote !== '') + '">' +
@@ -12722,7 +12797,7 @@ function renderVendorSourcing(jobId, job, est) {
           ? '<div style="margin-top:5px;font-size:11.5px;color:var(--gray-dk);line-height:1.45;background:var(--cream);border-left:3px solid var(--bronze);border-radius:3px;padding:5px 8px;"><span style="color:var(--bronze);font-weight:700;">Scope:</span> ' + esc(p.note) + '</div>'
           : '') +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('type', p.type)) + '</select>' +
+          '<select onchange="setPrepVendor(' + jobId + ',' + i + ',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(_selVendorId(rec), vendorCategoriesForSlot('type', p.type)) + '</select>' +
           '<select onchange="setPrepVendorStatus(' + jobId + ',' + i + ',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setPrepVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
@@ -12754,7 +12829,7 @@ function renderVendorSourcing(jobId, job, est) {
           '</span>' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
-          '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(rec.vendorId, vendorCategoriesForSlot('disp', c.disp)) + '</select>' +
+          '<select onchange="setCollVendor(' + jobId + ',\'' + c.id + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(_selVendorId(rec), vendorCategoriesForSlot('disp', c.disp)) + '</select>' +
           '<span style="font-size:12px;color:var(--gray);">' + feeLabel + '</span>' +
           '<input type="number" value="' + esc(String(fee)) + '" min="0" onchange="setCollFee(' + jobId + ',\'' + c.id + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(fee !== '') + '">' +
         '</div>' +
