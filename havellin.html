@@ -542,7 +542,7 @@ body.field-mode #field-banner{
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 9:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 10:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4743,8 +4743,13 @@ function saveIntake() {
   // Clear intake form
   clearIntakeForm();
 
-  // Show success and navigate to Clients tab
-  showFB('i-fb','ok','Client created: ' + name + '. Find them in the Clients tab.');
+  // Show success and navigate to Clients tab — except in field mode, which has no
+  // Clients tab, so pointing at one would be telling you to go somewhere that isn't
+  // there. showPanel redirects the hop below; this just makes the words match.
+  var _fieldNow = document.body.classList.contains('field-mode');
+  showFB('i-fb','ok','Client created: ' + name + '.'
+    + (_fieldNow ? ' Opening Build Estimate — pick them from the job list to start scoring rooms.'
+                 : ' Find them in the Clients tab.'));
   setTimeout(function() {
     // Go to Clients tab (last tab)
     var tabs = document.querySelectorAll('.nb');
@@ -8176,6 +8181,15 @@ function hardDeleteJob(id) {
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 function showPanel(id, btn) {
+  // Field mode shows four tabs. Navigating to any other panel leaves you looking at a
+  // screen with no matching tab in the bottom bar and nothing highlighted — no way back
+  // except guessing. saveIntake does exactly this: it hops to Client Dashboard on an
+  // 800ms timer after creating a client, which is the phone's headline use case.
+  // Guarding here rather than at each caller covers the call sites that don't exist yet.
+  if (btn && !btn.hasAttribute('data-field') && document.body.classList.contains('field-mode')) {
+    var fieldTab = document.querySelector('.nb[data-field-default]') || document.querySelector('.nb[data-field]');
+    if (fieldTab && fieldTab !== btn) { fieldTab.click(); return; }
+  }
   document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('panel-'+id).classList.add('active');
