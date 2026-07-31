@@ -423,6 +423,69 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   .card div[style*="flex-shrink:0"]{flex-shrink:1!important;}
 }
 
+/* ══════════════════════ FIELD MODE ══════════════════════
+   Phone-shaped capture mode. Reached with ?field=1 (bookmark it to the home screen)
+   and remembered afterwards, so the icon always opens straight into it.
+
+   The governing rule: THE PHONE CAPTURES WHAT YOU CAN ONLY LEARN BY BEING IN THE
+   HOUSE; THE DESK DECIDES EVERYTHING ABOUT PRICE. So difficult access, heirs, room
+   scoring, collections, vehicles, materials and prep all stay — you cannot come back
+   for the boat. Crew sizing, discount, premium, expedite, fixed price and every
+   calculated output are hidden.
+
+   HIDDEN, NEVER REMOVED. calcAll() reads 89 distinct element ids and a display:none
+   element still answers getElementById, so the estimate computes and saves in FULL on
+   the phone — you just don't render the arithmetic. Deleting any of this would throw
+   null references through the pricing engine. Same reason the intake-derived fields
+   further down are kept in a hidden div rather than dropped.
+
+   Not inside a max-width query on purpose: field mode has to be testable in a desktop
+   browser at any width. */
+body.field-mode .nb:not([data-field]){display:none;}
+body.field-mode .nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  padding:0;border-top:1px solid var(--border);border-bottom:none;
+  box-shadow:0 -2px 10px rgba(0,0,0,.07);
+  justify-content:space-around;overflow:visible;
+}
+/* Thumb-reachable, and the label under the tab is the short data-field-label rather
+   than the desk name — "Estimate" fits a quarter of a phone, "Build Estimate" doesn't. */
+body.field-mode .nb{
+  flex:1 1 0;padding:10px 4px calc(10px + env(safe-area-inset-bottom,0px));
+  font-size:0;border-bottom:none;border-top:2px solid transparent;min-height:52px;
+}
+body.field-mode .nb::after{content:attr(data-field-label);font-size:10.5px;letter-spacing:.03em;}
+body.field-mode .nb.active{border-top-color:var(--bronze);border-bottom-color:transparent;background:var(--cream);}
+/* Clear the fixed bar so the last field on a form is never trapped under it. */
+body.field-mode .main{padding-bottom:88px;}
+
+/* Desk-only panels. Hidden, still readable by calcAll. */
+body.field-mode #est-summary-col,
+body.field-mode #est-crew-col{display:none!important;}
+/* The two-column grids collapse to one so the capture cards run full width. */
+body.field-mode #est-job-grid,
+body.field-mode #est-main-grid{grid-template-columns:1fr!important;}
+body.field-mode #est-build-col{width:100%;}
+
+/* Per-room TC / PS hours — the calculated columns. Hiding these two takes the room
+   table from eight columns to six, which is most of the way to fitting a phone before
+   the card reflow lands. Column order: scope · room · volume · complexity · special ·
+   TC · PS · media. */
+body.field-mode .rtable th:nth-child(6), body.field-mode .rtable td:nth-child(6),
+body.field-mode .rtable th:nth-child(7), body.field-mode .rtable td:nth-child(7){display:none;}
+
+/* The mode toggle, and the banner that keeps you from wondering why half the tab is
+   missing. Desk view hides both by default. */
+#field-toggle{display:none;}
+body.field-mode #field-toggle{display:inline-block;}
+#field-banner{display:none;}
+body.field-mode #field-banner{
+  display:block;background:var(--tan);border:1px solid var(--border-md);border-radius:5px;
+  padding:7px 11px;margin-bottom:.9rem;font-size:11.5px;color:var(--gray-dk);
+}
+
+@media print { body.field-mode .nav{display:none!important;} }
+
 @media print {
   /* Printed page margins: 1in top, 0.5in bottom/sides — keeps content off the paper
      edges on every page, including across page breaks. Requires the print dialog's
@@ -479,27 +542,32 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 8:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 9:51pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
+    <button id="field-toggle" onclick="setFieldMode(false)" title="Leave field mode and show all tabs" style="background:var(--bronze);border:1px solid var(--bronze);color:#fff;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Raleway,sans-serif;font-weight:600;letter-spacing:.04em;">Field · exit</button>
     <button onclick="openSettings()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:var(--tan);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Raleway,sans-serif;font-weight:600;letter-spacing:.04em;">⚙ Settings</button>
     <div class="hdr-ct" id="jct">0 jobs</div>
   </div>
 </div>
 
+<!-- data-field marks the four tabs that survive in field mode. The walkthrough needs
+     Build Estimate; a prospect calling while you're out needs Client Intake; the crew
+     needs Job Plan; and Vendors is how you call a hauler from the driveway. Everything
+     else is desk work and is hidden rather than removed, so calcAll still reads it. -->
 <div class="nav">
   <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
   <button class="nb active" onclick="showPanel('jobs',this)">Client Dashboard</button>
-  <button class="nb" onclick="showPanel('intake',this)">Client Intake</button>
-  <button class="nb" onclick="showPanel('estimate',this)">Build Estimate</button>
+  <button class="nb" data-field="1" data-field-label="Intake" onclick="showPanel('intake',this)">Client Intake</button>
+  <button class="nb" data-field="1" data-field-default="1" data-field-label="Estimate" onclick="showPanel('estimate',this)">Build Estimate</button>
   <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
   <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
-  <button class="nb" onclick="showPanel('job-plan',this)">Job Plan</button>
+  <button class="nb" data-field="1" data-field-label="Job Plan" onclick="showPanel('job-plan',this)">Job Plan</button>
   <button class="nb" onclick="showPanel('inventory',this)">Inventory</button>
   <button class="nb" onclick="showPanel('invoice',this)">Invoices</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
-  <button class="nb" onclick="showPanel('vendors',this)">Vendors</button>
+  <button class="nb" data-field="1" data-field-label="Vendors" onclick="showPanel('vendors',this)">Vendors</button>
   <button class="nb" onclick="showPanel('referrals',this)">Referral Partners</button>
 </div>
 </div><!-- /topbar -->
@@ -925,7 +993,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     </div>
   </div>
 
-  <div class="grid2" style="gap:1rem;align-items:start;">
+  <div id="field-banner">
+    <strong>Field mode — capture only.</strong> Crew sizing, discount, expedite, fixed price and
+    the calculated totals are hidden here; they're waiting for you on the desk view. Everything
+    you enter is saved in full.
+  </div>
+
+  <div class="grid2" id="est-main-grid" style="gap:1rem;align-items:start;">
     <div id="est-build-col">
       <div class="card" style="padding:0;overflow:hidden;" id="est-rooms-card">
         <div style="padding:.9rem 1.1rem .5rem;">
@@ -1061,7 +1135,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
       </div>
     </div>
 
-    <div style="position:sticky;top:calc(var(--topbar-h, 96px) + 1rem);">
+    <div id="est-summary-col" style="position:sticky;top:calc(var(--topbar-h, 96px) + 1rem);">
       <div class="card">
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
@@ -17529,6 +17603,59 @@ populateIntakeTCDropdown();
   });
 })();
 calcAll();
+
+// ─── FIELD MODE ───────────────────────────────────────────────────────────────
+// A view over the same app and the same data, not a second app — see
+// UNEARNED_REVENUE_SPEC.md's sibling discussion and the CSS block for the reasoning.
+// Nothing is removed from the DOM, so calcAll() keeps reading all 89 of the ids it
+// depends on and an estimate captured on a phone is complete when you open it at a
+// desk. Enter with ?field=1 (bookmark to the home screen); the choice is remembered.
+var FIELD_MODE_KEY = 'havellin_field_mode';
+
+function isFieldMode() {
+  return document.body.classList.contains('field-mode');
+}
+
+function setFieldMode(on) {
+  document.body.classList.toggle('field-mode', !!on);
+  try { localStorage.setItem(FIELD_MODE_KEY, on ? '1' : '0'); } catch(e) {}
+
+  // Entering field mode can strand you: the desk default is Client Dashboard, which
+  // field mode hides, so you would face an empty main area under four tabs that do not
+  // include the one marked active. Land on Build Estimate instead — not merely the
+  // first surviving tab, since the walkthrough is the common field job and starting
+  // anywhere else costs a tap on every visit.
+  //
+  // Leaving field mode needs no equivalent: all twelve tabs come back, so whatever you
+  // were on is still there. Staying put is also the behaviour you want — capture on the
+  // phone, then open the desk view on that same estimate to review it.
+  var activeBtn = document.querySelector('.nb.active');
+  if (on && activeBtn && !activeBtn.hasAttribute('data-field')) {
+    var target = document.querySelector('.nb[data-field-default]')
+              || document.querySelector('.nb[data-field]');
+    if (target) target.click();
+  }
+
+  // The sticky summary column is measured off the topbar height, and in field mode the
+  // nav leaves the topbar for the bottom of the screen. Re-measure so desk view is not
+  // left with a gap after toggling back.
+  if (typeof setTopbarHeight === 'function') setTopbarHeight();
+}
+
+(function initFieldMode(){
+  var q = '';
+  try { q = new URLSearchParams(window.location.search).get('field') || ''; } catch(e) {}
+  var stored = '';
+  try { stored = localStorage.getItem(FIELD_MODE_KEY) || ''; } catch(e) {}
+  // An explicit ?field=0 is how you get a bookmarked phone back to desk view without
+  // clearing site data, so the URL always beats the remembered value — and it has to be
+  // RECORDED, not just applied. Applying it only for this load left the stored '1' in
+  // place, so the next plain visit bounced straight back into field mode and the escape
+  // hatch looked broken.
+  var explicit = (q === '1') ? true : (q === '0' ? false : null);
+  if (explicit !== null) setFieldMode(explicit);
+  else if (stored === '1') setFieldMode(true);
+})();
 </script>
 </body>
 </html>
