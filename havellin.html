@@ -1851,9 +1851,10 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
         </select>
       </div>
       <div class="fld">
-        <label>Category <span class="lbl-hint">— or type to create</span></label>
-        <input type="text" id="v-category" list="v-cat-list">
+        <label>Category <span class="lbl-hint">— or type to create; separate several with ;</span></label>
+        <input type="text" id="v-category" list="v-cat-list" placeholder="Art Appraiser; Antiques &amp; Furniture Appraiser">
         <datalist id="v-cat-list"></datalist>
+        <div style="font-size:10.5px;color:var(--gray);margin-top:2px;">A firm that does two things is <strong>one</strong> vendor — list both trades here rather than adding a second row, so it keeps one rating, one status and one contact history.</div>
       </div>
       <div class="fld">
         <label>COI on file</label>
@@ -12500,13 +12501,43 @@ function _catSet(cats) {
   var set = {}; (cats||[]).forEach(function(c){ set[String(c).trim().toLowerCase()] = 1; });
   return set;
 }
-// Active vendors whose category is in `cats` (all active if cats is empty).
+// A vendor's categories, as a list. The directory cell holds ONE OR MORE categories
+// separated by semicolons — "Art Appraiser; Antiques & Furniture Appraiser" — because a
+// firm that does two things is one firm with one phone number, one rating and one
+// contact history, not two vendors. It used to be expressed as two rows, which meant two
+// of everything and a call logged against one being invisible on the other.
+//
+// Semicolon, not comma: 'Specialty Vendor (art handler, etc.)' contains a comma, and
+// eleven category names contain a slash, eight an ampersand. A semicolon appears in none
+// of them. Whitespace around the separator is trimmed, so "A; B" and "A;B" are the same.
+function vendorCats(v) {
+  return String((v && v.category) || '').split(';')
+    .map(function(c){ return c.trim(); })
+    .filter(Boolean);
+}
+
+// The category to file this vendor under when the display is one-per-heading. Prefers
+// whichever of its categories the caller was asking for, so a firm appearing in an
+// antiques slot reads as an antiques appraiser rather than under its first-listed trade.
+function vendorPrimaryCat(v, preferSet) {
+  var list = vendorCats(v);
+  if (preferSet) {
+    for (var i = 0; i < list.length; i++) {
+      if (preferSet[list[i].toLowerCase()] === 1) return list[i];
+    }
+  }
+  return list[0] || '';
+}
+
+// Active vendors serving ANY of `cats` (all active if cats is empty).
 // Only "Active" vendors are assignable to a job.
 function approvedVendorsInCats(cats) {
   var usable = vendorDirectory.filter(isActiveVendor);
   if (!cats || !cats.length) return usable;
   var set = _catSet(cats);
-  return usable.filter(function(v){ return set[String(v.category||'').trim().toLowerCase()] === 1; });
+  return usable.filter(function(v){
+    return vendorCats(v).some(function(c){ return set[c.toLowerCase()] === 1; });
+  });
 }
 // Directory options for a Job Plan slot: APPROVED vendors only, scoped to the
 // slot's categories, sorted by rank, with pricing shown inline. Any vendor already
@@ -12531,7 +12562,16 @@ function vendorPickerOptions(selId, cats) {
   }
   function groupOptions(list){
     var byCat = {};
-    list.forEach(function(v){ var c = v.category || v.category_group || 'Other'; (byCat[c]=byCat[c]||[]).push(v); });
+    // File each vendor under the category THIS SLOT asked for. A firm listed as
+    // "Art Appraiser; Antiques & Furniture Appraiser" shows under Antiques when you are
+    // filling an antiques slot, rather than always under whichever it happens to list
+    // first. It appears once per dropdown either way — never twice, even when the slot
+    // maps to several categories the vendor serves.
+    var prefer = _catSet(cats || []);
+    list.forEach(function(v){
+      var c = vendorPrimaryCat(v, prefer) || v.category_group || 'Other';
+      (byCat[c]=byCat[c]||[]).push(v);
+    });
     return Object.keys(byCat).sort().map(function(cat){
       // Best-performing approved vendor first; unrated fall to the bottom, then A–Z.
       var items = byCat[cat].slice().sort(function(a,b){
@@ -13104,11 +13144,11 @@ function directoryCategories(opts) {
   var set = {};
   vendorDirectory.forEach(function(v){
     var g = String(v.category_group || '').trim();
-    var c = String(v.category || '').trim();
-    if (!c) return;
     if (opts.group != null && g !== opts.group) return;
     if (opts.menu  != null && GROUP_JOB_MENU[g] !== opts.menu) return;
-    set[c] = 1;
+    // A multi-category vendor contributes every category it serves, so a trade offered
+    // only as somebody's second listing still appears in the pickers built from this.
+    vendorCats(v).forEach(function(c){ set[c] = 1; });
   });
   return Object.keys(set).sort();
 }
@@ -13233,7 +13273,9 @@ function getFilteredVendors() {
     if (!vendorMatchesQuery(v, q)) return false;
     if (ffit === '__none') { if (vendorFit(v)) return false; }
     else if (ffit && vendorFit(v) !== ffit) return false;
-    if (fc && String(v.category||'').trim() !== fc) return false;
+    // Match on ANY of the vendor's categories — filtering to "Art Appraiser" must still
+    // find a firm listed as "Art Appraiser; Antiques & Furniture Appraiser".
+    if (fc && !vendorCats(v).some(function(c){ return c === fc; })) return false;
     if (fs === '__none') { if (String(v.status||'').trim()) return false; }
     else if (fs && String(v.status||'').trim() !== fs) return false;
     if (frating === 'unrated') { if (vendorPerf(v) != null) return false; }
@@ -13337,9 +13379,9 @@ function toggleVendorCat(i) {
 function setAllVendorCats(open) {
   vendorDirectory.forEach(function(v){
     var g = String(v.category_group||'').trim() || 'Ungrouped';
-    var c = String(v.category||'').trim() || 'Uncategorized';
+    var cs = vendorCats(v); if (!cs.length) cs = ['Uncategorized'];
     vendorExpandedGroups[g] = open;
-    vendorExpandedCats[_vendorCatKey(g, c)] = open;
+    cs.forEach(function(c){ vendorExpandedCats[_vendorCatKey(g, c)] = open; });
   });
   renderVendorsTab();
 }
@@ -13378,9 +13420,13 @@ function renderVendorsTab() {
   var byGroup = {};
   rows.forEach(function(v){
     var g = String(v.category_group||'').trim() || 'Ungrouped';
-    var c = String(v.category||'').trim() || 'Uncategorized';
+    var cs = vendorCats(v); if (!cs.length) cs = ['Uncategorized'];
     var grp = byGroup[g] = byGroup[g] || {};
-    (grp[c] = grp[c] || []).push(v);
+    // Listed under EVERY category it serves. Deliberately unlike the job-plan dropdown,
+    // which shows a vendor once: this tree is how you browse for "who does art
+    // appraisal", so a firm doing two things has to be findable under both headings.
+    // One record, two places — which is the whole point of merging the rows.
+    cs.forEach(function(c){ (grp[c] = grp[c] || []).push(v); });
   });
   var groups = Object.keys(byGroup).sort(function(a,b){
     return (_vendorGroupRank(a) - _vendorGroupRank(b)) || a.localeCompare(b);
@@ -13559,7 +13605,10 @@ function vendorCardHtml(v) {
   return '<div class="card" style="margin:0;padding:0.85rem 1rem;display:flex;flex-direction:column;">' +
     '<div>' +
       '<div style="font-weight:600;font-size:14px;">' + esc(v.vendor_name||'Vendor') + '</div>' +
-      '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(v.category||'—') +
+      // Every trade the firm does, on the card, so the record reads the same wherever
+      // in the tree you reached it from. Joined with a middot rather than showing the
+      // raw semicolons.
+      '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:2px;">' + esc(vendorCats(v).join(' · ') || '—') +
         (v.category_group ? ' <span style="color:var(--gray);font-weight:400;">· ' + esc(v.category_group) + '</span>' : '') + '</div>' +
       '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">' + vendorStatusSelect(v, idAttr) + vendorRatingCompact(v) + '</div>' +
     '</div>' +

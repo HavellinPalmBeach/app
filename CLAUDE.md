@@ -407,13 +407,32 @@ the QuickBooks posting layer is deliberately NOT, pending Laura's September char
 - Verified against the real exported sheets 2026-07-29: 79 partners + 152 vendors →
   **199 contacts** (63 partner + 136 vendor), 20 skipped for no dialable phone, 2
   duplicate vendor rows, 1 conflict. No number appears in more than one source.
-- **A vendor on several rows is NOT a duplicate.** The directory carries one category
-  per row, so two rows is how a vendor that does two things is expressed — Prestige
-  Estate Services appraises antiques *and* art, Gander & White does storage *and*
-  specialty packing. Rows sharing a number and a name merge into one contact carrying
-  every category as a tag, with the role naming all of them. An earlier version kept
-  only the first row's category and called the rest a duplicate to clean up; that was
-  wrong and threw away half of what those vendors do.
+- **SUPERSEDED 2026-07-31 — a multi-trade vendor is now ONE row, categories separated by
+  `;`.** `Art Appraiser; Antiques & Furniture Appraiser`. It used to be one category per
+  row, so a firm doing two things was two rows — which meant two ratings, two statuses,
+  two contact histories, and a call logged against one being invisible on the other.
+  `category_group` stays a single value per row and is unchanged; only `category` went
+  multi-value. **Semicolon, not comma:** `Specialty Vendor (art handler, etc.)` contains
+  a comma, 11 category names contain `/` and 8 contain `&` — none contains `;` (checked
+  against all 65 names the app references). Whitespace around it is trimmed.
+  - App: `vendorCats(v)` splits, `vendorPrimaryCat(v, prefer)` picks the heading to file
+    under. A job-plan dropdown files the vendor under **the category that slot asked
+    for** and lists it **once** even when the slot maps to several of its categories; the
+    Vendors tab tree lists it under **every** category, because that is a browse view and
+    the whole point is finding it under either heading. Counts read the row array, so a
+    multi-category vendor is not double-counted.
+  - Quo: one row now yields one contact carrying every category as a tag, role joined
+    with ` / ` (`Landscaper / Pest Inspection / Treatment`).
+- **The row-merge path in `quo-sync.gs` is KEPT even so.** It still catches rows never
+  merged in the sheet and the same firm reached through a second listing. Rows sharing a
+  number and a name merge into one contact carrying every category, with the role naming
+  all of them. An early version kept only the first row's category and called the rest a
+  duplicate to clean up; that was wrong and threw away half of what those vendors do.
+- ⚠️ **Vendors are keyed by ROW INDEX in the app** (`vendorIdOf` returns `v._row`), unlike
+  the Quo sync which correctly keys on the `uid` column. So a job's saved vendor points at
+  "row 7", not at a vendor. **Merging rows must CLEAR them, never delete** — deleting
+  shifts every row below and silently repoints live job assignments. Safe to migrate now
+  only because the jobs sheet is still dummy data; fix the identity before October.
 - **Several business names on one number also merge**, under the combined name, and are
   still reported — two genuinely unrelated businesses on one line is a data problem, and
   that report is where it shows. Better is to fix the sheet: O'Hara's two rows were

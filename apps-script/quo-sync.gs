@@ -242,10 +242,18 @@ function _collectVendors() {
     // A vendor you have decided not to call does not belong in the dialer.
     if (String(r.status || '').trim().toLowerCase().indexOf('do not use') === 0) continue;
     var first = String(r.contact_first || '').trim(), lastN = String(r.contact_last || '').trim();
-    var cat = String(r.category || '').trim();
-    // Group and category both go on, giving a coarse filter (the 5 groups) and a
+    // One row can carry several trades, semicolon-separated — "Art Appraiser; Antiques
+    // & Furniture Appraiser". A firm that does two things is one firm with one number,
+    // so it is one row and one contact. Semicolon rather than comma because a category
+    // name contains a comma ('Specialty Vendor (art handler, etc.)'), eleven contain a
+    // slash and eight an ampersand; none contains a semicolon.
+    var cats = String(r.category || '').split(';')
+                 .map(function (c) { return c.trim(); })
+                 .filter(function (c) { return !!c; });
+    var cat = cats.join(' / ');   // display role, same convention as the row-merge below
+    // Group and every category go on, giving a coarse filter (the 5 groups) and a
     // precise one (42 categories) without having to pick which matters more.
-    var tags = _tags('Vendor', r.category_group, cat);
+    var tags = _tags.apply(null, ['Vendor', r.category_group].concat(cats));
     out.push({
       // The sheet carries a UID per vendor (verified populated and distinct on all
       // 152 rows), so identity comes from that rather than the row index — a cleared
@@ -408,12 +416,18 @@ function syncQuoAll(dryRun) {
         });
       }
       // Same company AND same person on one number is not a switchboard — it is one
-      // vendor listed on several rows. The directory carries one category per row, so
-      // two rows is how a vendor that does two things is expressed (Prestige Estate
-      // Services appraises both antiques and art; Gander & White does storage and
-      // specialty packing). Keeping only the first row's category would throw half of
-      // what they do on the floor, so the rows merge: every category becomes a tag,
-      // and the role names all of them.
+      // vendor listed on several rows. That used to be the ONLY way to express a vendor
+      // doing two things (Prestige Estate Services appraises both antiques and art;
+      // Gander & White does storage and specialty packing), and it cost two of
+      // everything: two ratings, two statuses, two contact histories, a call logged
+      // against one invisible on the other. The directory now carries several
+      // semicolon-separated categories in a single row instead, so this path should
+      // find less and less to do.
+      //
+      // It is kept because it still catches what it always did: rows that were never
+      // merged in the sheet, and the same firm reached through a second listing. Every
+      // category still becomes a tag and the role still names all of them — dropping
+      // the extra rows' categories would throw half of what they do on the floor.
       var labels = {};
       members.forEach(function (m) { labels[m.label] = 1; });
       if (Object.keys(labels).length === 1) {
