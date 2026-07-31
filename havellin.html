@@ -552,7 +552,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 10:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 11:33pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12517,9 +12517,16 @@ function approvedVendorsInCats(cats) {
 function vendorPickerOptions(selId, cats) {
   function optOne(v){
     var id = vendorIdOf(v);
-    var extra = v.estimate_cost || v.pricing_structure || '';
+    // Name and rating only. The pricing blurb used to be appended here too, but it is
+    // free text from the vendor sheet — "Free pickup; tax-deductible receipt (haul-away
+    // of non-qualifying may incur landfill fee)" is one option — which wrapped to four
+    // lines each on a phone and buried the actual names. It is not lost: _vendorRefLine
+    // renders directly beneath every one of these pickers and already shows pricing
+    // structure, estimate cost, minimum job, lead time and a tappable number once a
+    // vendor is chosen. This was duplication, and the option label is the one place
+    // that cannot afford it.
     var stars = vendorStars(v);
-    var label = (v.vendor_name||'Vendor') + (stars ? ' ' + '★'.repeat(stars) : '') + (extra ? ' — ' + extra : '');
+    var label = (v.vendor_name||'Vendor') + (stars ? ' ' + '★'.repeat(stars) : '');
     return '<option value="' + esc(String(id)) + '"' + (String(selId)===String(id)?' selected':'') + '>' + esc(label) + '</option>';
   }
   function groupOptions(list){
