@@ -133,6 +133,52 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   Standard $30 / Senior $35, with a named contractor's own `rate` taking precedence and the
   **founder** rate as the conservative fallback for an unresolvable concierge.
 
+## Unearned revenue prerequisites — BUILT 2026-07-30
+Full spec + line-verified findings: `UNEARNED_REVENUE_SPEC.md`. Only §10 steps 0-1 are built —
+the QuickBooks posting layer is deliberately NOT, pending Laura's September chart of accounts.
+- **The 20% expedited premium never reached the invoice.** `RUSH_PCT` was quoted, shown on the
+  client estimate, persisted on the saved estimate and inside `est.havellinTotal` — but
+  `renderInvoice` rebuilt `totalMidBasis`/`totalFinalBasis` from components and had **zero**
+  references to rush. A rush job was deposited WITH the premium and billed WITHOUT it: on $100k
+  of services the client agreed $120k and the invoices collected $100k. A third consequence hit
+  the client's own document — `overUnder` compared a rush-exclusive actual against a
+  rush-inclusive estimate, so every rush job landing exactly on budget printed *"came in under
+  estimate by $20,000 — credit applied."* Now: rate **pinned per estimate** (`est.rushPct`, the
+  way α is), amount trues up with each basis, excluded on fixed price (already in the flat fee),
+  computed **before** `coTotal` so it never lands on change orders, and shown as its own line on
+  both invoice bodies. **Don't "simplify" this back into a single total** — the pin and the
+  pre-CO ordering are each load-bearing.
+- **A negative final invoice is CORRECT and was left alone.** `_amtDueBox` already renders it as
+  a green Credit and `overUnder` already says "came in under estimate". A job running far enough
+  under estimate really did overcollect via the 75% taken by midpoint. Fixing rush reduces
+  spurious negatives; it does not remove real ones, and it shouldn't.
+- **Payments now carry a real stage.** `saveDeposit` hardcoded `stage:'deposit'`, so midpoint and
+  final money was invoiced and never captured. New `PAYMENT_STAGES`, `stagePaidTotal(job,stage)`,
+  `jobPaidTotal(job)`; `depositPaidTotal` is now an alias so no caller changed meaning.
+  `isJobFunded` still reads **deposit only** — a midpoint cheque of any size must never fund a
+  job (there's a test). The short-payment challenge stays deposit-only because it is the one
+  stage whose target the app can derive; midpoint/final targets live in `renderInvoice` and
+  duplicating that engine would just let the copies drift.
+- **`midpointInvoiceSent` was never written by anything** — initialised false at `4633`, read by
+  `defaultInvStage`. So every funded job pinned to the midpoint invoice and the final was
+  unreachable. Same dead-flag shape as Wave 1's `markDepositReceived`. Stage now advances off
+  recorded payments.
+- **One transition map, finally.** `JOB_TRANSITIONS` + `jobActivationBlockers()` +
+  `applyJobTransition()` replace the two hand-synced copies in `activateOrCycle`/`cycleStatus`.
+  `closed` now cycles to **`active`** (the button always said *Re-open*), not `new` — a mis-tap
+  used to throw a delivered job back to the start, and once recognition hangs off delivery that
+  tap would un-recognize revenue. `lost`/`closed_retained` were missing from the map and fell
+  through `|| 'new'`, silently **resurrecting a lost job as brand new**; they're terminal now.
+- **`deliveredOn`/`deliveredAt`/`deliveredBy` stamped WRITE-ONCE** on first close. Reopen/reclose
+  does not move it. This is the field revenue recognition will read; there was previously no
+  record of delivery at all (`completionDate` is the intake *target*).
+- Left alone on purpose: the `hvlId || String(jobId)` fallback at `9906` is a **court inventory**
+  export where a blank ID cell is worse than a numeric one. The spec's fail-loud rule is for the
+  GL path, which does not exist yet.
+- ⚠️ **`manual.html` needs a reconciliation pass** — §8 (payment recording is now three stages,
+  not deposit-only), §9 (Re-open resumes at Active; lost/retained are terminal), §12 (invoice
+  stage advances off recorded payments; expedited-delivery line on midpoint + final).
+
 ## Client lifecycle rebuild — Waves 1 + 2 BUILT 2026-07-30
 - **Wave 1 shipped.** Per-person PINs (`MANAGER_PINS`, `resolvePin`) — Anthony `3010`,
   Ashley `4020`; approvals now record who actually typed the PIN instead of a constant.

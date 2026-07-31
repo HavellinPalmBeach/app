@@ -479,7 +479,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 9:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.30 · 11:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1467,12 +1467,19 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      trust account), which is why it is asked for separately. -->
 <div class="modal-overlay" id="deposit-modal" style="display:none;">
   <div class="modal-box" style="width:440px;">
-    <div class="modal-title">Record Deposit</div>
+    <div class="modal-title" id="dep-modal-title">Record Deposit</div>
     <div class="modal-sub" id="dep-modal-sub">Recording the deposit is what allows work to begin on this job.</div>
+
+    <label style="margin-top:0;">Which payment is this?</label>
+    <select id="dep-stage" onchange="onDepStageChange()">
+      <option value="deposit">Deposit (50%) — starts the job</option>
+      <option value="midpoint">Midpoint (25%)</option>
+      <option value="final">Final (25%)</option>
+    </select>
 
     <div class="grid2" style="gap:10px;">
       <div>
-        <label style="margin-top:0;">Amount received</label>
+        <label>Amount received</label>
         <input type="number" id="dep-amount" min="0" step="0.01" placeholder="0.00">
       </div>
       <div>
@@ -6830,11 +6837,28 @@ function jobPayments(job) {
   return out;
 }
 
-function depositPaidTotal(job) {
+// The billing schedule, in order. `deposit` is the only one that gates anything; the
+// other two are recorded so the money is captured, not to unlock work.
+var PAYMENT_STAGES = ['deposit', 'midpoint', 'final'];
+var PAYMENT_STAGE_LABELS = { deposit: 'Deposit (50%)', midpoint: 'Midpoint (25%)', final: 'Final (25%)' };
+
+// Paid on ONE stage. Every payment record carries a stage, and until now every record
+// was written with `stage: 'deposit'` hardcoded — so midpoint and final money was
+// invoiced and then never captured anywhere. See UNEARNED_REVENUE_SPEC.md §2a.
+function stagePaidTotal(job, stage) {
   return jobPayments(job)
-    .filter(function(p){ return p.stage === 'deposit'; })
+    .filter(function(p){ return p.stage === stage; })
     .reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
 }
+
+// Everything received on the job, all stages. This is the figure that relieves the
+// unearned-revenue liability at delivery — never a stage target, which is what was
+// billed rather than what arrived.
+function jobPaidTotal(job) {
+  return jobPayments(job).reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
+}
+
+function depositPaidTotal(job) { return stagePaidTotal(job, 'deposit'); }
 
 // The gate the whole job hangs off. True when deposit payments meet the 50% target;
 // the 1% tolerance absorbs rounding between the estimate total and what a client's bank
@@ -6861,34 +6885,75 @@ function paymentMethodLabel(m) {
             stripe: 'Card / Stripe', cash: 'Cash' })[m] || m || '—';
 }
 
+// Which stage the modal should open on: the first one that is not yet satisfied. The
+// deposit is the only stage with a target the app can compute on its own, so once it is
+// funded the picker simply moves on rather than guessing at a midpoint figure.
+function _defaultPaymentStage(job) {
+  if (!isJobFunded(job)) return 'deposit';
+  if (stagePaidTotal(job, 'midpoint') <= 0) return 'midpoint';
+  return 'final';
+}
+
+function currentDepStage() {
+  var el = document.getElementById('dep-stage');
+  var v = el ? el.value : 'deposit';
+  return PAYMENT_STAGES.indexOf(v) >= 0 ? v : 'deposit';
+}
+
 function openDepositModal() {
   var job = _agrJob();
   if (!job) { showFB('agr-fb','warn','Select a job first.'); return; }
   if (!job.agrSigned) { showFB('agr-fb','warn','Record the signed agreement before the deposit.'); return; }
-  var target = depositTargetFor(job);
-  var already = depositPaidTotal(job);
-  var outstanding = Math.max(0, target - already);
-  // Prefill what is still OUTSTANDING, not the full target — a second cheque completing
-  // a part-paid deposit is the common case and should not need arithmetic in the field.
-  document.getElementById('dep-amount').value = outstanding ? outstanding : (target || '');
+  var stageEl = document.getElementById('dep-stage');
+  if (stageEl) stageEl.value = _defaultPaymentStage(job);
   document.getElementById('dep-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('dep-method').value = '';
   document.getElementById('dep-reference').value = '';
   document.getElementById('dep-payer').value = '';
   var _ev = document.getElementById('dep-evidence'); if (_ev) _ev.value = '';
   document.getElementById('dep-fb').innerHTML = '';
-  document.getElementById('dep-modal-sub').innerHTML = target
-    ? 'Deposit due on this job is <strong>' + fmt(target) + '</strong> (50% of the approved total)'
-      + (already ? ', of which <strong>' + fmt(already) + '</strong> is already recorded.' : '. ')
-      + (outstanding ? ' Outstanding: <strong>' + fmt(outstanding) + '</strong>.' : '')
-    : 'No approved estimate total found for this job, so the 50% target cannot be shown.';
+  onDepStageChange();
+  document.getElementById('deposit-modal').style.display = 'flex';
+}
 
-  // Show what has already come in, so a second entry is made in full knowledge of the
-  // first rather than duplicating it.
+// Re-points the whole modal at the selected stage. Only the deposit has a target the app
+// can derive (50% of the approved estimate); the midpoint and final amounts come off the
+// invoice the client was actually sent, which is computed from logged hours and actual
+// vendor quotes and is not reproducible here. So those stages prefill nothing and warn
+// about nothing — they are a recording surface, deliberately, not a second gate.
+function onDepStageChange() {
+  var job = _agrJob();
+  if (!job) return;
+  var stage = currentDepStage();
+  var isDep = (stage === 'deposit');
+  var target = isDep ? depositTargetFor(job) : 0;
+  var already = stagePaidTotal(job, stage);
+  var outstanding = Math.max(0, target - already);
+
+  var titleEl = document.getElementById('dep-modal-title');
+  if (titleEl) titleEl.textContent = 'Record ' + (isDep ? 'Deposit' : (stage === 'midpoint' ? 'Midpoint Payment' : 'Final Payment'));
+
+  // Prefill what is still OUTSTANDING, not the full target — a second cheque completing
+  // a part-paid deposit is the common case and should not need arithmetic in the field.
+  var amtEl = document.getElementById('dep-amount');
+  if (amtEl) amtEl.value = isDep ? (outstanding ? outstanding : (target || '')) : '';
+
+  document.getElementById('dep-modal-sub').innerHTML = isDep
+    ? (target
+        ? 'Deposit due on this job is <strong>' + fmt(target) + '</strong> (50% of the approved total)'
+          + (already ? ', of which <strong>' + fmt(already) + '</strong> is already recorded.' : '. ')
+          + (outstanding ? ' Outstanding: <strong>' + fmt(outstanding) + '</strong>.' : '')
+        : 'No approved estimate total found for this job, so the 50% target cannot be shown.')
+    : 'Enter the amount from the ' + (stage === 'midpoint' ? 'midpoint' : 'final') + ' invoice you sent. '
+      + 'Recording it does not gate anything — it captures the money so the job\'s paid total is complete.'
+      + (already ? ' <strong>' + fmt(already) + '</strong> already recorded at this stage.' : '');
+
+  // Show what has already come in AT THIS STAGE, so a second entry is made in full
+  // knowledge of the first rather than duplicating it.
   var prior = document.getElementById('dep-prior');
-  var list = jobPayments(job).filter(function(p){ return p.stage === 'deposit'; });
+  var list = jobPayments(job).filter(function(p){ return p.stage === stage; });
   prior.innerHTML = list.length
-    ? '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">Already recorded on this job:</div>'
+    ? '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">Already recorded at this stage:</div>'
       + list.map(function(p){
           return '<div style="font-size:11px;padding:4px 8px;background:var(--tan);border-radius:3px;margin-bottom:3px;">'
             + '<strong>' + fmt(p.amount) + '</strong> · ' + esc(paymentMethodLabel(p.method))
@@ -6901,7 +6966,6 @@ function openDepositModal() {
     : '';
 
   updateDepModalHints();
-  document.getElementById('deposit-modal').style.display = 'flex';
 }
 
 // Surfaces the large-deposit instrument policy at the moment of entry. A personal cheque
@@ -6941,12 +7005,15 @@ function saveDeposit() {
   if (!date)       { showFB('dep-fb','warn','Enter the date it was received.'); return; }
   if (!method)     { showFB('dep-fb','warn','Select how it was paid.'); return; }
 
-  var target = depositTargetFor(job);
-  var already = depositPaidTotal(job);
+  var stage = currentDepStage();
+  var isDep = (stage === 'deposit');
+  var target = isDep ? depositTargetFor(job) : 0;
+  var already = stagePaidTotal(job, stage);
   var afterThis = already + amount;
   // A short deposit must be visible, not silently pass as paid. The comparison is on the
   // RUNNING TOTAL, so a second cheque completing a part-paid deposit passes without a
-  // warning while a genuinely short total still raises one.
+  // warning while a genuinely short total still raises one. Only the deposit has a target
+  // the app can derive, so only the deposit can be judged short here.
   if (target && afterThis < target * 0.99 &&
       !confirm((already ? fmt(afterThis) + ' total (' + fmt(already) + ' already recorded, '
                           + fmt(amount) + ' now)' : fmt(amount))
@@ -6960,7 +7027,7 @@ function saveDeposit() {
 
   var payment = {
     id: (list.reduce(function(m,p){ return Math.max(m, p.id || 0); }, 0) + 1),
-    stage: 'deposit',
+    stage: stage,
     amount: amount,
     receivedOn: date,
     method: method,
@@ -6976,12 +7043,14 @@ function saveDeposit() {
   list.push(payment);
   delete job.deposit;      // superseded by the list; jobPayments migrated it already
 
-  // depositReceived stays in sync as the derived flag — seven places still read it,
-  // including defaultInvStage. It is now a CONSEQUENCE of the payments rather than a
-  // thing anyone sets.
-  job.depositReceived = isJobFunded(job);
-  job.depositReceivedAt = date;
-  job.depositReceivedBy = _actor(job);
+  // depositReceived stays in sync as the derived flag — seven places still read it.
+  // It is a CONSEQUENCE of the payments rather than a thing anyone sets, and only
+  // deposit-stage money moves it: a midpoint cheque must never be what funds a job.
+  if (isDep) {
+    job.depositReceived = isJobFunded(job);
+    job.depositReceivedAt = date;
+    job.depositReceivedBy = _actor(job);
+  }
 
   saveJobs(); syncJobToSheets(job);
 
@@ -6998,12 +7067,15 @@ function saveDeposit() {
     try { loadInvoice(); } catch(e) {}   // invoice stage advances off depositReceived
   }
   var funded = isJobFunded(job);
-  showFB('agr-fb', funded ? 'ok' : 'warn', fmt(amount) + ' recorded'
+  var stageWord = PAYMENT_STAGE_LABELS[stage] || stage;
+  showFB('agr-fb', (!isDep || funded) ? 'ok' : 'warn', fmt(amount) + ' recorded against ' + stageWord
     + (clearsOnReceipt ? '' : ' — uncleared until the bank confirms')
-    + (funded
-        ? '. Deposit is complete; work can begin on this job.'
-        : '. Still ' + fmt(Math.max(0, target - afterThis)) + ' short of the '
-          + fmt(target) + ' deposit — the job is not funded yet.'));
+    + (!isDep
+        ? '. Job total received is now ' + fmt(jobPaidTotal(job)) + '.'
+        : (funded
+            ? '. Deposit is complete; work can begin on this job.'
+            : '. Still ' + fmt(Math.max(0, target - afterThis)) + ' short of the '
+              + fmt(target) + ' deposit — the job is not funded yet.')));
 }
 
 // Compress and file a cheque photo, then link it to the payment. Failure is reported
@@ -7618,21 +7690,61 @@ function renderClientDashboard(jobId) {
   maybeStartJobsWatch();   // keep the dashboard live while this job is Pending Approval
 }
 
+// ─── STATUS TRANSITIONS ───────────────────────────────────────────────────────
+// ONE map, read by both status buttons. They used to carry a copy each and the copies
+// were expected to be edited in lockstep, which is a rule no one can keep.
+//
+// `closed` used to cycle back to `new`. A closed job is a delivered job, so a single
+// mis-tap on a phone threw it back to the start of the lifecycle — and once revenue
+// recognition hangs off delivery (UNEARNED_REVENUE_SPEC.md §2b) that same tap would
+// un-recognize it and re-fire the entry on the way forward. Re-open now resumes at
+// `active`, which is what the button has always been labelled.
+//
+// `lost` and `closed_retained` are deliberately absent: they are terminal, and the old
+// `|| 'new'` fallback silently resurrected them as brand-new jobs.
+var JOB_TRANSITIONS = {
+  new: 'active', pending: 'active', approved: 'active', won: 'active',
+  active: 'closed', closed: 'active'
+};
+
+function jobActivationBlockers(j) {
+  var blockers = [];
+  if (!j.agrSigned) blockers.push('Service agreement must be signed');
+  if (!j.depositReceived) blockers.push('Deposit (50%) must be received');
+  if ((j.svc === 'probate' || j.svc === 'contested_probate') && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
+  return blockers;
+}
+
+// Resolves the next status and applies it, or returns false having already told the user
+// why not. Delivery is stamped WRITE-ONCE on the first close: re-opening and re-closing a
+// job does not move the date it was actually handed over.
+function applyJobTransition(j) {
+  var next = JOB_TRANSITIONS[j.status];
+  if (!next) {
+    alert('This job is ' + (j.status === 'lost' ? 'marked Lost' : 'closed with the deposit retained')
+      + ' and cannot be re-opened from here. Start a new job if the client comes back.');
+    return false;
+  }
+  if (next === 'active') {
+    var blockers = jobActivationBlockers(j);
+    if (blockers.length > 0) {
+      alert('Cannot activate job — resolve first:\n\n' + blockers.map(function(b){ return '• ' + b; }).join('\n'));
+      return false;
+    }
+  }
+  if (next === 'closed' && !j.deliveredOn) {
+    j.deliveredOn = new Date().toISOString().split('T')[0];
+    j.deliveredAt = new Date().toISOString();
+    j.deliveredBy = _actor(j);
+  }
+  j.status = next;
+  return true;
+}
+
 function activateOrCycle(jobId) {
   var j = jobs.find(function(x){ return x.id===jobId; });
   if (!j) return;
-  var next = {new:'active',pending:'active',approved:'active',won:'active',active:'closed',closed:'new'}[j.status] || 'new';
-  if (next === 'active') {
-    var blockers = [];
-    if (!j.agrSigned) blockers.push('Service agreement must be signed');
-    if (!j.depositReceived) blockers.push('Deposit (50%) must be received');
-    if ((j.svc === 'probate' || j.svc === 'contested_probate') && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
-    if (blockers.length > 0) {
-      alert('Cannot activate job — resolve first:\n\n' + blockers.map(function(b){ return '• ' + b; }).join('\n'));
-      return;
-    }
-  }
-  j.status = next;
+  if (!applyJobTransition(j)) return;
   saveJobs(); syncJobToSheets(j);
   renderClientDashboard(jobId);
 }
@@ -7724,21 +7836,7 @@ function docEmail(jobId, docType) {
 function cycleStatus(id) {
   var j = jobs.find(function(x){ return x.id===id; });
   if (!j) return;
-  var next = {new:'active',pending:'active',approved:'active',won:'active',active:'closed',closed:'new'}[j.status] || 'new';
-
-  // Enforce hard blockers before allowing Active
-  if (next === 'active') {
-    var blockers = [];
-    if (!j.agrSigned) blockers.push('Service agreement must be signed');
-    if (!j.depositReceived) blockers.push('Deposit (50%) must be received');
-    if ((j.svc === 'probate' || j.svc === 'contested_probate') && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
-    if (blockers.length > 0) {
-      alert('Cannot activate job — the following must be resolved first:\n\n' + blockers.map(function(b){ return '• ' + b; }).join('\n'));
-      return;
-    }
-  }
-
-  j.status = next;
+  if (!applyJobTransition(j)) return;   // shared map + blockers + delivery stamp
   saveJobs(); syncJobToSheets(j); renderJobs();
 }
 
@@ -11215,10 +11313,18 @@ function toggleLogHistory() {
 // ─── FINAL INVOICE ────────────────────────────────────────────────────────────
 // Default to the earliest stage not yet handled: deposit (until the deposit is
 // received) → midpoint (until the midpoint invoice is sent) → final.
+// Which invoice to open on. This used to advance off `midpointInvoiceSent`, a field
+// initialised to false at job creation and then never written by anything — so once the
+// deposit landed, every job pinned to the midpoint invoice and the final was unreachable
+// without picking it by hand. Same dead-flag shape as the old `depositReceived`.
+//
+// The stage now advances off money actually recorded, which is the same rule the deposit
+// already followed, one stage along: midpoint paid means the next document to produce is
+// the final. `midpointInvoiceSent` is still honoured if some future path sets it.
 function defaultInvStage(job) {
   if (!job) return 'deposit';
-  if (!job.depositReceived) return 'deposit';
-  if (!job.midpointInvoiceSent) return 'midpoint';
+  if (!isJobFunded(job)) return 'deposit';
+  if (!job.midpointInvoiceSent && stagePaidTotal(job, 'midpoint') <= 0) return 'midpoint';
   return 'final';
 }
 
@@ -11360,11 +11466,28 @@ function renderInvoice() {
   // themselves. It under-bills silently, so warn — but don't block, since a genuinely
   // TC-free day (a subcontracted crew working unattended) is somebody's call, not ours.
   var _noTCHours = (stage === 'final') && !_fixed && !_feeOnly && !_noHours && actTC === 0;
+  // Expedited-delivery premium (RUSH_PCT). est.havellinTotal already carries it, so the
+  // deposit basis needs no addition — but the midpoint and final bases are rebuilt from
+  // components and were dropping it outright. A rush job was therefore quoted and
+  // deposited WITH the premium and billed WITHOUT it: on $100k of services the client
+  // agreed $120k and the invoices collected $100k, and where the job also ran under
+  // estimate the balance went negative and refunded a client who was charged correctly.
+  // The RATE is pinned to the saved estimate the way α is, so moving RUSH_PCT can never
+  // reprice a live job; the AMOUNT trues up with its basis, so the client is billed the
+  // premium on the services actually delivered. Fixed-price already has it inside the
+  // flat fee, hence the !_fixed guard. Change orders are priced when they are agreed, so
+  // the premium is computed BEFORE coTotal is added rather than levied on top of it.
+  var _rushRate      = (!_fixed && est && est.rush) ? (est.rushPct || RUSH_PCT) : 0;
+  var _midServices   = _fixed ? _fixedTotal : (estLaborNet + materials + smf + prepFee + legacyFees);
+  var _finalServices = _fixed ? _fixedTotal : (actLaborNet + materials + smf + prepFee + legacyFees);
+  var midRushAmt     = Math.round(_midServices * _rushRate);
+  var finalRushAmt   = Math.round(_finalServices * _rushRate);
+
   var totalDepositBasis = _fixed ? _fixedTotal
                         : ((est && est.havellinTotal) ? est.havellinTotal
-                          : (estLaborNet + materials + smfEst + prepFeeEst + legacyFees));
-  var totalMidBasis     = _fixed ? _fixedTotal : (estLaborNet + materials + smf + prepFee + legacyFees);
-  var totalFinalBasis   = _fixed ? (_fixedTotal + coTotal) : (actLaborNet + materials + smf + prepFee + legacyFees + coTotal);
+                          : (estLaborNet + materials + smfEst + prepFeeEst + legacyFees + ((est && est.rushAmt) || 0)));
+  var totalMidBasis     = _midServices + midRushAmt;
+  var totalFinalBasis   = _finalServices + finalRushAmt + coTotal;
 
   var depositAmt   = Math.round(0.5 * totalDepositBasis);
   var midCumTarget = Math.round(0.75 * totalMidBasis);
@@ -11438,6 +11561,7 @@ function renderInvoice() {
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (30%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
+    (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>';
@@ -11473,6 +11597,9 @@ function renderInvoice() {
   var advSmf  = (stage === 'deposit') ? smfEst : smf;
   var advPrep = (stage === 'deposit') ? prepFeeEst : prepFee;
   var advBasis = (stage === 'deposit') ? totalDepositBasis : totalMidBasis;
+  // The deposit basis is the saved estimate total, which already has the premium inside
+  // it, so read the pinned amount rather than recomputing one that would double it.
+  var advRush = (stage === 'deposit') ? ((est && est.rushAmt) || 0) : midRushAmt;
   var advanceServices =
     '<div class="ce-section-hdr">Project Summary' + (stage === 'midpoint' ? ' — Fees Trued to Actuals' : ' — Estimate Basis') + '</div>' +
     '<table class="ce-tbl"><tbody>' +
@@ -11481,6 +11608,7 @@ function renderInvoice() {
     (advSmf > 0 ? '<tr><td>Service Management Fee (15% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
     (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
     (legacyFees > 0 ? '<tr><td>GC / Site Management Fee</td><td style="text-align:right;">' + fmt(legacyFees) + '</td></tr>' : '') +
+    (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">Compressing the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">' + (stage === 'midpoint'

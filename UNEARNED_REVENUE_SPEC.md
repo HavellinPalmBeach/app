@@ -1,8 +1,13 @@
 # Unearned Revenue & QuickBooks Posting Layer — Spec
 
-**Status:** Specification only. **No code has been changed.** The QuickBooks Online AR twin is
-stubbed until the September chart-of-accounts build with Laura. This document exists so the
-design is settled before the twin goes live.
+**Status:** **Steps 0 and 1 of §10 are BUILT** (2026-07-30) — the rush-premium billing defect,
+the status-transition hazard, delivery capture, and payment capture across all three stages.
+The QuickBooks posting layer itself (§3, §5, §6 guard, §7) remains **specification only**: it is
+blocked on the September chart-of-accounts build with Laura and on the open decisions in §9, and
+per §10 a posting path must not be built against accounts that do not yet exist.
+
+What changed in the app is listed at each section. Nothing about the QuickBooks integration was
+built, and no GL write path exists.
 
 **Supersedes** the July 30 brief *"Claude Code Brief — Unearned Revenue & QBO Posting Layer"*.
 Every claim below was verified against `havellin.html` at commit `9e37f3f` (17,406 lines) —
@@ -24,17 +29,23 @@ had they been mapped by reading labels.
 
 Nine corrections follow.
 
-| # | Item | Status in the brief | Corrected |
-|---|---|---|---|
-| 1 | Rush premium dropped from midpoint + final invoices | Not mentioned | **§1a — live billing bug, blocks everything** |
-| 2 | Recognition trigger has no backing field | "flag it if they diverge" | **§2b — second blocking prerequisite** |
-| 3 | Attached Home Prep folds into SMF | Not mentioned | **§6 — decided: 4400 is standalone-only** |
-| 4 | The AR debit is the unpaid balance, not the invoiced final | "1200 AR (final balance)" | **§3 — one formula covers refunds too** |
-| 5 | `finalDue` can go negative | Not mentioned | §3 |
-| 6 | The three stages bill on three different bases | Implied "50 / 25 / 25" | §3 |
-| 7 | Hours are *not* moving to QuickBooks Time | Given as rationale for §4 | **§4 — rationale corrected, recommendation stands** |
-| 8 | `recordPayment` does not exist — the function is `saveDeposit` | Named `recordPayment` | §2a |
-| 9 | §9a and §9d are already answered | Listed as open | §9 |
+| # | Item | Status in the brief | Corrected | Built |
+|---|---|---|---|---|
+| 1 | Rush premium dropped from midpoint + final invoices | Not mentioned | **§1a — live billing bug, blocks everything** | ✅ |
+| 2 | Recognition trigger has no backing field | "flag it if they diverge" | **§2b — second blocking prerequisite** | ✅ |
+| 3 | Attached Home Prep folds into SMF | Not mentioned | **§6 — decided: 4400 is standalone-only** | n/a — needs no code |
+| 4 | The AR debit is the unpaid balance, not the invoiced final | "1200 AR (final balance)" | **§3 — one formula covers refunds too** | spec |
+| 5 | `finalDue` can go negative | Not mentioned | §3 | already correct in UI |
+| 6 | The three stages bill on three different bases | Implied "50 / 25 / 25" | §3 | spec |
+| 7 | Hours are *not* moving to QuickBooks Time | Given as rationale for §4 | **§4 — rationale corrected, recommendation stands** | n/a |
+| 8 | `recordPayment` does not exist — the function is `saveDeposit` | Named `recordPayment` | §2a | ✅ |
+| 9 | §9a and §9d are already answered | Listed as open | §9 | n/a |
+| 10 | `midpointInvoiceSent` is never set — the final invoice was unreachable | Not mentioned | **§2c** | ✅ |
+
+Item 5 needed no fix: `_amtDueBox` already renders a negative balance as a green **Credit**, and
+`overUnder < 0` already prints *"came in under estimate — credit applied."* A negative final on a
+genuinely under-running T&M job is correct output, not a defect. Fixing the rush premium reduces
+spurious negatives but does not remove real ones, and it should not.
 
 ---
 
@@ -53,10 +64,10 @@ Allowances** as contra.
 and a *posting instruction*. QuickBooks performs the accounting. No general ledger inside the
 app. The app remains the operational source of truth and the only writer to job data.
 
-### 1a. Blocking defect — the rush premium never reaches the invoice
+### 1a. Blocking defect — the rush premium never reaches the invoice — **FIXED**
 
-**This is a client-billing bug that exists today, independent of QuickBooks, and it must be
-fixed before any posting design is built on top of the invoice totals.**
+**This was a client-billing bug independent of QuickBooks, and it had to be fixed before any
+posting design could be built on top of the invoice totals.**
 
 `RUSH_PCT` is a flat 20% expedited-delivery premium on the Havellin services total
 (`3347`, `3859-3862`). It is quoted, shown as its own line on the client estimate (`5503`),
@@ -93,9 +104,24 @@ while recognition credits revenue without it, leaving a permanent unexplained ba
 on **every rush job**. No reconciliation can clear it, because the money is real and the
 revenue was never recognized.
 
-**Fix before anything else in this document.** Carry `rushAmt` onto all three bases, or store
-the agreed contract total once at approval and bill every stage against that. The second is
-preferable and is discussed in §3.
+There was a third consequence, on the client's own invoice. `overUnder` compares
+`havellinTotalDiscounted` against `est.havellinTotal` — a rush-exclusive actual against a
+rush-inclusive estimate — so **every rush job that hit its estimate exactly printed
+*"Job came in under estimate by $20,000 — credit applied"*** on the final invoice. A phantom
+credit, shown to the client, on a job that landed precisely on budget.
+
+**Fixed.** The rate is pinned per saved estimate (`est.rushPct`, the way α is pinned) so moving
+`RUSH_PCT` cannot reprice a live job; the amount trues up with each basis so the premium follows
+the services actually delivered; fixed-price is excluded because the flat fee already contains
+it; and the premium is computed *before* `coTotal` so it is never levied on change orders, which
+are priced when they are agreed. The premium now also appears as its own line on the midpoint and
+final invoice bodies, so the subtotal reconciles on the page.
+
+The worked example now bills $120,000. `overUnder` reads $0.
+
+**Not fixed, deliberately:** a job running far enough under estimate still produces a negative
+final. That is a real refund — the client overpaid through the 75% collected by midpoint — and
+the invoice already renders it as a credit. See §0 item 5.
 
 ---
 
@@ -103,7 +129,7 @@ preferable and is discussed in §3.
 
 Two, not one. Neither is optional and neither can be worked around downstream.
 
-### 2a. Payment capture covers only the deposit
+### 2a. Payment capture covers only the deposit — **FIXED**
 
 `saveDeposit` (`6931` — the brief calls this `recordPayment`, which does not exist in the file)
 hardcodes `stage: 'deposit'` on every payment record (`6963`). `jobPayments()` (`6812`) likewise
@@ -127,7 +153,18 @@ Scope:
 - Note that `isJobFunded` carries a 1% tolerance (`6848`, `paid >= target * 0.99`). A job can
   be funded while genuinely short. **Post observed amounts, never targets** — see §9b.
 
-### 2b. The recognition trigger has no backing field
+**Built as specified.** The modal opens on the first unsatisfied stage and can be re-pointed at
+any of the three. `stagePaidTotal(job, stage)` and `jobPaidTotal(job)` are the new readers;
+`depositPaidTotal` is now a thin alias so no existing caller changed meaning. `isJobFunded` still
+reads the deposit alone — a midpoint cheque of any size cannot fund a job, which is covered by a
+test. Only a deposit-stage payment writes `depositReceived` / `depositReceivedAt`.
+
+The short-payment challenge stays deposit-only: it is the one stage whose target the app can
+derive on its own. Midpoint and final amounts come off an invoice computed from logged hours and
+actual vendor quotes, which is not reproducible in the payments module, and inventing a target
+there would have meant duplicating the invoice engine and letting the copies drift.
+
+### 2b. The recognition trigger has no backing field — **FIXED**
 
 The brief recommends recognizing at job delivery and notes: *"if delivery and the final invoice
 can diverge, flag it."* They cannot diverge, because **neither event is recorded.**
@@ -147,13 +184,31 @@ var next = {new:'active',pending:'active',approved:'active',won:'active',
 cycling forward again re-fires the entry. A general ledger cannot hang off a button that
 round-trips.
 
-**Required:** a write-once `deliveredOn` record — timestamp, who, and the status it was set
-from — set by an explicit action, not by the status cycle. Both `activateOrCycle` and
-`cycleStatus` carry the transition map; per `CLAUDE.md`, **they are duplicates and both must
-change.**
+**Fixed, in three parts.**
 
-This belongs in the same work as §2a. Both are missing fields the posting layer reads, and §3
-cannot be verified without both.
+1. **The map is now one map.** `JOB_TRANSITIONS` plus `jobActivationBlockers()` and
+   `applyJobTransition()` replace the two hand-synchronised copies. `CLAUDE.md` instructed that
+   both be edited in lockstep, which is a rule nobody can keep; there is now nothing to keep.
+2. **`closed → active`, not `closed → new`.** The button has always been labelled *Re-open*, and
+   it now resumes the job instead of resetting it to the start of the lifecycle.
+3. **`deliveredOn` / `deliveredAt` / `deliveredBy` are stamped write-once** on the first close.
+   Re-opening and re-closing does not move the date the job was actually handed over — which is
+   the property recognition needs.
+
+Also fixed on the way: `lost` and `closed_retained` were absent from the map and fell through
+its `|| 'new'` default, so the status button silently **resurrected a lost job as brand new**.
+They are terminal now and say so.
+
+### 2c. `midpointInvoiceSent` is never set — **FIXED**
+
+`midpointInvoiceSent` is initialised to `false` at job creation (`4633`) and **written by
+nothing**. `defaultInvStage` read it, so once the deposit landed every job pinned to the midpoint
+invoice and the final was unreachable without selecting it by hand — the same dead-flag shape as
+the `markDepositReceived` defect from Wave 1.
+
+The stage now advances off money actually recorded, which is the rule the deposit already
+followed one stage along: midpoint paid means the next document to produce is the final. The
+flag is still honoured if any future path sets it.
 
 ---
 
@@ -422,17 +477,34 @@ codebase — do not introduce a new write path without addressing it.
 
 Forced, not preferred.
 
-| # | Step | Gate |
+| # | Step | Status |
 |---|---|---|
-| 0 | **Fix the rush premium (§1a)** | Invoice totals are wrong until this lands. Nothing downstream can be verified against them. |
-| 1 | **Generalize payment capture to all three stages (§2a) and add `deliveredOn` (§2b)** | Both are missing fields the posting layer reads. Same work item. |
-| 2 | Build the `svcKey` → GL lookup with fail-loud on unmapped types (§5) | |
-| 3 | Build the posting instruction layer against the existing `qbMatchId` stub (§3) | Needs 1. |
-| 4 | Implement the whitelist payload guard (§6) | |
-| 5 | Implement discount + rush handling with fixed-price mode respected (§7) | Needs 0. |
-| 6 | Return §9b, 9c, 9e for a call before resolving any of them in code | |
+| 0 | **Fix the rush premium (§1a)** | ✅ **Built** 2026-07-30 |
+| 1 | **Payment capture across all three stages (§2a) + `deliveredOn` (§2b) + invoice stage advance (§2c)** | ✅ **Built** 2026-07-30 |
+| 2 | Build the `svcKey` → GL lookup with fail-loud on unmapped types (§5) | Blocked — needs the QBO accounts |
+| 3 | Build the posting instruction layer against the existing `qbMatchId` stub (§3) | Blocked — needs 2 |
+| 4 | Implement the whitelist payload guard (§6) | Blocked — needs 3 |
+| 5 | Implement discount + rush posting with fixed-price respected (§7) | Blocked — needs 3 |
+| 6 | Return §9b, 9c, 9e for a call before resolving any of them in code | **Open — for Laura / Anthony** |
 
-Verify each step before moving to the next.
+Steps 2–5 are deliberately **not** built. The QBO account does not exist yet, three posting
+policy questions are unresolved, and a GL write path built against accounts nobody has created
+cannot be verified against anything. Building it early would mean the first live reconciliation
+is also its first test.
+
+### Verification of steps 0 and 1
+
+31 checks, all passing, over the extracted functions and the real invoice basis block:
+
+- **Rush (10):** the worked example bills $120,000 · under-run bills exactly its actual basis ·
+  a non-rush job is byte-identical at 50/25/25 · fixed price adds nothing on top · the premium is
+  not levied on change orders · the rate is pinned per estimate.
+- **Payments (10):** all three stages capture and total independently · `jobPaidTotal` sums
+  across stages · a $99,999 midpoint payment does **not** fund a job.
+- **Invoice stage (3):** deposit → midpoint → **final**, the last of which was unreachable.
+- **Transitions (8):** `closed → active` · delivery stamped on first close · `deliveredOn` is
+  write-once across a reopen/reclose cycle · `lost` and `closed_retained` are terminal ·
+  activation blockers still enforced.
 
 ---
 
