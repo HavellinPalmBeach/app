@@ -552,7 +552,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 11:33pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 11:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12636,8 +12636,12 @@ function resolveJobVendor(rec) {
 
 // Report every job vendor slot whose stored row number no longer matches the vendor it
 // was assigned to. Run `auditJobVendorRefs()` from the browser console after the sheet
-// has been re-sorted or had rows removed. Read-only — it names what drifted and what it
-// resolves to; opening the affected Job Plan is what repairs it.
+// has been re-sorted or had rows removed.
+//
+// NOT read-only: it resolves each drifted slot, and resolving is what repairs it — so a
+// run both reports and fixes, and `repaired: true` means the stored id has already been
+// rewritten. Re-running should come back clean. (A first version of this comment claimed
+// the opposite and would have had someone hunting for a separate repair step.)
 function auditJobVendorRefs() {
   var out = [];
   (jobs || []).forEach(function(job){
