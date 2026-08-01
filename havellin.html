@@ -375,23 +375,24 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   input,select{min-height:44px;}
   /* …and the width. This reverses an earlier call — the note on input[type=date] up
      top said the sizing caps were enough and the appearance reset was not worth the
-     change to how the picker renders. Reported from a real phone, they are not
-     enough: all three Client Intake dates and the Estimate start date render about
-     22px wider than every control beside them and hang out past the card.
-     WebKit gives date/time controls an intrinsic minimum from the shadow tree that
-     the specified width cannot go under, so `width:100%` and `max-width:100%` are
-     both silently ignored — the cause is not the flexbox automatic minimum that
-     min-width:0 releases, which is why that fix looked right and did nothing.
-     appearance:none is the only lever that drops that minimum. It restyles the field
-     box, NOT the picker: tapping still opens the native iOS date wheel. Scoped to the
-     phone block so the desk view keeps the native rendering it has always had. */
+     change to how the picker renders. Measured off a real 320px phone, they are not:
+     every select and text input on Client Intake lands on 267px and all three date
+     fields on 288px, hanging out past the card. 21px is not an arbitrary overhang —
+     it is exactly this form's 20px of horizontal padding plus its 2px of border, so
+     iOS is applying the specified width to the control's INNER value box and adding
+     the padding and border outside it. box-sizing never enters into it, which is why
+     the border-box declaration up top reads like it should already have fixed this.
+     Nor is it the flexbox automatic minimum, which is why min-width:0 looked right
+     and did nothing. appearance:none drops that whole native layout path so the field
+     sizes like the text input beside it. It restyles the field box, NOT the picker:
+     tapping still opens the native iOS date wheel, and iOS shows no placeholder in an
+     empty date field either way, so nothing is lost from the empty state. Scoped to
+     the phone block so the desk view keeps the native rendering it has always had. */
   input[type=date]{min-height:44px;line-height:normal;-webkit-appearance:none;appearance:none;box-sizing:border-box;}
-  /* The other half of that intrinsic width, and the one appearance:none does not
-     always reach: ::-webkit-date-and-time-value is the shadow node holding the value
-     text, and on iOS it carries its own width plus a centring margin that the control
-     then has to grow to fit. Pinning it to the field and left-aligning it also lines
-     the date up with the text in every other input on the form. Unknown pseudo-elements
-     are dropped by browsers that do not implement them, so this costs nothing elsewhere. */
+  /* ::-webkit-date-and-time-value is that inner value box named directly — belt and
+     braces on the rule above, and what left-aligns the date with the text in every
+     other input on the form rather than leaving it centred. Unknown pseudo-elements
+     are dropped by browsers that do not implement them, so this costs nothing else. */
   input[type=date]::-webkit-date-and-time-value{width:100%;text-align:left;margin:0;}
 
   /* Paired fields stack on a phone. Two fields side by side at 390px leaves ~170px
@@ -628,7 +629,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.01 · 11:46am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.01 · 11:51am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
