@@ -120,6 +120,12 @@ textarea{height:70px;resize:vertical;}
 .a-ok{background:var(--ok-bg);color:var(--ok-tx);border-color:var(--sage-dk);}
 .a-warn{background:var(--warn-bg);color:var(--warn-tx);border-color:var(--bronze-lt);}
 .a-err{background:var(--err-bg);color:var(--err-tx);border-color:#c04040;}
+/* .a-info was used in five places and never defined, so those alerts fell back to
+   .alert's bare `border-left:3px solid` — no tint, and a heavy near-black rule down the
+   left in currentColor. The timeline placeholder on the Estimate tab is the one you
+   meet every time you open a fresh job, and on a phone it reads as a rendering fault
+   rather than a note. The palette already carried --info-bg / --info-tx for .b-info. */
+.a-info{background:var(--info-bg);color:var(--info-tx);border-color:#5b8db8;}
 .badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:3px;}
 .b-ok{background:var(--ok-bg);color:var(--ok-tx);}
 .b-warn{background:var(--warn-bg);color:var(--warn-tx);}
@@ -298,12 +304,29 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 @media (max-width:820px) {
   /* Header + nav. 12 tabs is ~1400px of buttons — let the strip scroll sideways
      rather than wrapping into a 3-line block that eats the whole screen. */
-  .hdr{padding:.7rem .9rem;}
+  .hdr{padding:.7rem .9rem;flex-wrap:wrap;gap:.3rem .6rem;}
   .hdr-brand{font-size:17px;}
   /* The version stamp was wrapping mid-string, leaving a stranded "ET" on its own
      line. Give it its own line and keep it unbroken — it's the thing you read to
      confirm the phone isn't showing a cached build. */
   .hdr-ver{display:block;margin-left:0!important;white-space:nowrap;}
+  /* Both header columns are flex items sitting on a min-content floor they cannot go
+     under: the version stamp above is nowrap (~132px) and the control cluster is a
+     nowrap row of two buttons plus the job count (~203px). At 320px that is 44px more
+     than the header has, so the columns spilled, the document widened, and the sticky
+     header then rendered at viewport width against a wider page — the cut-off header
+     with a cream gutter beside it, and every panel below it shifted left by the scroll.
+     Three things together, in the order they take effect: release the automatic
+     minimum so the columns can actually shrink; tighten the desk-sized button padding;
+     and drop the job count, which is desk information field mode cannot even reach
+     (the Client Dashboard is not one of its four tabs). flex-wrap is the last resort
+     under all of that — at 320px the row now fits, but a narrower viewport or an
+     inflated accessibility font degrades into a second line rather than a spill.
+     margin-left:auto keeps the cluster right-aligned once it does wrap. */
+  .hdr>*{min-width:0;}
+  .hdr>*:last-child{margin-left:auto;}
+  .hdr button{padding:5px 9px!important;}
+  .hdr-ct{display:none;}
   .nav{padding:0 .5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .nav::-webkit-scrollbar{display:none;}
   .nb{flex:0 0 auto;padding:12px 13px;}
@@ -418,6 +441,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      the case that bites (the button is hidden until a job loads, so a tab-level
      overflow sweep won't catch it); let these rows wrap so the button drops below. */
   .card div{flex-wrap:wrap;}
+  /* …and the other half of that picker. Forcing the control to width:100% only helps
+     if its containing block is the card: #plan-job sits in a shrink-to-fit flex wrapper
+     that used to be sized by the select's own inline min-width:320px, so once that is
+     released the wrapper collapses to the width of the words "Select job" and the tab's
+     primary control renders about a third of the card wide. Give the wrapper the whole
+     row. Scoped by id — every other desk-sized picker in the app declares a flex grow
+     factor and already fills its row. */
+  .card div:has(> #plan-job){flex:1 1 100%;}
   /* The client estimate is a print document: a 780px page with 2.5rem padding and
      4-column header rows. On a phone that leaves ~290px of usable width for four
      columns, so the header collapses to two and the page padding comes back to
@@ -431,6 +462,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      (Estimate / Change Order / Edit Client / …) is 501px that way. Released only for
      elements that actually declare it, so nothing else changes behaviour. */
   .card div[style*="flex-shrink:0"]{flex-shrink:1!important;}
+}
+
+/* Narrow phones — an iPhone SE, or any handset in iOS Display Zoom, which reports a
+   320px viewport rather than 390 and is what the original mobile sweep never measured.
+   The brand line ("Havellin Palm Beach" at 17px Cormorant, ~148px) and a two-word
+   Settings button cannot both hold their ground in 291px of content width, and the
+   brand is the one worth keeping whole — wrapped to "Havellin Palm / Beach" it reads
+   like the layout broke. The gear alone is an understood control and keeps its title. */
+@media (max-width:400px){
+  .hdr-btn-label{display:none;}
 }
 
 /* ══════════════════════ FIELD MODE ══════════════════════
@@ -503,6 +544,12 @@ body.field-mode #field-banner{
    !important is what beats an inline style, so it has to be written this way. */
 body.field-mode #sync-status,
 body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px))!important;}
+/* Both are shrink-to-fit boxes pinned 16px off one edge, so their available width is
+   the viewport minus that one offset — a long message ("Vendor Directory URL not set
+   — add it in Settings to load vendors") then runs off the opposite edge on a 320px
+   phone. Cap them against both gutters. Set here rather than inline because showSyncBadge
+   builds the toast's styles from JS and this must not be something a caller can forget. */
+#sync-status,#sync-pending{max-width:calc(100vw - 32px);}
 
 @media print { body.field-mode .nav{display:none!important;} }
 
@@ -562,7 +609,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.07.31 · 11:58pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.01 · 9:44am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -570,7 +617,9 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
          you were already in field mode, which meant the only way IN was typing ?field=1
          into the address bar — a control nobody can find by looking at the app. -->
     <button id="field-toggle" onclick="setFieldMode(!isFieldMode())" style="background:none;border:1px solid rgba(255,255,255,0.3);color:var(--tan);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Raleway,sans-serif;font-weight:600;letter-spacing:.04em;">&#128241; Field</button>
-    <button onclick="openSettings()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:var(--tan);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Raleway,sans-serif;font-weight:600;letter-spacing:.04em;">⚙ Settings</button>
+    <!-- The word is a span so the narrow-phone rule can collapse the button to its
+         gear. Keep the title — it is the only label left at that width. -->
+    <button onclick="openSettings()" title="Settings" style="background:none;border:1px solid rgba(255,255,255,0.3);color:var(--tan);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Raleway,sans-serif;font-weight:600;letter-spacing:.04em;">⚙<span class="hdr-btn-label"> Settings</span></button>
     <div class="hdr-ct" id="jct">0 jobs</div>
   </div>
 </div>
