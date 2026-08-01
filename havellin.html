@@ -90,9 +90,9 @@ label{display:block;font-size:10px;font-weight:600;color:var(--gray);text-transf
 label:first-child{margin-top:0;}
 /* Cap the field at its container. iOS sizes a date input from its native picker
    widget, which is wider than the box it often sits in; min-width:0 releases the
-   flexbox automatic minimum so width:100% can actually win. Deliberately NOT
-   resetting -webkit-appearance — the sizing caps are enough, and the reset changes
-   how the picker renders on iOS. */
+   flexbox automatic minimum so width:100% can actually win.
+   These caps hold on desktop. They do NOT hold on iOS — see the appearance reset in
+   the phone block, and read that note before touching this line. */
 input[type=date]{width:100%;max-width:100%;min-width:0;box-sizing:border-box;}
 input,select,textarea{width:100%;padding:7px 10px;border:1px solid var(--border-md);border-radius:4px;font-family:'Raleway',sans-serif;font-size:12px;color:var(--gray-dk);background:var(--cream);outline:none;transition:border-color .15s;}
 input:focus,select:focus,textarea:focus{border-color:var(--bronze);background:var(--white);}
@@ -373,7 +373,26 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      so a date sitting beside a dropdown looks like a mistake. Pin them all to one
      height and the row reads as a row. */
   input,select{min-height:44px;}
-  input[type=date]{min-height:44px;line-height:normal;}
+  /* …and the width. This reverses an earlier call — the note on input[type=date] up
+     top said the sizing caps were enough and the appearance reset was not worth the
+     change to how the picker renders. Reported from a real phone, they are not
+     enough: all three Client Intake dates and the Estimate start date render about
+     22px wider than every control beside them and hang out past the card.
+     WebKit gives date/time controls an intrinsic minimum from the shadow tree that
+     the specified width cannot go under, so `width:100%` and `max-width:100%` are
+     both silently ignored — the cause is not the flexbox automatic minimum that
+     min-width:0 releases, which is why that fix looked right and did nothing.
+     appearance:none is the only lever that drops that minimum. It restyles the field
+     box, NOT the picker: tapping still opens the native iOS date wheel. Scoped to the
+     phone block so the desk view keeps the native rendering it has always had. */
+  input[type=date]{min-height:44px;line-height:normal;-webkit-appearance:none;appearance:none;box-sizing:border-box;}
+  /* The other half of that intrinsic width, and the one appearance:none does not
+     always reach: ::-webkit-date-and-time-value is the shadow node holding the value
+     text, and on iOS it carries its own width plus a centring margin that the control
+     then has to grow to fit. Pinning it to the field and left-aligning it also lines
+     the date up with the text in every other input on the form. Unknown pseudo-elements
+     are dropped by browsers that do not implement them, so this costs nothing elsewhere. */
+  input[type=date]::-webkit-date-and-time-value{width:100%;text-align:left;margin:0;}
 
   /* Paired fields stack on a phone. Two fields side by side at 390px leaves ~170px
      each, which wraps a label like "Hard target date (optional — closing date, court
@@ -609,7 +628,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.01 · 9:44am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.01 · 11:46am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
