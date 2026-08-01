@@ -33,6 +33,21 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 ## Docs / operations manual (`manual.html`)
 - `manual.html` is the internal operations manual. It is **hand-maintained** and does
   NOT auto-sync with the app, so it drifts whenever the app changes.
+- **`MANUAL.md` is a GENERATED copy of `manual.html`** — a plain-text read of the same
+  document for phones, printing and pasting into a thread. `manual.html` stays the
+  source. Regenerate it in the same commit as any manual edit or the two disagree, and
+  the markdown is the one people will have open. The converter lives in the session
+  scratchpad, not the repo; it is ~120 lines of DOM walking (h1-h3, p, ul/ol incl.
+  nested, tables, `.note` → blockquote, `.flow` → fenced block **stripped of inline
+  bold**, since `**` renders literally inside a fence).
+- **Printing is a real output, so the phone block in `manual.html` is scoped to
+  `screen`.** Chrome lays a page out at roughly 739px for Letter, which matches
+  `max-width:820px` — so an unscoped phone block gives every printed table the phone's
+  `display:block; overflow-x:auto; white-space:nowrap`. On screen you scroll such a
+  table; on paper the overflow is just gone. A printed table losing its right-hand
+  column silently is the worst failure mode for a document someone follows step by step.
+  Keep `break-inside:avoid` on `.note`, `.flow` and tables but NOT on lists — §5i and
+  §11 have lists longer than a page and forcing those whole strands half a sheet.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
