@@ -36,7 +36,37 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-07-31** — the unearned-revenue prerequisites. What
+- Last reconciled against the app: **2026-08-01** — a pass run before Anthony and Ashley walk a
+  fake client end to end, so the checks were aimed at the billing/job-plan path rather than at
+  what had recently been built. Four claims were wrong against the app:
+  - **§12 the invoice PIN rule was simply not the rule.** It said every stage needs manager-PIN
+    approval to unlock the PDF. `invRequiresApproval = (stage === 'final') && (_variancePct >
+    0.15)` — deposit and midpoint need nothing and render a *No approval required* badge, and
+    the final needs a PIN only outside ±15% (change orders excluded from the comparison).
+  - **§12 was missing a hard gate that has no override.** `invBlocked = _noHours` kills a final
+    invoice with no logged hours — no PIN, no PDF, no email, deliberately not routed through
+    `invRequiresApproval` because a manager cannot unlock a missing timesheet. Nothing in the
+    manual mentioned it, and it is exactly what a practice job hits. Documented, along with the
+    softer `_noTCHours` warning (crew hours logged with no concierge hours against them).
+  - **§9 Change Orders described a manager approval and a DocuSign send. Neither exists.**
+    `saveChangeOrder` takes no PIN, and the app has *zero* DocuSign references. The real flow is
+    Create → PDF → **Get Acceptance** (the client's name typed against *I Accept This Change
+    Order*). The load-bearing part now stated plainly: `renderInvoice` filters on
+    `co.clientApproved`, so an unaccepted change order is never billed at all.
+    (`co.approved` is initialised false and written by nothing — a dead flag of the same shape
+    as `midpointInvoiceSent`. Left alone; the client-acceptance path is the real one.)
+  - **§1 still sold DocuSign as live** — "Client signatures via DocuSign. Payments via Stripe
+    (planned — not yet live)", where the parenthetical reads as attaching only to Stripe. This
+    is the third time this manual has promised that integration; §3's not-yet-built note was
+    added in the 2026-07-30 pass and §1 was missed then.
+  - §17's PIN list carries the ±15% condition now, and says plainly that a Change Order needs
+    no PIN — the two questions §9 and §12 will send a reader there with.
+  - Checked and found **already correct**, so left alone: §3's three hard gates, §5c (fixed
+    price withheld on probate/contested, rush premium), §7, §8 (three ordered agreement steps,
+    the three-stage payment recorder, the cheque photo — `dep-evidence` is real), §9's status
+    table and won/re-open/delivery-stamp notes, §11, §12's Drive filing and stage auto-advance,
+    §16a, §17's attribution-not-security note.
+- Prior pass **2026-07-31** — the unearned-revenue prerequisites. What
   changed:
   - **§8** the deposit button is now a three-stage payment recorder (deposit · midpoint · final),
     with the picker defaulting to the first unsatisfied stage. States plainly that only the
@@ -196,9 +226,11 @@ the QuickBooks posting layer is deliberately NOT, pending Laura's September char
 - Left alone on purpose: the `hvlId || String(jobId)` fallback at `9906` is a **court inventory**
   export where a blank ID cell is worse than a numeric one. The spec's fail-loud rule is for the
   GL path, which does not exist yet.
-- ⚠️ **`manual.html` needs a reconciliation pass** — §8 (payment recording is now three stages,
+- ~~⚠️ **`manual.html` needs a reconciliation pass** — §8 (payment recording is now three stages,
   not deposit-only), §9 (Re-open resumes at Active; lost/retained are terminal), §12 (invoice
-  stage advances off recorded payments; expedited-delivery line on midpoint + final).
+  stage advances off recorded payments; expedited-delivery line on midpoint + final).~~
+  **Done 2026-07-31**, and re-verified in the 2026-08-01 pass. This flag outlived its fix by a
+  day and read as outstanding work; clear these when the pass lands.
 
 ## Client lifecycle rebuild — Waves 1 + 2 BUILT 2026-07-30
 - **Wave 1 shipped.** Per-person PINs (`MANAGER_PINS`, `resolvePin`) — Anthony `3010`,

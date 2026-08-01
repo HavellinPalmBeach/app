@@ -57,7 +57,7 @@
   <div class="subtitle">Operations Manual &nbsp;·&nbsp; Internal Use Only &nbsp;·&nbsp; v2026</div>
 
   <h2>1. Overview</h2>
-  <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Approvals require a manager PIN. Client signatures via DocuSign. Payments via Stripe (planned — not yet live).</p>
+  <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. Client signatures and payments are recorded <strong>by hand</strong>: DocuSign, Stripe and QuickBooks are not built (§3).</p>
   <p><strong>Navigation tabs (in order):</strong> Win / Loss · Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Referral Partners</p>
   <p class="note">The app opens on the <strong>Client Dashboard</strong> even though Win / Loss is the first tab.</p>
   <p style="font-size:12px;color:#6B6B72;">Interface notes: the header + navigation bar stay pinned to the top while you scroll; dialogs (e.g. Settings) scroll internally so their buttons are always reachable; and reference dropdowns (categories, dispositions, types, roles) are alphabetized — scale/pipeline lists (Condition, Priority, statuses, service tiers, Year) keep their meaningful order.</p>
@@ -338,7 +338,13 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   <div class="note">The retained-deposit position <strong>needs agreement language before the money is treated as earned</strong>. The app models the state; the clause is a question for counsel.</div>
   <p>The <strong>📁 Drive</strong> button opens the job's Google Drive folder directly.</p>
   <h3>Change Orders</h3>
-  <p>If scope changes after estimate approval: <strong>Create Change Order</strong> → enter description and cost impact → manager approves → sent to client for sign-off via DocuSign.</p>
+  <p>If scope changes after estimate approval, the approved estimate is not edited — a Change Order carries the difference. From the job card: <strong>Create Change Order</strong> → description, the dollar impact (<em>positive to add, negative to reduce</em>) and a reason. <strong>No manager PIN is involved</strong> — a Change Order is priced with the client, not approved internally.</p>
+  <p>The change order then appears on the job with two buttons:</p>
+  <ol>
+    <li><strong>PDF</strong> — the printable Change Order showing original total, the change, and the revised total.</li>
+    <li><strong>Get Acceptance</strong> — the client types their name against <em>✓ I Accept This Change Order</em>. Hand them the iPad, or record it yourself off their email or call. Name and date are stored on the change order.</li>
+  </ol>
+  <div class="note"><strong>An unaccepted Change Order is never billed.</strong> Acceptance is what updates the project total and what puts the change on the final invoice — the invoice counts client-approved change orders and silently ignores the rest. A change order created, printed, agreed on the phone and never marked accepted is work you will do and not charge for. Take the acceptance at the moment the client agrees.</div>
 
   <h2>10. Active Job Documentation</h2>
   <p>Accessible from Client Dashboard once a job is <strong>Active</strong>. This is the only stage where photos are captured. (Home Prep jobs are vendor-managed and generally skip room documentation.)</p>
@@ -423,7 +429,10 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   <p>Assign a directory vendor to each estimate line and logged category, set status, and record the actual quote. These actuals feed the midpoint and final invoices (15% SMF / 30% GC on the real numbers).</p>
 
   <h2>12. Invoices</h2>
-  <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders. Each stage requires its own manager-PIN approval to unlock the PDF.</p>
+  <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders.</p>
+  <div class="note"><strong>Most invoices need no PIN.</strong> Deposit and midpoint are formulaic from the approved estimate — nothing to review, so they print straight out and show <em>No approval required</em>. Only the <strong>final</strong> asks for a manager PIN, and only when it lands more than <strong>±15%</strong> away from the estimate; the banner names the percentage and the direction. Approved Change Orders are excluded from that comparison, since the client already agreed to those separately. An approval is per stage and per job — re-picking the stage asks again.</div>
+  <div class="note"><strong>The final invoice is blocked outright until hours are logged.</strong> On a time-and-materials labor job with no hours recorded there is no PIN, no PDF and no email — a manager cannot unlock it, because nobody can approve a total that has nothing behind it. The final bills labor at the hours actually worked, so the Job Plan timesheet <em>is</em> the invoice. This catches a dry run especially: skip the daily logging on a practice job and the final simply will not issue. Log the hours, then reprint. (Fixed-price and fee-only jobs are exempt — their labor total does not come from the log.)</div>
+  <p>A softer version fires when crew hours are logged with <strong>no concierge hours</strong> against them: the invoice still issues, with a warning naming the dollar value of concierge time it is probably missing. The concierge is on site for every crew hour, so that pattern nearly always means the log is incomplete rather than that nobody supervised.</p>
   <p>That describes a <strong>time-and-materials</strong> job, which is the default. On a job quoted <strong>fixed price</strong> (§5c) the flat fee <em>is</em> the Havellin services total — the stages split that number and labor is never trued to logged hours. Vendor and home-prep fees still true up to actual quotes either way, since those stay pass-through at cost.</p>
 
   <div class="note"><strong>Every invoice you print is filed to Drive automatically</strong>, into the job's <strong>Invoice</strong>
@@ -554,7 +563,8 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     keeping them separate from ordinary losses is why the two statuses exist.</p>
 
   <h2>17. Manager PINs</h2>
-  <p>Required for: estimate approval · estimate denial · agreement approval · invoice approval · deleting a client, vendor or partner.</p>
+  <p>Required for: estimate approval · estimate denial · agreement approval · <strong>a final invoice more than ±15% off the estimate</strong> (§12 — deposit and midpoint invoices need none) · deleting a client, vendor or partner.</p>
+  <p style="font-size:12px;color:#6B6B72;">Not required for a Change Order (§9) — that one is settled with the client, not internally.</p>
   <p><strong>Each person has their own PIN, and the approval is recorded under whoever typed it.</strong> Previously there was
     one shared code and the approver was stored as a fixed name, so an estimate Ashley approved was filed under Anthony's —
     worse than recording nothing, because it read as evidence. Contact management for current PINs.</p>
@@ -565,7 +575,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
 
   <div class="footer">
     Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
-    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.07 · reconciled 2026-07-31
+    Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; v2026.08 · reconciled 2026-08-01
   </div>
 
 </div>
