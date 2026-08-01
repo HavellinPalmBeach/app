@@ -14,10 +14,16 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/zen-ride-v4x393`
+- Active feature branch: `claude/field-app-formatting-9eu5ff`
+  (was `claude/zen-ride-v4x393`, deleted from the remote — don't chase it.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/zen-ride-v4x393:main`
+  `git push origin claude/field-app-formatting-9eu5ff:main`
 - Keep the feature branch in sync with main after each push.
+- **A session may be assigned its own branch, and that assignment wins over the name
+  above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
+  it means the phone keeps showing the old build no matter what was committed. Then
+  update the name above in the same commit, or the next session works off a dead ref.
+  Note that pushing the same commit to both leaves nothing for a PR to diff.
 
 ## App
 - Single-file app: `havellin.html` — all CSS, JS, HTML in one file
