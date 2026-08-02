@@ -533,6 +533,9 @@ body.field-mode .main{padding-bottom:88px;}
 /* Desk-only panels. Hidden, still readable by calcAll. */
 body.field-mode #est-summary-col,
 body.field-mode #adj-pricing,
+/* Crew sizing moved in beside the other staffing questions, so it needs hiding by
+   name now rather than inheriting it from the old Property Specialists column. */
+body.field-mode #crew-size-wrap,
 body.field-mode #est-crew-col{display:none!important;}
 /* The two-column grids collapse to one so the capture cards run full width. */
 body.field-mode #est-job-grid,
@@ -625,6 +628,22 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
    Hidden rather than deleted so the column comes back intact if a coordination fee is
    ever reinstated; body.no-smf is set once at startup off the constant. */
 body.no-smf .smf-col{display:none;}
+/* Room sections run two-up on a wide screen. Each .room-sec is an independent
+   accordion, so a plain two-column grid lets Entry & Living sit opposite Kitchen &
+   Utility instead of stacking into one long scroll. min-width:0 on the children is
+   load-bearing: each section holds a fixed-column room table inside .tbl-scroll, and
+   without it the auto floor of a 1fr track is min-content, so the table would widen
+   its own column and drag the document past the viewport. Single column below the
+   phone breakpoint, where two of these tables side by side is unreadable. */
+#room-table-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;align-items:start;}
+#room-table-wrap>*{min-width:0;}
+@media (max-width:1100px){#room-table-wrap{grid-template-columns:1fr;}}
+/* Detail the estimator does not need on this tab — the hours breakdown, the per-role
+   fee lines, the suggested fixed fee and the blended-rate bar. All of it reappears on
+   the client estimate, which is the document those numbers are actually for. Hidden and
+   NOT removed: calcAll writes into every one of these ids on each recalculation, and a
+   display:none element still answers getElementById. */
+[data-est-detail]{display:none;}
 #print-target{display:none;}
 </style>
 </head>
@@ -634,7 +653,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 4:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 4:47pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -973,6 +992,29 @@ body.no-smf .smf-col{display:none;}
           </label>
           <div id="e-tc2-hint" style="font-size:11px;color:var(--gray);margin-top:2px;"></div>
         </div>
+        <!-- Crew size sits with the other two staffing questions rather than in its
+             own column: who prepares it, whether the scope needs a second concierge,
+             and how many specialists. Desk-only — field mode hides crew sizing. -->
+        <div id="crew-size-wrap">
+        <!-- One control, not six. The engine still auto-sets this to the smallest crew
+             that lands inside the 10-day target; the reasoning that used to be printed
+             here in full lives in manual.html §5c and §5i. -->
+        <label style="margin-top:0;">Crew size</label>
+        <select id="ps-crew-size" onchange="calcAll()">
+          <option value="2">2 specialists</option>
+          <option value="3">3 specialists</option>
+          <option value="4">4 specialists</option>
+          <option value="5">5 specialists</option>
+          <option value="6">6 specialists</option>
+        </select>
+        <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
+        <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
+        <div id="ps-reason-wrap" style="display:none;margin-bottom:8px;">
+          <label style="margin-top:4px;">Reason for 3+ specialists <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <input type="text" id="ps-crew-reason" placeholder="e.g. Grand piano + oversized armoire require 3 PS simultaneously on Day 1" oninput="calcAll()">
+          <div style="font-size:10px;color:var(--gray);margin-top:2px;">Appears on client estimate to justify crew size.</div>
+        </div>
+        </div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <div id="e-svc-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
         <input type="hidden" id="e-svc" value="">
@@ -980,39 +1022,6 @@ body.no-smf .smf-col{display:none;}
         <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set in Client Intake">
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
         <div id="timeline-badge" style="margin-top:6px;"></div>
-        <div id="est-adjustments">
-        <div class="sec" style="margin-top:12px;">Adjustments</div>
-        <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to the hands-on work pool — lengthens the job, so concierge hours follow</div></div>
-          <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div class="toggle-wrap" id="adj-heirs-wrap">
-          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
-          <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <!-- Premium estate and rush sit with the other adjustments because that is what
-             they are. Both are PRICE decisions though, so they stay desk-only — field
-             mode's rule is that the phone captures what you can only learn in the house
-             and the desk decides everything about price. -->
-        <div id="adj-pricing">
-                <div class="toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Premium estate?</div>
-            <div class="toggle-sub">$185 TC / $125 PS rates — rate only, hours unchanged</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div id="prem-badge"></div>
-                <div class="toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Rush order?</div>
-            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div id="rush-badge" style="margin-bottom:4px;"></div>
-        </div>
-        </div>
         <div id="move-mgmt-card" style="display:none;">
           <div class="sec" style="margin-top:12px;">Move Management</div>
           <div id="move-dest-readout" style="font-size:11px;color:var(--gray);margin-bottom:6px;"></div>
@@ -1034,31 +1043,88 @@ body.no-smf .smf-col{display:none;}
         <div id="probate-inv-badge" style="margin-top:4px;"></div>
       </div>
       <div id="est-crew-col">
-        <div class="sec">Property Specialists</div>
-        <!-- One control, not six. The engine still auto-sets this to the smallest crew
-             that lands inside the 10-day target; the reasoning that used to be printed
-             here in full lives in manual.html §5c and §5i. -->
-        <label style="margin-top:0;">Crew size</label>
-        <select id="ps-crew-size" onchange="calcAll()">
-          <option value="2">2 specialists</option>
-          <option value="3">3 specialists</option>
-          <option value="4">4 specialists</option>
-          <option value="5">5 specialists</option>
-          <option value="6">6 specialists</option>
-        </select>
-        <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
-        <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
-        <div id="ps-reason-wrap" style="display:none;margin-bottom:8px;">
-          <label style="margin-top:4px;">Reason for 3+ specialists <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <input type="text" id="ps-crew-reason" placeholder="e.g. Grand piano + oversized armoire require 3 PS simultaneously on Day 1" oninput="calcAll()">
-          <div style="font-size:10px;color:var(--gray);margin-top:2px;">Appears on client estimate to justify crew size.</div>
+        <div id="est-adjustments">
+        <div class="sec">Adjustments</div>
+        <div class="toggle-wrap">
+          <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to the hands-on work pool — lengthens the job, so concierge hours follow</div></div>
+          <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
         </div>
+        <div class="toggle-wrap" id="adj-heirs-wrap">
+          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
+          <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <!-- Premium estate and rush sit with the other adjustments because that is what
+             they are. Both are PRICE decisions though, so they stay desk-only — field
+             mode's rule is that the phone captures what you can only learn in the house
+             and the desk decides everything about price. -->
+        <div id="adj-pricing">
+                <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Premium estate?</div>
+            <div class="toggle-sub">$185 TC / $125 PS rates — rate only, hours unchanged</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="prem-badge"></div>
+        </div>
+        </div>
+      <!-- Price levers sit directly above the totals they move, so the effect is on the
+           same screen as the cause. They used to live up in the crew column, three
+           scrolls from any number they changed. -->
+        <div class="sec" style="margin-top:12px;">Price</div>
+        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
+            <div style="font-size:11px;color:var(--gray);">Havellin labor fees only. Max 15%.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
+              style="width:64px;text-align:center;font-size:16px;font-weight:600;"
+              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
+          </div>
+        </div>
+        <div id="discount-badge" style="margin-bottom:8px;"></div>
+        <div class="sec" style="margin-top:8px;">Expedited Delivery</div>
+                <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Rush order?</div>
+            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="rush-badge" style="margin-bottom:4px;"></div>
+        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
+        <div class="toggle-wrap" id="fixed-toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Quote as a fixed price?</div>
+            <div class="toggle-sub" id="fixed-toggle-sub">Firm flat fee instead of hourly. Client sees fee and scope, not hours.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
+        </div>
+        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
+            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
+            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
+              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
+          </div>
+        </div>
+        <div id="fixed-price-warn" style="margin-top:6px;"></div>
       </div>
     </div>
   </div>
 
 
-  <div class="grid2" id="est-main-grid" style="gap:1rem;align-items:start;">
+  <!-- Single column now that the summary has moved to the bottom. The two-column
+       reading happens INSIDE this — the room sections run two-up across the full
+       page width, which is the point; nested inside a half-width column they were
+       squeezed to about 300px each. -->
+  <div id="est-main-grid" style="align-items:start;">
     <div id="est-build-col">
       <!-- Promoted out of "Moving Materials & Third-Party Vendors" and to the top of the
            build column. Vendors are the common case on a walkthrough — an estate sale
@@ -1204,51 +1270,16 @@ body.no-smf .smf-col{display:none;}
       </div>
     </div>
 
-    <div id="est-summary-col" style="position:sticky;top:calc(var(--topbar-h, 96px) + 1rem);">
-      <!-- Price levers sit directly above the totals they move, so the effect is on the
-           same screen as the cause. They used to live up in the crew column, three
-           scrolls from any number they changed. -->
-      <div class="card" style="margin-bottom:1rem;">
-        <div class="sec">Price</div>
-        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
-            <div style="font-size:11px;color:var(--gray);">Havellin labor fees only. Max 15%.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
-              style="width:64px;text-align:center;font-size:16px;font-weight:600;"
-              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
-          </div>
-        </div>
-        <div id="discount-badge" style="margin-bottom:8px;"></div>
-        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
-        <div class="toggle-wrap" id="fixed-toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Quote as a fixed price?</div>
-            <div class="toggle-sub" id="fixed-toggle-sub">Firm flat fee instead of hourly. Client sees fee and scope, not hours.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
-        </div>
-        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
-            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:4px;">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
-            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
-              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
-          </div>
-        </div>
-        <div id="fixed-price-warn" style="margin-top:6px;"></div>
-      </div>
+</div>
+
+    <!-- Sits under both columns rather than beside them: once the rooms run two-up
+       there is no column to be sticky in, and this is a read-once-at-the-end block —
+       the full breakdown is the client estimate's job, not this tab's. -->
+  <div id="est-summary-col" style="margin-top:1rem;">
       <div class="card">
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
-        <table class="stbl" id="s-hours-table">
+        <table class="stbl" id="s-hours-table" data-est-detail="1">
           <tr><td class="muted">Hands-on work pool — all roles</td><td class="num" id="s-base-ps">0.0</td></tr>
           <tr><td class="muted" style="padding-left:16px;">&#8627; Difficult-access uplift</td><td class="num" id="s-adj-ps">0.0</td></tr>
           <tr><td class="muted">Concierge on site — works the crew days</td><td class="num" id="s-tc-onsite">0.0</td></tr>
@@ -1261,9 +1292,9 @@ body.no-smf .smf-col{display:none;}
         </table>
         <div class="divider"></div>
         <table class="stbl">
-          <tr id="s-tc-fee-row"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
-          <tr id="s-ps-fee-row"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
-          <tr id="s-pkg-row"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
+          <tr id="s-tc-fee-row" data-est-detail="1"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
+          <tr id="s-ps-fee-row" data-est-detail="1"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
+          <tr id="s-pkg-row" data-est-detail="1"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
           <tr id="s-smf-row" style="display:none;"><td class="muted">Vendor coordination fee</td><td class="num" id="s-smf">$0</td></tr>
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
@@ -1274,7 +1305,7 @@ body.no-smf .smf-col{display:none;}
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" id="s-grand-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
-        <div id="fixed-price-panel" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
+        <div id="fixed-price-panel" data-est-detail="1" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
           <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Fixed-Price Project Fee Option</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;">
             <div style="font-size:12px;color:var(--gray-dk);" id="fixed-price-label">Hourly estimate + contingency buffer</div>
@@ -1282,7 +1313,7 @@ body.no-smf .smf-col{display:none;}
           </div>
           <div style="font-size:10px;color:var(--gray);margin-top:2px;" id="fixed-price-note"></div>
         </div>
-        <div id="blended-rate-badge" style="margin-top:6px;"></div>
+        <div id="blended-rate-badge" data-est-detail="1" style="margin-top:6px;"></div>
         <div id="hours-warning-badge" style="margin-top:4px;"></div>
         <div class="divider"></div>
         <div class="sec">Internal Margin Analysis <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(not on client document)</span></div>
@@ -1298,7 +1329,7 @@ body.no-smf .smf-col{display:none;}
         <div id="e-fb"></div>
       </div>
     </div>
-  </div>
+
 </div>
 
 <!-- ══════════════════════════════ ESTATE INVENTORY ══════════════════════════════ -->
@@ -8754,33 +8785,24 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
   var negBg = negotiationRoom > 0 ? 'var(--ok-bg)' : 'var(--err-bg)';
   var negColor = negotiationRoom > 0 ? 'var(--ok-tx)' : 'var(--err-tx)';
   panel.innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">' +
-    '<div style="background:var(--tan);border-radius:5px;padding:8px;text-align:center;">' +
-      '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Total Cost</div>' +
-      '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;">' + fmt(totalCost) + '</div>' +
-    '</div>' +
-    '<div style="background:var(--tan);border-radius:5px;padding:8px;text-align:center;">' +
-      '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Gross Profit</div>' +
-      '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;">' + fmt(grossProfit) + '</div>' +
-    '</div>' +
-    '<div style="background:' + marginBg + ';border-radius:5px;padding:8px;text-align:center;">' +
-      '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Margin</div>' +
-      '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;color:' + marginColor + ';">' + margin + '%</div>' +
-    '</div>' +
-    '<div style="background:var(--tan);border-radius:5px;padding:8px;text-align:center;">' +
+    // Two tiles, not five, and no per-role table. The panel is read for one decision —
+    // is there room to come down on price — and the cost / gross-profit / per-role detail
+    // was noise around it. Margin % survives as a caption because a margin panel that
+    // never states the margin is worse than none. Labels unchanged on purpose: "Price at
+    // 30% Margin" and "Above Reference" replaced "Min Viable Quote" and "Negotiation
+    // Room" in July precisely because the old pair invited the discount this exists to
+    // discourage, and the number is a reference line, not an allowance.
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
+    '<div style="background:var(--tan);border-radius:5px;padding:10px;text-align:center;">' +
       '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;" title="Price at a 30% margin. A reference line, not a target.">Price at 30% Margin</div>' +
-      '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;">' + fmt(walkAway) + '</div>' +
+      '<div style="font-size:20px;font-family:Cormorant Garamond,serif;font-weight:500;">' + fmt(walkAway) + '</div>' +
     '</div>' +
-    '<div style="background:' + negBg + ';border-radius:5px;padding:8px;text-align:center;">' +
+    '<div style="background:' + negBg + ';border-radius:5px;padding:10px;text-align:center;">' +
       '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;" title="Distance to the 30% reference line — not an allowance to discount.">Above Reference</div>' +
-      '<div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:500;color:' + negColor + ';">' + (negotiationRoom > 0 ? fmt(negotiationRoom) : 'AT / BELOW') + '</div>' +
+      '<div style="font-size:20px;font-family:Cormorant Garamond,serif;font-weight:500;color:' + negColor + ';">' + (negotiationRoom > 0 ? fmt(negotiationRoom) : 'AT / BELOW') + '</div>' +
     '</div>' +
     '</div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
-    '<tr style="background:var(--tan);"><td style="padding:5px 8px;font-weight:600;">Role</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Hours</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Cost</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Billed</td><td style="padding:5px 8px;text-align:right;font-weight:600;">Margin</td></tr>' +
-    '<tr><td style="padding:5px 8px;">Transition Concierge (@$' + tcCost + '/hr cost)</td><td style="padding:5px 8px;text-align:right;">' + tcEngagedHrs.toFixed(1) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(tcCostTotal) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(tcBilled) + '</td><td style="padding:5px 8px;text-align:right;color:var(--ok-tx);">' + tcMargin + '%</td></tr>' +
-    '<tr><td style="padding:5px 8px;">Property Specialist (@$' + psCost + '/hr blended cost)</td><td style="padding:5px 8px;text-align:right;">' + totPS.toFixed(1) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(psCostTotal) + '</td><td style="padding:5px 8px;text-align:right;">' + fmt(psBilled) + '</td><td style="padding:5px 8px;text-align:right;color:var(--ok-tx);">' + psMargin + '%</td></tr>' +
-    '</table>' +
+    '<div style="font-size:11px;color:var(--gray);margin-bottom:6px;">Margin <strong style="color:' + marginColor + ';">' + margin + '%</strong> \u00b7 cost ' + fmt(totalCost) + ' \u00b7 gross profit ' + fmt(grossProfit) + '</div>' +
     '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
     (negotiationRoom <= 0 ? '<span class="badge b-warn">At or below the 30% reference — hold firm</span>' : '') +
     '</div>' +
