@@ -629,7 +629,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.01 · 4:47pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 12:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1040,12 +1040,12 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
           <div style="flex:1;">
             <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
-            <div style="font-size:11px;color:var(--gray);">Apply to Havellin labor fees only. Max 30%.</div>
+            <div style="font-size:11px;color:var(--gray);">Apply to Havellin labor fees only. Max 15%.</div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
-            <input type="number" id="e-discount" min="0" max="30" step="1" value="0"
+            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
               style="width:64px;text-align:center;font-size:16px;font-weight:600;"
-              oninput="this.value=Math.min(30,Math.max(0,parseInt(this.value)||0));calcAll()">
+              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
             <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
           </div>
         </div>
@@ -2527,7 +2527,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
       <label style="font-size:12px;font-weight:600;white-space:nowrap;">Discount %</label>
-      <input type="number" id="dm-pct" min="1" max="30" step="1" value="5"
+      <input type="number" id="dm-pct" min="1" max="15" step="1" value="5"
         style="width:72px;text-align:center;font-size:18px;font-weight:700;"
         oninput="updateDiscountModal()">
       <span style="font-size:18px;font-weight:700;color:var(--gray-dk);">%</span>
@@ -3522,6 +3522,19 @@ function fixedPriceBuffer(svcKey) {
 // a job left hourly — which is every job by default. One flat number, one mechanism.
 var RUSH_PCT = 0.20;
 
+// Ceiling on the Preferred Client Discount, applied on BOTH routes to a discount: the
+// field on Build Estimate and the Offer Discount modal on Client Estimate. Lowered from
+// 30% to 15% on 2026-08-01.
+//
+// A constant rather than the six hard-coded 30s it replaces — the cap was written into
+// two `max` attributes, an oninput clamp, calcAll, the modal preview and the modal's
+// apply step, which is precisely the shape that gets changed in five places and missed
+// in the sixth, leaving one route quietly more generous than the other.
+//
+// Note this is a different number from the 30% margin REFERENCE in the margin panel
+// (§16), which is not a floor and is not related — do not collapse the two.
+var MAX_DISCOUNT_PCT = 15;
+
 // Fixed-price toggle: on enable, prefill the amount from the latest suggested fee
 // (computed in calcAll's fixed-price panel) unless the manager already typed one.
 // "Prefill + override" — the prefilled number is fully editable afterward.
@@ -4023,7 +4036,7 @@ function calcAll() {
   var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
 
   // Apply preferred client discount to Havellin labor fees
-  var discountPct = Math.min(30, Math.max(0, parseInt(document.getElementById('e-discount') ? document.getElementById('e-discount').value : 0) || 0));
+  var discountPct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('e-discount') ? document.getElementById('e-discount').value : 0) || 0));
   var laborBase = tcFee + psFee;  // discount applies to labor only
   var discountAmt = Math.round(laborBase * discountPct / 100);
   // Expedited delivery premium (see RUSH_PCT). Charged on the Havellin services total
@@ -6101,7 +6114,7 @@ function markEstimateSent() {
 // discountPct in fixed mode and just echoes fixedAmount.
 function discountPreview(est, pct) {
   if (!est) return { original: 0, discount: 0, revised: 0, fixed: false };
-  pct = Math.min(30, Math.max(0, pct || 0));
+  pct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, pct || 0));
   if (est.fixedPrice) {
     var baseFixed = Math.round(est.fixedAmount || est.havellinTotal || 0);
     var dFixed = Math.round(baseFixed * pct / 100);
@@ -6124,7 +6137,7 @@ function openDiscountModal() {
 
 function updateDiscountModal() {
   if (!currentEstimate) return;
-  var pct = Math.min(30, Math.max(0, parseInt(document.getElementById('dm-pct').value) || 0));
+  var pct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('dm-pct').value) || 0));
   var p = discountPreview(currentEstimate, pct);
   // Name the base explicitly — a manager approving this needs to see that on an
   // hourly job the % comes off labor, not off materials and vendor fees too.
@@ -6141,7 +6154,7 @@ function closeDiscountModal() {
 
 function applyDiscountRevision() {
   if (!currentEstimate) return;
-  var pct = Math.min(30, Math.max(1, parseInt(document.getElementById('dm-pct').value) || 0));
+  var pct = Math.min(MAX_DISCOUNT_PCT, Math.max(1, parseInt(document.getElementById('dm-pct').value) || 0));
   if (!pct) { alert('Enter a discount % between 1 and 30.'); return; }
   // Same helper the modal previews with, so what the manager saw is what gets applied.
   var p = discountPreview(currentEstimate, pct);
