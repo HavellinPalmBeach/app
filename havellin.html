@@ -644,6 +644,13 @@ body.no-smf .smf-col{display:none;}
    NOT removed: calcAll writes into every one of these ids on each recalculation, and a
    display:none element still answers getElementById. */
 [data-est-detail]{display:none;}
+/* Five Category Group cards, three across. Two rows of 3 + 2 at desk width; one column
+   on a phone, where two of these side by side leaves no room for the cost box. */
+.vgrp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.vgrp-card{border:1px solid var(--border);border-radius:5px;padding:9px 10px;background:var(--white);min-width:0;}
+.vgrp-title{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--bronze);margin-bottom:6px;}
+@media (max-width:1100px){.vgrp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:700px){.vgrp-grid{grid-template-columns:1fr;}}
 #print-target{display:none;}
 </style>
 </head>
@@ -653,7 +660,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 4:47pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 5:34pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -969,12 +976,21 @@ body.no-smf .smf-col{display:none;}
     <div class="grid2" style="align-items:start;gap:1.5rem;" id="est-job-grid">
       <div>
         <div class="sec">Job</div>
-        <label>Attach estimate to job</label>
+        <label>Job Details</label>
         <div style="display:flex;gap:6px;align-items:center;">
           <select id="e-job" onchange="loadJobIntoEstimate()" style="flex:1;"><option value="">Select job</option></select>
           <button class="btn-s" onclick="clearEstimateTab()" title="Clear all rooms and reset estimate">Clear</button>
         </div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
+        <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
+        <div id="e-svc-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
+        <input type="hidden" id="e-svc" value="">
+        <!-- "Target start date", matching what Client Intake calls the same field. It read
+             "Start date" here, which sounded like a commitment rather than the target the
+             intake form actually captured. -->
+        <label>Target start date</label>
+        <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set in Client Intake">
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
         <label>Estimate prepared by <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <select id="e-prepared-by">
           <option value="">Select TC</option>
@@ -1015,12 +1031,6 @@ body.no-smf .smf-col{display:none;}
           <div style="font-size:10px;color:var(--gray);margin-top:2px;">Appears on client estimate to justify crew size.</div>
         </div>
         </div>
-        <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
-        <div id="e-svc-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
-        <input type="hidden" id="e-svc" value="">
-        <label>Start date</label>
-        <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set in Client Intake">
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
         <div id="timeline-badge" style="margin-top:6px;"></div>
         <div id="move-mgmt-card" style="display:none;">
           <div class="sec" style="margin-top:12px;">Move Management</div>
@@ -1135,26 +1145,7 @@ body.no-smf .smf-col{display:none;}
       <div class="card" style="margin-bottom:1rem;" id="est-vendors-card">
         <div class="sec">Third-Party Vendors</div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly.</div>
-        <div class="tbl-scroll">
-          <table class="vtbl">
-            <thead><tr><th>Vendor / Service</th><th>Est. Cost</th><th class="smf-col">SMF</th><th></th></tr></thead>
-            <tbody id="vendor-body"></tbody>
-            <tfoot>
-              <tr>
-                <td><select id="new-vendor-type" style="width:100%;"><option value="">Add vendor...</option></select></td>
-                <td><input type="number" id="new-vendor-cost" placeholder="0" style="width:100%;"></td>
-                <td class="smf-col" style="color:var(--gray);" id="new-smf">$0</td>
-                <td><button class="icon-btn" onclick="addVendor()">+ Add</button></td>
-              </tr>
-              <tr style="border-top:2px solid var(--border-md);">
-                <td><strong>Totals</strong></td>
-                <td><strong id="vendor-total-cost">$0</strong></td>
-                <td class="smf-col"><strong id="vendor-total-smf">$0</strong></td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <div id="vendor-group-cards"></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;" id="est-rooms-card">
         <div style="padding:.9rem 1.1rem .5rem;">
@@ -1292,9 +1283,9 @@ body.no-smf .smf-col{display:none;}
         </table>
         <div class="divider"></div>
         <table class="stbl">
-          <tr id="s-tc-fee-row" data-est-detail="1"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
-          <tr id="s-ps-fee-row" data-est-detail="1"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
-          <tr id="s-pkg-row" data-est-detail="1"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
+          <tr id="s-tc-fee-row"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
+          <tr id="s-ps-fee-row"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
+          <tr id="s-pkg-row"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
           <tr id="s-smf-row" style="display:none;"><td class="muted">Vendor coordination fee</td><td class="num" id="s-smf">$0</td></tr>
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
@@ -1305,7 +1296,7 @@ body.no-smf .smf-col{display:none;}
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" id="s-grand-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
-        <div id="fixed-price-panel" data-est-detail="1" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
+        <div id="fixed-price-panel" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
           <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Fixed-Price Project Fee Option</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;">
             <div style="font-size:12px;color:var(--gray-dk);" id="fixed-price-label">Hourly estimate + contingency buffer</div>
@@ -3547,10 +3538,18 @@ function isTMOnly(svcKey) {
 // Contingency buffer added on top of the hourly estimate for fixed-price proposals.
 // Probate and contested probate keep a buffer figure because the panel still shows what
 // a flat quote WOULD run as an internal reference — it is never offered to the client.
+// Contingency added to the hourly basis when quoting a firm fixed fee. Flat 20% on every
+// service you can actually quote fixed — Estate Settlement was 25% and came down to match,
+// because 25% on top of an already-buffered hourly estimate reads as padding to a client
+// comparing quotes.
+//
+// Probate and contested probate keep higher numbers and are NOT an inconsistency: those
+// two are time-and-materials only (isTMOnly), so their buffer is never quoted to anyone.
+// It exists solely as the internal "what would a fixed fee have run" reference on this
+// tab, where a wider band on the riskiest work is the honest figure.
 function fixedPriceBuffer(svcKey) {
-  if (svcKey === 'contested_probate') return 0.35;
-  if (svcKey === 'probate')           return 0.25;
-  if (svcKey === 'cleanout')          return 0.25;  // Estate Settlement
+  if (svcKey === 'contested_probate') return 0.35;   // reference only — T&M billed
+  if (svcKey === 'probate')           return 0.25;   // reference only — T&M billed
   return 0.20;
 }
 
@@ -3658,7 +3657,10 @@ function applyEstimateServiceMode(isPrep) {
   // only a standalone prep engagement carries the 30% GC fee. Keep the entry-card fee
   // column header in step with what will actually be charged.
   var feeHdr = document.getElementById('prep-fee-col-hdr');
-  if (feeHdr) feeHdr.textContent = isPrep ? '30% GC Fee' : '15% Fee';
+  // Reads the rate rather than asserting one. This said "15% Fee" on a bundled job long
+  // after SMF went to zero, so the column promised a fee the app no longer charges.
+  if (feeHdr) feeHdr.textContent = isPrep ? '30% GC Fee'
+                                          : (SMF_PCT > 0 ? Math.round(SMF_PCT*100) + '% Fee' : 'No fee');
 
   // Reorder the ESTIMATE SUMMARY panel for Home Prep for Sale so it reads the way the
   // client estimate does: vendors (at cost) first, then the 30% fee, then the grand
@@ -4541,20 +4543,102 @@ function updateRefBox(havellinTotal) {
 }
 
 // ─── VENDORS ──────────────────────────────────────────────────────────────────
-document.getElementById('new-vendor-cost').addEventListener('input', function() {
-  document.getElementById('new-smf').textContent = '$' + Math.round((parseFloat(this.value)||0) * SMF_PCT).toLocaleString();
+// The single add-vendor row this fed was replaced by the five Category Group cards, so
+// the elements no longer exist. Guarded rather than deleted: an unguarded getElementById
+// here threw at load and stopped the whole script partway through, which left later
+// declarations undefined and was invisible except as things mysteriously not working.
+var _nvc = document.getElementById('new-vendor-cost');
+if (_nvc) _nvc.addEventListener('input', function() {
+  var _ns = document.getElementById('new-smf');
+  if (_ns) _ns.textContent = '$' + Math.round((parseFloat(this.value)||0) * SMF_PCT).toLocaleString();
 });
+// Legacy entry point for the old single add row. Kept and guarded — addFromVendorGroup
+// is what the group cards call.
 function addVendor() {
-  var type = document.getElementById('new-vendor-type').value;
-  if (!type) return;
-  var cost = parseFloat(document.getElementById('new-vendor-cost').value) || 0;
-  vendors.push({type:type, cost:cost});
-  document.getElementById('new-vendor-type').value = '';
-  document.getElementById('new-vendor-cost').value = '';
-  document.getElementById('new-smf').textContent = '$0';
+  var t = document.getElementById('new-vendor-type');
+  if (!t || !t.value) return;
+  var c = document.getElementById('new-vendor-cost');
+  vendors.push({type:t.value, cost: parseFloat(c && c.value) || 0});
+  t.value = ''; if (c) c.value = '';
+  var ns = document.getElementById('new-smf'); if (ns) ns.textContent = '$0';
   renderVendors(); calcAll();
 }
 function removeVendor(i) { vendors.splice(i,1); renderVendors(); calcAll(); }
+// Five cards, one per Category Group, laid out three across. The single "Add vendor..."
+// dropdown it replaces mixed twelve hand-written umbrella labels with whatever directory
+// categories those labels did not already cover, so the list was half taxonomy and half
+// leftovers and the real category names were mostly hidden behind an umbrella. These read
+// the directory and nothing else: what is in the Vendors sheet is what you can pick.
+//
+// Individual vendors are deliberately NOT selectable here. Finding an appraiser who is
+// actually free that week is office work at job kickoff, not walkthrough work — the
+// estimate says what the job needs, the Job Plan says who is doing it.
+function vendorGroupCategories(group) {
+  return directoryCategories({ group: group });
+}
+
+function renderVendorGroupCards() {
+  var wrap = document.getElementById('vendor-group-cards');
+  if (!wrap) return;
+  var anyCats = VENDOR_GROUP_CARDS.some(function(c){ return vendorGroupCategories(c.group).length; });
+  if (!anyCats) {
+    wrap.innerHTML = '<div class="alert a-warn" style="margin-top:0;">Vendor Directory not loaded \u2014 add the Vendor Directory URL in \u2699 Settings. '
+      + 'These lists are built from the directory, so there is nothing to pick until it loads.</div>';
+    return;
+  }
+  wrap.innerHTML = '<div class="vgrp-grid">' + VENDOR_GROUP_CARDS.map(function(card, gi) {
+    var cats  = vendorGroupCategories(card.group);
+    var isPrep = card.target === 'prep';
+    var lines = isPrep ? prepItems : vendors;
+    var rows = lines.map(function(v, idx) {
+      if (vendorGroupOfLine(v.type) !== card.group) return '';
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+        '<span style="flex:1;font-size:11.5px;">' + esc(v.type) + '</span>' +
+        '<input type="number" value="' + (v.cost||0) + '" min="0" style="width:82px;font-size:11.5px;" ' +
+          'oninput="' + (isPrep ? 'updatePrepCost' : 'updateVendorCost') + '(' + idx + ',this.value)">' +
+        '<button class="icon-btn del" title="Remove" onclick="' + (isPrep ? 'removePrepItem' : 'removeVendor') + '(' + idx + ')">\u2715</button>' +
+      '</div>';
+    }).join('');
+    return '<div class="vgrp-card">' +
+      '<div class="vgrp-title">' + esc(card.group) + '</div>' +
+      (rows || '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">None added</div>') +
+      '<div style="display:flex;gap:5px;margin-top:6px;">' +
+        '<select id="vgrp-cat-' + gi + '" style="flex:1;font-size:11.5px;">' +
+          '<option value="">Add\u2026</option>' +
+          cats.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('') +
+        '</select>' +
+        '<input type="number" id="vgrp-cost-' + gi + '" placeholder="0" min="0" style="width:76px;font-size:11.5px;">' +
+        '<button class="icon-btn" onclick="addFromVendorGroup(' + gi + ')">+</button>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+// Which card a saved line belongs under. Read from the directory so a category that moves
+// group in the sheet moves card here too; an unknown category (the sheet changed under a
+// saved estimate) falls to the first card rather than vanishing from the UI.
+function vendorGroupOfLine(cat) {
+  var want = String(cat || '').trim().toLowerCase();
+  for (var i = 0; i < VENDOR_GROUP_CARDS.length; i++) {
+    var g = VENDOR_GROUP_CARDS[i].group;
+    var hit = vendorGroupCategories(g).some(function(c){ return String(c).trim().toLowerCase() === want; });
+    if (hit) return g;
+  }
+  return VENDOR_GROUP_CARDS[0].group;
+}
+
+function addFromVendorGroup(gi) {
+  var card = VENDOR_GROUP_CARDS[gi];
+  var sel  = document.getElementById('vgrp-cat-' + gi);
+  var cst  = document.getElementById('vgrp-cost-' + gi);
+  if (!card || !sel || !sel.value) return;
+  var cost = parseFloat(cst && cst.value) || 0;
+  if (card.target === 'prep') { prepItems.push({type: sel.value, cost: cost}); renderPrepItems(); }
+  else                        { vendors.push({type: sel.value, cost: cost});   renderVendors();   }
+  sel.value = ''; if (cst) cst.value = '';
+  calcAll();
+}
+
 function renderVendors() {
   var html = '';
   vendors.forEach(function(v,i) {
@@ -4563,7 +4647,9 @@ function renderVendors() {
       '<td class="smf-col" id="vendor-smf-'+i+'">$' + Math.round(v.cost*SMF_PCT).toLocaleString() + '</td>' +
       '<td><button class="icon-btn del" onclick="removeVendor('+i+')">✕</button></td></tr>';
   });
-  document.getElementById('vendor-body').innerHTML = html || '<tr><td colspan="4" style="color:var(--gray);font-size:11px;padding:10px;">No vendors added</td></tr>';
+  var vb = document.getElementById('vendor-body');
+  if (vb) vb.innerHTML = html || '<tr><td colspan="4" style="color:var(--gray);font-size:11px;padding:10px;">No vendors added</td></tr>';
+  renderVendorGroupCards();
 }
 function updateVendorCost(i, val) {
   // Don't re-render the table on each keystroke — that recreates the input and steals
@@ -4576,8 +4662,12 @@ function updateVendorCost(i, val) {
 function calcVendorTotals() {
   var totalSMF = vendors.reduce(function(a,v){ return a + Math.round(v.cost*SMF_PCT); }, 0);
   var totalCost = vendors.reduce(function(a,v){ return a + v.cost; }, 0);
-  document.getElementById('vendor-total-cost').textContent = '$' + totalCost.toLocaleString();
-  document.getElementById('vendor-total-smf').textContent = '$' + totalSMF.toLocaleString();
+  // The totals row lived in the single vendor table the group cards replaced. Guarded,
+  // not deleted — this function's return value is what calcAll actually consumes.
+  var tc = document.getElementById('vendor-total-cost');
+  if (tc) tc.textContent = '$' + totalCost.toLocaleString();
+  var ts = document.getElementById('vendor-total-smf');
+  if (ts) ts.textContent = '$' + totalSMF.toLocaleString();
   return totalSMF;
 }
 function getVendorCost() { return vendors.reduce(function(a,v){ return a+v.cost; }, 0); }
@@ -4653,6 +4743,7 @@ function renderPrepItems() {
   var tbody = document.getElementById('prep-body');
   if (tbody) tbody.innerHTML = html || '<tr><td colspan="4" style="color:var(--gray);font-size:11px;padding:10px;">No items added</td></tr>';
   calcPrepTotals();
+  renderVendorGroupCards();
 }
 
 // Scope note per prep vendor line. Set the model + recalc (which persists via the
@@ -12873,11 +12964,17 @@ function _vendorRefLine(rec) {
 // `est` lists the estimate vendor-type label(s) that cover this category — if one
 // was already added on the estimate it shows under Service Vendors instead, and the
 // logistics row is suppressed to avoid duplication / double-counting.
+// `est` lists the DIRECTORY CATEGORY names that satisfy this logistics slot from the
+// estimate. They used to be the estimate's friendly labels ('Junk Removal / Hauling');
+// now that the estimate picks real categories they are real categories, or the Job Plan
+// asks again for something the estimate already covered. Donation is no longer an empty
+// list — Donation Pickup is a real category, so a donation partner planned on the
+// walkthrough now carries through instead of always reappearing on the plan.
 var LOGISTICS_CATEGORIES = [
-  {key:'donation', label:'Donation Organization', est:[]},
-  {key:'junk',     label:'Junk Removal / Hauling', est:['Junk Removal / Hauling']},
-  {key:'dumpster', label:'Dumpster Rental', est:['Dumpster Rental']},
-  {key:'cleaning', label:'Move-Out / Final Cleaning', est:['Professional Cleaning']},
+  {key:'donation', label:'Donation Organization', est:['Donation Pickup']},
+  {key:'junk',     label:'Junk Removal / Hauling', est:['Junk Removal & Dumpster']},
+  {key:'dumpster', label:'Dumpster Rental', est:['Junk Removal & Dumpster']},
+  {key:'cleaning', label:'Move-Out / Final Cleaning', est:['Deep Cleaning','Carpet Cleaning']},
   {key:'shred',    label:'Document Shredding', est:['Document Shredding']}
 ];
 
@@ -13455,6 +13552,18 @@ function _coveredCats(baseTypes) {
   });
   return set;
 }
+// Which Category Group each estimate card covers, in the order they are shown. Four
+// feed the third-party vendor list; Property Preparation feeds prepItems, because that
+// is the array the 30% GC fee on a standalone Home Prep engagement is computed from —
+// routing a painter through the vendor list instead would silently drop that fee.
+var VENDOR_GROUP_CARDS = [
+  {group:'Asset Liquidation & Valuation', target:'vendor'},
+  {group:'Disposal & Waste Management',   target:'vendor'},
+  {group:'Moving & Logistics',            target:'vendor'},
+  {group:'Professional Services',         target:'vendor'},
+  {group:'Property Preparation',          target:'prep'}
+];
+
 function _jobMenuHTML(baseTypes, menu, placeholder) {
   var covered = _coveredCats(baseTypes);
   var baseLower = {}; baseTypes.forEach(function(t){ baseLower[t.toLowerCase()] = 1; });
@@ -13471,10 +13580,12 @@ function _jobMenuHTML(baseTypes, menu, placeholder) {
 // any in-progress selection. Safe to call anytime; runs on directory load and after
 // a vendor is saved (so a brand-new category appears immediately).
 function populateJobMenus() {
+  // The estimate's vendor and prep pickers are the five group cards now, and each is
+  // built from the directory when the cards render. Kept as the entry point so every
+  // existing caller (directory load, vendor save) still refreshes the lists.
+  renderVendorGroupCards();
   var p = document.getElementById('new-prep-type');
   if (p) { var pv = p.value; p.innerHTML = _jobMenuHTML(PREP_BASE_TYPES, 'prep', 'Add item...'); if (pv) p.value = pv; }
-  var s = document.getElementById('new-vendor-type');
-  if (s) { var sv = s.value; s.innerHTML = _jobMenuHTML(SERVICE_BASE_TYPES, 'service', 'Add vendor...'); if (sv) s.value = sv; }
 }
 
 // Free-text search over the fields you'd actually recall in the field: who they are,
