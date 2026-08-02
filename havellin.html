@@ -532,6 +532,7 @@ body.field-mode .main{padding-bottom:88px;}
 
 /* Desk-only panels. Hidden, still readable by calcAll. */
 body.field-mode #est-summary-col,
+body.field-mode #adj-pricing,
 body.field-mode #est-crew-col{display:none!important;}
 /* The two-column grids collapse to one so the capture cards run full width. */
 body.field-mode #est-job-grid,
@@ -633,7 +634,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 4:01pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 4:21pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -989,6 +990,28 @@ body.no-smf .smf-col{display:none;}
           <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
           <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
         </div>
+        <!-- Premium estate and rush sit with the other adjustments because that is what
+             they are. Both are PRICE decisions though, so they stay desk-only — field
+             mode's rule is that the phone captures what you can only learn in the house
+             and the desk decides everything about price. -->
+        <div id="adj-pricing">
+                <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Premium estate?</div>
+            <div class="toggle-sub">$185 TC / $125 PS rates — rate only, hours unchanged</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="prem-badge"></div>
+                <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Rush order?</div>
+            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="rush-badge" style="margin-bottom:4px;"></div>
+        </div>
         </div>
         <div id="move-mgmt-card" style="display:none;">
           <div class="sec" style="margin-top:12px;">Move Management</div>
@@ -1012,40 +1035,17 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div id="est-crew-col">
         <div class="sec">Property Specialists</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to the smallest crew that lands the job inside the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation — but note that a bigger crew finishes sooner, so the concierge is on site fewer hours and <strong>the estimate goes down</strong>. Never carry a crew size over from another job.</div>
-        <!-- Crew SIZE only. These were six dropdowns naming an actual person or rate
-             tier per slot, which is a question nobody can answer at estimate time — you
-             do not know who is free three weeks out. Named staffing lives on the Job
-             Plan, after the job is Won, where the roster seeds from this count and every
-             row asks for a name. Ticking boxes still drives the price exactly as the
-             dropdowns did (crew size is a pricing input), and the recommendation logic
-             below is untouched. -->
-        <div id="ps-slots">
-          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
-            <input type="checkbox" id="ps-slot-0" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
-            <span>Specialist 1</span>
-          </label>
-          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
-            <input type="checkbox" id="ps-slot-1" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
-            <span>Specialist 2</span>
-          </label>
-          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
-            <input type="checkbox" id="ps-slot-2" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
-            <span>Specialist 3</span>
-          </label>
-          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
-            <input type="checkbox" id="ps-slot-3" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
-            <span>Specialist 4</span>
-          </label>
-          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
-            <input type="checkbox" id="ps-slot-4" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
-            <span>Specialist 5</span>
-          </label>
-          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
-            <input type="checkbox" id="ps-slot-5" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
-            <span>Specialist 6</span>
-          </label>
-        </div>
+        <!-- One control, not six. The engine still auto-sets this to the smallest crew
+             that lands inside the 10-day target; the reasoning that used to be printed
+             here in full lives in manual.html §5c and §5i. -->
+        <label style="margin-top:0;">Crew size</label>
+        <select id="ps-crew-size" onchange="calcAll()">
+          <option value="2">2 specialists</option>
+          <option value="3">3 specialists</option>
+          <option value="4">4 specialists</option>
+          <option value="5">5 specialists</option>
+          <option value="6">6 specialists</option>
+        </select>
         <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
         <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
         <div id="ps-reason-wrap" style="display:none;margin-bottom:8px;">
@@ -1053,58 +1053,6 @@ body.no-smf .smf-col{display:none;}
           <input type="text" id="ps-crew-reason" placeholder="e.g. Grand piano + oversized armoire require 3 PS simultaneously on Day 1" oninput="calcAll()">
           <div style="font-size:10px;color:var(--gray);margin-top:2px;">Appears on client estimate to justify crew size.</div>
         </div>
-        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
-            <div style="font-size:11px;color:var(--gray);">Apply to Havellin labor fees only. Max 15%.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
-              style="width:64px;text-align:center;font-size:16px;font-weight:600;"
-              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
-          </div>
-        </div>
-        <div id="discount-badge" style="margin-bottom:8px;"></div>
-        <div class="sec" style="margin-top:8px;">Premium Estate</div>
-        <div class="toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Premium estate?</div>
-            <div class="toggle-sub">Activates $185 TC / $125 PS rates (rate only — no change to hours)</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div id="prem-badge"></div>
-        <div class="sec" style="margin-top:8px;">Expedited Delivery</div>
-        <div class="toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Rush order?</div>
-            <div class="toggle-sub">Adds a flat 20% expedited-delivery premium to the Havellin services total — a second concierge and a larger crew working in parallel to compress the calendar. Shown as its own line; hourly rates are unchanged. Vendor costs stay at cost.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div id="rush-badge" style="margin-bottom:4px;"></div>
-        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
-        <div class="toggle-wrap" id="fixed-toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Quote as a fixed price?</div>
-            <div class="toggle-sub" id="fixed-toggle-sub">Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
-        </div>
-        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
-            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fixed-price fee below — edit as needed.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:4px;">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
-            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
-              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
-          </div>
-        </div>
-        <div id="fixed-price-warn" style="margin-top:6px;"></div>
       </div>
     </div>
   </div>
@@ -1112,6 +1060,36 @@ body.no-smf .smf-col{display:none;}
 
   <div class="grid2" id="est-main-grid" style="gap:1rem;align-items:start;">
     <div id="est-build-col">
+      <!-- Promoted out of "Moving Materials & Third-Party Vendors" and to the top of the
+           build column. Vendors are the common case on a walkthrough — an estate sale
+           company, a hauler, a general appraiser for the furniture and artwork — and they
+           were filed under a materials heading four cards down, below two sections about
+           exceptional items. Notable Collections stays what it is: specific items needing
+           a custody trail and a disposition channel, which a vendor line does not carry. -->
+      <div class="card" style="margin-bottom:1rem;" id="est-vendors-card">
+        <div class="sec">Third-Party Vendors</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly.</div>
+        <div class="tbl-scroll">
+          <table class="vtbl">
+            <thead><tr><th>Vendor / Service</th><th>Est. Cost</th><th class="smf-col">SMF</th><th></th></tr></thead>
+            <tbody id="vendor-body"></tbody>
+            <tfoot>
+              <tr>
+                <td><select id="new-vendor-type" style="width:100%;"><option value="">Add vendor...</option></select></td>
+                <td><input type="number" id="new-vendor-cost" placeholder="0" style="width:100%;"></td>
+                <td class="smf-col" style="color:var(--gray);" id="new-smf">$0</td>
+                <td><button class="icon-btn" onclick="addVendor()">+ Add</button></td>
+              </tr>
+              <tr style="border-top:2px solid var(--border-md);">
+                <td><strong>Totals</strong></td>
+                <td><strong id="vendor-total-cost">$0</strong></td>
+                <td class="smf-col"><strong id="vendor-total-smf">$0</strong></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
       <div class="card" style="padding:0;overflow:hidden;" id="est-rooms-card">
         <div style="padding:.9rem 1.1rem .5rem;">
           <div class="sec" style="margin-bottom:4px;">Room-by-Room Assessment</div>
@@ -1182,7 +1160,7 @@ body.no-smf .smf-col{display:none;}
       </div>
 
       <div class="card" style="margin-top:1rem;" id="est-materials-card">
-        <div class="sec">Moving Materials &amp; Third-Party Vendors</div>
+        <div class="sec">Moving Materials</div>
         <label>Moving materials package</label>
         <select id="e-pkg" onchange="calcAll()">
           <option value="0">None — $0</option>
@@ -1193,26 +1171,6 @@ body.no-smf .smf-col{display:none;}
           <option value="350">Downsizing Standard — $350</option>
           <option value="550">Downsizing Premium — $550</option>
         </select>
-        <div style="margin-top:12px;">
-          <table class="vtbl">
-            <thead><tr><th>Vendor / Service</th><th>Est. Cost</th><th class="smf-col">SMF</th><th></th></tr></thead>
-            <tbody id="vendor-body"></tbody>
-            <tfoot>
-              <tr>
-                <td><select id="new-vendor-type" style="width:100%;"><option value="">Add vendor...</option></select></td>
-                <td><input type="number" id="new-vendor-cost" placeholder="0" style="width:100%;"></td>
-                <td class="smf-col" style="color:var(--gray);" id="new-smf">$0</td>
-                <td><button class="icon-btn" onclick="addVendor()">+ Add</button></td>
-              </tr>
-              <tr style="border-top:2px solid var(--border-md);">
-                <td><strong>Totals</strong></td>
-                <td><strong id="vendor-total-cost">$0</strong></td>
-                <td class="smf-col"><strong id="vendor-total-smf">$0</strong></td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
       </div>
 
       <div class="card" style="margin-top:1rem;" id="est-prep-card">
@@ -1247,6 +1205,46 @@ body.no-smf .smf-col{display:none;}
     </div>
 
     <div id="est-summary-col" style="position:sticky;top:calc(var(--topbar-h, 96px) + 1rem);">
+      <!-- Price levers sit directly above the totals they move, so the effect is on the
+           same screen as the cause. They used to live up in the crew column, three
+           scrolls from any number they changed. -->
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="sec">Price</div>
+        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
+            <div style="font-size:11px;color:var(--gray);">Havellin labor fees only. Max 15%.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
+              style="width:64px;text-align:center;font-size:16px;font-weight:600;"
+              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
+          </div>
+        </div>
+        <div id="discount-badge" style="margin-bottom:8px;"></div>
+        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
+        <div class="toggle-wrap" id="fixed-toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Quote as a fixed price?</div>
+            <div class="toggle-sub" id="fixed-toggle-sub">Firm flat fee instead of hourly. Client sees fee and scope, not hours.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
+        </div>
+        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
+            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
+            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
+              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
+          </div>
+        </div>
+        <div id="fixed-price-warn" style="margin-top:6px;"></div>
+      </div>
       <div class="card">
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
@@ -1266,7 +1264,7 @@ body.no-smf .smf-col{display:none;}
           <tr id="s-tc-fee-row"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
           <tr id="s-ps-fee-row"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
           <tr id="s-pkg-row"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
-          <tr id="s-smf-row"><td class="muted">Vendor SMF (15%)</td><td class="num" id="s-smf">$0</td></tr>
+          <tr id="s-smf-row" style="display:none;"><td class="muted">Vendor coordination fee</td><td class="num" id="s-smf">$0</td></tr>
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row" id="s-havellin-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
@@ -4007,10 +4005,9 @@ function calcAll() {
   var curPS = getScheduledPSCount();
   if (!isPrep && curPS < crew.requiredPS) {
     for (var psi = 0; psi < 6; psi++) {
-      var slotEl = document.getElementById('ps-slot-' + psi);
-      if (slotEl && psi < crew.requiredPS && !slotEl.checked) {
-        slotEl.checked = true;
-      }
+      var _crewSel = document.getElementById('ps-crew-size');
+      if (_crewSel) _crewSel.value = String(Math.min(6, Math.max(2, crew.requiredPS)));
+      break;
     }
     crewDays = Math.round(basePSHrs / (8 * crew.requiredPS) * 10) / 10;
   }
@@ -4142,6 +4139,11 @@ function calcAll() {
   document.getElementById('s-ps-fee').textContent = '$' + psFee.toLocaleString();
   document.getElementById('s-pkg').textContent = '$' + pkgCost.toLocaleString();
   document.getElementById('s-smf').textContent = '$' + smf.toLocaleString();
+  // Hidden whenever no coordination fee is charged — which since 2026-08-02 is every job
+  // except standalone Home Prep. A row reading "Vendor SMF (15%) $0" on a quote that
+  // charges no such fee is worse than no row at all.
+  var sSmfRow = document.getElementById('s-smf-row');
+  if (sSmfRow) sSmfRow.style.display = smf > 0 ? '' : 'none';
   var sPrepFeeRow = document.getElementById('s-prep-fee-row');
   var sPrepCostRow = document.getElementById('s-prep-cost-row');
   if (sPrepFeeRow) { sPrepFeeRow.style.display = prepEnabled && prepFee > 0 ? '' : 'none'; document.getElementById('s-prep-fee').textContent = '$'+prepFee.toLocaleString(); }
@@ -4341,16 +4343,12 @@ function calcAll() {
       effMsg = crewSize + ' PS assigned — ' + dailyHrsPerPS + ' hrs/day per specialist. Consider adding a PS to reduce individual workload.';
     } else {
       effClass = 'a-ok';
-      effMsg = crewSize + ' PS + the concierge on site — ' + psHrsPerPerson + ' hrs each over ' + effectiveDays
-        + ' working day' + (effectiveDays !== 1 ? 's' : '') + ' (' + dailyHrsPerPS + ' hrs/day per specialist). '
-        + 'The concierge is on site for every one of those hours and works alongside the crew at '
-        + _alphaPct + '% production, which is why ' + workPool.toFixed(1) + ' hrs of hands-on work bills as '
-        + totPS.toFixed(1) + ' PS hrs — the rest moves to the concierge line, not billed twice.'
-        + (colOnsiteTC > 0
-            ? ' A further ' + colOnsiteTC.toFixed(1) + ' hrs of concierge presence covers the specialist visits '
-              + '(appraisers, dealers, FFL) — fixed time no crew size absorbs, counted against the day target.'
-            : '')
-        + ' Adding a specialist shortens the job and lowers the estimate.';
+      // Numbers, not a lecture. The working-supervisor model this used to explain in
+      // full is documented in manual.html §5i — the estimator needs the figures, not the
+      // derivation, and the derivation was six lines on every recalculation.
+      effMsg = crewSize + ' PS \u00b7 ' + psHrsPerPerson + ' hrs each over ' + effectiveDays
+        + ' day' + (effectiveDays !== 1 ? 's' : '') + ' (' + dailyHrsPerPS + ' hrs/day)'
+        + (colOnsiteTC > 0 ? ' \u00b7 +' + colOnsiteTC.toFixed(1) + ' hrs concierge at specialist visits' : '');
     }
     // When this estimate is pinned to a production rate that differs from the current
     // Settings value, say so — otherwise its hours look inexplicably different from a
@@ -5151,10 +5149,8 @@ function applyOpenedEstimate(jobId, job, status) {
   document.getElementById('e-prem').checked = job.premium || false;
   var _rshO = document.getElementById('e-rush'); if (_rshO) _rshO.checked = false;
   // Reset PS slots
-  for (var si = 0; si <= 5; si++) {
-    var slotEl = document.getElementById('ps-slot-' + si);
-    if (slotEl) slotEl.checked = (si < 2);
-  }
+  var _crewReset = document.getElementById('ps-crew-size');
+  if (_crewReset) _crewReset.value = '2';
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
@@ -5179,10 +5175,8 @@ function clearEstimateTab() {
   var _fxAN = document.getElementById('e-fixed-amount'); if (_fxAN) _fxAN.value = '';
   var _rshN = document.getElementById('e-rush'); if (_rshN) _rshN.checked = false;
   var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
-  for (var si = 0; si <= 5; si++) {
-    var slotEl = document.getElementById('ps-slot-' + si);
-    if (slotEl) slotEl.checked = (si < 2);
-  }
+  var _crewReset = document.getElementById('ps-crew-size');
+  if (_crewReset) _crewReset.value = '2';
   clearAllRooms();
   collectionsData = [];
   renderCollections();
@@ -5365,10 +5359,8 @@ function resetEstimate() {
   var prepFields = document.getElementById('prep-fields'); if(prepFields) prepFields.style.display='none';
   var prepNote = document.getElementById('prep-note'); if(prepNote) prepNote.style.display='none';
   // Reset PS slots to defaults
-  for (var si = 0; si <= 5; si++) {
-    var slotEl = document.getElementById('ps-slot-' + si);
-    if (slotEl) slotEl.checked = (si < 2);
-  }
+  var _crewReset = document.getElementById('ps-crew-size');
+  if (_crewReset) _crewReset.value = '2';
   vendors=[]; renderVendors(); calcAll();
 }
 
@@ -6781,11 +6773,9 @@ function restoreEstimateToUI(est) {
     // Count, not identity. An estimate saved before the checkboxes lists named people;
     // all that survives the reopen is how many were scheduled, which is the only part
     // that was ever a pricing input.
-    var _savedPS = est.psSlots.length;
-    for (var _psi = 0; _psi <= 5; _psi++) {
-      var _psEl = document.getElementById('ps-slot-' + _psi);
-      if (_psEl) _psEl.checked = (_psi < _savedPS);
-    }
+    var _savedPS = Math.min(6, Math.max(2, est.psSlots.length || 2));
+    var _crewEl = document.getElementById('ps-crew-size');
+    if (_crewEl) _crewEl.value = String(_savedPS);
   }
 
   // Restore crew reason
@@ -16943,19 +16933,21 @@ function getPSSlots() {
   // saved before this change still carry real names in `type`. What changed is that a NEW
   // estimate only ever records the unnamed standard-contractor placeholder: it states how
   // MANY specialists, never which, so every seeded Job Plan row asks for a name.
+  var n = getScheduledPSCount();
   var slots = [];
-  for (var i = 0; i <= 5; i++) {
-    var el = document.getElementById('ps-slot-' + i);
-    if (el && el.checked) {
-      slots.push({slot: i+1, type: 'contractor_standard',
-                  costRate: getPSCostRate('contractor_standard'), label: 'contractor_standard'});
-    }
+  for (var i = 0; i < n; i++) {
+    slots.push({slot: i+1, type: 'contractor_standard',
+                costRate: getPSCostRate('contractor_standard'), label: 'contractor_standard'});
   }
   return slots;
 }
 
 function getScheduledPSCount() {
-  return getPSSlots().length;
+  // Reads the control directly. getPSSlots() derives its rows FROM this number, so this
+  // must never call back into it.
+  var el = document.getElementById('ps-crew-size');
+  var n = el ? parseInt(el.value, 10) : 2;
+  return Math.min(6, Math.max(2, isNaN(n) ? 2 : n));
 }
 
 function getBlendedPSCost() {
