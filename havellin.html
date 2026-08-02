@@ -660,7 +660,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 5:34pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 5:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4592,23 +4592,31 @@ function renderVendorGroupCards() {
     var lines = isPrep ? prepItems : vendors;
     var rows = lines.map(function(v, idx) {
       if (vendorGroupOfLine(v.type) !== card.group) return '';
-      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
-        '<span style="flex:1;font-size:11.5px;">' + esc(v.type) + '</span>' +
-        '<input type="number" value="' + (v.cost||0) + '" min="0" style="width:82px;font-size:11.5px;" ' +
-          'oninput="' + (isPrep ? 'updatePrepCost' : 'updateVendorCost') + '(' + idx + ',this.value)">' +
+      return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">' +
+        '<span style="flex:1;min-width:0;font-size:11.5px;">' + esc(v.type) + '</span>' +
+        // Money field, not a spinner. A vendor quote is never nudged one dollar at a
+        // time, and the arrows ate width the number needed.
+        '<input type="text" inputmode="numeric" value="' + (v.cost ? '$' + Number(v.cost).toLocaleString() : '') + '" ' +
+          'style="width:86px;font-size:11.5px;text-align:right;" ' +
+          'oninput="formatMoneyInput(this);' + (isPrep ? 'updatePrepCost' : 'updateVendorCost') + '(' + idx + ',this.value)">' +
         '<button class="icon-btn del" title="Remove" onclick="' + (isPrep ? 'removePrepItem' : 'removeVendor') + '(' + idx + ')">\u2715</button>' +
       '</div>';
     }).join('');
     return '<div class="vgrp-card">' +
-      '<div class="vgrp-title">' + esc(card.group) + '</div>' +
-      (rows || '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">None added</div>') +
+      '<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:6px;">' +
+        '<div class="vgrp-title" style="flex:1;min-width:0;margin:0;">' + esc(card.group) + '</div>' +
+        '<div class="vgrp-title" style="width:86px;margin:0;text-align:right;">Est Cost</div>' +
+        '<span style="width:26px;flex:0 0 auto;"></span>' +
+      '</div>' +
+      rows +
       '<div style="display:flex;gap:5px;margin-top:6px;">' +
-        '<select id="vgrp-cat-' + gi + '" style="flex:1;font-size:11.5px;">' +
+        '<select id="vgrp-cat-' + gi + '" style="flex:1;min-width:0;font-size:11.5px;">' +
           '<option value="">Add\u2026</option>' +
           cats.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('') +
         '</select>' +
-        '<input type="number" id="vgrp-cost-' + gi + '" placeholder="0" min="0" style="width:76px;font-size:11.5px;">' +
-        '<button class="icon-btn" onclick="addFromVendorGroup(' + gi + ')">+</button>' +
+        '<input type="text" inputmode="numeric" id="vgrp-cost-' + gi + '" placeholder="$0" ' +
+          'style="width:86px;font-size:11.5px;text-align:right;" oninput="formatMoneyInput(this)">' +
+        '<button class="icon-btn" style="flex:0 0 auto;" onclick="addFromVendorGroup(' + gi + ')">+</button>' +
       '</div>' +
     '</div>';
   }).join('') + '</div>';
@@ -4632,7 +4640,7 @@ function addFromVendorGroup(gi) {
   var sel  = document.getElementById('vgrp-cat-' + gi);
   var cst  = document.getElementById('vgrp-cost-' + gi);
   if (!card || !sel || !sel.value) return;
-  var cost = parseFloat(cst && cst.value) || 0;
+  var cost = moneyToNumber(cst && cst.value);
   if (card.target === 'prep') { prepItems.push({type: sel.value, cost: cost}); renderPrepItems(); }
   else                        { vendors.push({type: sel.value, cost: cost});   renderVendors();   }
   sel.value = ''; if (cst) cst.value = '';
@@ -4654,7 +4662,7 @@ function renderVendors() {
 function updateVendorCost(i, val) {
   // Don't re-render the table on each keystroke — that recreates the input and steals
   // focus (the "one digit at a time" bug). Update the model, the row's SMF cell, and totals.
-  vendors[i].cost = parseFloat(val)||0;
+  vendors[i].cost = moneyToNumber(val);
   var smfCell = document.getElementById('vendor-smf-'+i);
   if (smfCell) smfCell.textContent = '$' + Math.round(vendors[i].cost*SMF_PCT).toLocaleString();
   calcAll();
@@ -8539,6 +8547,15 @@ function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
 function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 // Live-format a free-text money field as the user types: digits only, grouped with
 // commas and a leading $ (e.g. "$3,200,000"). Readers must strip non-digits.
+// "$8,000" back to 8000. The group-card cost fields are money-formatted text, so every
+// reader of their value has to strip the formatting rather than trust parseFloat, which
+// would silently read "$8,000" as 8.
+function moneyToNumber(v) {
+  if (typeof v === 'number') return v;
+  var d = String(v == null ? '' : v).replace(/[^0-9.]/g, '');
+  return parseFloat(d) || 0;
+}
+
 function formatMoneyInput(el) {
   var digits = (el.value || '').replace(/[^0-9]/g, '');
   el.value = digits ? '$' + parseInt(digits, 10).toLocaleString() : '';
