@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:07pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:28pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1041,6 +1041,10 @@ body.no-smf .smf-col{display:none;}
         <div id="probate-inv-badge" style="margin-top:4px;"></div>
       </div>
       <div id="est-crew-col">
+        <!-- Section heading purely so the right column starts on the same line as the
+             left: "Job / Job details" against "Crew / Crew size". Without it the right
+             column began one row higher and the two never lined up. -->
+        <div class="sec">Crew</div>
         <!-- Crew size lives in the right column beside the adjustments, which evens the two
              columns out — it is one dropdown, and the left column carries six fields.
              Desk-only either way: field mode hides crew sizing. -->
@@ -1130,7 +1134,6 @@ body.no-smf .smf-col{display:none;}
       <div class="card" id="est-collections-card">
         <div class="sec">Notable Collections <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(flag significant collections for auction — not room-by-room)</span></div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:6px;">Flag major collections only — china, coins, guns, art, wine, books, jewelry, etc. TC advises if items lack auction value.</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:10px;font-style:italic;">Voice notes only at estimate. Photos available post signed agreement for documentation.</div>
         <div class="tbl-scroll">
         <table class="vtbl" id="collections-tbl">
           <thead><tr>
@@ -1154,9 +1157,6 @@ body.no-smf .smf-col{display:none;}
           </tfoot>
         </table>
         </div><!-- /.tbl-scroll -->
-        <div style="margin-top:8px;padding:9px 12px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--gray);">
-          <strong style="color:var(--gray-dk);">TC Advisory (say on site):</strong> "We'll identify the right partner for each collection — auction houses, appraisers, and dealers typically come to the property at no charge to assess what they'll take. Our coordination and hands-on time is included in your estimate. We handle everything on your behalf and pass any proceeds directly to you — we don't take a percentage of any sales, consignments, or auction results."
-        </div>
       </div>
 
       <div class="card" id="est-vehicles-card">
@@ -1184,9 +1184,9 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div class="est-pair" id="est-prep-pair">
       <div class="card" id="est-prep-card">
-        <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="sec" style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
           <span id="prep-card-label">Home Prep for Sale</span>
-          <label id="prep-include-label" style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <label id="prep-include-label" style="margin-top:0;font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;flex:0 0 auto;display:flex;align-items:center;gap:5px;">
             <input type="checkbox" id="e-prep-enabled" onchange="togglePrepSection()"> Include in estimate
           </label>
         </div>
@@ -1238,52 +1238,6 @@ body.no-smf .smf-col{display:none;}
       <!-- The price levers sit with the totals they move. They spent a spell in the
            right-hand column beside Adjustments, but discount / rush / fixed price are
            read against the number, not against the scope. -->
-      <div class="card" style="margin-bottom:1rem;">
-        <div class="sec">Price</div>
-        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
-            <div style="font-size:11px;color:var(--gray);">Havellin labor fees only. Max 15%.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
-              style="width:64px;text-align:center;font-size:16px;font-weight:600;"
-              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
-          </div>
-        </div>
-        <div id="discount-badge" style="margin-bottom:8px;"></div>
-        <div class="sec" style="margin-top:8px;">Expedited Delivery</div>
-                <div class="toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Rush order?</div>
-            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div id="rush-badge" style="margin-bottom:4px;"></div>
-        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
-        <div class="toggle-wrap" id="fixed-toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Quote as a fixed price?</div>
-            <div class="toggle-sub" id="fixed-toggle-sub">Firm flat fee instead of hourly. Client sees fee and scope, not hours.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
-        </div>
-        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
-            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:4px;">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
-            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
-              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
-          </div>
-        </div>
-        <div id="fixed-price-warn" style="margin-top:6px;"></div>
-      </div>
       <div class="card">
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
@@ -1326,10 +1280,65 @@ body.no-smf .smf-col{display:none;}
         <div class="divider" data-est-detail="1"></div>
         <div class="sec" data-est-detail="1">Internal Margin Analysis <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(not on client document)</span></div>
         <div id="margin-panel" data-est-detail="1"><div style="font-size:11px;color:var(--gray);">Score rooms to see margin analysis.</div></div>
-        <div class="divider"></div>
-        <div class="sec">Pricing Reference Check</div>
-        <div id="ref-box"><div style="font-size:11px;color:var(--gray);">Select service type above</div></div>
-        <div class="divider"></div>
+      </div>
+
+      <!-- The market check and the levers that move the number, side by side: you read
+           where the quote sits in the range and adjust in the same glance. -->
+      <div class="est-pair">
+        <div class="card">
+          <div class="sec">Pricing Reference Check</div>
+          <div id="ref-box"><div style="font-size:11px;color:var(--gray);">Select service type above</div></div>
+        </div>
+      <!-- Three boxes, all the same shape. The section headings and rules between them
+           ("PRICE", "PREFERRED CLIENT DISCOUNT", "EXPEDITED DELIVERY", "FIXED-PRICE
+           QUOTE") labelled one control apiece, which is chrome around a decision that
+           reads fine without it. The discount keeps a number field where the other two
+           have a toggle; everything else about the row is identical. -->
+      <div class="card">
+        <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Preferred client discount</div>
+            <div class="toggle-sub">Havellin labor fees only. Max 15%.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:12px;">
+            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
+              style="width:58px;text-align:center;font-size:15px;font-weight:600;"
+              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
+            <span style="font-size:15px;font-weight:600;color:var(--gray-dk);">%</span>
+          </div>
+        </div>
+        <div id="discount-badge"></div>
+        <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Rush order?</div>
+            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="rush-badge"></div>
+        <div class="toggle-wrap" id="fixed-toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Quote as a fixed price?</div>
+            <div class="toggle-sub" id="fixed-toggle-sub">Firm flat fee instead of hourly. Client sees fee and scope, not hours.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
+        </div>
+        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
+            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
+            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
+              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
+          </div>
+        </div>
+        <div id="fixed-price-warn" style="margin-top:6px;"></div>
+      </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-s" onclick="resetEstimate()">Reset</button>
           <button class="btn-p" onclick="saveEstimateAndPreview()">Save &amp; Preview Client Estimate →</button>
@@ -3130,7 +3139,29 @@ function buildRoomTable() {
     html += '</div>';         // close .tbl-scroll
     html += '</div></div>';   // close .sec-body and .room-sec
   });
+  // Private notes ride in the grid as a final cell, filling the space an odd number of
+  // room sections leaves empty. Rebuilt with the table (service type changes redraw the
+  // whole thing), so the text is held in _privateWalkNote and written back after.
+  html += '<div class="room-sec" id="private-note-sec">' +
+    '<div class="sec-hdr" style="border-radius:4px 4px 0 0;">Private Walkthrough Notes</div>' +
+    '<div style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:9px 10px;background:var(--white);">' +
+      '<div style="font-size:11px;color:var(--gray);margin-bottom:6px;">Internal only — never shown to the client, never on the estimate. Dictate in the car afterwards.</div>' +
+      '<div style="display:flex;align-items:flex-start;gap:6px;">' +
+        '<button id="pnote-mic-btn" onclick="startPrivateNoteTranscription()" title="Voice note" ' +
+          'style="background:none;border:1px solid var(--border-md);border-radius:4px;cursor:pointer;font-size:15px;line-height:1;padding:5px 7px;color:var(--gray);flex:0 0 auto;">&#127908;</button>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<textarea id="e-private-note" rows="5" placeholder="What you would not say in front of the client — access problems, hoarding, family dynamics, anything that changes how this job runs&hellip;" ' +
+            'oninput="_privateWalkNote=this.value" ' +
+            'style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:inherit;background:var(--cream);box-sizing:border-box;"></textarea>' +
+          '<div id="pnote-mic-status" style="font-size:10px;color:var(--bronze);font-style:italic;min-height:14px;margin-top:2px;"></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
   document.getElementById('room-table-wrap').innerHTML = html;
+  var _pn = document.getElementById('e-private-note');
+  if (_pn) _pn.value = _privateWalkNote || '';
   // Single delegated listener for all note textareas
   document.getElementById('room-table-wrap').addEventListener('input', function(e) {
     if (e.target && e.target.tagName === 'TEXTAREA') {
@@ -3740,7 +3771,9 @@ function applyEstimateServiceMode(isPrep) {
       var prepPair = document.getElementById('est-prep-pair');
       var homeFor = prepPair || buildCol;
       if (prepCard.parentNode !== homeFor) homeFor.insertBefore(prepCard, homeFor.firstChild);
-      prepCard.style.marginTop = '1rem';
+      // No margin: it sits in a grid pair beside Moving Materials now, and 1rem here
+      // dropped its heading 16px below its neighbour's. The pair supplies the spacing.
+      prepCard.style.marginTop = '0';
     }
   }
 }
@@ -4501,6 +4534,9 @@ function calcAll() {
     psSlots: getPSSlots(),
     psCount: getScheduledPSCount(),
     psCrewReason: '',   // field removed; kept on the record so older estimates still load
+    // Internal walkthrough notes. Saved with the estimate but deliberately never read
+    // by the client-estimate renderer — the whole point is that it is not client-facing.
+    privateNote: _privateWalkNote || '',
     psBlendedCost: Math.round(getBlendedPSCost()*100)/100,
     coordDays: coordDays, vendorTotal: vendorTotal,
     gcFee: gcFee, stagerCost: stagerCost, stagerGcFee: stagerGcFee,
@@ -6963,6 +6999,9 @@ function restoreEstimateToUI(est) {
 
   // Restore crew reason
   // psCrewReason has no field to restore into any more.
+  _privateWalkNote = est.privateNote || '';
+  var _pnEl = document.getElementById('e-private-note');
+  if (_pnEl) _pnEl.value = _privateWalkNote;
 
   // Restore room checkboxes and scores — match by saved index first, fall back to name+section
   // Build lookups: by index, by "section:::name", and by plain name (legacy saves without section)
@@ -17929,6 +17968,50 @@ function updateCollectionDisp(id, val) {
   calcAll();
 }
 
+// Held outside the DOM because buildRoomTable() replaces the whole grid whenever the
+// service type changes, which would otherwise wipe what was just dictated.
+var _privateWalkNote = '';
+
+// Same shape as startCollectionTranscription, targeting the private-notes box.
+function startPrivateNoteTranscription() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showFB('e-fb','warn','Voice transcription not supported in this browser.'); return; }
+  var key = 'private_note';
+  if (_activeRecognitions[key]) { _activeRecognitions[key].stop(); return; }
+  var recog = new SR();
+  recog.continuous = true; recog.interimResults = true; recog.lang = 'en-US';
+  var statusEl = document.getElementById('pnote-mic-status');
+  var micBtn   = document.getElementById('pnote-mic-btn');
+  var reset = function(){
+    delete _activeRecognitions[key];
+    if (micBtn) { micBtn.innerHTML = '&#127908;'; micBtn.style.color = 'var(--gray)'; micBtn.title = 'Voice note'; }
+    if (statusEl) statusEl.textContent = '';
+  };
+  if (micBtn) { micBtn.innerHTML = '&#9634;'; micBtn.style.color = '#A32D2D'; micBtn.title = 'Stop recording'; }
+  recog.onresult = function(event) {
+    var finalText = '', interimText = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) finalText += event.results[i][0].transcript + ' ';
+      else interimText += event.results[i][0].transcript;
+    }
+    if (statusEl) statusEl.textContent = interimText || '';
+    if (finalText) {
+      var el = document.getElementById('e-private-note');
+      if (el) {
+        el.value = (el.value ? el.value.trimRight() + ' ' : '') + finalText.trim();
+        _privateWalkNote = el.value;
+      }
+    }
+  };
+  recog.onerror = function(e) {
+    reset();
+    if (e.error !== 'aborted' && e.error !== 'no-speech') showFB('e-fb','warn','Microphone: ' + e.error);
+  };
+  recog.onend = reset;
+  _activeRecognitions[key] = recog;
+  try { recog.start(); } catch(ex) { reset(); showFB('e-fb','warn','Could not start microphone.'); }
+}
+
 function startCollectionTranscription(collId) {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { showFB('e-fb','warn','Voice transcription not supported in this browser.'); return; }
@@ -18022,11 +18105,8 @@ function renderCollections() {
     '<tr>' +
       '<td colspan="5" style="padding:6px 8px 10px;background:var(--tan);">' +
         '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;">' +
-          '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">Vendor</span>' +
-          '<input value="' + esc(c.vendor||'') + '" oninput="updateCollectionField(' + c.id + ',\'vendor\',this.value)" placeholder="e.g. Heritage Auctions, Jane Doe Appraisals" style="flex:1;min-width:170px;font-size:11px;padding:3px 6px;">' +
           '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);">Fee $</span>' +
           '<input type="number" value="' + (parseFloat(c.cost)||0) + '" oninput="updateCollectionField(' + c.id + ',\'cost\',this.value)" title="Appraisal / FFL fee — leave 0 for proceeds-based (auction, consign)" style="width:90px;font-size:11px;padding:3px 6px;">' +
-          '<span style="font-size:10px;color:var(--gray);font-style:italic;">+15% coordination</span>' +
         '</div>' +
         '<div style="display:flex;align-items:flex-start;gap:6px;">' +
           '<button id="coll-mic-btn-' + c.id + '" onclick="startCollectionTranscription(' + c.id + ')" title="Voice note" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--gray);padding:2px 4px;flex-shrink:0;">&#127908;</button>' +
