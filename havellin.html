@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:54pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 7:11pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1053,7 +1053,7 @@ body.no-smf .smf-col{display:none;}
              that lands inside the 10-day target; the reasoning that used to be printed
              here in full lives in manual.html §5c and §5i. -->
         <label style="margin-top:0;">Crew size</label>
-        <select id="ps-crew-size" onchange="calcAll()">
+        <select id="ps-crew-size" onchange="_crewUserSet=true;calcAll()">
           <option value="2">2 specialists</option>
           <option value="3">3 specialists</option>
           <option value="4">4 specialists</option>
@@ -1137,9 +1137,9 @@ body.no-smf .smf-col{display:none;}
         <div class="tbl-scroll">
         <table class="vtbl" id="collections-tbl">
           <thead><tr>
-            <th style="min-width:160px;">Collection / Description</th>
-            <th style="width:120px;">Est. Value (owner)</th>
-            <th style="width:80px;">Qty</th>
+            <th style="min-width:150px;white-space:nowrap;">Collection</th>
+            <th style="width:96px;white-space:nowrap;">Est. Value</th>
+            <th style="width:56px;white-space:nowrap;">Qty</th>
             <th>Disposition</th>
             <th style="width:60px;"></th>
           </tr></thead>
@@ -1240,7 +1240,7 @@ body.no-smf .smf-col{display:none;}
            read against the number, not against the scope. -->
       <div class="card">
         <div class="sec">Estimate Summary</div>
-        <div id="photo-count-badge" style="margin-bottom:8px;"></div>
+        <div id="photo-count-badge" style="margin-bottom:8px;display:none;"></div>
         <table class="stbl" id="s-hours-table" data-est-detail="1">
           <tr><td class="muted">Hands-on work pool — all roles</td><td class="num" id="s-base-ps">0.0</td></tr>
           <tr><td class="muted" style="padding-left:16px;">&#8627; Difficult-access uplift</td><td class="num" id="s-adj-ps">0.0</td></tr>
@@ -1252,7 +1252,8 @@ body.no-smf .smf-col{display:none;}
           <tr class="total-row"><td>Total Transition Concierge hours</td><td class="num big" id="s-tot-tc">0.0</td></tr>
           <tr class="total-row"><td>Total Property Specialist hours</td><td class="num big" id="s-tot-ps">0.0</td></tr>
         </table>
-        <div class="divider"></div>
+        <!-- Divider dropped: it separated the hours table from the fee table, and with the
+             hours table hidden it sat directly under the section rule as a second line. -->
         <table class="stbl">
           <tr id="s-tc-fee-row"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
           <tr id="s-ps-fee-row"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
@@ -3741,6 +3742,11 @@ var SMF_PCT = 0;
 // (§16), which is not a floor and is not related — do not collapse the two.
 var MAX_DISCOUNT_PCT = 15;
 
+// True once the estimator picks a crew size by hand. Until then the dropdown tracks the
+// engine's recommendation up and down; afterwards it is left alone and the crew badge
+// warns if it sits above what the scope needs.
+var _crewUserSet = false;
+
 // Fixed-price toggle: on enable, prefill the amount from the latest suggested fee
 // (computed in calcAll's fixed-price panel) unless the manager already typed one.
 // "Prefill + override" — the prefilled number is fully editable afterward.
@@ -4176,15 +4182,20 @@ function calcAll() {
   var crew = _sup;
   // Enforce the recommended crew on the PS dropdowns (up to the raised cap of 6).
   var curPS = getScheduledPSCount();
-  if (!isPrep && curPS < crew.requiredPS) {
-    for (var psi = 0; psi < 6; psi++) {
-      var _crewSel = document.getElementById('ps-crew-size');
-      if (_crewSel) _crewSel.value = String(Math.min(6, Math.max(2, crew.requiredPS)));
-      break;
-    }
-    crewDays = Math.round(basePSHrs / (8 * crew.requiredPS) * 10) / 10;
+  // Track the recommendation in BOTH directions while the estimator has not overridden it.
+  // This used to fire only when curPS < requiredPS, so the crew ratcheted up and never
+  // came back down. During a walkthrough the recommendation starts high — few rooms scored
+  // means the whole property is priced off those few — and falls as scoring completes, so
+  // the dropdown kept an early number. That is not cosmetic: a larger crew finishes sooner,
+  // the concierge is on site fewer hours, and the fee goes DOWN. A stale crew of 6 on a
+  // job that needs 3 quietly discounts it.
+  if (!isPrep && !_crewUserSet && curPS !== _recommendedPS) {
+    var _crewSel = document.getElementById('ps-crew-size');
+    if (_crewSel) _crewSel.value = String(Math.min(6, Math.max(2, _recommendedPS)));
+    curPS = getScheduledPSCount();
+    crewDays = Math.round(basePSHrs / (8 * Math.max(1, curPS)) * 10) / 10;
   }
-  crewSize = crew.requiredPS;
+  crewSize = Math.max(curPS, crew.requiredPS);
   // The destination (move-in) day is additive on top of the origin-property calendar.
   var _mobFloor  = ENGINE_FLOOR[svcKey] || 2;
   daysNeeded = isPrep ? 0 : Math.max(crew.days, destPS > 0 ? crew.days + Math.ceil(destPS / (crewSize * PRODUCTIVE_HRS_PER_DAY)) : 0, _mobFloor);
@@ -4228,11 +4239,15 @@ function calcAll() {
       var projDateFmt = new Date(projectedEnd + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
       var hardTarget = loadedJob && loadedJob.completion ? loadedJob.completion : null;
       var tcNote = (crew.tcCount >= 2 ? '2 TC' : '1 TC');
-      var crewNote = tcNote + ' + ' + (crew.requiredPS <= 2
+      // _recommendedPS, NOT crew.requiredPS. The solve is re-run at the assigned crew when
+      // that is larger, so crew.requiredPS afterwards is the crew imposed rather than the
+      // crew needed — printing it as "recommended" is how this badge ended up claiming 6
+      // were recommended while the crew warning beside it said 3.
+      var crewNote = tcNote + ' + ' + (_recommendedPS <= 2
         ? '2 PS'
-        : '<strong>' + crew.requiredPS + ' PS recommended</strong>');
-      var assigned = Math.max(getScheduledPSCount(), crew.requiredPS);
-      if (assigned > crew.requiredPS) crewNote += ', ' + assigned + ' assigned';
+        : '<strong>' + _recommendedPS + ' PS recommended</strong>');
+      var assigned = Math.max(getScheduledPSCount(), _recommendedPS);
+      if (assigned > _recommendedPS) crewNote += ', ' + assigned + ' assigned';
       // Past the internal 10-day preference. Worth an amber badge only when something can
       // still be done about it — that is, when there is crew headroom left. Once the crew
       // is maxed the duration is simply what the property is, and an amber on every large
@@ -5423,6 +5438,7 @@ function applyOpenedEstimate(jobId, job, status) {
   // Reset PS slots
   var _crewReset = document.getElementById('ps-crew-size');
   if (_crewReset) _crewReset.value = '2';
+  _crewUserSet = false;
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
@@ -5449,6 +5465,7 @@ function clearEstimateTab() {
   var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
   var _crewReset = document.getElementById('ps-crew-size');
   if (_crewReset) _crewReset.value = '2';
+  _crewUserSet = false;
   clearAllRooms();
   collectionsData = [];
   renderCollections();
@@ -5633,6 +5650,7 @@ function resetEstimate() {
   // Reset PS slots to defaults
   var _crewReset = document.getElementById('ps-crew-size');
   if (_crewReset) _crewReset.value = '2';
+  _crewUserSet = false;
   vendors=[]; renderVendors(); calcAll();
 }
 
