@@ -651,6 +651,11 @@ body.no-smf .smf-col{display:none;}
 .vgrp-title{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--bronze);margin-bottom:6px;}
 @media (max-width:1100px){.vgrp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:700px){.vgrp-grid{grid-template-columns:1fr;}}
+/* Two cards abreast. Same min-width:0 reasoning as the room grid — each of these holds
+   a fixed-column table, and a 1fr track's auto floor is min-content. */
+.est-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:start;margin-top:1rem;}
+.est-pair>*{min-width:0;}
+@media (max-width:1100px){.est-pair{grid-template-columns:1fr;}}
 #print-target{display:none;}
 </style>
 </head>
@@ -660,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 5:54pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:07pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -765,7 +770,13 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div id="i-refpartner-wrap" style="display:none;">
         <label>Referral partner <span style="font-weight:400;color:var(--gray);">(who specifically)</span></label>
-        <select id="i-refpartner"><option value="">— none / not a named partner —</option></select>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select id="i-refpartner" style="flex:1;min-width:0;"><option value="">— none / not a named partner —</option></select>
+          <!-- A referral arrives from someone who is not in the directory yet more often
+               than not, and leaving intake to go and add them is how the attribution gets
+               dropped. Adds straight to the Referral Partners sheet and selects them. -->
+          <button type="button" class="btn-s" style="flex:0 0 auto;white-space:nowrap;" onclick="openQuickPartner()">+ New</button>
+        </div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — lists only the partners matching the referral source selected above, so the specific referrer is tracked. Manage the list in the Referral Partners tab.</div>
       </div>
       <div id="estate-auth-fields" style="display:none;">
@@ -1008,29 +1019,6 @@ body.no-smf .smf-col{display:none;}
           </label>
           <div id="e-tc2-hint" style="font-size:11px;color:var(--gray);margin-top:2px;"></div>
         </div>
-        <!-- Crew size sits with the other two staffing questions rather than in its
-             own column: who prepares it, whether the scope needs a second concierge,
-             and how many specialists. Desk-only — field mode hides crew sizing. -->
-        <div id="crew-size-wrap">
-        <!-- One control, not six. The engine still auto-sets this to the smallest crew
-             that lands inside the 10-day target; the reasoning that used to be printed
-             here in full lives in manual.html §5c and §5i. -->
-        <label style="margin-top:0;">Crew size</label>
-        <select id="ps-crew-size" onchange="calcAll()">
-          <option value="2">2 specialists</option>
-          <option value="3">3 specialists</option>
-          <option value="4">4 specialists</option>
-          <option value="5">5 specialists</option>
-          <option value="6">6 specialists</option>
-        </select>
-        <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
-        <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
-        <div id="ps-reason-wrap" style="display:none;margin-bottom:8px;">
-          <label style="margin-top:4px;">Reason for 3+ specialists <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <input type="text" id="ps-crew-reason" placeholder="e.g. Grand piano + oversized armoire require 3 PS simultaneously on Day 1" oninput="calcAll()">
-          <div style="font-size:10px;color:var(--gray);margin-top:2px;">Appears on client estimate to justify crew size.</div>
-        </div>
-        </div>
         <div id="timeline-badge" style="margin-top:6px;"></div>
         <div id="move-mgmt-card" style="display:none;">
           <div class="sec" style="margin-top:12px;">Move Management</div>
@@ -1053,6 +1041,24 @@ body.no-smf .smf-col{display:none;}
         <div id="probate-inv-badge" style="margin-top:4px;"></div>
       </div>
       <div id="est-crew-col">
+        <!-- Crew size lives in the right column beside the adjustments, which evens the two
+             columns out — it is one dropdown, and the left column carries six fields.
+             Desk-only either way: field mode hides crew sizing. -->
+        <div id="crew-size-wrap">
+        <!-- One control, not six. The engine still auto-sets this to the smallest crew
+             that lands inside the 10-day target; the reasoning that used to be printed
+             here in full lives in manual.html §5c and §5i. -->
+        <label style="margin-top:0;">Crew size</label>
+        <select id="ps-crew-size" onchange="calcAll()">
+          <option value="2">2 specialists</option>
+          <option value="3">3 specialists</option>
+          <option value="4">4 specialists</option>
+          <option value="5">5 specialists</option>
+          <option value="6">6 specialists</option>
+        </select>
+        <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
+        <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
+        </div>
         <div id="est-adjustments">
         <div class="sec">Adjustments</div>
         <div class="toggle-wrap">
@@ -1118,7 +1124,10 @@ body.no-smf .smf-col{display:none;}
         <div id="room-overhead-line" style="display:none;padding:.6rem 1.1rem .9rem;border-top:1px solid var(--border);font-size:11px;color:var(--gray-dk);background:var(--cream);"></div>
       </div>
 
-      <div class="card" style="margin-top:1rem;" id="est-collections-card">
+      <!-- Paired two-up: facing questions on a walkthrough, and each is short enough
+           that stacking them wasted a screen apiece. -->
+      <div class="est-pair">
+      <div class="card" id="est-collections-card">
         <div class="sec">Notable Collections <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(flag significant collections for auction — not room-by-room)</span></div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:6px;">Flag major collections only — china, coins, guns, art, wine, books, jewelry, etc. TC advises if items lack auction value.</div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:10px;font-style:italic;">Voice notes only at estimate. Photos available post signed agreement for documentation.</div>
@@ -1150,7 +1159,7 @@ body.no-smf .smf-col{display:none;}
         </div>
       </div>
 
-      <div class="card" style="margin-top:1rem;" id="est-vehicles-card">
+      <div class="card" id="est-vehicles-card">
         <div class="sec">Vehicles &amp; Watercraft <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(cars, boats, motorcycles — flag collectors for appraisal)</span></div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Ordinary vehicles are valued from a book value (KBB / NADA) as of the date of death — we can do that ourselves. Collectors, classics, and boats route to a Vehicle / Boat appraiser. Add each below, then fill in its details.</div>
         <table class="vtbl" id="vehicles-tbl">
@@ -1172,21 +1181,9 @@ body.no-smf .smf-col{display:none;}
         </table>
       </div>
 
-      <div class="card" style="margin-top:1rem;" id="est-materials-card">
-        <div class="sec">Moving Materials</div>
-        <label>Moving materials package</label>
-        <select id="e-pkg" onchange="calcAll()">
-          <option value="0">None — $0</option>
-          <option value="500">Estate Basic — $500</option>
-          <option value="750">Estate Standard — $750</option>
-          <option value="1500">Estate Premium — $1,500</option>
-          <option value="200">Downsizing Basic — $200</option>
-          <option value="350">Downsizing Standard — $350</option>
-          <option value="550">Downsizing Premium — $550</option>
-        </select>
       </div>
-
-      <div class="card" style="margin-top:1rem;" id="est-prep-card">
+      <div class="est-pair" id="est-prep-pair">
+      <div class="card" id="est-prep-card">
         <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
           <span id="prep-card-label">Home Prep for Sale</span>
           <label id="prep-include-label" style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;cursor:pointer;display:flex;align-items:center;gap:5px;">
@@ -1214,6 +1211,21 @@ body.no-smf .smf-col{display:none;}
           </table>
           <div id="prep-tc-badge" style="margin-top:8px;font-size:11px;color:var(--gray);text-align:right;"></div>
         </div>
+      </div>
+      <div class="card" id="est-materials-card">
+        <div class="sec">Moving Materials</div>
+        <label>Moving materials package</label>
+        <select id="e-pkg" onchange="calcAll()">
+          <option value="0">None — $0</option>
+          <option value="500">Estate Basic — $500</option>
+          <option value="750">Estate Standard — $750</option>
+          <option value="1500">Estate Premium — $1,500</option>
+          <option value="200">Downsizing Basic — $200</option>
+          <option value="350">Downsizing Standard — $350</option>
+          <option value="550">Downsizing Premium — $550</option>
+        </select>
+      </div>
+
       </div>
     </div>
 
@@ -1326,6 +1338,33 @@ body.no-smf .smf-col{display:none;}
       </div>
     </div>
 
+</div>
+
+
+<!-- QUICK ADD a referral partner from Client Intake. Writes to the same sheet through the
+     same addPartner action the Referral Partners tab uses, so there is one write path and
+     one place a partner can come from. Deliberately minimal: name, firm and contact. The
+     rest of the prospecting intel is desk work on the Referral Partners tab. -->
+<div class="modal-overlay" id="qp-modal" style="display:none;">
+  <div class="modal-box" style="width:440px;">
+    <div class="modal-title">New Referral Partner</div>
+    <div class="modal-sub" id="qp-type-note">Added to the Referral Partners directory and attributed to this job.</div>
+    <div class="row">
+      <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="qp-fname"></div>
+      <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="qp-lname"></div>
+    </div>
+    <label>Firm</label>
+    <input type="text" id="qp-firm" placeholder="e.g. Comiter, Singer, Baseman &amp; Braun">
+    <div class="row">
+      <div><label>Phone</label><input type="tel" id="qp-phone" placeholder="(561) 000-0000"></div>
+      <div><label>Email</label><input type="email" id="qp-email" placeholder="name@firm.com"></div>
+    </div>
+    <div id="qp-fb"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn-s" style="flex:1;" onclick="document.getElementById('qp-modal').style.display='none'">Cancel</button>
+      <button class="btn-p" style="flex:1;" id="qp-save-btn" onclick="saveQuickPartner()">Add Partner</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════ ESTATE INVENTORY ══════════════════════════════ -->
@@ -3696,7 +3735,11 @@ function applyEstimateServiceMode(isPrep) {
       if (prepCard.parentNode !== jobGrid) jobGrid.appendChild(prepCard);
       prepCard.style.marginTop = '0';
     } else {
-      if (prepCard.parentNode !== buildCol) buildCol.appendChild(prepCard);
+      // Back to its pair (beside Moving Materials), not appended to the end of the
+      // column — buildCol.appendChild would strand it below everything.
+      var prepPair = document.getElementById('est-prep-pair');
+      var homeFor = prepPair || buildCol;
+      if (prepCard.parentNode !== homeFor) homeFor.insertBefore(prepCard, homeFor.firstChild);
       prepCard.style.marginTop = '1rem';
     }
   }
@@ -4350,7 +4393,7 @@ function calcAll() {
 
   // Crew efficiency badge — shows hrs/day per PS and flags over/under-staffing
   var crewBadge = document.getElementById('ps-crew-badge');
-  var reasonWrap = document.getElementById('ps-reason-wrap');
+  var reasonWrap = null;   // crew-reason field removed 2026-08-02 — guarded below
   if (crewBadge && totPS > 0 && crewSize > 0) {
     var psHrsPerPerson = Math.round((totPS / crewSize) * 10) / 10;
     var psDays = Math.ceil(psHrsPerPerson / PRODUCTIVE_HRS_PER_DAY);
@@ -4394,10 +4437,8 @@ function calcAll() {
         + Math.round(TC_ONSITE_ALPHA * 100) + '%. A saved quote is never repriced by a settings change.</em>';
     }
     crewBadge.innerHTML = '<div class="alert ' + effClass + '" style="margin-top:0;font-size:11px;">' + effMsg + '</div>';
-    if (reasonWrap) reasonWrap.style.display = crewSize >= 3 ? 'block' : 'none';
   } else if (crewBadge) {
     crewBadge.innerHTML = '';
-    if (reasonWrap) reasonWrap.style.display = 'none';
   }
 
   // store snapshot
@@ -4459,7 +4500,7 @@ function calcAll() {
     destPS: typeof destPS !== 'undefined' ? destPS : 0,
     psSlots: getPSSlots(),
     psCount: getScheduledPSCount(),
-    psCrewReason: document.getElementById('ps-crew-reason') ? document.getElementById('ps-crew-reason').value : '',
+    psCrewReason: '',   // field removed; kept on the record so older estimates still load
     psBlendedCost: Math.round(getBlendedPSCost()*100)/100,
     coordDays: coordDays, vendorTotal: vendorTotal,
     gcFee: gcFee, stagerCost: stagerCost, stagerGcFee: stagerGcFee,
@@ -4580,7 +4621,12 @@ function vendorGroupCategories(card) {
   // Accepts a card or a bare group name. End-of-Job Logistics is a curated list rather
   // than a directory group, so it resolves from LOGISTICS_CATEGORIES.
   var g = (card && card.group) ? card.group : card;
-  if (g === 'End-of-Job Logistics') return LOGISTICS_CATEGORIES.map(function(c){ return c.label; });
+  // Sorted, like every other reference dropdown in the app. LOGISTICS_CATEGORIES keeps
+  // its own order because the Job Plan renders those tiles in workflow sequence; only
+  // this picker is alphabetized.
+  if (g === 'End-of-Job Logistics') {
+    return LOGISTICS_CATEGORIES.map(function(c){ return c.label; }).sort();
+  }
   return directoryCategories({ group: g });
 }
 
@@ -6916,8 +6962,7 @@ function restoreEstimateToUI(est) {
   }
 
   // Restore crew reason
-  var crewReasonEl = document.getElementById('ps-crew-reason');
-  if (crewReasonEl) crewReasonEl.value = est.psCrewReason || '';
+  // psCrewReason has no field to restore into any more.
 
   // Restore room checkboxes and scores — match by saved index first, fall back to name+section
   // Build lookups: by index, by "section:::name", and by plain name (legacy saves without section)
@@ -14909,6 +14954,66 @@ function onReferralSourceChange(){
   if (rbWrap) rbWrap.style.display = personal.indexOf(src.value) >= 0 ? 'block' : 'none';
   if (isPro) { populateReferralPicker(); if (!referralDirectory.length && REFERRAL_SYNC_URL) loadReferralDirectory(); }
 }
+// ─── QUICK-ADD A REFERRAL PARTNER FROM INTAKE ────────────────────────────────
+// partner_type is taken from the referral source already chosen on the form rather than
+// asked again — the picker is scoped by that same value, so a mismatch would add a
+// partner the field then refuses to show.
+function openQuickPartner() {
+  var srcEl = document.getElementById('i-src');
+  var src = srcEl ? String(srcEl.value || '').trim() : '';
+  if (!src) { showFB('i-fb','warn','Choose the referral source first — it sets the partner type.'); return; }
+  if (!REFERRAL_SYNC_URL) { showFB('i-fb','err','Set the Referral Partners URL in ⚙ Settings first — partners save to the shared sheet.'); return; }
+  ['qp-fname','qp-lname','qp-firm','qp-phone','qp-email'].forEach(function(id){
+    var e = document.getElementById(id); if (e) e.value = '';
+  });
+  var note = document.getElementById('qp-type-note');
+  // "under <type>" rather than "as a/an <type>" — the source labels start with both
+  // vowels and consonants, and picking the article at runtime is not worth it.
+  if (note) note.textContent = 'Added to the Referral Partners directory under ' + src + ', and attributed to this job.';
+  document.getElementById('qp-fb').innerHTML = '';
+  document.getElementById('qp-modal').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('qp-fname').focus(); }, 100);
+}
+
+function saveQuickPartner() {
+  var fname = document.getElementById('qp-fname').value.trim();
+  var lname = document.getElementById('qp-lname').value.trim();
+  var src   = String((document.getElementById('i-src')||{}).value || '').trim();
+  if (!fname || !lname) {
+    document.getElementById('qp-fb').innerHTML = '<div class="alert a-warn">First and last name are required.</div>';
+    return;
+  }
+  var fields = {
+    first_name: fname, last_name: lname, partner_name: (fname + ' ' + lname).trim(),
+    partner_type: src, firm: document.getElementById('qp-firm').value.trim(),
+    phone: document.getElementById('qp-phone').value.trim(),
+    email: document.getElementById('qp-email').value.trim(),
+    status: 'Active Partner'
+  };
+  var btn = document.getElementById('qp-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+  // NOT queued for retry, matching how the Referral Partners tab treats an append: a
+  // failed append can't be safely re-sent, because nothing tells you whether the first
+  // one reached the sheet, and a duplicate partner splits the referral attribution.
+  postReferralWrite('addPartner', { fields: fields }, function(ok, d) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Add Partner'; }
+    if (!ok) {
+      document.getElementById('qp-fb').innerHTML = '<div class="alert a-err">Could not add: ' + esc((d && d.error) || 'write error') + '. Add them on the Referral Partners tab instead.</div>';
+      return;
+    }
+    var rec = {}; Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; });
+    if (d && d._row != null) rec._row = d._row;
+    referralDirectory.push(rec);
+    try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
+    document.getElementById('qp-modal').style.display = 'none';
+    populateReferralPicker();
+    var sel = document.getElementById('i-refpartner');
+    if (sel) sel.value = referralIdOf(rec);
+    showFB('i-fb','ok', fields.partner_name + ' added to Referral Partners and selected.');
+    if (typeof renderReferralsTab === 'function') renderReferralsTab();
+  });
+}
+
 function populateReferralPicker(){
   var sel = document.getElementById('i-refpartner'); if (!sel) return;
   // Scope the named-partner list to the referral source chosen above: an "Estate
