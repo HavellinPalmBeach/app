@@ -30,6 +30,28 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## Concierge job playbook (`concierge-guide.html` / `CONCIERGE_GUIDE.md`) — NEW 2026-08-02
+- **A second, separate document. It does NOT replace `manual.html` and nothing was removed from
+  the manual to make it.** The manual is the system-of-record reference (setup, Apps Script
+  URLs, folder IDs, engine formulas, vendor taxonomy, interface/architecture notes). The
+  playbook is the TC-facing *how do I run a job* document — chronological, one job from intake
+  to final invoice, written for Anthony and Ashley walking dummy clients end to end.
+- **The dividing line, and keep it:** the playbook says what to press and what the app will
+  refuse; the manual says how it works and how it is configured. If you find yourself writing
+  "α" or an Apps Script URL into the playbook, it belongs in the manual instead.
+- Structure is Step 1..13 + Home Prep short version + a quick reference (billing rates, PIN
+  list, margin panel framing) + a **"If something won't let you proceed"** symptom→cause table.
+  That last table is the highest-value part for a dry run — keep it current with the gates.
+- `CONCIERGE_GUIDE.md` is GENERATED from `concierge-guide.html` by the same style of converter
+  as `MANUAL.md` (scratchpad, not the repo). Regenerate in the same commit as any edit.
+- It adds one class the manual doesn't have: `.stop` (red left border) for the hard gates,
+  rendering as `> **⚠**` in markdown. Print/phone rules are copied from `manual.html` verbatim
+  and carry the same reasoning — the phone block stays scoped to `screen` or printed tables
+  silently lose their right-hand column.
+- **Both documents drift together.** Any app change that triggers a manual reconciliation pass
+  triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
+  a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
+
 ## Docs / operations manual (`manual.html`)
 - `manual.html` is the internal operations manual. It is **hand-maintained** and does
   NOT auto-sync with the app, so it drifts whenever the app changes.
