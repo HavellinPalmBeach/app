@@ -629,7 +629,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 12:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 12:38pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -955,11 +955,17 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
         <select id="e-prepared-by">
           <option value="">Select TC</option>
         </select>
+        <!-- A flag, not a person. Same reasoning as the specialist checkboxes: at
+             estimate time you can say the scope needs two concierges, not which two.
+             The engine ticks this itself when the daily load passes TC_DAY_CAP. It has
+             never touched the fee or the duration and still does not — it decides whether
+             the Job Plan roster offers a second concierge row to name. -->
         <div id="e-tc2-wrap">
-          <label>Second Transition Concierge <span style="color:var(--gray);font-weight:400;">(optional)</span></label>
-          <select id="e-prepared-by-2" onchange="calcAll()">
-            <option value="">None — single concierge</option>
-          </select>
+          <label>Second Transition Concierge</label>
+          <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <input type="checkbox" id="e-needs-tc2" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
+            <span>This scope needs a second concierge</span>
+          </label>
           <div id="e-tc2-hint" style="font-size:11px;color:var(--gray);margin-top:2px;"></div>
         </div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
@@ -1003,31 +1009,38 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
       <div id="est-crew-col">
         <div class="sec">Property Specialists</div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Crew size is auto-set to the smallest crew that lands the job inside the 10-working-day target (floor 2, cap 6). You can manually add specialists above the recommendation — but note that a bigger crew finishes sooner, so the concierge is on site fewer hours and <strong>the estimate goes down</strong>. Never carry a crew size over from another job.</div>
+        <!-- Crew SIZE only. These were six dropdowns naming an actual person or rate
+             tier per slot, which is a question nobody can answer at estimate time — you
+             do not know who is free three weeks out. Named staffing lives on the Job
+             Plan, after the job is Won, where the roster seeds from this count and every
+             row asks for a name. Ticking boxes still drives the price exactly as the
+             dropdowns did (crew size is a pricing input), and the recommendation logic
+             below is untouched. -->
         <div id="ps-slots">
-          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <select id="ps-slot-0" onchange="calcAll()" style="font-size:12px;"><option value="contractor_standard">Contractor — Standard</option></select>
-            <span style="font-size:11px;color:var(--gray);">Specialist 1</span>
-          </div>
-          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <select id="ps-slot-1" onchange="calcAll()" style="font-size:12px;"><option value="contractor_standard">Contractor — Standard</option></select>
-            <span style="font-size:11px;color:var(--gray);">Specialist 2</span>
-          </div>
-          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <select id="ps-slot-2" onchange="calcAll()" style="font-size:12px;"><option value="none">Not scheduled</option></select>
-            <span style="font-size:11px;color:var(--gray);">Specialist 3</span>
-          </div>
-          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <select id="ps-slot-3" onchange="calcAll()" style="font-size:12px;"><option value="none">Not scheduled</option></select>
-            <span style="font-size:11px;color:var(--gray);">Specialist 4</span>
-          </div>
-          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <select id="ps-slot-4" onchange="calcAll()" style="font-size:12px;"><option value="none">Not scheduled</option></select>
-            <span style="font-size:11px;color:var(--gray);">Specialist 5</span>
-          </div>
-          <div class="ps-slot-row" style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <select id="ps-slot-5" onchange="calcAll()" style="font-size:12px;"><option value="none">Not scheduled</option></select>
-            <span style="font-size:11px;color:var(--gray);">Specialist 6</span>
-          </div>
+          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <input type="checkbox" id="ps-slot-0" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
+            <span>Specialist 1</span>
+          </label>
+          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <input type="checkbox" id="ps-slot-1" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
+            <span>Specialist 2</span>
+          </label>
+          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <input type="checkbox" id="ps-slot-2" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
+            <span>Specialist 3</span>
+          </label>
+          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <input type="checkbox" id="ps-slot-3" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
+            <span>Specialist 4</span>
+          </label>
+          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <input type="checkbox" id="ps-slot-4" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
+            <span>Specialist 5</span>
+          </label>
+          <label class="ps-slot-row" style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <input type="checkbox" id="ps-slot-5" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
+            <span>Specialist 6</span>
+          </label>
         </div>
         <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
         <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
@@ -3961,8 +3974,8 @@ function calcAll() {
   if (!isPrep && curPS < crew.requiredPS) {
     for (var psi = 0; psi < 6; psi++) {
       var slotEl = document.getElementById('ps-slot-' + psi);
-      if (slotEl && psi < crew.requiredPS && (slotEl.value === 'none' || !slotEl.value)) {
-        slotEl.value = 'contractor_standard';
+      if (slotEl && psi < crew.requiredPS && !slotEl.checked) {
+        slotEl.checked = true;
       }
     }
     crewDays = Math.round(basePSHrs / (8 * crew.requiredPS) * 10) / 10;
@@ -3983,13 +3996,16 @@ function calcAll() {
   // on-site presence plus off-site coordination past TC_DAY_CAP hours/day. Contested
   // probate and heavy-documentation estates are what trip this, which is correct.
   var tc2Hint = document.getElementById('e-tc2-hint');
-  var tc2Sel = document.getElementById('e-prepared-by-2');
+  var tc2Box = document.getElementById('e-needs-tc2');
+  // Tick it for them when the load says so, exactly as the specialist boxes are ticked
+  // to the recommended crew. Still overridable either way.
+  if (tc2Box && crew.tcCount >= 2 && !tc2Box.checked) tc2Box.checked = true;
   if (tc2Hint) {
-    if (crew.tcCount >= 2 && !(tc2Sel && tc2Sel.value)) {
+    if (crew.tcCount >= 2) {
       tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">Engine recommends 2 concierges for this scope</span> — '
-        + crew.tcLoad.toFixed(1) + ' concierge hrs/day across ' + daysNeeded + ' working days is more than one person can carry. Assign a second here so both are tracked on the job.';
-    } else if (tc2Sel && tc2Sel.value) {
-      tc2Hint.textContent = 'Both concierges are tracked in the crew and Log Hours. Billing is total TC hours split between them, so a second concierge changes neither the fee nor the duration — it makes the schedule coverable without one person carrying 12-hour days.';
+        + crew.tcLoad.toFixed(1) + ' concierge hrs/day across ' + daysNeeded + ' working days is more than one person can carry. Name them on the Job Plan once the job is Won.';
+    } else if (tc2Box && tc2Box.checked) {
+      tc2Hint.textContent = 'The Job Plan roster will ask for a second concierge. Billing is total TC hours split between them, so a second concierge changes neither the fee nor the duration — it makes the schedule coverable without one person carrying 12-hour days.';
     } else {
       tc2Hint.textContent = '';
     }
@@ -4366,7 +4382,10 @@ function calcAll() {
     discountPct: discountPct,
     discountAmt: Math.round(discountAmt),
     preparedBy: document.getElementById('e-prepared-by') ? document.getElementById('e-prepared-by').value : '',
-    preparedBy2: document.getElementById('e-prepared-by-2') ? document.getElementById('e-prepared-by-2').value : '',
+    // Kept in the shape older records use so every reader stays valid; a new estimate
+    // never names the second concierge, it only records that the scope needs one.
+    preparedBy2: '',
+    needsTC2: !!(document.getElementById('e-needs-tc2') && document.getElementById('e-needs-tc2').checked),
     tcCount: crew.tcCount || 1,
     destTC: typeof destTC !== 'undefined' ? destTC : 0,
     destPS: typeof destPS !== 'undefined' ? destPS : 0,
@@ -5096,7 +5115,7 @@ function applyOpenedEstimate(jobId, job, status) {
   // Reset PS slots
   for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
-    if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
+    if (slotEl) slotEl.checked = (si < 2);
   }
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
@@ -5124,7 +5143,7 @@ function clearEstimateTab() {
   var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
   for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
-    if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
+    if (slotEl) slotEl.checked = (si < 2);
   }
   clearAllRooms();
   collectionsData = [];
@@ -5310,7 +5329,7 @@ function resetEstimate() {
   // Reset PS slots to defaults
   for (var si = 0; si <= 5; si++) {
     var slotEl = document.getElementById('ps-slot-' + si);
-    if (slotEl) slotEl.value = si < 2 ? 'contractor_standard' : 'none';
+    if (slotEl) slotEl.checked = (si < 2);
   }
   vendors=[]; renderVendors(); calcAll();
 }
@@ -6708,19 +6727,23 @@ function restoreEstimateToUI(est) {
     var prepByEl = document.getElementById('e-prepared-by');
     if (prepByEl) prepByEl.value = est.preparedBy || jobForStart.siteVisitBy || jobForStart.tc || '';
     // Restore the optional second concierge
-    var prepBy2El = document.getElementById('e-prepared-by-2');
-    if (prepBy2El) prepBy2El.value = est.preparedBy2 || '';
+    // An estimate saved before this named a person; the surviving fact is that it wanted
+    // two, so a legacy name reads as the flag being set.
+    var needsTC2El = document.getElementById('e-needs-tc2');
+    if (needsTC2El) needsTC2El.checked = !!(est.needsTC2 || est.preparedBy2);
   }
 
 
   // Set PS slots
   if (est.psSlots) {
-    est.psSlots.forEach(function(slot, i) {
-      var slotEl = document.getElementById('ps-slot-' + i);
-      if (slotEl) {
-        slotEl.value = slot.name || slot.type || '';
-      }
-    });
+    // Count, not identity. An estimate saved before the checkboxes lists named people;
+    // all that survives the reopen is how many were scheduled, which is the only part
+    // that was ever a pricing input.
+    var _savedPS = est.psSlots.length;
+    for (var _psi = 0; _psi <= 5; _psi++) {
+      var _psEl = document.getElementById('ps-slot-' + _psi);
+      if (_psEl) _psEl.checked = (_psi < _savedPS);
+    }
   }
 
   // Restore crew reason
@@ -10483,7 +10506,8 @@ function attachCollectionDoc(input, jobId, collId) {
 var SYNC_TARGETS = {
   main:     function(){ return SHEETS_SYNC_URL; },     // jobs, estimates, logs, plans, contractors
   vendor:   function(){ return VENDOR_SYNC_URL; },     // vendor directory sheet
-  referral: function(){ return REFERRAL_SYNC_URL; }    // referral partners sheet
+  referral: function(){ return REFERRAL_SYNC_URL; },   // referral partners sheet
+  stripe:   function(){ return STRIPE_SCRIPT_URL; }    // payment-link generator (send only)
 };
 function _targetUrl(target) {
   var f = SYNC_TARGETS[target || 'main'];
@@ -11159,7 +11183,7 @@ function buildLogTeamRows() {
   var estRecLog = (jobId && typeof estimateStore !== 'undefined' && estimateStore[jobId]) ? estimateStore[jobId].estimate : null;
   var tc2Name = (crew && crew.tc2) ? crew.tc2.name : '';
   var tc2Locked = !!(crew && crew.tc2 && crew.tc2.locked);
-  var showTC2 = (estRecLog && estRecLog.tcCount >= 2) || !!tc2Name;
+  var showTC2 = (estRecLog && (estRecLog.tcCount >= 2 || estRecLog.needsTC2)) || !!tc2Name;
   if (showTC2) {
     html += '<div style="' + rowStyle + '">' +
       '<div>' +
@@ -16675,15 +16699,33 @@ function generateStripeLink() {
     showFB('agr-fb','warn','Stripe not configured. Go to ⚙ Settings to add your Stripe Apps Script URL.');
     return;
   }
-  fetch(STRIPE_SCRIPT_URL, {
-    method:'POST', mode:'no-cors',
-    body: JSON.stringify({type:'stripe_link', payload:{jobId:job.id, clientName:job.name, clientEmail:job.email, amount:deposit, description:'Havellin deposit — '+job.name}}),
-    headers:{'Content-Type':'text/plain'}
-  }).then(function(){
-    showFB('agr-fb','ok','Stripe payment link generated and sent to billing@havellinpalmbeach.com. Copy it from there to send to the client.');
-  }).catch(function(){
-    showFB('agr-fb','warn','Could not reach Stripe service. Configure Stripe in ⚙ Settings.');
-  });
+  // This was the app's only `mode:'no-cors'` fetch, and no-cors makes the response
+  // OPAQUE — status unreadable, body unreadable. So `.then` fired on any completed
+  // request, including a 404 from a URL that was never deployed and a 500 from a script
+  // that threw, and the success message went out regardless. `.catch` only ever saw a
+  // DNS/offline failure. It reported a payment link had been generated and emailed when
+  // in fact nothing had happened at all, which during a dry run means sitting and waiting
+  // for a link that is never coming.
+  //
+  // Every other Apps Script call in this file posts `mode:'cors'` and reads the reply
+  // through _readAppsScriptJson, so a readable response is known to work against these
+  // deployments; there was no reason for this one to be different. Now a failure says so.
+  //
+  // NOTE this only makes the report honest. Nothing yet reads BACK from Stripe — no
+  // webhook, no clearedOn write, no auto-populated payment. Deliberately deferred to the
+  // QuickBooks work; recording a payment stays manual (§8).
+  showFB('agr-fb','info','Requesting Stripe payment link…');
+  postSyncTo('stripe', {type:'stripe_link', payload:{jobId:job.id, clientName:job.name, clientEmail:job.email, amount:deposit, description:'Havellin deposit — '+job.name}})
+    .then(function(res){
+      if (res && res.ok) {
+        showFB('agr-fb','ok','Stripe payment link generated and sent to billing@havellinpalmbeach.com. Copy it from there to send to the client.');
+      } else {
+        showFB('agr-fb','err','Stripe service rejected the request' + ((res && res.error) ? ' — ' + res.error : '') + '. No payment link was created. Send the client the deposit invoice instead, and record the payment by hand when it arrives.');
+      }
+    })
+    .catch(function(e){
+      showFB('agr-fb','err','Could not reach the Stripe service' + ((e && e.message) ? ' — ' + e.message : '') + '. No payment link was created. Check the Stripe Apps Script URL in ⚙ Settings.');
+    });
 }
 
 function copyStripeLink(type) {
@@ -16854,13 +16896,17 @@ function costRateLabel(name) {
 }
 
 function getPSSlots() {
+  // Shape unchanged on purpose — seedCrewFromEstimate, the hours-log prefill and the Job
+  // Plan crew line all read {slot,type,costRate,label} off saved estimates, and estimates
+  // saved before this change still carry real names in `type`. What changed is that a NEW
+  // estimate only ever records the unnamed standard-contractor placeholder: it states how
+  // MANY specialists, never which, so every seeded Job Plan row asks for a name.
   var slots = [];
   for (var i = 0; i <= 5; i++) {
     var el = document.getElementById('ps-slot-' + i);
-    if (!el) continue;
-    var val = el.value;
-    if (val && val !== 'none') {
-      slots.push({slot: i+1, type: val, costRate: getPSCostRate(val), label: val});
+    if (el && el.checked) {
+      slots.push({slot: i+1, type: 'contractor_standard',
+                  costRate: getPSCostRate('contractor_standard'), label: 'contractor_standard'});
     }
   }
   return slots;
@@ -17159,39 +17205,14 @@ function rebuildDropdowns() {
     tcList.forEach(function(c){ prepBySel.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
     if (curPB) prepBySel.value = curPB;
   }
-  // Rebuild the optional second-TC dropdown
-  var prepBy2Sel = document.getElementById('e-prepared-by-2');
-  if (prepBy2Sel) {
-    var curPB2 = prepBy2Sel.value;
-    prepBy2Sel.innerHTML = '<option value="">None — single concierge</option>';
-    tcList.forEach(function(c){ prepBy2Sel.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
-    if (curPB2) prepBy2Sel.value = curPB2;
-  }
+  // The second concierge is a flag on the estimate now, not a person, so there is no
+  // dropdown here to repopulate. The Job Plan roster's own TC2 select is built from this
+  // same tcList when the roster renders.
 
-  // Rebuild PS slot dropdowns — fixed order: AJ first, then Standard/Senior placeholders, then named contractors
-  var psNamedList = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS' && c.status!=='inactive' && c.name !== 'Anthony Graziano Jr'; })
-    .concat(contractors.filter(function(c){ return c.role==='PS' && c.status!=='inactive'; }))
-    .sort(function(a,b){
-      var aLast = a.name.trim().split(' ').pop();
-      var bLast = b.name.trim().split(' ').pop();
-      return aLast.localeCompare(bLast);
-    });
-  for (var si = 0; si <= 5; si++) {
-    var slotSel = document.getElementById('ps-slot-' + si);
-    if (!slotSel) continue;
-    var curSlot = slotSel.value;
-    var optionsHTML = (si >= 2 ? '<option value="none">Not scheduled</option>' : '');
-    // Fixed entries always first
-    optionsHTML += '<option value="Anthony Graziano Jr">Anthony Graziano Jr</option>';
-    optionsHTML += '<option value="contractor_standard">Contractor — Standard</option>';
-    optionsHTML += '<option value="contractor_senior">Contractor — Senior</option>';
-    // Named contractors from directory below
-    psNamedList.forEach(function(c){
-      optionsHTML += '<option value="'+c.name+'">'+c.name+'</option>';
-    });
-    slotSel.innerHTML = optionsHTML;
-    if (curSlot) slotSel.value = curSlot;
-  }
+  // The PS slots are checkboxes now — a count, with no per-slot person to populate — so
+  // there is nothing here to rebuild when the contractor directory reloads. The specialist
+  // names this used to supply are asked for on the Job Plan roster instead, which builds
+  // its own selects from the same directory.
 
   // Rebuild log team rows if visible
   rebuildLogDropdowns(tcList, psList);
