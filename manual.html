@@ -187,7 +187,8 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   </ul>
 
   <h3>5d. Moving Materials &amp; Third-Party Vendors</h3>
-  <p>Add third-party vendors with estimated costs. A <strong>15% Service Management Fee</strong> is automatically calculated on vendor totals. Vendor costs are estimates only — actual invoices billed directly to client at cost.</p>
+  <p>Add third-party vendors with estimated costs. Vendor costs are estimates only — actual invoices are billed directly to the client at cost. <strong>Havellin adds no fee to them.</strong></p>
+  <div class="note"><strong>No coordination fee on third-party vendors, as of 2026-08-02.</strong> Vendors are billed to the client directly at cost and Havellin adds nothing on top. The 15% Service Management Fee was removed because the concierge time spent sourcing, quoting, scheduling and supervising a vendor is <em>already billed hourly</em> — the engine bills off-site coordination as concierge hours — so the fee was a second charge for the same work, and on probate it was a percentage markup on a third-party invoice in front of a court that reviews the expenses. <strong>Standalone Home Prep is the exception and is unchanged:</strong> it bills no hours at all, so its <strong>30% GC fee</strong> is the entire revenue for that engagement. The rule: a coordination fee applies only where the coordination is not already billed by the hour. An estimate quoted before this keeps the rate it was quoted at.</div>
   <p>The vendor-type dropdown lists the standard estate/clearing service types plus, under a <strong>From directory</strong> group, any category from the Vendor Directory in the estate-side groups (Asset Liquidation, Disposal, Moving, Professional Services). So a new category added to the directory shows up here automatically — see Section 13a.</p>
 
   <h3>5e. Home Prep for Sale (as an add-on)</h3>
@@ -326,7 +327,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td>Midpoint</td><td>Brings cumulative to 75%, with vendor &amp; home-prep fees trued to actual Job Plan quotes</td><td>Due at project midpoint</td></tr>
     <tr><td>Final</td><td>Balance — labor trued to logged hours, fees on actuals, plus any approved Change Orders</td><td>Within 7 days of final invoice</td></tr>
   </table>
-  <p style="font-size:11px;color:#888780;">Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 15% SMF / 30% GC fee is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoices tab via the Stage selector.</p>
+  <p style="font-size:11px;color:#888780;">Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 30% GC fee on a standalone Home Prep engagement is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; no fee is charged on vendors for any other service; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoices tab via the Stage selector.</p>
 
   <h2>9. Client Dashboard</h2>
   <p><strong>Tab: Client Dashboard</strong> → select job card. Shows full job status, action checklist, referral source / partner, Drive folder link, and all management actions.</p>
@@ -454,7 +455,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   <h3>Log Hours (labor jobs)</h3>
   <p>One entry per working day: <strong>date</strong>, an <strong>activity summary</strong>, and <strong>hours against each crew member</strong> on the confirmed roster. Roles come from the roster, not a dropdown — the concierge rows log as TC (including the second concierge), the specialist rows as PS. Hours accumulate against the estimate and drive the forward-variance projection. Log daily — do not batch at end of job.</p>
   <h3>Vendor &amp; Partner Sourcing</h3>
-  <p>Assign a directory vendor to each estimate line and logged category, set status, and record the actual quote. These actuals feed the midpoint and final invoices (15% SMF / 30% GC on the real numbers).</p>
+  <p>Assign a directory vendor to each estimate line and logged category, set status, and record the actual quote. On a standalone Home Prep job these actuals feed the 30% GC fee on the midpoint and final invoices. On every other service they carry no Havellin fee at all — they are recorded so the client's pass-through costs and the job's true margin are known.</p>
 
   <h2>12. Invoices</h2>
   <p><strong>Tab: Invoices</strong> → select job, then pick a <strong>Stage</strong> (Deposit / Midpoint / Final). <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders.</p>
@@ -518,10 +519,10 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   <table>
     <tr><th>Category group</th><th>Feeds estimate menu</th><th>Fee</th></tr>
     <tr><td>Property Preparation</td><td>Home Prep items (Section 5e / 6a)</td><td>30% GC / Site Management</td></tr>
-    <tr><td>Asset Liquidation &amp; Valuation</td><td>Third-Party / Service Vendors (Section 5d)</td><td>15% SMF</td></tr>
-    <tr><td>Disposal &amp; Waste Management</td><td>Third-Party / Service Vendors + End-of-Job Logistics</td><td>15% SMF</td></tr>
-    <tr><td>Moving &amp; Logistics</td><td>Third-Party / Service Vendors</td><td>15% SMF</td></tr>
-    <tr><td>Professional Services</td><td>Third-Party / Service Vendors</td><td>15% SMF</td></tr>
+    <tr><td>Asset Liquidation &amp; Valuation</td><td>Third-Party / Service Vendors (Section 5d)</td><td>At cost — no fee</td></tr>
+    <tr><td>Disposal &amp; Waste Management</td><td>Third-Party / Service Vendors + End-of-Job Logistics</td><td>At cost — no fee</td></tr>
+    <tr><td>Moving &amp; Logistics</td><td>Third-Party / Service Vendors</td><td>At cost — no fee</td></tr>
+    <tr><td>Professional Services</td><td>Third-Party / Service Vendors</td><td>At cost — no fee</td></tr>
   </table>
   <p class="note">What stays fixed: the five groups and the group→menu routing above. Everything below them — the categories — is self-serve, so onboarding a new type of vendor never requires a code change.</p>
 
@@ -555,7 +556,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><th>Item</th><th>Standard</th><th>Premium Estate</th></tr>
     <tr><td>Transition Concierge</td><td>$150/hr</td><td>$185/hr</td></tr>
     <tr><td>Property Specialist</td><td>$100/hr</td><td>$125/hr</td></tr>
-    <tr><td>Service Management Fee (third-party vendors)</td><td>15% of vendor costs</td><td>15% of vendor costs</td></tr>
+    <tr><td>Service Management Fee (third-party vendors)</td><td><strong>None — at cost</strong></td><td><strong>None — at cost</strong></td></tr>
     <tr><td>Home Prep GC / Site Management Fee</td><td>30% of prep vendors</td><td>30% of prep vendors</td></tr>
     <tr><td>Moving Materials</td><td>Cost + 25%</td><td>Cost + 25%</td></tr>
     <tr><td>Expedited delivery (rush order)</td><td>+20% of Havellin services</td><td>+20% of Havellin services</td></tr>

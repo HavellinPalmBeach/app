@@ -139,7 +139,9 @@ Room sections launch **collapsed** so the estimate opens compact — open each s
 
 ### 5d. Moving Materials & Third-Party Vendors
 
-Add third-party vendors with estimated costs. A **15% Service Management Fee** is automatically calculated on vendor totals. Vendor costs are estimates only — actual invoices billed directly to client at cost.
+Add third-party vendors with estimated costs. Vendor costs are estimates only — actual invoices are billed directly to the client at cost. **Havellin adds no fee to them.**
+
+> **No coordination fee on third-party vendors, as of 2026-08-02.** Vendors are billed to the client directly at cost and Havellin adds nothing on top. The 15% Service Management Fee was removed because the concierge time spent sourcing, quoting, scheduling and supervising a vendor is *already billed hourly* — the engine bills off-site coordination as concierge hours — so the fee was a second charge for the same work, and on probate it was a percentage markup on a third-party invoice in front of a court that reviews the expenses. **Standalone Home Prep is the exception and is unchanged:** it bills no hours at all, so its **30% GC fee** is the entire revenue for that engagement. The rule: a coordination fee applies only where the coordination is not already billed by the hour. An estimate quoted before this keeps the rate it was quoted at.
 
 The vendor-type dropdown lists the standard estate/clearing service types plus, under a **From directory** group, any category from the Vendor Directory in the estate-side groups (Asset Liquidation, Disposal, Moving, Professional Services). So a new category added to the directory shows up here automatically — see Section 13a.
 
@@ -317,7 +319,7 @@ A *certified* cheque and a *cashier's* cheque are not the same thing: certified 
 | Midpoint | Brings cumulative to 75%, with vendor & home-prep fees trued to actual Job Plan quotes | Due at project midpoint |
 | Final | Balance — labor trued to logged hours, fees on actuals, plus any approved Change Orders | Within 7 days of final invoice |
 
-Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 15% SMF / 30% GC fee is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoices tab via the Stage selector.
+Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 30% GC fee on a standalone Home Prep engagement is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; no fee is charged on vendors for any other service; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoices tab via the Stage selector.
 
 ## 9. Client Dashboard
 
@@ -464,7 +466,7 @@ One entry per working day: **date**, an **activity summary**, and **hours agains
 
 ### Vendor & Partner Sourcing
 
-Assign a directory vendor to each estimate line and logged category, set status, and record the actual quote. These actuals feed the midpoint and final invoices (15% SMF / 30% GC on the real numbers).
+Assign a directory vendor to each estimate line and logged category, set status, and record the actual quote. On a standalone Home Prep job these actuals feed the 30% GC fee on the midpoint and final invoices. On every other service they carry no Havellin fee at all — they are recorded so the client's pass-through costs and the job's true margin are known.
 
 ## 12. Invoices
 
@@ -523,10 +525,10 @@ Every vendor is filed under a **Category group** (required) and a **Category**. 
 | Category group | Feeds estimate menu | Fee |
 | --- | --- | --- |
 | Property Preparation | Home Prep items (Section 5e / 6a) | 30% GC / Site Management |
-| Asset Liquidation & Valuation | Third-Party / Service Vendors (Section 5d) | 15% SMF |
-| Disposal & Waste Management | Third-Party / Service Vendors + End-of-Job Logistics | 15% SMF |
-| Moving & Logistics | Third-Party / Service Vendors | 15% SMF |
-| Professional Services | Third-Party / Service Vendors | 15% SMF |
+| Asset Liquidation & Valuation | Third-Party / Service Vendors (Section 5d) | At cost — no fee |
+| Disposal & Waste Management | Third-Party / Service Vendors + End-of-Job Logistics | At cost — no fee |
+| Moving & Logistics | Third-Party / Service Vendors | At cost — no fee |
+| Professional Services | Third-Party / Service Vendors | At cost — no fee |
 
 > What stays fixed: the five groups and the group→menu routing above. Everything below them — the categories — is self-serve, so onboarding a new type of vendor never requires a code change.
 
@@ -563,7 +565,7 @@ Every vendor is filed under a **Category group** (required) and a **Category**. 
 | --- | --- | --- |
 | Transition Concierge | $150/hr | $185/hr |
 | Property Specialist | $100/hr | $125/hr |
-| Service Management Fee (third-party vendors) | 15% of vendor costs | 15% of vendor costs |
+| Service Management Fee (third-party vendors) | **None — at cost** | **None — at cost** |
 | Home Prep GC / Site Management Fee | 30% of prep vendors | 30% of prep vendors |
 | Moving Materials | Cost + 25% | Cost + 25% |
 | Expedited delivery (rush order) | +20% of Havellin services | +20% of Havellin services |

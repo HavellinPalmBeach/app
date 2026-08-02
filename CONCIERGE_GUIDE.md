@@ -80,7 +80,7 @@ Tick **Special Items** if the room holds artwork, antiques, or anything needing 
 
 ### Vendors, collections and vehicles
 
-- **Third-party vendors** — add each with an estimated cost. A **15% Service Management Fee** calculates automatically. Vendor costs are estimates; the client is billed by the vendor directly at cost.
+- **Third-party vendors** — add each with an estimated cost. Havellin charges **no fee** on them; they are billed to the client directly at cost, and your coordination time is billed hourly instead. Vendor costs are estimates; the client is billed by the vendor directly at cost.
 - **Home Prep as an add-on** — tick *Include in estimate* in the Home Prep section. Prep vendors carry a **30% GC fee**, not the 15%.
 - **Notable Collections** — name, estimated value, quantity and a proposed disposition (appraise, auction house, consignment, estate sale, licensed FFL, gold & silver buyer, and so on). **The disposition you pick adds hours**, and the rule is simple: *if the specialist comes to the property, you're standing there; if the items go out to them, your time is phone and paperwork.* An appraisal, a dealer visit or an FFL handoff books real on-site time and lengthens the job. eBay, Replacements.com and consignment book coordination only. A ten-collection estate genuinely is a longer job than a two-collection one.
 - **Vehicles & watercraft** — add each by description then fill the panel: type, year, VIN/HIN, mileage, condition, and the two flags — *collector / classic* and *title located*. Ordinary vehicles you value in-house from KBB/NADA as of the date of death; collectors and boats route to an appraiser. Vehicles don't change the labour estimate.
@@ -323,7 +323,7 @@ A sell-side, show-ready service, mostly through Douglas Elliman referral agents.
 | --- | --- | --- |
 | Transition Concierge | $150/hr | $185/hr |
 | Property Specialist | $100/hr | $125/hr |
-| Service Management Fee (third-party vendors) | 15% of vendor cost | 15% |
+| Service Management Fee (third-party vendors) | **None — billed at cost** | **None** |
 | Home Prep GC / Site Management Fee | 30% of prep vendors | 30% |
 | Moving Materials | Cost + 25% | Cost + 25% |
 | Expedited delivery (rush) | +20% of Havellin services | +20% |
