@@ -660,7 +660,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 5:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 5:54pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1081,50 +1081,6 @@ body.no-smf .smf-col{display:none;}
       <!-- Price levers sit directly above the totals they move, so the effect is on the
            same screen as the cause. They used to live up in the crew column, three
            scrolls from any number they changed. -->
-        <div class="sec" style="margin-top:12px;">Price</div>
-        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
-            <div style="font-size:11px;color:var(--gray);">Havellin labor fees only. Max 15%.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
-              style="width:64px;text-align:center;font-size:16px;font-weight:600;"
-              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
-          </div>
-        </div>
-        <div id="discount-badge" style="margin-bottom:8px;"></div>
-        <div class="sec" style="margin-top:8px;">Expedited Delivery</div>
-                <div class="toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Rush order?</div>
-            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div id="rush-badge" style="margin-bottom:4px;"></div>
-        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
-        <div class="toggle-wrap" id="fixed-toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Quote as a fixed price?</div>
-            <div class="toggle-sub" id="fixed-toggle-sub">Firm flat fee instead of hourly. Client sees fee and scope, not hours.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
-        </div>
-        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
-          <div style="flex:1;">
-            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
-            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:4px;">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
-            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
-              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
-          </div>
-        </div>
-        <div id="fixed-price-warn" style="margin-top:6px;"></div>
       </div>
     </div>
   </div>
@@ -1267,6 +1223,55 @@ body.no-smf .smf-col{display:none;}
        there is no column to be sticky in, and this is a read-once-at-the-end block —
        the full breakdown is the client estimate's job, not this tab's. -->
   <div id="est-summary-col" style="margin-top:1rem;">
+      <!-- The price levers sit with the totals they move. They spent a spell in the
+           right-hand column beside Adjustments, but discount / rush / fixed price are
+           read against the number, not against the scope. -->
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="sec">Price</div>
+        <div class="sec" style="margin-top:8px;">Preferred Client Discount</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Discount %</div>
+            <div style="font-size:11px;color:var(--gray);">Havellin labor fees only. Max 15%.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" id="e-discount" min="0" max="15" step="1" value="0"
+              style="width:64px;text-align:center;font-size:16px;font-weight:600;"
+              oninput="this.value=Math.min(MAX_DISCOUNT_PCT,Math.max(0,parseInt(this.value)||0));calcAll()">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">%</span>
+          </div>
+        </div>
+        <div id="discount-badge" style="margin-bottom:8px;"></div>
+        <div class="sec" style="margin-top:8px;">Expedited Delivery</div>
+                <div class="toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Rush order?</div>
+            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="rush-badge" style="margin-bottom:4px;"></div>
+        <div class="sec" style="margin-top:8px;">Fixed-Price Quote</div>
+        <div class="toggle-wrap" id="fixed-toggle-wrap">
+          <div class="toggle-info">
+            <div class="toggle-title">Quote as a fixed price?</div>
+            <div class="toggle-sub" id="fixed-toggle-sub">Firm flat fee instead of hourly. Client sees fee and scope, not hours.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-fixed" onchange="toggleFixedPrice()"><span class="slider"></span></label>
+        </div>
+        <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
+            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
+            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
+              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
+          </div>
+        </div>
+        <div id="fixed-price-warn" style="margin-top:6px;"></div>
+      </div>
       <div class="card">
         <div class="sec">Estimate Summary</div>
         <div id="photo-count-badge" style="margin-bottom:8px;"></div>
@@ -1306,9 +1311,9 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div id="blended-rate-badge" data-est-detail="1" style="margin-top:6px;"></div>
         <div id="hours-warning-badge" style="margin-top:4px;"></div>
-        <div class="divider"></div>
-        <div class="sec">Internal Margin Analysis <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(not on client document)</span></div>
-        <div id="margin-panel"><div style="font-size:11px;color:var(--gray);">Score rooms to see margin analysis.</div></div>
+        <div class="divider" data-est-detail="1"></div>
+        <div class="sec" data-est-detail="1">Internal Margin Analysis <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(not on client document)</span></div>
+        <div id="margin-panel" data-est-detail="1"><div style="font-size:11px;color:var(--gray);">Score rooms to see margin analysis.</div></div>
         <div class="divider"></div>
         <div class="sec">Pricing Reference Check</div>
         <div id="ref-box"><div style="font-size:11px;color:var(--gray);">Select service type above</div></div>
@@ -4311,14 +4316,12 @@ function calcAll() {
     }
   }
 
-  // 500+ hours warning
+  // The 500-hour flag was removed 2026-08-02. It fired on totTC + totPS > 500, a
+  // hard-coded threshold tied to nothing in the engine, and blocked nothing. The Pricing
+  // Reference Check below compares the quote against the real market range for that
+  // service and property size, which is the check that carries information.
   var hoursWarnEl = document.getElementById('hours-warning-badge');
-  if (hoursWarnEl) {
-    var totalBillableHrs = totTC + totPS;
-    hoursWarnEl.innerHTML = totalBillableHrs > 500
-      ? '<div class="alert a-err" style="margin-top:4px;font-size:11px;">⚠ ' + totalBillableHrs.toFixed(1) + ' total billable hours — exceeds 500-hour threshold. Consider a custom quote conversation before presenting this estimate.</div>'
-      : '';
-  }
+  if (hoursWarnEl) hoursWarnEl.innerHTML = '';
 
   if (isPrep) {
     var _rb = document.getElementById('ref-box');
@@ -4573,21 +4576,25 @@ function removeVendor(i) { vendors.splice(i,1); renderVendors(); calcAll(); }
 // Individual vendors are deliberately NOT selectable here. Finding an appraiser who is
 // actually free that week is office work at job kickoff, not walkthrough work — the
 // estimate says what the job needs, the Job Plan says who is doing it.
-function vendorGroupCategories(group) {
-  return directoryCategories({ group: group });
+function vendorGroupCategories(card) {
+  // Accepts a card or a bare group name. End-of-Job Logistics is a curated list rather
+  // than a directory group, so it resolves from LOGISTICS_CATEGORIES.
+  var g = (card && card.group) ? card.group : card;
+  if (g === 'End-of-Job Logistics') return LOGISTICS_CATEGORIES.map(function(c){ return c.label; });
+  return directoryCategories({ group: g });
 }
 
 function renderVendorGroupCards() {
   var wrap = document.getElementById('vendor-group-cards');
   if (!wrap) return;
-  var anyCats = VENDOR_GROUP_CARDS.some(function(c){ return vendorGroupCategories(c.group).length; });
+  var anyCats = VENDOR_GROUP_CARDS.some(function(c){ return vendorGroupCategories(c).length; });
   if (!anyCats) {
     wrap.innerHTML = '<div class="alert a-warn" style="margin-top:0;">Vendor Directory not loaded \u2014 add the Vendor Directory URL in \u2699 Settings. '
       + 'These lists are built from the directory, so there is nothing to pick until it loads.</div>';
     return;
   }
   wrap.innerHTML = '<div class="vgrp-grid">' + VENDOR_GROUP_CARDS.map(function(card, gi) {
-    var cats  = vendorGroupCategories(card.group);
+    var cats  = vendorGroupCategories(card);
     var isPrep = card.target === 'prep';
     var lines = isPrep ? prepItems : vendors;
     var rows = lines.map(function(v, idx) {
@@ -4629,7 +4636,7 @@ function vendorGroupOfLine(cat) {
   var want = String(cat || '').trim().toLowerCase();
   for (var i = 0; i < VENDOR_GROUP_CARDS.length; i++) {
     var g = VENDOR_GROUP_CARDS[i].group;
-    var hit = vendorGroupCategories(g).some(function(c){ return String(c).trim().toLowerCase() === want; });
+    var hit = vendorGroupCategories(VENDOR_GROUP_CARDS[i]).some(function(c){ return String(c).trim().toLowerCase() === want; });
     if (hit) return g;
   }
   return VENDOR_GROUP_CARDS[0].group;
@@ -12988,11 +12995,11 @@ function _vendorRefLine(rec) {
 // list — Donation Pickup is a real category, so a donation partner planned on the
 // walkthrough now carries through instead of always reappearing on the plan.
 var LOGISTICS_CATEGORIES = [
-  {key:'donation', label:'Donation Organization', est:['Donation Pickup']},
-  {key:'junk',     label:'Junk Removal / Hauling', est:['Junk Removal & Dumpster']},
-  {key:'dumpster', label:'Dumpster Rental', est:['Junk Removal & Dumpster']},
-  {key:'cleaning', label:'Move-Out / Final Cleaning', est:['Deep Cleaning','Carpet Cleaning']},
-  {key:'shred',    label:'Document Shredding', est:['Document Shredding']}
+  {key:'donation', label:'Donation Organization',    est:['Donation Organization','Donation Pickup']},
+  {key:'junk',     label:'Junk Removal / Hauling',   est:['Junk Removal / Hauling','Junk Removal & Dumpster']},
+  {key:'dumpster', label:'Dumpster Rental',          est:['Dumpster Rental','Junk Removal & Dumpster']},
+  {key:'cleaning', label:'Move-Out / Final Cleaning',est:['Move-Out / Final Cleaning','Deep Cleaning','Carpet Cleaning']},
+  {key:'shred',    label:'Document Shredding',       est:['Document Shredding']}
 ];
 
 // Logistics categories not already covered by an estimate service vendor.
@@ -13578,7 +13585,12 @@ var VENDOR_GROUP_CARDS = [
   {group:'Disposal & Waste Management',   target:'vendor'},
   {group:'Moving & Logistics',            target:'vendor'},
   {group:'Professional Services',         target:'vendor'},
-  {group:'Property Preparation',          target:'prep'}
+  {group:'Property Preparation',          target:'prep'},
+  // Not a Category Group: the five end-of-job slots the Job Plan asks for, brought
+  // forward so a dumpster or a donation partner you already know you need is priced on
+  // the walkthrough. Anything ticked here drops out of the Job Plan's own logistics list
+  // via logisticsCatsFor, so it is asked once, not twice.
+  {group:'End-of-Job Logistics',         target:'vendor', cats: null}
 ];
 
 function _jobMenuHTML(baseTypes, menu, placeholder) {
