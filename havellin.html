@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:46pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:54pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1124,6 +1124,7 @@ body.no-smf .smf-col{display:none;}
           </div>
         </div>
         <div id="room-table-wrap"></div>
+        <div id="coverage-badge"></div>
         <div id="room-overhead-line" style="display:none;padding:.6rem 1.1rem .9rem;border-top:1px solid var(--border);font-size:11px;color:var(--gray-dk);background:var(--cream);"></div>
       </div>
 
@@ -3082,6 +3083,62 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
            volFactor:volFactor, cpxFactor:cpxFactor, perRoom:perRoom };
 }
 
+
+// ─── ROOM COVERAGE CHECK ─────────────────────────────────────────────────────
+// Intake records how many bedrooms and bathrooms the property has. The room grid
+// records how many were actually scored. Comparing the two is the only honest read on
+// whether a walkthrough was finished, and it matters more than a room count because
+// volume and complexity are averaged across the ticked rooms and then applied to the
+// WHOLE sqft-derived load — so a half-scored house is not half-priced, it is priced as
+// though the entire property looks like the rooms you happened to reach.
+//
+// A flag, not a gate. Saving with zero rooms is already refused; past that a concierge
+// mid-walkthrough knows the estimate is incomplete and does not need to be stopped.
+var COVERAGE_BEDROOMS = ['Primary Suite','Bedroom 2','Bedroom 3','Bedroom 4',
+  'Guest House — Bedroom(s)','Pool House — Living / Bedroom',"Caretaker's Cottage — Bedroom(s)"];
+var COVERAGE_FULL_BATHS = ['Primary Bath','His Primary Bath','Hers Primary Bath',
+  'Bathroom 2','Bathroom 3','Bathroom 4','Additional Bathroom(s)',
+  'Guest House — Bath','Pool House — Bath',"Caretaker's Cottage — Bath"];
+var COVERAGE_HALF_BATHS = ['Half Bath'];
+
+function roomCoverage(scoredNames) {
+  var count = function(list) {
+    return scoredNames.filter(function(n){ return list.indexOf(n) >= 0; }).length;
+  };
+  return { beds: count(COVERAGE_BEDROOMS),
+           fullBaths: count(COVERAGE_FULL_BATHS),
+           halfBaths: count(COVERAGE_HALF_BATHS) };
+}
+
+// Renders the shortfall against intake, or nothing when the walkthrough looks complete.
+function renderCoverageBadge(scoredNames) {
+  var el = document.getElementById('coverage-badge');
+  if (!el) return;
+  var jobId = document.getElementById('e-job') ? (parseInt(document.getElementById('e-job').value) || 0) : 0;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  // No job attached, or intake never captured the counts — nothing to check against.
+  if (!job || !scoredNames.length) { el.innerHTML = ''; return; }
+  var num = function(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; };
+  var wantBeds = num(job.beds), wantFull = num(job.baths), wantHalf = num(job.halfBaths);
+  if (wantBeds == null && wantFull == null && wantHalf == null) { el.innerHTML = ''; return; }
+  var got = roomCoverage(scoredNames);
+  var short = [];
+  if (wantBeds != null && got.beds < wantBeds)
+    short.push('<strong>' + got.beds + ' of ' + wantBeds + '</strong> bedrooms');
+  if (wantFull != null && got.fullBaths < wantFull)
+    short.push('<strong>' + got.fullBaths + ' of ' + wantFull + '</strong> full baths');
+  if (wantHalf != null && got.halfBaths < wantHalf)
+    short.push('<strong>' + got.halfBaths + ' of ' + wantHalf + '</strong> half baths');
+  if (!short.length) {
+    el.innerHTML = '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">Room coverage matches intake \u2014 every bedroom and bath on record has been scored.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">'
+    + '<strong>Walkthrough looks incomplete.</strong> Scored ' + short.join(', ')
+    + ' recorded at intake. Volume and complexity are averaged across the rooms you score and applied to the whole property, '
+    + 'so an unfinished walkthrough misprices the job rather than just under-counting it.</div>';
+}
+
 // ─── ROOM TABLE ───────────────────────────────────────────────────────────────
 function buildRoomTable() {
   var html = '';
@@ -4036,6 +4093,9 @@ function calcAll() {
   // colOnsiteTC (appraiser / dealer / FFL attendance) is passed as fixed on-site time so
   // the sizing loop counts it against TARGET_DAYS instead of discovering the overrun
   // after the crew has already been chosen.
+  // Coverage flag: what intake says the property has against what has been scored.
+  renderCoverageBadge(roomMeta.map(function(r){ return r.name; }));
+
   var _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, 0, colOnsiteTC);
   var _recommendedPS = _sup.requiredPS;
   var _actualPS = Math.max(getScheduledPSCount(), _recommendedPS);
