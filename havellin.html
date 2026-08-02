@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:28pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 6:36pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1060,7 +1060,6 @@ body.no-smf .smf-col{display:none;}
           <option value="5">5 specialists</option>
           <option value="6">6 specialists</option>
         </select>
-        <div id="ps-cost-badge" style="font-size:11px;color:var(--gray);margin-bottom:4px;"></div>
         <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
         </div>
         <div id="est-adjustments">
@@ -4412,17 +4411,11 @@ function calcAll() {
     updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct, crewSize);
   }
 
-  // Update PS cost badge
-  var psBadge = document.getElementById('ps-cost-badge');
-  if (psBadge) {
-    var psSlots = getPSSlots();
-    if (psSlots.length > 0) {
-      var blended = Math.round(getBlendedPSCost() * 10) / 10;
-      psBadge.innerHTML = '<strong>' + psSlots.length + ' specialist(s) scheduled</strong>';
-    } else {
-      psBadge.innerHTML = '<span style="color:var(--err-tx);">No Property Specialists scheduled — add at least 2</span>';
-    }
-  }
+  // The "N specialist(s) scheduled" line was removed 2026-08-02: it restated the crew
+  // dropdown directly above it and the crew badge directly below it, which opens with the
+  // same count. Its else-branch ("No Property Specialists scheduled — add at least 2") was
+  // already unreachable — getScheduledPSCount clamps to a floor of 2, so the count can
+  // never be zero.
 
   // Crew efficiency badge — shows hrs/day per PS and flags over/under-staffing
   var crewBadge = document.getElementById('ps-crew-badge');
