@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Havellin Palm Beach — Concierge Job Playbook</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Raleway:wght@300;400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Raleway',sans-serif;font-size:13px;color:#2C2C30;background:#fff;line-height:1.6;padding:2rem;}
+  .page{max-width:820px;margin:0 auto;background:#fff;padding:3rem;border:1px solid #E2DDD6;}
+  h1{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:500;color:#A67C45;letter-spacing:.06em;margin-bottom:4px;}
+  .subtitle{font-size:11px;color:#888780;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:2px solid #A67C45;}
+  h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#A67C45;margin:2rem 0 .75rem;padding-bottom:4px;border-bottom:1px solid #E2DDD6;}
+  h3{font-size:12px;font-weight:600;color:#2C2C30;margin:1.25rem 0 .4rem;}
+  p{margin-bottom:.6rem;font-size:13px;}
+  ul,ol{margin:.4rem 0 .6rem 1.4rem;}
+  li{margin-bottom:3px;}
+  table{width:100%;border-collapse:collapse;margin:.6rem 0 1rem;font-size:12px;}
+  th{background:#fff;text-align:left;padding:6px 10px;font-weight:600;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#A67C45;border:1px solid #E2DDD6;border-bottom:2px solid #A67C45;}
+  td{padding:6px 10px;border:1px solid #E2DDD6;vertical-align:top;}
+  code{font-family:monospace;background:#fff;padding:1px 5px;border:1px solid #E2DDD6;border-radius:3px;font-size:11px;color:#A67C45;}
+  .flow{background:#fff;border:1px solid #E2DDD6;border-left:3px solid #A67C45;padding:.75rem 1rem;font-size:12px;color:#4A4A52;margin:.6rem 0 1rem;font-family:monospace;line-height:1.8;}
+  .note{background:#fff;border:1px solid #E2DDD6;border-left:3px solid #A67C45;border-radius:4px;padding:.6rem .9rem;font-size:12px;color:#6B5020;margin:.6rem 0;}
+  .stop{background:#fff;border:1px solid #E2DDD6;border-left:3px solid #A33A2A;border-radius:4px;padding:.6rem .9rem;font-size:12px;color:#7A2E22;margin:.6rem 0;}
+  .download-btn{display:inline-block;background:#A67C45;color:#fff;padding:.6rem 1.4rem;border-radius:5px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:none;margin-bottom:2rem;text-decoration:none;}
+  .download-btn:hover{background:#8C6535;}
+  .footer{text-align:center;margin-top:3rem;padding-top:1.5rem;border-top:1px solid #E2DDD6;font-size:10px;color:#888780;letter-spacing:.06em;text-transform:uppercase;}
+  /* ── PAPER ──────────────────────────────────────────────────────────────────
+     Same reasoning as manual.html: this gets printed and carried through a job,
+     so the phone block below is scoped to `screen` deliberately. Chrome lays a
+     Letter page out at ~739px, which is inside the 820px breakpoint, so an
+     unscoped phone block would give every printed table the phone's
+     display:block/overflow-x:auto and silently drop its right-hand column on
+     paper. break-inside stays on notes, flows and tables but NOT on lists — the
+     step lists here run longer than a page. */
+  @media print{
+    @page{margin:.6in .65in;}
+    body{background:#fff;padding:0;font-size:12px;line-height:1.5;}
+    .page{border:none;padding:0;max-width:100%;}
+    .download-btn{display:none;}
+    h1{font-size:24px;}
+    .subtitle{margin-bottom:1.25rem;padding-bottom:1rem;}
+    h2{font-size:10.5px;margin:1.4rem 0 .5rem;page-break-after:avoid;break-after:avoid;}
+    h3{page-break-after:avoid;break-after:avoid;}
+    p,li{orphans:3;widows:3;}
+    p{margin-bottom:.5rem;}
+    table{page-break-inside:avoid;break-inside:avoid;font-size:11px;margin:.5rem 0 .8rem;}
+    th,td{padding:4px 7px;}
+    .note,.flow,.stop{page-break-inside:avoid;break-inside:avoid;}
+    .footer{page-break-before:avoid;}
+    a{color:inherit;text-decoration:none;}
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  }
+/* ── PHONE ────────────────────────────────────────────────────────────────── */
+@media (max-width:820px){
+  body{padding:1rem;}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}
+  td,th{white-space:normal;min-width:110px;}
+  code{word-break:break-all;}
+  .flow{font-size:11px;line-height:1.7;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <button class="download-btn" onclick="window.print()">&#8595; Print / Save as PDF</button>
+
+  <h1>HAVELLIN PALM BEACH</h1>
+  <div class="subtitle">Concierge Job Playbook &nbsp;·&nbsp; Running a Job End to End &nbsp;·&nbsp; Internal</div>
+
+  <p>This is the <strong>how do I run a job</strong> document. It follows one job in order, from the first phone call to the final invoice, and tells you which tab to be on, what to type, and what the app will refuse to let you do until something earlier is done.</p>
+  <p>It deliberately does not explain how the app is built. Setup, Apps Script URLs, folder IDs, the pricing engine's formulas, the vendor taxonomy and every other configuration matter live in the <strong>Operations Manual</strong> (<code>manual.html</code>). If something here says "the app works this out," the manual is where the arithmetic is written down.</p>
+
+  <div class="note"><strong>Three things are recorded by hand, always.</strong> The client's acceptance, the signed agreement coming back, and every payment. Nothing arrives by itself and nothing is automatic — if you don't record it, the app does not know it happened, and the next step stays locked.</div>
+
+  <h2>The Job, Start to Finish</h2>
+  <div class="flow">
+    1. Intake → 2. Build the estimate → 3. Manager approves it → 4. Email it to the client
+    <br>→ 5. Client says yes → Mark Won → 6. Approve &amp; send the agreement → 7. Staff the job team
+    <br>→ 8. Mark it signed → 9. Record the deposit → 10. Work the job: document, log hours, source vendors
+    <br>→ 11. Midpoint invoice → 12. Final invoice → 13. Close the job
+  </div>
+
+  <p><strong>Four points in that sequence are hard gates.</strong> The app refuses — it does not warn, and there is no override:</p>
+  <table>
+    <tr><th>You cannot…</th><th>Until…</th><th>Why</th></tr>
+    <tr><td>Email the estimate</td><td>A manager has approved it</td><td>The figure isn't final until somebody has signed off on it.</td></tr>
+    <tr><td>Staff the job team, or open the staffing section of the Job Plan</td><td>The job is marked <strong>Won</strong></td><td>Holding a specialist for these dates means turning down other work. Never commit crew to a job the client hasn't accepted.</td></tr>
+    <tr><td>Log hours</td><td>The <strong>deposit</strong> is recorded and complete</td><td>The deposit is never waived, so this gate is always safe to enforce.</td></tr>
+    <tr><td>Issue the final invoice</td><td>Hours are logged</td><td>The final bills labour at hours actually worked. No hours means there is nothing behind the number, so no manager can unlock it.</td></tr>
+  </table>
+
+  <h2>Step 1 · Intake — Client Intake tab</h2>
+  <p>Fill in everything marked *. The Job ID (<code>HVL-YYMM-XXXX</code>) and the client's Drive folders are created for you on save.</p>
+  <ul>
+    <li><strong>Service type</strong> — Downsizing · Downsizing &amp; Move Management · Home Cleanout · Estate Settlement · Probate Estate Settlement · Contested Probate Estate Settlement · Home Prep for Sale.</li>
+    <li><strong>Square footage</strong> is what drives the sizing. Property type is just a label. Bedrooms, full baths and half baths are separate fields, so "five baths" is never ambiguous.</li>
+    <li><strong>Estate and probate jobs need an authorised representative</strong> — executor, POA or administrator, with name, role, phone and email. Probate also needs the case number and the attorney's details.</li>
+    <li><strong>Documentation level</strong> — Auto, Standard, or Formal (court &amp; attorney grade). Auto is right almost always: it makes contested probate Formal and everything else Standard. Formal turns on the appraisal guardrails and makes chain-of-custody mandatory. This is separate from the Premium-estate rate — a premium job is not automatically a court-grade one.</li>
+    <li><strong>Referral source</strong> — if it came from an attorney, realtor or trust officer, link the actual Referral Partner so they get credit on the leaderboard. Family and friend referrals use the free-text name field.</li>
+    <li><strong>Assigned concierge is optional here.</strong> Intake usually runs a fortnight ahead of the work and nobody knows who is free. You staff the job properly at step 7.</li>
+  </ul>
+  <div class="note"><strong>Home Prep for Sale runs a shorter version of this whole playbook</strong> — no room scoring, no crew, no hours. Skip to the Home Prep section near the end once intake is saved.</div>
+
+  <h2>Step 2 · Build the estimate — Build Estimate tab</h2>
+  <p>Select the job from the dropdown. This is desk or iPad work — the room tables are not built for a phone.</p>
+
+  <h3>On the walkthrough</h3>
+  <ul>
+    <li>Use <strong>📝</strong> for notes and <strong>🎙</strong> for voice-to-text in each room row. Voice transcribes as you talk. Hit <strong>Save Notes</strong> and it files itself to the job's Walkthrough Notes folder.</li>
+    <li><strong>No photos at this stage.</strong> Photography happens after the job is active, not on the estimate visit.</li>
+    <li>Room sections open collapsed. Open each one as you walk that part of the house; use <em>Expand all / Collapse all / Hide empty</em> at the top.</li>
+  </ul>
+
+  <h3>Scoring a room</h3>
+  <p>Check the room to include it — it scores 3/3 by default. Then set Volume and Complexity 1–5:</p>
+  <table>
+    <tr><th>Score</th><th>Volume</th><th>Complexity</th></tr>
+    <tr><td>1</td><td>Nearly empty</td><td>Simple / standard items</td></tr>
+    <tr><td>3</td><td>Moderately filled</td><td>Mix of standard and care items</td></tr>
+    <tr><td>5</td><td>Completely full</td><td>High-value / fragile / specialty handling</td></tr>
+  </table>
+  <p>Tick <strong>Special Items</strong> if the room holds artwork, antiques, or anything needing specialty care. Hours and a timeline appear as you score.</p>
+
+  <h3>The job settings that change the price</h3>
+  <table>
+    <tr><th>Setting</th><th>What it does to the quote</th><th>When to use it</th></tr>
+    <tr><td><strong>Premium Estate</strong></td><td>TC $185 / PS $125 instead of $150 / $100, plus a flat 25 hrs of specialty coordination.</td><td>Auction houses, appraisers, wine and art logistics.</td></tr>
+    <tr><td><strong>Property Specialists</strong></td><td>The app sizes the crew itself — the smallest number that lands inside the 10-working-day target (floor 2, cap 6). You can add more by hand.</td><td>Leave it alone unless you know something the app doesn't.</td></tr>
+    <tr><td><strong>Difficult access</strong></td><td>+15% to the physical work, which lengthens the job and so lengthens concierge time automatically.</td><td>Stairs, no elevator, long carry.</td></tr>
+    <tr><td><strong>Multiple heirs</strong></td><td>+20% to off-site coordination — more calls and sign-offs, not more boxes.</td><td>Greyed out on contested probate; it's already in those rates.</td></tr>
+    <tr><td><strong>Rush order</strong></td><td>A flat <strong>20% expedited-delivery premium</strong> on the Havellin services total, shown to the client as its own named line. Never on vendor costs.</td><td>When the client is buying a compressed calendar — a second concierge and a bigger crew in parallel.</td></tr>
+    <tr><td><strong>Quote as a fixed price</strong></td><td>Replaces hourly with a firm flat fee, prefilled from the suggested figure and fully editable.</td><td><strong>Not available on Probate or Contested Probate</strong> — the toggle is disabled. Those bill on logged hours so the expense stands up in court.</td></tr>
+    <tr><td><strong>Preferred Client Discount</strong></td><td>Percentage off Havellin labour only, max 30%.</td><td>Read the margin panel before you use it.</td></tr>
+    <tr><td><strong>Moving Materials Package</strong></td><td>Estate tier ($500 / $750 / $1,500) or Downsizing tier ($200 / $350 / $550).</td><td>Or None.</td></tr>
+  </table>
+
+  <div class="stop"><strong>A bigger crew makes the estimate go DOWN, not up.</strong> The concierge works alongside the crew, so more specialists finish sooner and the concierge is on site for fewer billable hours. That is correct pricing — but it means a crew size left over from a larger job will quietly discount this one. <strong>Never carry a crew size between estimates.</strong> The app flags any crew above its own recommendation; take the flag seriously.</div>
+
+  <h3>Vendors, collections and vehicles</h3>
+  <ul>
+    <li><strong>Third-party vendors</strong> — add each with an estimated cost. A <strong>15% Service Management Fee</strong> calculates automatically. Vendor costs are estimates; the client is billed by the vendor directly at cost.</li>
+    <li><strong>Home Prep as an add-on</strong> — tick <em>Include in estimate</em> in the Home Prep section. Prep vendors carry a <strong>30% GC fee</strong>, not the 15%.</li>
+    <li><strong>Notable Collections</strong> — name, estimated value, quantity and a proposed disposition (appraise, auction house, consignment, estate sale, licensed FFL, gold &amp; silver buyer, and so on). <strong>The disposition you pick adds hours</strong>, and the rule is simple: <em>if the specialist comes to the property, you're standing there; if the items go out to them, your time is phone and paperwork.</em> An appraisal, a dealer visit or an FFL handoff books real on-site time and lengthens the job. eBay, Replacements.com and consignment book coordination only. A ten-collection estate genuinely is a longer job than a two-collection one.</li>
+    <li><strong>Vehicles &amp; watercraft</strong> — add each by description then fill the panel: type, year, VIN/HIN, mileage, condition, and the two flags — <em>collector / classic</em> and <em>title located</em>. Ordinary vehicles you value in-house from KBB/NADA as of the date of death; collectors and boats route to an appraiser. Vehicles don't change the labour estimate.</li>
+  </ul>
+
+  <h3>Reading the timeline badge before you save</h3>
+  <table>
+    <tr><th>Badge</th><th>What to do</th></tr>
+    <tr><td><strong>Green</strong></td><td>Nothing. Either it's inside the 10-day target, or it's longer because the house is big and the crew is already at 6 — no lever left.</td></tr>
+    <tr><td><strong>Amber</strong></td><td>Over target <em>with crew headroom</em>. Adding a specialist would pull it back. This is the one badge you can act on.</td></tr>
+    <tr><td><strong>Red</strong></td><td>The projection misses the client's hard date. Renegotiate scope or the deadline <em>before</em> you send the estimate.</td></tr>
+  </table>
+  <div class="note"><strong>If the app recommends a second concierge</strong>, it's telling you one person can't cover the schedule — more than 10 concierge hours a day. It changes neither the fee nor the duration; it stops somebody working 12-hour days. Contested probate and heavy documentation estates trip this, which is right.</div>
+
+  <p>Hit <strong>Save &amp; Preview Client Estimate</strong>. It saves, syncs, and opens the client-facing preview. You can keep editing until it's approved.</p>
+
+  <h2>Step 3 · Get it approved — Client Estimate tab</h2>
+  <p>Read the client-facing document for accuracy. Then <strong>Submit for Approval</strong> → a manager types their PIN → the estimate locks as <em>Approved for Release</em> and the PDF unlocks.</p>
+  <div class="stop">Once approved, the estimate <strong>cannot be edited</strong>. Service type, square footage and the premium toggle freeze. If the scope changes after this, it's a <strong>Change Order</strong> — see step 10.</div>
+  <p>No client signature is wanted on the estimate. It's informational.</p>
+
+  <h2>Step 4 · Send it — Client Estimate tab</h2>
+  <p><strong>Email Estimate</strong> opens a pre-drafted, warmly-worded email that ties back to the walkthrough. Attach the estimate and send.</p>
+  <div class="stop">An unapproved estimate <strong>cannot be emailed</strong>, from this tab or from the dashboard shortcut. If the button refuses, go back to step 3.</div>
+  <p>Then wait. Do not send an agreement, do not book anybody.</p>
+
+  <h2>Step 5 · The client says yes — Client Dashboard</h2>
+  <p>Open the job card and hit <strong>✓ Client Accepted — Mark Won</strong>. Acceptance is informal — nothing is signed until the agreement — so the app records <em>how you know</em>:</p>
+  <ul>
+    <li><strong>Method</strong> — email reply · phone call · text · in person</li>
+    <li><strong>Date</strong> they accepted</li>
+    <li><strong>What they said</strong> — paste the email, or write down what was said on the call</li>
+  </ul>
+  <div class="note">A phone call or in-person acceptance <strong>with no note</strong> gets challenged before it's accepted. There's no email to fall back on, so your note is the only record of what the client actually agreed to. Write it while you remember it.</div>
+  <p><em>Approved</em> and <em>Won</em> are different things and the difference is the whole point: approved means a manager signed off on our figure; won means the client said yes. Marking Won is what unlocks staffing.</p>
+
+  <h2>Step 6 · Agreement — Agreement tab</h2>
+  <div class="stop"><strong>Never send an agreement before the job is marked Won.</strong> Record the acceptance on the dashboard first.</div>
+  <ol>
+    <li>Select the job — the agreement populates from the approved estimate.</li>
+    <li>A manager enters their PIN to approve it for sending. The approved agreement files itself to the Drive <strong>Agreement</strong> folder at this moment.</li>
+    <li><strong>Print / Save PDF</strong> or <strong>Email to Client</strong>.</li>
+    <li>Hit <strong>✉ Mark Agreement Sent</strong>.</li>
+  </ol>
+  <p>Three buttons then appear one at a time, each in its own turn, each recording who did it and when. None of them will run out of order — you cannot mark a signature on an agreement that was never sent.</p>
+  <table>
+    <tr><th>Button</th><th>Press it when</th></tr>
+    <tr><td><strong>✉ Mark Agreement Sent</strong></td><td>You've emailed it or handed it over.</td></tr>
+    <tr><td><strong>✓ Mark Agreement Signed</strong></td><td>The signed copy has come back. Signing does <em>not</em> mean paid — the app keeps those separate on purpose.</td></tr>
+    <tr><td><strong>✓ Record Deposit</strong></td><td>The money is in your hand. This is what lets work begin.</td></tr>
+  </table>
+
+  <h2>Step 7 · Staff the job team — Job Plan tab</h2>
+  <p>Do this in the wait between sending the agreement and the deposit landing. You know the job is happening; now find out who is actually free.</p>
+  <ol>
+    <li>Open the job's <strong>Job Team &amp; Hours</strong> roster. It shows the crew the approved estimate was priced for — not a blank six slots — plus a concierge row and an optional second concierge row.</li>
+    <li>Confirm each person's availability, then name them. Any empty planned slot is flagged <strong>"needs a name."</strong></li>
+    <li>Need somebody beyond what was quoted? <strong>+ Add a specialist beyond plan</strong>. Those rows are tagged <em>beyond plan</em>, because crew above plan eats margin against a fixed quote and the projection will say so.</li>
+    <li><strong>Save &amp; Confirm Job Team →</strong></li>
+  </ol>
+  <ul>
+    <li><strong>Placeholders are fine.</strong> <em>Contractor TBD</em> and <em>Contractor — TC</em> mean a confirmed need with an unconfirmed person. They cost at a placeholder rate, so the app says out loud that margin is an estimate until you name them.</li>
+    <li><strong>Confirming locks the named people.</strong> Empty slots stay open so you can add mid-job.</li>
+    <li><strong>Revise team</strong> reopens the roster — but anyone who has already logged hours stays locked. You can add to a team mid-job; you can never retroactively remove somebody who worked. Hours stay shut until you re-confirm.</li>
+    <li><strong>One person, one role, one date.</strong> A name taken disappears from the other selects and a duplicate is refused at save.</li>
+  </ul>
+  <div class="stop"><strong>Confirming the team does not start the clock.</strong> Hours stay locked until the deposit is in. A confirmed team on an unfunded job keeps its confirmation and tells you plainly that the deposit is what's missing. Staffing ahead of payment is deliberate; starting work is not.</div>
+
+  <h2>Step 8 · Signed copy back</h2>
+  <p><strong>✓ Mark Agreement Signed</strong> on the Agreement tab. That's it — but do it the day it arrives, because the deposit button won't appear until you have.</p>
+
+  <h2>Step 9 · Record the deposit — Agreement tab</h2>
+  <p>The deposit is <strong>50% of the approved total</strong> and it is <strong>never waived or varied</strong>. The same button records all three payments; a <em>Which payment is this?</em> picker at the top opens on the first unsatisfied stage, so in normal use you never touch it.</p>
+  <p>Recording a payment captures evidence, not a tick:</p>
+  <table>
+    <tr><th>Field</th><th>What to put</th></tr>
+    <tr><td><strong>Amount</strong></td><td>Prefilled with what's still outstanding — a second cheque needs no arithmetic in the field.</td></tr>
+    <tr><td><strong>Date received</strong></td><td>The day it reached your hand, not the day it clears.</td></tr>
+    <tr><td><strong>Method &amp; reference</strong></td><td>Cheque number, wire confirmation, Stripe id.</td></tr>
+    <tr><td><strong>Paid by</strong></td><td>The trust, estate account, law firm or the client. In estate work the payer is often not the client, and this is what shows the estate is funding the engagement properly. It also settles the argument if heirs later dispute who paid for what.</td></tr>
+    <tr><td><strong>Photo of the cheque</strong></td><td>Take it <em>before the cheque leaves your hands.</em> Five seconds, and it's what makes a hand-recorded payment a document rather than an assertion. It files to Drive against the payment.</td></tr>
+  </table>
+
+  <p><strong>Partial payments are normal.</strong> Two cheques, or the trust sending part and the family the rest, all work. The job stays part-paid and unfunded until the running total hits the target, the bar shows what's outstanding, and the button stays available for the next one. A short total asks before it's accepted; a second cheque that completes the deposit goes through without a warning.</p>
+
+  <div class="note"><strong>Work starts on <em>received</em>, not <em>cleared</em>.</strong> Waiting for cheques to clear costs three to five days on every job. Wires, cards and cash are marked cleared on receipt; cheques show as uncleared on the dashboard until the bank confirms.</div>
+
+  <h3>Deposits over $10,000</h3>
+  <p>Above $10,000 a personal cheque is no longer the accepted instrument: <strong>wire preferred, cashier's cheque accepted.</strong> Recording a large personal cheque anyway is allowed — the money is already in hand — but it's flagged as a policy exception and carries your name.</p>
+  <p>Two things worth knowing when you ask for one:</p>
+  <ul>
+    <li>A <strong>certified</strong> cheque is not a <strong>cashier's</strong> cheque. Certified is drawn on the client's account with the bank only secondarily liable. A cashier's cheque is drawn on the bank's own account with the money already taken. Ask for the second one, by name.</li>
+    <li>Neither is bounce-proof — counterfeit cashier's cheques are a common fraud and a bank can reverse weeks later. On a large one, phone the <em>issuing</em> bank on a number you look up yourself, never the number printed on the cheque. A wire beats both: it's final on receipt, and it's what trust officers and law firms do routinely anyway.</li>
+  </ul>
+
+  <h3>What you're collecting, and when</h3>
+  <table>
+    <tr><th>Milestone</th><th>Amount</th><th>Timing</th></tr>
+    <tr><td>Deposit</td><td>50% of the estimate</td><td>On signing</td></tr>
+    <tr><td>Midpoint</td><td>Brings the cumulative to 75%, with vendor and prep fees trued to the actual quotes you've logged</td><td>At project midpoint</td></tr>
+    <tr><td>Final</td><td>The balance — labour trued to logged hours, fees on actuals, plus any accepted Change Orders</td><td>Within 7 days of the final invoice</td></tr>
+  </table>
+  <div class="note">Only the deposit gates anything. Recording a midpoint or final payment captures the money so the job's paid total is complete — it doesn't unlock anything, and a midpoint cheque of any size will never fund a job. Those two stages prefill nothing and challenge nothing: type what arrived.</div>
+
+  <h2>Step 10 · Work the job</h2>
+  <p>The job is now <strong>Active</strong>. Three things run in parallel.</p>
+
+  <h3>a. Document the property — Client Dashboard → job documentation</h3>
+  <p>This is the only stage where photos are captured.</p>
+  <ul>
+    <li><strong>📷</strong> per room — photos upload automatically to the <strong>Estate Inventory</strong> Drive folder. Each room row shows its walkthrough note from the estimate in grey italic, so you're photographing against what you wrote at the time.</li>
+    <li><strong>🎥</strong> per room — video walkthrough footage.</li>
+    <li><strong>📷 Asset photos</strong> and <strong>📄 Appraisal</strong> on each notable collection — condition photography and the appraisal document itself.</li>
+    <li><strong>Capture item</strong> on a room card — photograph individual objects for the inventory. Type the object name, pick a category and set a disposition <em>before</em> the shot. Anything in an intrinsic category (art, jewellery, silver, antiques, rugs, coins, firearms, wine, instruments) that carries real value gets a <strong>⚑ needs-a-specialist</strong> flag.</li>
+  </ul>
+
+  <h3>b. Log hours — Job Plan tab, every single day</h3>
+  <p>One entry per working day: the <strong>date</strong>, an <strong>activity summary</strong>, and <strong>hours against each named crew member</strong>. The roles come from the roster you confirmed — concierge rows log as TC, specialist rows as PS.</p>
+  <div class="stop"><strong>Log daily. Do not batch at end of job.</strong> The hours drive the forward-variance projection <em>and</em> the final invoice — the timesheet <em>is</em> the invoice. A job with no logged hours cannot issue a final invoice at all, and nobody can unlock it for you.</div>
+  <p>Log <em>your own</em> hours as well as the crew's. You are on site for every crew hour; if the log shows crew time with no concierge time against it, the invoice warns you in dollars about the time it thinks you've missed.</p>
+
+  <h3>c. Source the vendors — Job Plan tab</h3>
+  <p>Assign a directory vendor to each estimate line, set its status, and <strong>record the actual quote</strong>. Those actuals are what the midpoint and final invoices charge the 15% / 30% fee on — a line with no logged quote falls back to the estimate and gets tagged "est." on the client's invoice.</p>
+  <p>Only <strong>Active</strong> vendors appear in the picker. An assigned vendor's phone is a tap-to-dial link, because you're usually standing in the house when you need them.</p>
+
+  <h3>d. Change Orders — Client Dashboard</h3>
+  <p>Scope changed after approval? Do <em>not</em> edit the estimate — it's locked. From the job card: <strong>Create Change Order</strong> → description, the dollar impact (positive to add, negative to reduce), and a reason. <strong>No manager PIN is involved</strong> — a change order is priced with the client, not approved internally.</p>
+  <p>Then two buttons appear on it:</p>
+  <ol>
+    <li><strong>PDF</strong> — the printable change order showing the original total, the change and the revised total.</li>
+    <li><strong>Get Acceptance</strong> — the client types their name against <em>✓ I Accept This Change Order.</em> Hand them the iPad, or record it yourself off their email or call.</li>
+  </ol>
+  <div class="stop"><strong>An unaccepted Change Order is never billed.</strong> The final invoice counts accepted change orders and silently ignores the rest. A change order created, printed, agreed on the phone and never marked accepted is work you will do and not charge for. <strong>Take the acceptance at the moment the client agrees.</strong></div>
+
+  <h3>e. Estate Inventory — Inventory tab</h3>
+  <p>On estate and probate jobs, the manifest assembles from three places: items you captured on room cards, <strong>+ Add line item</strong> for an asset with no photo (cash, an account, a vehicle), and a <strong>From the Estimate Walkthrough</strong> panel that pulls in the collections and vehicles you flagged at estimate time — as a lot or itemised. Nothing can be imported twice.</p>
+  <ul>
+    <li><strong>Appraisers</strong> — build the roster per estate: name, firm, credential (ISA / ASA / AAA / USPAP / GIA), independence, and the effective and report dates. An item valued by appraisal links to a roster appraiser instead of free text.</li>
+    <li><strong>The $3,000 guardrail</strong> — flagged items with no appraiser attached raise an amber nudge on a Standard job and a <strong>red block on a Formal one</strong>. Per-item <strong>Waive</strong> logs a reason. On a Formal job the Court Inventory prints <em>DRAFT</em> until every flagged item is appraised or waived.</li>
+    <li><strong>Valuation basis and date</strong> — Fair Market Value by default, valued as of the date of death. If the estate is taxable and counsel elects the §2032 alternate date (six months after death), toggle it and the schedule follows.</li>
+    <li><strong>Asset track</strong> — Probate / Trust / Non-probate / Homestead / Exempt. Only Probate-track items reach the Court Inventory, so the schedule doesn't overstate the estate.</li>
+    <li><strong>🔗 Custody log</strong> per item — released / received / transferred / returned, with party, date, method and receipt. Mandatory on Formal and on any probate job.</li>
+    <li><strong>Snapshot</strong> — a labelled point-in-time copy of the manifest. This is your amended-inventory trail; print any snapshot as an as-of schedule.</li>
+  </ul>
+  <p><strong>Exports:</strong> <em>Court Inventory</em> (the §733.604-style schedule counsel files — Havellin does not file it), <em>Disposition Ledger</em> (gross / fees / net to the estate — our own service fee never appears on it), <em>Appraisal Worklist</em> (a per-specialist packet to hand each appraiser), and <strong>Share w/ Counsel</strong>, which grants the attorney or trust officer read-only access to the whole Estate Inventory folder by name — never a public link. <strong>Revoke</strong> takes it back. Financial folders stay private either way.</p>
+  <div class="note">Everything in the inventory is documentation support, not a legal or appraisal opinion. The estate attorney and a credentialed appraiser remain the authority.</div>
+
+  <h2>Step 11 &amp; 12 · Invoices — Invoices tab</h2>
+  <p>Select the job, then pick a <strong>Stage</strong>. The stage advances by itself as you record payments, so it's usually already on the right one.</p>
+  <table>
+    <tr><th>Stage</th><th>What it bills</th></tr>
+    <tr><td><strong>Deposit</strong></td><td>50% on the estimate basis. No actuals exist yet.</td></tr>
+    <tr><td><strong>Midpoint</strong></td><td>Brings the cumulative collected to 75% and trues vendor and prep fees to the quotes you logged. Labour stays on estimate until the hours are complete.</td></tr>
+    <tr><td><strong>Final</strong></td><td>Labour trued to logged hours, fees on actuals, plus any accepted Change Orders.</td></tr>
+  </table>
+
+  <h3>What needs a PIN — and what doesn't</h3>
+  <p><strong>Most invoices need no PIN.</strong> Deposit and midpoint are formulaic from the approved estimate, so they print straight out and show <em>No approval required</em>. Only the <strong>final</strong> asks for a manager PIN, and only when it lands more than <strong>±15%</strong> away from the estimate — the banner names the percentage and the direction. Accepted change orders are left out of that comparison, since the client already agreed to those separately.</p>
+
+  <div class="stop"><strong>No hours logged = no final invoice.</strong> No PIN, no PDF, no email, and no manager can unlock it. This is the one thing most likely to bite a practice run: skip the daily logging and the final simply will not issue. Go log the hours, then reprint. (Fixed-price and Home Prep jobs are exempt — their labour total doesn't come from the log.)</div>
+
+  <h3>Things you'll see on an invoice</h3>
+  <ul>
+    <li><strong>A rush job carries its 20% expedited-delivery line on all three stages.</strong> If you invoiced a rush job before August 2026, re-print its midpoint and final and check the totals against what the client agreed — the premium used to be dropped after the deposit.</li>
+    <li><strong>A negative final invoice is not a bug.</strong> If the job ran far enough under estimate, the 75% taken by midpoint overcollected. It renders as a green Credit and the document says the job came in under estimate. That's correct — issue it.</li>
+    <li><strong>Every invoice you print files itself to Drive</strong>, one file per stage, so the three never overwrite each other. Reprinting a stage replaces its own copy — which is what you want when you correct a figure and reissue.</li>
+    <li><strong>On a fixed-price job</strong> the flat fee <em>is</em> the services total; the stages split that number and labour is never trued to hours. Vendor and prep fees still true up to actual quotes either way.</li>
+  </ul>
+
+  <h2>Step 13 · Close the job — Client Dashboard</h2>
+  <p>Final invoice paid → close the job. The app stamps the delivery date, the time, and who closed it, <strong>once</strong>. Re-opening and re-closing does not move that date — it records when the work was actually handed over.</p>
+  <p>The status button on a closed job reads <strong>Re-open</strong> and returns it to <em>Active</em>, where it left off. It does not send the job back to the start.</p>
+
+  <h3>If the job dies instead</h3>
+  <p>The <strong>✕</strong> on the job card opens closeout, and what it does depends on whether money arrived:</p>
+  <ul>
+    <li><strong>Before the deposit</strong> → <em>Lost</em>, with a reason (price, scope, timing, unresponsive, competitor, other) and an optional note — competitor name, price gap. A job marked Won that then withdraws flips back to not-won: a win that produced nothing isn't a win.</li>
+    <li><strong>After the deposit</strong> → the button becomes <strong>Close — Retain Deposit</strong>. We keep the money and it still counts as won, because it produced revenue.</li>
+  </ul>
+  <div class="stop">Both of those are <strong>terminal</strong>. The status button will not move them. If a lost client comes back, start a new job.</div>
+
+  <h2>Where the job sits — the status list</h2>
+  <table>
+    <tr><th>Status</th><th>Means</th><th>What's unlocked</th></tr>
+    <tr><td>New</td><td>Intake done, no estimate yet</td><td>Build Estimate</td></tr>
+    <tr><td>Pending Approval</td><td>Estimate submitted for a manager PIN</td><td>—</td></tr>
+    <tr><td>Approved — Awaiting Client</td><td>We approved our own figure. <strong>The client has not answered.</strong></td><td>Email the estimate. Nothing may be staffed.</td></tr>
+    <tr><td><strong>Won</strong></td><td>The client accepted</td><td>Agreement, staffing, the Job Plan staffing section</td></tr>
+    <tr><td>Active</td><td>Signed and deposited — work in progress</td><td>Hours, photos, invoices</td></tr>
+    <tr><td>Closed</td><td>Final invoice paid; delivery stamped</td><td>Re-open returns it to Active</td></tr>
+    <tr><td>Lost</td><td>Died before any money arrived</td><td>Terminal</td></tr>
+    <tr><td>Closed — Deposit Retained</td><td>Died after the deposit; we keep it</td><td>Terminal. Still counts as won.</td></tr>
+  </table>
+
+  <h2>Home Prep for Sale — the short version</h2>
+  <p>A sell-side, show-ready service, mostly through Douglas Elliman referral agents. Havellin manages every trade — paint, repairs, landscaping, deep cleaning, staging — and charges a flat <strong>30% GC / Site Management Fee</strong> on the managed vendor spend. No room scoring, no in-house labour, no crew, no hours log.</p>
+  <div class="stop"><strong>The agreement is with the homeowner.</strong> The referring agent is a referral channel, never our client. No document should suggest otherwise.</div>
+  <ol>
+    <li><strong>Intake</strong> with Service Type = <em>Home Prep for Sale</em>. No property value needed.</li>
+    <li><strong>Build Estimate</strong> hides rooms, crew and labour entirely. Add each prep item and vendor with an estimated cost — the 30% shows per line and in total. <strong>Fill in the scope note on every line</strong> while you're on the walkthrough: exactly what you'll tell that trade ("5 bedrooms + hallway, walls &amp; ceilings; front and back landscaping"). It carries through to sourcing.</li>
+    <li><strong>Client estimate</strong> reads vendors-first: itemised vendor estimates at cost, then the 30% fee, then one total. Same 50 / 25 / 25 schedule on the Havellin fee. No completion date is projected — the schedule is confirmed once vendors are booked, and the estimate says so.</li>
+    <li>Approve → send → Mark Won → agreement → deposit, exactly as above.</li>
+    <li><strong>Job Plan</strong> is stripped down to three things: <em>Budget &amp; Fee</em> (estimated spend, quoted-to-date, the running 30% on actual quotes, with an over-budget flag), <em>Home Prep Vendors — Sourcing &amp; Status</em> (assign the vendor, set status, log the actual quote against the scope note), and a <em>Coordination Checklist</em> — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices and fee billed.</li>
+  </ol>
+
+  <h2>Quick reference</h2>
+
+  <h3>What we bill the client</h3>
+  <table>
+    <tr><th>Item</th><th>Standard</th><th>Premium Estate</th></tr>
+    <tr><td>Transition Concierge</td><td>$150/hr</td><td>$185/hr</td></tr>
+    <tr><td>Property Specialist</td><td>$100/hr</td><td>$125/hr</td></tr>
+    <tr><td>Service Management Fee (third-party vendors)</td><td>15% of vendor cost</td><td>15%</td></tr>
+    <tr><td>Home Prep GC / Site Management Fee</td><td>30% of prep vendors</td><td>30%</td></tr>
+    <tr><td>Moving Materials</td><td>Cost + 25%</td><td>Cost + 25%</td></tr>
+    <tr><td>Expedited delivery (rush)</td><td>+20% of Havellin services</td><td>+20%</td></tr>
+  </table>
+  <p>Every service bills <strong>time-and-materials by default</strong>. A firm fixed price is available on any job <em>except</em> Probate and Contested Probate. Vendor work is pass-through — the vendor bills the client directly at cost and Havellin takes only the fee on top.</p>
+
+  <h3>Manager PIN required for</h3>
+  <ul>
+    <li>Approving or denying an estimate</li>
+    <li>Approving an agreement for sending</li>
+    <li>A <strong>final</strong> invoice more than ±15% off the estimate (deposit and midpoint need none)</li>
+    <li>Deleting a client, vendor or partner</li>
+  </ul>
+  <p><strong>Not</strong> required for a Change Order — that one is settled with the client, not internally. Everyone has their own PIN and the approval is recorded under whoever typed it, so use yours.</p>
+
+  <h3>The margin panel</h3>
+  <p>It's an indicative profitability readout with a flag on it — <strong>not a discounting tool</strong>. <em>Price at 30% Margin</em> is a reference line at an admittedly arbitrary margin and <em>Above Reference</em> is simply the distance to it. Neither is an allowance to spend. In practice, a job needing that much discount is one to walk away from rather than price down to. The panel also shows what the 50% deposit covers at the quoted price and warns in dollars when it stops covering cost.</p>
+
+  <h3>If something won't let you proceed</h3>
+  <table>
+    <tr><th>Symptom</th><th>What's missing</th></tr>
+    <tr><td>Email Estimate refuses</td><td>The estimate isn't approved. Submit for Approval first.</td></tr>
+    <tr><td>Can't edit the estimate</td><td>It's approved and locked. Use a Change Order.</td></tr>
+    <tr><td>Staffing refuses / Job Plan staffing section is hidden</td><td>The job isn't marked Won. Record the client's acceptance on the dashboard.</td></tr>
+    <tr><td>Mark Signed / Record Deposit buttons aren't there</td><td>The step before hasn't been marked. They appear one at a time, in order.</td></tr>
+    <tr><td>Save Hours Entry is greyed out</td><td>Either the team isn't confirmed, or the deposit isn't in — the bar says which.</td></tr>
+    <tr><td>Final invoice won't print, and no PIN is offered</td><td>No hours are logged. Go and log them.</td></tr>
+    <tr><td>A change order isn't on the final invoice</td><td>It was never marked accepted. Get Acceptance.</td></tr>
+    <tr><td>A vendor isn't in the Job Plan picker</td><td>They aren't set to <em>Active</em> in the Vendor Directory.</td></tr>
+    <tr><td>A crew member isn't in the staffing dropdown</td><td>They aren't <em>Active</em> on the Contractors tab.</td></tr>
+    <tr><td>Fixed-price toggle is disabled</td><td>It's a probate or contested probate job. Those bill on logged hours.</td></tr>
+  </table>
+
+  <div class="footer">
+    Havellin Palm Beach &nbsp;·&nbsp; 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401<br>
+    Concierge Job Playbook &nbsp;·&nbsp; Internal use only &nbsp;·&nbsp; Not for distribution &nbsp;·&nbsp; For configuration, setup and system reference see the Operations Manual
+  </div>
+
+</div>
+</body>
+</html>
