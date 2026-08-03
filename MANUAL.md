@@ -402,6 +402,24 @@ A Home Prep job opens a stripped-down Job Plan — no hours log, no PS crew, no 
 
 **Tab: Client Estimate** → select job. The client-facing estimate document renders here. Review for accuracy. The estimate is informational — no client signature is required or requested.
 
+### What the document contains
+
+It opens with **Havellin Job Plan & Services** — rebuilt 2026-08-03 from a single *Proposed Plan* paragraph into a structured section ahead of the fee tables: *How We Work* · *Spaces In Scope* · *How The Work Runs* · *What We Coordinate For You* · *What You Receive* · *What We Need From You*. The fee tables, third-party vendors and totals follow it.
+
+> **The stages are DERIVED from the pricing engine, not written per service — this is the whole design.** Which stages a client sees comes from `JOB_STEPS[svc]`, the same table that produced the hours. Probate prices a *document* step and a *legal* step, so its document carries the documentation and court-filing stages; Home Cleanout prices neither and shows neither; move management gets Move Day. The narrative and the number read one source and cannot disagree. **If a service ever needs a new stage, add the step to `JOB_STEPS`** — never hardcode a per-service phase list, or the two drift exactly the way this manual does.
+
+Each stage states three things: what Havellin does, **what we need from the client**, and **what "complete" means** — the internal Job Plan's phase gate (§11) restated in client language. That last field is what makes the document read as a method rather than a brochure.
+
+> **No dates and no durations appear anywhere in the plan, deliberately.** Same reasoning as the fixed-price fee line (§5c): a number beside a stage reads as a delivery commitment, and the pace is set by how fast the *client* decides, not by us. A test asserts that no day or week count appears in any stage copy on any service type. Don't add one.
+
+> **Depth follows the documentation level (§4), not the project value.** A *Formal* engagement gets the fuller completion criteria and the court-grade *What You Receive* list — date-of-death FMV, chain of custody, appraisals attached, seven-year retention. A *Standard* job keeps every stage rather than reading as an afterthought; it simply doesn't claim records it isn't producing.
+
+**Spaces In Scope is grouped by section** — Entry & Living, Kitchen & Utility, Lifestyle Rooms, both bedroom floors and the rest — with a count per group and a total. The flat comma list it replaces dropped the section name, so a two-storey house printed *Primary Suite … Primary Suite* and *Half Bath … Half Bath*: real first- and second-floor rooms reading as duplicated typing on a six-figure proposal. Grouping is a correctness fix, not styling. Excluded spaces still print in red beneath.
+
+**Standalone Home Prep runs its own three stages** — Scoping & Sourcing · Execution & Oversight · Show-Ready Handover — and carries no *What You Receive* block, because it produces no inventory (§6b).
+
+> **An empty third-party section no longer prints.** With no vendors on the estimate the heading, the *No third-party vendors estimated at this time* line, the $0 subtotal and the $0 row in the totals table are all suppressed — four lines describing work outside the engagement, which read as though something were missing. **The test is on having no vendor *rows*, never on the cost being zero:** an auction house or estate-sale company is proceeds-based, prints *No direct cost*, and is a real engaged vendor that must still be listed. A cost with nothing itemising it keeps the section, so money is never hidden to tidy a layout. The totals table also drops its *Havellin Services* breakdown line when there is nothing to break the total into — with no vendors and no prep it was stating one number twice.
+
 ### Approval
 
 Hit **Submit for Approval** → manager enters PIN → estimate is locked and marked *Approved for Release*. PDF is unlocked. Estimate cannot be edited after approval — use a Change Order instead.
@@ -411,6 +429,8 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 > **An unapproved estimate cannot be emailed.** The app refuses, from the Client Estimate tab and from the Client Dashboard shortcut alike. Approve it first — the figure isn't final until someone has signed off on it.
 
 Hit **Email Estimate** → opens a pre-drafted, warmly-worded email (referencing the in-home walkthrough) with the estimate to attach. Send to the client for review, then wait for them to confirm they want to proceed before taking further steps.
+
+> **Save to Drive confirms itself, and still says so tomorrow.** The button repaints to a green **✓ Saved to Drive** carrying the time in its tooltip, and the approval banner gains a persistent **📁 Filed to Drive · &lt;when&gt; · Open** line linking straight to the filed copy. Before 2026-08-03 the only acknowledgement was a four-second toast in the bottom-right corner of a long page — missed by anyone watching the button they had just pressed — and nothing anywhere recorded that an estimate had ever been filed. A *failed* upload writes no stamp and the button stays plain, so it can never claim a save that didn't happen. **Editing an approved estimate clears the stamp**, because the copy in Drive is the previous version the moment you edit; re-approval re-files and re-stamps automatically. Pressing the button again re-files and overwrites by filename.
 
 ## 8. Service Agreement
 
@@ -520,7 +540,15 @@ The change order then appears on the job with two buttons:
 
 ## 10. Active Job Documentation
 
-Accessible from Client Dashboard once a job is **Active**. This is the only stage where photos are captured. (Home Prep jobs are vendor-managed and generally skip room documentation.)
+Accessible from Client Dashboard once a job is **Won**. (Home Prep jobs are vendor-managed and generally skip room documentation.)
+
+> **Corrected 2026-08-03 — this said *Active*, and the app used to enforce it.** Photo capture now opens as soon as the job is **Won**, matching the gate the Job Plan screen itself enforces. It mattered: a job sits at *Won* for the entire stretch between the client accepting and the deposit being recorded, the Job Plan renders its room cards — camera buttons included — that whole time, and every shot taken in that window was **silently discarded**. No upload, no record, no message: the camera opened, the photo was taken, and the app did nothing. Day-one walkthrough photos evaporated. **If either gate ever moves, move both.**
+
+> **Three refusals that were silent now speak.** A job that isn't Won, a job that can't be resolved, and a failed photo whose image data is no longer held all now say so. A camera button that does nothing is indistinguishable from one that worked, which is why these were worth more than a log line.
+
+> **A failed photo now survives the session.** Its **Retry** used to do nothing at all once the tab had been closed — the image was held in memory only, so a shot that failed on Tuesday was gone by Wednesday with a live-looking Retry button sitting beside it. Failed shots now keep their image data on the device (under their own storage key, so image data can never crowd out the inventory record) until they upload. If the device has no room to hold one, you are told to retry it *now*, before leaving the job.
+
+> **Photo counts are correct on the first open of a job.** The room cards used to be drawn before the photo records were loaded, so the first time you opened any job in a session every count read zero and every failed-upload flag was hidden — photos correctly filed in Drive read on screen as photos that never happened. Related: uploads now resolve the destination through the shared folder resolver, so a job folder created before the 2026-07-15 *Photos* + *Asset Documentation* merge files correctly instead of failing every photo (§15).
 
 ### Room Documentation
 
@@ -583,6 +611,8 @@ Items flagged for appraisal that aren't yet linked to an appraiser surface a pan
 ## 11. Job Plan & Log Hours
 
 **Tab: Job Plan** → select job. Generates once the estimate is approved. For labor-based services it runs the phase playbook (Phase 0 Pre-Job → Phase 4 Close-Out), vendor & partner sourcing, and daily hours logging. For **Home Prep for Sale** it is the streamlined vendor/budget/checklist view described in Section 6c.
+
+> **Room cards run in walkthrough order** — Entry & Living, then Kitchen & Utility, then Lifestyle Rooms, and so on: the same top-to-bottom as the Build Estimate grid and the client estimate, so a room can be found in one document by its position in the other. Both phase grids read the same order. Until 2026-08-03 they were sorted by complexity descending, which matched nothing else in the app and read as random. A room saved without a grid position keeps its stored place at the end rather than dropping out of the plan.
 
 The plan header shows the **documentation level** on estate/formal jobs. **Chain of custody is mandatory** when that level is Formal or the job is any probate — it is driven by the documentation level (§4), *not* the Premium-estate rate. Estate/probate jobs also carry the §733.604 documentation stream.
 

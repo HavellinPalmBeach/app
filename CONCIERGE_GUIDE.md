@@ -152,11 +152,17 @@ Hit **Save & Preview Client Estimate**. It saves, syncs, and opens the client-fa
 
 Read the client-facing document for accuracy. Then **Submit for Approval** → a manager types their PIN → the estimate locks as *Approved for Release* and the PDF unlocks.
 
+**The document now opens with a full job plan (new 2026-08-03).** Ahead of the money there is *How We Work*, *Spaces In Scope* grouped the way the Build Estimate grid groups them, *How The Work Runs* — every stage of the job with what you will do, what you need from the client, and what finishes it — then what you coordinate, what they receive, and what you need from them. **Read it before you submit.** It is written out of the estimate, so a room filed in the wrong section or a vendor you forgot shows up here in plain English, where a number would not have caught your eye.
+
+Two things about it worth knowing before a client asks. **There are no dates or durations in it**, on purpose — the pace is set by how quickly they make decisions, and a date there is a promise about their calendar rather than ours. And the stages come from the service type: a probate job shows documentation and court-filing stages, a home cleanout shows neither, a move shows Move Day. You cannot add or remove one by hand, and you should not try to — they are generated from the same thing that priced the job.
+
 **Two things to check on the document itself (changed 2026-08-03).** Every vehicle you logged now appears in a *Vehicles & Watercraft* table — each one reads *Flagged for specialist appraisal* if you ticked Collector / classic, otherwise *Flagged for disposition*, and any vehicle without *Title located* ticked prints *Title to be located* in front of the client. That is deliberate — no title means no transfer, and they should hear it now rather than at closeout — but tick the box if you did find the title. The document never names a buyer or an appraiser for a vehicle; that gets decided on the job and recorded in the inventory.
 
 On a **fixed-price** quote the document reads differently on purpose: one *Fixed Project Fee* line replacing the hourly rows, and **no hour counts anywhere** — including on the vendor and home-prep footnotes, which on an hourly quote tell the client how many concierge hours the vendor coordination took. A fixed-price document that quotes hours invites exactly the argument the fixed price exists to avoid.
 
 > **⚠** Once approved, the estimate **cannot be edited**. Service type, square footage and the premium toggle freeze. If the scope changes after this, it's a **Change Order** — see step 10.
+
+**Save to Drive** confirms itself now: the button turns green and reads *✓ Saved to Drive*, and the green approval banner gains a *📁 Filed to Drive · &lt;when&gt; · Open* line that is still there tomorrow. **If the button stays white, it did not save.** Pressing it again re-files and overwrites the old copy, which is what you want after an edit — and if you do edit, the *Filed to Drive* line disappears until it is re-approved, because the copy sitting in Drive is no longer the one on your screen.
 
 No client signature is wanted on the estimate. It's informational.
 
@@ -260,12 +266,18 @@ The job is now **Active**. Three things run in parallel.
 
 ### a. Document the property — Client Dashboard → job documentation
 
-This is the only stage where photos are captured.
+Photos can be captured from the moment the job is **Won** — you do not have to wait for the deposit, and the room cards are on screen from then on.
+
+> **⚠** **This changed on 2026-08-03, and it is the fix to a real loss.** The app used to require *Active*. Because the camera buttons are on screen from *Won* onward, every photo taken between the client saying yes and the deposit being recorded was **thrown away without a word** — the camera opened, you took the shot, and nothing happened. If you took photos on a job in that window, **they are not in Drive**. Re-shoot if the property is still accessible.
 
 - **📷** per room — photos upload automatically to the **Estate Inventory** Drive folder. Each room row shows its walkthrough note from the estimate in grey italic, so you're photographing against what you wrote at the time.
 - **🎥** per room — video walkthrough footage.
 - **📷 Asset photos** and **📄 Appraisal** on each notable collection — condition photography and the appraisal document itself.
 - **Capture item** on a room card — photograph individual objects for the inventory. Type the object name, pick a category and set a disposition *before* the shot. Anything in an intrinsic category (art, jewellery, silver, antiques, rugs, coins, firearms, wine, instruments) that carries real value gets a **⚑ needs-a-specialist** flag.
+
+> **Check the room card after you shoot.** A green number on the button means that many photos are filed in Drive. A red **⚠ not saved** means the upload failed and the photo is *not* in Drive — hit **Retry** on that shot. Retry works across sessions now, so a photo that failed yesterday can still be sent today; it used to do nothing at all and look identical to a button that had worked. If Retry tells you the image can no longer be recovered, the device did not have room to hold it — take the shot again.
+> 
+> The room cards themselves are in **walkthrough order**, matching the estimate, so you can work down the plan the way you walked the house.
 
 ### b. Log hours — Job Plan tab, every single day
 
@@ -412,6 +424,15 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| You took photos and nothing happened — no count, no flag, no message | Fixed 2026-08-03. The app required the job to be *Active* and it was only *Won*, so it discarded the shot silently. It captures from *Won* now, and says so out loud if it ever does refuse. **Photos taken in that window before that date are not in Drive** — re-shoot if you still can. |
+| A room card shows a red **⚠ not saved** | That upload failed and the photo is not in Drive. Hit **Retry** on that shot — it works across sessions now, so yesterday's failure can still be sent today. |
+| Retry says the photo can no longer be retried | The device had no room to hold the image. It's gone — take the shot again. |
+| A job's photo counts all read zero when you first open it | Fixed 2026-08-03. The cards were drawn before the photo records loaded. Everything was in Drive the whole time; switching away and back used to show the real counts. |
+| Save to Drive stays white after you press it | It didn't save. When it works the button turns green and reads *✓ Saved to Drive*, and the approval banner gains a *Filed to Drive* line. |
+| The *Filed to Drive* line vanished from the banner | You edited the estimate. The copy in Drive is the previous version, so the claim is withdrawn until it's re-approved — which re-files it automatically. |
+| Job Plan rooms are in a strange order | They're in walkthrough order now, matching the estimate. Before 2026-08-03 they were sorted hardest-room-first, which matched nothing. |
+| The client estimate has no third-party vendor section at all | Correct when there are no vendors — the empty heading and its $0 lines are suppressed. Add a vendor and it comes back. A vendor with no direct cost (auction house, estate sale company) still shows. |
+| A client asks how long each stage of the job will take | The document deliberately carries no dates. Answer from the overall working-day estimate and say plainly that the pace depends on how quickly they make decisions — that is the honest answer and it's also the one that protects you. |
 | Email Estimate refuses | The estimate isn't approved. Submit for Approval first. |
 | Can't edit the estimate | It's approved and locked. Use a Change Order. |
 | Staffing refuses / Job Plan staffing section is hidden | The job isn't marked Won. Record the client's acceptance on the dashboard. |

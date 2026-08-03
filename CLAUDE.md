@@ -454,7 +454,29 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (seventh pass, same day)** — both documents, against
+- Last reconciled against the app: **2026-08-03 (eighth pass, same day)** — both documents, against the
+  photo-path fixes, the Save-to-Drive confirmation, the suppressed empty vendor section, the Job Plan
+  room reorder and the new client Job Plan section. This pass CORRECTS a claim that was actively
+  wrong: **manual §10 and playbook Step 10a both said photos are captured only once a job is Active**,
+  which was true of the app and was the bug — every shot taken while the job sat at *Won* was silently
+  discarded. Both now say **Won**, name the loss, and tell anyone who shot in that window that those
+  photos are not in Drive. Manual §7 gained a new **"What the document contains"** subsection (the
+  derived-from-`JOB_STEPS` rule, the no-dates rule and why, depth-by-documentation-level, grouped
+  spaces and the duplicate-name defect they fix, prep's own three stages, the suppressed vendor
+  section) · §7 a Save-to-Drive note · §10 four notes (the gate correction, refusals that now speak,
+  retry surviving a session, counts correct on first open) · §11 a walkthrough-order note. Playbook
+  Step 3 gained the job-plan section in field language plus Save to Drive, Step 10a the gate `.stop`
+  and a check-the-room-card note, and **nine new symptom→cause rows**.
+  - **Also fixed here, and it is a pre-existing defect in both documents:** the phone block was
+    `@media (max-width:820px)` — NOT scoped to `screen`, despite this file asserting it was and
+    explaining why it must be. Chrome lays Letter out at ~739px, inside that breakpoint, so every
+    PRINTED table was getting `display:block; overflow-x:auto; white-space:nowrap` and losing its
+    right-hand column silently on paper — including the playbook's symptom→cause table, whose right
+    column is the half that says what to do. Now `@media screen and (max-width:820px)` in both, with
+    the reasoning in a CSS comment so it survives the next edit. `havellin.html` was checked and is
+    NOT exposed: its phone block carries no bare `table{overflow-x:auto}` rule and printing goes
+    through `#print-target` under its own `@media print`.
+- Prior pass **2026-08-03 (seventh pass, same day)** — both documents, against
   the outbuilding consolidation. This pass CORRECTS the reachable ceilings the fourth pass added
   (11 / 17 → **8 / 14**, half baths unchanged at 5) and adds: manual §5b a note that **intake's
   bed/bath counts are the main house and outbuildings no longer satisfy them**, naming the false
