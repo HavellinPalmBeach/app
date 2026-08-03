@@ -61,6 +61,56 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## Tenure was a DOUBLE COUNT + fullness presets + honest room rows (BUILT 2026-08-03)
+**Anthony ran a 3,500 sqft 4bed/3.5bath estate settlement, left every room at its default,
+and got $27,000 / 9 days against a reference band of $8,000–$16,000 / 5–9 days.** Forensic
+decomposition (harnesses in the session scratchpad) found three separate things.
+- **THE DOUBLE COUNT, and Anthony spotted it himself.** `tenureMultiplier` (up to ×1.30)
+  multiplied `interiorLoad` — so it was a SECOND measurement of the exact quantity the volume
+  slider measures directly. The estimator is standing in the room scoring it, and
+  `submitForApproval` refuses without a volume score on every room in scope, so the direct
+  observation is **always** present and the proxy is **always** redundant. Worse, they
+  compounded: an honestly-scored packed 35-year home got `1.70 × 1.30 = 2.21×`, so **the more
+  accurately you recorded what you saw, the more the guess piled on top**. +$7,600 on a packed
+  house, +$4,700 on this one.
+  - **Tenure now scales the CONCIERGE column only** (`stepTC`), never the hands-on pool.
+    Long tenure is real, but it is *decision friction* — thirty-five years of "we should keep
+    this", more heir conversation — not more crew hours. A box packs at the same rate whether
+    it sat there thirty-five years or three. **Do not put it back into `interiorLoad`.**
+    A test asserts the crew pool is bit-identical at 5 yrs and 35 yrs.
+- **Room rows understated themselves by 3.7×.** `perRoom[].work` carried `roomPS` — the `pack`
+  step alone, 27% of the pool on an estate job. A 2-car garage displayed **2.4 PS** and booked
+  **9.1 person-hours**. Nothing on screen let you feel a quote building as you ticked rooms,
+  which is why this took a forensic exercise to find. Rows now carry their share of the WHOLE
+  pool and reconcile to the fee lines once the walkthrough is complete — so there is no
+  residual and no "room rows are packing only" caveat to remember. (That caveat is now wrong
+  in `manual.html` §5b and the playbook — **both need a pass**.)
+- **NEW `VOL_PRESETS` — one control for the whole house.** Seasonal · Light · Normal · Full ·
+  Packed, as a chip row above the room grid. Telling the app "this place is packed" used to
+  mean moving nineteen sliders by hand, so nobody did, and every house priced as average.
+  - **A preset is a SHIFT on each room's own default, never a blanket value.** `ROOM_DEFAULTS`
+    opens a foyer and a powder room at 1 because they are inherently lighter whatever the house
+    is like; setting everything to 5 would say a powder room is as full as a garage. Tested:
+    on *Packed* the foyer is still below the living room.
+  - Applies to rooms **in scope** only, idempotent, re-bases from defaults rather than
+    compounding, and any per-room edit afterwards stands until another preset is pressed.
+  - **COMPLEXITY IS DELIBERATELY UNTOUCHED, and "premium estate → complexity 5" was CONSIDERED
+    AND REJECTED.** Complexity moves a job **3.9%**; the premium toggle moves it **49.6%**
+    (rates $150→$185 / $100→$125 plus 25 flat coordination hrs). Wiring them together adds a
+    control you would never notice firing and collapses two different questions — "how careful"
+    and "how expensive" — into one. Don't re-propose it.
+  - `est.volPreset` round-trips so a reopened estimate lights the right chip; the room volumes
+    are the real record.
+- 34 checks on these three alone (183 across five suites).
+- **STILL OPEN, and the honest state of the pricing:** at *Normal* this job is now $19,070
+  against a $16,000 ceiling. **The engine still overshoots the bands at every sqft above
+  ~3,000, even at neutral scoring** — one band bucket spans 2,000–4,000 sqft while the engine
+  is linear across it ($10.4k → $20.8k), so a single band cannot track it at both ends. Also
+  unresolved: `document` at 0.90 is 35% of crew hours and is blind to whether there is anything
+  to document (this job had **no** collections); `Garage (2-car)` weighs 3.5, identical to the
+  Kitchen; the full estate step-set including `document` is applied to a patio; and complexity
+  never touches crew hours so "premium estate" cannot mean "handle everything slowly".
+
 ## Havellin Job Plan & Services — the estimate now states the METHOD (BUILT 2026-08-03)
 **Anthony: "this is a big ticket item, twenty to a hundred thousand dollars, and I want a
 detailed job plan that lives up to the ticket price."** The old *Proposed Plan* was ONE table

@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 5:44pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 6:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1193,6 +1193,7 @@ body.no-smf .smf-col{display:none;}
             <a href="#" onclick="setAllRoomSections(true);return false;" style="color:var(--bronze);text-decoration:none;">Collapse all</a>
             <a href="#" onclick="collapseEmptyRoomSections();return false;" style="color:var(--bronze);text-decoration:none;" title="Collapse sections with no rooms in scope">Hide empty</a>
           </div>
+          <div id="vol-preset-row"></div>
         </div>
         <div id="room-table-wrap"></div>
         <div id="coverage-badge"></div>
@@ -3052,6 +3053,87 @@ var ROOM_DEFAULTS = {
 };
 function roomDefault(name){ return ROOM_DEFAULTS[name] || {vol:3, cplx:3}; }
 
+// ─── HOW FULL IS THIS HOUSE — one control for the whole walkthrough ──────────
+// Telling the app "this place is packed" used to mean moving nineteen sliders by
+// hand, so nobody did it and every house priced as if it were average. These
+// presets set the starting volume for every room in scope in one press.
+//
+// A preset is a SHIFT on each room's own default, never a blanket value. That is
+// the load-bearing part: ROOM_DEFAULTS opens a foyer and a powder room at 1 and a
+// living room at 3 because those rooms are inherently lighter whatever the house
+// is like. Setting everything to 5 would say a powder room is as full as a garage.
+// Shifting keeps the relative structure and moves the whole property.
+//
+// COMPLEXITY IS NOT TOUCHED. It is a different question — how careful the work is,
+// not how much of it there is — and the premium-estate toggle already carries the
+// high-end rate. Wiring a preset to complexity would collapse two decisions into
+// one and cost you the ability to say "ordinary client, but everything is fragile".
+var VOL_PRESETS = [
+  {key:'seasonal', shift:-2, label:'Seasonal',  hint:'Snowbird or seasonal home — furnished but barely lived in'},
+  {key:'light',    shift:-1, label:'Light',     hint:'Sparsely furnished, or already partly cleared'},
+  {key:'normal',   shift: 0, label:'Normal',    hint:'A normally furnished Palm Beach home — the default'},
+  {key:'full',     shift: 1, label:'Full',      hint:'Long lived-in, closets and storage in real use'},
+  {key:'packed',   shift: 2, label:'Packed',    hint:'Full to capacity — overflowing storage, nothing cleared'}
+];
+function volPresetShift(key){
+  var p = VOL_PRESETS.find(function(x){ return x.key === key; });
+  return p ? p.shift : 0;
+}
+
+// Applied to every room currently IN SCOPE. Idempotent — pressing the same preset
+// twice lands on the same numbers, and pressing a different one re-bases from the
+// defaults rather than compounding. Any per-room adjustment made afterwards stands
+// until another preset is pressed, which is the point: this is a starting position.
+function applyVolPreset(key) {
+  var shift = volPresetShift(key);
+  var ri = 0, touched = 0;
+  ROOMS.forEach(function(sec) {
+    sec.rooms.forEach(function(r) {
+      var id = 'r' + ri; ri++;
+      if (roomState(id) !== 'in') return;
+      var nameEl = document.getElementById('name-' + id);
+      if (!nameEl) return;
+      var nm = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
+      var volEl = document.getElementById('vol-' + id);
+      if (!volEl) return;
+      volEl.value = Math.max(1, Math.min(5, roomDefault(nm).vol + shift));
+      touched++;
+    });
+  });
+  _volPreset = key;
+  paintVolPreset();
+  calcAll();
+  if (!touched) {
+    showFB('e-fb', 'warn', 'No rooms are in scope yet — tick the rooms first, then set how full the house is.');
+  }
+}
+
+var _volPreset = 'normal';
+function paintVolPreset() {
+  VOL_PRESETS.forEach(function(p) {
+    var b = document.getElementById('volpreset-' + p.key);
+    if (!b) return;
+    var on = (p.key === _volPreset);
+    b.style.background   = on ? 'var(--bronze)' : 'var(--cream)';
+    b.style.color        = on ? '#fff' : 'var(--gray-dk)';
+    b.style.borderColor  = on ? 'var(--bronze)' : 'var(--border-md)';
+    b.style.fontWeight   = on ? '700' : '600';
+  });
+}
+function volPresetButtonsHTML() {
+  return '<div style="display:flex;align-items:center;gap:6px;margin-top:9px;flex-wrap:wrap;">'
+    + '<span style="font-size:11px;color:var(--gray);font-weight:600;">How full is this house?</span>'
+    + VOL_PRESETS.map(function(p) {
+        return '<button type="button" id="volpreset-' + p.key + '" onclick="applyVolPreset(\'' + p.key + '\')"'
+          + ' title="' + esc(p.hint) + '"'
+          + ' style="cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;padding:3px 10px;'
+          + 'border-radius:11px;border:1px solid var(--border-md);background:var(--cream);color:var(--gray-dk);">'
+          + p.label + '</button>';
+      }).join('')
+    + '<span style="font-size:10px;color:var(--gray);">sets every room in scope — adjust any of them afterwards</span>'
+    + '</div>';
+}
+
 // Work-step rates [concierge/TC, specialist/PS] per content unit, by service type.
 //
 // WORKING-SUPERVISOR MODEL (2026-07-28). These two columns no longer mean "TC hours"
@@ -3121,10 +3203,26 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
     allW += w; allCpxW += w*cpxF;
   });
   var volFactor = iW>0 ? iVolW/iW : 1.0;
-  // Interior load scales with under-air sqft, room-volume modulation, and years in
-  // home (tenure nudge — interior only). Exterior add-ons are unaffected by tenure.
-  var interiorLoad = sqft * ENGINE_K * volFactor * tenureMultiplier(years);
+  // Interior load scales with under-air sqft and room-volume modulation. Exterior
+  // add-ons sit on top.
+  //
+  // TENURE IS DELIBERATELY NOT HERE ANY MORE (2026-08-03) — do not put it back.
+  // It used to multiply this line, which made it a SECOND measurement of the thing
+  // the volume slider already measures directly: how much stuff is in the house.
+  // The estimator is standing in the room scoring it, and the app refuses to submit
+  // without a volume score on every room in scope — so the direct observation is
+  // always present and the proxy is always redundant. Worse, they compounded: a
+  // genuinely packed 35-year home scored an honest volume 5 got 1.70 × 1.30 = 2.21×,
+  // so the more accurately you recorded what you saw, the more the guess piled on
+  // top of it. On a 3,500 sqft estate that was +$7,600.
+  // What tenure DOES predict is decision friction — thirty-five years of "we should
+  // keep this", more family history attached to each object, more heir conversation.
+  // That is concierge time, not crew time: the crew packs a box at the same rate
+  // whether it has sat there thirty-five years or three. So it now scales the
+  // coordination column only, below.
+  var interiorLoad = sqft * ENGINE_K * volFactor;
   var load = interiorLoad + extLoad;
+  var tenureF = tenureMultiplier(years);
   var cpxFactor = allW>0 ? allCpxW/allW : 1.0;
   // Hours from active work-steps (complexity scales the careful/concierge steps).
   // We also track the room-level "hands-on" portion (physical packing) separately
@@ -3140,7 +3238,8 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
   var byStep = {};
   for (var L in steps){
     var cf = ENGINE_CAREFUL[L] ? cpxFactor : 1;
-    var stepTC = load*steps[L][0]*cf;
+    // tenureF scales the CONCIERGE column only — see the note above interiorLoad.
+    var stepTC = load*steps[L][0]*cf*tenureF;
     var stepPS = load*steps[L][1];
     byStep[L] = {tc:stepTC, ps:stepPS};
     tc += stepTC; ps += stepPS;
@@ -3157,10 +3256,20 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
   // Splitting it between the concierge and the crew is calcAll's job, because the
   // split depends on crew size, which isn't known here.
   var iDenom = Math.max(PERROOM_REF, iVolW) || 1;
+  // A room row carries its share of the WHOLE hands-on pool, not just the packing
+  // step. It used to carry `roomPS` (pack alone), which is 27% of the pool on an
+  // estate job — so every row understated its own room by 3.7×. Ticking a 2-car
+  // garage displayed "2.4 PS" and booked 9.1 person-hours, and nothing on the
+  // screen let you feel a quote building as you walked the house. Now the rows
+  // reconcile: once the walkthrough is complete they sum to the billed figures on
+  // the fee lines, so there is no unexplained residual and no caveat to remember.
+  var poolCoefSum = 0;
+  for (var L3 in steps) poolCoefSum += steps[L3][1];
+  var poolAll = load * poolCoefSum;
   var perRoom = rb.map(function(b){
     var share = b.ext ? (load>0 ? b.raw/load : 0)
                       : (load>0 ? (b.raw/iDenom)*interiorLoad/load : 0);
-    return { work: Math.round(roomPS*share*10)/10 };
+    return { work: Math.round(poolAll*share*10)/10 };
   });
   return { totTC:tc, totPS:ps, roomTC:Math.round(roomTC*10)/10, roomPS:Math.round(roomPS*10)/10,
            load:Math.round(load*10)/10, days:days,
@@ -3497,6 +3606,8 @@ function buildRoomTable() {
   '</div>';
 
   document.getElementById('room-table-wrap').innerHTML = html;
+  var _vpr = document.getElementById('vol-preset-row');
+  if (_vpr) { _vpr.innerHTML = volPresetButtonsHTML(); paintVolPreset(); }
   var _pn = document.getElementById('e-private-note');
   if (_pn) _pn.value = _privateWalkNote || '';
   // Single delegated listener for all note textareas
@@ -5131,7 +5242,11 @@ function calcAll() {
     // saved estimate is reopened, and neither can anyone auditing why a vendor-heavy job
     // priced higher than a bare one.
     vendorTCHrs: vendorTCHrs,
-    moveStyling: document.getElementById('e-move-styling') ? document.getElementById('e-move-styling').checked : false
+    moveStyling: document.getElementById('e-move-styling') ? document.getElementById('e-move-styling').checked : false,
+    // Which fullness preset the walkthrough started from. Observational — the room
+    // volumes are the real record and are already on the snapshot. This just lets a
+    // reopened estimate light the right chip instead of always reading "Normal".
+    volPreset: _volPreset
   };
 
   // Re-attach the immutable lock snapshot. Prefer the in-session value (same
@@ -6293,6 +6408,7 @@ function populateJobSelect() {
 function resetEstimate() {
   var ri = 0;
   ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; setRoomState(id, 'off'); ri++; }); });
+  _volPreset = 'normal'; paintVolPreset();
   document.getElementById('e-prem').checked = false;
   var _fxR = document.getElementById('e-fixed'); if (_fxR) _fxR.checked = false;
   var _fxAR = document.getElementById('e-fixed-amount'); if (_fxAR) _fxAR.value = '';
@@ -8383,6 +8499,8 @@ function restoreEstimateToUI(est) {
   renderPrepItems();
   var moveStylingR = document.getElementById('e-move-styling');
   if (moveStylingR) moveStylingR.checked = est.moveStyling || false;
+  _volPreset = est.volPreset || 'normal';
+  paintVolPreset();
 
   window._suppressEstimateAutoSave = false;
   calcAll(); // one clean save with fully-restored state
