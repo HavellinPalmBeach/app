@@ -89,6 +89,39 @@ cutting; do not wait to be told.
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## NOT "licensed" — insured & bonded only (CORRECTED 2026-08-03)
+**Anthony: "we are not 'licensed', only 'bonded & insured'."** Every client document was
+claiming a licence Havellin does not hold. Fixed on all four — client estimate footer,
+invoice footer, standard agreement footer, probate agreement footer — plus the Terms line
+(*"Havellin Palm Beach is insured and bonded."*).
+- **The first sweep missed two of the four.** The agreement footers build the string
+  differently, so a grep on the estimate's phrasing came back clean while
+  `renderAgreement`/`renderProbateAgreement` still said it. A test asserting the claim
+  appears **nowhere in the file** is what caught them. Keep that test.
+- **A third party's licence is a different thing and must survive** — *Licensed FFL* on the
+  firearms disposition list, the vendor directory's *License / cert* field, "licensed
+  firearms transfer" in the collections cost note. Those are about vendors, not us.
+- Compliance-adjacent, not styling: if this ever needs revisiting, it needs Anthony, not a
+  judgement call.
+
+## Header rows: even columns, justified ends (2026-08-03)
+- Header rows run **even columns** (`repeat(N,minmax(0,1fr))`) and **justify their ends** —
+  `.ce-hdr-row>*:last-child:not(:first-child){text-align:right;}`. Uneven `fr` weights left
+  the last value floating short of the right margin, a ragged edge on a document whose job
+  is to look considered. **The `:not(:first-child)` guard matters**: without it a one-cell
+  row (`ce-hdr-row-3`, the contact line) gets right-aligned.
+- **Service moved onto the Authorized Representative row** and **Date of Death onto the dates
+  row**, where a date belongs. That removed a whole row and a divider that existed to carry
+  one short value. Dates row is `ce-hdr-row-5` when a date of death exists, `-4` otherwise.
+- **Rep Email lost its inline `font-size:11px`** — it was squeezing into a narrow column and
+  read visibly smaller than every value beside it. Even columns plus `overflow-wrap` make it
+  unnecessary.
+- Phone collapses all of them to two columns AND resets the right-alignment (with two
+  columns the second cell is the last child, and right-flinging it looks broken).
+  **`@media print` re-asserts the full grids** — Chrome lays Letter out at ~739px, inside the
+  820px phone breakpoint, so without that the printed estimate gets the phone layout.
+- `ce-hdr-row-2` deleted as dead. `ce-hdr-row-1` survives — the INVOICE still uses it.
+
 ## "At cost" said twice on labels, not five times in prose (2026-08-03)
 **Anthony, walking the estimate: "two more areas restating the same thing — billed at cost."**
 It appeared FIVE times on one page. It now appears on the two subtotal labels and the two

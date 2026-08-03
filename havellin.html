@@ -250,12 +250,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .ce-meta>*,.ce-hdr-row>*{min-width:0;}
 .ce-meta-val,.ce-meta-item{overflow-wrap:anywhere;}
 .ce-hdr-row-1{grid-template-columns:1.4fr 2fr 1fr 1.2fr;}
-.ce-hdr-row-2{grid-template-columns:1fr 1fr 1fr 1fr;}
 .ce-hdr-row-3{grid-template-columns:1fr;}
-/* The identity line: who this is, where, and when — Job ID · Estate/Client ·
-   Property · Date, in that order, on one row. Job ID and Date are fixed-width
-   strings so they take `auto`; the two variable-length fields get the slack. */
-.ce-ident-row{grid-template-columns:auto 1.3fr 1.7fr auto;}
+/* Header rows run EVEN columns and justify their ends: first cell flush left,
+   last cell flush right, everything between spread on equal tracks. Uneven `fr`
+   weights left the last value floating short of the right margin, which read as
+   a ragged edge on a document whose whole job is to look considered.
+   :not(:first-child) so a single-cell row (ce-hdr-row-3) is not right-aligned. */
+.ce-hdr-row>*:last-child:not(:first-child){text-align:right;}
+.ce-ident-row{grid-template-columns:repeat(4,minmax(0,1fr));}
+.ce-hdr-row-4{grid-template-columns:repeat(4,minmax(0,1fr));}
+.ce-hdr-row-5{grid-template-columns:repeat(5,minmax(0,1fr));}
 .ce-hdr-divider{height:1px;background:var(--border);margin:.6rem 0;}
 .ce-meta-item{font-size:13px;}.ce-meta-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:2px;}
 .ce-meta-val{font-size:13px;color:var(--gray-dk);font-weight:500;}
@@ -487,7 +491,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      columns, so the header collapses to two and the page padding comes back to
      something a 390px screen can spare. */
   .ce-page{padding:1.1rem .9rem;}
-  .ce-hdr-row-1,.ce-hdr-row-2{grid-template-columns:1fr 1fr;}
+  .ce-hdr-row-1,.ce-ident-row,.ce-hdr-row-4,.ce-hdr-row-5{grid-template-columns:1fr 1fr;}
+  /* Two columns means the second cell is the row's last child; leave it left-aligned
+     rather than flinging every other value to the right margin. */
+  .ce-hdr-row>*:last-child:not(:first-child){text-align:left;}
   .ce-brand{font-size:28px;}
   .ce-title{font-size:17px;}
   /* An inline flex-shrink:0 keeps a button cluster at its full single-line width, so
@@ -628,8 +635,10 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
   .ce-meta{gap:.25rem 1.5rem;margin-bottom:.8rem;}
   .ce-hdr-row{gap:.4rem 1rem;margin-bottom:.5rem;}
   .ce-hdr-row-1{grid-template-columns:1.4fr 2fr 1fr 1.2fr;}
-  .ce-hdr-row-2{grid-template-columns:1fr 1fr 1fr 1fr;}
   .ce-hdr-row-3{grid-template-columns:1fr;}
+  .ce-ident-row,.ce-hdr-row-4{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .ce-hdr-row-5{grid-template-columns:repeat(5,minmax(0,1fr));}
+  .ce-hdr-row>*:last-child:not(:first-child){text-align:right;}
   .ce-meta-label{font-size:9px;}
   .ce-meta-val{font-size:11px;}
   .ce-section-hdr,.ce-band{padding:5px 10px;font-size:9px;}
@@ -705,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:09pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:16pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7029,15 +7038,16 @@ function renderClientEstimate() {
 
         (isEstateJob
       ? '<div class="ce-hdr-divider"></div>' +
-        '<div class="ce-hdr-row" style="grid-template-columns:1.5fr 1fr 1.3fr;">' +
+        // Service rides along here rather than taking a row of its own — one short
+        // value on its own line cost a whole row and a divider. Date of Death moved
+        // to the dates row below, where a date belongs. Rep Email is back at the
+        // shared 13px; it carried an inline 11px override to squeeze into a narrow
+        // column, and with even columns and overflow-wrap it no longer needs to.
+        '<div class="ce-hdr-row ce-hdr-row-4">' +
         '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + esc(job.executor||'—') + (job.executorRole ? ' — ' + esc(job.executorRole) : '') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + (job.executorPhone||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val" style="font-size:11px;">' + (job.executorEmail||'—') + '</div></div>' +
-        '</div>' +
-        '<div class="ce-hdr-divider"></div>' +
-        '<div class="ce-hdr-row" style="grid-template-columns:' + (job.deathDate ? '1fr 1fr' : '1fr') + ';">' +
+        '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val">' + (job.executorEmail||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
-        (job.deathDate ? '<div><div class="ce-meta-label">Date of Death (Valuation Date)</div><div class="ce-meta-val">' + fmtCEDate(job.deathDate) + '</div></div>' : '') +
         '</div>'
       // Client and Property moved up into the identity line, so this row carries
       // only what is left rather than repeating them.
@@ -7060,7 +7070,8 @@ function renderClientEstimate() {
         '<div><div class="ce-meta-label">Target Start</div><div class="ce-meta-val">' + (job.start ? fmtCEDate(job.start) : '—') + '</div></div>' +
         '</div>' +
         '<div style="margin-top:9px;font-size:12px;color:var(--gray-dk);line-height:1.55;"><span style="color:var(--bronze);font-weight:700;">Timeline:</span> Scheduled around vendor availability. Your Transition Concierge coordinates each trade and confirms the working schedule once vendors are booked.</div>'
-      : '<div class="ce-hdr-row ce-hdr-row-2">' +
+      : '<div class="ce-hdr-row ' + (job.deathDate ? 'ce-hdr-row-5' : 'ce-hdr-row-4') + '">' +
+        (job.deathDate ? '<div><div class="ce-meta-label">Date of Death</div><div class="ce-meta-val">' + fmtCEDate(job.deathDate) + '</div></div>' : '') +
         '<div><div class="ce-meta-label">Site Visit</div><div class="ce-meta-val">' + (job.walkthrough ? fmtCEDate(job.walkthrough) : '—') + '</div></div>' +
         '<div><div class="ce-meta-label">Target Start</div><div class="ce-meta-val">' + (job.start ? fmtCEDate(job.start) : '—') + '</div></div>' +
         '<div><div class="ce-meta-label">Projected Completion</div><div class="ce-meta-val">' + (job.start && _estDayNum > 0 ? fmtCEDate(addWorkingDays(job.start, _estDayNum)) : '—') + '</div></div>' +
@@ -7365,14 +7376,14 @@ function renderClientEstimate() {
               : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>')) +
         '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>') +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
-    '<li>Havellin Palm Beach is licensed, insured, and bonded.</li>' +
+    '<li>Havellin Palm Beach is insured and bonded.</li>' +
     '</ul></div>' +
 
     (preparer && preparer.bio ? '' : '') +
     '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">' +
     'Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>' +
     '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; (561) 370-4700<br>' +
-    'Licensed, Insured &amp; Bonded' +
+    'Insured &amp; Bonded' +
     '</div>';
 
   document.getElementById('ce-page-content').innerHTML = html;
@@ -13811,7 +13822,7 @@ function renderInvoice() {
 
     bodyHtml +
 
-    '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; (561) 370-4700<br>Licensed, Insured &amp; Bonded</div>';
+    '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; (561) 370-4700<br>Insured &amp; Bonded</div>';
 
   content.innerHTML = html;
 
@@ -18323,7 +18334,7 @@ function renderProbateAgreement() {
   // Footer
   content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
   content += 'Havellin Palm Beach, LLC &nbsp;&middot;&nbsp; FL LLC L26000216712 &nbsp;&middot;&nbsp; (561) 370-4700 &nbsp;&middot;&nbsp; agreements@havellinpalmbeach.com &nbsp;&middot;&nbsp; havellinpalmbeach.com<br>';
-  content += 'Licensed, Insured &amp; Bonded &nbsp;&middot;&nbsp; NASMM Member &nbsp;&middot;&nbsp; Confidential &nbsp;&middot;&nbsp; '+monthYear;
+  content += 'Insured &amp; Bonded &nbsp;&middot;&nbsp; NASMM Member &nbsp;&middot;&nbsp; Confidential &nbsp;&middot;&nbsp; '+monthYear;
   content += '</div>';
   document.getElementById('agr-page-content').innerHTML = content;
   updateAgrUI();
@@ -18605,7 +18616,7 @@ function renderAgreement() {
 
   content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
   content += 'Havellin Palm Beach, LLC  &middot;  FL LLC L26000216712  &middot;  (561) 370-4700  &middot;  agreements@havellinpalmbeach.com  &middot;  havellinpalmbeach.com<br>';
-  content += 'Licensed, Insured &amp; Bonded  &middot;  NASMM Member  &middot;  Confidential  &middot;  '+monthYear;
+  content += 'Insured &amp; Bonded  &middot;  NASMM Member  &middot;  Confidential  &middot;  '+monthYear;
   content += '</div>';
 
   document.getElementById('agr-page-content').innerHTML = content;
