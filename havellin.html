@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 4:17pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 4:37pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10124,22 +10124,106 @@ function buildInvoiceMailto(job, balance, stage) {
 
 
 // ─── DRIVE-PRIMARY PHOTO SYSTEM ───────────────────────────────────────────────
-// References only stored in localStorage — no image data ever persisted.
+// References stored in localStorage — no image data is persisted for a photo that
+// UPLOADED. Bytes for a FAILED photo are held (see _savePendingPhotoData) so its
+// Retry button still works in the next session.
 // PhotoRef: { stableId, roomIdx, label, collId, filename, driveFileUrl, status, ts }
-// _photoRetryData holds compressed dataUrl in-memory only for failed uploads.
 var _photoRefs = {};
 var _photoRetryData = {};
+
+// One id per capture, unique for the life of the page. A timestamp alone is not:
+// two shots can land in the same millisecond, and the sequence number is read
+// before an async read + compress that can interleave with the next capture.
+var _photoUidSeq = 0;
+function _photoUid() { return Date.now().toString(36) + '-' + (++_photoUidSeq); }
+
+// Every capture entry point opened with `if (!job || job.status !== 'active') return;`
+// — no upload, no ref, no message. The camera opened, the shot was taken, and the
+// app did nothing at all. A job sits at `won` for the whole stretch between the
+// client accepting and the deposit being recorded, and the Job Plan renders its
+// room cards — camera buttons included — that entire time, so day-one walkthrough
+// shots silently evaporated. The gate now matches the one the SCREEN enforces
+// (loadJobPlanTab withholds the plan until isJobWon), and when it does refuse it
+// says so instead of swallowing the shot.
+function _photoCaptureJob(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) { alert('Photo not saved — this job could not be found. Reload and try again.'); return null; }
+  if (!isJobWon(job)) {
+    alert('Photo NOT saved.\n\n'
+      + 'This job has not been won yet, so nothing is filed against it. '
+      + 'Record the client’s acceptance on the Client Dashboard, then take the shot again.');
+    return null;
+  }
+  return job;
+}
+
+// A swallowed quota error means the photo is sitting in Drive and missing from the
+// inventory — and the inventory is the court record. Say it once, out loud.
+var _photoStoreWarned = false;
+function _warnPhotoStoreFull(e) {
+  console.warn('[Photos] manifest write failed:', e);
+  if (_photoStoreWarned) return;
+  _photoStoreWarned = true;
+  alert('This device is out of local storage, so the photo RECORD could not be saved.\n\n'
+    + 'Photos already uploaded are safe in Drive, but this job’s inventory list on this '
+    + 'device is now incomplete. Clear space and reopen the job, or finish on another device.');
+}
+
+var _photoPendingWarned = false;
+function _warnPhotoRetryUnsaved(e) {
+  console.warn('[Photos] could not persist retry data:', e);
+  if (_photoPendingWarned) return;
+  _photoPendingWarned = true;
+  alert('A photo failed to upload and this device has no room to hold it for a retry.\n\n'
+    + 'Retry it NOW, before you leave this job — once the app is closed that shot is gone.');
+}
 
 function _cleanName(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); }
 
 function loadPhotoRefs(jobId) {
   try {
     var raw = localStorage.getItem('hav_media_' + jobId);
-    if (!raw) return;
-    var data = JSON.parse(raw);
-    if (Array.isArray(data)) { _photoRefs[jobId] = data; }
-    // Legacy object format: discard (pre-launch; no production photo data)
+    if (raw) {
+      var data = JSON.parse(raw);
+      if (Array.isArray(data)) { _photoRefs[jobId] = data; }
+      // Legacy object format: discard (pre-launch; no production photo data)
+    }
   } catch(e) {}
+  _loadPendingPhotoData(jobId);
+}
+
+// ── Retry bytes for FAILED uploads ───────────────────────────────────────────
+// _photoRetryData used to be memory-only, so a shot that failed on Tuesday was
+// gone by Wednesday — and retryPhotoUpload opens `if (!dataUrl) return;`, so the
+// Retry button sat there doing nothing, forever, with no way to tell it apart
+// from a button that worked. Bytes live under their own key: image data must
+// never be able to crowd the manifest write out of the quota.
+function _pendingPhotoKey(jobId) { return 'hav_media_pending_' + jobId; }
+
+function _loadPendingPhotoData(jobId) {
+  try {
+    var raw = localStorage.getItem(_pendingPhotoKey(jobId));
+    if (!raw) return;
+    var map = JSON.parse(raw);
+    if (map && typeof map === 'object') {
+      Object.keys(map).forEach(function(k) {
+        if (!_photoRetryData[k]) _photoRetryData[k] = map[k];
+      });
+    }
+  } catch(e) {}
+}
+
+function _savePendingPhotoData(jobId) {
+  var map = {};
+  (_photoRefs[jobId] || []).forEach(function(r) {
+    if (r.status === 'failed' && _photoRetryData[r.stableId]) map[r.stableId] = _photoRetryData[r.stableId];
+  });
+  try {
+    if (Object.keys(map).length) localStorage.setItem(_pendingPhotoKey(jobId), JSON.stringify(map));
+    else localStorage.removeItem(_pendingPhotoKey(jobId));
+  } catch(e) {
+    _warnPhotoRetryUnsaved(e);
+  }
 }
 
 function savePhotoRefs(jobId) {
@@ -10156,7 +10240,7 @@ function savePhotoRefs(jobId) {
                filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
-  } catch(e) {}
+  } catch(e) { _warnPhotoStoreFull(e); }
 }
 
 function _getPhotoRef(jobId, stableId) {
@@ -10379,8 +10463,8 @@ function _updateRoomInventoryEl(jobId, roomIdx) {
 function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
   var file = input.files[0];
   if (!file) return;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active') return;
+  var job = _photoCaptureJob(jobId);
+  if (!job) { input.value = ''; return; }
   var estRec = estimateStore[jobId];
   var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
   var room = estRooms.find(function(r){ return r.idx === roomIdx; });
@@ -10397,14 +10481,17 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
   var dispEl = document.getElementById('inv-disp-' + jobId + '-r' + roomIdx);
   var disposition = (dispEl && dispEl.dataset.disp) || '';
   var ts = Date.now();
-  var stableId = jobId + '_r' + roomIdx + '_inv_' + ts;
   var cleanRoom = _cleanName(roomName);
   var cleanObj = _cleanName(objectName) || ('Item' + seq);
   var cleanCat = _cleanName(category) || 'Uncategorized';
-  var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_INV_' + cleanCat + '_' + cleanObj + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
+      // Re-read after the compress — see attachJobPlanPhoto. seq above is only the
+      // "Item N" name fallback, which is fixed at the moment the crew is prompted.
+      seq = _invRefs(jobId, roomIdx).length + 1;
+      var stableId = jobId + '_r' + roomIdx + '_inv_' + _photoUid();
+      var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_INV_' + cleanCat + '_' + cleanObj + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
       var ref = { stableId:stableId, roomIdx:roomIdx, label:'inventory', seq:seq, collId:null,
                   objectName:objectName, category:category, disposition:disposition,
                   filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
@@ -11541,21 +11628,25 @@ function _photoStamp(ms) {
 function attachJobPlanPhoto(input, jobId, roomIdx, label) {
   var file = input.files[0];
   if (!file) return;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active') return;
+  var job = _photoCaptureJob(jobId);
+  if (!job) { input.value = ''; return; }
   var estRec = estimateStore[jobId];
   var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
   var room = estRooms.find(function(r){ return r.idx === roomIdx; });
   var roomName = room ? room.name : ('Room' + roomIdx);
-  // Sequence number = total existing shots for this room+label + 1
-  var seq = _slotRefs(jobId, roomIdx, label).length + 1;
-  var stableId = jobId + '_r' + roomIdx + '_' + label + '_' + seq;
   var cleanRoom = _cleanName(roomName);
   var ts = Date.now();
-  var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + label + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
+      // Sequence and id are taken HERE, not at capture time. Read before the async
+      // FileReader + compress, two shots fired into one slot back to back both
+      // computed seq 1 and the SAME stableId, so the second ref overwrote the
+      // first in _setPhotoRef: both files reached Drive, one of them referenced by
+      // nothing, and the slot badge counted one shot where two were taken.
+      var seq = _slotRefs(jobId, roomIdx, label).length + 1;
+      var stableId = jobId + '_r' + roomIdx + '_' + label + '_' + _photoUid();
+      var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + label + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
       var ref = { stableId:stableId, roomIdx:roomIdx, label:label, seq:seq, collId:null,
                   filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
       _setPhotoRef(jobId, ref);
@@ -11574,20 +11665,20 @@ function attachJobPlanPhoto(input, jobId, roomIdx, label) {
 function attachJobPlanCollectionPhoto(input, jobId, collId) {
   var file = input.files[0];
   if (!file) return;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active') return;
+  var job = _photoCaptureJob(jobId);
+  if (!job) { input.value = ''; return; }
   var estRec = estimateStore[jobId];
   var colls = estRec && estRec.estimate && estRec.estimate.collections ? estRec.estimate.collections : [];
   var coll = colls.find(function(c){ return c.id === collId; });
   var collName = coll ? coll.name : ('Collection' + collId);
   var ts = Date.now();
-  // Sequence number = total existing shots for this collection + 1 (keeps
-  // filenames unique even when two are captured within the same second).
-  var seq = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId); }).length + 1;
-  var stableId = jobId + '_c' + collId + '_' + ts;
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
+      // Both taken after the compress, for the reason given in attachJobPlanPhoto:
+      // two captures inside one millisecond shared a stableId AND a filename.
+      var seq = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId); }).length + 1;
+      var stableId = jobId + '_c' + collId + '_' + _photoUid();
       var filename = (job.hvlId ? job.hvlId + '_' : '') + 'ASSET_' + _cleanName(collName) + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
       var ref = { stableId:stableId, roomIdx:null, label:'collection', collId:String(collId),
                   filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
@@ -11606,46 +11697,45 @@ function attachJobPlanCollectionPhoto(input, jobId, collId) {
 
 function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpdate) {
   var job = jobs.find(function(j){ return j.id === jobId; });
-  function _fail() {
-    var r = _getPhotoRef(jobId, stableId);
-    if (r) { r.status = 'failed'; _setPhotoRef(jobId, r); savePhotoRefs(jobId); }
+  function _finish(status, fileUrl) {
+    var ref = _getPhotoRef(jobId, stableId);
+    if (ref) {
+      ref.status = status;
+      if (status === 'uploaded') { ref.driveFileUrl = fileUrl || null; delete _photoRetryData[stableId]; }
+      _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
+    }
+    _savePendingPhotoData(jobId);
     if (onUpdate) onUpdate();
   }
-  if (!job) { _fail(); return; }
-  function _upload(folderId) {
+  if (!job) { _finish('failed'); return; }
+  // Resolve through the SHARED resolver instead of reading driveSubfolders by hand.
+  // The hand-rolled lookup this replaces knew nothing of resolveSubfolderId's alias
+  // map, and 'Estate Inventory' aliases to ['Photos','Asset Documentation'] — the two
+  // folders it was merged from on 2026-07-15. So on any job folder created before that
+  // merge there is no 'Estate Inventory' key, the lookup came back null, and EVERY
+  // photo failed, while every other Drive writer in the app (estimates, invoices,
+  // agreements, walkthrough notes) went through the resolver and filed correctly.
+  // It also missed the { name: "id" } stored shape that _subfolderId handles.
+  resolveSubfolderId(job, subfolderName, function(folderId) {
+    if (!folderId) { _finish('failed'); return; }
     uploadToDrive(folderId, filename, dataUrl, function(ok, fileUrl) {
-      var ref = _getPhotoRef(jobId, stableId);
-      if (!ref) return;
-      if (ok) {
-        ref.status = 'uploaded'; ref.driveFileUrl = fileUrl || null;
-        delete _photoRetryData[stableId];
-      } else {
-        ref.status = 'failed';
-      }
-      _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
-      if (onUpdate) onUpdate();
+      _finish(ok ? 'uploaded' : 'failed', fileUrl);
     });
-  }
-  var folderId = job.driveSubfolders && job.driveSubfolders[subfolderName]
-    ? job.driveSubfolders[subfolderName].id : null;
-  if (folderId) { _upload(folderId); return; }
-  if (job.driveFolder) {
-    fetchSubfolderIds(job, function() {
-      var fid = job.driveSubfolders && job.driveSubfolders[subfolderName]
-        ? job.driveSubfolders[subfolderName].id : null;
-      if (fid) _upload(fid);
-      else _fail();
-    });
-  } else {
-    _fail();
-  }
+  });
 }
 
 function retryPhotoUpload(jobId, stableId) {
-  var dataUrl = _photoRetryData[stableId];
-  if (!dataUrl) return;
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
+  var dataUrl = _photoRetryData[stableId];
+  // Bytes are persisted now (_savePendingPhotoData), so this is the residual case:
+  // the device had no room to hold them. A Retry button that quietly does nothing
+  // reads exactly like one that worked, which is how a lost shot stays lost.
+  if (!dataUrl) {
+    alert('That photo can no longer be retried from this device — the image itself was not held.\n\n'
+      + 'Re-shoot ' + (ref.objectName || ref.filename || 'the item') + ' if it is still on site.');
+    return;
+  }
   ref.status = 'uploading';
   _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
   var subfolder = 'Estate Inventory';
@@ -11702,19 +11792,20 @@ function _updateCollDocs(jobId, collId) {
 function attachCollectionDoc(input, jobId, collId) {
   var file = input.files[0];
   if (!file) return;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || job.status !== 'active') return;
+  var job = _photoCaptureJob(jobId);
+  if (!job) { input.value = ''; return; }
   var estRec = estimateStore[jobId];
   var colls = estRec && estRec.estimate && estRec.estimate.collections ? estRec.estimate.collections : [];
   var coll = colls.find(function(c){ return c.id === collId; });
   var collName = coll ? coll.name : ('Collection' + collId);
   var ext = (file.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '') || 'pdf';
   var ts = Date.now();
-  var seq = _collDocRefs(jobId, collId).length + 1;
-  var stableId = jobId + '_cdoc' + collId + '_' + ts;
-  var filename = (job.hvlId ? job.hvlId + '_' : '') + 'APPRSL_' + _cleanName(collName) + '_' + seq + '_' + _photoStamp(ts) + '.' + ext;
   var reader = new FileReader();
   reader.onload = function(ev) {
+    // After the read, for the reason given in attachJobPlanPhoto.
+    var seq = _collDocRefs(jobId, collId).length + 1;
+    var stableId = jobId + '_cdoc' + collId + '_' + _photoUid();
+    var filename = (job.hvlId ? job.hvlId + '_' : '') + 'APPRSL_' + _cleanName(collName) + '_' + seq + '_' + _photoStamp(ts) + '.' + ext;
     var ref = { stableId:stableId, roomIdx:null, label:'appraisal', collId:String(collId),
                 objectName:file.name, filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
     _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
@@ -13673,13 +13764,19 @@ function loadJobPlanTab() {
   var est = estRec.estimate;
   if (printBtn) printBtn.style.display = 'inline-block';
 
+  // Photo refs load BEFORE the plan is built, not after. The room cards render their
+  // shot counts and their "not saved — Retry" flags out of _photoRefs, so loading it
+  // afterwards meant the first open of a job in any session drew every count as zero
+  // and hid every failed-upload flag — photos correctly filed in Drive read on screen
+  // as photos that never happened, which is exactly the report this fixes.
+  loadPhotoRefs(jobId);
+
   // Home Prep for Sale gets a stripped-down plan: no hours log, PS crew, room phases, or
   // end-of-job logistics — just vendor sourcing, budget, and a coordination checklist.
   if (job.svc === 'prep') {
     var logSectionP = document.getElementById('plan-log-section');
     if (logSectionP) logSectionP.style.display = 'none';
     content.innerHTML = renderPrepJobPlan(jobId, job, est);
-    loadPhotoRefs(jobId);
     return;
   }
 
@@ -13698,9 +13795,6 @@ function loadJobPlanTab() {
   // Build team rows and dropdowns for the entry form
   buildLogTeamRows();
   rebuildDropdowns();
-
-  // Load photo references for this job
-  loadPhotoRefs(jobId);
 
   // Auto-set date
   var logDateEl = document.getElementById('log-date');

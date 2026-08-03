@@ -20,12 +20,13 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/master-suite-cleaning-hours-g62ink`
-  (was `claude/home-prep-sale-consolidation-13yxt9`; before that
+- Active feature branch: `claude/photo-sync-google-drive-69ykub`
+  (was `claude/master-suite-cleaning-hours-g62ink`, then
+  `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/master-suite-cleaning-hours-g62ink:main`
+  `git push origin claude/photo-sync-google-drive-69ykub:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -59,6 +60,49 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Both documents drift together.** Any app change that triggers a manual reconciliation pass
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
+
+## Job Plan photos → Drive: six ways a shot went missing (BUILT 2026-08-03)
+**Reported as "we took pics the other day that didn't seem to make it to the Estate Inventory
+folder."** Six defects on that path, three of which lose the photo outright and two of which
+lose it *without saying so*. Verified by lifting the real function bodies into a vm sandbox and
+driving them (19 checks, harness in the session scratchpad — booting the whole 1.2 MB file in
+jsdom times out, so the harness pulls `function NAME(` blocks by source text instead).
+- **The headline, and it is a silent drop.** All four capture entry points opened with
+  `if (!job || job.status !== 'active') return;` — **no upload, no ref, no message**. The camera
+  opened, the shot was taken, and the app did nothing. A job sits at **`won`** for the entire
+  stretch between the client accepting and the deposit being recorded, and `loadJobPlanTab`
+  renders the room cards — camera buttons included — that whole time. So the day-one walkthrough
+  shots, the ones taken before anyone has been back to the office to record a cheque, evaporated.
+  New `_photoCaptureJob(jobId)` gates on **`isJobWon`** — the same rule the SCREEN enforces —
+  and when it does refuse it says so. **Match these two gates if either ever moves.**
+- **`_doPhotoUpload` hand-rolled its subfolder lookup instead of calling `resolveSubfolderId`**,
+  so it never saw the alias map — and `'Estate Inventory'` aliases to `['Photos','Asset
+  Documentation']`, the two folders it was merged from on 2026-07-15. On any job folder created
+  before that merge there is no `Estate Inventory` key and **every photo failed**, while every
+  other Drive writer in the app (estimates, invoices, agreements, walkthrough notes) went
+  through the resolver and filed correctly. It also missed the `{ name: "id" }` stored shape
+  `_subfolderId` handles. Now one call to the shared resolver. **Don't re-inline this lookup.**
+- **`_photoRetryData` was memory-only, so a failed shot died with the tab** — and
+  `retryPhotoUpload` opened `if (!dataUrl) return;`, so the Retry button sat there doing nothing,
+  forever, indistinguishable from one that worked. Bytes for **failed** shots now persist under
+  their own key (`hav_media_pending_<jobId>`), rehydrated by `loadPhotoRefs`, dropped on success.
+  Separate key on purpose: image data must never be able to crowd the manifest write out of the
+  quota. The residual no-bytes case now speaks instead of returning.
+- **Two shots into one room slot back to back collided.** `seq` and `stableId` were read at
+  capture time, *before* the async FileReader + compress, so both computed seq 1 and the same
+  `stableId` — the second ref overwrote the first in `_setPhotoRef`. Both files reached Drive;
+  one of them was referenced by nothing and the badge counted one shot where two were taken.
+  Now taken inside the compress callback, with `_photoUid()` (timestamp + monotonic counter)
+  because two captures really can share a millisecond. Same fix on all four entry points.
+- **`loadPhotoRefs(jobId)` ran AFTER the plan HTML was built.** The room cards read `_photoRefs`
+  as they render, so the first open of a job in any session drew every count as zero and hid
+  every failed-upload flag — photos correctly filed in Drive read on screen as photos that never
+  happened. Moved above both render calls; the duplicate second call is gone.
+- **`savePhotoRefs` swallowed quota errors in a bare `catch(e) {}`.** That leaves the photo in
+  Drive and missing from the inventory, and the inventory is the court record. Warns once now.
+- ⚠️ **`manual.html` + `concierge-guide.html` need a pass** — the capture gate moved from
+  *active* to *won*, three refusals that were silent now speak, and the playbook's symptom→cause
+  table has no row for "took photos and nothing happened." Not done here.
 
 ## Home Prep consolidation + vendor coordination hours — BUILT 2026-08-03
 **One entry point for prep, and third-party vendors finally bill the hours the estimate has
