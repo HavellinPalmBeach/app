@@ -61,6 +61,28 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## Client estimate: page breaks, band weight, no left rule (BUILT 2026-08-03)
+Three presentation fixes on the new Job Plan section, all reported off a printed copy.
+- **A half-blank page before *How The Work Runs*, and it was self-inflicted.** Every block in
+  `clientJobPlanSection` carried `break-inside:avoid`, including the CONTAINER holding all five
+  phases. Once that container outgrew the space left on the page it jumped to the next one
+  whole, stranding half a sheet. **Same lesson as `manual.html`: keep `break-inside` on notes
+  and tables, never on a list that can run longer than a page.** Now two styles — `BLOCK`
+  (atomic, short fixed blocks) and `BLOCKB` (growable: spaces, phases, vendors, records, asks).
+  The container may break; each repeated CHILD carries `ATOM`, so a break lands *between* two
+  phases and never through one. Headings gained `break-after:avoid` so none is orphaned at a
+  page foot. **Picking the wrong one of the two is a printing bug, not a styling preference.**
+- **The bronze left rule is gone** — Anthony's call, it read as a quote bar on a document that
+  is not quoting anything. Blocks are now plain with tighter vertical rhythm.
+- **Band weight is now hierarchy.** `.ce-section-hdr` (dark) is **reserved for the two bands
+  that state what the client pays** — *Total Estimated Project Cost* and *Payment Schedule*.
+  Every other estimate section uses the new `.ce-band` (tan `#f7f4ee` + bronze), which matches
+  the sub-headers already inside the fee tables. With every section wearing the dark band there
+  was no hierarchy and the number the client needs to find carried no more weight than a vendor
+  list. A test asserts **exactly two** dark bands on a fully-populated document. **The INVOICE
+  is a separate surface and deliberately still uses the dark band throughout.**
+- 22 more checks in the job-plan suite (99 total there, 205 across five suites).
+
 ## Tenure was a DOUBLE COUNT + fullness presets + honest room rows (BUILT 2026-08-03)
 **Anthony ran a 3,500 sqft 4bed/3.5bath estate settlement, left every room at its default,
 and got $27,000 / 9 days against a reference band of $8,000–$16,000 / 5–9 days.** Forensic

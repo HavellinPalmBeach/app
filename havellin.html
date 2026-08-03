@@ -255,7 +255,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .ce-hdr-divider{height:1px;background:var(--border);margin:.6rem 0;}
 .ce-meta-item{font-size:13px;}.ce-meta-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:2px;}
 .ce-meta-val{font-size:13px;color:var(--gray-dk);font-weight:500;}
+/* Two band weights on the client estimate, and the split is deliberate.
+   .ce-section-hdr (dark) is RESERVED for the two bands that state what the client
+   pays — Total Estimated Project Cost and Payment Schedule. Everything else on the
+   document is scope and method, and uses the lighter .ce-band, which matches the
+   sub-headers inside the fee tables (Onsite … Services, Move Management, Moving
+   Materials). When every section wore the dark band there was no visual hierarchy
+   at all and the number the client actually needs to find had no more weight than
+   a vendor list. Don't put the dark band back on a scope section. */
 .ce-section-hdr{background:var(--gray-dk);color:var(--cream);padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;margin-bottom:0;}
+.ce-band{background:#f7f4ee;color:var(--bronze);padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;margin-bottom:0;border-bottom:1px solid var(--border);}
 .ce-tbl{width:100%;border-collapse:collapse;margin-bottom:0;}
 .ce-tbl th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:8px 14px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;}
 .ce-tbl th.r{text-align:right;}
@@ -619,7 +628,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
   .ce-hdr-row-3{grid-template-columns:1fr;}
   .ce-meta-label{font-size:9px;}
   .ce-meta-val{font-size:11px;}
-  .ce-section-hdr{padding:5px 10px;font-size:9px;}
+  .ce-section-hdr,.ce-band{padding:5px 10px;font-size:9px;}
   .ce-tbl td,.ce-tbl th{padding:5px 10px;font-size:10px;}
   .ce-tbl tr.subtotal td{font-size:11px;}
   .ce-tbl tr.grand td{font-size:12px;}
@@ -692,7 +701,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 6:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 6:46pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6749,11 +6758,27 @@ function clientJobPlanSection(e, job) {
   var isPrep = e.svc === 'prep';
   var steps = (typeof JOB_STEPS !== 'undefined' && JOB_STEPS[e.svc]) ? JOB_STEPS[e.svc] : {};
 
-  var SUB = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin:0 0 6px;';
+  // A heading must never be the last thing on a page — break-after:avoid keeps it
+  // with the first line of whatever it introduces.
+  var SUB = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin:0 0 6px;break-after:avoid;page-break-after:avoid;';
   var BODY = 'font-size:12px;color:var(--gray-dk);line-height:1.65;';
   // break-inside on each block so a phase never splits across a printed page —
   // half a completion criterion at a page break is worse than a short page.
-  var BLOCK = 'padding:12px 14px;background:var(--white);border-left:3px solid var(--bronze);margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;';
+  // TWO block styles, and picking the wrong one is a printing bug rather than a
+  // styling one. `break-inside:avoid` on a container that GROWS with the data means
+  // that once it outgrows the space left on the page it jumps to the next one whole,
+  // stranding half a sheet of white — which is exactly what "How The Work Runs" (five
+  // phases) did on its first outing. So:
+  //   BLOCK  — short, fixed-size blocks. Keep atomic; they always fit.
+  //   BLOCKB — anything that grows with the job (spaces, phases, vendors, records).
+  //            The CONTAINER may break; each repeated child inside it is atomic, so
+  //            a page break lands between two phases, never through one.
+  // Same lesson as manual.html: keep break-inside on notes and tables, never on the
+  // lists that can run longer than a page.
+  var BLOCK_BASE = 'padding:10px 0 12px;background:var(--white);margin-bottom:4px;';
+  var BLOCK  = BLOCK_BASE + 'break-inside:avoid;page-break-inside:avoid;';
+  var BLOCKB = BLOCK_BASE;
+  var ATOM   = 'break-inside:avoid;page-break-inside:avoid;';
 
   var html = '';
 
@@ -6768,10 +6793,10 @@ function clientJobPlanSection(e, job) {
   var excl = (e.rooms || []).filter(function(r){ return r.excluded; });
   if (incl.length) {
     var groups = _ceGroupedSpaces(incl);
-    html += '<div style="' + BLOCK + '">'
+    html += '<div style="' + BLOCKB + '">'
       + '<div style="' + SUB + '">Spaces In Scope &nbsp;·&nbsp; ' + incl.length + '</div>'
       + groups.map(function(g) {
-          return '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.55;margin-bottom:4px;">'
+          return '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.55;margin-bottom:4px;' + ATOM + '">'
             + '<span style="color:var(--bronze);font-weight:700;">' + esc(g.section) + ' (' + g.rooms.length + '):</span> '
             + g.rooms.join(' &middot; ') + '</div>';
         }).join('')
@@ -6787,7 +6812,7 @@ function clientJobPlanSection(e, job) {
   // 3 · How the work runs — the phases.
   var phases = _cePhases(e, _j);
   if (phases.length) {
-    html += '<div style="' + BLOCK + '">'
+    html += '<div style="' + BLOCKB + '">'
       + '<div style="' + SUB + '">How The Work Runs</div>'
       + '<div style="font-size:11.5px;color:var(--gray);line-height:1.55;margin-bottom:9px;font-style:italic;">'
       + 'Each stage below has to finish before the next begins. We have deliberately not put dates against them — the pace is set by how quickly decisions can be made, and a date here would be a promise about your calendar rather than ours.</div>'
@@ -6808,7 +6833,7 @@ function clientJobPlanSection(e, job) {
 
   // 4 · What we coordinate — vendors, collections, prep, site conditions.
   if (parts.notesHtml) {
-    html += '<div style="' + BLOCK + '">'
+    html += '<div style="' + BLOCKB + '">'
       + '<div style="' + SUB + '">What We Coordinate For You</div>'
       + '<div style="margin-top:-5px;">' + parts.notesHtml + '</div>'
       + '</div>';
@@ -6832,10 +6857,10 @@ function clientJobPlanSection(e, job) {
     } else {
       records.push('The complete job file, filed in a folder shared with you');
     }
-    html += '<div style="' + BLOCK + '">'
+    html += '<div style="' + BLOCKB + '">'
       + '<div style="' + SUB + '">What You Receive</div>'
       + '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.55;">'
-      + records.map(function(r){ return '<div style="margin-bottom:3px;"><span style="color:var(--bronze);">&#8212;</span> ' + r + '</div>'; }).join('')
+      + records.map(function(r){ return '<div style="margin-bottom:3px;' + ATOM + '"><span style="color:var(--bronze);">&#8212;</span> ' + r + '</div>'; }).join('')
       + '</div>'
       + (deep
           ? '<div style="margin-top:7px;font-size:11px;color:var(--gray);line-height:1.5;font-style:italic;">This engagement is documented to court and attorney standard. The records above are prepared to be read by counsel, a judge, or an interested party who is looking for a problem.</div>'
@@ -6860,10 +6885,10 @@ function clientJobPlanSection(e, job) {
   if (e.access) {
     asks.push(['Site conditions', 'Stairs or no elevator here. The extra handling time is already in the hours below; what we need is a loading route agreed before Day 1.']);
   }
-  html += '<div style="' + BLOCK + 'margin-bottom:1.1rem;">'
+  html += '<div style="' + BLOCKB + 'margin-bottom:1.1rem;">'
     + '<div style="' + SUB + '">What We Need From You</div>'
     + asks.map(function(a) {
-        return '<div style="margin-top:4px;font-size:11.5px;color:var(--gray-dk);line-height:1.55;">'
+        return '<div style="margin-top:4px;font-size:11.5px;color:var(--gray-dk);line-height:1.55;' + ATOM + '">'
           + '<span style="color:var(--bronze);font-weight:700;">' + a[0] + ':</span> ' + a[1] + '</div>';
       }).join('')
     + '</div>';
@@ -6920,18 +6945,18 @@ function buildPrepEstimateBody(e, job) {
   return '' +
     // Standalone prep gets the same structured plan as every other service — its
     // three phases are sourcing, oversight and handover rather than sort/pack/close.
-    '<div class="ce-section-hdr">Havellin Job Plan &amp; Services</div>' +
+    '<div class="ce-band">Havellin Job Plan &amp; Services</div>' +
     clientJobPlanSection(e, job) +
 
     // 1) Vendors first — billed at cost
-    '<div class="ce-section-hdr">Home Prep Vendors — Estimated (billed to you at cost)</div>' +
+    '<div class="ce-band">Home Prep Vendors — Estimated (billed to you at cost)</div>' +
     '<table class="ce-tbl"><tbody>' + prepRows + '</tbody>' +
     '<tr class="subtotal"><td>Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note" style="margin-top:6px;">Vendor amounts are estimates. Actual invoices are billed to you directly at cost — Havellin does not mark them up.</div>' +
 
     // 2) Then Havellin\'s 30% management fee on that spend
-    '<div class="ce-section-hdr" style="margin-top:1.25rem;">Havellin Management Fee</div>' +
+    '<div class="ce-band" style="margin-top:1.25rem;">Havellin Management Fee</div>' +
     '<table class="ce-tbl"><tbody>' +
     '<tr><td>GC / Site Management Fee — sourcing, scheduling, on-site oversight &amp; quality control (30% of vendor spend)</td><td class="r">' + fmt(e.prepFee || e.havellinTotal) + '</td></tr>' +
     '</tbody>' +
@@ -7115,7 +7140,7 @@ function renderClientEstimate() {
     html += buildPrepEstimateBody(e, job);
   } else {
   html +=
-    '<div class="ce-section-hdr">Havellin Job Plan &amp; Services</div>' +
+    '<div class="ce-band">Havellin Job Plan &amp; Services</div>' +
     clientJobPlanSection(e, job) +
     '<table class="ce-tbl">' +
     '<tbody>' +
@@ -7183,7 +7208,7 @@ function renderClientEstimate() {
       var rows = cols.map(function(c) {
         return '<tr><td>' + esc(c.name) + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
       }).join('');
-      return '<div class="ce-section-hdr" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
+      return '<div class="ce-band" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
         '<table class="ce-tbl" style="margin-bottom:1.25rem;"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
         '<tbody>' + rows + '</tbody></table>';
     })() +
@@ -7214,7 +7239,7 @@ function renderClientEstimate() {
           (spec ? '<br><span style="font-size:11px;color:var(--gray);">' + spec + '</span>' : '') +
           '</td><td>' + flags.join('<br>') + '</td></tr>';
       }).join('');
-      return '<div class="ce-section-hdr" style="margin-top:1rem;">Vehicles &amp; Watercraft</div>' +
+      return '<div class="ce-band" style="margin-top:1rem;">Vehicles &amp; Watercraft</div>' +
         '<table class="ce-tbl"><thead><tr><th>Vehicle / Watercraft</th><th>Status</th></tr></thead>' +
         '<tbody>' + rows + '</tbody></table>' +
         '<div style="font-size:11px;color:var(--gray);padding:6px 10px 0;font-style:italic;">' +
@@ -7233,7 +7258,7 @@ function renderClientEstimate() {
     // that is not part of their engagement — and it made the estimate read as though
     // something were missing.
     (showVendors ?
-    '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendors To Be Engaged</div>' +
+    '<div class="ce-band" style="margin-top:1rem;">Third-Party Vendors To Be Engaged</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
@@ -7263,7 +7288,7 @@ function renderClientEstimate() {
       var rows = e.prepItems.filter(function(p){ return p.cost > 0; }).map(function(p) {
         return '<tr><td>' + p.type + '</td><td class="r">' + fmt(p.cost) + '</td></tr>';
       }).join('');
-      return '<div class="ce-section-hdr" style="margin-top:1rem;">Home Prep for Sale</div>' +
+      return '<div class="ce-band" style="margin-top:1rem;">Home Prep for Sale</div>' +
         '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody>' +
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
