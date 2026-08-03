@@ -61,6 +61,33 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## Job Plan section folded into the stages — three trailing blocks DELETED (2026-08-03)
+**Anthony: "everything below 4. Close-Out should be incorporated in the appropriate numbered
+slot above. this is too much and reads awkwardly."** The section was six blocks; it is now
+three — *How We Work · Spaces In Scope · How The Work Runs*. **Do not reintroduce a trailing
+block after a numbered sequence** — it reads as an appendix restating what the stages said.
+- **Vendors are named in the STAGE THEY APPEAR IN**, bucketed by what the trade does, not by
+  what it costs: `/apprais|firearm|ffl|gemolog|numismat/` → the **sorting** stage (they value
+  while contents are still in place), `/clean|paint|carpet|landscap|stag|repair|…/` → **close-out**
+  (a cleaner cannot start until the house is empty), everything else → **disposition**. The old
+  single roster put appraisers two stages late and the final clean two stages early on a
+  document whose whole point is that we know the order. Tests assert the position of each.
+- **Close-out was silently missing the finishing trades entirely** — a cleaning vendor appeared
+  on the estimate and in no stage. Fixed here.
+- *What You Receive* moved into Close-Out (that is when they receive it) as a `receive` field on
+  the phase. *What We Need From You* was mostly a duplicate of each stage's own `need`; access
+  and the multi-party ask folded into stage 1. The collections no-commission line moved to
+  Disposition.
+- **The Drive reference is gone** on instruction — "the complete job file, filed in a folder
+  shared with you" became *the complete documentation package*. The client does not need our
+  storage mechanism named.
+- **The italic no-dates preamble is DELETED, also on instruction.** Explaining an absence is
+  what draws attention to it. The no-dates RULE still holds and is still tested; if a client
+  asks, the concierge has the answer in the playbook's symptom table.
+- `proposedPlanRow` is now narrative-only — its four conditional notes and `andList` are gone,
+  every one having a real home in a stage.
+- 112 checks in this suite.
+
 ## New tagline + one-line estimate header (BUILT 2026-08-03)
 - **Tagline is now "Havellin handles the work no family should face alone."** Replaces
   *Guiding Families Through Life's Transitions* on **all four client documents** — client
