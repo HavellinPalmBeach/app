@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:16pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7043,11 +7043,14 @@ function renderClientEstimate() {
         // to the dates row below, where a date belongs. Rep Email is back at the
         // shared 13px; it carried an inline 11px override to squeeze into a narrow
         // column, and with even columns and overflow-wrap it no longer needs to.
+        // Service leads the row. It is the shortest label and value of the four, so it
+        // sits cleanly at the left edge, and the three representative fields then read
+        // as one group rather than being split around it.
         '<div class="ce-hdr-row ce-hdr-row-4">' +
+        '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + esc(job.executor||'—') + (job.executorRole ? ' — ' + esc(job.executorRole) : '') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + (job.executorPhone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val">' + (job.executorEmail||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
         '</div>'
       // Client and Property moved up into the identity line, so this row carries
       // only what is left rather than repeating them.
