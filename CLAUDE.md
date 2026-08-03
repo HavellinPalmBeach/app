@@ -89,6 +89,28 @@ cutting; do not wait to be told.
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## "At cost" said twice on labels, not five times in prose (2026-08-03)
+**Anthony, walking the estimate: "two more areas restating the same thing — billed at cost."**
+It appeared FIVE times on one page. It now appears on the two subtotal labels and the two
+grand-total lines — where a reader looking for a number actually is — and in full, once, in
+**Terms**, which is where a commercial rule belongs.
+- **Both vendor footnotes deleted.** `Estimated Third-Party Total` gained **(at cost)** to match
+  `Est. Prep Vendor Total (at cost)`; the prep footnote now renders only its
+  Service-Management-Fee sentence, and only while `SMF_PCT > 0` (it is 0 today).
+- **The hour counts went with them** — *"…accounts for 18.0 of the Transition Concierge hours
+  above"*. They were added as evidence for the no-fee claim, but the client's copy shows one
+  combined concierge figure, so the number could never be checked against anything on the page.
+  It invited a question rather than answering one. **The claim itself survives, in Terms.**
+- **"No coordination fee" went too** — on a document with no coordination-fee line, that
+  explains an absence.
+- **A third-party duplicate found while doing this:** *"Includes N TC hrs for home prep vendor
+  coordination"* sat under the **Moving Materials** heading while describing **home prep**, and
+  the Home Prep section stated the same `prepTCHrs` figure four lines later. Misfiled and
+  duplicated.
+- The Packing & Disposition stage names the vendors but no longer restates the rule.
+- 23 more checks (135 in this suite), including one asserting `(at cost)` appears exactly four
+  times and only on labels.
+
 ## Job Plan section folded into the stages — three trailing blocks DELETED (2026-08-03)
 **Anthony: "everything below 4. Close-Out should be incorporated in the appropriate numbered
 slot above. this is too much and reads awkwardly."** The section was six blocks; it is now

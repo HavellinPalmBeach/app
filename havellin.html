@@ -705,7 +705,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:01pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6676,8 +6676,10 @@ function _cePhases(e, job) {
     dispDone = 'Everything retained is packed and labeled by destination, and the property is ready for the next step.';
   }
   if (vend.move.length) {
+    // Names who does the work; does NOT restate the pass-through rule. That is on the
+    // vendor subtotal, on the grand-total line, and in full in Terms.
     dispBody += ' The outside firms doing this work — ' + _vList(vend.move)
-      + ' — are booked, scheduled and supervised by us. Their invoices come to you directly at cost; we add nothing to them.';
+      + ' — are sourced, booked, scheduled and supervised by us, and we are on site when they are.';
   }
   if (hasColl) {
     dispBody += ' On anything sold through auction, consignment or a dealer, Havellin takes no commission — the proceeds are yours, less whatever fee that partner charges.';
@@ -7112,6 +7114,7 @@ function renderClientEstimate() {
   // if there is somehow a cost with nothing itemising it, keep the section so the money
   // is still disclosed and the grand total below still reconciles.
   var showVendors = !!vendorRows || (e.vendorCost || 0) > 0;
+
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
 
   var _svcSubHdr = {
@@ -7178,7 +7181,16 @@ function renderClientEstimate() {
         (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
         (prepGcFee > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)</td><td>—</td><td>30% of prep vendors</td><td class="r">' + fmt(prepGcFee) + '</td></tr>' : '')
       : '') +
-      (e.prepEnabled && e.prepTCHrs > 0 ? '<tr><td colspan="4" style="font-size:11px;color:var(--gray);font-style:italic;padding:4px 10px;">Includes ' + e.prepTCHrs.toFixed(1) + ' TC hrs for home prep vendor coordination — factored into Transition Concierge total above.</td></tr>' : '')
+      // DELETED: "Includes N TC hrs for home prep vendor coordination — factored into
+      // Transition Concierge total above." Three things wrong with it at once. It was a
+      // DUPLICATE — the Home Prep for Sale section already states the same prepTCHrs
+      // figure, in the section that is actually about prep. It was MISFILED, sitting
+      // under a *Moving Materials* heading while describing home-prep coordination. And
+      // it was internal accounting reassuring the client we had not double-billed them,
+      // which answers a question nobody asked — the same reason the concierge
+      // no-double-billing sub-line was removed on 2026-08-03. See the client-copy rule
+      // at the top of CLAUDE.md.
+      ''
     )) +
     '</tbody>' +
     (!e.fixedPrice && e.discountPct > 0 ?
@@ -7280,25 +7292,14 @@ function renderClientEstimate() {
     '<div class="ce-band" style="margin-top:1rem;">Third-Party Vendors To Be Engaged</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' + vendorRows + '</tbody>' +
-    '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
-    // Says where the coordination went. The terms below have promised since the fee came off
-    // that managing these vendors is billed hourly instead; naming the hours turns that from
-    // a reassurance into something the client can find in the labor lines above.
-    //
-    // FIXED PRICE TAKES A DIFFERENT SENTENCE, and this was a real defect: on a fixed-price
-    // estimate the hourly TC/PS rows are replaced by the single Fixed Project Fee line, so
-    // "of the Transition Concierge hours above" pointed at a line that is not on the page —
-    // and disclosed an hour count on a document sold as explicitly not billed by the hour.
-    // The wording below matches the fixed-price clause already in Terms.
-    ((e.vendorTCHrs || 0) > 0
-      ? '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">' +
-          'Billed to you directly at cost — no coordination fee or markup. ' +
-          (e.fixedPrice
-            ? 'Sourcing, scheduling and supervising these vendors is included in the fixed project fee.'
-            : 'Sourcing, scheduling and supervising these vendors accounts for ' +
-              e.vendorTCHrs.toFixed(1) + ' of the Transition Concierge hours above.') +
-        '</td></tr>'
-      : '') +
+    '<tr class="subtotal"><td>Estimated Third-Party Total (at cost)</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
+    // No footnote. The subtotal label says "(at cost)" and so does this vendor's line
+    // in the Total Estimated Project Cost table — the pass-through rule is on the page
+    // twice already, in the two places a reader looking for a number will actually be.
+    // What went with it: "no coordination fee", which explains the absence of a fee line
+    // that is not on the document, and "…accounts for 18.0 of the Transition Concierge
+    // hours above", a figure the client's copy shows no way to check. See the
+    // client-copy rule at the top of CLAUDE.md.
     '</table>' +
     '<div style="margin-bottom:1.25rem;"></div>'
     : '') +
@@ -7311,19 +7312,12 @@ function renderClientEstimate() {
         '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody>' +
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
+        // Same reasoning: the subtotal above already reads "(at cost)". The only
+        // thing left worth saying is what a Service Management Fee COVERS, and only
+        // while one is actually being charged (SMF_PCT is 0 today).
         (SMF_PCT > 0
           ? '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">Coordination of these vendors is included in the ' + Math.round(SMF_PCT*100) + '% Service Management Fee above.</td></tr>'
-          // Same fixed-price split as the third-party footnote above, and this one was worse:
-          // it asserted "billed hourly" outright on a document whose Terms say the fee is
-          // firm and does not vary with hours worked \u2014 a flat contradiction three paragraphs
-          // apart, on the client's own copy.
-          : '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">These vendors are billed to you directly at cost. Havellin charges no coordination fee on them \u2014 ' +
-              (e.fixedPrice
-                ? 'coordinating them is included in the fixed project fee.'
-                : 'the concierge time spent managing them is billed hourly' +
-                  ((e.prepTCHrs || 0) > 0 ? ', and accounts for ' + e.prepTCHrs.toFixed(1) + ' of the Transition Concierge hours above' : '') +
-                  '.') +
-              '</td></tr>') +
+          : '') +
         '</table>';
     })() : '') +
 
