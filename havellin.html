@@ -665,6 +665,11 @@ body.no-smf .smf-col{display:none;}
 .vgrp-title{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--bronze);margin-bottom:6px;}
 @media (max-width:1100px){.vgrp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:700px){.vgrp-grid{grid-template-columns:1fr;}}
+/* Standalone Home Prep shows one card. Left in the 3-col track it rendered a third of the
+   way across with two empty columns beside it; !important because the breakpoints above
+   are equally specific and would win at narrow widths for no reason — one column is one
+   column at every size. */
+.vgrp-grid.vgrp-solo{grid-template-columns:1fr!important;}
 /* The three adjustment toggles, across the page. min-width:0 for the usual reason — a
    1fr track's auto floor is min-content, and these subtitles are long enough to push the
    track wider than its share. align-items:stretch so the three boxes match height however
@@ -687,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 11:34am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 12:02pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1168,8 +1173,8 @@ body.no-smf .smf-col{display:none;}
            exceptional items. Notable Collections stays what it is: specific items needing
            a custody trail and a disposition channel, which a vendor line does not carry. -->
       <div class="card" style="margin-bottom:1rem;" id="est-vendors-card">
-        <div class="sec">Third-Party Vendors</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly.</div>
+        <div class="sec" id="vendors-card-title">Third-Party Vendors</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;" id="vendors-card-sub">Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly, and each line below books that time.</div>
         <div id="vendor-group-cards"></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;" id="est-rooms-card">
@@ -1242,37 +1247,14 @@ body.no-smf .smf-col{display:none;}
       </div>
 
       </div>
-      <div class="est-pair" id="est-prep-pair">
-      <div class="card" id="est-prep-card">
-        <div class="sec" style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
-          <span id="prep-card-label">Home Prep for Sale</span>
-          <label id="prep-include-label" style="margin-top:0;font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;flex:0 0 auto;display:flex;align-items:center;gap:5px;">
-            <input type="checkbox" id="e-prep-enabled" onchange="togglePrepSection()"> Include in estimate
-          </label>
-        </div>
-        <div id="prep-content" style="display:none;">
-          <table class="vtbl">
-            <thead><tr><th>Prep Item / Vendor</th><th>Est. Cost</th><th id="prep-fee-col-hdr">30% GC Fee</th><th></th></tr></thead>
-            <tbody id="prep-body"></tbody>
-            <tfoot>
-              <tr>
-                <td><select id="new-prep-type" style="width:100%;"><option value="">Add item...</option></select></td>
-                <td><input type="number" id="new-prep-cost" placeholder="0" style="width:100%;"></td>
-                <td style="color:var(--gray);" id="new-prep-fee">$0</td>
-                <td><button class="icon-btn" onclick="addPrepItem()">+ Add</button></td>
-              </tr>
-              <tr style="border-top:2px solid var(--border-md);">
-                <td><strong>Totals</strong></td>
-                <td><strong id="prep-total-cost">$0</strong></td>
-                <td><strong id="prep-total-fee">$0</strong></td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-          <div id="prep-tc-badge" style="margin-top:8px;font-size:11px;color:var(--gray);text-align:right;"></div>
-        </div>
-      </div>
-      <div class="card" id="est-materials-card">
+      <!-- Home Prep for Sale had its own card here, with a second "Add item…" dropdown and
+           an "Include in estimate" checkbox. It wrote to the SAME prepItems array as the
+           Property Preparation card in Third-Party Vendors above, so one list had two front
+           doors that disagreed: the card bypassed the checkbox (lines added there priced at
+           zero everywhere downstream), and the two dropdowns offered different names for the
+           same trades. One entry point now — the Property Preparation card — and inclusion is
+           simply whether any prep line exists. -->
+      <div class="card" id="est-materials-card" style="margin-top:1rem;">
         <div class="sec">Moving Materials</div>
         <label>Moving materials package</label>
         <select id="e-pkg" onchange="calcAll()">
@@ -1284,8 +1266,6 @@ body.no-smf .smf-col{display:none;}
           <option value="350">Downsizing Standard — $350</option>
           <option value="550">Downsizing Premium — $550</option>
         </select>
-      </div>
-
       </div>
     </div>
 
@@ -1308,6 +1288,7 @@ body.no-smf .smf-col{display:none;}
           <tr id="s-col-onsite-row" style="display:none;"><td class="muted" style="padding-left:16px;">&#8627; Specialist visits attended (appraisers, dealers, FFL)</td><td class="num" id="s-col-onsite">0.0</td></tr>
           <tr><td class="muted">Concierge off-site coordination</td><td class="num" id="s-base-tc">0.0</td></tr>
           <tr><td class="muted" style="padding-left:16px;">&#8627; Heirs / premium specialty coordination</td><td class="num" id="s-adj-tc">0.0</td></tr>
+          <tr id="s-vendor-tc-sum-row" style="display:none;"><td class="muted">Third-party vendor coordination — Transition Concierge</td><td class="num" id="s-vendor-tc-sum">0.0</td></tr>
           <tr id="s-prep-tc-sum-row" style="display:none;"><td class="muted">Home-prep coordination — Transition Concierge</td><td class="num" id="s-prep-tc-sum">0.0</td></tr>
           <tr class="total-row"><td>Total Transition Concierge hours</td><td class="num big" id="s-tot-tc">0.0</td></tr>
           <tr class="total-row"><td>Total Property Specialist hours</td><td class="num big" id="s-tot-ps">0.0</td></tr>
@@ -1319,8 +1300,9 @@ body.no-smf .smf-col{display:none;}
           <tr id="s-ps-fee-row"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
           <tr id="s-pkg-row"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
           <tr id="s-smf-row" style="display:none;"><td class="muted">Vendor coordination fee</td><td class="num" id="s-smf">$0</td></tr>
+          <!-- The coordination-hours lines live in the hours table above, where hours belong;
+               a "2.0 hrs" row inside a table of dollar amounts read as a charge. -->
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
-          <tr id="s-prep-tc-row" style="display:none;"><td class="muted">Home Prep TC coordination hrs</td><td class="num" id="s-prep-tc-hrs">0.0</td></tr>
           <tr class="total-row" id="s-havellin-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
           <tr id="s-rush-row" style="display:none;"><td style="color:var(--bronze);font-weight:600;" id="s-rush-label">Expedited delivery (20%)</td><td class="num" id="s-rush-amt" style="color:var(--bronze);font-weight:600;">$0</td></tr>
@@ -3989,24 +3971,30 @@ function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(cal
 // vendor costs — no room scoring, crew, or labor hours). This toggles the labor-
 // oriented estimate UI off and makes the prep vendor list the centerpiece. Called
 // from calcAll() on every recompute so it stays in sync with the selected service.
+// Which card set is currently on screen. null until the first render, so the first calcAll
+// after load always builds the cards for the service actually selected.
+var _vgrpPrepMode = null;
 function applyEstimateServiceMode(isPrep) {
-  var hide = ['est-adjustments','est-crew-col','est-rooms-card','est-collections-card','est-materials-card','s-hours-table','s-tc-fee-row','s-ps-fee-row','s-pkg-row','s-smf-row','s-vendor-row'];
+  // est-vehicles-card joined this list on 2026-08-03. A standalone prep job has no estate
+  // assets to schedule — the client still owns the house and everything in it — and it was
+  // the last thing left to tick on a tab that is otherwise just the vendor list.
+  var hide = ['est-adjustments','est-crew-col','est-rooms-card','est-collections-card','est-vehicles-card','est-materials-card','s-hours-table','s-tc-fee-row','s-ps-fee-row','s-pkg-row','s-smf-row','s-vendor-row'];
   hide.forEach(function(id){ var el = document.getElementById(id); if (el) el.style.display = isPrep ? 'none' : ''; });
-  var incLbl = document.getElementById('prep-include-label');
-  if (incLbl) incLbl.style.display = isPrep ? 'none' : 'flex';
-  var chk = document.getElementById('e-prep-enabled');
-  if (chk) { chk.disabled = isPrep; if (isPrep && !chk.checked) chk.checked = true; }
-  if (isPrep) { var pc = document.getElementById('prep-content'); if (pc) pc.style.display = 'block'; }
-  var lbl = document.getElementById('prep-card-label');
-  if (lbl) lbl.textContent = isPrep ? 'Home Prep for Sale — Managed Vendors (30% GC fee)' : 'Home Prep for Sale';
-  // Bundled prep vendors fold in with all other coordinated vendors at the 15% SMF;
-  // only a standalone prep engagement carries the 30% GC fee. Keep the entry-card fee
-  // column header in step with what will actually be charged.
-  var feeHdr = document.getElementById('prep-fee-col-hdr');
-  // Reads the rate rather than asserting one. This said "15% Fee" on a bundled job long
-  // after SMF went to zero, so the column promised a fee the app no longer charges.
-  if (feeHdr) feeHdr.textContent = isPrep ? '30% GC Fee'
-                                          : (SMF_PCT > 0 ? Math.round(SMF_PCT*100) + '% Fee' : 'No fee');
+  // The Third-Party Vendors card IS the Home Prep card on a prep job — renderVendorGroupCards
+  // collapses to the single Property Preparation group, so the heading has to follow or it
+  // reads as a third-party section that happens to contain the whole engagement.
+  var vTitle = document.getElementById('vendors-card-title');
+  var vSub   = document.getElementById('vendors-card-sub');
+  if (vTitle) vTitle.textContent = isPrep ? 'Home Prep for Sale — Managed Vendors' : 'Third-Party Vendors';
+  if (vSub) vSub.innerHTML = isPrep
+    ? 'Billed to the client directly at cost. Havellin’s fee is <strong>30% of vendor spend</strong> — no hours are billed on a standalone prep engagement.'
+    : 'Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly, and each line below books that time.';
+  // Rebuild the cards when the service crosses into or out of prep, because the card SET
+  // changes (six groups vs Property Preparation alone). Guarded on an actual transition
+  // rather than run unconditionally: applyEstimateServiceMode is called from every calcAll,
+  // and calcAll fires on every keystroke — rebuilding the cards each time would destroy the
+  // cost <input> being typed in, which is the "can't get past the first digit" bug.
+  if (_vgrpPrepMode !== isPrep) { _vgrpPrepMode = isPrep; renderVendorGroupCards(); }
 
   // Reorder the ESTIMATE SUMMARY panel for Home Prep for Sale so it reads the way the
   // client estimate does: vendors (at cost) first, then the 30% fee, then the grand
@@ -4023,28 +4011,31 @@ function applyEstimateServiceMode(isPrep) {
     else        grandRow.parentNode.insertBefore(pCostRow, grandRow);  // restore: vendors before grand total
   }
 
-  // Relocate the Home Prep vendor card for prep jobs. The Job card's right column
-  // (est-crew-col — PS scheduling) is hidden for a fee-only service, leaving white
-  // space next to the Job details. Move the prep vendor card up into that slot so it
-  // sits beside the Job block instead of stranded in a row below. Because est-crew-col
-  // is display:none it drops out of the 2-col grid, so the prep card becomes column 2.
+  // Relocate the vendor card for prep jobs. The Job card's right column (est-crew-col — PS
+  // scheduling) is hidden for a fee-only service, leaving white space next to the Job
+  // details. Move the vendor card up into that slot so the one thing a prep job asks for
+  // sits beside the Job block instead of stranded in a row below. Because est-crew-col is
+  // display:none it drops out of the 2-col grid, so the vendor card becomes column 2.
   // Idempotent (runs every calcAll) and reversible for non-prep services.
-  var prepCard = document.getElementById('est-prep-card');
+  //
+  // This used to move est-prep-card, the separate Home Prep table. That card is gone; the
+  // vendor card is now the prep card on a prep job, so it is what moves.
+  var vendCard = document.getElementById('est-vendors-card');
   var jobGrid  = document.getElementById('est-job-grid');
   var buildCol = document.getElementById('est-build-col');
-  if (prepCard && jobGrid && buildCol) {
+  if (vendCard && jobGrid && buildCol) {
     if (isPrep) {
-      if (prepCard.parentNode !== jobGrid) jobGrid.appendChild(prepCard);
-      prepCard.style.marginTop = '0';
+      if (vendCard.parentNode !== jobGrid) jobGrid.appendChild(vendCard);
+      vendCard.style.marginTop = '0';
+      vendCard.style.marginBottom = '0';
     } else {
-      // Back to its pair (beside Moving Materials), not appended to the end of the
-      // column — buildCol.appendChild would strand it below everything.
-      var prepPair = document.getElementById('est-prep-pair');
-      var homeFor = prepPair || buildCol;
-      if (prepCard.parentNode !== homeFor) homeFor.insertBefore(prepCard, homeFor.firstChild);
-      // No margin: it sits in a grid pair beside Moving Materials now, and 1rem here
-      // dropped its heading 16px below its neighbour's. The pair supplies the spacing.
-      prepCard.style.marginTop = '0';
+      // Back to the TOP of the build column, not appended — buildCol.appendChild would
+      // strand it below the rooms grid, and vendors are the common case on a walkthrough.
+      if (vendCard.parentNode !== buildCol || buildCol.firstElementChild !== vendCard) {
+        buildCol.insertBefore(vendCard, buildCol.firstChild);
+      }
+      vendCard.style.marginTop = '0';
+      vendCard.style.marginBottom = '1rem';
     }
   }
 }
@@ -4287,27 +4278,39 @@ function calcAll() {
   var pkgLabel = document.getElementById('e-pkg').options[document.getElementById('e-pkg').selectedIndex].text;
   var _collCost = getCollectionCost();
   var smf = calcVendorTotals() + Math.round(_collCost * SMF_PCT);
-  var vendorCost = getVendorCost() + _collCost;
+  // Excluded on standalone prep. buildPrepEstimateBody itemizes prep vendors, the 30% fee
+  // and one grand total, and nothing else — so any third-party or collection cost carried
+  // into grandTotal made that document fail to add up, with no line the client could point
+  // at to explain the difference. Neither card is reachable on a prep job now, so this only
+  // catches lines left on an estimate saved before they were hidden.
+  var vendorCost = isPrep ? 0 : (getVendorCost() + _collCost);
   // Home Prep for Sale. As the STANDALONE service ('prep') this IS the whole estimate:
   // a pure 30% GC fee on managed vendor costs, with no room/labor hours and no billed
-  // TC coordination time. As an ADD-ON to another service, the checkbox toggles it and
-  // TC coordination hours are billed on top of that service's labor.
-  var prepEnabled = isPrep || (document.getElementById('e-prep-enabled') && document.getElementById('e-prep-enabled').checked);
+  // TC coordination time. As an ADD-ON to another service, prep vendors are billed at cost
+  // like every other vendor and TC coordination hours are billed on top of that service's
+  // labor.
+  //
+  // prepEnabled is DERIVED from the lines now — there is no "Include in estimate" checkbox.
+  // It gated everything downstream (client-estimate section, Job Plan sourcing, invoice
+  // actuals) while the Property Preparation card that adds the lines never touched it, so a
+  // prep vendor entered on the walkthrough could carry a cost on screen and be worth zero on
+  // every document the client or the crew ever sees. Having lines is what including prep
+  // means; nothing else can now disagree with it.
+  var prepEnabled = isPrep || prepItems.length > 0;
   var prepCost = prepEnabled ? getPrepCost() : 0;
   var prepFee  = prepEnabled ? getPrepFee(svcKey) : 0;
   var prepTCHrs = (prepEnabled && !isPrep) ? getPrepTCHrs() : 0;
-  // Bundled prep folds in with every other coordinated vendor at the 15% SMF
-  // (getPrepFee returns 15% for a non-'prep' service). Only a standalone prep
-  // engagement keeps its own 30% GC fee line; here we roll the bundled fee into
-  // smf so the estimate shows a single vendor-coordination fee rather than a
-  // separate Home Prep line. The extra TC coordination hours still bill on top.
-  if (prepEnabled && !isPrep) { smf += prepFee; prepFee = 0; }
+  // Third-party vendor coordination — the hours that make "no fee, coordination bills
+  // hourly" true (see VENDOR_TC_HRS). Off-site only, so it joins coordTC rather than the
+  // hands-on pool, exactly like prep coordination. Zero on standalone prep: that engagement
+  // bills no hours at all, and its fee already covers the coordination.
+  var vendorTCHrs = isPrep ? 0 : getVendorTCHrs();
   if (isPrep) { baseTCHrs = 0; basePSHrs = 0; workPool = 0; coordTC = 0; colOnsiteTC = 0; }
-  // Fold bundled-prep coordination and the move-management destination hours in.
-  // Both sit OUTSIDE the origin-property work pool: prep coordination is off-site
-  // vendor management, and move day happens at the new home. destPS is crew work at
-  // the destination, billed straight through rather than shared with the concierge.
-  coordTC = Math.round((coordTC + prepTCHrs + destTC) * 10) / 10;
+  // Fold vendor + bundled-prep coordination and the move-management destination hours in.
+  // All sit OUTSIDE the origin-property work pool: coordination is off-site vendor
+  // management, and move day happens at the new home. destPS is crew work at the
+  // destination, billed straight through rather than shared with the concierge.
+  coordTC = Math.round((coordTC + prepTCHrs + vendorTCHrs + destTC) * 10) / 10;
 
   // ─── WORKING-SUPERVISOR SOLVE ──────────────────────────────────────────────
   // Size the crew to the working-day target, then split the hands-on work pool
@@ -4587,6 +4590,8 @@ function calcAll() {
   document.getElementById('s-adj-tc').textContent = (adjTC + premiumSpecialtyTC).toFixed(1) + ' hrs';
   // Show home-prep coordination hours in the hours breakdown so base + adj + prep
   // = total is obvious at a glance (the prep hours are folded into Total TC).
+  var sVendorTCSumRow = document.getElementById('s-vendor-tc-sum-row');
+  if (sVendorTCSumRow) { sVendorTCSumRow.style.display = vendorTCHrs > 0 ? '' : 'none'; document.getElementById('s-vendor-tc-sum').textContent = '+ ' + vendorTCHrs.toFixed(1) + ' hrs'; }
   var sPrepTCSumRow = document.getElementById('s-prep-tc-sum-row');
   if (sPrepTCSumRow) { sPrepTCSumRow.style.display = (prepEnabled && prepTCHrs > 0) ? '' : 'none'; document.getElementById('s-prep-tc-sum').textContent = '+ ' + prepTCHrs.toFixed(1) + ' hrs'; }
   document.getElementById('s-tot-tc').textContent = totTC.toFixed(1) + ' hrs';
@@ -4606,8 +4611,6 @@ function calcAll() {
   var sPrepCostRow = document.getElementById('s-prep-cost-row');
   if (sPrepFeeRow) { sPrepFeeRow.style.display = prepEnabled && prepFee > 0 ? '' : 'none'; document.getElementById('s-prep-fee').textContent = '$'+prepFee.toLocaleString(); }
   if (sPrepCostRow) { sPrepCostRow.style.display = prepEnabled && prepCost > 0 ? '' : 'none'; document.getElementById('s-prep-cost').textContent = '$'+prepCost.toLocaleString(); }
-  var sPrepTCRow = document.getElementById('s-prep-tc-row');
-  if (sPrepTCRow) { sPrepTCRow.style.display = prepEnabled && prepTCHrs > 0 ? '' : 'none'; document.getElementById('s-prep-tc-hrs').textContent = prepTCHrs.toFixed(1)+' hrs'; }
   document.getElementById('s-havellin').textContent = '$' + havellinTotal.toLocaleString();
   document.getElementById('s-vendor').textContent = '$' + vendorCost.toLocaleString();
   document.getElementById('s-total').textContent = '$' + Math.round(grandTotal).toLocaleString();
@@ -4961,6 +4964,11 @@ function calcAll() {
     gcFee: gcFee, stagerCost: stagerCost, stagerGcFee: stagerGcFee,
     prepEnabled: prepEnabled, prepItems: JSON.parse(JSON.stringify(prepItems)),
     prepCost: prepCost, prepFee: prepFee, prepTCHrs: prepTCHrs,
+    // Recorded for the same reason prepTCHrs is: the hours are already inside totTC, but
+    // without the component the Estimate Summary cannot say where they came from when a
+    // saved estimate is reopened, and neither can anyone auditing why a vendor-heavy job
+    // priced higher than a bare one.
+    vendorTCHrs: vendorTCHrs,
     moveStyling: document.getElementById('e-move-styling') ? document.getElementById('e-move-styling').checked : false
   };
 
@@ -5088,18 +5096,36 @@ function vendorGroupCategories(card) {
 function renderVendorGroupCards() {
   var wrap = document.getElementById('vendor-group-cards');
   if (!wrap) return;
-  var anyCats = VENDOR_GROUP_CARDS.some(function(c){ return vendorGroupCategories(c).length; });
+  var isPrepSvc = (currentSvc() === 'prep');
+  // On a STANDALONE Home Prep engagement the card set collapses to Property Preparation.
+  // The rest of that pipeline already assumes prep vendors are the only vendors \u2014
+  // buildPrepEstimateBody itemizes nothing else and renderPrepJobPlan sources nothing else
+  // \u2014 so a service-vendor line added here landed in grandTotal while appearing on no client
+  // document and in no sourcing list. Fewer cards is also the honest answer to "a Home Prep
+  // job should have nothing else to tick".
+  var cards = VENDOR_GROUP_CARDS.filter(function(c){ return !isPrepSvc || c.target === 'prep'; });
+  var anyCats = cards.some(function(c){ return vendorGroupCategories(c).length; });
   if (!anyCats) {
     wrap.innerHTML = '<div class="alert a-warn" style="margin-top:0;">Vendor Directory not loaded \u2014 add the Vendor Directory URL in \u2699 Settings. '
       + 'These lists are built from the directory, so there is nothing to pick until it loads.</div>';
     return;
   }
-  wrap.innerHTML = '<div class="vgrp-grid">' + VENDOR_GROUP_CARDS.map(function(card, gi) {
+  wrap.innerHTML = '<div class="vgrp-grid' + (isPrepSvc ? ' vgrp-solo' : '') + '">' + cards.map(function(card) {
+    // Index into the FULL list, because addFromVendorGroup resolves the card from it.
+    var gi = VENDOR_GROUP_CARDS.indexOf(card);
     var cats  = vendorGroupCategories(card);
     var isPrep = card.target === 'prep';
     var lines = isPrep ? prepItems : vendors;
+    var cardHrs = 0, cardCost = 0;
     var rows = lines.map(function(v, idx) {
-      if (vendorGroupOfLine(v.type) !== card.group) return '';
+      // Prep lines belong to this card by construction \u2014 they are a separate array \u2014 so no
+      // category lookup. That is what lets a legacy line labelled "Full Interior Paint"
+      // still render: vendorGroupOfLine can only place directory category names, and ten of
+      // the fourteen old friendly labels are not one, so under a category filter they would
+      // show nowhere at all now that the second entry point is gone.
+      if (!isPrep && vendorGroupOfLine(v.type) !== card.group) return '';
+      cardCost += (v.cost || 0);
+      cardHrs  += isPrep ? prepLineTCHrs(v.type) : vendorLineTCHrs(v.type);
       return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">' +
         '<span style="flex:1;min-width:0;font-size:11.5px;">' + esc(v.type) + '</span>' +
         // Money field, not a spinner. A vendor quote is never nudged one dollar at a
@@ -5108,8 +5134,30 @@ function renderVendorGroupCards() {
           'style="width:86px;font-size:11.5px;text-align:right;" ' +
           'oninput="formatMoneyInput(this);' + (isPrep ? 'updatePrepCost' : 'updateVendorCost') + '(' + idx + ',this.value)">' +
         '<button class="icon-btn del" title="Remove" onclick="' + (isPrep ? 'removePrepItem' : 'removeVendor') + '(' + idx + ')">\u2715</button>' +
-      '</div>';
+      '</div>' +
+      // Scope note, prep lines only \u2014 what to tell this trade when you ring for a quote.
+      // It came off the deleted Home Prep table, and it is the one thing that table had
+      // that the card did not; losing it would have made this consolidation a downgrade.
+      // Third-party vendor lines still have no scope field, by the same decision as before.
+      (isPrep
+        ? '<textarea rows="1" oninput="updatePrepNote(' + idx + ',this.value)" ' +
+            'placeholder="Scope \u2014 e.g. 5 bedrooms + hallway, walls &amp; ceilings\u2026" ' +
+            'style="width:100%;font-size:10.5px;padding:4px 6px;margin:-1px 0 7px;border:1px solid var(--border);' +
+            'border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);' +
+            'box-sizing:border-box;color:var(--gray-dk);">' + esc(v.note || '') + '</textarea>'
+        : '');
     }).join('');
+    // Footer says what the lines just cost the client and what they book for Havellin, on
+    // the card where they were entered. The coordination hours were invisible before \u2014
+    // prep hours only ever surfaced in the Estimate Summary, and vendor hours did not exist.
+    var footer = '';
+    if (cardCost > 0 || cardHrs > 0) {
+      var bits = ['$' + Math.round(cardCost).toLocaleString() + ' at cost'];
+      if (isPrep && isPrepSvc) bits.push('30% GC fee $' + Math.round(cardCost * 0.30).toLocaleString());
+      else if (cardHrs > 0)    bits.push('+' + (Math.round(cardHrs * 10) / 10).toFixed(1) + ' hrs concierge');
+      footer = '<div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--border);' +
+        'font-size:10px;color:var(--gray);">' + bits.join(' \u00b7 ') + '</div>';
+    }
     return '<div class="vgrp-card">' +
       '<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:6px;">' +
         '<div class="vgrp-title" style="flex:1;min-width:0;margin:0;">' + esc(card.group) + '</div>' +
@@ -5126,6 +5174,7 @@ function renderVendorGroupCards() {
           'style="width:86px;font-size:11.5px;text-align:right;" oninput="formatMoneyInput(this)">' +
         '<button class="icon-btn" style="flex:0 0 auto;" onclick="addFromVendorGroup(' + gi + ')">+</button>' +
       '</div>' +
+      footer +
     '</div>';
   }).join('') + '</div>';
 }
@@ -5133,14 +5182,19 @@ function renderVendorGroupCards() {
 // Which card a saved line belongs under. Read from the directory so a category that moves
 // group in the sheet moves card here too; an unknown category (the sheet changed under a
 // saved estimate) falls to the first card rather than vanishing from the UI.
+// Only ever asked about a THIRD-PARTY vendor line, so the Property Preparation card is
+// skipped: prep lines live in their own array and are placed by that, not by category. The
+// skip is load-bearing rather than tidy — 'Pest Inspection / Treatment' is both a service
+// base label and a Property Preparation directory category, so a vendor line carrying it
+// used to resolve to the prep card, which renders prepItems, and disappear from the tab.
 function vendorGroupOfLine(cat) {
   var want = String(cat || '').trim().toLowerCase();
-  for (var i = 0; i < VENDOR_GROUP_CARDS.length; i++) {
-    var g = VENDOR_GROUP_CARDS[i].group;
-    var hit = vendorGroupCategories(VENDOR_GROUP_CARDS[i]).some(function(c){ return String(c).trim().toLowerCase() === want; });
-    if (hit) return g;
+  var cards = VENDOR_GROUP_CARDS.filter(function(c){ return c.target !== 'prep'; });
+  for (var i = 0; i < cards.length; i++) {
+    var hit = vendorGroupCategories(cards[i]).some(function(c){ return String(c).trim().toLowerCase() === want; });
+    if (hit) return cards[i].group;
   }
-  return VENDOR_GROUP_CARDS[0].group;
+  return cards[0].group;
 }
 
 function addFromVendorGroup(gi) {
@@ -5187,6 +5241,61 @@ function calcVendorTotals() {
   return totalSMF;
 }
 function getVendorCost() { return vendors.reduce(function(a,v){ return a+v.cost; }, 0); }
+
+// ── VENDOR COORDINATION HOURS ────────────────────────────────────────────────
+// When SMF_PCT went to zero the estimate started telling the client that Havellin adds no
+// fee "because coordination time bills hourly" — on the tab header, in the client estimate
+// note and in the terms. Nothing was billing it. The engine's off-site coordination column
+// is per-service and sqft-driven; it has no idea how many vendors the job runs. So five
+// vendors on a cleanout added $0 of fee AND 0 hours, and the sentence justifying the first
+// was made true by nothing. These are the hours that make it true.
+//
+// OFF-SITE COORDINATION ONLY — sourcing, quotes, scheduling, the confirming calls, checking
+// the invoice. Deliberately NOT attendance: a collection dispositioned to an appraiser or a
+// dealer already books real on-site presence through COLLECTION_HOURS.on, and an estate sale
+// company can be both a vendor line and a collection disposition on the same job. Pricing
+// attendance here would charge the second one twice. Same reason PREP_TC_HRS is coordination
+// only, and these fold into the same coordTC bucket.
+//
+// Calibrated against what the removed 15% collected on a typical quote, at the $150 TC rate:
+// a $3,000 mover was $450 of SMF and is 3.0 hrs; a $1,500 appraiser was $225 and is 2.0 hrs.
+// The point is not to reproduce the fee — it is that the replacement is in the same
+// neighbourhood, so dropping the percentage did not quietly halve the revenue on a
+// vendor-heavy job. Keyed by Category Group so a category added to the Vendors sheet
+// inherits a sane number with no app change; the override table is for the ones whose group
+// default is plainly wrong.
+var VENDOR_TC_HRS_BY_GROUP = {
+  'Asset Liquidation & Valuation': 2.0,
+  'Disposal & Waste Management':   1.0,
+  'Moving & Logistics':            3.0,
+  'Professional Services':         1.5,
+  'End-of-Job Logistics':          1.0
+};
+var VENDOR_TC_HRS = {
+  'Estate Sale Company':     4.0,   // contract, staging schedule, settlement reconciliation
+  'Auction House':           3.0,   // consignment agreement, transport, lotting, settlement
+  'Online Auction House':    2.0,
+  'Document Shredding':      0.5,   // one call, one pickup
+  'Donation Pickup':         1.0,
+  'Firearms Dealer (FFL)':   2.0    // transfer paperwork, not the handoff itself
+};
+var VENDOR_TC_HRS_DEFAULT = 1.0;
+
+// Hours for one third-party vendor line. Falls back through category override → group
+// default → VENDOR_TC_HRS_DEFAULT, so an unrecognised label still books something rather
+// than silently costing nothing.
+function vendorLineTCHrs(type) {
+  var t = String(type || '').trim();
+  if (VENDOR_TC_HRS[t] != null) return VENDOR_TC_HRS[t];
+  var g = vendorGroupOfLine(t);
+  return VENDOR_TC_HRS_BY_GROUP[g] != null ? VENDOR_TC_HRS_BY_GROUP[g] : VENDOR_TC_HRS_DEFAULT;
+}
+function prepLineTCHrs(type) {
+  return PREP_TC_HRS[String(type || '').trim()] != null ? PREP_TC_HRS[String(type || '').trim()] : 1.0;
+}
+function getVendorTCHrs() {
+  return Math.round(vendors.reduce(function(a, v){ return a + vendorLineTCHrs(v.type); }, 0) * 10) / 10;
+}
 // Collection vendors (appraisers, FFLs, etc.) are entered per collection; their fees roll
 // into the third-party total and the 15% SMF alongside the vendor table.
 function getCollectionCost() { return collectionsData.reduce(function(a,c){ return a + (parseFloat(c.cost)||0); }, 0); }
@@ -5194,73 +5303,62 @@ function getCollectionCost() { return collectionsData.reduce(function(a,c){ retu
 // ─── HOME PREP FOR SALE ───────────────────────────────────────────────────────
 var prepItems = [];
 
-// Conservative TC overhead hours per prep type — coordination only, not full on-site supervision
+// Conservative TC overhead hours per prep type — coordination only, not full on-site
+// supervision.
+//
+// REKEYED TO DIRECTORY CATEGORY NAMES on 2026-08-03. This table was keyed entirely by the
+// friendly labels of the deleted Home Prep dropdown, and the Property Preparation card
+// offers directory categories — so once that dropdown went, only four of these keys
+// ('Carpet Cleaning', 'Pest Inspection / Treatment', 'Pressure Washing', 'Window Cleaning')
+// were still reachable and everything else silently fell to the 1.0 default. Staging would
+// have booked 1.0 instead of 2.0 on every job. The old labels are kept below as aliases so
+// an estimate saved before the change books the hours it was quoted at.
 var PREP_TC_HRS = {
-  'Appliance Service / Repair':  0.5,
+  // Directory categories — what the card actually offers.
+  'Appliance Repair':            0.5,
   'Carpet Cleaning':             1.0,
-  'Deep Clean / Move-Out Clean': 1.0,
+  'Deep Cleaning':               1.0,
   'Floor Refinishing':           1.5,
+  'General Contractor':          2.0,
+  'Handyman':                    1.0,
+  'HVAC':                        0.5,
+  'Home Staging':                2.0,
+  'Landscaper':                  1.0,
+  // 1.5 rather than 2.0: the old list split this into a full interior repaint (2.0) and a
+  // touch-up (1.0), and the directory has one Painting category for both. The scope note on
+  // the line is what says which one it is; the number is the middle of the two rather than
+  // billing a $400 touch-up as if it were a whole-house repaint.
+  'Painting':                    1.5,
+  'Pest Inspection / Treatment': 0.5,
+  'Pool & Spa Service':          0.5,
+  'Pressure Washing':            0.5,
+  'Window Cleaning':             1.0,
+  // Legacy labels from the deleted dropdown — same hours as the category each mapped to.
+  'Appliance Service / Repair':  0.5,
+  'Deep Clean / Move-Out Clean': 1.0,
   'Full Interior Paint':         2.0,
   'Handyman Services':           1.0,
   'HVAC Service':                0.5,
   'Landscaping / Curb Appeal':   1.0,
   'Minor Repairs':               1.0,
-  'Pest Inspection / Treatment': 0.5,
   'Pool / Spa Service':          0.5,
-  'Pressure Washing':            0.5,
   'Professional Staging':        2.0,
-  'Touch-Up / Interior Paint':   1.0,
-  'Window Cleaning':             1.0
+  'Touch-Up / Interior Paint':   1.0
 };
 
+// Prep coordination hours. No longer gated on a checkbox — inclusion IS having lines, so
+// the hours follow the lines. The old guard read e-prep-enabled directly, which is how a
+// prep vendor added from the Property Preparation card booked zero coordination time while
+// sitting on screen with a dollar figure in it.
 function getPrepTCHrs() {
-  var enabled = document.getElementById('e-prep-enabled') && document.getElementById('e-prep-enabled').checked;
-  if (!enabled) return 0;
-  return prepItems.reduce(function(a,p){ return a + (PREP_TC_HRS[p.type] || 1.0); }, 0);
-}
-
-function togglePrepSection() {
-  var enabled = document.getElementById('e-prep-enabled').checked;
-  document.getElementById('prep-content').style.display = enabled ? 'block' : 'none';
-  calcAll();
-}
-
-document.getElementById('new-prep-cost').addEventListener('input', function() {
-  document.getElementById('new-prep-fee').textContent = '$' + Math.round((parseFloat(this.value)||0) * currentPrepFeeRate()).toLocaleString();
-});
-
-function addPrepItem() {
-  var type = document.getElementById('new-prep-type').value;
-  if (!type) return;
-  var cost = parseFloat(document.getElementById('new-prep-cost').value) || 0;
-  prepItems.push({type:type, cost:cost});
-  document.getElementById('new-prep-type').value = '';
-  document.getElementById('new-prep-cost').value = '';
-  document.getElementById('new-prep-fee').textContent = '$0';
-  renderPrepItems(); calcAll();
+  return Math.round(prepItems.reduce(function(a,p){ return a + prepLineTCHrs(p.type); }, 0) * 10) / 10;
 }
 
 function removePrepItem(i) { prepItems.splice(i,1); renderPrepItems(); calcAll(); }
 
-function renderPrepItems() {
-  var html = '';
-  prepItems.forEach(function(p,i) {
-    html += '<tr><td><strong>'+esc(p.type)+'</strong></td>' +
-      '<td><input type="number" value="'+p.cost+'" oninput="updatePrepCost('+i+',this.value)" style="width:100%;"></td>' +
-      '<td id="prep-fee-'+i+'">$'+Math.round(p.cost*currentPrepFeeRate()).toLocaleString()+'</td>' +
-      '<td><button class="icon-btn del" onclick="removePrepItem('+i+')">✕</button></td></tr>' +
-      // Scope note — what to tell this vendor when you call for a quote (captured on the
-      // walkthrough since there's no room-by-room grid for a prep job).
-      '<tr><td colspan="4" style="padding-top:0;">' +
-        '<textarea oninput="updatePrepNote('+i+',this.value)" rows="2" placeholder="Scope for this vendor — e.g. 5 bedrooms + hallway, walls &amp; ceilings; front &amp; back landscaping; whole-house pressure wash…" ' +
-        'style="width:100%;font-size:11px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;">'+esc(p.note||'')+'</textarea>' +
-      '</td></tr>';
-  });
-  var tbody = document.getElementById('prep-body');
-  if (tbody) tbody.innerHTML = html || '<tr><td colspan="4" style="color:var(--gray);font-size:11px;padding:10px;">No items added</td></tr>';
-  calcPrepTotals();
-  renderVendorGroupCards();
-}
+// The Home Prep table this used to draw is gone; prep lines render in the Property
+// Preparation card with everything else. Kept as the name every caller already uses.
+function renderPrepItems() { renderVendorGroupCards(); }
 
 // Scope note per prep vendor line. Set the model + recalc (which persists via the
 // scratch save); do NOT re-render the table here — that would drop focus mid-type.
@@ -5269,52 +5367,32 @@ function updatePrepNote(i, val) {
   calcAll();
 }
 
-// Update the model + this row's 30% fee + totals in place. Do NOT re-render the
-// prep table here — rebuilding it on every keystroke destroys the <input> you're
-// typing in (that's the "can't get past the first digit" bug).
+// Update the model + totals in place. Do NOT re-render the card here — rebuilding it on
+// every keystroke destroys the <input> you're typing in (that's the "can't get past the
+// first digit" bug).
+//
+// moneyToNumber, NOT parseFloat. The card's cost field is a formatted money input — its
+// oninput runs formatMoneyInput first, so the value arriving here is "$8,000", and
+// parseFloat("$8,000") is NaN, which the || 0 turned into zero. Every keystroke wrote 0
+// while the field went on displaying the number you typed; the totals were the only place
+// it showed. updateVendorCost beside it always used moneyToNumber and was never affected.
 function updatePrepCost(i, val) {
-  prepItems[i].cost = parseFloat(val)||0;
-  var feeCell = document.getElementById('prep-fee-'+i);
-  if (feeCell) feeCell.textContent = '$'+Math.round(prepItems[i].cost*currentPrepFeeRate()).toLocaleString();
-  calcPrepTotals();
+  if (!prepItems[i]) return;
+  prepItems[i].cost = moneyToNumber(val);
   calcAll();
-}
-
-function calcPrepTotals() {
-  var totalCost = prepItems.reduce(function(a,p){ return a+p.cost; }, 0);
-  var totalFee = Math.round(totalCost * currentPrepFeeRate());
-  var isPrepSvc = (currentSvc() === 'prep');
-  // A standalone prep engagement bills NO separate TC hours — coordination is baked into
-  // the 30% GC fee (see the !isPrep gate in calcAll). Only a bundled add-on actually adds
-  // the coordination hours on top of the base job's labor, so only then is the raw helper
-  // meaningful for the badge.
-  var tcHrs = isPrepSvc ? 0 : getPrepTCHrs();
-  var c = document.getElementById('prep-total-cost');
-  var f = document.getElementById('prep-total-fee');
-  if (c) c.textContent = '$'+totalCost.toLocaleString();
-  if (f) f.textContent = '$'+totalFee.toLocaleString();
-  var badge = document.getElementById('prep-tc-badge');
-  if (badge && prepItems.length > 0) {
-    badge.textContent = isPrepSvc
-      ? 'Coordination & oversight are included in the 30% GC fee — no separate TC hours billed.'
-      : 'Est. TC coordination: ' + tcHrs.toFixed(1) + ' hrs added to TC total';
-  } else if (badge) badge.textContent = '';
 }
 
 function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost; }, 0); }
 
-// Home Prep for Sale fee is engagement-scoped. Booked on its own ('prep' service) it
-// is a full GC project — a flat 30% on managed vendor spend, no billed labor. Ridden
-// on a downsizing/estate job, the prep vendors fold in with every other coordinated
-// third-party vendor at the standard 15% SMF (the extra TC coordination hours still
-// bill on top). Any service other than 'prep' is a bundled add-on.
-// Standalone prep keeps its 30% GC fee — it is the only revenue on that engagement.
-// Bundled prep goes to SMF_PCT with every other coordinated vendor: its coordination
-// bills as prepTCHrs on top of the host service's labor, so a fee as well was the same
-// double charge.
+// Home Prep for Sale fee is engagement-scoped. Booked on its own ('prep' service) it is a
+// full GC project — a flat 30% on managed vendor spend, no billed labor at all, so the fee
+// is the entire revenue. Ridden on a downsizing/estate job it carries NO fee: the vendors
+// are billed to the client at cost like every other vendor, and the coordination is billed
+// by the hour as prepTCHrs on top of the host service's labor. A percentage as well would
+// be the same double charge that took SMF_PCT to zero. Any service other than 'prep' is a
+// bundled add-on.
 function prepFeeRate(svc) { return svc === 'prep' ? 0.30 : SMF_PCT; }
 function currentSvc() { var el = document.getElementById('e-svc'); return el ? el.value : 'cleanout'; }
-function currentPrepFeeRate() { return prepFeeRate(currentSvc()); }
 function getPrepFee(svc)  { return Math.round(getPrepCost() * prepFeeRate(svc || currentSvc())); }
 
 // ─── INTAKE ───────────────────────────────────────────────────────────────────
@@ -5912,11 +5990,9 @@ function resetEstimateExtras() {
   var nvc = document.getElementById('new-vendor-cost'); if (nvc) nvc.value = '';
   var nsmf = document.getElementById('new-smf'); if (nsmf) nsmf.textContent = '$0';
   renderVendors();
+  // Clearing the lines is the whole reset now — inclusion is derived from them, so there is
+  // no checkbox to untick and no separate section to collapse.
   prepItems = [];
-  var prepChk = document.getElementById('e-prep-enabled'); if (prepChk) prepChk.checked = false;
-  var prepContent = document.getElementById('prep-content'); if (prepContent) prepContent.style.display = 'none';
-  var npt = document.getElementById('new-prep-type'); if (npt) npt.value = '';
-  var npc = document.getElementById('new-prep-cost'); if (npc) npc.value = '';
   renderPrepItems();
 }
 
@@ -6469,6 +6545,14 @@ function renderClientEstimate() {
     '<table class="ce-tbl">' +
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
+    // Says where the coordination went. The terms below have promised since the fee came off
+    // that managing these vendors is billed hourly instead; naming the hours turns that from
+    // a reassurance into something the client can find in the labor lines above.
+    ((e.vendorTCHrs || 0) > 0
+      ? '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">' +
+          'Billed to you directly at cost — no coordination fee or markup. Sourcing, scheduling and supervising these vendors accounts for ' +
+          e.vendorTCHrs.toFixed(1) + ' of the Transition Concierge hours above.</td></tr>'
+      : '') +
     '</table>' +
     '<div style="margin-bottom:1.25rem;"></div>' +
 
@@ -6482,7 +6566,9 @@ function renderClientEstimate() {
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
         (SMF_PCT > 0
           ? '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">Coordination of these vendors is included in the ' + Math.round(SMF_PCT*100) + '% Service Management Fee above.</td></tr>'
-          : '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">These vendors are billed to you directly at cost. Havellin charges no coordination fee on them \u2014 the concierge time spent managing them is billed hourly.</td></tr>') +
+          : '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">These vendors are billed to you directly at cost. Havellin charges no coordination fee on them \u2014 the concierge time spent managing them is billed hourly' +
+              ((e.prepTCHrs || 0) > 0 ? ', and accounts for ' + e.prepTCHrs.toFixed(1) + ' of the Transition Concierge hours above' : '') +
+              '.</td></tr>') +
         '</table>';
     })() : '') +
 
@@ -7643,12 +7729,13 @@ function restoreEstimateToUI(est) {
   vendors = est.vendors ? JSON.parse(JSON.stringify(est.vendors)) : [];
   renderVendors();
 
-  // Restore home prep
+  // Restore home prep. est.prepEnabled is not read back — the lines decide. One migration
+  // consequence, and it is a fix rather than a regression: an older estimate saved with prep
+  // lines but the box unticked reopens with those lines priced. They were entered on a
+  // walkthrough and dropped by a checkbox that the card adding them never set; pricing them
+  // is what was meant to happen. Worth knowing before reopening an old dummy estimate and
+  // wondering why the total moved.
   prepItems = est.prepItems ? JSON.parse(JSON.stringify(est.prepItems)) : [];
-  var prepChkR = document.getElementById('e-prep-enabled');
-  var prepContentR = document.getElementById('prep-content');
-  if (prepChkR) prepChkR.checked = est.prepEnabled || false;
-  if (prepContentR) prepContentR.style.display = est.prepEnabled ? 'block' : 'none';
   renderPrepItems();
   var moveStylingR = document.getElementById('e-move-styling');
   if (moveStylingR) moveStylingR.checked = est.moveStyling || false;
@@ -14257,33 +14344,21 @@ function refreshVendorCategoryList() {
 }
 
 // ── ESTIMATE JOB MENUS (data-driven from the taxonomy) ───────────────────────
-// The "add line" dropdowns = curated base task labels PLUS any live directory
-// category (routed by group) not already reachable through a base label. Because
-// each added option's text IS the category string, the Job Plan identity match is
-// exact by construction, so a newly-added specialty vendor auto-populates its slot
-// with zero code. Base labels stay for the standard, differently-phrased tasks
-// (e.g. "Full Interior Paint" → the Painting category).
-var PREP_BASE_TYPES = [
-  'Appliance Service / Repair','Carpet Cleaning','Deep Clean / Move-Out Clean',
-  'Full Interior Paint','Handyman Services','HVAC Service','Landscaping / Curb Appeal',
-  'Minor Repairs','Pest Inspection / Treatment','Pool / Spa Service','Pressure Washing',
-  'Professional Staging','Touch-Up / Interior Paint','Window Cleaning'
-];
-var SERVICE_BASE_TYPES = [
-  'Appraiser(s)','Auction House','Document Shredding','Dumpster Rental',
-  'Estate Sale Company','Firearms / FFL Transfer','Handyman / General Repairs',
-  'Junk Removal / Hauling','Moving Company','Pest Inspection / Treatment',
-  'Professional Cleaning','Specialty Vendor (art handler, etc.)'
-];
-// Lower-cased categories already reachable through a base label (via the slot map or
-// identity fallback), so live categories aren't listed a second time.
-function _coveredCats(baseTypes) {
-  var set = {};
-  baseTypes.forEach(function(lbl){
-    vendorCategoriesForSlot('type', lbl).forEach(function(c){ set[String(c).trim().toLowerCase()] = 1; });
-  });
-  return set;
-}
+// PREP_BASE_TYPES / SERVICE_BASE_TYPES / _coveredCats / _jobMenuHTML were deleted on
+// 2026-08-03. They built the two curated "add line" dropdowns out of friendly base labels
+// plus whatever directory categories those labels did not already cover. The vendor one
+// went when the group cards landed; the prep one went with the Home Prep table, and with
+// both gone the machinery had nothing left to build.
+//
+// It is worth knowing WHY only one vocabulary survived, because the base labels read
+// nicer. Ten of the fourteen prep labels were not directory category names — "Full Interior
+// Paint" for Painting, "Landscaping / Curb Appeal" for Landscaper — and the card places a
+// line by looking its label up in the directory. So the two entry points into one array
+// spoke two languages, and a line entered in one could not be displayed by the other. One
+// list, the directory's own names, is what makes the single entry point actually single.
+// (VENDOR_SLOT_CATEGORY_MAP still translates the old labels, so a saved estimate carrying
+// them still scopes its Job Plan picker correctly.)
+
 // Which Category Group each estimate card covers, in the order they are shown. Four
 // feed the third-party vendor list; Property Preparation feeds prepItems, because that
 // is the array the 30% GC fee on a standalone Home Prep engagement is computed from —
@@ -14301,28 +14376,12 @@ var VENDOR_GROUP_CARDS = [
   {group:'End-of-Job Logistics',         target:'vendor', cats: null}
 ];
 
-function _jobMenuHTML(baseTypes, menu, placeholder) {
-  var covered = _coveredCats(baseTypes);
-  var baseLower = {}; baseTypes.forEach(function(t){ baseLower[t.toLowerCase()] = 1; });
-  var extra = directoryCategories({menu: menu}).filter(function(c){
-    return !covered[c.toLowerCase()] && !baseLower[c.toLowerCase()];
-  });
-  var html = '<option value="">' + esc(placeholder) + '</option>' +
-    baseTypes.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join('');
-  if (extra.length) html += '<optgroup label="From directory">' +
-    extra.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('') + '</optgroup>';
-  return html;
-}
-// Rebuild both estimate "add line" dropdowns from the current directory, preserving
-// any in-progress selection. Safe to call anytime; runs on directory load and after
-// a vendor is saved (so a brand-new category appears immediately).
+// Rebuild the estimate's "add line" dropdowns from the current directory. Every picker on
+// the tab is a group card now, so this is one call — kept as the named entry point because
+// directory load and vendor save both go through it (a brand-new category appears
+// immediately, with no app change).
 function populateJobMenus() {
-  // The estimate's vendor and prep pickers are the five group cards now, and each is
-  // built from the directory when the cards render. Kept as the entry point so every
-  // existing caller (directory load, vendor save) still refreshes the lists.
   renderVendorGroupCards();
-  var p = document.getElementById('new-prep-type');
-  if (p) { var pv = p.value; p.innerHTML = _jobMenuHTML(PREP_BASE_TYPES, 'prep', 'Add item...'); if (pv) p.value = pv; }
 }
 
 // Free-text search over the fields you'd actually recall in the field: who they are,

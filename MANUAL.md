@@ -115,7 +115,7 @@ Room photos, item photos, collection photos/appraisals, and the inventory workbo
 | Band | Holds |
 | --- | --- |
 | **Top card, two columns** | *Job* on the left — Job Details picker, service type, target start date, estimate prepared by, the second-concierge flag, the timeline badge. *Crew* on the right — crew size, the *client needs it sooner* planner, and the Adjustments toggles (difficult access, multiple heirs, premium estate). |
-| **Build column** | Third-Party Vendors, then the Room-by-Room Assessment (sections run **two across** the full page width), then two paired cards: Notable Collections beside Vehicles & Watercraft, and Home Prep beside Moving Materials. |
+| **Build column** | Third-Party Vendors, then the Room-by-Room Assessment (sections run **two across** the full page width), then Notable Collections beside Vehicles & Watercraft, then Moving Materials. *Changed 2026-08-03:* the separate Home Prep card that used to sit beside Moving Materials is gone — prep vendors are entered in the *Property Preparation* card at the top with every other vendor (§5e). |
 | **Bottom** | Estimate Summary, then Pricing Reference Check beside the three price levers (discount · rush · fixed price), then Reset / Save. |
 
 > **The price levers sit under the totals they move, and that is deliberate.** Discount, expedite and fixed price are read against the number, not against the scope — they spent a spell up beside Adjustments and were three scrolls away from anything they changed. Scope decisions live at the top; price decisions live at the bottom next to the price.
@@ -183,6 +183,10 @@ Add third-party vendors with estimated costs. Vendor costs are estimates only �
 
 > **No coordination fee on third-party vendors, as of 2026-08-02.** Vendors are billed to the client directly at cost and Havellin adds nothing on top. The 15% Service Management Fee was removed because the concierge time spent sourcing, quoting, scheduling and supervising a vendor is *already billed hourly* — the engine bills off-site coordination as concierge hours — so the fee was a second charge for the same work, and on probate it was a percentage markup on a third-party invoice in front of a court that reviews the expenses. **Standalone Home Prep is the exception and is unchanged:** it bills no hours at all, so its **30% GC fee** is the entire revenue for that engagement. The rule: a coordination fee applies only where the coordination is not already billed by the hour.
 
+> **Each vendor line now books concierge coordination hours — new 2026-08-03, and it changes the price.** When the 15% came off, the justification given to the client (on the tab, on the estimate and in the terms) was that coordination bills hourly instead. It did not. The engine's off-site coordination is driven by service type and square footage and had no idea how many vendors a job ran, so five vendors added **no fee and no hours** — the sentence defending the removal was true of nothing. Each line now books coordination time by Category Group, with overrides where the group default is wrong: **Moving & Logistics 3.0 hrs** · **Asset Liquidation & Valuation 2.0** (Estate Sale Company 4.0, Auction House 3.0, Online Auction 2.0, FFL 2.0) · **Professional Services 1.5** · **Disposal & Waste Management 1.0** (Document Shredding 0.5) · **End-of-Job Logistics 1.0** · anything unrecognized 1.0. The card footer shows the running total per group, and the Estimate Summary carries a *Third-party vendor coordination* line. Sized against what the 15% used to collect at the $150 concierge rate — a $3,000 mover was $450 of fee and is 3.0 hrs — so removing the percentage did not quietly halve the revenue on a vendor-heavy job.
+
+> **Coordination only — never attendance.** These hours are sourcing, quotes, scheduling, the confirming calls and checking the invoice. Standing next to the appraiser is priced separately and already: a collection dispositioned to an appraiser or a dealer books real on-site presence through the disposition hours (§5f). An estate sale company can be both a vendor line here and a collection disposition on the same job, so pricing attendance in both places would bill it twice.
+
 **Vendors are picked from six Category Group cards**, three across, at the top of the build column. Each card is a category dropdown plus an *Est cost* box and a **+**:
 
 | Card | Source of its list | Where the line lands |
@@ -191,7 +195,7 @@ Add third-party vendors with estimated costs. Vendor costs are estimates only �
 | Disposal & Waste Management | Same, that group. | Third-party vendor list, at cost. |
 | Moving & Logistics | Same, that group. | Third-party vendor list, at cost. |
 | Professional Services | Same, that group. | Third-party vendor list, at cost. |
-| Property Preparation | Same — the Property Preparation group. | **The Home Prep list**, not the vendor list. That is deliberate: the Home Prep list is what a standalone prep engagement's 30% GC fee is computed from, and routing a painter through the vendor list would silently drop that fee. |
+| Property Preparation | Same — the Property Preparation group. | **The Home Prep list**, not the vendor list. That is deliberate: the Home Prep list is what a standalone prep engagement's 30% GC fee is computed from, and routing a painter through the vendor list would silently drop that fee. This card is the **only** way to add prep, as of 2026-08-03 (§5e), and its lines each carry a **scope note** — what to tell that trade when you ring for a quote. |
 | End-of-Job Logistics | Not a directory group — the five end-of-job slots the Job Plan asks for: donation organization, junk removal / hauling, dumpster rental, move-out / final cleaning, document shredding. | Third-party vendor list. Anything ticked here **drops out of the Job Plan's own logistics list**, so it is asked once, not twice (§11). |
 
 > **These lists are the directory and nothing else.** The twelve hand-written umbrella labels are gone — the old single "Add vendor…" dropdown mixed those labels with whatever directory categories they did not already cover, so it was half taxonomy and half leftovers and the real category names were mostly hidden behind an umbrella. A category added to the Vendors sheet appears here on the next directory load, with no app change. If no card has any options, the Vendor Directory URL is missing from ⚙ Settings and the cards say so.
@@ -200,9 +204,13 @@ Add third-party vendors with estimated costs. Vendor costs are estimates only �
 
 ### 5e. Home Prep for Sale (as an add-on)
 
-On a labor-based job you can also check **Include in estimate** in the Home Prep section to add show-ready prep as an add-on. Add prep items through the *Property Preparation* card. When Home Prep is the *only* service, use the standalone flow in Section 6 instead.
+To add show-ready prep to a labor-based job, add the trades through the **Property Preparation** card in Third-Party Vendors. That is all there is to it — adding a line *is* including prep in the estimate. Each line takes an estimated cost and a **scope note** (what to tell that trade when you call for a quote); the notes carry through to the Job Plan sourcing. When Home Prep is the *only* service, use the standalone flow in Section 6 instead.
 
-> **Bundled prep carries no fee, as of 2026-08-02.** Prep vendors on a labor job are billed to the client at cost like every other vendor, and the fee column on the entry card reads *No fee* — it reads the live rate rather than asserting one, so it cannot promise a fee the app no longer charges. The **30% GC fee applies only to a standalone Home Prep engagement** (§6), where no hours are billed at all and the fee is the entire revenue. Same rule as the vendor fee in §5d: a coordination fee applies only where the coordination is not already billed by the hour, and on a labor job it is.
+> **One entry point, as of 2026-08-03 — the separate Home Prep card and its "Include in estimate" tick box are gone.** There used to be two: the *Property Preparation* card at the top and a *Home Prep for Sale* card near Moving Materials. They wrote to the **same list**, so one list had two front doors that disagreed. The card never touched the tick box, and everything downstream read the tick box — so a prep vendor added on a walkthrough sat on screen with a dollar figure against it and was worth **zero** on the client estimate, in the Job Plan sourcing and on every invoice. The two dropdowns also spoke different languages (*Full Interior Paint* in one, *Painting* in the other), so a line entered in one could not be shown by the other. If you have an estimate saved before this date with prep lines that never priced, **reopen it** — those lines now price, and the total will move.
+
+> **Bundled prep carries no fee, as of 2026-08-02.** Prep vendors on a labor job are billed to the client at cost like every other vendor. The **30% GC fee applies only to a standalone Home Prep engagement** (§6), where no hours are billed at all and the fee is the entire revenue. Same rule as the vendor fee in §5d: a coordination fee applies only where the coordination is not already billed by the hour, and on a labor job it is.
+
+> **Prep lines book coordination hours, and the numbers were rekeyed on 2026-08-03.** Roughly 0.5–2.0 concierge hours per trade — Painting 1.5 · Staging 2.0 · General Contractor 2.0 · Floor Refinishing 1.5 · Handyman / Carpet Cleaning / Deep Cleaning / Landscaper / Window Cleaning 1.0 · Appliance Repair / HVAC / Pool & Spa / Pressure Washing / Pest 0.5. The table used to be keyed by the old dropdown's friendly labels, so once that dropdown went, all but four of them stopped matching and every prep line quietly billed the 1.0 default — staging at 1.0 instead of 2.0. Painting is **1.5** because the old list split it into a full repaint (2.0) and a touch-up (1.0) and the directory has one *Painting* category for both; the scope note on the line is what says which one it is. Older estimates carrying the friendly labels still resolve to their original hours.
 
 ### 5f. Notable Collections
 
@@ -312,10 +320,12 @@ A show-ready, sell-side service offered primarily through **Douglas Elliman refe
 
 ### 6a. Building the estimate
 
-- Select the job (Service Type = *Home Prep for Sale*). The estimator hides room scoring, crew, and labor entirely — the **Home Prep for Sale — Managed Vendors** card sits beside the Job details.
-- Add each prep item/vendor with an estimated cost. The 30% fee is shown per line and in total. The item dropdown lists the standard prep tasks plus, under a **From directory** group, any *Property Preparation* category from the Vendor Directory — so a newly-added prep specialty (e.g. Floor Refinishing) appears here automatically (Section 13a).
+- Select the job (Service Type = *Home Prep for Sale*). **The tab empties out** — room scoring, crew, labor, Notable Collections, Vehicles & Watercraft and Moving Materials all disappear, and so do the five vendor cards that are not Property Preparation. What is left is one card, **Home Prep for Sale — Managed Vendors**, sitting beside the Job details. There is nothing else on the tab to fill in.
+- Add each prep trade with an estimated cost. The card footer shows the vendor total and the running 30% fee. The dropdown is the *Property Preparation* categories from the Vendor Directory, so a newly-added prep specialty (e.g. Floor Refinishing) appears automatically (Section 13a).
 - **Scope notes:** each vendor line has a scope field — capture on the walkthrough exactly what to tell that trade (e.g. "5 bedrooms + hallway, walls & ceilings; front & back landscaping"). These carry through to the Job Plan sourcing.
 - No property value is required.
+
+> **Why the other five vendor cards are hidden — changed 2026-08-03.** They were on screen and they should not have been: the client estimate for a prep job itemizes prep vendors, the 30% fee and one total and nothing else, and the prep Job Plan sources nothing else — so a dumpster added here landed in the grand total while appearing on no document the client or the crew ever saw, and the client estimate stopped adding up. If a prep job genuinely needs a hauler, book it as a Property Preparation trade or run the job as a Cleanout with prep bundled (§5e).
 
 ### 6b. Client estimate
 
@@ -649,8 +659,9 @@ The sixth estimate card, *End-of-Job Logistics*, is not a Category Group — it 
 | Transition Concierge | $150/hr | $185/hr |
 | Property Specialist | $100/hr | $125/hr |
 | Service Management Fee (third-party vendors) | **None — at cost** | **None — at cost** |
+| Vendor coordination (per vendor line) | 0.5–4.0 concierge hrs, billed at the rate above (§5d) | Same hours, premium rate |
 | Home Prep GC / Site Management Fee | **30%** — standalone engagement only | 30% |
-| Home Prep bundled onto a labor job | **None — at cost** | **None — at cost** |
+| Home Prep bundled onto a labor job | **None — at cost**, plus 0.5–2.0 coordination hrs per trade | **None — at cost**, plus the same hours |
 | Moving Materials | Cost + 25% | Cost + 25% |
 | Preferred Client Discount | Havellin labor only · **max 15%** | Havellin labor only · **max 15%** |
 | Expedited delivery (rush order) | +20% of Havellin services | +20% of Havellin services |

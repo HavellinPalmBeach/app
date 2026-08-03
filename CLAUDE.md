@@ -14,10 +14,11 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/field-app-formatting-9eu5ff`
-  (was `claude/zen-ride-v4x393`, deleted from the remote — don't chase it.)
+- Active feature branch: `claude/home-prep-sale-consolidation-13yxt9`
+  (was `claude/field-app-formatting-9eu5ff`; before that `claude/zen-ride-v4x393`, deleted
+  from the remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/field-app-formatting-9eu5ff:main`
+  `git push origin claude/home-prep-sale-consolidation-13yxt9:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -52,6 +53,73 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## Home Prep consolidation + vendor coordination hours — BUILT 2026-08-03
+**One entry point for prep, and third-party vendors finally bill the hours the estimate has
+been promising the client since the 15% came off.**
+- **There were two front doors on ONE array.** The *Property Preparation* card in Third-Party
+  Vendors and the separate *Home Prep for Sale* card both wrote to `prepItems`. Four ways they
+  disagreed, in descending order of how much money each cost:
+  - **The card never touched `e-prep-enabled`, and everything downstream read it.** With the
+    box unticked `prepEnabled` was false, so `prepCost`/`prepFee`/`prepTCHrs` all zeroed — no
+    line on the client estimate, no sourcing card in the Job Plan, nothing on any invoice.
+    A prep vendor entered on a walkthrough sat on screen with a dollar figure against it and
+    was worth **zero** everywhere else. `prepEnabled` is now **derived**: `isPrep ||
+    prepItems.length > 0`. Having lines IS including prep, and nothing can disagree with it.
+  - **Editing a cost in the card wrote 0.** `formatMoneyInput` rewrites the field to `$8,000`
+    and then handed that string to `updatePrepCost`, which did `parseFloat(val)||0` → `NaN`
+    → **0**, on every keystroke, while the field went on displaying the number. Now
+    `moneyToNumber`, which is what `updateVendorCost` beside it always used.
+  - **The two dropdowns spoke different languages.** The card offers directory categories;
+    the deleted dropdown offered `PREP_BASE_TYPES` friendly labels, and **ten of the fourteen
+    are not category names** (*Full Interior Paint* vs *Painting*). `vendorGroupOfLine` places
+    a line by category lookup, so a line entered in one could not be displayed by the other.
+    One vocabulary now — the directory's own names. `VENDOR_SLOT_CATEGORY_MAP` still
+    translates the old labels so saved estimates scope their Job Plan picker correctly.
+  - Only the deleted table had the per-line **scope note**. It moved into the card; losing it
+    would have made the consolidation a downgrade.
+- **`PREP_TC_HRS` was rekeyed to directory categories** and this is the subtle one: the table
+  was keyed *entirely* by the friendly labels, so the moment that dropdown went, all but four
+  keys stopped matching and every prep line silently billed the 1.0 default — staging at 1.0
+  instead of 2.0. Old labels kept as aliases. **Painting is 1.5**, not 2.0: the old list split
+  it into a full repaint (2.0) and a touch-up (1.0) and the directory has one category for
+  both, so the number is the middle and the scope note says which it is.
+- **NEW `VENDOR_TC_HRS` / `VENDOR_TC_HRS_BY_GROUP`.** When `SMF_PCT` went to 0 the app started
+  telling the client — on the tab, on the estimate, in the terms — that Havellin adds no fee
+  *because coordination bills hourly*. **Nothing billed it.** The engine's off-site coordination
+  is service-type and sqft driven and had no idea how many vendors a job ran, so five vendors
+  added **no fee and no hours**: the sentence justifying the removal was true of nothing. Now
+  keyed by Category Group (Moving & Logistics 3.0 · Asset Liquidation 2.0 · Professional
+  Services 1.5 · Disposal 1.0 · Logistics 1.0) with per-category overrides (Estate Sale 4.0,
+  Auction 3.0, Shredding 0.5). Sized against what the 15% collected at the $150 TC rate — a
+  $3,000 mover was $450 of fee and is 3.0 hrs.
+  - **Coordination ONLY, never attendance — do not "improve" this into on-site time.** A
+    collection dispositioned to an appraiser or dealer already books real presence via
+    `COLLECTION_HOURS.on`, and an estate sale company can be a vendor line *and* a collection
+    disposition on the same job. Pricing attendance here would bill it twice. Folds into
+    `coordTC` for exactly that reason, alongside `prepTCHrs`.
+  - Zero on standalone prep (that engagement bills no hours at all). Saved as
+    `est.vendorTCHrs` so a reopened estimate can still explain where the hours came from.
+- **Standalone prep now shows ONE card.** `renderVendorGroupCards` filters to Property
+  Preparation on `svc === 'prep'`, `est-vehicles-card` joined the hide list, and `vendorCost`
+  is excluded from `grandTotal` on prep. The rest of that pipeline already assumed prep
+  vendors are the only vendors — `buildPrepEstimateBody` itemizes nothing else and
+  `renderPrepJobPlan` sources nothing else — so a dumpster added there landed in the grand
+  total while appearing on no client document, and **the client estimate stopped adding up**.
+- The card that relocates into `est-job-grid` on a prep job is now `est-vendors-card`, not the
+  deleted `est-prep-card`. Card-set rebuilds are guarded on `_vgrpPrepMode` changing, NOT run
+  every `calcAll` — that would destroy the cost `<input>` mid-type (the "can't get past the
+  first digit" bug).
+- **Migration, and it is a fix rather than a regression:** an estimate saved before this with
+  prep lines but the box unticked reopens with those lines **priced**, so its total moves. They
+  were entered on a walkthrough and dropped by a checkbox the card adding them never set.
+  Vendor lines on old estimates also book coordination hours now. Both documents say to
+  reopen and re-read anything saved earlier.
+- Deleted as newly-dead: `PREP_BASE_TYPES`, `SERVICE_BASE_TYPES`, `_coveredCats`,
+  `_jobMenuHTML`, `togglePrepSection`, `addPrepItem`, `calcPrepTotals`, `currentPrepFeeRate`,
+  and the `s-prep-tc-row` hours line that sat inside the dollars table.
+- 47 jsdom checks on the estimate path + 22 downstream (Job Plan sourcing, all three invoice
+  stages bundled and standalone, both agreements, zero load errors) — all green.
+
 ## Docs / operations manual (`manual.html`)
 - `manual.html` is the internal operations manual. It is **hand-maintained** and does
   NOT auto-sync with the app, so it drifts whenever the app changes.
@@ -73,7 +141,20 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03** — both documents, against the Build Estimate
+- Last reconciled against the app: **2026-08-03 (second pass, same day)** — both documents,
+  against the Home Prep consolidation and vendor coordination hours built that afternoon. See
+  the *Home Prep consolidation* section below for the change itself. Docs touched: §5 layout
+  map (the Home Prep card is gone from the build column) · **§5d gained two notes** — the
+  per-vendor coordination hours with the full rate table, and the coordination-not-attendance
+  rule that keeps it off collections' on-site time · §5d's Property Preparation row now says
+  it is the only prep entry point and carries scope notes · **§5e rewritten** around one entry
+  point, with a callout naming the silent-drop bug and telling anyone holding a pre-2026-08-03
+  estimate to reopen it · §5e gained the rekeyed `PREP_TC_HRS` numbers and why Painting is 1.5
+  · **§6a** the tab empties out on a prep job, plus why the other five vendor cards are hidden
+  · §16 fee table gained a coordination-hours row. Playbook: the same in field language, plus
+  **five new symptom→cause rows** (looking for the tick box · an old estimate pricing higher ·
+  adding a vendor raising the quote · one card on a prep job · a prep cost reading $0).
+- Prior pass **2026-08-03 (first)** — both documents, against the Build Estimate
   rebuild and the pricing decisions of 2026-08-02/03. The manual and the playbook were passed
   together, as CLAUDE.md says they must be. What changed:
   - **§5 gained a layout map of the rebuilt tab** (Job/Crew two-column top · vendors → rooms

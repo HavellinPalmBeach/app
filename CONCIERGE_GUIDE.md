@@ -47,7 +47,7 @@ Fill in everything marked *. The Job ID (`HVL-YYMM-XXXX`) and the client's Drive
 
 Select the job from the dropdown. This is desk or iPad work — the room tables are not built for a phone.
 
-The tab reads top to bottom in three bands. **Top card:** *Job* on the left (job, service type, target start date, who prepared it), *Crew* on the right (crew size, the "client needs it sooner" planner, and the adjustment toggles). **Middle:** vendors, then the rooms two across, then collections beside vehicles and home prep beside moving materials. **Bottom:** the summary, then the pricing reference check beside the three price levers — discount, rush, fixed price. Scope decisions at the top, price decisions at the bottom next to the price.
+The tab reads top to bottom in three bands. **Top card:** *Job* on the left (job, service type, target start date, who prepared it), *Crew* on the right (crew size, the "client needs it sooner" planner, and the adjustment toggles). **Middle:** vendors, then the rooms two across, then collections beside vehicles, then moving materials. **Bottom:** the summary, then the pricing reference check beside the three price levers — discount, rush, fixed price. Scope decisions at the top, price decisions at the bottom next to the price.
 
 ### On the walkthrough
 
@@ -120,8 +120,8 @@ Vendors are picked from **six Category Group cards** at the top of the build col
 
 > **You pick a category, not a vendor.** Finding an appraiser who's actually free that week is office work at kickoff — the estimate says what the job *needs*, the Job Plan says who's doing it. Anything you add on the *End-of-Job Logistics* card carries through to the Job Plan and drops off its list there, so you're asked once rather than twice.
 
-- **Third-party vendors** — add each with an estimated cost. Havellin charges **no fee** on them; they are billed to the client directly at cost, and your coordination time is billed hourly instead. Vendor costs are estimates; the client is billed by the vendor directly at cost.
-- **Home Prep as an add-on** — tick *Include in estimate* and add the items through the *Property Preparation* card. Bundled onto a labour job these carry **no fee** — the column reads *No fee* and that's correct. The **30% GC fee applies only when Home Prep is the whole engagement**, where it's the only revenue there is.
+- **Third-party vendors** — add each with an estimated cost. Havellin charges **no fee** on them; they are billed to the client directly at cost, and your coordination time is billed hourly instead. **Every line you add books that time** — roughly 3 hours for a mover, 4 for an estate sale company, 2 for an appraiser or auction house, 1 for a hauler or a dumpster. The card footer shows the running total per group. So adding a vendor does raise the quote now, and it should: sourcing, quoting, scheduling and chasing that vendor is real time you spend.
+- **Home Prep as an add-on** — add the trades through the *Property Preparation* card, same as any other vendor. **That's the whole thing** — there's no box to tick and no second Home Prep section; if a line is on the card it's in the estimate. Fill in the **scope note** under each line while you're standing there. Bundled onto a labour job these carry **no fee**, billed at cost, plus your coordination hours (about 1.5 for painting, 2 for staging, 0.5–1 for most of the rest). The **30% GC fee applies only when Home Prep is the whole engagement**, where it's the only revenue there is.
 - **Notable Collections** — name, estimated value, quantity, a proposed disposition (appraise, auction house, consignment, estate sale, licensed FFL, gold & silver buyer, and so on), what you expect that partner to charge, and a voice note. *You don't name the auction house here* — you tag a specific partner on the Job Plan when you're calling round with a list, and the disposition you pick is what scopes that picker to the right vendors. **The disposition you pick adds hours**, and the rule is simple: *if the specialist comes to the property, you're standing there; if the items go out to them, your time is phone and paperwork.* An appraisal, a dealer visit or an FFL handoff books real on-site time and lengthens the job. eBay, Replacements.com and consignment book coordination only. A ten-collection estate genuinely is a longer job than a two-collection one.
 - **Vehicles & watercraft** — add each by description then fill the panel: type, year, VIN/HIN, mileage, condition, and the two flags — *collector / classic* and *title located*. Ordinary vehicles you value in-house from KBB/NADA as of the date of death; collectors and boats route to an appraiser. Vehicles don't change the labour estimate.
 
@@ -350,7 +350,7 @@ A sell-side, show-ready service, mostly through Douglas Elliman referral agents.
 > **⚠** **The agreement is with the homeowner.** The referring agent is a referral channel, never our client. No document should suggest otherwise.
 
 1. **Intake** with Service Type = *Home Prep for Sale*. No property value needed.
-2. **Build Estimate** hides rooms, crew and labour entirely. Add each prep item and vendor with an estimated cost — the 30% shows per line and in total. **Fill in the scope note on every line** while you're on the walkthrough: exactly what you'll tell that trade ("5 bedrooms + hallway, walls & ceilings; front and back landscaping"). It carries through to sourcing.
+2. **Build Estimate** empties out — rooms, crew, labour, collections, vehicles and moving materials all disappear, and so do the five vendor cards that aren't Property Preparation. **One card is left**, sitting beside the Job details: *Home Prep for Sale — Managed Vendors*. Add each trade with an estimated cost; the footer shows the vendor total and the running 30%. **Fill in the scope note on every line** while you're on the walkthrough: exactly what you'll tell that trade ("5 bedrooms + hallway, walls & ceilings; front and back landscaping"). It carries through to sourcing.
 3. **Client estimate** reads vendors-first: itemised vendor estimates at cost, then the 30% fee, then one total. Same 50 / 25 / 25 schedule on the Havellin fee. No completion date is projected — the schedule is confirmed once vendors are booked, and the estimate says so.
 4. Approve → send → Mark Won → agreement → deposit, exactly as above.
 5. **Job Plan** is stripped down to three things: *Budget & Fee* (estimated spend, quoted-to-date, the running 30% on actual quotes, with an over-budget flag), *Home Prep Vendors — Sourcing & Status* (assign the vendor, set status, log the actual quote against the scope note), and a *Coordination Checklist* — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices and fee billed.
@@ -364,8 +364,9 @@ A sell-side, show-ready service, mostly through Douglas Elliman referral agents.
 | Transition Concierge | $150/hr | $185/hr |
 | Property Specialist | $100/hr | $125/hr |
 | Service Management Fee (third-party vendors) | **None — billed at cost** | **None** |
+| Vendor coordination, per line you add | Mover 3 hrs · estate sale 4 · auction 3 · appraiser 2 · hauler / dumpster 1 · shredding 0.5 | Same hours, premium rate |
 | Home Prep GC / Site Management Fee | **30%** — standalone Home Prep job only | 30% |
-| Home Prep bundled onto a labour job | **None — at cost** | **None** |
+| Home Prep bundled onto a labour job | **None — at cost**, plus 0.5–2 coordination hrs per trade | **None**, same hours |
 | Moving Materials | Cost + 25% | Cost + 25% |
 | Preferred Client Discount | Havellin labour only · **max 15%** | max 15% |
 | Expedited delivery (rush) | +20% of Havellin services | +20% |
@@ -413,6 +414,11 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | The timeline planner says a date "is not reachable" | Six specialists is the cap. Counter with the days it quotes, or cut scope. |
 | A vendor category isn't on any of the six cards | It isn't in the Vendor Directory under that Category Group. Add it there and reload. |
 | The vendor cards are empty and say so | The Vendor Directory URL is missing from ⚙ Settings. |
+| Looking for the Home Prep card and the *Include in estimate* tick box | Both gone as of 2026-08-03. Prep goes in the *Property Preparation* card with every other vendor, and having a line on it *is* including it. Nothing to tick. |
+| An old estimate you reopen prices higher than it did | Expected, and it's a fix. Prep lines used to be dropped unless a tick box was set that the card adding them never touched — those lines now price. Third-party vendor lines also book coordination hours now. Re-read it before you send it. |
+| Adding a vendor pushed the quote up | Correct since 2026-08-03. Each line books concierge coordination time (a mover 3 hrs, an estate sale company 4, a hauler 1). We charge no percentage on vendors, so this is how that work gets paid for. |
+| A Home Prep job shows only one vendor card | Correct. A standalone prep job has nothing else to price — the client estimate and the Job Plan only ever carried prep vendors. If it truly needs a hauler, book it as a prep trade or run the job as a Cleanout with prep bundled. |
+| A prep cost you typed into the card reads $0 in the totals | Fixed 2026-08-03. It was a parsing bug — the formatted "$8,000" was read as zero on every keystroke while the field kept showing it. If you're still seeing it, you're on a cached build; hard-refresh. |
 | "No payment link was created" after Generate Payment Link | The Stripe service didn't answer or rejected it. Nothing was sent. Send the deposit invoice and record the payment by hand. |
 
 ---
