@@ -504,7 +504,25 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (eighth pass, same day)** — both documents, against the
+- Last reconciled against the app: **2026-08-03 (ninth pass, same day)** — both documents, against the
+  pricing changes. This pass CORRECTS the biggest standing claim in either document: **manual §5b and
+  playbook Step 2 both said a room row is "the packing step only"**, with the instruction to mentally
+  multiply it (a 3.6 hr closet "is really 13"). True until this morning, false now — rows carry the
+  whole pool and reconcile to the fee lines, so the advice is not just stale, following it now
+  double-counts. Both say so and name the 3.7× understatement it replaced. Manual §5b also gained the
+  fullness-preset note (shift-not-blanket, complexity untouched, premium→complexity rejected with the
+  3.9% vs 49.6% numbers) and a kept-but-rewritten note that rooms are still not comparable ACROSS
+  service types (2.2× and 1.5× ratios). **§5i gained the load-drivers note** — what feeds the pool,
+  the tenure double-count and why it moved to the coordination column, and that complexity never
+  touched the pool either. §5i's core-team-reach footnote dropped "long tenure" from the list of
+  things that pull the reach down, because it no longer does. Playbook Step 2 got the same in field
+  language plus **five new symptom→cause rows** (hours jumped · garage/patio costs more than expected ·
+  nineteen sliders · long tenure not pricing higher · above the reference range).
+  - **Both documents now carry the open calibration gap in writing** — engine above the bands past
+    ~3,000 sqft, one band bucket spanning a 2× sqft range, `document` blind to contents, garage
+    weighted as the kitchen, estate documentation charged on a patio. The playbook's version ends
+    **"do not score down to hit it"**, which is the instruction that matters in the field.
+- Prior pass **2026-08-03 (eighth pass, same day)** — both documents, against the
   photo-path fixes, the Save-to-Drive confirmation, the suppressed empty vendor section, the Job Plan
   room reorder and the new client Job Plan section. This pass CORRECTS a claim that was actively
   wrong: **manual §10 and playbook Step 10a both said photos are captured only once a job is Active**,

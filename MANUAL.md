@@ -140,9 +140,17 @@ Check each room to include it. Set Volume and Complexity on a 1–5 scale:
 | 3 | Moderately filled | Mix of standard and care items |
 | 5 | Completely full | High-value / fragile / specialty handling |
 
-Check **Special Items** if the room contains artwork, antiques, or items requiring specialty care. Hours and a working-day timeline generate automatically as you score — but note what the per-room figures are: **the packing step only**. Sorting, documentation and haul-out are job-level and are not attributed to a room. How the totals become billed concierge and specialist hours is Section 5i.
+Check **Special Items** if the room contains artwork, antiques, or items requiring specialty care. Hours and a working-day timeline generate automatically as you score. **A room row now shows that room's share of the whole job** — sorting, documentation, packing and haul-out together — so the rows reconcile to the fee lines once the walkthrough is complete. How the totals become billed concierge and specialist hours is Section 5i.
 
-> **The room rows are a minority of the work on an estate job, so do not read them as "what it costs to clear this room."** Only the packing step is distributed to rooms. On *Estate Settlement* packing is **27%** of the hands-on pool — item documentation alone is 35%, and none of it appears in a room row. On *Probate* packing is 23%, on *Contested Probate* 18%. On *Downsizing* it is **71%**, because there the packing genuinely is the job. Two consequences: a room reading 3.6 hrs on an estate job is carrying roughly 13 hrs of total work once its share of everything else is counted, and **per-room hours are not comparable between service types** — the same closet shows more hours on a downsizing job whose whole pool is less than half the size.
+> **Corrected 2026-08-03 — this section used to say a room row was "the packing step only", and it was.** Packing is 27% of the hands-on pool on an estate job, so every row understated its own room by **3.7×**: a 2-car garage displayed *2.4 PS* and booked **9.1 person-hours**. Nothing on the screen let you feel a quote building as you ticked rooms, and a 3,500 sqft house priced at $27,000 with nobody able to see where it came from. The rows carry the full pool now and there is no residual to explain. **The old advice to mentally multiply a room row is obsolete — the number on screen is the number.**
+
+> **Rooms are still not comparable between service types.** The same closet costs different hours on a downsizing job than on a probate one, because the pool coefficients differ per service — Estate Settlement runs **2.2×** the hands-on hours of a Downsizing of the same house, and Contested Probate **1.5×** an Estate Settlement. That is a deliberate policy ratio, not a scoring difference. Compare a room to other rooms on the same job, never across jobs of different types.
+
+> **"How full is this house?" — one press instead of nineteen (NEW 2026-08-03).** A chip row above the room grid: **Seasonal · Light · Normal · Full · Packed**. It sets the starting volume for every room *in scope* in one go. *Normal* is the behaviour that was there before, so ignoring the row changes nothing.
+>
+> Each preset is a **shift on each room's own default, never a blanket value** — that part is load-bearing. A foyer and a powder room open at 1 because they are inherently lighter whatever the house is like, so setting everything to 5 would claim a powder room is as full as a garage. On *Packed* the foyer is still below the living room. Pressing the same chip twice lands on the same numbers, and pressing a different one re-bases from the defaults rather than compounding; any per-room adjustment you make afterwards stands until another chip is pressed. It exists because telling the app a house was packed used to mean moving nineteen sliders by hand, so nobody did it and every house priced as average.
+>
+> **It does not touch complexity**, and wiring "premium estate" to complexity was considered and rejected: complexity moves a job about **3.9%** while the premium toggle moves it **49.6%**, so you would never notice it fire — and it would collapse two separate questions, *how careful* and *how expensive*, into one.
 
 **Where the rest of the hours are stated (changed 2026-08-03).** There used to be a *Project coordination & logistics* strip under the room grid carrying the residual. It is gone: it named the largest block of work on an estate job — mostly documentation and triage — as though it were administrative overhead, and it gave a number without ever saying what was in it. The same hours are now itemized by work step directly under the **Transition Concierge fee** and **Property Specialist fee** rows in the Estimate Summary, beside the figures they explain. The concierge line splits first into *on site with the crew* and *off site*, then names the off-site drivers. Both lines are scaled so the parts add up to the hours printed on the same row.
 
@@ -304,6 +312,14 @@ The estimator does **not** compute concierge hours and specialist hours as two i
 | **Off-site coordination** | Attorney, vendor, heir, and disposition contact that happens away from the property, around the crew days. |
 | **Fixed on-site presence** | Concierge time at the property that isn't pool work — attending appraisals, dealer visits, FFL handoffs (§5f). |
 
+> **What drives the pool — and what deliberately does not (changed 2026-08-03).** The hands-on pool comes from under-air square footage, the *volume* scores averaged across the rooms you scored, and any exterior rooms added on top. That is the whole list.
+>
+> **Years in home no longer touches it, and must not be put back.** It used to multiply the interior load by up to **1.30** — which made it a second measurement of the thing the volume slider measures directly. You are standing in the room scoring it, and the app refuses to submit without a volume score on every room in scope, so the direct observation is always present and the proxy was always redundant. Worse, the two compounded: a genuinely packed 35-year home scored an honest volume 5 got `1.70 × 1.30 = 2.21×`, so **the more accurately you recorded what you saw, the more the guess piled on top of it**. On a 3,500 sqft estate that was $7,600.
+>
+> Tenure now scales the **coordination column only**. What long tenure genuinely predicts is decision friction — thirty-five years of "we should keep this", more family history against each object, more heir conversation. That is concierge time. A box packs at the same rate whether it has sat there thirty-five years or three.
+>
+> **Complexity has never touched the pool either**, and still doesn't — it scales the coordination column, like tenure. So a "simple" house cannot price down on crew hours; only *volume* and scope do that.
+
 With a crew of *n* specialists and the concierge working at production rate **α** (Settings, default 50%), the pool is cleared by **n + α** pairs of hands:
 
 | Quantity | How it is derived |
@@ -357,7 +373,9 @@ Fixed on-site presence is added flat, never divided — six specialists don't ma
 | Probate Estate Settlement | 4,700 sqft |
 | Contested Probate Estate Settlement | 3,600 sqft |
 
-Indicative, not a rule — the app does the real arithmetic per job. Heavier room scoring, long tenure, difficult access, and attended collection visits all pull these down; difficult access alone by roughly 13%. The pattern is what matters: the heavier the documentation load, the sooner the core team runs out of calendar.
+Indicative, not a rule — the app does the real arithmetic per job. Heavier room scoring, difficult access, and attended collection visits all pull these down; difficult access alone by roughly 13%. *Long tenure no longer does* — it moved off the pool in the 2026-08-03 change above, so it lengthens no crew day. The pattern is what matters: the heavier the documentation load, the sooner the core team runs out of calendar.
+
+> **Known and unresolved: the engine still runs above the §16 reference bands.** At neutral scoring a 3,500 sqft Estate Settlement prices around **$19,000** against a band of $8,000–$16,000, and the gap widens with size — the band treats 2,000–4,000 sqft as one bucket while the engine is linear across it (roughly $10,400 to $20,800), so a single band cannot track both ends. Treat the band as a *market sanity check that is currently mis-calibrated*, not as a fault in the quote. Also open: item documentation is 35% of crew hours on an estate job and does not vary with whether there is anything worth documenting; *Garage (2-car)* carries the same content weight as the Kitchen; and the full estate step set, documentation included, is applied to exterior spaces like a patio. All recorded for a pricing pass.
 
 **Reading the timeline badge:**
 

@@ -68,7 +68,13 @@ Check the room to include it. It starts at 3/3 in most rooms — but foyers, hal
 
 Tick **Special Items** if the room holds artwork, antiques, or anything needing specialty care. Hours and a timeline appear as you score.
 
-**The hours on a room row are packing only.** They are not what it costs to clear that room. Sorting, documentation and haul-out are job-level and never show against a room — and on an estate settlement those are most of the work, with documentation alone bigger than packing. So a walk-in closet reading 3.6 hrs is really carrying about 13 once its share of everything else is counted. If you want the full picture, read the **Estimate Summary**: the breakdown under the Transition Concierge and Property Specialist fee lines names every kind of work and what it adds up to.
+**The hours on a room row are that room's full share of the job** — sorting, documentation, packing and haul-out together. Add the rows up and you get the fee lines. This changed on 2026-08-03: the rows used to show the *packing step only*, which is about a quarter of the work on an estate settlement, so every room understated itself by roughly **3.7×**. A 2-car garage read *2.4 PS* and was really booking over nine person-hours. If a room looks expensive now, that is the real number — it always was.
+
+> **"How full is this house?" — press one chip instead of moving nineteen sliders.** Above the room grid: **Seasonal · Light · Normal · Full · Packed**. Tick your rooms as normal, then press the one that matches what you walked into. It sets the starting volume for every room in scope at once. *Normal* is what the app did before, so if you ignore the row nothing changes.
+>
+> It is a *shift*, not a blanket setting — a powder room stays lighter than a living room on every preset. Adjust individual rooms afterwards for anything that does not fit the pattern ("the house is full but they already cleared the garage"); your edits stand until you press another chip. Pressing the same chip twice does nothing new.
+>
+> It does not touch complexity. Volume is *how much stuff*; complexity is *how careful you have to be*. Two different questions, and the premium-estate toggle already handles the high-end rate.
 
 Don't compare room hours between service types. The same closet shows *more* hours on a downsizing job than on an estate settlement, even though the estate job is more than twice the work — because on a downsizing nearly all the work is packing, so nearly all of it lands on the room rows.
 
@@ -450,7 +456,11 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | The guest house has its own kitchen and bath — where are those rows? | Gone on purpose. Score the whole building on one row, sized by bedrooms. Its kitchen and bath are already in that weight. |
 | Can't find the casita | It moved from Exterior & Auxiliary into Outbuildings & Guest Quarters. |
 | Two pool house rows — which one? | Whether it has living quarters. Cabana or changing room → the Exterior row. Bedroom, kitchen or bath → the Outbuildings row. Never both; that bills it twice. |
-| A room's hours look far too low for what's in it | Room rows are *packing only*. Sorting, documentation and haul-out are job-level. Read the breakdown under the fee lines in the Estimate Summary for the whole picture. |
+| Room hours jumped since you last used the app | Fixed 2026-08-03. Rows used to show the packing step only — about a quarter of the work — so every room understated itself by 3.7×. Nothing got more expensive; the row is finally telling the truth. |
+| A garage or patio costs far more than you expected | Exterior rooms add load *on top of* the square footage, and they are charged the full estate step set including documentation. A 2-car garage carries the same content weight as the kitchen. Known and queued for a pricing pass — flag it if it looks wrong on a live job. |
+| The whole house is packed and setting nineteen sliders is absurd | Use the **How full is this house?** chips above the room grid. One press. Then fix the odd room that does not fit. |
+| A long-tenured house does not price higher than a new one | Correct as of 2026-08-03. Years in home used to multiply crew hours as well, on top of the volume you had already scored — the same fact counted twice. It now only adds concierge coordination time. If the house really is packed, say so with *volume*: that is the input that carries it. |
+| The quote is above the reference range on an ordinary house | Known — the engine currently runs above the bands above roughly 3,000 sqft even at neutral scoring. The band is a market sanity check that needs re-cutting, not a fault in your walkthrough. Do not score down to hit it. |
 | Crew size keeps changing by itself | Correct — it tracks the recommendation while you score. It stops the moment you set it yourself. |
 | Crew badge: "2 assigned, 6 recommended — runs 23 days instead of 9" | You've staffed below what the job needs. That's allowed and it is priced as staffed — longer job, more concierge days, higher fee. Go back up unless the small crew is a real constraint. |
 | Fixed price warns it is "+41% over the hourly basis" | You typed a fee and the estimate has moved since. The panel shows the current suggestion — one click to take it. |
