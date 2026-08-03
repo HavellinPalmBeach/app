@@ -10,6 +10,12 @@
 
 Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. Client signatures and payments are recorded **by hand**: DocuSign, Stripe and QuickBooks are not built (§3).
 
+> **How we describe ourselves on client documents — corrected 2026-08-03.** Havellin is **insured and bonded**. It is **NOT licensed**, and every client document said *"Licensed, Insured & Bonded"* until this correction — client estimate footer, invoice footer, both agreement footers, and the Terms line. **Do not put "licensed" back on any client-facing surface.** This is compliance, not wording: if it ever needs revisiting it needs Anthony, not a judgement call.
+>
+> *A third party's licence is a different thing and is correct where it appears* — **Licensed FFL** on the firearms disposition list (§5f), the vendor directory's **License / cert** field (§13), and "licensed firearms transfer" in the collections cost note. Those describe vendors, not us.
+>
+> The tagline on all four client documents is **"Havellin handles the work no family should face alone."** It replaced *Guiding Families Through Life's Transitions* on 2026-08-03.
+
 **Navigation tabs (in order):** Win / Loss · Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Referral Partners
 
 > The app opens on the **Client Dashboard** even though Win / Loss is the first tab.
@@ -422,21 +428,33 @@ A Home Prep job opens a stripped-down Job Plan — no hours log, no PS crew, no 
 
 ### What the document contains
 
-It opens with **Havellin Job Plan & Services** — rebuilt 2026-08-03 from a single *Proposed Plan* paragraph into a structured section ahead of the fee tables: *How We Work* · *Spaces In Scope* · *How The Work Runs* · *What We Coordinate For You* · *What You Receive* · *What We Need From You*. The fee tables, third-party vendors and totals follow it.
+It opens with **Havellin Job Plan & Services** — rebuilt 2026-08-03 from a single *Proposed Plan* paragraph into a structured section ahead of the fee tables. **Three blocks: *How We Work* · *Spaces In Scope* · *How The Work Runs*.** The fee tables, third-party vendors and totals follow it.
+
+> **It was six blocks for a few hours on 2026-08-03, and the last three were folded into the numbered stages on instruction.** Everything they said now sits in the stage it belongs to: the vendor roster is split across the stages the vendors actually appear in, the records list is inside Close-Out because that is when the client receives it, and the client's obligations were already stated per stage under *What we need from you*. **Do not reintroduce a trailing block after a numbered sequence** — it reads as an appendix restating what the sequence already said.
+
+> **Vendors are named in the stage they appear in, bucketed by what the trade does.** Appraisers, FFLs and other valuers go in the *sorting* stage — they work while the contents are still in place. Haulers, dumpsters, storage and auction houses go in *disposition*. Cleaners, painters and finishing trades go in *close-out*, because none of them can start until the house is empty. A single roster at the end had put the appraisers two stages late and the final clean two stages early, on a document whose whole point is that we know the order. It also exposed a real gap — **close-out never mentioned the finishing trades at all**, so a cleaning vendor could appear on the estimate and in no stage of the method.
 
 > **The stages are DERIVED from the pricing engine, not written per service — this is the whole design.** Which stages a client sees comes from `JOB_STEPS[svc]`, the same table that produced the hours. Probate prices a *document* step and a *legal* step, so its document carries the documentation and court-filing stages; Home Cleanout prices neither and shows neither; move management gets Move Day. The narrative and the number read one source and cannot disagree. **If a service ever needs a new stage, add the step to `JOB_STEPS`** — never hardcode a per-service phase list, or the two drift exactly the way this manual does.
 
 Each stage states three things: what Havellin does, **what we need from the client**, and **what "complete" means** — the internal Job Plan's phase gate (§11) restated in client language. That last field is what makes the document read as a method rather than a brochure.
 
 > **No dates and no durations appear anywhere in the plan, deliberately.** Same reasoning as the fixed-price fee line (§5c): a number beside a stage reads as a delivery commitment, and the pace is set by how fast the *client* decides, not by us. A test asserts that no day or week count appears in any stage copy on any service type. Don't add one.
+>
+> There is also **no sentence on the document explaining that absence** — one was written and then removed on instruction. Explaining an absence is what draws attention to it; a client reading a gated sequence with a *Complete when* on every stage does not ask why there is no calendar. If one does ask, answer from the overall working-day estimate and say plainly that the pace depends on how quickly they decide.
 
-> **Depth follows the documentation level (§4), not the project value.** A *Formal* engagement gets the fuller completion criteria and the court-grade *What You Receive* list — date-of-death FMV, chain of custody, appraisals attached, seven-year retention. A *Standard* job keeps every stage rather than reading as an afterthought; it simply doesn't claim records it isn't producing.
+> **Depth follows the documentation level (§4), not the project value.** A *Formal* engagement gets the fuller completion criteria and the court-grade records list inside Close-Out — date-of-death FMV, chain of custody, appraisals attached, seven-year retention. A *Standard* job keeps every stage rather than reading as an afterthought; it simply doesn't claim records it isn't producing.
 
 **Spaces In Scope is grouped by section** — Entry & Living, Kitchen & Utility, Lifestyle Rooms, both bedroom floors and the rest — with a count per group and a total. The flat comma list it replaces dropped the section name, so a two-storey house printed *Primary Suite … Primary Suite* and *Half Bath … Half Bath*: real first- and second-floor rooms reading as duplicated typing on a six-figure proposal. Grouping is a correctness fix, not styling. Excluded spaces still print in red beneath.
 
-**Standalone Home Prep runs its own three stages** — Scoping & Sourcing · Execution & Oversight · Show-Ready Handover — and carries no *What You Receive* block, because it produces no inventory (§6b).
+**Standalone Home Prep runs its own three stages** — Scoping & Sourcing · Execution & Oversight · Show-Ready Handover — and carries no records list, because it produces no inventory (§6b).
 
 > **An empty third-party section no longer prints.** With no vendors on the estimate the heading, the *No third-party vendors estimated at this time* line, the $0 subtotal and the $0 row in the totals table are all suppressed — four lines describing work outside the engagement, which read as though something were missing. **The test is on having no vendor *rows*, never on the cost being zero:** an auction house or estate-sale company is proceeds-based, prints *No direct cost*, and is a real engaged vendor that must still be listed. A cost with nothing itemising it keeps the section, so money is never hidden to tidy a layout. The totals table also drops its *Havellin Services* breakdown line when there is nothing to break the total into — with no vendors and no prep it was stating one number twice.
+
+> **"At cost" is stated on labels and in Terms — not in prose.** It appeared five times on one page. It now appears on the two vendor subtotals (*Estimated Third-Party Total (at cost)*, *Est. Prep Vendor Total (at cost)*), on their two lines in the Total Estimated Project Cost table, and in full, once, in **Terms**, which is where a commercial rule belongs. Both vendor footnotes were deleted with it, and so were the concierge-hour counts they carried (*"accounts for 18.0 of the Transition Concierge hours above"*) — the client's copy shows one combined concierge figure, so that number could never be checked against anything on the page. **The no-markup claim itself survives, in Terms.**
+
+> **Band weight is hierarchy, and there are exactly two dark bands.** The dark charcoal band is **reserved for the two that state what the client pays** — *Total Estimated Project Cost* and *Payment Schedule*. Every other section on the estimate wears the lighter tan band. When all of them were dark there was no hierarchy and the number the client needs to find carried no more weight than a vendor list. A test asserts exactly two. *The invoice is a separate document and still uses the dark band throughout.*
+
+> **The header is one identity line** — Job ID · Estate/Client · Property · Date — then the representative row (which now carries *Service*), then the dates row (which now carries *Date of Death*). Rows run even columns with the last value flush right. The *Estate*/*Client* label flips on whether an **authorised representative is recorded**, not on the service type, so a cleanout job with no rep correctly reads *Client*.
 
 ### Approval
 

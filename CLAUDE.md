@@ -655,7 +655,23 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (ninth pass, same day)** — both documents, against the
+- Last reconciled against the app: **2026-08-03 (tenth pass, same day)** — both documents, against
+  the client-estimate rebuild and the licence correction. **The compliance item is the one that
+  matters:** manual §1 and playbook Step 3 now state plainly that Havellin is **insured and bonded,
+  NOT licensed**, that every client document claimed otherwise until this correction, and that a
+  vendor's *Licensed FFL* is a different thing that is correct where it appears. In the playbook it
+  is a red `.stop`, because the instruction is to strike the word from anything a concierge writes
+  themselves. Both also carry the new tagline.
+  - Manual §7 was rewritten for the folded structure — **three blocks, not six** — with the
+    fold recorded (do not reintroduce a trailing block after a numbered sequence), the
+    vendor-to-stage bucketing rule, the close-out gap it exposed, the deleted no-dates preamble
+    and why, the *at cost* consolidation, the two-dark-bands rule, and the one-line header
+    including the `isEstateJob`-reads-the-rep trap. §5b/§5i untouched — the ninth pass covered them.
+  - Playbook Step 3 gained the same in field language plus a genuinely useful field check:
+    **if a vendor you entered is not named anywhere in the stages, it is filed under the wrong
+    category.** Three new symptom→cause rows (vendor missing from the stages · client asks why
+    there are no dates · the word *licensed* anywhere).
+- Prior pass **2026-08-03 (ninth pass, same day)** — both documents, against the
   pricing changes. This pass CORRECTS the biggest standing claim in either document: **manual §5b and
   playbook Step 2 both said a room row is "the packing step only"**, with the instruction to mentally
   multiply it (a 3.6 hr closet "is really 13"). True until this morning, false now — rows carry the
