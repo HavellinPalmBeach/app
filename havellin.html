@@ -252,6 +252,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .ce-hdr-row-1{grid-template-columns:1.4fr 2fr 1fr 1.2fr;}
 .ce-hdr-row-2{grid-template-columns:1fr 1fr 1fr 1fr;}
 .ce-hdr-row-3{grid-template-columns:1fr;}
+/* The identity line: who this is, where, and when — Job ID · Estate/Client ·
+   Property · Date, in that order, on one row. Job ID and Date are fixed-width
+   strings so they take `auto`; the two variable-length fields get the slack. */
+.ce-ident-row{grid-template-columns:auto 1.3fr 1.7fr auto;}
 .ce-hdr-divider{height:1px;background:var(--border);margin:.6rem 0;}
 .ce-meta-item{font-size:13px;}.ce-meta-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:2px;}
 .ce-meta-val{font-size:13px;color:var(--gray-dk);font-weight:500;}
@@ -701,7 +705,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 6:46pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 6:51pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7009,21 +7013,24 @@ function renderClientEstimate() {
   var html =
     '<div style="text-align:center;padding:0 0 .75rem;">' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
-    '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Guiding Families Through Life\u2019s Transitions</div>' +
+    '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Havellin handles the work no family should face alone.</div>' +
     '</div>' +
     '<div class="ce-divider-thick"></div>' +
     '<div class="ce-title">Service Estimate</div>' +
-    '<div style="display:flex;justify-content:center;gap:2.5rem;margin:.35rem 0 .75rem;text-align:center;">' +
-    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'\u2014') + '</div></div>' +
-    '<div><div class="ce-meta-label">Date</div><div class="ce-meta-val">' + _estDate + '</div></div>' +
+
+    // One identity line \u2014 Job ID \u00b7 Estate/Client \u00b7 Property \u00b7 Date. These four used
+    // to sit across two rows with the Job ID and Date centred on their own strip
+    // above, which spent three lines and a lot of vertical space on four short
+    // facts and pushed the actual scope further down the page.
+    '<div class="ce-hdr-row ce-ident-row" style="margin-top:.35rem;">' +
+    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;white-space:nowrap;">' + (job.hvlId||'\u2014') + '</div></div>' +
+    '<div><div class="ce-meta-label">' + (isEstateJob ? 'Estate' : 'Client') + '</div><div class="ce-meta-val">' + (isEstateJob ? 'Estate of ' + esc(job.name||'\u2014') : esc(job.name||'\u2014')) + '</div></div>' +
+    '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
+    '<div><div class="ce-meta-label">Date</div><div class="ce-meta-val" style="white-space:nowrap;">' + _estDate + '</div></div>' +
     '</div>' +
 
         (isEstateJob
-      ? '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
-        '<div><div class="ce-meta-label">Estate</div><div class="ce-meta-val">Estate of ' + esc(job.name) + '</div></div>' +
-        '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
-        '</div>' +
-        '<div class="ce-hdr-divider"></div>' +
+      ? '<div class="ce-hdr-divider"></div>' +
         '<div class="ce-hdr-row" style="grid-template-columns:1.5fr 1fr 1.3fr;">' +
         '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + esc(job.executor||'—') + (job.executorRole ? ' — ' + esc(job.executorRole) : '') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + (job.executorPhone||'—') + '</div></div>' +
@@ -7034,9 +7041,10 @@ function renderClientEstimate() {
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
         (job.deathDate ? '<div><div class="ce-meta-label">Date of Death (Valuation Date)</div><div class="ce-meta-val">' + fmtCEDate(job.deathDate) + '</div></div>' : '') +
         '</div>'
-      : '<div class="ce-hdr-row ce-hdr-row-1">' +
-        '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
+      // Client and Property moved up into the identity line, so this row carries
+      // only what is left rather than repeating them.
+      : '<div class="ce-hdr-divider"></div>' +
+        '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
         '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
         '</div>'
@@ -13777,7 +13785,7 @@ function renderInvoice() {
     // Branded header — wordmark · tagline (Job ID + date sit centered under the title).
     '<div style="text-align:center;padding:0 0 .75rem;">' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
-    '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Guiding Families Through Life’s Transitions</div>' +
+    '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Havellin handles the work no family should face alone.</div>' +
     '</div>' +
     '<div class="ce-divider-thick"></div>' +
     '<div class="ce-title">' + stageTitle + '</div>' +
@@ -18019,7 +18027,7 @@ function renderProbateAgreement() {
   // TITLE BLOCK
   content += '<div style="text-align:center;margin-bottom:1.2rem;">';
   content += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:500;letter-spacing:.05em;color:var(--bronze);">HAVELLIN PALM BEACH</div>';
-  content += '<div style="font-size:11px;color:var(--gray);margin:.2rem 0 .6rem;letter-spacing:.02em;">Guiding Families Through Life\'s Transitions</div>';
+  content += '<div style="font-size:11px;color:var(--gray);margin:.2rem 0 .6rem;letter-spacing:.02em;">Havellin handles the work no family should face alone.</div>';
   content += '<div class="ce-divider"></div>';
   content += '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-dk);margin:.6rem 0 .25rem;">'+svcLabel+'</div>';
   content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Engagement Agreement</div>';
@@ -18384,7 +18392,7 @@ function renderAgreement() {
   content += approvedStamp;
   content += '<div style="text-align:center;margin-bottom:1.2rem;">';
   content += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:500;letter-spacing:.05em;color:var(--bronze);">HAVELLIN PALM BEACH</div>';
-  content += '<div style="font-size:11px;color:var(--gray);margin:.2rem 0 .6rem;letter-spacing:.02em;">Guiding Families Through Life\'s Transitions</div>';
+  content += '<div style="font-size:11px;color:var(--gray);margin:.2rem 0 .6rem;letter-spacing:.02em;">Havellin handles the work no family should face alone.</div>';
   content += '<div class="ce-divider"></div>';
   content += '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-dk);margin:.6rem 0 .25rem;">'+svcLabel+'</div>';
   content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Services Agreement</div>';

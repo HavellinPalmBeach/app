@@ -61,6 +61,25 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## New tagline + one-line estimate header (BUILT 2026-08-03)
+- **Tagline is now "Havellin handles the work no family should face alone."** Replaces
+  *Guiding Families Through Life's Transitions* on **all four client documents** — client
+  estimate, invoice, standard agreement, probate agreement. It appears in three different
+  source spellings (`’` escape, literal `’`, escaped `\'`), which is why a naive
+  find-and-replace missed half of them; a test asserts **4 occurrences and zero survivors** of
+  the old one. Check that count if it ever needs changing again.
+- **The estimate header is one identity line:** `Job ID · Estate/Client · Property · Date`,
+  in that order, under `.ce-ident-row` (`auto 1.3fr 1.7fr auto` — the two fixed-width strings
+  take `auto`, the variable-length fields get the slack). It replaces a centred Job ID/Date
+  strip plus a separate Estate/Property row — three lines and a lot of vertical space for four
+  short facts, pushing the actual scope down the page.
+  - **`isEstateJob` keys off `job.executor` being present, NOT the service type.** The label
+    flips between *Estate* and *Client* on that, and a cleanout job with no rep recorded
+    correctly reads *Client*. Don't "fix" it to test `svc`.
+  - The non-estate branch lost its now-duplicated Client and Property cells and carries only
+    Phone and Service.
+- 12 more checks (110 in the job-plan suite).
+
 ## Client estimate: page breaks, band weight, no left rule (BUILT 2026-08-03)
 Three presentation fixes on the new Job Plan section, all reported off a printed copy.
 - **A half-blank page before *How The Work Runs*, and it was self-inflicted.** Every block in
