@@ -5,6 +5,12 @@
   `2026.MM.DD · H:MMpm ET`
   Use the current date and approximate ET time.
   Format: `YYYY.MM.DD · H:MMpm ET`
+- **READ THE CLOCK — do not increment the stamp you found in the file.** The container runs
+  UTC, so get ET with `TZ=America/New_York date '+%Y.%m.%d · %-I:%M%P ET'` and paste that.
+  On 2026-08-03 five commits shipped with invented times (7:05pm → 11:05pm) against a real
+  4:17pm, because the stamp already in the file was treated as a counter to bump. The point
+  of the stamp is telling which build is on the phone; a made-up time makes it useless and
+  a stamp in the future makes it actively misleading.
 
 ## Git identity — set this at the start of every session
 ```
