@@ -61,6 +61,32 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## Empty third-party section suppressed + Job Plan rooms in walkthrough order (BUILT 2026-08-03)
+Two cosmetics reported on the same pass, both about a screen saying something it shouldn't.
+- **The client estimate always printed the third-party block, empty.** A heading, an italic
+  "No third-party vendors estimated at this time", a **$0** subtotal, and a **$0** line in the
+  grand-total table — four lines describing work that is not part of the engagement, and it
+  read as though something were missing. Suppressed now on `showVendors`.
+  - **The test is on having no ROWS, never on `vendorCost === 0`.** An auction house or estate
+    sale company is proceeds-based and renders "No direct cost" — it is a real engaged vendor
+    and must still be listed. Collection-attached vendors (appraisers, FFLs) count the same way.
+  - **One fail-safe runs the other direction:** `showVendors` is also true if `vendorCost > 0`
+    with nothing itemising it, so a stray cost is still disclosed and the grand total still
+    reconciles. Never hide money to tidy a layout.
+  - The **Total Estimated Project Cost** table drops its *Havellin Services* breakdown line when
+    there is nothing to break the total down into — with no vendors and no prep it was stating
+    one number twice, directly under a *Havellin Services Total* band that had already stated it.
+    Any vendor or prep row brings the Havellin line back so the column adds up.
+  - The internal Estimate Summary panel (`s-vendor-row`) is untouched — a $0 there is a working
+    readout, not a client document.
+- **Job Plan room cards were sorted by complexity descending** (`(b.cplx)-(a.cplx) || (b.vol)-(a.vol)`),
+  which matched nothing else in the app and read as random. Now **ascending `idx`** — the running
+  counter across the whole `ROOMS` array, so it IS the Build Estimate / client estimate order
+  (Entry & Living → Kitchen & Utility → Lifestyle → …). Rooms with no `idx` keep their stored
+  position at the end rather than being dropped. Heading changed to *(walkthrough order)*, and
+  both phase grids read the same array so Phase 1 and Phase 2 stay in step.
+- 29 checks, driving the real `renderClientEstimate` and the real ordering expression.
+
 ## Save to Drive now confirms itself (BUILT 2026-08-03)
 **The client estimate's *Save to Drive* had feedback — a `showSyncBadge` toast — but it is fixed
 bottom-right and gone in 4 seconds, while your eyes are on the button you just pressed near the

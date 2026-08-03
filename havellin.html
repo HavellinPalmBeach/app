@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 5:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 5:27pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6670,6 +6670,12 @@ function renderClientEstimate() {
     var amt = cCost > 0 ? fmt(cCost) : '<span style="color:var(--gray);font-style:italic;">No direct cost</span>';
     vendorRows += '<tr><td>' + label + '</td><td class="r">' + amt + '</td></tr>';
   });
+  // A vendor with no direct cost (auction house, estate-sale company) still earns a row
+  // above, so the section is suppressed on having no ROWS — never on vendorCost being 0,
+  // which would hide a genuinely engaged vendor. The one exception runs the other way:
+  // if there is somehow a cost with nothing itemising it, keep the section so the money
+  // is still disclosed and the grand total below still reconciles.
+  var showVendors = !!vendorRows || (e.vendorCost || 0) > 0;
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
 
   var _svcSubHdr = {
@@ -6815,6 +6821,11 @@ function renderClientEstimate() {
     // beside each row are estimates and the vendors are proposals; the past tense read as
     // a statement that the work was already booked. The invoice has no equivalent heading,
     // so there is no past-tense counterpart to keep in step with this.
+    // Suppressed entirely on a job with no vendors. A heading, an apology for having
+    // nothing under it, and a $0 subtotal is three lines telling the client about work
+    // that is not part of their engagement — and it made the estimate read as though
+    // something were missing.
+    (showVendors ?
     '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendors To Be Engaged</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' + vendorRows + '</tbody>' +
@@ -6838,7 +6849,8 @@ function renderClientEstimate() {
         '</td></tr>'
       : '') +
     '</table>' +
-    '<div style="margin-bottom:1.25rem;"></div>' +
+    '<div style="margin-bottom:1.25rem;"></div>'
+    : '') +
 
     (e.prepEnabled && e.prepItems && e.prepItems.length > 0 ? (function() {
       var rows = e.prepItems.filter(function(p){ return p.cost > 0; }).map(function(p) {
@@ -6864,13 +6876,24 @@ function renderClientEstimate() {
         '</table>';
     })() : '') +
 
-    '<div style="margin-top:1rem;"><div class="ce-section-hdr">Total Estimated Project Cost</div>' +
-    '<table class="ce-tbl"><tbody>' +
-    '<tr><td>Havellin Services</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
-    '<tr><td>Est. Third-Party Vendors (at cost)</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
-    (e.prepEnabled && e.prepCost > 0 ? '<tr><td>Est. Home Prep Vendors (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' : '') +
-    '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
-    '</tbody></table></div>';
+    // The breakdown only earns its place when there is something to break the total
+    // DOWN into. With no vendors and no prep, "Havellin Services 14,650 / Total
+    // 14,650" states one number twice, directly under a Havellin Services Total that
+    // already stated it — so on that job the band closes with the grand total alone.
+    (function() {
+      var showPrepTotal = !!(e.prepEnabled && e.prepCost > 0);
+      // The Havellin line only appears alongside something to add to it — on its own it
+      // restates the grand total immediately below it.
+      var breakdown = (showVendors || showPrepTotal)
+        ? '<tr><td>Havellin Services</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>'
+          + (showVendors ? '<tr><td>Est. Third-Party Vendors (at cost)</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' : '')
+          + (showPrepTotal ? '<tr><td>Est. Home Prep Vendors (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' : '')
+        : '';
+      return '<div style="margin-top:1rem;"><div class="ce-section-hdr">Total Estimated Project Cost</div>' +
+        '<table class="ce-tbl"><tbody>' + breakdown +
+        '<tr class="grand"><td>Total Estimated Project Cost</td><td class="r">' + fmt(e.grandTotal) + '</td></tr>' +
+        '</tbody></table></div>';
+    })();
   }
 
   html +=
@@ -16430,9 +16453,20 @@ function renderJobPlan(jobId, job, est) {
                : (s.label === 'contractor_senior' ? 'Senior PS' : 'PS Specialist');
       }).join(', ')
     : ((est.psCount || est.nps || 2) + ' specialists');
-  var _allJpRooms = (est.rooms || []).slice().sort(function(a,b){
-    return (b.cplx||0)-(a.cplx||0) || (b.vol||0)-(a.vol||0);
-  });
+  // Walkthrough order — the same top-to-bottom the Build Estimate grid and the client
+  // estimate use (Entry & Living → Kitchen & Utility → Lifestyle → …). `idx` is the
+  // running counter across the whole ROOMS array, so ascending idx IS that order.
+  // This used to sort by complexity descending, which shuffled the house into a
+  // sequence matching nothing else in the app: the crew reading the plan against the
+  // estimate had to hunt for each room, and on site nobody walks a property hardest-
+  // room-first. Rooms with no idx (older saves) keep their stored position at the end.
+  var _allJpRooms = (est.rooms || []).map(function(r, i){ return { r: r, i: i }; })
+    .sort(function(a, b){
+      var ai = (typeof a.r.idx === 'number') ? a.r.idx : Infinity;
+      var bi = (typeof b.r.idx === 'number') ? b.r.idx : Infinity;
+      return ai - bi || a.i - b.i;
+    })
+    .map(function(x){ return x.r; });
   // Excluded (homeowner-handled) rooms are shown to the crew flagged NOT IN SCOPE but
   // are kept out of the priced/status-tracked room set (midpoint gate, projections).
   var rooms = _allJpRooms.filter(function(r){ return !r.excluded; });
@@ -16583,7 +16617,7 @@ function renderJobPlan(jobId, job, est) {
     'High-value items reviewed by TC, documented, and set aside'
   ];
 
-  var p1 = planSubsec('Rooms — Sort & Lock (ordered by complexity)') + p1rooms +
+  var p1 = planSubsec('Rooms — Sort & Lock (walkthrough order)') + p1rooms +
     planSubsec('Phase Gates') +
     chks('p1_gate_', p1gates) +
     (hasCOC ? planSubsec('Chain of Custody'+(custodyMandatory?' — Mandatory':'')) +
