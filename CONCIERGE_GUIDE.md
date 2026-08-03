@@ -84,14 +84,14 @@ If it says nothing at all, intake never captured the bed and bath counts. Go and
 | Setting | What it does to the quote | When to use it |
 | --- | --- | --- |
 | **Premium Estate** | TC $185 / PS $125 instead of $150 / $100, plus a flat 25 hrs of specialty coordination. | Auction houses, appraisers, wine and art logistics. |
-| **Crew size** | One dropdown, 2 to 6 specialists. The app sizes it itself — the smallest crew that lands inside the 10-working-day target — and keeps adjusting it up *and down* as you score. The moment you pick a number yourself it stops moving and warns you instead. | Leave it alone unless you know something the app doesn't. You're saying *how many*, never *which* — naming people is Job Plan work, step 7. |
-| **Client needs it sooner?** | Type the working days the client is asking for and the planner tells you what crew reaches it — see below. | Whenever a date comes up on site. Read it *before* you tick rush. |
-| **Second concierge** | A tick box: "this scope needs a second concierge". The app ticks it when the daily load says one person can't cover the schedule. Changes neither the fee nor the duration. | Leave it to the app. You name the second concierge on the Job Plan, not here. |
+| **Crew** — concierges and specialists | Two dropdowns side by side in the *Schedule & Crew* card. The app sizes both itself and keeps adjusting them up *and down* as you score. The moment you set one yourself it stops moving and reports what your choice costs instead. | Leave them alone unless you know something the app doesn't. You're saying *how many*, never *which* — naming people is Job Plan work, step 7. |
+| **Client needs it sooner?** | Pick the *date* the client asked for and the planner tells you what crew reaches it — see below. | Whenever a date comes up on site. Read it *before* you tick rush. |
 | **Difficult access** | +15% to the physical work, which lengthens the job and so lengthens concierge time automatically. | Stairs, no elevator, long carry. |
 | **Multiple heirs** | +20% to off-site coordination — more calls and sign-offs, not more boxes. | Greyed out on contested probate; it's already in those rates. |
 | **Rush order** | A flat **20% expedited-delivery premium** on the Havellin services total, shown to the client as its own named line. Never on vendor costs. | When the client is buying a compressed calendar — a second concierge and a bigger crew in parallel. |
 | **Quote as a fixed price** | Replaces hourly with a firm flat fee — the hourly basis plus a **20% contingency** — prefilled and fully editable. | **Not available on Probate or Contested Probate** — the toggle is disabled. Those bill on logged hours so the expense stands up in court. |
 | **Preferred Client Discount** | Percentage off Havellin labour only, **max 15%**. Same cap on *Offer Discount* from the Client Estimate tab. | Sparingly. The cap is the guardrail — the margin panel is no longer shown on this tab. |
+| **Multiple heirs** — read this once | It adds a full 20%, but to *off-site coordination* — not to total concierge hours. Coordination is about half the concierge line, so the total moves about 10%. | Nothing. It is not a bug; people report it as one. |
 | **Moving Materials Package** | Estate tier ($500 / $750 / $1,500) or Downsizing tier ($200 / $350 / $550). | Or None. |
 
 > **⚠** **A bigger crew makes the estimate go DOWN, not up.** The concierge works alongside the crew, so more specialists finish sooner and the concierge is on site for fewer billable hours. That is correct pricing — but it means a crew size left over from a larger job will quietly discount this one. **Never carry a crew size between estimates.** The app flags any crew above its own recommendation; take the flag seriously.
@@ -100,17 +100,19 @@ If it says nothing at all, intake never captured the bed and bath counts. Go and
 
 ### When the client wants it faster — the timeline planner
 
-Under crew size there's a box: *client needs it sooner?* Type the number of working days they're asking for. It tells you the natural pace first — "8 working days at 2 specialists" — then answers the date three ways:
+Under the crew dropdowns there's a date field: *client needs it sooner?* **Pick the date they asked for** — the app works out the days. It shows you what the job delivers as staffed first — "As staffed: 8 working days at 2 specialists — done Aug 19" — then answers the date three ways:
 
 | Answer | What to say on site |
 | --- | --- |
-| **Green** — already inside that date at the natural crew | "Yes, comfortably." **Do not tick rush.** Nothing is being expedited and you can't defend the premium. |
-| **Amber** — "6 days with 4 specialists (from 8 at 2)", with an **Apply** button | Offer it. Apply sets the crew and ticks expedited delivery for you; the summary underneath shows what it does to the price before you commit. |
-| **Red** — "4 days is not reachable" | Six specialists is the cap. Counter with the number it gives you, or take scope out. Don't agree to the date. |
+| **Green** — "Sep 30 is comfortable" | "Yes, comfortably." **Do not tick rush.** Nothing is being expedited and you can't defend the premium. |
+| **Amber** — "Reachable — Aug 14 with 4 specialists", with a button | Offer it. The button sets the crew and, when it really is faster than normal, ticks expedited delivery. The summary underneath shows the price before you commit. |
+| **Red** — "Aug 11 is not reachable" | Six specialists is the cap. Counter with the date it gives you, or take scope out. Don't agree to the date. |
+
+> **The amber button comes two ways.** "*Rush it — 4 specialists, done Aug 14, +20%*" means genuinely faster than normal, so the premium applies. "*Set crew to 3 — done Sep 1, no premium*" means the date is reachable only because the crew was set below what the job needs — that's staffing it properly, not expediting, and we don't charge for it.
 
 > **Compressing is good for us, not just for them.** A bigger crew moves hours off the concierge line onto the specialist line, so our cost *falls* while the premium adds revenue — on a 6,000 sqft cleanout, 8 days at 2 specialists versus 5 days at 6 went from 54% margin to 65%, and the client got it three days sooner. Say yes to the compression when you can deliver it.
 
-> **⚠** **Don't charge the premium for a schedule you were going to run anyway.** That same job at its natural pace with rush ticked bills *more* than the genuinely expedited version — for nothing expedited. The planner's green answer is exactly the case where the box stays unticked.
+> **⚠** **Don't charge the premium for a schedule you were going to run anyway.** That same job at its natural pace with rush ticked bills *more* than the genuinely expedited version — for nothing expedited. The app now says so out loud: tick rush without compressing and the badge reads *"Rush is on, but nothing is compressed … you are adding $X for no change in delivery."* Untick it, or add the crew.
 
 ### Vendors, collections and vehicles
 
@@ -405,6 +407,8 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | The estimate won't save | No rooms are scored. Score at least one — and read the coverage badge before you settle for one. |
 | Amber badge: "walkthrough looks incomplete" | Fewer bedrooms or baths scored than intake recorded. It won't block you; finish the walkthrough anyway. |
 | Crew size keeps changing by itself | Correct — it tracks the recommendation while you score. It stops the moment you set it yourself. |
+| Crew badge: "2 assigned, 6 recommended — runs 23 days instead of 9" | You've staffed below what the job needs. That's allowed and it is priced as staffed — longer job, more concierge days, higher fee. Go back up unless the small crew is a real constraint. |
+| Fixed price warns it is "+41% over the hourly basis" | You typed a fee and the estimate has moved since. The panel shows the current suggestion — one click to take it. |
 | Crew badge warns "N assigned but only M recommended" | You've set a crew bigger than the scope needs, which *lowers* the quote. Drop back unless the extra hands are genuinely required. |
 | The timeline planner says a date "is not reachable" | Six specialists is the cap. Counter with the days it quotes, or cut scope. |
 | A vendor category isn't on any of the six cards | It isn't in the Vendor Directory under that Category Group. Add it there and reload. |

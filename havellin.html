@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 8:47am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 9:22am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1006,20 +1006,9 @@ body.no-smf .smf-col{display:none;}
         <select id="e-prepared-by">
           <option value="">Select TC</option>
         </select>
-        <!-- A flag, not a person. Same reasoning as the specialist checkboxes: at
-             estimate time you can say the scope needs two concierges, not which two.
-             The engine ticks this itself when the daily load passes TC_DAY_CAP. It has
-             never touched the fee or the duration and still does not — it decides whether
-             the Job Plan roster offers a second concierge row to name. -->
-        <div id="e-tc2-wrap">
-          <label>Second Transition Concierge</label>
-          <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;">
-            <input type="checkbox" id="e-needs-tc2" onchange="calcAll()" style="width:16px;height:16px;flex:0 0 auto;cursor:pointer;">
-            <span>This scope needs a second concierge</span>
-          </label>
-          <div id="e-tc2-hint" style="font-size:11px;color:var(--gray);margin-top:2px;"></div>
-        </div>
-        <div id="timeline-badge" style="margin-top:6px;"></div>
+        <!-- The concierge count and the timeline badge moved to the Schedule & Crew card
+             on the right (2026-08-03). Both are schedule decisions and both were sitting
+             two columns away from the crew dropdown they belong beside. -->
         <div id="move-mgmt-card" style="display:none;">
           <div class="sec" style="margin-top:12px;">Move Management</div>
           <div id="move-dest-readout" style="font-size:11px;color:var(--gray);margin-bottom:6px;"></div>
@@ -1044,33 +1033,57 @@ body.no-smf .smf-col{display:none;}
         <!-- Section heading purely so the right column starts on the same line as the
              left: "Job / Job details" against "Crew / Crew size". Without it the right
              column began one row higher and the two never lined up. -->
-        <div class="sec">Crew</div>
-        <!-- Crew size lives in the right column beside the adjustments, which evens the two
-             columns out — it is one dropdown, and the left column carries six fields.
-             Desk-only either way: field mode hides crew sizing. -->
+        <!-- SCHEDULE & CREW. One card, read top to bottom as a single sentence: how many
+             people → when that finishes → does the client need it sooner → what that
+             costs. These controls were spread across two columns and the bottom of the
+             page, which is six controls for one decision. Desk-only: field mode hides
+             the whole card, because every part of it moves the price. -->
+        <div class="sec">Schedule &amp; Crew</div>
         <div id="crew-size-wrap">
-        <!-- One control, not six. The engine still auto-sets this to the smallest crew
-             that lands inside the 10-day target; the reasoning that used to be printed
-             here in full lives in manual.html §5c and §5i. -->
-        <label style="margin-top:0;">Crew size</label>
-        <select id="ps-crew-size" onchange="_crewUserSet=true;calcAll()">
-          <option value="2">2 specialists</option>
-          <option value="3">3 specialists</option>
-          <option value="4">4 specialists</option>
-          <option value="5">5 specialists</option>
-          <option value="6">6 specialists</option>
-        </select>
-        <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
-        <!-- Timeline planner. The client asks for a date on site; this says what crew
-             reaches it, or that it is not reachable. Applying it drives the crew and rush
-             controls so the price comes from the normal calculation, never from here. -->
-        <label style="margin-top:6px;">Client needs it sooner?</label>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <input type="number" id="tp-target" min="1" max="90" step="1" placeholder="days"
-            style="width:74px;text-align:center;" oninput="renderTimelinePlanner()">
-          <span style="font-size:11.5px;color:var(--gray);">working days requested</span>
+        <!-- Two counts, same shape, side by side. Concierges was a tick box in the Job
+             column; specialists was six tick boxes before it was this dropdown. Both are
+             "how many", neither is "which" — naming people is Job Plan work once Won. -->
+        <div class="grid2" id="crew-count-row" style="gap:.6rem;">
+          <div>
+            <label style="margin-top:0;">Concierges</label>
+            <select id="e-tc-count" onchange="_tc2UserSet=true;calcAll()">
+              <option value="1">1 concierge</option>
+              <option value="2">2 concierges</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-top:0;">Specialists</label>
+            <select id="ps-crew-size" onchange="_crewUserSet=true;calcAll()">
+              <option value="2">2 specialists</option>
+              <option value="3">3 specialists</option>
+              <option value="4">4 specialists</option>
+              <option value="5">5 specialists</option>
+              <option value="6">6 specialists</option>
+            </select>
+          </div>
         </div>
+        <div id="e-tc2-hint" style="font-size:11px;color:var(--gray);margin-top:4px;"></div>
+        <div id="ps-crew-badge" style="margin-top:6px;"></div>
+        <!-- Projected completion, immediately under the crew that determines it. -->
+        <div id="timeline-badge" style="margin-top:6px;"></div>
+        <!-- The client names a DATE on site, not a count of working days — asking them to
+             convert is asking the wrong question, and "done by the 18th" is what actually
+             gets agreed to. The planner converts against the intake start date. -->
+        <label style="margin-top:10px;">Client needs it sooner?</label>
+        <input type="date" id="tp-target" onchange="renderTimelinePlanner()" oninput="renderTimelinePlanner()">
         <div id="timeline-planner" style="margin-top:6px;"></div>
+        <!-- Rush lives with the timing decision, not down with the money. It is the
+             answer to "can you do it by the 18th" — you tick it in the same breath as
+             you size the crew, and the badge underneath states the compression it is
+             being charged for. -->
+        <div class="toggle-wrap" style="margin-top:10px;">
+          <div class="toggle-info">
+            <div class="toggle-title">Rush order?</div>
+            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
+        </div>
+        <div id="rush-badge"></div>
         </div>
         <div id="est-adjustments">
         <div class="sec">Adjustments</div>
@@ -1079,7 +1092,7 @@ body.no-smf .smf-col{display:none;}
           <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <div class="toggle-wrap" id="adj-heirs-wrap">
-          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to Transition Concierge hours only</div></div>
+          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to off-site coordination hours (about half of total concierge hours)</div></div>
           <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <!-- Premium estate and rush sit with the other adjustments because that is what
@@ -1319,14 +1332,11 @@ body.no-smf .smf-col{display:none;}
           </div>
         </div>
         <div id="discount-badge"></div>
-        <div class="toggle-wrap">
-          <div class="toggle-info">
-            <div class="toggle-title">Rush order?</div>
-            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div id="rush-badge"></div>
+        <!-- Rush moved UP to Schedule & Crew on 2026-08-03. It is a timing decision that
+             happens to cost money, and it was being made three scrolls away from the crew
+             size and the completion date it depends on. Its effect on the price still
+             lands here, on the summary directly above. -->
+        <div id="rush-mirror" style="margin-bottom:4px;"></div>
         <div class="toggle-wrap" id="fixed-toggle-wrap">
           <div class="toggle-info">
             <div class="toggle-title">Quote as a fixed price?</div>
@@ -1342,9 +1352,10 @@ body.no-smf .smf-col{display:none;}
           <div style="display:flex;align-items:center;gap:4px;">
             <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
             <input type="number" id="e-fixed-amount" min="0" step="100" value=""
-              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="calcAll()">
+              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="markFixedAmountEdited()">
           </div>
         </div>
+        <div id="fixed-price-drift"></div>
         <div id="fixed-price-warn" style="margin-top:6px;"></div>
       </div>
       </div>
@@ -3122,42 +3133,99 @@ function solveCrewForDays(targetDays) {
   return { crew: 6, days: Math.max(best.days, floor), achievable: false };
 }
 
+// Short date for the badges \u2014 "Aug 18" is what gets said out loud on site.
+function _tlDate(dstr, withYear) {
+  if (!dstr) return '';
+  var o = {month:'short', day:'numeric'};
+  if (withYear) o.year = 'numeric';
+  return new Date(dstr + 'T12:00:00').toLocaleDateString('en-US', o);
+}
+
+// The estimate's start date, as intake captured it. Everything the planner says is a
+// date rather than a count of working days, because a date is what a client asks for.
+function _plannerStart() {
+  var el = document.getElementById('e-start-date');
+  return (el && el.value) ? el.value : '';
+}
+
 function renderTimelinePlanner() {
   var wrap = document.getElementById('timeline-planner');
   if (!wrap) return;
   var e = _engineInputs;
   if (!e || !(e.workPool > 0)) { wrap.innerHTML = ''; return; }
-  var want = parseInt((document.getElementById('tp-target') || {}).value, 10);
+  var start = _plannerStart();
+  // Measure against what this estimate is actually selling \u2014 the assigned crew \u2014 not the
+  // engine's recommendation. They are the same number until somebody staffs the job
+  // differently, and it is exactly then that the difference matters.
+  var curDays = e.currentDays > 0 ? e.currentDays : e.naturalDays;
+  var curPS   = e.currentPS   > 0 ? e.currentPS   : e.naturalPS;
   var natural = '<div style="font-size:11.5px;color:var(--gray-dk);margin-bottom:6px;">'
-    + 'Natural pace: <strong>' + e.naturalDays + ' working days</strong> at '
-    + e.naturalPS + ' specialist' + (e.naturalPS === 1 ? '' : 's') + '.</div>';
+    + 'As staffed: <strong>' + curDays + ' working days</strong> at '
+    + curPS + ' specialist' + (curPS === 1 ? '' : 's')
+    + (start ? ' \u2014 done <strong>' + _tlDate(addWorkingDays(start, curDays), true) + '</strong>' : '')
+    + '.'
+    + (curPS !== e.naturalPS
+        ? ' <span style="color:var(--gray);">(' + e.naturalPS + ' specialists would take ' + e.naturalDays + '.)</span>'
+        : '')
+    + '</div>';
+
+  var targetEl = document.getElementById('tp-target');
+  var wantDate = targetEl ? targetEl.value : '';
   var out = '';
-  if (want > 0) {
-    var sol = solveCrewForDays(want);
-    if (!sol) out = '';
-    else if (want >= e.naturalDays) {
-      out = '<div class="alert a-ok" style="margin-top:0;font-size:11px;">Already inside that date at the natural crew \u2014 no expedite needed.</div>';
-    } else if (!sol.achievable) {
-      out = '<div class="alert a-err" style="margin-top:0;font-size:11px;"><strong>' + want + ' days is not reachable.</strong> '
-        + 'Six specialists is the cap and still needs <strong>' + sol.days + ' days</strong>. '
-        + 'Offer ' + sol.days + ' days, or reduce scope.</div>';
+  if (wantDate && !start) {
+    out = '<div class="alert a-warn" style="margin-top:0;font-size:11px;">No target start date on this job \u2014 set one in Client Intake and the planner can work back from the date the client asked for.</div>';
+  } else if (wantDate && start) {
+    // Working days from the start date to the date the client named. Same working-day
+    // arithmetic the timeline badge uses, so the two can never disagree.
+    var want = Math.round(workingDaysBetween(start, wantDate));
+    var wantFmt = _tlDate(wantDate, true);
+    if (wantDate <= start) {
+      out = '<div class="alert a-err" style="margin-top:0;font-size:11px;">' + wantFmt + ' is on or before the target start date. Move the start date, or the completion date.</div>';
     } else {
-      out = '<div class="alert a-warn" style="margin-top:0;font-size:11px;">'
-        + '<strong>' + sol.days + ' days with ' + sol.crew + ' specialists</strong> (from ' + e.naturalDays + ' at ' + e.naturalPS + '). '
-        + 'Applying this sets the crew and adds the ' + Math.round(RUSH_PCT * 100) + '% expedite premium \u2014 the summary below shows what it does to the price and the margin.'
-        + '<div style="margin-top:6px;"><button class="btn-s" style="font-size:11px;padding:4px 10px;" '
-        + 'onclick="applyTimelinePlan(' + sol.crew + ')">Apply \u2014 ' + sol.crew + ' specialists, ' + sol.days + ' days</button></div></div>';
+      var sol = solveCrewForDays(want);
+      if (!sol) out = '';
+      else if (want >= curDays) {
+        out = '<div class="alert a-ok" style="margin-top:0;font-size:11px;"><strong>Yes \u2014 ' + wantFmt + ' is comfortable.</strong> '
+          + 'The job finishes ' + _tlDate(addWorkingDays(start, curDays), true) + ' at the crew already assigned. '
+          + 'Nothing is being expedited, so <strong>do not tick rush</strong>.</div>';
+      } else if (!sol.achievable) {
+        out = '<div class="alert a-err" style="margin-top:0;font-size:11px;"><strong>' + wantFmt + ' is not reachable.</strong> '
+          + 'Six specialists is the cap and still needs <strong>' + sol.days + ' working days</strong> \u2014 '
+          + _tlDate(addWorkingDays(start, sol.days), true) + '. Offer that date, or reduce scope.</div>';
+      } else {
+        var hitDate = addWorkingDays(start, sol.days);
+        // The premium is only earned when the result is FASTER than the pace this job
+        // would run at the crew the engine recommends. Reaching the date by correcting an
+        // under-staffed crew is not an expedite \u2014 it is staffing the job properly \u2014 and
+        // charging 20% for it would be charging to undo our own under-staffing. This is
+        // also what keeps the planner and the rush badge from contradicting each other.
+        var _isExpedite = sol.days < e.naturalDays;
+        out = '<div class="alert a-warn" style="margin-top:0;font-size:11px;">'
+          + '<strong>Reachable \u2014 ' + _tlDate(hitDate, true) + ' with ' + sol.crew + ' specialists</strong> '
+          + '(' + sol.days + ' working days, from ' + curDays + ' at ' + curPS + '). '
+          + (_isExpedite
+              ? 'Faster than the ' + e.naturalDays + '-day pace at the recommended ' + e.naturalPS + ', so this is a genuine expedite \u2014 applying it sets the crew and adds the ' + Math.round(RUSH_PCT * 100) + '% premium.'
+              : 'This is still no faster than the ' + e.naturalDays + ' days at the recommended ' + e.naturalPS + ' specialists, so <strong>no premium applies</strong> \u2014 it is staffing the job properly, not expediting it.')
+          + '<div style="margin-top:6px;"><button class="btn-s" style="font-size:11px;padding:4px 10px;" '
+          + 'onclick="applyTimelinePlan(' + sol.crew + ',' + (_isExpedite ? 'true' : 'false') + ')">'
+          + (_isExpedite
+              ? 'Rush it \u2014 ' + sol.crew + ' specialists, done ' + _tlDate(hitDate) + ', +' + Math.round(RUSH_PCT * 100) + '%'
+              : 'Set crew to ' + sol.crew + ' \u2014 done ' + _tlDate(hitDate) + ', no premium')
+          + '</button></div></div>';
+      }
     }
   }
   wrap.innerHTML = natural + out;
 }
 
-// Drives the real controls rather than reporting its own figures.
-function applyTimelinePlan(crew) {
+// Drives the real controls rather than reporting its own figures, so the price always
+// comes out of the normal calculation. withRush is false when the date is reached by
+// correcting an under-staffed crew rather than by going faster than the default pace.
+function applyTimelinePlan(crew, withRush) {
   var sel = document.getElementById('ps-crew-size');
   if (sel) { sel.value = String(Math.min(6, Math.max(2, crew))); _crewUserSet = true; }
   var rush = document.getElementById('e-rush');
-  if (rush) rush.checked = true;
+  if (rush && withRush !== false) rush.checked = true;
   calcAll();
 }
 
@@ -3823,6 +3891,10 @@ var MAX_DISCOUNT_PCT = 15;
 // warns if it sits above what the scope needs.
 var _crewUserSet = false;
 
+// Same, for the concierge count. The engine raises it to 2 when the daily load says one
+// person cannot carry the schedule; once the estimator sets it by hand it is left alone.
+var _tc2UserSet = false;
+
 // Fixed-price toggle: on enable, prefill the amount from the latest suggested fee
 // (computed in calcAll's fixed-price panel) unless the manager already typed one.
 // "Prefill + override" — the prefilled number is fully editable afterward.
@@ -3842,8 +3914,32 @@ function toggleFixedPrice() {
   var amt = document.getElementById('e-fixed-amount');
   if (on && amt && (!amt.value || parseFloat(amt.value) <= 0) && window._fixedPriceSuggested) {
     amt.value = window._fixedPriceSuggested;
+    _fixedAmountUserSet = false;
   }
   if (row) row.style.display = on ? 'flex' : 'none';
+  calcAll();
+}
+
+// True once the manager types a fixed fee by hand. Until then the field TRACKS the
+// suggested fee instead of freezing at whatever the estimate happened to total the
+// instant the toggle was flipped.
+//
+// It froze before, and that is a client-document bug rather than a cosmetic one: the
+// prefill fired once, then crew size, room scores, adjustments, the premium toggle, the
+// discount and rush all kept moving the basis underneath it. A real estimate showed
+// $109,613 against a $77,620 services total — a 41% premium where the contingency is
+// 20%, because the toggle had been flipped when the total was ~$91,300 and the crew
+// changed afterwards. That number flows onto the client estimate, the agreement and
+// every invoice, so a stale prefill is money.
+var _fixedAmountUserSet = false;
+function markFixedAmountEdited() { _fixedAmountUserSet = true; calcAll(); }
+
+// Hand the field back to the tracker. Offered by the drift warning, so a stale fee is one
+// click from correct rather than a number to re-derive by hand.
+function resetFixedToSuggested() {
+  var amt = document.getElementById('e-fixed-amount');
+  if (amt && window._fixedPriceSuggested) amt.value = window._fixedPriceSuggested;
+  _fixedAmountUserSet = false;
   calcAll();
 }
 
@@ -3931,8 +4027,12 @@ function calcAll() {
 
   var _tcPill = document.getElementById('tc-rate-pill'); if (_tcPill) _tcPill.textContent = '$' + tcRate;
   var _psPill = document.getElementById('ps-rate-pill'); if (_psPill) _psPill.textContent = '$' + psRate;
-  document.getElementById('prem-badge').innerHTML = prem ?
-    '<div class="alert a-warn" style="margin-top:6px;">Premium rates active: TC $185/hr | PS $125/hr</div>' : '';
+  // The premium banner was removed 2026-08-03: it restated the toggle's own subtitle
+  // ("$185 TC / $125 PS rates") one line below it, and no other adjustment carries one.
+  // Element kept and guarded rather than deleted — cheaper than proving nothing else
+  // reaches for it.
+  var _premBadge = document.getElementById('prem-badge');
+  if (_premBadge) _premBadge.innerHTML = '';
 
   // Warn if property value not set
   var propValWarnEl = document.getElementById('propval-warn');
@@ -4083,9 +4183,15 @@ function calcAll() {
     if (heirsBakedIn) heirsEl.checked = false;
   }
   if (heirsWrapEl) heirsWrapEl.style.opacity = heirsBakedIn ? '0.55' : '';
+  // "Adds 20% to Transition Concierge hours only" was misleading and got reported as a
+  // bug: the uplift IS a full 20%, but of baseTCHrs, which is the OFF-SITE COORDINATION
+  // pool — not total concierge hours. Total TC is on-site presence plus off-site
+  // coordination, so 20% of the off-site half lands as roughly 10% on the total TC line,
+  // and a reader checking the summary concludes the app is applying half of what it
+  // promised. Name the pool it actually lifts.
   if (heirsSubEl) heirsSubEl.textContent = heirsBakedIn
     ? 'Built into contested-probate rates — no separate uplift'
-    : 'Adds 20% to Transition Concierge hours only';
+    : 'Adds 20% to off-site coordination hours (about half of total concierge hours)';
   var heirs = heirsEl ? heirsEl.checked : false;
   // ── ADJUSTMENT ROUTING (working-supervisor model) ──────────────────────────────
   // Difficult access is physical difficulty: it makes the hands-on work take longer,
@@ -4177,7 +4283,6 @@ function calcAll() {
   // after the crew has already been chosen.
   // Coverage flag: what intake says the property has against what has been scored.
   renderCoverageBadge(roomMeta.map(function(r){ return r.name; }));
-  renderTimelinePlanner();
 
   var _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, 0, colOnsiteTC);
   var _recommendedPS = _sup.requiredPS;
@@ -4188,8 +4293,18 @@ function calcAll() {
   _engineInputs = { workPool: workPool, coordTC: coordTC, svcKey: svcKey,
                     colOnsiteTC: colOnsiteTC, naturalPS: _recommendedPS,
                     naturalDays: Math.max(_sup.days, ENGINE_FLOOR[svcKey] || 2) };
-  var _actualPS = Math.max(getScheduledPSCount(), _recommendedPS);
-  if (!isPrep && _actualPS > _recommendedPS) {
+  // The crew you picked is the crew that is costed — above OR below the recommendation.
+  // This used to be Math.max(scheduled, recommended), which made the recommendation an
+  // undisclosed FLOOR: choosing 4 against a recommended 6 changed nothing at all, and the
+  // badge then honestly reported the 6 it had used against a dropdown still reading 4.
+  // Two numbers for one crew, on screen at the same time. A smaller crew is a legitimate
+  // answer — it takes longer, which is what the timeline badge is for — so let it through
+  // and let the badges say what it costs in days.
+  //
+  // Only once the estimator has actually chosen, though: before that the dropdown is
+  // still being tracked to the recommendation and its interim value means nothing.
+  var _actualPS = _crewUserSet ? getScheduledPSCount() : _recommendedPS;
+  if (!isPrep && _actualPS !== _recommendedPS) {
     _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, _actualPS, colOnsiteTC);
   }
   var tcOnsiteHrs = isPrep ? 0 : _sup.onsiteTC;
@@ -4279,7 +4394,9 @@ function calcAll() {
     curPS = getScheduledPSCount();
     crewDays = Math.round(basePSHrs / (8 * Math.max(1, curPS)) * 10) / 10;
   }
-  crewSize = Math.max(curPS, crew.requiredPS);
+  // The chosen crew, full stop — see the _actualPS note above. Was
+  // Math.max(curPS, crew.requiredPS), the second half of the undisclosed floor.
+  crewSize = curPS;
   // The destination (move-in) day is additive on top of the origin-property calendar.
   var _mobFloor  = ENGINE_FLOOR[svcKey] || 2;
   daysNeeded = isPrep ? 0 : Math.max(crew.days, destPS > 0 ? crew.days + Math.ceil(destPS / (crewSize * PRODUCTIVE_HRS_PER_DAY)) : 0, _mobFloor);
@@ -4295,19 +4412,42 @@ function calcAll() {
   // on-site presence plus off-site coordination past TC_DAY_CAP hours/day. Contested
   // probate and heavy-documentation estates are what trip this, which is correct.
   var tc2Hint = document.getElementById('e-tc2-hint');
-  var tc2Box = document.getElementById('e-needs-tc2');
-  // Tick it for them when the load says so, exactly as the specialist boxes are ticked
-  // to the recommended crew. Still overridable either way.
-  if (tc2Box && crew.tcCount >= 2 && !tc2Box.checked) tc2Box.checked = true;
+  var tc2Sel = document.getElementById('e-tc-count');
+  // Track the recommendation until the estimator picks, exactly as the specialist
+  // dropdown does. Was a checkbox the engine could only ever tick ON — so a scope that
+  // stopped needing two concierges kept the second one, and the hint below then argued
+  // for a recommendation that had gone away.
+  if (tc2Sel && !_tc2UserSet) tc2Sel.value = String(crew.tcCount >= 2 ? 2 : 1);
+  var _tc2Chosen = tc2Sel ? (parseInt(tc2Sel.value, 10) || 1) : 1;
   if (tc2Hint) {
-    if (crew.tcCount >= 2) {
-      tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">Engine recommends 2 concierges for this scope</span> — '
+    if (crew.tcCount >= 2 && _tc2Chosen >= 2) {
+      tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">2 concierges recommended</span> — '
         + crew.tcLoad.toFixed(1) + ' concierge hrs/day across ' + daysNeeded + ' working days is more than one person can carry. Name them on the Job Plan once the job is Won.';
-    } else if (tc2Box && tc2Box.checked) {
+    } else if (crew.tcCount >= 2 && _tc2Chosen < 2) {
+      // Chosen below the recommendation. Unlike the specialist crew this changes no
+      // number at all, so the only honest thing to report is the working day it implies.
+      tc2Hint.innerHTML = '<span style="color:var(--err-tx);font-weight:600;">1 concierge assigned, 2 recommended</span> — '
+        + crew.tcLoad.toFixed(1) + ' hrs/day for one person across ' + daysNeeded + ' working days. The fee and the timeline do not change; somebody works a 12-hour day.';
+    } else if (_tc2Chosen >= 2) {
       tc2Hint.textContent = 'The Job Plan roster will ask for a second concierge. Billing is total TC hours split between them, so a second concierge changes neither the fee nor the duration — it makes the schedule coverable without one person carrying 12-hour days.';
     } else {
       tc2Hint.textContent = '';
     }
+  }
+  // What this estimate ACTUALLY delivers, as staffed — which is not the same thing as the
+  // engine's recommendation now that a crew below it is honoured. The planner has to
+  // measure the client's date against the schedule being quoted, or it answers about a
+  // job nobody is selling: at 2 specialists against a recommended 6 it said "finishes
+  // Aug 20" while the badge beside it said Sep 9.
+  //
+  // Populated HERE, and the planner rendered after the badge, because both need the final
+  // daysNeeded — which is not known until the mobilization floor and any move-management
+  // destination day have been folded in.
+  if (_engineInputs) {
+    _engineInputs.currentDays = daysNeeded;
+    _engineInputs.currentPS   = crewSize;
+    _engineInputs.startStr    = jobStartStr || '';
+    _engineInputs.hasScope    = includedRoomCount > 0;
   }
   if (timelineBadge) {
     if (isPrep) {
@@ -4330,8 +4470,12 @@ function calcAll() {
       var crewNote = tcNote + ' + ' + (_recommendedPS <= 2
         ? '2 PS'
         : '<strong>' + _recommendedPS + ' PS recommended</strong>');
-      var assigned = Math.max(getScheduledPSCount(), _recommendedPS);
-      if (assigned > _recommendedPS) crewNote += ', ' + assigned + ' assigned';
+      // The crew actually assigned, not the larger of the two. It was
+      // Math.max(scheduled, recommended), which could only ever report a crew ABOVE the
+      // recommendation — so a job deliberately run with 2 specialists against a
+      // recommended 6 printed "6 PS recommended" and never said what was staffed.
+      var assigned = crewSize;
+      if (assigned !== _recommendedPS) crewNote += ', <strong>' + assigned + ' assigned</strong>';
       // Past the internal 10-day preference. Worth an amber badge only when something can
       // still be done about it — that is, when there is crew headroom left. Once the crew
       // is maxed the duration is simply what the property is, and an amber on every large
@@ -4351,6 +4495,11 @@ function calcAll() {
       }
     }
   }
+  // Rendered here, after the badge it sits under and after daysNeeded is final. It used
+  // to run at the top of the crew section, above the solve, so it showed the PREVIOUS
+  // recalculation's figures — toggling difficult access moved the crew badge and left the
+  // planner a pass behind, which read as two day counts moving in opposite directions.
+  renderTimelinePlanner();
 
   var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
 
@@ -4445,10 +4594,38 @@ function calcAll() {
     if (sRushLbl) sRushLbl.textContent = 'Expedited delivery (' + Math.round(RUSH_PCT * 100) + '%)';
     if (sRushAmt) sRushAmt.textContent = '+ $' + rushAmt.toLocaleString();
   }
+  // Rush badge — states the COMPRESSION being charged for, not just the money. The
+  // premium is defensible when the crew was scaled up to pull a date in; it is not when
+  // the job is running the schedule it was always going to run. Both cases used to
+  // render the same neutral "adding $X" line, so the second was invisible.
   var rushBadge = document.getElementById('rush-badge');
+  var _natDaysRef = (_engineInputs && _engineInputs.naturalDays) || 0;
+  var _compressed = _natDaysRef > 0 && daysNeeded < _natDaysRef;
+  var _rushEndFmt = (isRush && jobStartStr && daysNeeded > 0)
+    ? _tlDate(addWorkingDays(jobStartStr, daysNeeded), true) : '';
   if (rushBadge) {
-    rushBadge.innerHTML = rushAmt > 0
-      ? '<div style="background:var(--tan);border-radius:4px;padding:5px 10px;font-size:12px;color:var(--bronze);font-weight:600;">Rush order — adding ' + fmt(rushAmt) + ' (' + Math.round(RUSH_PCT * 100) + '% of Havellin services)</div>'
+    if (rushAmt <= 0) {
+      rushBadge.innerHTML = '';
+    } else if (_compressed) {
+      rushBadge.innerHTML = '<div class="alert a-ok" style="margin-top:6px;font-size:11px;">'
+        + '<strong>Expedited — ' + daysNeeded + ' working days instead of ' + _natDaysRef + '</strong>'
+        + (_rushEndFmt ? ', done <strong>' + _rushEndFmt + '</strong>' : '')
+        + '. Premium of ' + fmt(rushAmt) + ' (' + Math.round(RUSH_PCT * 100) + '% of Havellin services).</div>';
+    } else {
+      rushBadge.innerHTML = '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">'
+        + '<strong>Rush is on, but nothing is compressed.</strong> This job runs ' + daysNeeded
+        + ' working days at ' + crewSize + ' specialist' + (crewSize === 1 ? '' : 's')
+        + ' — the same schedule it would run without the premium'
+        + (_rushEndFmt ? ', finishing ' + _rushEndFmt : '') + '. '
+        + 'You are adding ' + fmt(rushAmt) + ' for no change in delivery. Raise the crew to pull the date in, or untick this.</div>';
+    }
+  }
+  // The premium lands on the summary above the price levers, but the toggle now lives up
+  // in Schedule & Crew — so say so here rather than leaving the line unexplained.
+  var _rushMirror = document.getElementById('rush-mirror');
+  if (_rushMirror) {
+    _rushMirror.innerHTML = rushAmt > 0
+      ? '<div style="font-size:11px;color:var(--bronze);">Expedited delivery is on — <strong>+' + fmt(rushAmt) + '</strong>. Set it under <em>Schedule &amp; Crew</em> at the top.</div>'
       : '';
   }
 
@@ -4480,7 +4657,23 @@ function calcAll() {
     var _fxRow = document.getElementById('fixed-amount-row');
     if (_fxRow) _fxRow.style.display = 'none';
   }
-  var fixedAmount = isFixed ? Math.round(parseFloat(document.getElementById('e-fixed-amount') ? document.getElementById('e-fixed-amount').value : 0) || 0) : 0;
+  // The suggested fee, computed here rather than inside the panel block below, because
+  // the field TRACKS it until the manager types a number and so has to be resolved before
+  // fixedAmount is read. Probate / contested keep their own reference buffer.
+  var _fpBuf  = fixedPriceBuffer(svcKey);
+  var _fpFee  = Math.round(havellinTotalDiscounted * (1 + _fpBuf));
+  window._fixedPriceSuggested = _fpFee;
+  var _fxAmtEl = document.getElementById('e-fixed-amount');
+  if (isFixed && _fxAmtEl && !_fixedAmountUserSet && _fpFee > 0) {
+    // Not typed by hand yet, so it is still a prefill — keep it current with the estimate
+    // instead of freezing it at whatever the total was when the toggle was flipped.
+    if (Math.round(parseFloat(_fxAmtEl.value) || 0) !== _fpFee) _fxAmtEl.value = _fpFee;
+  }
+  var fixedAmount = isFixed ? Math.round(parseFloat(_fxAmtEl ? _fxAmtEl.value : 0) || 0) : 0;
+  // Cleared here and repopulated only by the fixed-price branch below, so it can never
+  // survive the toggle being switched off.
+  var _fpDriftClear = document.getElementById('fixed-price-drift');
+  if (_fpDriftClear) _fpDriftClear.innerHTML = '';
 
   var fpPanel = document.getElementById('fixed-price-panel');
   var fpLabel = document.getElementById('fixed-price-label');
@@ -4493,19 +4686,16 @@ function calcAll() {
       // fixed-price quote WOULD run, with the contingency buffer, as an internal manager
       // reference — this panel is on the Build Estimate tab only, never on the
       // client-facing document, and it does not change the billing.
-      var _refBuf = fixedPriceBuffer(svcKey);
-      var _refFixed = Math.round(havellinTotalDiscounted * (1 + _refBuf));
-      window._fixedPriceSuggested = _refFixed;
+      var _refBuf = _fpBuf;
+      var _refFixed = _fpFee;
       if (fpLabel) fpLabel.textContent = 'Time & materials — billed on actual logged hours';
       if (fpVal)   fpVal.textContent   = '$' + Math.round(havellinTotalDiscounted).toLocaleString();
       if (fpNote)  fpNote.innerHTML    = 'The final invoice bills actual TC + PS hours, itemized for the Personal Representative and court — no fixed-price contingency, vendor costs at cost. '
         + '<span style="color:var(--gray-dk);">Internal reference: a fixed-price quote would run <strong>$' + _refFixed.toLocaleString() + '</strong> (incl. ' + Math.round(_refBuf * 100) + '% contingency).</span>';
     } else {
-      var buf = fixedPriceBuffer(svcKey);
       // The expedited premium is already inside havellinTotalDiscounted, so it carries
       // into the suggested fixed fee without being applied a second time here.
-      var fpFee = Math.round(havellinTotalDiscounted * (1 + buf));
-      window._fixedPriceSuggested = fpFee;
+      var buf = _fpBuf, fpFee = _fpFee;
       if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services × ' + Math.round(buf * 100) + '% contingency';
       if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
       if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
@@ -4518,8 +4708,25 @@ function calcAll() {
       var _delta = fixedAmount - _hrlyRef;
       if (fpLabel) fpLabel.textContent = 'Fixed price for this quote (client-facing)';
       if (fpVal)   fpVal.textContent   = '$' + fixedAmount.toLocaleString();
+      // Effective markup over the hourly basis, so a fee that has drifted away from the
+      // contingency is readable as a number rather than left to be worked out.
+      var _effPct = _hrlyRef > 0 ? Math.round((fixedAmount / _hrlyRef - 1) * 100) : 0;
       if (fpNote)  fpNote.innerHTML    = 'This flat fee replaces hourly billing on the client estimate, agreement, and invoices. '
-        + 'Underlying hourly basis: $' + _hrlyRef.toLocaleString() + ' (' + (_delta >= 0 ? '+' : '') + '$' + _delta.toLocaleString() + ' vs. fixed). Vendor costs remain pass-through at cost.';
+        + 'Underlying hourly basis: $' + _hrlyRef.toLocaleString() + ' (' + (_delta >= 0 ? '+' : '') + '$' + _delta.toLocaleString()
+        + ' vs. fixed, <strong>' + (_effPct >= 0 ? '+' : '') + _effPct + '%</strong>). Vendor costs remain pass-through at cost.'
+        + (_fixedAmountUserSet ? '' : ' <em>Tracking the suggested fee — type a number to set it by hand.</em>');
+      // A hand-typed fee does not retrack, by design. But the basis under it keeps moving,
+      // so say when the two have parted company rather than letting a stale number ride
+      // onto a client document. 2 points of slack absorbs the rounding.
+      var _fpDriftEl = document.getElementById('fixed-price-drift');
+      if (_fpDriftEl) {
+        _fpDriftEl.innerHTML = (_fixedAmountUserSet && _fpFee > 0 && Math.abs(_effPct - Math.round(_fpBuf * 100)) > 2)
+          ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">This fixed fee is <strong>' + (_effPct >= 0 ? '+' : '') + _effPct + '%</strong> over the hourly basis, '
+            + 'where the contingency for this service is ' + Math.round(_fpBuf * 100) + '%. The estimate has moved since you set it — '
+            + 'the suggested fee is now <strong>$' + _fpFee.toLocaleString() + '</strong>. '
+            + '<button class="btn-s" style="font-size:11px;padding:3px 9px;margin-left:6px;" onclick="resetFixedToSuggested()">Use $' + _fpFee.toLocaleString() + '</button></div>'
+          : '';
+      }
     }
   } else if (fpPanel) {
     fpPanel.style.display = 'none';
@@ -4599,6 +4806,16 @@ function calcAll() {
         + dailyHrsPerPS + ' hrs/day each over ' + effectiveDays + ' days. The extra specialist shortens the job, '
         + 'so the concierge is on site less and the estimate is lower than it would be at ' + _recommendedPS + ' PS. '
         + 'Drop back to ' + _recommendedPS + ' unless simultaneous handling is genuinely required.';
+    } else if (crewSize < _recommendedPS) {
+      // A smaller crew than recommended is allowed and is costed as chosen — it just
+      // takes longer. Say how much longer, in days, because that is the whole trade and
+      // it is the number the client will ask about.
+      var _natDays = (_engineInputs && _engineInputs.naturalDays) || daysNeeded;
+      effClass = 'a-warn';
+      effMsg = crewSize + ' PS assigned, ' + _recommendedPS + ' recommended — the job runs '
+        + '<strong>' + daysNeeded + ' working days</strong> instead of ' + _natDays
+        + '. Costed at ' + crewSize + ', so the fee is higher and the calendar is longer. '
+        + 'Go back to ' + _recommendedPS + ' unless the smaller crew is a real constraint.';
     } else if (dailyHrsPerPS < 3 && crewSize > 2) {
       effClass = 'a-warn';
       effMsg = crewSize + ' PS assigned — each averages ' + dailyHrsPerPS + ' hrs/day over ' + effectiveDays + ' days. Consider reducing to ' + (crewSize - 1) + ' PS unless simultaneous handling is required.';
@@ -4679,7 +4896,10 @@ function calcAll() {
     // Kept in the shape older records use so every reader stays valid; a new estimate
     // never names the second concierge, it only records that the scope needs one.
     preparedBy2: '',
-    needsTC2: !!(document.getElementById('e-needs-tc2') && document.getElementById('e-needs-tc2').checked),
+    // Was a checkbox; now the Concierges dropdown. Same boolean on the record, so every
+    // reader downstream (the Job Plan roster at showTC2) is untouched.
+    needsTC2: (function(){ var _t = document.getElementById('e-tc-count');
+                           return !!(_t && (parseInt(_t.value, 10) || 1) >= 2); })(),
     tcCount: crew.tcCount || 1,
     destTC: typeof destTC !== 'undefined' ? destTC : 0,
     destPS: typeof destPS !== 'undefined' ? destPS : 0,
@@ -5523,6 +5743,13 @@ function applyOpenedEstimate(jobId, job, status) {
   var _crewReset = document.getElementById('ps-crew-size');
   if (_crewReset) _crewReset.value = '2';
   _crewUserSet = false;
+  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
+  // not inherit a previous job's manual choices, which is the whole reason these flags
+  // exist. Missing one leaves the next estimate silently pinned to the last one.
+  var _tcReset = document.getElementById('e-tc-count');
+  if (_tcReset) _tcReset.value = '1';
+  _tc2UserSet = false;
+  _fixedAmountUserSet = false;
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
@@ -5550,6 +5777,13 @@ function clearEstimateTab() {
   var _crewReset = document.getElementById('ps-crew-size');
   if (_crewReset) _crewReset.value = '2';
   _crewUserSet = false;
+  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
+  // not inherit a previous job's manual choices, which is the whole reason these flags
+  // exist. Missing one leaves the next estimate silently pinned to the last one.
+  var _tcReset = document.getElementById('e-tc-count');
+  if (_tcReset) _tcReset.value = '1';
+  _tc2UserSet = false;
+  _fixedAmountUserSet = false;
   clearAllRooms();
   collectionsData = [];
   renderCollections();
@@ -5735,6 +5969,13 @@ function resetEstimate() {
   var _crewReset = document.getElementById('ps-crew-size');
   if (_crewReset) _crewReset.value = '2';
   _crewUserSet = false;
+  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
+  // not inherit a previous job's manual choices, which is the whole reason these flags
+  // exist. Missing one leaves the next estimate silently pinned to the last one.
+  var _tcReset = document.getElementById('e-tc-count');
+  if (_tcReset) _tcReset.value = '1';
+  _tc2UserSet = false;
+  _fixedAmountUserSet = false;
   vendors=[]; renderVendors(); calcAll();
 }
 
@@ -7099,6 +7340,9 @@ function restoreEstimateToUI(est) {
   if (fxEl) fxEl.checked = !!est.fixedPrice;
   if (fxAmtEl) fxAmtEl.value = est.fixedPrice ? (est.fixedAmount || est.havellinTotal || '') : '';
   if (fxRow) fxRow.style.display = est.fixedPrice ? 'flex' : 'none';
+  // A saved flat fee is a price that was agreed, not a prefill — hold it, and let the
+  // drift warning say so if the basis has moved underneath it since.
+  _fixedAmountUserSet = !!est.fixedPrice;
 
   // Restore the hours-affecting adjustment toggles from the saved estimate. Without
   // this, the recompute on open drops the +15% difficult-access / +20% multiple-heirs
@@ -7137,8 +7381,11 @@ function restoreEstimateToUI(est) {
     // Restore the optional second concierge
     // An estimate saved before this named a person; the surviving fact is that it wanted
     // two, so a legacy name reads as the flag being set.
-    var needsTC2El = document.getElementById('e-needs-tc2');
-    if (needsTC2El) needsTC2El.checked = !!(est.needsTC2 || est.preparedBy2);
+    var needsTC2El = document.getElementById('e-tc-count');
+    if (needsTC2El) needsTC2El.value = (est.needsTC2 || est.preparedBy2) ? '2' : '1';
+    // A saved estimate carries a decision that was already made, so hold it rather than
+    // letting the engine re-derive it — same treatment the crew size gets below.
+    _tc2UserSet = true;
   }
 
 
@@ -7150,6 +7397,12 @@ function restoreEstimateToUI(est) {
     var _savedPS = Math.min(6, Math.max(2, est.psSlots.length || 2));
     var _crewEl = document.getElementById('ps-crew-size');
     if (_crewEl) _crewEl.value = String(_savedPS);
+    // Hold the crew that was saved. Without this the tracker treats a reopened estimate
+    // as untouched and re-sizes it to the current recommendation — quietly repricing a
+    // quote that may already be in front of a client. It mattered less when the crew was
+    // floored at the recommendation; now that a smaller crew really is costed smaller,
+    // it would move the number in both directions.
+    _crewUserSet = true;
   }
 
   // Restore crew reason
