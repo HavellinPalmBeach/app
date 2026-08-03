@@ -651,6 +651,14 @@ body.no-smf .smf-col{display:none;}
 .vgrp-title{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--bronze);margin-bottom:6px;}
 @media (max-width:1100px){.vgrp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:700px){.vgrp-grid{grid-template-columns:1fr;}}
+/* The three adjustment toggles, across the page. min-width:0 for the usual reason — a
+   1fr track's auto floor is min-content, and these subtitles are long enough to push the
+   track wider than its share. align-items:stretch so the three boxes match height however
+   many lines each subtitle wraps to. */
+.adj-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:stretch;}
+.adj-grid>*{min-width:0;}
+.adj-grid .toggle-wrap{height:100%;margin:0;}
+@media (max-width:900px){.adj-grid{grid-template-columns:1fr;}}
 /* Two cards abreast. Same min-width:0 reasoning as the room grid — each of these holds
    a fixed-column table, and a 1fr track's auto floor is min-content. */
 .est-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:start;margin-top:1rem;}
@@ -665,7 +673,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:59am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 11:08am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1085,22 +1093,40 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div id="rush-badge"></div>
         </div>
-        <div id="est-adjustments">
-        <div class="sec">Adjustments</div>
-        <div class="toggle-wrap">
-          <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to the hands-on work pool — lengthens the job, so concierge hours follow</div></div>
-          <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <div class="toggle-wrap" id="adj-heirs-wrap">
-          <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to off-site coordination hours (about half of total concierge hours)</div></div>
-          <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
-        </div>
-        <!-- Premium estate and rush sit with the other adjustments because that is what
-             they are. Both are PRICE decisions though, so they stay desk-only — field
-             mode's rule is that the phone captures what you can only learn in the house
-             and the desk decides everything about price. -->
-        <div id="adj-pricing">
-                <div class="toggle-wrap">
+      <!-- Price levers sit directly above the totals they move, so the effect is on the
+           same screen as the cause. They used to live up in the crew column, three
+           scrolls from any number they changed. -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ADJUSTMENTS — its own full-width card, three across.
+       It used to sit in the right-hand column under Schedule & Crew, where three stacked
+       toggles ran the column far past the left one and left the dead white block beside
+       them. Across the page each toggle gets room for its subtitle on one or two lines
+       instead of four.
+       Also fixes a field-mode bug it had inherited: the phone rule is that difficult
+       access and heirs STAY (you cannot learn them again from the desk) while every price
+       decision goes. But #est-adjustments was nested inside #est-crew-col, which field
+       mode hides wholesale, so those two were being hidden along with it. Out here they
+       are visible on the phone again, and #adj-pricing keeps its own rule so the premium
+       rate toggle stays desk-only. -->
+  <div class="card" style="margin-bottom:1rem;" id="est-adjustments">
+    <div class="sec">Adjustments</div>
+    <div class="adj-grid">
+      <div class="toggle-wrap">
+        <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to the hands-on work pool — lengthens the job, so concierge hours follow</div></div>
+        <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-wrap" id="adj-heirs-wrap">
+        <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to off-site coordination hours (about half of total concierge hours)</div></div>
+        <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
+      </div>
+      <!-- Premium estate is a PRICE decision, so it keeps its own wrapper and stays
+           desk-only — field mode's rule is that the phone captures what you can only
+           learn in the house and the desk decides everything about price. -->
+      <div id="adj-pricing">
+        <div class="toggle-wrap" style="height:100%;">
           <div class="toggle-info">
             <div class="toggle-title">Premium estate?</div>
             <div class="toggle-sub">$185 TC / $125 PS rates — rate only, hours unchanged</div>
@@ -1108,11 +1134,6 @@ body.no-smf .smf-col{display:none;}
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
         <div id="prem-badge"></div>
-        </div>
-        </div>
-      <!-- Price levers sit directly above the totals they move, so the effect is on the
-           same screen as the cause. They used to live up in the crew column, three
-           scrolls from any number they changed. -->
       </div>
     </div>
   </div>
