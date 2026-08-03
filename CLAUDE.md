@@ -39,6 +39,38 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## LIVING client vs DECEASED client — the rule every document obeys (2026-08-03)
+**Anthony: "there should be a rule about the language for projects when the client is alive
+versus when the client is deceased… applied to estimates and engagement agreements
+accordingly."** It is now one predicate, `isDecedentJob(job, svcKey)`, and both documents read it.
+
+| | LIVING owner | DECEASED owner |
+|---|---|---|
+| Who we address | the owner | the **representative** — executor, PR, trustee, attorney |
+| The property | *"your home"* | *"the property"* — never theirs |
+| What sets the pace | their decisions, room by room | our cataloguing; they need not attend |
+| What governs disposition | preference | the **will**, via the representative |
+| Before anything moves | a confirmed keep list | **written authority**, after they read the inventory |
+| Heirs on site | they are the client | courtesy, and **no instruction taken from them** |
+
+- **Service type settles it in almost every case, but not always** — and that gap is the whole
+  reason the predicate exists. A **Home Cleanout is routinely a just-died house** and prices no
+  documentation step, so a service-type test called it a living-owner job. A recorded
+  **date of death** or **authorised representative** now settles it too.
+- **KEEP VOICE SEPARATE FROM PRICING.** `JOB_STEPS[svc].document` answers *does a documentation
+  stage exist* — it is what the client is being charged for. `isDecedentJob` answers *who are we
+  writing to*. A decedent Home Cleanout is addressed to the representative **without** claiming a
+  court-grade inventory it is not selling. Its stage 2 is `Sorting & Inventory`, not
+  `Sorting, Documentation & Inventory`.
+- **THE AGREEMENT ROUTING CHANGED, and it is a real behaviour change.** It named four service
+  types, so a Home Cleanout of a deceased owner's home got the **standard agreement — written
+  throughout to a living owner of their own property**. It now routes on the predicate.
+  ⚠️ **A decedent cleanout will now generate the estate-form agreement.** Confirm that is what
+  Anthony wants before a real one goes out.
+- `showEditClient` **deliberately still tests service type** — it decides which form FIELDS to
+  show, and the executor field is what sets the predicate. Gating it on the predicate is circular.
+- 18 checks on the predicate and its two consumers.
+
 ## Writing client-facing copy — the standing rule (Anthony, 2026-08-03)
 **If a line explains something the reader can already see, or explains why something is
 *not* there, it is costing you rather than earning.** Cut it. This applies to the client

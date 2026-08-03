@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 8:02pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4079,6 +4079,38 @@ function isTMOnly(svcKey) {
   return svcKey === 'probate' || svcKey === 'contested_probate';
 }
 
+// ─── LIVING CLIENT vs DECEASED CLIENT ────────────────────────────────────────
+// THE RULE, and every client-facing document must obey it: the person we are
+// writing to is either the OWNER, alive and standing in their own house, or the
+// REPRESENTATIVE of someone who has died. Those are different documents.
+//
+//   LIVING   — address the owner. It is "your home". The pace is set by their
+//              decisions, room by room. They confirm a keep list. They attend.
+//   DECEASED — address the representative (executor, PR, trustee, attorney).
+//              It is "the property", never theirs. The WILL governs disposition,
+//              not preference. We catalogue first and hand the inventory over;
+//              nothing moves without their WRITTEN authority; heirs on site get
+//              courtesy and no instruction is taken from them. They need not attend.
+//
+// Service type settles it in almost every case, but NOT always: a Home Cleanout is
+// routinely the house of someone who has just died, and it prices no documentation
+// step. So a recorded date of death or an authorised representative settles it too —
+// that is what stops a decedent cleanout being addressed to a dead man.
+//
+// KEEP THIS SEPARATE FROM "does this job price a documentation step". That question
+// is answered by JOB_STEPS and decides whether a documentation STAGE exists at all.
+// This one only decides the VOICE. A decedent Home Cleanout is written to the
+// representative without ever claiming a court-grade inventory it is not selling.
+var DECEDENT_SERVICES = { cleanout:1, probate:1, contested_probate:1 };
+function isDecedentJob(job, svcKey) {
+  var svc = svcKey || (job && (job.svc || job.serviceType)) || '';
+  if (DECEDENT_SERVICES[svc]) return true;
+  if (!job) return false;
+  if (job.deathDate) return true;
+  if (job.executor && String(job.executor).trim()) return true;
+  return false;
+}
+
 // ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
 // Contingency buffer added on top of the hourly estimate for fixed-price proposals.
 // Probate and contested probate keep a buffer figure because the panel still shows what
@@ -6564,7 +6596,10 @@ function _cePhases(e, job) {
   var isPrep       = svc === 'prep';
   var isProbate    = svc === 'probate' || svc === 'contested_probate';
   var isContested  = svc === 'contested_probate';
-  var hasDoc       = !!steps.document;                       // documentation is priced
+  var hasDoc       = !!steps.document;                       // documentation is PRICED (stage exists)
+  // VOICE, not pricing — see isDecedentJob. A Home Cleanout of a deceased owner's
+  // home prices no documentation step but must still address the representative.
+  var isDeceased   = (typeof isDecedentJob === 'function') ? isDecedentJob(job, svc) : !!steps.document;
   var hasLegal     = !!steps.legal;                          // court/legal work is priced
   var hasDisp      = !!steps.disposition;                    // outbound disposition streams
   var deep         = (typeof isFormalDoc === 'function') ? isFormalDoc(job) : false;
@@ -6626,7 +6661,7 @@ function _cePhases(e, job) {
   // attend. Heirs may well be on site; we are courteous to them and take direction
   // from none of them. Saying that plainly is what the representative wants to read.
   var beforeBody;
-  if (hasDoc) {
+  if (isDeceased) {
     beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through how the engagement will run — the sequence, who will be on site, and what comes back to you and when. We confirm access, parking and any building or association rules, and brief the crew on the property before anyone arrives. We also confirm authority: a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.'
       + ' <strong>We work for you.</strong> If family members or beneficiaries will be at the property while we are there, tell us who to expect — we will be courteous to everyone present, but we take direction from you alone and nothing is released to anyone without your written authority.';
   } else if (isDownsizing) {
@@ -6637,12 +6672,12 @@ function _cePhases(e, job) {
   // The old standalone "What We Need From You" block lived here as a fourth section
   // and mostly repeated these per-phase asks. Folded in: access and the multi-party
   // point belong at the start, decisions belong to the sorting stage.
-  var beforeNeed = hasDoc
+  var beforeNeed = isDeceased
     ? 'A signed engagement agreement, the deposit, and a certified copy of the Letters of Administration or Testamentary, with any limits on that authority noted in writing. If particular items are designated to particular people, we need that list from you or from counsel before anything is handled — we do not need the will itself.'
     : 'A signed engagement agreement, the deposit, and one named person who can make the final call on what stays and what goes.';
   beforeNeed += ' Keys or codes, parking, and any building, HOA or elevator rules, confirmed before the first day.';
   if (e.heirs) {
-    beforeNeed += hasDoc
+    beforeNeed += isDeceased
       ? ' Several interested parties are involved on this matter — the estimate accounts for that coordination. We still take instruction from you alone; tell us how you want questions from anyone else routed.'
       : ' Several people are involved in decisions here — the estimate accounts for that coordination, but we need one point of contact who speaks for the group.';
   }
@@ -6665,13 +6700,14 @@ function _cePhases(e, job) {
   // not preference. Nothing is sold or removed at this stage at all: we catalogue,
   // and the inventory goes to the representative and counsel. Writing the
   // downsizing ask onto an estate document described a job that is not happening.
-  var sortTitle = hasDoc ? 'Sorting, Documentation &amp; Inventory' : 'Sorting &amp; Decisions';
+  var sortTitle = hasDoc ? 'Sorting, Documentation &amp; Inventory'
+                : isDeceased ? 'Sorting &amp; Inventory' : 'Sorting &amp; Decisions';
   var sortBody, sortNeed, sortDone;
   if (isDownsizing) {
     sortBody = 'We work alongside you, one room at a time, in the same order the estimate lists them. Every item is sorted into keep, sell, donate, or dispose — and nothing is decided for you. Property Specialists do the handling and the lifting so you are making decisions rather than moving furniture, and your Transition Concierge keeps the plan moving room to room.';
     sortNeed = 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.';
     sortDone = 'A room is complete when every item in it has been routed and the keep list is confirmed with you in writing.';
-  } else if (hasDoc) {
+  } else if (isDeceased) {
     sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, property that may be claimed as exempt is flagged for your attention, and anything that may carry real value is held for the appropriate specialist before it moves. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
     sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The inventory comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = deep
@@ -6693,7 +6729,7 @@ function _cePhases(e, job) {
 
   // ── Phase 3 · Packing / disposition ─────────────────────────────────────────
   var dispBody, dispTitle, dispNeed, dispDone;
-  if (hasDisp && hasDoc) {
+  if (hasDisp && isDeceased) {
     // Estate / probate: authority to dispose comes AFTER the inventory has been
     // read by the representative and counsel. Releases are against signed receipts,
     // because on a court-supervised matter "we gave it to the daughter" is not a
@@ -6765,7 +6801,7 @@ function _cePhases(e, job) {
   P.push({
     title: 'Close-Out' + (hasLegal ? ' &amp; Court Filing' : ''),
     body: closeBody,
-    need: hasDoc
+    need: isDeceased
       ? 'Sign-off on the final disposition summary. A closing walkthrough with us if you want one — on an estate it is often the attorney or a family member standing in, and the records do not depend on anyone attending.'
       : 'A final walkthrough with us, and sign-off on the disposition summary.',
     done: deep
@@ -18383,7 +18419,13 @@ function renderAgreement() {
   var jobId = currentAgrJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  if (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate') { renderProbateAgreement(); return; }
+  // Which agreement a job gets follows the LIVING / DECEASED rule, not the service
+  // list — see isDecedentJob. The old test named four service types, which meant a
+  // Home Cleanout of a house whose owner had just died got the STANDARD agreement,
+  // written throughout to a living owner of their own property. A recorded date of
+  // death or an authorised representative now routes it to the estate form, which is
+  // the one that addresses a representative.
+  if (isDecedentJob(job)) { renderProbateAgreement(); return; }
 
   var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
