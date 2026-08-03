@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.02 · 7:11pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 8:29am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1061,6 +1061,16 @@ body.no-smf .smf-col{display:none;}
           <option value="6">6 specialists</option>
         </select>
         <div id="ps-crew-badge" style="margin-bottom:8px;"></div>
+        <!-- Timeline planner. The client asks for a date on site; this says what crew
+             reaches it, or that it is not reachable. Applying it drives the crew and rush
+             controls so the price comes from the normal calculation, never from here. -->
+        <label style="margin-top:6px;">Client needs it sooner?</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="tp-target" min="1" max="90" step="1" placeholder="days"
+            style="width:74px;text-align:center;" oninput="renderTimelinePlanner()">
+          <span style="font-size:11.5px;color:var(--gray);">working days requested</span>
+        </div>
+        <div id="timeline-planner" style="margin-top:6px;"></div>
         </div>
         <div id="est-adjustments">
         <div class="sec">Adjustments</div>
@@ -3085,6 +3095,72 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
 }
 
 
+
+// ─── TIMELINE PLANNER ────────────────────────────────────────────────────────
+// What the job takes at its natural crew, and what crew it would take to hit a date the
+// client asks for on site. Compression is genuinely good for Havellin — a bigger crew
+// finishes sooner, which moves hours off the $100/hr concierge line onto the $30/hr
+// specialist line, so cost FALLS while the expedite premium adds revenue. Measured on a
+// 6,000 sqft cleanout: 8 days at 2 PS costs $12,870 and bills $28,050; 5 days at 6 PS
+// costs $10,830 and bills $30,780 with the premium. More profit, better margin, faster
+// delivery.
+//
+// What this exists to prevent is the other case: charging a 20% "expedited delivery"
+// premium on a job running its natural schedule, where nothing was expedited.
+var _engineInputs = null;
+
+function solveCrewForDays(targetDays) {
+  if (!_engineInputs || !(targetDays > 0)) return null;
+  var e = _engineInputs;
+  var floor = ENGINE_FLOOR[e.svcKey] || 2;
+  for (var n = 2; n <= 6; n++) {
+    var sol = computeWorkingSupervisor(e.workPool, e.coordTC, e.svcKey, n, e.colOnsiteTC);
+    var d = Math.max(sol.days, floor);
+    if (d <= targetDays) return { crew: n, days: d, achievable: true };
+  }
+  var best = computeWorkingSupervisor(e.workPool, e.coordTC, e.svcKey, 6, e.colOnsiteTC);
+  return { crew: 6, days: Math.max(best.days, floor), achievable: false };
+}
+
+function renderTimelinePlanner() {
+  var wrap = document.getElementById('timeline-planner');
+  if (!wrap) return;
+  var e = _engineInputs;
+  if (!e || !(e.workPool > 0)) { wrap.innerHTML = ''; return; }
+  var want = parseInt((document.getElementById('tp-target') || {}).value, 10);
+  var natural = '<div style="font-size:11.5px;color:var(--gray-dk);margin-bottom:6px;">'
+    + 'Natural pace: <strong>' + e.naturalDays + ' working days</strong> at '
+    + e.naturalPS + ' specialist' + (e.naturalPS === 1 ? '' : 's') + '.</div>';
+  var out = '';
+  if (want > 0) {
+    var sol = solveCrewForDays(want);
+    if (!sol) out = '';
+    else if (want >= e.naturalDays) {
+      out = '<div class="alert a-ok" style="margin-top:0;font-size:11px;">Already inside that date at the natural crew \u2014 no expedite needed.</div>';
+    } else if (!sol.achievable) {
+      out = '<div class="alert a-err" style="margin-top:0;font-size:11px;"><strong>' + want + ' days is not reachable.</strong> '
+        + 'Six specialists is the cap and still needs <strong>' + sol.days + ' days</strong>. '
+        + 'Offer ' + sol.days + ' days, or reduce scope.</div>';
+    } else {
+      out = '<div class="alert a-warn" style="margin-top:0;font-size:11px;">'
+        + '<strong>' + sol.days + ' days with ' + sol.crew + ' specialists</strong> (from ' + e.naturalDays + ' at ' + e.naturalPS + '). '
+        + 'Applying this sets the crew and adds the ' + Math.round(RUSH_PCT * 100) + '% expedite premium \u2014 the summary below shows what it does to the price and the margin.'
+        + '<div style="margin-top:6px;"><button class="btn-s" style="font-size:11px;padding:4px 10px;" '
+        + 'onclick="applyTimelinePlan(' + sol.crew + ')">Apply \u2014 ' + sol.crew + ' specialists, ' + sol.days + ' days</button></div></div>';
+    }
+  }
+  wrap.innerHTML = natural + out;
+}
+
+// Drives the real controls rather than reporting its own figures.
+function applyTimelinePlan(crew) {
+  var sel = document.getElementById('ps-crew-size');
+  if (sel) { sel.value = String(Math.min(6, Math.max(2, crew))); _crewUserSet = true; }
+  var rush = document.getElementById('e-rush');
+  if (rush) rush.checked = true;
+  calcAll();
+}
+
 // ─── ROOM COVERAGE CHECK ─────────────────────────────────────────────────────
 // Intake records how many bedrooms and bathrooms the property has. The room grid
 // records how many were actually scored. Comparing the two is the only honest read on
@@ -4101,9 +4177,17 @@ function calcAll() {
   // after the crew has already been chosen.
   // Coverage flag: what intake says the property has against what has been scored.
   renderCoverageBadge(roomMeta.map(function(r){ return r.name; }));
+  renderTimelinePlanner();
 
   var _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, 0, colOnsiteTC);
   var _recommendedPS = _sup.requiredPS;
+  // Kept so the timeline planner can ask "how many specialists to finish in N days?"
+  // by re-running this same solve. It never recomputes a price — applying an answer
+  // drives the real crew and rush controls and lets calcAll produce the numbers, so the
+  // planner cannot drift away from what the estimate actually charges.
+  _engineInputs = { workPool: workPool, coordTC: coordTC, svcKey: svcKey,
+                    colOnsiteTC: colOnsiteTC, naturalPS: _recommendedPS,
+                    naturalDays: Math.max(_sup.days, ENGINE_FLOOR[svcKey] || 2) };
   var _actualPS = Math.max(getScheduledPSCount(), _recommendedPS);
   if (!isPrep && _actualPS > _recommendedPS) {
     _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, _actualPS, colOnsiteTC);
