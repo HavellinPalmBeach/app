@@ -73,7 +73,54 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-01** — a pass run before Anthony and Ashley walk a
+- Last reconciled against the app: **2026-08-03** — both documents, against the Build Estimate
+  rebuild and the pricing decisions of 2026-08-02/03. The manual and the playbook were passed
+  together, as CLAUDE.md says they must be. What changed:
+  - **§5 gained a layout map of the rebuilt tab** (Job/Crew two-column top · vendors → rooms
+    two-up → paired cards · summary, reference check and the three price levers at the bottom).
+    A screenshot older than 2026-08-02 no longer matches the tab, so the map is what a reader
+    reconciles against.
+  - **§5c: the six specialist tick boxes are one crew-size dropdown (2–6)**, and the manual now
+    states the two-way tracking — it follows the recommendation up *and down* until you set it
+    by hand, then stops and warns. The one-way version was the bug: a stale crew of 6 on a job
+    needing 3 silently discounts the quote.
+  - **NEW in §5c/§5i: the timeline planner.** Three answers (already inside / reachable at N
+    specialists / not reachable at the cap) with the measured margin case for compressing —
+    54% → 65% on the 6,000 sqft cleanout — and the guard it exists for: charging the 20%
+    premium on a natural schedule bills *more* than the genuinely expedited job.
+  - **NEW in §5b: the room-coverage flag**, plus the reason it matters stated plainly — scores
+    are averaged over the rooms you scored and applied to the whole sqft, so a half walkthrough
+    misprices rather than under-counts ($44,900 → $24,100 on one ticked foyer).
+  - **§5b: "auto-scores 3/3" was wrong** and is corrected — foyer/half bath/secondary baths/
+    laundry/mudroom/utility open at 1/1, primary baths at 2/2.
+  - **§5d rewritten for the six Category Group cards**, including the two things that are
+    load-bearing: Property Preparation feeds the *prep* list (routing a painter through the
+    vendor list drops the 30% GC fee on a standalone job) and End-of-Job Logistics dedupes
+    against the Job Plan.
+  - **§5e/§13a/§16: bundled Home Prep now carries NO fee.** Both documents still said 30% on a
+    bundled add-on; `prepFeeRate` returns 30% only when `svc === 'prep'`. The playbook's version
+    of the same claim ("not the 15%") was doubly stale.
+  - **§16: discount cap 15%, fixed-price contingency 20%**, plus an explicit order-of-operations
+    block (services → less discount → plus 20% expedite → plus vendors at cost).
+  - **§16: the margin panel is HIDDEN on Build Estimate** and the manual says so rather than
+    describing a panel nobody can see. Two named consequences: the 30%-reference pair is not in
+    front of you when you set a discount, and neither is the deposit-coverage warning. The 15%
+    cap is the guardrail that remains.
+  - **§8: Stripe's payment link now reports failure honestly** — worth documenting because the
+    old behaviour (unconditional success on an opaque response) is exactly what strands a dry
+    run waiting for a link that was never created.
+  - Also: §4 the inline *+ New* referral partner · §5a private walkthrough notes · §5f the
+    vendor-name field is off the collection row · §11 mid-job vendors and the logistics dedupe.
+  - Playbook: Step 2 rebuilt to match, quick-reference fee table corrected, and **nine new rows
+    on the symptom→cause table** (won't save with no rooms · coverage amber · crew moving by
+    itself · crew-above-recommendation warning · unreachable date · missing vendor category ·
+    empty vendor cards · Stripe failure).
+  - Checked and found **already correct**, so left alone: the 20% rush mechanics and its
+    after-discount ordering, the T&M default and the probate withholding, §5f's disposition
+    hours rule, §5i's engine formulas and core-team reach table, §12's invoice gates, §17.
+    The Home Prep scope note IS real (`p.note` on each prep line) — both documents describe it
+    correctly; it is the *third-party vendor* line that has no scope field, and neither claims one.
+- Prior pass **2026-08-01** — a pass run before Anthony and Ashley walk a
   fake client end to end, so the checks were aimed at the billing/job-plan path rather than at
   what had recently been built. Four claims were wrong against the app:
   - **§12 the invoice PIN rule was simply not the rule.** It said every stage needs manager-PIN

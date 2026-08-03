@@ -6,6 +6,8 @@
 
 ## 1. Overview
 
+> **This is the master document.** It is the system of record for how the app is set up and how it works — configuration, engine, taxonomy, rates, gates. Its companion, the **Concierge Job Playbook** (`concierge-guide.html`), is the walk-through-it-in-order extract for running one job from intake to final invoice with the app open; it covers a subset of what is here, and where the two disagree this document is right. They are reconciled against the app *together* — the version stamp at the foot of each says when. Plain-text copies for a phone or a printer: `MANUAL.md` and `CONCIERGE_GUIDE.md`, generated from these two files.
+
 Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. Client signatures and payments are recorded **by hand**: DocuSign, Stripe and QuickBooks are not built (§3).
 
 **Navigation tabs (in order):** Win / Loss · Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Referral Partners
@@ -92,6 +94,8 @@ All fields marked * are required. Job ID is auto-generated (`HVL-YYMM-XXXX`). Go
 
 **Referral source:** Intake records how the job came in. Professional referral types (attorney, realtor, trust officer, etc.) link to a specific **Referral Partner** from that directory, so referrals are attributed on the partner leaderboard. Personal sources (family, friend, existing client) use a free-text "Referred by" name instead.
 
+> **The partner doesn't have to be in the directory yet — *+ New* beside the picker adds them without leaving intake.** Name, firm, phone, email; it writes to the Referral Partners sheet through the same `addPartner` path the directory tab uses, then selects them on the form. A referral arrives from someone new more often than not, and leaving intake to go and add them first is precisely how the attribution gets dropped. The rest of the prospecting detail (partner type, rating, contact history) is desk work on the Referral Partners tab afterwards — §14.
+
 Drive folder structure created automatically per job:
 
 ```
@@ -104,15 +108,29 @@ Room photos, item photos, collection photos/appraisals, and the inventory workbo
 
 **Tab: Build Estimate** → select job from dropdown. This section covers the labor-based services (Downsizing, Cleanout, Estate Settlement, Probate). Home Prep for Sale uses the fee-only flow in Section 6.
 
+**How the tab is laid out** (rebuilt 2026-08-02, so a screenshot older than that will not match):
+
+| Band | Holds |
+| --- | --- |
+| **Top card, two columns** | *Job* on the left — Job Details picker, service type, target start date, estimate prepared by, the second-concierge flag, the timeline badge. *Crew* on the right — crew size, the *client needs it sooner* planner, and the Adjustments toggles (difficult access, multiple heirs, premium estate). |
+| **Build column** | Third-Party Vendors, then the Room-by-Room Assessment (sections run **two across** the full page width), then two paired cards: Notable Collections beside Vehicles & Watercraft, and Home Prep beside Moving Materials. |
+| **Bottom** | Estimate Summary, then Pricing Reference Check beside the three price levers (discount · rush · fixed price), then Reset / Save. |
+
+> **The price levers sit under the totals they move, and that is deliberate.** Discount, expedite and fixed price are read against the number, not against the scope — they spent a spell up beside Adjustments and were three scrolls away from anything they changed. Scope decisions live at the top; price decisions live at the bottom next to the price.
+
+> **The Estimate Summary on this tab is condensed.** The hours breakdown, per-role fee lines, blended-rate bar and the internal margin panel are hidden here — all of that reappears on the **Client Estimate** document (§7), which is what those numbers are actually for. Nothing was deleted: the app still calculates every one of them on each recalculation, so the client estimate and the invoices are unchanged. See §16 for what this means for the margin panel specifically.
+
 ### 5a. Walkthrough Notes & Voice
 
 During the site visit, use the **📝** (notes) and **🎙** (voice-to-text) buttons in each room row. Voice transcribes in real time into the notes field. Hit **Save Notes** — the note saves with the estimate and uploads as a `.txt` file to the job's **Walkthrough Notes** Drive folder automatically.
+
+**Private Walkthrough Notes** is a separate box, sitting as the last cell of the room grid with its own 🎙 button. It is *internal only* — never shown to the client, never on the estimate document, never uploaded to a shared folder. It is for what you would not say in front of the family: access problems, hoarding, who is actually making the decision, anything that changes how the job runs. It saves with the estimate (`est.privateNote`) and reloads with it. The intended use is dictating in the car on the way out.
 
 > 📷 Photos are NOT captured during the estimate stage. Photography happens only after job activation.
 
 ### 5b. Room Scoring
 
-Check each room to include it (auto-scores 3/3). Set Volume and Complexity on a 1–5 scale:
+Check each room to include it. Set Volume and Complexity on a 1–5 scale:
 
 | Score | Volume | Complexity |
 | --- | --- | --- |
@@ -122,32 +140,63 @@ Check each room to include it (auto-scores 3/3). Set Volume and Complexity on a 
 
 Check **Special Items** if the room contains artwork, antiques, or items requiring specialty care. Hours and a working-day timeline generate automatically as you score — the per-room figures shown are *hands-on handling only*, with job-level work (triage, documentation, haul-out, vendor and move coordination) surfaced as one separate *Project coordination & logistics* line so the room breakdown plus that line always equals the totals. How the totals become billed concierge and specialist hours is Section 5i.
 
-Room sections launch **collapsed** so the estimate opens compact — open each section as you walk that part of the house. Use *Expand all / Collapse all / Hide empty* at the top of the assessment; each section header shows a live in-scope count. Reopening a scored estimate auto-reveals the sections that have rooms in scope.
+**A ticked room does not start at 3/3 everywhere.** Most rooms open at the neutral 3 — a normally furnished Palm Beach home. Inherently light rooms open at the 1 floor: entryway/foyer, half bath, bathrooms 2–4, additional bathrooms, laundry, mudroom, mechanical/utility. Primary baths open at 2. The starting score is a starting point in every case — **score what you are looking at**.
+
+Room sections launch **collapsed** so the estimate opens compact, and run **two across** the page — open each section as you walk that part of the house. Use *Expand all / Collapse all / Hide empty* at the top of the assessment; each section header shows a live in-scope count. Reopening a scored estimate auto-reveals the sections that have rooms in scope.
+
+> **Volume and complexity are property-wide, not per-room — which is why a half-finished walkthrough misprices rather than under-counts.** The scores you enter are averaged across the rooms you scored, and that average is then applied to the load derived from the *whole* square footage. Score one foyer at 1/1 on a 10,000 sqft estate and the app prices all 10,000 sqft as though the entire house looks like that foyer — on a real job that took the quote from about $44,900 to $24,100. Half a walkthrough is not half a price; it is a wrong price.
+
+**Room coverage flag.** Under the room grid the app compares the bedrooms and baths *recorded at intake* against the bedrooms and baths you have actually scored, and says so:
+
+| Badge | Means |
+| --- | --- |
+| Green — *Room coverage matches intake* | Every bedroom and bath on record has been scored. Nothing to do. |
+| Amber — *Walkthrough looks incomplete* | Names the shortfall, e.g. "scored **2 of 5** bedrooms, **1 of 4** full baths". Finish the walkthrough, or knowingly accept that the unscored rooms are being priced off the ones you did score. |
+
+It is a *flag, not a gate* — a concierge mid-walkthrough knows the estimate is incomplete and does not need to be stopped. Saving with *zero* rooms is already refused, which is the case worth blocking. The check goes quiet if intake never captured bed/bath counts, so fill those in at intake (§4) or this check has nothing to compare against.
 
 ### 5c. Job Settings
 
 - **Premium Estate** — TC $185/hr, PS $125/hr (vs. standard $150/$100). Also adds a flat 25 hrs of specialty coordination (auction house, appraisers, wine/art logistics).
-- **Property Specialists** — six **tick boxes**, one per specialist. Crew is auto-ticked to the smallest number that lands the job inside the 10-working-day target (floor 2, cap 6); tick more to price a bigger crew, up to the cap.
-  > **The estimate says how many specialists, never which.** These were dropdowns naming a person or a rate tier per slot — a question nobody can answer three weeks before the job, and the wrong question to ask at estimate time. Naming people happens on the **Job Plan** once the job is Won (§11), where the roster seeds from this count and every row asks for a name. Costing at estimate stage now assumes the standard contractor rate for every specialist; the margin panel firms up as the real people are named.
+- **Crew size** — one dropdown, **2 to 6 specialists**, in the Crew column at the top right. The app sets it itself to the smallest crew that lands the job inside the 10-working-day target and *keeps tracking its own recommendation up and down* until you change it by hand; from the moment you pick a number yourself it is left alone and the badge below warns if it sits above what the scope needs.
+  > **The estimate says how many specialists, never which.** This was six tick boxes, and before that six dropdowns naming a person or a rate tier per slot — a question nobody can answer three weeks before the job, and the wrong question to ask at estimate time. Naming people happens on the **Job Plan** once the job is Won (§11), where the roster seeds from this count and every row asks for a name. Costing at estimate stage assumes the standard contractor rate for every specialist; the margin firms up as the real people are named.
   > **Crew size moves the price.** Under the working-supervisor model a bigger crew finishes sooner, so the concierge is on site for fewer hours — which makes the estimate *lower*, not higher. That is correct, but it means a crew left over from a larger job will quietly discount this one, so the app flags any crew above the recommendation. Do not carry a crew size over between estimates. See Section 5i.
+- **Client needs it sooner?** — type the number of working days the client is asking for. The **timeline planner** underneath answers it directly: what the job takes at its natural crew, and what crew reaches the date. Full detail in §5i.
+- **Second Transition Concierge** — a tick box, *"this scope needs a second concierge"*, not a name. The app ticks it itself when the daily concierge load passes the cap; you can tick it yourself. It changes neither the fee nor the duration — see the note at the end of §5i.
 - **Difficult access** (stairs, no elevator) — **+15% to the hands-on work pool only**. It makes the physical work take longer, which lengthens the job, which lengthens concierge presence automatically. Lifting the concierge line as well would double-count it.
 - **Multiple heirs / decision-makers** — **+20% to off-site coordination only**. More calls and sign-offs, not more boxes. Baked into contested-probate rates already, so the toggle greys out on those jobs.
 - **Rush order** — adds a flat **20% expedited-delivery premium** to the Havellin services total, shown to the client as its own line. It is a premium on the total, deliberately *not* a markup on the TC/PS hourly rates: rates outside NASMM norms read badly to a client comparing quotes, and a named line is clearer and easier to defend. It is also literally what they're buying — a second concierge and a larger crew working in parallel to compress the calendar. Applied *after* the Preferred Client Discount, so the discount is never computed on the premium. Vendor costs are excluded (pass-through at cost doesn't get more expensive because we moved faster). Works on both hourly and fixed-price quotes.
-- **Quote as a fixed price** — every service bills **time-and-materials by default**; the concierge may switch an individual estimate to a firm flat fee. The amount prefills from the suggested fee (hourly basis + contingency buffer) and is fully editable. **Not available on Probate or Contested Probate** — the toggle is disabled there, because those bill on actual logged hours for Personal-Representative and court defensibility. Estate Settlement is a private engagement with a family or trustee, so a flat quote *is* available on it.
+- **Quote as a fixed price** — every service bills **time-and-materials by default**; the concierge may switch an individual estimate to a firm flat fee. The amount prefills from the suggested fee (hourly basis + a flat **20% contingency**) and is fully editable. **Not available on Probate or Contested Probate** — the toggle is disabled there, because those bill on actual logged hours for Personal-Representative and court defensibility. Estate Settlement is a private engagement with a family or trustee, so a flat quote *is* available on it.
+  > The contingency is **20% on every service you can actually quote fixed**. Estate Settlement was 25% and came down to match: 25% on top of an already-buffered hourly estimate reads as padding to a client comparing quotes. Probate keeps 25% and contested probate 35%, and that is not an inconsistency — those two are time-and-materials only, so their buffer is never quoted to anyone. It exists solely as the internal *"what would a flat fee have run"* reference line the panel shows on this tab, where a wider band on the riskiest work is the honest figure.
 - **Preferred Client Discount** — percentage off Havellin labor fees only, **capped at 15%**. The same cap applies to *Offer Discount* on the Client Estimate tab (§7), which is the route to use once the estimate has already gone out.
 - **Moving Materials Package** — None, or an Estate tier (Basic $500 · Standard $750 · Premium $1,500) or Downsizing tier (Basic $200 · Standard $350 · Premium $550)
 
-### 5d. Moving Materials & Third-Party Vendors
+### 5d. Third-Party Vendors & Moving Materials
 
 Add third-party vendors with estimated costs. Vendor costs are estimates only — actual invoices are billed directly to the client at cost. **Havellin adds no fee to them.**
 
 > **No coordination fee on third-party vendors, as of 2026-08-02.** Vendors are billed to the client directly at cost and Havellin adds nothing on top. The 15% Service Management Fee was removed because the concierge time spent sourcing, quoting, scheduling and supervising a vendor is *already billed hourly* — the engine bills off-site coordination as concierge hours — so the fee was a second charge for the same work, and on probate it was a percentage markup on a third-party invoice in front of a court that reviews the expenses. **Standalone Home Prep is the exception and is unchanged:** it bills no hours at all, so its **30% GC fee** is the entire revenue for that engagement. The rule: a coordination fee applies only where the coordination is not already billed by the hour.
 
-The vendor-type dropdown lists the standard estate/clearing service types plus, under a **From directory** group, any category from the Vendor Directory in the estate-side groups (Asset Liquidation, Disposal, Moving, Professional Services). So a new category added to the directory shows up here automatically — see Section 13a.
+**Vendors are picked from six Category Group cards**, three across, at the top of the build column. Each card is a category dropdown plus an *Est cost* box and a **+**:
+
+| Card | Source of its list | Where the line lands |
+| --- | --- | --- |
+| Asset Liquidation & Valuation | The Vendor Directory — every category filed under that Category Group, alphabetized (§13a). | Third-party vendor list, at cost. |
+| Disposal & Waste Management | Same, that group. | Third-party vendor list, at cost. |
+| Moving & Logistics | Same, that group. | Third-party vendor list, at cost. |
+| Professional Services | Same, that group. | Third-party vendor list, at cost. |
+| Property Preparation | Same — the Property Preparation group. | **The Home Prep list**, not the vendor list. That is deliberate: the Home Prep list is what a standalone prep engagement's 30% GC fee is computed from, and routing a painter through the vendor list would silently drop that fee. |
+| End-of-Job Logistics | Not a directory group — the five end-of-job slots the Job Plan asks for: donation organization, junk removal / hauling, dumpster rental, move-out / final cleaning, document shredding. | Third-party vendor list. Anything ticked here **drops out of the Job Plan's own logistics list**, so it is asked once, not twice (§11). |
+
+> **These lists are the directory and nothing else.** The twelve hand-written umbrella labels are gone — the old single "Add vendor…" dropdown mixed those labels with whatever directory categories they did not already cover, so it was half taxonomy and half leftovers and the real category names were mostly hidden behind an umbrella. A category added to the Vendors sheet appears here on the next directory load, with no app change. If no card has any options, the Vendor Directory URL is missing from ⚙ Settings and the cards say so.
+
+> **You do not pick individual vendors at this stage, by design.** Finding an appraiser who is actually free that week is office work at job kickoff, not walkthrough work. The estimate says what the job *needs*; the **Job Plan** says who is doing it (§11).
 
 ### 5e. Home Prep for Sale (as an add-on)
 
-On a labor-based job you can also check **Include in estimate** in the Home Prep section to add show-ready prep as an add-on. Prep vendors carry a **30% GC / Site Management Fee** (not the 15% vendor SMF). When Home Prep is the *only* service, use the standalone flow in Section 6 instead.
+On a labor-based job you can also check **Include in estimate** in the Home Prep section to add show-ready prep as an add-on. Add prep items through the *Property Preparation* card. When Home Prep is the *only* service, use the standalone flow in Section 6 instead.
+
+> **Bundled prep carries no fee, as of 2026-08-02.** Prep vendors on a labor job are billed to the client at cost like every other vendor, and the fee column on the entry card reads *No fee* — it reads the live rate rather than asserting one, so it cannot promise a fee the app no longer charges. The **30% GC fee applies only to a standalone Home Prep engagement** (§6), where no hours are billed at all and the fee is the entire revenue. Same rule as the vendor fee in §5d: a coordination fee applies only where the coordination is not already billed by the hour, and on a labor job it is.
 
 ### 5f. Notable Collections
 
@@ -156,6 +205,8 @@ Add significant asset collections (artwork, jewelry, antiques, silver, etc.) req
 Appraise · Auction House · Coin / Currency Buyer · Consignment · Donate · eBay Store · Estate Sale · Firearms — Licensed FFL · Gold & Silver Buyer · Jewelry / Watch Buyer · Online Auction · Rare Books / Manuscripts · Replacements.com · Specialized Dealer · Other.
 
 Collections appear in the client-facing estimate under *Notable Collections — Disposition Plan*, and can be pulled into the **Estate Inventory** manifest on site (as a lot or itemized — see §10a).
+
+> **You do not name the auction house here.** The vendor-name field came off the collection row on 2026-08-02, same reasoning as the vendor cards in §5d — you tag a specific partner when you are calling round with a list, not while standing in the house. That is **Job Plan** work, and the disposition you pick is what scopes the Job Plan's partner picker to the right directory category. What stays on the row: the estimated **fee** the partner will charge (a real cost, and it belongs in the estimate) and the **voice note** (detail captured on site is the whole point).
 
 **The disposition you pick adds hours.** Each option carries its own concierge and specialist time, split by a single rule: *if the specialist comes to the property, the concierge is there; if the items go out to them (shipped, dropped off, consigned), the concierge's time is phone and paperwork.* So an appraisal, a dealer visit, or an FFL firearms handoff books real **on-site presence** — it shows on its own summary line and counts against the working-day target, because standing next to an appraiser is fixed time no crew size absorbs. Online auction, eBay, Replacements.com and consignment book coordination only. A ten-collection estate is a materially longer job than a two-collection one, and the timeline now says so.
 
@@ -193,7 +244,7 @@ With a crew of *n* specialists and the concierge working at production rate **α
 
 The concierge's own share of the pool is **not billed twice** — it moves from the specialist line to the concierge line. That is why a 100-hour pool does not bill as 100 PS hours. Billable hours are rounded up to whole hours, and the fees are recomputed off the rounded figures so hours × rate always reconciles on the client estimate.
 
-**Reading the Estimate Summary panel** — the rows map straight onto the model:
+**Reading the hours breakdown** — the rows map straight onto the model. This table is on the **Client Estimate** document (§7); the Build Estimate tab's own summary is condensed and does not show it.
 
 | Summary row | Is |
 | --- | --- |
@@ -204,6 +255,20 @@ The concierge's own share of the pool is **not billed twice** — it moves from 
 | **Total Property Specialist hours** | The crew's share of the pool. This is what bills at the PS rate. |
 
 **Crew sizing.** The app starts at 2 specialists and adds one at a time — to a maximum of 6 — until the job lands inside the **10-working-day target**. Each service also carries a mobilization floor no job goes below: Downsizing 2 days · Downsizing & Move / Cleanout / Estate Settlement / Probate 3 days · Contested Probate 4 days. A crew day is **7 productive hours** (travel, setup, and breaks are already excluded).
+
+> **The crew dropdown tracks the recommendation in both directions — until you touch it.** It used to move up only, which mattered more than it sounds: early in a walkthrough the recommendation runs high (few rooms scored means the whole property is priced off those few) and falls as scoring completes, so the dropdown kept the early number. A crew of 6 left sitting on a job that needs 3 finishes sooner, puts the concierge on site fewer hours, and *quietly discounts the quote*. Once you pick a crew size by hand the app stops moving it and the badge warns instead — which is the behaviour you want when the choice is yours.
+
+**"Client needs it sooner?" — the timeline planner.** The badge tells you what the job takes; the planner tells you what to *offer* when the client asks for a date on the spot. Type the number of working days they are asking for and you get one of three answers:
+
+| Answer | Means | What to say |
+| --- | --- | --- |
+| Green — *Already inside that date at the natural crew* | The date they asked for is looser than the schedule you were going to run anyway. | Say yes. **Do not tick rush.** Nothing is being expedited and charging a 20% premium for it is not defensible. |
+| Amber — *"N days with M specialists"*, with an **Apply** button | Reachable by compressing. States the crew it takes and where it comes from ("6 days with 4 specialists, from 8 at 2"). | Offer it. Apply sets the crew, ticks expedited delivery, and lets the summary below show what it does to the price. |
+| Red — *"N days is not reachable"* | Six specialists is the cap and the job still needs more days than that. | Counter with the number the app gives you, or reduce scope. Do not agree to the date. |
+
+> **Compression is genuinely good business, which is why the planner exists at all.** A bigger crew moves hours off the $100/hr concierge cost line onto the $30/hr specialist line, so Havellin's *cost falls* while the expedite premium adds revenue. Measured on a 6,000 sqft cleanout: 8 days at 2 specialists costs $12,870 and bills $28,050 (54% margin); 5 days at 6 specialists costs $10,830 and bills $30,780 with the premium (65%). More profit, better margin, faster delivery, and the client got what they asked for. What the planner is there to prevent is the other case — **charging the 20% premium on a job running its natural schedule**. That same job at 2 specialists over 8 days with rush ticked bills $33,660: more than the genuinely expedited version, for nothing expedited. The planner's green answer is the guard against it, so read it before you tick the box.
+
+Applying a plan drives the real crew and rush controls and then re-runs the normal calculation — the planner never produces a price of its own, so it cannot drift away from what the estimate actually charges.
 
 Fixed on-site presence is added flat, never divided — six specialists don't make an appraisal go faster. A larger crew still helps indirectly: it shrinks the pool-derived share of the concierge's day, which buys back calendar room for the fixed hours.
 
@@ -281,6 +346,8 @@ Hit **Email Estimate** → opens a pre-drafted, warmly-worded email (referencing
 1. Select job → agreement auto-populates from approved estimate data
 2. Manager enters PIN to approve for sending. *The approved agreement files itself to the Drive **Agreement** folder at this point* — approval is the first moment the document means anything.
 3. **Print / Save PDF** or **Email to Client**, then hit **✉ Mark Agreement Sent**.
+
+> **Generate Payment Link** asks the Stripe service for a deposit link and mails it to `billing@havellinpalmbeach.com` for you to forward. **Believe what it tells you.** It used to report success unconditionally — the request was sent in a mode that makes the reply unreadable, so a 404 from an undeployed URL and a 500 from a script that threw both printed *"payment link generated and sent"*. It now reads the reply and says plainly when nothing was created; if it does, send the deposit invoice instead and record the payment by hand. Nothing yet reads *back* from Stripe — there is no webhook and no automatic payment record (§3).
 
 ### Then, as each thing actually happens
 
@@ -468,6 +535,10 @@ One entry per working day: **date**, an **activity summary**, and **hours agains
 
 Assign a directory vendor to each estimate line and logged category, set status, and record the actual quote. On a standalone Home Prep job these actuals feed the 30% GC fee on the midpoint and final invoices. On every other service they carry no Havellin fee at all — they are recorded so the client's pass-through costs and the job's true margin are known.
 
+> **End-of-job logistics are asked once.** The Job Plan carries five logistics slots — donation organization, junk removal / hauling, dumpster rental, move-out / final cleaning, document shredding. Any of those already priced on the estimate through the *End-of-Job Logistics* card (§5d) arrives here as an estimate line to source against, and drops out of the Job Plan's own list rather than appearing twice under a slightly different name.
+
+**A vendor you didn't know you needed mid-job** is added the same way: pick the category, assign the vendor, log the quote. It becomes a pass-through cost on the client's invoice at cost like any other. If it also changes Havellin's scope or hours, that is a **Change Order** (§9) — the vendor line alone is not one.
+
 ## 12. Invoices
 
 **Tab: Invoices** → select job, then pick a **Stage** (Deposit / Midpoint / Final). *Deposit* is the 50% estimate basis. *Midpoint* brings the cumulative collected to 75% and trues vendor & home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). *Final* trues labor to logged hours, fees to actuals, and adds any approved Change Orders.
@@ -524,11 +595,13 @@ Every vendor is filed under a **Category group** (required) and a **Category**. 
 
 | Category group | Feeds estimate menu | Fee |
 | --- | --- | --- |
-| Property Preparation | Home Prep items (Section 5e / 6a) | 30% GC / Site Management |
-| Asset Liquidation & Valuation | Third-Party / Service Vendors (Section 5d) | At cost — no fee |
-| Disposal & Waste Management | Third-Party / Service Vendors + End-of-Job Logistics | At cost — no fee |
-| Moving & Logistics | Third-Party / Service Vendors | At cost — no fee |
-| Professional Services | Third-Party / Service Vendors | At cost — no fee |
+| Property Preparation | *Property Preparation* card → the Home Prep list (§5e / §6a) | **30% GC / Site Management on a standalone Home Prep job only.** Bundled onto a labor job: at cost, no fee. |
+| Asset Liquidation & Valuation | Its own card → third-party vendor list (§5d) | At cost — no fee |
+| Disposal & Waste Management | Its own card, and several of its categories also appear on the *End-of-Job Logistics* card | At cost — no fee |
+| Moving & Logistics | Its own card → third-party vendor list | At cost — no fee |
+| Professional Services | Its own card → third-party vendor list | At cost — no fee |
+
+The sixth estimate card, *End-of-Job Logistics*, is not a Category Group — it is a curated list of the five slots the Job Plan asks for, drawn across the groups. A category can therefore appear on two cards; adding the line from either one produces the same vendor line.
 
 > What stays fixed: the five groups and the group→menu routing above. Everything below them — the categories — is self-serve, so onboarding a new type of vendor never requires a code change.
 
@@ -566,13 +639,24 @@ Every vendor is filed under a **Category group** (required) and a **Category**. 
 | Transition Concierge | $150/hr | $185/hr |
 | Property Specialist | $100/hr | $125/hr |
 | Service Management Fee (third-party vendors) | **None — at cost** | **None — at cost** |
-| Home Prep GC / Site Management Fee | 30% of prep vendors | 30% of prep vendors |
+| Home Prep GC / Site Management Fee | **30%** — standalone engagement only | 30% |
+| Home Prep bundled onto a labor job | **None — at cost** | **None — at cost** |
 | Moving Materials | Cost + 25% | Cost + 25% |
+| Preferred Client Discount | Havellin labor only · **max 15%** | Havellin labor only · **max 15%** |
 | Expedited delivery (rush order) | +20% of Havellin services | +20% of Havellin services |
+| Fixed-price contingency | +20% on the hourly basis | +20% on the hourly basis |
 
 The rush premium is charged on the Havellin services total after any Preferred Client Discount, and never on vendor costs. Hourly rates stay as published — the premium is a separate line, so a client comparing us to another firm sees standard NASMM-range rates plus a clearly-labelled expedite.
 
-> **The margin panel is an indicative profitability readout with a flag on it — not a discounting tool.** *Price at 30% Margin* is a reference line at an admittedly arbitrary margin, and *Above Reference* is simply the distance to it. Neither is an allowance to spend. In practice a job that needs that much discount is one to walk away from rather than one to price down to. The panel also shows what the 50% deposit covers at the quoted price, and warns in dollars when it stops covering cost — that happens below a 50% margin.
+**Order of operations on the price**, because a discount and an expedite on the same job is a fair question to ask:
+
+```
+Havellin services total → less Preferred Client Discount (labor fees only) → plus 20% expedited delivery on what's left → plus vendor costs at cost = total project estimate
+```
+
+The discount comes off first, so the premium is never charged on money already discounted away and the discount is never computed on the premium. On a fixed-price quote the 20% contingency is applied last, to a figure that already contains both.
+
+> **The margin panel is hidden on Build Estimate as of 2026-08-02** — it was too much detail for the tab the estimate is built on. Nothing was deleted and nothing changed about how margin is calculated; the panel and its underlying figures are still computed on every recalculation. Two consequences to know about: the *Price at 30% Margin* / *Above Reference* pair is no longer in front of you when you set a discount, and neither is the warning that fires when the 50% deposit stops covering job cost. The **15% discount cap** is the guardrail that remains, and it is enforced on both routes to a discount. When it is read, read it for what it is: an indicative profitability readout with a flag on it, **not a discounting tool**. *Price at 30% Margin* is a reference line at an admittedly arbitrary margin, and *Above Reference* is simply the distance to it. Neither is an allowance to spend. In practice a job that needs that much discount is one to walk away from rather than one to price down to.
 
 ### What we pay — labour cost rates (internal, never billed)
 
@@ -609,4 +693,4 @@ Not required for a Change Order (§9) — that one is settled with the client, n
 
 ---
 
-Havellin Palm Beach · 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401 · Internal use only · Not for distribution · v2026.08 · reconciled 2026-08-01
+Havellin Palm Beach · 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401 · Internal use only · Not for distribution · v2026.08 · reconciled 2026-08-03
