@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 9:22am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 9:58am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4706,15 +4706,25 @@ function calcAll() {
     if (isFixed) {
       var _hrlyRef = Math.round(havellinTotalDiscounted);
       var _delta = fixedAmount - _hrlyRef;
-      if (fpLabel) fpLabel.textContent = 'Fixed price for this quote (client-facing)';
+      // Keep the contingency named in the ON state too. It used to read only "Fixed price
+      // for this quote", which dropped the one fact that explains where the number came
+      // from — and next to a "+20%" in the note below, that reads as a SECOND 20% being
+      // applied by the toggle. The toggle applies nothing; it switches the quote to a flat
+      // fee and the contingency is already inside the figure.
+      if (fpLabel) fpLabel.textContent = 'Fixed price for this quote (client-facing) — includes the '
+        + Math.round(_fpBuf * 100) + '% contingency';
       if (fpVal)   fpVal.textContent   = '$' + fixedAmount.toLocaleString();
       // Effective markup over the hourly basis, so a fee that has drifted away from the
       // contingency is readable as a number rather than left to be worked out.
       var _effPct = _hrlyRef > 0 ? Math.round((fixedAmount / _hrlyRef - 1) * 100) : 0;
+      // "$X (+$Y vs. fixed, +20%)" read as though the toggle had added a further 20% on
+       // top of the suggested fee shown a moment earlier. Say what the gap IS — it is the
+      // contingency, and it is already in the figure above.
       if (fpNote)  fpNote.innerHTML    = 'This flat fee replaces hourly billing on the client estimate, agreement, and invoices. '
-        + 'Underlying hourly basis: $' + _hrlyRef.toLocaleString() + ' (' + (_delta >= 0 ? '+' : '') + '$' + _delta.toLocaleString()
-        + ' vs. fixed, <strong>' + (_effPct >= 0 ? '+' : '') + _effPct + '%</strong>). Vendor costs remain pass-through at cost.'
-        + (_fixedAmountUserSet ? '' : ' <em>Tracking the suggested fee — type a number to set it by hand.</em>');
+        + 'Underlying hourly basis <strong>$' + _hrlyRef.toLocaleString() + '</strong>; the fee sits $' + Math.abs(_delta).toLocaleString()
+        + ' (' + (_effPct >= 0 ? '+' : '') + _effPct + '%) ' + (_delta >= 0 ? 'above' : 'below') + ' it — that gap is the contingency, already included. '
+        + 'Vendor costs remain pass-through at cost.'
+        + (_fixedAmountUserSet ? '' : ' <em>Tracking the estimate — type a number to set the fee by hand.</em>');
       // A hand-typed fee does not retrack, by design. But the basis under it keeps moving,
       // so say when the two have parted company rather than letting a stale number ride
       // onto a client document. 2 points of slack absorbs the rounding.
