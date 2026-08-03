@@ -39,6 +39,34 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## Writing client-facing copy — the standing rule (Anthony, 2026-08-03)
+**If a line explains something the reader can already see, or explains why something is
+*not* there, it is costing you rather than earning.** Cut it. This applies to the client
+estimate, the invoice, both agreements, and any client document built later. Default to
+cutting; do not wait to be told.
+- Anthony removed four separate things in a row on 2026-08-03, and they are all the same
+  mistake. Keep them as the worked examples:
+  - **The italic preamble** under *How The Work Runs* explaining that we have deliberately
+    not put dates against the stages. **Explaining an absence is what draws attention to
+    it** — a client reading a gated sequence with a *Complete when* on every stage does not
+    ask why there is no calendar.
+  - **"No fixed-price contingency is applied"** on a T&M estimate — describing something the
+    document never offered.
+  - **The second billing caveat.** "Final charges reflect actual hours worked" and "billed on
+    actual logged Transition Concierge and Property Specialist hours" is ONE fact in two
+    stacked boxes, directly beneath a table of hours.
+  - **Column header rows** reading *Collection / Item* over a list of collections, under a
+    band already headed *Notable Collections*. Two header bars for a two-column table.
+- The same instinct killed the three trailing sections after the numbered stages: content
+  that restates, after the fact, what the sequence already said reads as an appendix.
+- **The test to apply:** would a reader who skipped this line be missing anything? If the
+  answer is no — because the table above it, the heading over it, or the absence itself
+  already told them — it goes.
+- **What this is NOT licence to cut:** anything stated once that a client would otherwise
+  have to ask for. The 15% notify threshold, the at-cost/no-markup statement, the
+  hour-by-hour court record, the *Complete when* gates. Those each appear exactly once and
+  each answer a real question. Terseness is the goal, not thinness.
+
 ## Concierge job playbook (`concierge-guide.html` / `CONCIERGE_GUIDE.md`) — NEW 2026-08-02
 - **A second, separate document. It does NOT replace `manual.html` and nothing was removed from
   the manual to make it.** The manual is the system-of-record reference (setup, Apps Script
