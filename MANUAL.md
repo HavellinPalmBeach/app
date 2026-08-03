@@ -268,6 +268,10 @@ Capture cars, boats, motorcycles, and other vehicles as estate assets. Add each 
 
 Vehicles ride along in the estimate snapshot (they don't affect the labor estimate) and can be pulled into the Estate Inventory on site (§10a).
 
+> **Flag at estimate, route on the job — and the client estimate now says so (added 2026-08-03).** Vehicles appear on the client estimate for the first time, in a *Vehicles & Watercraft* table beside the collections disposition plan; before this a boat logged on the walkthrough reached no client document at all. It states what was *flagged*, never a route: *Flagged for specialist appraisal* when Collector / classic is ticked, otherwise *Flagged for disposition*, plus *Title to be located* where that box is unticked. The KBB / NADA and Vehicle-Boat-appraiser wording stays on the internal card and is deliberately kept off the client's copy, because the disposition path is chosen during the engagement — `materializeVehicle` imports each vehicle with an empty `disposition` for exactly that reason. **What Collector / classic actually does** is set `needsAppr` on the inventory line; the appraiser itself comes from the category, which is *Vehicles & Watercraft* either way. It is an appraisal flag, not a routing switch.
+
+Title located is worth ticking honestly. It is the one field on this card with a consequence the client feels — no title means no transfer — and an unticked box now prints on their estimate.
+
 ### 5h. Saving
 
 Hit **Save & Preview Client Estimate**. Estimate saves and syncs to Google Sheets, then opens in the Client Estimate preview. Editable until approved.

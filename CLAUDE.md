@@ -175,6 +175,47 @@ arrange, work to inspect, a settlement to reconcile.
 - 47 jsdom checks on the estimate path + 22 downstream (Job Plan sourcing, all three invoice
   stages bundled and standalone, both agreements, zero load errors) — all green.
 
+## Client estimate document — vehicles, the fixed-price line, and a fixed-price hours leak (BUILT 2026-08-03)
+- **Vehicles reached NO client document.** Captured since 2026-07-15, saved on the snapshot,
+  bridged to inventory — and absent from the client estimate entirely, while collections beside
+  them got a whole disposition table. New *Vehicles & Watercraft* section after the collections
+  plan.
+- **It states what was FLAGGED, never a route, and that is Anthony's rule: flag at estimate,
+  route on the job.** *Flagged for specialist appraisal* (collector) / *Flagged for disposition*,
+  plus *Title to be located* when unticked. The architecture already worked this way —
+  `materializeVehicle` imports with `disposition: ''` precisely so the job decides. KBB/NADA and
+  "→ Vehicle / Boat appraiser" stay on the internal card; a test asserts neither reaches the
+  client copy.
+  - **`collector` is an appraisal flag, not a routing switch.** Its one real effect is
+    `needsAppr: !!veh.collector` on the inventory line; the appraiser comes from the CATEGORY
+    (`INV_CATEGORIES` → Vehicles & Watercraft → Vehicle / Boat Appraiser), identical either way.
+    Don't document it as routing.
+  - The two tick boxes and the card's own hint text were left alone on instruction.
+- **`_fixedFeeBlurb(e)` replaces the Fixed Project Fee description.** The old copy ended "Billed
+  as a fixed price, not by the hour" under a heading reading FIXED PROJECT FEE, with the same
+  fact repeated in the note below and twice in Terms — four statements of one thing. Worse, the
+  hourly document described the concierge properly while the fixed one collapsed it to
+  "oversight", so **the client learned less by paying a firm price** — backwards, since there is
+  no hour count to inspect. Now names the crew size, the confirmed/excluded space counts, and
+  **the risk transfer**: `fixedPriceBuffer` adds 20% precisely so Havellin absorbs the overrun,
+  the client pays for that, and it was stated nowhere. Deliberately silent on duration — a day
+  count in the price line reads as a delivery commitment.
+- **The fixed-price hours leak, two sites, and the second was a contradiction not just a leak.**
+  Neither footnote branched on `fixedPrice`: the third-party one said "accounts for 18.0 of the
+  Transition Concierge hours above" (no such line exists on a fixed-price document), and the
+  home-prep one asserted "is billed hourly" against Terms three paragraphs down saying the fee
+  does not vary with hours. Both now take the Terms' own wording on fixed price. A test asserts
+  the string "of the Transition Concierge hours" appears nowhere on any fixed-price estimate.
+- Also removed on instruction: the concierge sub-line *"Present for every working hour listed
+  below, not on call. Hours the concierge spends on hands-on work are billed here and are not
+  also billed on the specialist line."* Both halves were already in the sentence above it, and
+  the no-double-billing disclaimer is internal accounting answering a question nobody asked.
+  And the note under the fixed-price table lost its redundant opening sentence, so it now leads
+  with the change-order mechanic — the only part not stated elsewhere.
+- Heading is **Third-Party Vendors To Be Engaged** — it is an estimate; nothing is booked. One
+  render site, client estimate only; the invoice has no counterpart to keep in step.
+- 46 jsdom checks on the document alone (136 across four suites).
+
 ## Estimate Summary now says what the hours ARE (BUILT 2026-08-03)
 **The fee rows stated a count and nothing else, and the composition existed nowhere a reader
 could see it.** The room grid shows `pack` alone — 27% of the hands-on pool on Estate
@@ -252,7 +293,15 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (fifth pass, same day)** — both documents, against
+- Last reconciled against the app: **2026-08-03 (sixth pass, same day)** — both documents, against
+  the client-estimate changes. Manual §5g gained a note stating the **flag-at-estimate /
+  route-on-the-job** rule, what the client now sees, why KBB/NADA and the appraiser name stay off
+  their copy, and the correction that **Collector / classic sets `needsAppr` rather than routing
+  anything** — §5g's old bullet implied it picked the appraiser. Playbook Step 3 gained what to
+  check on the document before submitting for approval (the vehicle rows, the printed
+  *Title to be located*) and **why a fixed-price document carries no hour counts anywhere**.
+  `.md` copies hand-edited to match and diffed for parity.
+- Prior pass **2026-08-03 (fifth pass, same day)** — both documents, against
   the Estimate Summary hours breakdown. This one CORRECTS rather than adds: manual §5b described
   the deleted *Project coordination & logistics* line as the place the job-level hours are stated,
   which is now false. Replaced with where they actually are (under the two fee rows), plus a note

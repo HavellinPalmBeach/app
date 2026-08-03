@@ -148,6 +148,10 @@ Hit **Save & Preview Client Estimate**. It saves, syncs, and opens the client-fa
 
 Read the client-facing document for accuracy. Then **Submit for Approval** → a manager types their PIN → the estimate locks as *Approved for Release* and the PDF unlocks.
 
+**Two things to check on the document itself (changed 2026-08-03).** Every vehicle you logged now appears in a *Vehicles & Watercraft* table — each one reads *Flagged for specialist appraisal* if you ticked Collector / classic, otherwise *Flagged for disposition*, and any vehicle without *Title located* ticked prints *Title to be located* in front of the client. That is deliberate — no title means no transfer, and they should hear it now rather than at closeout — but tick the box if you did find the title. The document never names a buyer or an appraiser for a vehicle; that gets decided on the job and recorded in the inventory.
+
+On a **fixed-price** quote the document reads differently on purpose: one *Fixed Project Fee* line replacing the hourly rows, and **no hour counts anywhere** — including on the vendor and home-prep footnotes, which on an hourly quote tell the client how many concierge hours the vendor coordination took. A fixed-price document that quotes hours invites exactly the argument the fixed price exists to avoid.
+
 > **⚠** Once approved, the estimate **cannot be edited**. Service type, square footage and the premium toggle freeze. If the scope changes after this, it's a **Change Order** — see step 10.
 
 No client signature is wanted on the estimate. It's informational.

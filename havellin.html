@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 9:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6324,6 +6324,43 @@ function collectionsDispositionNote(cols) {
 // under Confirmed Spaces so the client sees what we're doing before the hours and
 // pricing that follow. The full internal phase playbook lives in the Job Plan tab;
 // this is the trimmed, client-readable version of it.
+// The Fixed Project Fee description on the client estimate.
+//
+// The old copy was two sentences ending "Billed as a fixed price, not by the hour" — under
+// a heading reading FIXED PROJECT FEE, with the same fact repeated in the note below the
+// table and twice more in Terms. Four statements of one thing, and none of them said what
+// the client was actually buying.
+//
+// Two problems it fixes:
+//   1. On an hourly estimate the concierge gets a real description (on site for the full
+//      duration, single point of contact, works alongside the crew). On fixed price all of
+//      that collapsed into the word "oversight" — so the client learned LESS by paying a
+//      firm price, which is exactly backwards. There is no hour count to inspect on this
+//      document, so the scope description has to carry more weight, not less.
+//   2. fixedPriceBuffer() adds 20% to the hourly basis precisely so Havellin carries the
+//      overrun. That risk transfer is what a fixed price IS, the client is paying for it,
+//      and it was stated nowhere.
+//
+// Deliberately silent on duration. Naming a day count in the price line would read as a
+// delivery commitment attached to the fee; the schedule belongs in the plan, not here.
+function _fixedFeeBlurb(e) {
+  var ps = e.psCount || e.nps || 2;
+  var rooms = (e.rooms || []).filter(function(r){ return !r.excluded; }).length;
+  var excl  = (e.rooms || []).filter(function(r){ return r.excluded; }).length;
+  var scope = rooms
+    ? ' Covers the ' + rooms + ' space' + (rooms === 1 ? '' : 's') + ' confirmed above'
+      + (excl ? ', and excludes the ' + excl + ' you are handling yourself' : '') + '.'
+    : '';
+  return 'Everything required to deliver the plan described above. Your Transition Concierge is '
+    + 'on site for the full duration — directing the crew, acting as your single point of contact, '
+    + 'coordinating and quality-checking every vendor, and handling and documenting alongside the '
+    + 'team. ' + ps + ' Property Specialist' + (ps === 1 ? '' : 's') + ' carry out the sorting, '
+    + 'packing, labeling, staging and heavy lifting. Moving materials and all vendor coordination '
+    + 'are included.<br><br><strong style="color:var(--gray-dk);">The price is firm.</strong> If the '
+    + 'work takes more time or more people than we planned, that is Havellin\'s to absorb — not '
+    + 'yours.' + scope + ' Third-party vendors are invoiced to you directly at cost.';
+}
+
 function proposedPlanRow(e) {
   function andList(a) {
     if (a.length <= 1) return a.join('');
@@ -6638,12 +6675,19 @@ function renderClientEstimate() {
     // of the hourly basis it was derived from), so no separate fee lines are shown.
     (e.fixedPrice ?
       '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
-      '<tr><td><strong>Fixed Project Fee</strong><br><span style="font-size:11px;color:var(--gray);">A firm flat fee for the complete scope of work described above — Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. Billed as a fixed price, not by the hour.</span></td><td>—</td><td>Fixed</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>'
+      '<tr><td><strong>Fixed Project Fee</strong><br><span style="font-size:11px;color:var(--gray);">' + _fixedFeeBlurb(e) + '</span></td><td>—</td><td>Fixed</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>'
     : (
       // Home Prep for Sale is fee-only — no on-site TC/PS labor lines (they would print $0).
       ((e.svc === 'prep') ? '' :
         '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">' + onsiteLabel + '</td></tr>' +
-        '<tr><td>Transition Concierge — On site for the full duration of the project. Directs the crew, acts as your single point of contact, coordinates vendors and QCs the work — and handles, packs and documents alongside the specialists throughout.<br><span style="font-size:11px;color:var(--gray);">Present for every working hour listed below, not on call. Hours the concierge spends on hands-on work are billed here and are not also billed on the specialist line.</span></td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
+        // The sub-line here ("Present for every working hour listed below, not on call.
+        // Hours the concierge spends on hands-on work are billed here and are not also
+        // billed on the specialist line.") was removed 2026-08-03. Both halves were already
+        // said in the sentence above it — "on site for the full duration" is presence, and
+        // "handles, packs and documents alongside the specialists" is the hands-on work —
+        // and the no-double-billing disclaimer is internal accounting detail that answers a
+        // question the client had not asked.
+        '<tr><td>Transition Concierge — On site for the full duration of the project. Directs the crew, acts as your single point of contact, coordinates vendors and QCs the work — and handles, packs and documents alongside the specialists throughout.</td><td>' + _onsiteTcHrs + '</td><td>$' + e.tcRate + '/hr</td><td class="r">' + fmt(_onsiteTcFee) + '</td></tr>' +
         '<tr><td>Property Specialists (' + (e.psCount||e.nps||2) + ') — Sorting, packing, handling, staging, labeling &amp; heavy lifting</td><td>' + _onsitePsHrs + '</td><td>$' + e.psRate + '/hr</td><td class="r">' + fmt(_onsitePsFee) + '</td></tr>') +
       (_isMove ?
         '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Move Management — Destination Setup</td></tr>' +
@@ -6673,7 +6717,11 @@ function renderClientEstimate() {
     '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (!e.fixedPrice && e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
     (e.fixedPrice
-      ? '<div class="ce-note">This is a <strong>fixed-price</strong> quote. The Havellin Services fee above is firm for the scope of work described and will not change based on actual hours worked. Any change to that scope will be documented in a written change order, with any price adjustment agreed before the additional work proceeds. Third-party vendor costs are billed separately at cost.</div>'
+      // Leads with the change-order mechanic, which is the part not stated anywhere else on
+      // the page. The old opening sentence ("This is a fixed-price quote… will not change
+      // based on actual hours worked") was the fourth statement of that same fact — the fee
+      // line now says it, the heading says it, and Terms says it twice.
+      ? '<div class="ce-note">Any change to the scope described above will be documented in a written change order, with any price adjustment agreed before the additional work proceeds. Third-party vendor costs are billed separately at cost.</div>'
       : '<div class="ce-note">This estimate is based on the initial property walkthrough. Final charges reflect actual hours worked. If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</div>' +
         ((e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate')
           ? '<div class="ce-note" style="margin-top:6px;"><strong>Billing — probate / estate:</strong> This engagement is billed on actual logged Transition Concierge and Property Specialist hours (time-and-materials). An itemized, hour-by-hour record is maintained and provided to the Personal Representative and, as required, the court. No fixed-price contingency is applied.</div>'
@@ -6691,6 +6739,42 @@ function renderClientEstimate() {
         '<tbody>' + rows + '</tbody></table>';
     })() +
 
+    // Vehicles & watercraft. Captured at the walkthrough since 2026-07-15 and shown to the
+    // client for the first time here (2026-08-03) — until now a Boston Whaler logged on the
+    // walkthrough appeared on no client document at all, while collections beside it got a
+    // whole disposition table.
+    //
+    // States what was FLAGGED, never a route. Disposition for a vehicle is decided during
+    // the engagement, not at estimate time: materializeVehicle imports each one with
+    // `disposition: ''` for exactly that reason, and `collector` sets `needsAppr` rather
+    // than choosing a buyer. Printing "→ Vehicle / Boat appraiser" here would commit the
+    // client to a path nobody has chosen yet.
+    (function() {
+      var vehs = e.vehicles || [];
+      if (!vehs.length) return '';
+      var rows = vehs.map(function(v) {
+        // Spec line: whatever of type / year / mileage / condition was actually captured.
+        var spec = [v.vtype, v.year, v.mileage ? esc(v.mileage) + ' mi/hrs' : '', v.condition]
+          .filter(Boolean).map(function(x){ return esc(String(x)); }).join(' &middot; ');
+        var name = esc(v.desc || 'Vehicle');
+        var flags = [v.collector ? 'Flagged for specialist appraisal' : 'Flagged for disposition'];
+        // Title is the one open item on this card with a real consequence for the client:
+        // no title means no transfer. It is captured today and reaches nobody.
+        if (!v.titleLocated) flags.push('<span style="color:var(--bronze);">Title to be located</span>');
+        return '<tr><td><strong>' + name + '</strong>' +
+          (spec ? '<br><span style="font-size:11px;color:var(--gray);">' + spec + '</span>' : '') +
+          '</td><td>' + flags.join('<br>') + '</td></tr>';
+      }).join('');
+      return '<div class="ce-section-hdr" style="margin-top:1rem;">Vehicles &amp; Watercraft</div>' +
+        '<table class="ce-tbl"><thead><tr><th>Vehicle / Watercraft</th><th>Status</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>' +
+        '<div style="font-size:11px;color:var(--gray);padding:6px 10px 0;font-style:italic;">' +
+        'Each vehicle above is included in the estate documentation. The disposition path — sale, ' +
+        'transfer, or appraisal — is determined during the engagement and recorded in the inventory. ' +
+        'Any specialist appraiser engaged is billed to you directly at cost.</div>' +
+        '<div style="margin-bottom:1.25rem;"></div>';
+    })() +
+
     // "To Be Engaged" — this is the ESTIMATE, so nobody has been engaged yet. The costs
     // beside each row are estimates and the vendors are proposals; the past tense read as
     // a statement that the work was already booked. The invoice has no equivalent heading,
@@ -6702,10 +6786,20 @@ function renderClientEstimate() {
     // Says where the coordination went. The terms below have promised since the fee came off
     // that managing these vendors is billed hourly instead; naming the hours turns that from
     // a reassurance into something the client can find in the labor lines above.
+    //
+    // FIXED PRICE TAKES A DIFFERENT SENTENCE, and this was a real defect: on a fixed-price
+    // estimate the hourly TC/PS rows are replaced by the single Fixed Project Fee line, so
+    // "of the Transition Concierge hours above" pointed at a line that is not on the page —
+    // and disclosed an hour count on a document sold as explicitly not billed by the hour.
+    // The wording below matches the fixed-price clause already in Terms.
     ((e.vendorTCHrs || 0) > 0
       ? '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">' +
-          'Billed to you directly at cost — no coordination fee or markup. Sourcing, scheduling and supervising these vendors accounts for ' +
-          e.vendorTCHrs.toFixed(1) + ' of the Transition Concierge hours above.</td></tr>'
+          'Billed to you directly at cost — no coordination fee or markup. ' +
+          (e.fixedPrice
+            ? 'Sourcing, scheduling and supervising these vendors is included in the fixed project fee.'
+            : 'Sourcing, scheduling and supervising these vendors accounts for ' +
+              e.vendorTCHrs.toFixed(1) + ' of the Transition Concierge hours above.') +
+        '</td></tr>'
       : '') +
     '</table>' +
     '<div style="margin-bottom:1.25rem;"></div>' +
@@ -6720,9 +6814,17 @@ function renderClientEstimate() {
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
         (SMF_PCT > 0
           ? '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">Coordination of these vendors is included in the ' + Math.round(SMF_PCT*100) + '% Service Management Fee above.</td></tr>'
-          : '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">These vendors are billed to you directly at cost. Havellin charges no coordination fee on them \u2014 the concierge time spent managing them is billed hourly' +
-              ((e.prepTCHrs || 0) > 0 ? ', and accounts for ' + e.prepTCHrs.toFixed(1) + ' of the Transition Concierge hours above' : '') +
-              '.</td></tr>') +
+          // Same fixed-price split as the third-party footnote above, and this one was worse:
+          // it asserted "billed hourly" outright on a document whose Terms say the fee is
+          // firm and does not vary with hours worked \u2014 a flat contradiction three paragraphs
+          // apart, on the client's own copy.
+          : '<tr><td colspan="2" style="font-size:11px;color:var(--gray);padding:6px 10px;font-style:italic;">These vendors are billed to you directly at cost. Havellin charges no coordination fee on them \u2014 ' +
+              (e.fixedPrice
+                ? 'coordinating them is included in the fixed project fee.'
+                : 'the concierge time spent managing them is billed hourly' +
+                  ((e.prepTCHrs || 0) > 0 ? ', and accounts for ' + e.prepTCHrs.toFixed(1) + ' of the Transition Concierge hours above' : '') +
+                  '.') +
+              '</td></tr>') +
         '</table>';
     })() : '') +
 
