@@ -167,6 +167,21 @@ now branch on the job FAMILY.
   it in writing.** Bequests are released **against signed receipts** — on a court-supervised matter
   "we gave it to the daughter" is not a record. Where beneficiaries disagree we **hold and wait**;
   we do not arbitrate and **nothing goes out on a verbal request**.
+- **Stage 1 had the same bug and it was corrected in the same pass.** It told the reader about
+  *"who will be in **your home**"* and *"the decisions **you** will be asked to make in every
+  room"* — addressed to an attorney or trust officer who does not live there and may never
+  attend. The estate version now says **"We work for you"** plainly, and states that if family
+  or beneficiaries are at the property we will be **courteous to everyone present but take
+  direction from the representative alone**, and release nothing without their written
+  authority. That is the sentence the representative actually wants to read.
+- **CORRECTED MID-BUILD: do not ask the client for the will.** The first draft asked for "a copy
+  of the will or trust". Havellin's own internal checklist asks for a **certified copy of the
+  Letters**, and treats a will found in the house as something to **sequester and turn over to
+  the PR/attorney against a signed receipt** — it never requests one. The client document now
+  asks for the Letters plus **the list of items designated to a named person**, produced by the
+  representative or counsel, and says outright *"we do not need the will itself"* and *"we do
+  not read or interpret the will"*. **Havellin is not counsel and the document must never read
+  as if it were.**
 - **Downsizing keeps the decision-paced language, because there it is true**, and Home Cleanout
   keeps the simpler middle version. A test asserts *Decisions, room by room* appears on downsizing
   and on NEITHER estate nor probate.

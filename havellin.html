@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:51pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6619,19 +6619,32 @@ function _cePhases(e, job) {
   }
 
   // ── Phase 1 · Before we start ───────────────────────────────────────────────
-  var beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through exactly how the work will run — the daily rhythm, who will be in your home, and the decisions you will be asked to make in every room. We confirm access, parking, elevator and building rules, and brief the crew on the property before anyone arrives.';
+  // SAME FAMILY SPLIT AS STAGE 2. On a downsizing the reader lives in the house and
+  // will be making the calls, so "your home" and "the decisions you will be asked to
+  // make" are literally true. On an estate the reader is the REPRESENTATIVE — an
+  // attorney, executor or trust officer — who does not live there and may never
+  // attend. Heirs may well be on site; we are courteous to them and take direction
+  // from none of them. Saying that plainly is what the representative wants to read.
+  var beforeBody;
   if (hasDoc) {
-    beforeBody += ' We also confirm authority: a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.';
+    beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through how the engagement will run — the sequence, who will be on site, and what comes back to you and when. We confirm access, parking and any building or association rules, and brief the crew on the property before anyone arrives. We also confirm authority: a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.'
+      + ' <strong>We work for you.</strong> If family members or beneficiaries will be at the property while we are there, tell us who to expect — we will be courteous to everyone present, but we take direction from you alone and nothing is released to anyone without your written authority.';
+  } else if (isDownsizing) {
+    beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through exactly how the work will run — the daily rhythm, who will be in your home, and the decisions you will be asked to make in every room. We confirm access, parking, elevator and building rules, and brief the crew on the property before anyone arrives.';
+  } else {
+    beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through exactly how the work will run — the daily rhythm, who will be on site, and anything we will need a decision on. We confirm access, parking, elevator and building rules, and brief the crew on the property before anyone arrives.';
   }
   // The old standalone "What We Need From You" block lived here as a fourth section
   // and mostly repeated these per-phase asks. Folded in: access and the multi-party
   // point belong at the start, decisions belong to the sorting stage.
   var beforeNeed = hasDoc
-    ? 'A signed engagement agreement, the deposit, and the documents that establish authority — the Letters, and the will or trust — including any limits on that authority, in writing. If the will names specific bequests, we need it before anything is handled, not after.'
+    ? 'A signed engagement agreement, the deposit, and a certified copy of the Letters of Administration or Testamentary, with any limits on that authority noted in writing. If particular items are designated to particular people, we need that list from you or from counsel before anything is handled — we do not need the will itself.'
     : 'A signed engagement agreement, the deposit, and one named person who can make the final call on what stays and what goes.';
   beforeNeed += ' Keys or codes, parking, and any building, HOA or elevator rules, confirmed before the first day.';
   if (e.heirs) {
-    beforeNeed += ' Several people are involved in decisions here — the estimate accounts for that coordination, but we need one point of contact who speaks for the group.';
+    beforeNeed += hasDoc
+      ? ' Several interested parties are involved on this matter — the estimate accounts for that coordination. We still take instruction from you alone; tell us how you want questions from anyone else routed.'
+      : ' Several people are involved in decisions here — the estimate accounts for that coordination, but we need one point of contact who speaks for the group.';
   }
   if (e.access) {
     beforeBody += ' Access here is difficult — stairs or no elevator — so we agree the loading route before Day 1 rather than discovering it on the morning.';
@@ -6659,8 +6672,8 @@ function _cePhases(e, job) {
     sortNeed = 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.';
     sortDone = 'A room is complete when every item in it has been routed and the keep list is confirmed with you in writing.';
   } else if (hasDoc) {
-    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items identified in the will as specific bequests are set aside and recorded separately, property that may be claimed as exempt is flagged, and anything that may carry real value is held for the appropriate specialist before it moves.';
-    sortNeed = 'A copy of the will or trust, so specific bequests are identified before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The inventory comes to you and to counsel — we do not interpret the will, and we do not decide what happens to anything.';
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, property that may be claimed as exempt is flagged for your attention, and anything that may carry real value is held for the appropriate specialist before it moves. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+    sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The inventory comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = deep
       ? 'A room is complete when every item in it is catalogued and photographed, specific bequests and exempt property are set aside and recorded, and the room\'s inventory has been delivered to the representative and counsel.'
       : 'A room is complete when every item in it is catalogued and photographed, specific bequests are set aside, and the room\'s inventory has been delivered to the representative.';
@@ -6686,7 +6699,7 @@ function _cePhases(e, job) {
     // because on a court-supervised matter "we gave it to the daughter" is not a
     // record. We do not arbitrate between beneficiaries — we hold and wait.
     dispTitle = 'Distribution &amp; Disposition';
-    dispBody = '<strong>Nothing leaves the property until the representative has reviewed the inventory and authorised it in writing.</strong> Once that authority is given: specific bequests are released to the named beneficiaries against signed receipts; property claimed as exempt is set aside; and the remainder is routed to sale, donation or disposal, with the outcome recorded against its inventory line. Sensitive documents are shredded, and your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.';
+    dispBody = '<strong>Nothing leaves the property until the representative has reviewed the inventory and authorised it in writing.</strong> Once that authority is given, and only as you direct: designated items are released to the people you name, against signed receipts; property claimed as exempt is set aside; and the remainder is routed to sale, donation or disposal, with the outcome recorded against its inventory line. Sensitive documents are shredded, and your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.';
     dispNeed = 'Written authority to proceed, once you and counsel have read the inventory. Where beneficiaries disagree about an item, we hold it and wait for your instruction — we do not arbitrate and we do not release anything on a verbal request.';
     dispDone = 'Every disposition stream is cleared, each outcome is recorded against its inventory line, a signed receipt is held for every item released to a beneficiary, and any proceeds are routed to the estate account.';
   } else if (hasDisp) {
