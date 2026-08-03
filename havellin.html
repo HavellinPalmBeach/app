@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6627,7 +6627,7 @@ function _cePhases(e, job) {
   // and mostly repeated these per-phase asks. Folded in: access and the multi-party
   // point belong at the start, decisions belong to the sorting stage.
   var beforeNeed = hasDoc
-    ? 'A signed engagement agreement, the deposit, and documentation of who holds authority to act for the estate — including any limits on that authority, in writing.'
+    ? 'A signed engagement agreement, the deposit, and the documents that establish authority — the Letters, and the will or trust — including any limits on that authority, in writing. If the will names specific bequests, we need it before anything is handled, not after.'
     : 'A signed engagement agreement, the deposit, and one named person who can make the final call on what stays and what goes.';
   beforeNeed += ' Keys or codes, parking, and any building, HOA or elevator rules, confirmed before the first day.';
   if (e.heirs) {
@@ -6644,14 +6644,30 @@ function _cePhases(e, job) {
   });
 
   // ── Phase 2 · Sorting & decisions ───────────────────────────────────────────
-  var sortTitle = 'Sorting &amp; Decisions' + (hasDoc ? ' &amp; Documentation' : '');
-  var sortBody;
+  // THE JOB FAMILIES ARE GENUINELY DIFFERENT HERE AND THE COPY MUST FOLLOW.
+  // On a DOWNSIZING the owner is alive, standing in their own house, deciding —
+  // "we go as fast as you decide" is exactly right. On an ESTATE or PROBATE the
+  // owner is deceased, the representative is frequently an attorney or trust
+  // officer who is not local and not on site, and the WILL governs disposition,
+  // not preference. Nothing is sold or removed at this stage at all: we catalogue,
+  // and the inventory goes to the representative and counsel. Writing the
+  // downsizing ask onto an estate document described a job that is not happening.
+  var sortTitle = hasDoc ? 'Sorting, Documentation &amp; Inventory' : 'Sorting &amp; Decisions';
+  var sortBody, sortNeed, sortDone;
   if (isDownsizing) {
     sortBody = 'We work alongside you, one room at a time, in the same order the estimate lists them. Every item is sorted into keep, sell, donate, or dispose — and nothing is decided for you. Property Specialists do the handling and the lifting so you are making decisions rather than moving furniture, and your Transition Concierge keeps the plan moving room to room.';
+    sortNeed = 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.';
+    sortDone = 'A room is complete when every item in it has been routed and the keep list is confirmed with you in writing.';
   } else if (hasDoc) {
-    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. Items that may carry real value are set aside and flagged for the right specialist before anything moves.';
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items identified in the will as specific bequests are set aside and recorded separately, property that may be claimed as exempt is flagged, and anything that may carry real value is held for the appropriate specialist before it moves.';
+    sortNeed = 'A copy of the will or trust, so specific bequests are identified before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The inventory comes to you and to counsel — we do not interpret the will, and we do not decide what happens to anything.';
+    sortDone = deep
+      ? 'A room is complete when every item in it is catalogued and photographed, specific bequests and exempt property are set aside and recorded, and the room\'s inventory has been delivered to the representative and counsel.'
+      : 'A room is complete when every item in it is catalogued and photographed, specific bequests are set aside, and the room\'s inventory has been delivered to the representative.';
   } else {
     sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting contents and routing each item to where it is going. Anything that looks like it carries value is pulled aside and reviewed with you before the room is cleared, so nothing of consequence leaves the house by accident.';
+    sortNeed = 'A decision on anything you want kept, and a contact who can answer a question the same day. You do not need to be here for the rest — anything of consequence is set aside and reviewed with you before the room is cleared.';
+    sortDone = 'A room is complete when every item in it has been routed and anything set aside has been reviewed with you.';
   }
   if (hasColl) {
     sortBody += ' The collections identified at the walkthrough are handled on their own track, matched to the specialist partner named in the disposition plan below.';
@@ -6660,24 +6676,24 @@ function _cePhases(e, job) {
     sortBody += ' The specialists valuing items on this engagement — ' + _vList(vend.value)
       + ' — attend while the contents are still in place, so nothing is assessed from a photograph after the fact.';
   }
-  P.push({
-    title: sortTitle,
-    body: sortBody,
-    need: 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.',
-    done: deep
-      ? 'A room is complete when every item in it has been routed, the retained list is confirmed with you in writing, and the room’s inventory is acknowledged before anything leaves it.'
-      : 'A room is complete when every item in it has been routed and the retained list is confirmed with you in writing.'
-  });
+  P.push({ title: sortTitle, body: sortBody, need: sortNeed, done: sortDone });
 
   // ── Phase 3 · Packing / disposition ─────────────────────────────────────────
   var dispBody, dispTitle, dispNeed, dispDone;
-  if (hasDisp) {
+  if (hasDisp && hasDoc) {
+    // Estate / probate: authority to dispose comes AFTER the inventory has been
+    // read by the representative and counsel. Releases are against signed receipts,
+    // because on a court-supervised matter "we gave it to the daughter" is not a
+    // record. We do not arbitrate between beneficiaries — we hold and wait.
+    dispTitle = 'Distribution &amp; Disposition';
+    dispBody = '<strong>Nothing leaves the property until the representative has reviewed the inventory and authorised it in writing.</strong> Once that authority is given: specific bequests are released to the named beneficiaries against signed receipts; property claimed as exempt is set aside; and the remainder is routed to sale, donation or disposal, with the outcome recorded against its inventory line. Sensitive documents are shredded, and your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.';
+    dispNeed = 'Written authority to proceed, once you and counsel have read the inventory. Where beneficiaries disagree about an item, we hold it and wait for your instruction — we do not arbitrate and we do not release anything on a verbal request.';
+    dispDone = 'Every disposition stream is cleared, each outcome is recorded against its inventory line, a signed receipt is held for every item released to a beneficiary, and any proceeds are routed to the estate account.';
+  } else if (hasDisp) {
     dispTitle = 'Packing &amp; Disposition';
     dispBody = 'Every decision from the previous stage is carried out. Items for sale go to the consignment, auction or dealer partner named in the plan; donations are collected and receipted for your tax records; disposal is hauled; sensitive documents are shredded. Retained items are packed and labeled. Your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.';
-    dispNeed = 'Confirmation of the retained list before it is packed, and a decision on anything a specialist values differently than expected.';
-    dispDone = hasDoc
-      ? 'Every disposition stream is cleared, each outcome is recorded against its inventory line, and any proceeds are routed to the estate account.'
-      : 'Every disposition stream is cleared and only the items you are keeping remain, boxed and labeled.';
+    dispNeed = 'Confirmation of the keep list before it is packed, and a decision on anything a specialist values differently than expected.';
+    dispDone = 'Every disposition stream is cleared and only the items you are keeping remain, boxed and labeled.';
   } else {
     dispTitle = 'Packing &amp; Preparation';
     dispBody = 'Everything you are keeping is packed and labeled by the room it is going to, so unpacking is a matter of putting boxes where they belong rather than opening every one to find out what is inside. Sale, donation and disposal items leave in the same pass.';
@@ -6736,7 +6752,9 @@ function _cePhases(e, job) {
   P.push({
     title: 'Close-Out' + (hasLegal ? ' &amp; Court Filing' : ''),
     body: closeBody,
-    need: 'A final walkthrough with us, and sign-off on the disposition summary.',
+    need: hasDoc
+      ? 'Sign-off on the final disposition summary. A closing walkthrough with us if you want one — on an estate it is often the attorney or a family member standing in, and the records do not depend on anyone attending.'
+      : 'A final walkthrough with us, and sign-off on the disposition summary.',
     done: deep
       ? 'The property is confirmed clear and photographed, the financial close reconciles, the filing is complete, and the full documentation package is complete and retained.'
       : 'The property is confirmed clear and photographed, the financial close reconciles, and the complete documentation package is handed over to you.',

@@ -144,6 +144,36 @@ grand-total lines — where a reader looking for a number actually is — and in
 - 23 more checks (135 in this suite), including one asserting `(at cost)` appears exactly four
   times and only on labels.
 
+## The stages now follow the ESTATE playbook, not the downsizing one (2026-08-03)
+**Anthony: "in an estate settlement, there are no family members on site to make decisions… the
+will dictates the disposition for items specified. this language is wrong for those types of
+jobs."** He is right, and it was a correctness bug, not a wording preference. Stages 2 and 3
+now branch on the job FAMILY.
+- **What was wrong:** every service type got *"Decisions, room by room. This is the part of the
+  job that sets the pace — we can work as fast as decisions are made"* and *"the retained list is
+  confirmed with you in writing."* That is a **downsizing** job — a living owner standing in their
+  own house. On an estate the owner is deceased, the representative is frequently an attorney or
+  trust officer who is **not local and not on site**, and the **will** governs disposition rather
+  than preference. The document described a job that was not happening.
+- **Estate / probate stage 2 is now `Sorting, Documentation & Inventory`** — we CATALOGUE, and
+  **nothing is sold, donated or removed at that stage at all**. Specific bequests named in the
+  will are set aside and recorded separately; property that may be claimed exempt is flagged. The
+  ask is the **will or trust up front** (before anything is handled, not after) plus the Letters,
+  and it says plainly **"You do not need to be on site"** and **"we do not interpret the will"** —
+  we are not counsel and must not read as if we are. Complete when the room is catalogued and the
+  inventory has been **delivered to the representative and counsel**.
+- **Estate / probate stage 3 is `Distribution & Disposition`** and opens with the gate:
+  **nothing leaves the property until the representative has reviewed the inventory and authorised
+  it in writing.** Bequests are released **against signed receipts** — on a court-supervised matter
+  "we gave it to the daughter" is not a record. Where beneficiaries disagree we **hold and wait**;
+  we do not arbitrate and **nothing goes out on a verbal request**.
+- **Downsizing keeps the decision-paced language, because there it is true**, and Home Cleanout
+  keeps the simpler middle version. A test asserts *Decisions, room by room* appears on downsizing
+  and on NEITHER estate nor probate.
+- Close-Out no longer assumes the client attends the final walkthrough on an estate — it is often
+  the attorney or a family member standing in, and the records do not depend on anyone attending.
+- 25 checks on this alone (180 in the suite).
+
 ## Job Plan section folded into the stages — three trailing blocks DELETED (2026-08-03)
 **Anthony: "everything below 4. Close-Out should be incorporated in the appropriate numbered
 slot above. this is too much and reads awkwardly."** The section was six blocks; it is now
