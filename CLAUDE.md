@@ -61,6 +61,29 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## Save to Drive now confirms itself (BUILT 2026-08-03)
+**The client estimate's *Save to Drive* had feedback — a `showSyncBadge` toast — but it is fixed
+bottom-right and gone in 4 seconds, while your eyes are on the button you just pressed near the
+top of a long page.** Reported as "it saved fine but the button just stays white." Worse, it
+answered nothing the next day: there was no record anywhere that an estimate had ever been filed.
+- **The filing is recorded on the JOB** (`estimateDriveAt` + `estimateDriveUrl`), the way
+  `markEstimateSent` records delivery — `saveJobs()` + `syncJobToSheets`. **Not on the estimate
+  record:** `saveEstimateState` rebuilds `estimateStore[jobId]` from a literal every save, so a
+  stamp parked there is silently dropped on the next write.
+- `uploadHtmlToDrive` was already returning `fileUrl` and `saveFolderEstimate` was **throwing it
+  away** on `function(ok)`. Kept now, so the banner links straight to the filed copy.
+- Two surfaces: the button repaints to **✓ Saved to Drive** (green, timestamp in its tooltip) via
+  `_paintDriveEstBtn`, and the approval banner gains a persistent **📁 Filed to Drive · <when> ·
+  Open** line in both approved states. `_reset()` inside `saveFolderEstimate` calls the painter
+  rather than hardcoding the label, or a re-save would wipe the confirmed state.
+- **`editEstimateFromCE` clears both fields.** The copy in Drive is the previous version the
+  moment you edit; re-approval re-files and re-stamps automatically (`checkPin` →
+  `saveFolderEstimate(true)`). A stamp that outlived the edit would assert the filed document
+  matches the one on screen, which is the one thing it must never do.
+- A FAILED upload writes no stamp and the button falls back to plain *Save to Drive* — tested.
+- Pressing it again still re-files; the Apps Script overwrites by filename.
+- 24 checks (same lift-the-real-source harness as the photo suite).
+
 ## Job Plan photos → Drive: six ways a shot went missing (BUILT 2026-08-03)
 **Reported as "we took pics the other day that didn't seem to make it to the Estate Inventory
 folder."** Six defects on that path, three of which lose the photo outright and two of which
