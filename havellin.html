@@ -499,10 +499,22 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
    and remembered afterwards, so the icon always opens straight into it.
 
    The governing rule: THE PHONE CAPTURES WHAT YOU CAN ONLY LEARN BY BEING IN THE
-   HOUSE; THE DESK DECIDES EVERYTHING ABOUT PRICE. So difficult access, heirs, room
-   scoring, collections, vehicles, materials and prep all stay — you cannot come back
-   for the boat. Crew sizing, discount, premium, expedite, fixed price and every
+   HOUSE; THE DESK MAKES THE COMMERCIAL DECISIONS. So difficult access, heirs, premium
+   estate, room scoring, collections, vehicles, materials and prep all stay — you cannot
+   come back for the boat. Crew sizing, discount, expedite, fixed price and every
    calculated output are hidden.
+
+   The rule used to be "the desk decides everything about PRICE", and that sorted badly:
+   every adjustment changes the price, so it grouped premium estate with discount and
+   fixed price and hid it. But premium is not a commercial decision — the agreement
+   defines it (3.3) as a property "containing fine art, antiques, collectibles, or
+   high-value contents", which is an OBSERVATION, and one nobody can make from a desk. It
+   is the most field-dependent judgment on the tab. Difficult access and multiple heirs
+   are the same kind of thing and were always on the phone; premium was the odd one out.
+   Hiding it also protected nothing, since `i-prem` sets the same flag on the Client
+   Intake tab, which is itself a field tab — so it was reachable on a phone anyway, just
+   one tab away from any number showing what it does. Observation vs. commercial decision
+   is the cut that holds; "does it move the price" is not.
 
    HIDDEN, NEVER REMOVED. calcAll() reads 89 distinct element ids and a display:none
    element still answers getElementById, so the estimate computes and saves in FULL on
@@ -530,9 +542,11 @@ body.field-mode .nb.active{border-top-color:var(--bronze);border-bottom-color:tr
 /* Clear the fixed bar so the last field on a form is never trapped under it. */
 body.field-mode .main{padding-bottom:88px;}
 
-/* Desk-only panels. Hidden, still readable by calcAll. */
+/* Desk-only panels. Hidden, still readable by calcAll.
+   #adj-pricing came OFF this list — see the premium-estate reasoning in the block above.
+   Its wrapper stays in the markup: it still groups the toggle with #prem-badge, and it is
+   the hook to re-hide it if the call is ever reversed. */
 body.field-mode #est-summary-col,
-body.field-mode #adj-pricing,
 /* Crew sizing moved in beside the other staffing questions, so it needs hiding by
    name now rather than inheriting it from the old Property Specialists column. */
 body.field-mode #crew-size-wrap,
@@ -673,7 +687,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 11:08am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 11:18am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1105,12 +1119,10 @@ body.no-smf .smf-col{display:none;}
        toggles ran the column far past the left one and left the dead white block beside
        them. Across the page each toggle gets room for its subtitle on one or two lines
        instead of four.
-       Also fixes a field-mode bug it had inherited: the phone rule is that difficult
-       access and heirs STAY (you cannot learn them again from the desk) while every price
-       decision goes. But #est-adjustments was nested inside #est-crew-col, which field
-       mode hides wholesale, so those two were being hidden along with it. Out here they
-       are visible on the phone again, and #adj-pricing keeps its own rule so the premium
-       rate toggle stays desk-only. -->
+       Also fixes a field-mode bug it had inherited: all three of these are observations
+       you can only make in the house, so all three belong on the phone. But
+       #est-adjustments was nested inside #est-crew-col, which field mode hides wholesale,
+       so they were being hidden along with it. Out here the whole card is on the phone. -->
   <div class="card" style="margin-bottom:1rem;" id="est-adjustments">
     <div class="sec">Adjustments</div>
     <div class="adj-grid">
@@ -1122,9 +1134,13 @@ body.no-smf .smf-col{display:none;}
         <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to off-site coordination hours (about half of total concierge hours)</div></div>
         <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
       </div>
-      <!-- Premium estate is a PRICE decision, so it keeps its own wrapper and stays
-           desk-only — field mode's rule is that the phone captures what you can only
-           learn in the house and the desk decides everything about price. -->
+      <!-- Premium estate is an OBSERVATION, not a commercial decision: the agreement
+           (3.3) defines it as a property containing fine art, antiques, collectibles or
+           high-value contents, which is a call you make standing in the room. It reads as
+           a price control because it moves the rate, but so do the two beside it — they
+           just move hours instead. On the phone with the rest of them. The #adj-pricing
+           wrapper stays: it groups the toggle with its badge, and it is the hook to
+           re-hide this if the call is ever reversed. -->
       <div id="adj-pricing">
         <div class="toggle-wrap" style="height:100%;">
           <div class="toggle-info">

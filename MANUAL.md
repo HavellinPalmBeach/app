@@ -18,6 +18,8 @@ Interface notes: the header + navigation bar stay pinned to the top while you sc
 
 **Phone & field use.** Every tab works on a phone — the nav becomes a scrolling strip, dialogs open as bottom sheets, and grids stack. The three directories (Contractors, Vendors, Referral Partners) are built for standing in a driveway: search, tap-to-call/text/email, and a **Quick edit** for contact details. **Build Estimate** is the deliberate exception — its room tables are desk/iPad work, and they scroll sideways rather than reflow.
 
+> **What Build Estimate hides on a phone, and the rule behind it.** Field mode (`?field=1`) keeps everything you can only learn by *being in the house* — room scoring, difficult access, multiple heirs, **premium estate**, collections, vehicles, materials, prep. It hides the commercial decisions and the arithmetic: crew sizing, the timeline planner, discount, expedited delivery, fixed price, and every calculated total. Those wait for the desk. The cut is *observation vs. commercial decision*, not "does it change the price" — every adjustment changes the price. Premium estate sat on the wrong side of that until 2026-08-03: the agreement (§3.3) defines it as a property containing fine art, antiques, collectibles or high-value contents, which is a judgment you make standing in the room and cannot make from a desk. Hiding it also achieved nothing, since the same flag is set on the Client Intake tab, which is itself a field tab. Nothing is ever *removed* on a phone — only hidden. The estimate computes and saves in full either way, so a walkthrough captured on a phone is complete; you are only deferring the pricing decisions.
+
 ## 2. Initial Setup (one time per device)
 
 Open **Settings** (gear icon) and enter:
