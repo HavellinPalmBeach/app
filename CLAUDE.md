@@ -175,6 +175,33 @@ arrange, work to inspect, a settlement to reconcile.
 - 47 jsdom checks on the estimate path + 22 downstream (Job Plan sourcing, all three invoice
   stages bundled and standalone, both agreements, zero load errors) — all green.
 
+## Estimate Summary now says what the hours ARE (BUILT 2026-08-03)
+**The fee rows stated a count and nothing else, and the composition existed nowhere a reader
+could see it.** The room grid shows `pack` alone — 27% of the hands-on pool on Estate
+Settlement, 23% probate, 18% contested, but **71% on Downsizing** — so per-room hours are a
+minority of the work on exactly the jobs Havellin runs, and are **not comparable between
+service types**. A closet reading 3.6 hrs on an estate job carries ~13 hrs once its share of
+everything else is counted.
+- `computeEngineV3` now returns **`byStep`** (per-step tc/ps). `STEP_LABELS` +
+  `STEP_LABELS_COORD` name them, and `_scaleHoursParts` / `_hoursPartsLine` render them under
+  the two fee rows in the Estimate Summary. Stored on the snapshot as `est.hoursBreakdown` so
+  the Drive working paper and a reopened estimate can't drift from what was quoted.
+- **Both lines are SCALED, not raw.** Billed PS is `n × W/(n+α)` of the pool, and billed TC adds
+  on-site hours to off-site coordination — raw step hours would visibly fail to add up to the
+  total on the same row. The rounding residual goes to the largest part so they sum exactly.
+- **TWO label maps, and this is the one to not "simplify".** A step's two coefficients are
+  off-site coordination and the hands-on pool — not the same work done by two people. Using the
+  hands-on names for the TC column printed *"Packing & handling 5.0"* against a concierge who
+  was not in the building. Specialist side says *Packing & handling*; concierge side says
+  *Packing logistics & materials*.
+- **DELETED: the `room-overhead-line` strip** under the room grid ("+ Project coordination &
+  logistics"). It named the largest block of work on an estate job as administrative overhead
+  and gave a residual without saying what was in it. The Drive export row is renamed *Job-level
+  work* and now prints the stored breakdown, falling back to the old text on pre-change
+  snapshots. Don't reintroduce a second copy — two places describing one quantity is how the
+  fee table and the room grid drift apart.
+- 40 jsdom checks on this alone (90 across the three suites).
+
 ## Room coverage — half baths were unreachable, and ROOMS was secretly append-only (BUILT 2026-08-03)
 **The coverage badge could never clear on a house with two powder rooms**, so a fully-walked
 estate read as an unfinished walkthrough forever and the one check that catches a half-scored
@@ -225,7 +252,16 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (fourth pass, same day)** — both documents, against
+- Last reconciled against the app: **2026-08-03 (fifth pass, same day)** — both documents, against
+  the Estimate Summary hours breakdown. This one CORRECTS rather than adds: manual §5b described
+  the deleted *Project coordination & logistics* line as the place the job-level hours are stated,
+  which is now false. Replaced with where they actually are (under the two fee rows), plus a note
+  that room rows are the packing step only, the pack-share table by service type (27 / 23 / 18 /
+  71%), the "a 3.6 hr closet is really ~13" arithmetic, and **don't compare room hours across
+  service types**. A second note explains why the two label sets differ and says not to collapse
+  them. Playbook Step 2: the same in field language plus **one new symptom→cause row** (a room's
+  hours look far too low). `.md` copies hand-edited to match and diffed for parity.
+- Prior pass **2026-08-03 (fourth pass, same day)** — both documents, against
   the half-bath coverage fix. Nothing either document said was falsified (neither enumerates the
   room list), so this pass ADDS rather than corrects. Manual §5b: a note stating **the badge counts
   grid rows, so intake can only ask for what the grid can reach** — with the reachable ceilings

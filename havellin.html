@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 8:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1190,7 +1190,6 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div id="room-table-wrap"></div>
         <div id="coverage-badge"></div>
-        <div id="room-overhead-line" style="display:none;padding:.6rem 1.1rem .9rem;border-top:1px solid var(--border);font-size:11px;color:var(--gray-dk);background:var(--cream);"></div>
       </div>
 
       <!-- Paired two-up: facing questions on a walkthrough, and each is short enough
@@ -3106,10 +3105,16 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
   // single ticked room shows realistic minutes — not the whole job. The job TOTAL
   // (tc/ps) is unchanged: hands-on + overhead.
   var tc=0, ps=0, roomTC=0, roomPS=0;
+  // Per-step hours, kept so the Estimate Summary can say what the hours ARE rather than
+  // only how many there are. Only `pack` is distributed to rooms, so on an estate job the
+  // room rows show ~27% of the hands-on work and the rest was previously visible only as
+  // one unlabelled residual. See STEP_LABELS.
+  var byStep = {};
   for (var L in steps){
     var cf = ENGINE_CAREFUL[L] ? cpxFactor : 1;
     var stepTC = load*steps[L][0]*cf;
     var stepPS = load*steps[L][1];
+    byStep[L] = {tc:stepTC, ps:stepPS};
     tc += stepTC; ps += stepPS;
     if (ENGINE_ROOMLEVEL[L]) { roomTC += stepTC; roomPS += stepPS; }
   }
@@ -3131,7 +3136,61 @@ function computeEngineV3(sqft, rooms, svc, crew, years){
   });
   return { totTC:tc, totPS:ps, roomTC:Math.round(roomTC*10)/10, roomPS:Math.round(roomPS*10)/10,
            load:Math.round(load*10)/10, days:days,
-           volFactor:volFactor, cpxFactor:cpxFactor, perRoom:perRoom };
+           volFactor:volFactor, cpxFactor:cpxFactor, perRoom:perRoom, byStep:byStep };
+}
+
+// Client-legible names for the work steps. JOB_STEPS keys are internal; these are what
+// the Estimate Summary prints, so they have to read as work someone recognises being
+// done in their house rather than as engine vocabulary.
+//
+// TWO maps, and the split is load-bearing. A step's two coefficients are not the same
+// work done by two people: [0] is OFF-SITE COORDINATION and [1] is the HANDS-ON POOL
+// (see JOB_STEPS). So `pack` on the concierge side is not packing — it is ordering
+// materials and scheduling the crate delivery. Labelling the off-site column with the
+// hands-on names printed "Packing & handling 5.0" against a concierge who was not in the
+// building, which is worse than saying nothing. Keep them separate.
+var STEP_LABELS = {
+  triage:      'Sorting & triage',
+  document:    'Item documentation & inventory',
+  pack:        'Packing & handling',
+  disposition: 'Disposition & haul-out',
+  legal:       'Legal & chain of custody'
+};
+var STEP_LABELS_COORD = {
+  triage:      'Pre-job planning & family calls',
+  document:    'Appraiser & inventory scheduling',
+  pack:        'Packing logistics & materials',
+  disposition: 'Disposition paperwork & buyer coordination',
+  legal:       'Legal & court filings'
+};
+
+// Render a set of {label, hrs} parts as one "A 12.0 · B 8.5" line, largest first, with
+// anything below the threshold dropped so a long tail of 0.1s doesn't bury the real work.
+// Parts are pre-scaled by the caller; this only formats.
+function _hoursPartsLine(parts, minHrs) {
+  var min = minHrs === undefined ? 0.5 : minHrs;
+  return parts.filter(function(p){ return p.hrs >= min; })
+              .sort(function(a,b){ return b.hrs - a.hrs; })
+              .map(function(p){ return p.label + ' ' + p.hrs.toFixed(1); })
+              .join(' &middot; ');
+}
+
+// Scale raw component hours so they sum to the billed figure, then hand the rounding
+// residual to the largest part. Without that the parts visibly fail to add up to the
+// total printed on the same line, which is exactly the kind of thing that makes someone
+// stop trusting the whole panel.
+function _scaleHoursParts(parts, billed) {
+  var raw = parts.reduce(function(a,p){ return a + p.hrs; }, 0);
+  if (!(raw > 0) || !(billed > 0)) return [];
+  var k = billed / raw;
+  var out = parts.map(function(p){ return {label:p.label, hrs:Math.round(p.hrs*k*10)/10}; });
+  var sum = out.reduce(function(a,p){ return a + p.hrs; }, 0);
+  var drift = Math.round((billed - sum) * 10) / 10;
+  if (drift !== 0) {
+    var big = out.reduce(function(a,p){ return p.hrs > a.hrs ? p : a; }, out[0]);
+    big.hrs = Math.round((big.hrs + drift) * 10) / 10;
+  }
+  return out;
 }
 
 
@@ -4413,25 +4472,13 @@ function calcAll() {
   tcFee = Math.round(totTC * tcRate);
   psFee = Math.round(totPS * psRate);
 
-  // Coordination & logistics line: everything in the job total that isn't hands-on
-  // room work (triage, documentation, disposition/haul-out, move, collections & prep
-  // coordination, access/heir adjustments). Derived as total − sum of per-room
-  // hands-on hours, so the room breakdown plus this line always equals the total.
-  var _roomSumTC = includedRooms.reduce(function(a, r){ return a + (r.tcH || 0); }, 0);
-  var _roomSumPS = includedRooms.reduce(function(a, r){ return a + (r.psH || 0); }, 0);
-  var _ovhTC = Math.max(0, Math.round((totTC - _roomSumTC) * 10) / 10);
-  var _ovhPS = Math.max(0, Math.round((totPS - _roomSumPS) * 10) / 10);
-  var _ovhLine = document.getElementById('room-overhead-line');
-  if (_ovhLine) {
-    if (includedRoomCount === 0) {
-      _ovhLine.style.display = 'none';
-    } else {
-      _ovhLine.style.display = 'block';
-      _ovhLine.innerHTML = '<strong>+ Project coordination &amp; logistics:</strong> '
-        + _ovhTC.toFixed(1) + ' TC · ' + _ovhPS.toFixed(1) + ' PS hrs '
-        + '<span style="color:var(--gray);">— job-level work not tied to one room (triage, documentation, haul-out, vendor &amp; move coordination). Per-room figures above are hands-on handling only; together they make up the totals at right.</span>';
-    }
-  }
+  // The "+ Project coordination & logistics" strip that used to sit under the room grid
+  // is GONE (2026-08-03). It named the largest block of work on an estate job — mostly
+  // documentation and triage — "coordination & logistics", which reads as administrative
+  // overhead, and it stated the residual without ever saying what was in it. The same
+  // hours are now itemized by work step under the fee lines in the Estimate Summary,
+  // beside the numbers they explain. Don't reintroduce a second copy here; two places
+  // describing one quantity is how the fee table and the room grid drift apart.
 
   // ─── CREW / TIMELINE STATUS ────────────────────────────────────────────────
   // Duration comes straight out of the working-supervisor solve: the concierge's
@@ -4618,8 +4665,61 @@ function calcAll() {
   if (sPrepTCSumRow) { sPrepTCSumRow.style.display = (prepEnabled && prepTCHrs > 0) ? '' : 'none'; document.getElementById('s-prep-tc-sum').textContent = '+ ' + prepTCHrs.toFixed(1) + ' hrs'; }
   document.getElementById('s-tot-tc').textContent = totTC.toFixed(1) + ' hrs';
   document.getElementById('s-tot-ps').textContent = totPS.toFixed(1) + ' hrs';
-  document.getElementById('tc-fee-label').textContent = 'Transition Concierge fee (' + totTC.toFixed(1) + ' hrs × $' + tcRate + ')';
-  document.getElementById('ps-fee-label').textContent = 'Property Specialist fee (' + totPS.toFixed(1) + ' hrs × $' + psRate + ')';
+  // ── What the hours ARE, printed under each fee line ────────────────────────
+  // The fee rows used to state only a count, and the composition existed nowhere a
+  // reader could see it: the room grid shows `pack` alone, which on an Estate Settlement
+  // is 27% of the hands-on work, and the remaining 73% — documentation, triage, haul-out
+  // — surfaced only as an unlabelled residual under the grid. There is width here, so
+  // the breakdown goes where the number it explains already is.
+  //
+  // Both lines are SCALED to the billed figure rather than printed raw. Billed PS is
+  // n × W/(n+α) of the pool, not the pool, and billed TC adds the concierge's on-site
+  // hours to off-site coordination — so raw step hours would not add up to the total
+  // sitting on the same row.
+  var _psParts = [];
+  var _tcOffParts = [];
+  if (!isPrep && eng.byStep) {
+    Object.keys(eng.byStep).forEach(function(L){
+      if (eng.byStep[L].ps > 0) _psParts.push({label:STEP_LABELS[L] || L, hrs:eng.byStep[L].ps});
+      if (eng.byStep[L].tc > 0) _tcOffParts.push({label:STEP_LABELS_COORD[L] || L, hrs:eng.byStep[L].tc});
+    });
+  }
+  // Pool adders that are not work steps but are real hands-on hours.
+  if (adjPS > 0) _psParts.push({label:'Difficult-access uplift', hrs:adjPS});
+  if (colHrs.ps > 0) _psParts.push({label:'Collections handling', hrs:colHrs.ps});
+  var _psScaled = _scaleHoursParts(_psParts, isPrep ? 0 : Math.max(0, totPS - destPS));
+  if (destPS > 0) _psScaled.push({label:'New-home unpacking', hrs:destPS});
+  var _psLine = _hoursPartsLine(_psScaled);
+
+  // TC splits first into on-site vs off-site — the single most useful cut, because the
+  // on-site half is what makes the concierge a working supervisor rather than an
+  // administrator — and the off-site half then names its own drivers.
+  var _tcOffTotal = Math.max(0, Math.round((totTC - tcOnsiteHrs) * 10) / 10);
+  if (adjTC > 0) _tcOffParts.push({label:'Multiple-heir coordination', hrs:adjTC});
+  if (premiumSpecialtyTC > 0) _tcOffParts.push({label:'Premium specialty coordination', hrs:premiumSpecialtyTC});
+  if (colHrs.tc - colOnsiteTC > 0) _tcOffParts.push({label:'Collections & appraisal coordination', hrs:colHrs.tc - colOnsiteTC});
+  if (vendorTCHrs > 0) _tcOffParts.push({label:'Third-party vendor coordination', hrs:vendorTCHrs});
+  if (prepTCHrs > 0) _tcOffParts.push({label:'Home-prep coordination', hrs:prepTCHrs});
+  if (destTC > 0) _tcOffParts.push({label:'Move day', hrs:destTC});
+  var _tcScaled = _scaleHoursParts(_tcOffParts, _tcOffTotal);
+  var _tcLine = _hoursPartsLine(_tcScaled);
+  if (tcOnsiteHrs > 0) {
+    _tcLine = 'On site with the crew ' + tcOnsiteHrs.toFixed(1)
+            + (_tcLine ? ' &nbsp;|&nbsp; Off site: ' + _tcLine : '');
+  }
+  // Specialist attendance is on-site time that the crew-day figure already contains, so
+  // it is called out rather than added — see COLLECTION_HOURS.on.
+  if (colOnsiteTC > 0) {
+    _tcLine += (_tcLine ? ' &nbsp;|&nbsp; ' : '') + 'incl. specialist visits attended ' + colOnsiteTC.toFixed(1);
+  }
+
+  var _sub = function(txt){
+    return txt ? '<div style="margin-top:3px;font-size:11px;color:var(--gray);line-height:1.5;">' + txt + '</div>' : '';
+  };
+  document.getElementById('tc-fee-label').innerHTML =
+    'Transition Concierge fee (' + totTC.toFixed(1) + ' hrs × $' + tcRate + ')' + _sub(_tcLine);
+  document.getElementById('ps-fee-label').innerHTML =
+    'Property Specialist fee (' + totPS.toFixed(1) + ' hrs × $' + psRate + ')' + _sub(_psLine);
   document.getElementById('s-tc-fee').textContent = '$' + tcFee.toLocaleString();
   document.getElementById('s-ps-fee').textContent = '$' + psFee.toLocaleString();
   document.getElementById('s-pkg').textContent = '$' + pkgCost.toLocaleString();
@@ -4935,6 +5035,10 @@ function calcAll() {
     // told apart from one priced under the old volume-ratio model, and so the
     // concierge split can be shown without re-deriving it.
     hoursModel:'v4-working-supervisor', tcAlpha:_sup.alpha,
+    // What the hours are made of, already scaled to the billed totals. Stored rather than
+    // re-derived so the Drive working paper and a reopened estimate say exactly what the
+    // Estimate Summary said at the time — the step coefficients can move between builds.
+    hoursBreakdown:{tc:_tcScaled, ps:_psScaled, tcOnsite:tcOnsiteHrs},
     workPool:workPool, tcOnsite:tcOnsiteHrs, tcOffsite:coordTC,
     tcCount:crew.tcCount, tcLoad:crew.tcLoad,
     tcFee:tcFee, psFee:psFee, pkgCost:pkgCost, pkgLabel:pkgLabel,
@@ -16673,9 +16777,27 @@ function exportEstimateToDrive(jobId, estSnapshot) {
     var _rPS = (est.rooms||[]).reduce(function(a,r){ return a + (r.psH||0); }, 0);
     var _oTC = Math.max(0, Math.round(((est.totTC||0) - _rTC) * 10) / 10);
     var _oPS = Math.max(0, Math.round(((est.totPS||0) - _rPS) * 10) / 10);
-    var _coordRow = '<tr><td><em>Project coordination &amp; logistics</em></td><td></td><td></td>'
+    // Named by work step rather than as "coordination & logistics" — on an estate job this
+    // row is mostly documentation and triage, and the old label read as admin overhead.
+    // Uses the breakdown stored on the snapshot so this paper and the Estimate Summary
+    // cannot disagree; older snapshots have no breakdown and fall back to the bare hours.
+    var _bd = est.hoursBreakdown || null;
+    var _bdTxt = '';
+    if (_bd) {
+      var _fmtParts = function(list){
+        return (list||[]).filter(function(p){ return p.hrs >= 0.5; })
+          .sort(function(a,b){ return b.hrs - a.hrs; })
+          .map(function(p){ return p.label + ' ' + p.hrs.toFixed(1); }).join(' · ');
+      };
+      var _tcTxt = _fmtParts(_bd.tc), _psTxt = _fmtParts(_bd.ps);
+      _bdTxt = (_bd.tcOnsite > 0 ? 'TC on site with the crew ' + _bd.tcOnsite.toFixed(1) + (_tcTxt ? '; off site: ' : '') : 'TC: ')
+             + _tcTxt + (_psTxt ? '<br>PS: ' + _psTxt : '');
+    } else {
+      _bdTxt = 'Job-level work not tied to one room (triage, documentation, haul-out, coordination)';
+    }
+    var _coordRow = '<tr><td><em>Job-level work</em></td><td></td><td></td>'
       + '<td style="text-align:right;">' + _oTC.toFixed(1) + ' TC / ' + _oPS.toFixed(1) + ' PS</td><td></td>'
-      + '<td style="font-size:11px;color:#666;">Job-level work not tied to one room (triage, documentation, haul-out, coordination)</td></tr>';
+      + '<td style="font-size:11px;color:#666;">' + _bdTxt + '</td></tr>';
     var html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
       +'<title>Estimate – '+(job.hvlId||'')+'</title>'
       +'<style>body{font-family:Arial,sans-serif;padding:24px;color:#333;}h2{margin-bottom:4px;}table{width:100%;border-collapse:collapse;}th{background:#f5f0e8;padding:6px 8px;text-align:left;font-size:12px;}</style>'

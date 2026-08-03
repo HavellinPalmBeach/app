@@ -68,6 +68,10 @@ Check the room to include it. It starts at 3/3 in most rooms — but foyers, hal
 
 Tick **Special Items** if the room holds artwork, antiques, or anything needing specialty care. Hours and a timeline appear as you score.
 
+**The hours on a room row are packing only.** They are not what it costs to clear that room. Sorting, documentation and haul-out are job-level and never show against a room — and on an estate settlement those are most of the work, with documentation alone bigger than packing. So a walk-in closet reading 3.6 hrs is really carrying about 13 once its share of everything else is counted. If you want the full picture, read the **Estimate Summary**: the breakdown under the Transition Concierge and Property Specialist fee lines names every kind of work and what it adds up to.
+
+Don't compare room hours between service types. The same closet shows *more* hours on a downsizing job than on an estate settlement, even though the estate job is more than twice the work — because on a downsizing nearly all the work is packing, so nearly all of it lands on the room rows.
+
 > **⚠** **Score the whole house, not a sample.** Volume and complexity are averaged across the rooms you score and then applied to the *entire* square footage. Tick one foyer at 1/1 on a 10,000 sqft estate and the app prices all 10,000 sqft as if the whole house looked like that foyer — on a real job that dropped the quote from about $44,900 to $24,100. A half-finished walkthrough doesn't give you half a price, it gives you a *wrong* price.
 
 The app checks you on this. Under the room grid it compares the bedrooms and baths recorded at intake against the ones you've actually scored:
@@ -414,6 +418,7 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Amber badge: "walkthrough looks incomplete" | Fewer bedrooms or baths scored than intake recorded. It won't block you; finish the walkthrough anyway. |
 | Amber badge says "1 of 2 half baths" and you've ticked the only one you can find | There are five *Half Bath* rows, not one — Entry & Living, Kitchen & Utility, both bedroom floors, and *Pool / Cabana Half Bath* under Exterior & Auxiliary. Tick the one matching where the powder room is. If the house genuinely has fewer half baths than intake recorded, the intake figure is wrong — fix it there. |
 | You ticked *Additional Bathroom(s)* for a powder room and the badge got worse | That row counts as a *full* bath. Untick it and use a *Half Bath* row instead. |
+| A room's hours look far too low for what's in it | Room rows are *packing only*. Sorting, documentation and haul-out are job-level. Read the breakdown under the fee lines in the Estimate Summary for the whole picture. |
 | Crew size keeps changing by itself | Correct — it tracks the recommendation while you score. It stops the moment you set it yourself. |
 | Crew badge: "2 assigned, 6 recommended — runs 23 days instead of 9" | You've staffed below what the job needs. That's allowed and it is priced as staffed — longer job, more concierge days, higher fee. Go back up unless the small crew is a real constraint. |
 | Fixed price warns it is "+41% over the hourly basis" | You typed a fee and the estimate has moved since. The panel shows the current suggestion — one click to take it. |
