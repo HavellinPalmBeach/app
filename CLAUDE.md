@@ -83,7 +83,61 @@ been promising the client since the 15% came off.**
   instead of 2.0. Old labels kept as aliases. **Painting is 1.5**, not 2.0: the old list split
   it into a full repaint (2.0) and a touch-up (1.0) and the directory has one category for
   both, so the number is the middle and the scope note says which it is.
-- **NEW `VENDOR_TC_HRS` / `VENDOR_TC_HRS_BY_GROUP`.** When `SMF_PCT` went to 0 the app started
+  (`PREP_TC_HRS` itself was then folded into `COORD_TOUCHES` later the same day — see the touch
+  model section above. The rekeying and the aliases survive it; only the shape changed.)
+## The touch model — coordination hours from ONE rule (BUILT 2026-08-03, same day, after the below)
+**`hours = touches × TOUCH_HRS` (0.5), and that is the entire model.** A *touch* is one discrete
+interaction with a vendor that costs concierge time — a call, a quote to chase, access to
+arrange, work to inspect, a settlement to reconcile.
+- **Replaces `PREP_TC_HRS` AND `VENDOR_TC_HRS`/`VENDOR_TC_HRS_BY_GROUP`, both deleted.** Two
+  tables of the same quantity, hand-tuned at different times, in different shapes — which is
+  how two lists that mean the same thing drift. Now `COORD_TOUCHES` (per category, integers) +
+  `COORD_TOUCHES_BY_GROUP` (per Category Group) + `COORD_TOUCHES_DEFAULT`. `prepLineTCHrs` and
+  `vendorLineTCHrs` survive as one-line wrappers over `coordHrsFor(cat, kind)`, so no caller moved.
+- **It changes no number.** Every value in both old tables was a multiple of 0.5, so they convert
+  to touch counts exactly — the rule was already implicit and nobody had written it down. A test
+  hardcodes both old tables and asserts all 36 values reproduce. The counts also survive a
+  plausibility check, which is the real evidence: estate sale 8 (call · walkthrough · contract ·
+  pricing schedule · sale-day staffing · mid-sale check · breakdown · settlement), mover 6
+  (survey · quote · COI · pack · load · delivery). Countable on your fingers, which is the point.
+- `kind` ('prep' | 'vendor') selects only the FALLBACK: prep lines resolve to the Property
+  Preparation group default, never through `vendorGroupOfLine`, which cannot place them and would
+  drop an unknown prep label into the first vendor card's group.
+- **One deliberate behaviour change, on legacy data only:** a *vendor* line carrying a prep
+  category ('Pest Inspection / Treatment' is both) used to miss the vendor override table, fall
+  through `vendorGroupOfLine` to card[0], and book 2.0 hrs. It now answers 0.5 from the shared
+  table. Unreachable through the UI (vendor dropdowns never offer prep categories); it is a fix.
+- **DO NOT scale these by the vendor's cost. Do not re-propose it.** Havellin's own sorting,
+  contents list and photography SHRINK the appraiser's invoice, so hours pegged to that invoice
+  would FALL as Havellin did more work — the exact perverse incentive that took `SMF_PCT` to 0
+  (see its comment) — and it puts a percentage of third-party spend back onto court-reviewed
+  probate expenses in a hat. If size sensitivity is ever wanted the honest input is property
+  sqft on property-work trades: already in the engine, and our own effort cannot game it down.
+- **NEW `rec.coordHrs` — optional, observational, disposable.** A *Coord hrs* box beside each
+  actual quote on the Job Plan sourcing card (all three: service, logistics, prep), with the
+  touch-derived figure shown next to it, plus a `coordHrsRollup` at the foot of the section once
+  anything is recorded. Anthony was explicit he is unsure about per-vendor time logging long
+  term, so: never required, never gates anything, and if nobody fills it in the app behaves
+  exactly as before.
+  - **It must NEVER reach pricing, and the reason is not obvious.** The client is billed off the
+    HOURS LOG (`actTC`), which already contains the time spent phoning that mover — it is simply
+    not attributable to them. `saveLogEntry` stores `{date, activity(free text), members:[{name,
+    role, hours}]}` with no vendor or category field, which is why none of this could ever be
+    checked before. So `coordHrs` is a *breakdown of hours already logged and already billed*,
+    not additional hours. Feeding it anywhere would bill the same time twice.
+  - The rollup's ESTIMATED side reads `est.vendorTCHrs + est.prepTCHrs` (the saved quote), not a
+    re-walk of the lines — re-deriving sweeps in the empty End-of-Job Logistics placeholders and
+    inflates "estimated" with hours nobody quoted. The RECORDED side sweeps all three sourcing
+    maps including logistics, because a hauler booked mid-job is real coordination that really
+    happened and was never in the quote.
+  - Suppressed entirely on standalone prep (`_noCoord`): that engagement bills no hours, so there
+    is no estimate to check against and "est 1.5" would be inventing one.
+- Also fixed here: `renderVendorSourcing`'s prep footnote still promised a "15% Service Management
+  Fee (folded in with all coordinated vendors)" on a bundled job, on the very screen where those
+  actuals are typed. 69 more jsdom checks (138 total across the three suites).
+
+- **`VENDOR_TC_HRS` / `VENDOR_TC_HRS_BY_GROUP` — SUPERSEDED by the touch model above, same day.**
+  Kept here because the *reasoning* still holds; only the table shape changed. When `SMF_PCT` went to 0 the app started
   telling the client — on the tab, on the estimate, in the terms — that Havellin adds no fee
   *because coordination bills hourly*. **Nothing billed it.** The engine's off-site coordination
   is service-type and sqft driven and had no idea how many vendors a job ran, so five vendors
@@ -141,7 +195,18 @@ been promising the client since the 15% came off.**
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (second pass, same day)** — both documents,
+- Last reconciled against the app: **2026-08-03 (third pass, same day)** — both documents, against
+  the touch model and the optional `coordHrs` capture. Manual: **NEW §5d-i "The touch model"** —
+  the rule as a `.flow` block, a touches→hours→categories table, why it is a rule rather than a
+  list, the coordination-not-attendance note moved into it, and an explicit **do-not-scale-by-cost**
+  note carrying the appraiser argument · §5d's old rate list replaced by a pointer to it · §5e's
+  prep hours now point at the same rule · **§11 gained the `Coord hrs` note** — optional, bills
+  nothing, and *why* it cannot (the hours log already contains that time unattributed) · §16 fee
+  row now reads `touches × 0.5`. Playbook: the touch count in field language under the vendor
+  bullet, a `Coord hrs` note in Step 11c, the quick-reference row, and **two new symptom→cause
+  rows** (disagreeing with a vendor's hours · whether to fill in Coord hrs). Also corrected in
+  both: two surviving "15% / 30% fee" lines on the sourcing step, stale since 2026-08-02.
+- Prior pass **2026-08-03 (second)** — both documents,
   against the Home Prep consolidation and vendor coordination hours built that afternoon. See
   the *Home Prep consolidation* section below for the change itself. Docs touched: §5 layout
   map (the Home Prep card is gone from the build column) · **§5d gained two notes** — the

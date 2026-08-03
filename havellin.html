@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 12:02pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 2:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5242,7 +5242,7 @@ function calcVendorTotals() {
 }
 function getVendorCost() { return vendors.reduce(function(a,v){ return a+v.cost; }, 0); }
 
-// ── VENDOR COORDINATION HOURS ────────────────────────────────────────────────
+// ── VENDOR COORDINATION HOURS — THE TOUCH MODEL ──────────────────────────────
 // When SMF_PCT went to zero the estimate started telling the client that Havellin adds no
 // fee "because coordination time bills hourly" — on the tab header, in the client estimate
 // note and in the terms. Nothing was billing it. The engine's off-site coordination column
@@ -5250,49 +5250,110 @@ function getVendorCost() { return vendors.reduce(function(a,v){ return a+v.cost;
 // vendors on a cleanout added $0 of fee AND 0 hours, and the sentence justifying the first
 // was made true by nothing. These are the hours that make it true.
 //
-// OFF-SITE COORDINATION ONLY — sourcing, quotes, scheduling, the confirming calls, checking
-// the invoice. Deliberately NOT attendance: a collection dispositioned to an appraiser or a
-// dealer already books real on-site presence through COLLECTION_HOURS.on, and an estate sale
-// company can be both a vendor line and a collection disposition on the same job. Pricing
-// attendance here would charge the second one twice. Same reason PREP_TC_HRS is coordination
-// only, and these fold into the same coordTC bucket.
+// ONE RULE, replacing the two hand-tuned hour tables this started as (2026-08-03):
 //
-// Calibrated against what the removed 15% collected on a typical quote, at the $150 TC rate:
-// a $3,000 mover was $450 of SMF and is 3.0 hrs; a $1,500 appraiser was $225 and is 2.0 hrs.
-// The point is not to reproduce the fee — it is that the replacement is in the same
-// neighbourhood, so dropping the percentage did not quietly halve the revenue on a
-// vendor-heavy job. Keyed by Category Group so a category added to the Vendors sheet
-// inherits a sane number with no app change; the override table is for the ones whose group
-// default is plainly wrong.
-var VENDOR_TC_HRS_BY_GROUP = {
-  'Asset Liquidation & Valuation': 2.0,
-  'Disposal & Waste Management':   1.0,
-  'Moving & Logistics':            3.0,
-  'Professional Services':         1.5,
-  'End-of-Job Logistics':          1.0
+//     hours = touches × TOUCH_HRS
+//
+// A TOUCH is one discrete interaction with the vendor that costs concierge time — a call,
+// a quote to chase, an access arrangement to make, a piece of work to go and check, a
+// settlement statement to reconcile. Count them and multiply. That is the whole model.
+//
+// It is not a new set of numbers: every value in the two tables it replaces was a multiple
+// of half an hour, so dividing them by 0.5 recovers a touch count exactly — the rule was
+// already implicit in the numbers, it just was not written down anywhere, which is how
+// prep and vendor hours ended up as two lists with two shapes that could drift apart. The
+// evidence it is the RIGHT rule is that the recovered counts survive a plausibility check:
+// an estate sale is 8 (call, walkthrough, contract, pricing schedule, sale-day staffing,
+// mid-sale check, breakdown, settlement) and a mover is 6 (survey, quote, COI, pack,
+// load, delivery). Those are countable on your fingers, which is the point — a new
+// directory category gets a number in ten seconds, and "4 hours because it is 8 separate
+// interactions" is a sentence you can defend to a client or to a probate court. "4 hours
+// because that felt about right" is not.
+//
+// OFF-SITE COORDINATION ONLY — do not count attendance as a touch. A collection
+// dispositioned to an appraiser or a dealer already books real on-site presence through
+// COLLECTION_HOURS.on, and an estate sale company can be both a vendor line and a
+// collection disposition on the same job. Counting the days you stand there would charge
+// the second one twice. Folds into coordTC for exactly that reason.
+//
+// DO NOT scale these by the vendor's cost. It is the obvious next idea and it is the one to
+// refuse: Havellin's own sorting, contents list and photography SHRINK the appraiser's
+// invoice, so hours tied to that invoice would FALL as Havellin did more work — the exact
+// perverse incentive that took SMF_PCT to zero (see its comment) — and it would put a
+// percentage of third-party spend back onto court-reviewed probate expenses in a hat. If
+// size sensitivity is ever wanted, the honest input is property sqft on property-work
+// trades: already in the engine, and Havellin's own effort cannot game it downward.
+var TOUCH_HRS = 0.5;
+// Per Category Group, so a category added to the Vendors sheet inherits a sane count with
+// no app change. Property Preparation is here for prep lines, which never resolve through
+// vendorGroupOfLine (they are a separate array).
+var COORD_TOUCHES_BY_GROUP = {
+  'Asset Liquidation & Valuation': 4,
+  'Disposal & Waste Management':   2,
+  'Moving & Logistics':            6,
+  'Professional Services':         3,
+  'End-of-Job Logistics':          2,
+  'Property Preparation':          2
 };
-var VENDOR_TC_HRS = {
-  'Estate Sale Company':     4.0,   // contract, staging schedule, settlement reconciliation
-  'Auction House':           3.0,   // consignment agreement, transport, lotting, settlement
-  'Online Auction House':    2.0,
-  'Document Shredding':      0.5,   // one call, one pickup
-  'Donation Pickup':         1.0,
-  'Firearms Dealer (FFL)':   2.0    // transfer paperwork, not the handoff itself
+// Per category, where the group default is plainly wrong. Counts, not hours.
+var COORD_TOUCHES = {
+  // Asset Liquidation & Valuation
+  'Estate Sale Company':         8,  // call · walkthrough · contract · pricing schedule · sale-day staffing · mid-sale check · breakdown · settlement
+  'Auction House':               6,  // call · consignment agreement · transport · lotting review · sale · settlement
+  'Online Auction House':        4,
+  'Firearms Dealer (FFL)':       4,  // transfer paperwork, NOT the handoff itself
+  // Disposal & Waste Management / End-of-Job Logistics
+  'Document Shredding':          1,  // one call, one pickup
+  'Donation Pickup':             2,
+  // Property Preparation — one visit and done
+  'Appliance Repair':            1,
+  'HVAC':                        1,
+  'Pest Inspection / Treatment': 1,
+  'Pool & Spa Service':          1,
+  'Pressure Washing':            1,
+  // …two, the visit plus a re-check or a scope walk
+  'Carpet Cleaning':             2,
+  'Deep Cleaning':               2,
+  'Handyman':                    2,
+  'Landscaper':                  2,
+  'Window Cleaning':             2,
+  // …three, scope walk plus start plus inspection
+  'Painting':                    3,  // the directory has ONE Painting category where the old
+                                     // list had a full repaint and a touch-up; the scope note
+                                     // on the line is what says which, so this is the middle
+  'Floor Refinishing':           3,
+  // …four, a trade that runs over days with something to sign off
+  'General Contractor':          4,
+  'Home Staging':                4,  // consult · install · styling review · de-install
+  // Legacy labels from the dropdown deleted on 2026-08-03. Same counts as the categories
+  // they mapped to, so an estimate saved earlier books the hours it was quoted at.
+  'Appliance Service / Repair':  1,
+  'HVAC Service':                1,
+  'Pool / Spa Service':          1,
+  'Deep Clean / Move-Out Clean': 2,
+  'Handyman Services':           2,
+  'Landscaping / Curb Appeal':   2,
+  'Minor Repairs':               2,
+  'Touch-Up / Interior Paint':   2,
+  'Full Interior Paint':         4,
+  'Professional Staging':        4
 };
-var VENDOR_TC_HRS_DEFAULT = 1.0;
+var COORD_TOUCHES_DEFAULT = 2;
 
-// Hours for one third-party vendor line. Falls back through category override → group
-// default → VENDOR_TC_HRS_DEFAULT, so an unrecognised label still books something rather
-// than silently costing nothing.
-function vendorLineTCHrs(type) {
-  var t = String(type || '').trim();
-  if (VENDOR_TC_HRS[t] != null) return VENDOR_TC_HRS[t];
-  var g = vendorGroupOfLine(t);
-  return VENDOR_TC_HRS_BY_GROUP[g] != null ? VENDOR_TC_HRS_BY_GROUP[g] : VENDOR_TC_HRS_DEFAULT;
+// Touches for one line. `kind` is 'prep' or 'vendor' and decides only the fallback: prep
+// lines live in their own array and must NOT go through vendorGroupOfLine, which cannot
+// place them and would drop an unrecognised prep label into the first vendor group.
+function coordTouches(cat, kind) {
+  var c = String(cat || '').trim();
+  if (COORD_TOUCHES[c] != null) return COORD_TOUCHES[c];
+  var g = (kind === 'prep') ? 'Property Preparation' : vendorGroupOfLine(c);
+  return COORD_TOUCHES_BY_GROUP[g] != null ? COORD_TOUCHES_BY_GROUP[g] : COORD_TOUCHES_DEFAULT;
 }
-function prepLineTCHrs(type) {
-  return PREP_TC_HRS[String(type || '').trim()] != null ? PREP_TC_HRS[String(type || '').trim()] : 1.0;
+function coordHrsFor(cat, kind) {
+  return Math.round(coordTouches(cat, kind) * TOUCH_HRS * 10) / 10;
 }
+function vendorLineTCHrs(type) { return coordHrsFor(type, 'vendor'); }
+function prepLineTCHrs(type)   { return coordHrsFor(type, 'prep');   }
 function getVendorTCHrs() {
   return Math.round(vendors.reduce(function(a, v){ return a + vendorLineTCHrs(v.type); }, 0) * 10) / 10;
 }
@@ -5303,48 +5364,11 @@ function getCollectionCost() { return collectionsData.reduce(function(a,c){ retu
 // ─── HOME PREP FOR SALE ───────────────────────────────────────────────────────
 var prepItems = [];
 
-// Conservative TC overhead hours per prep type — coordination only, not full on-site
-// supervision.
-//
-// REKEYED TO DIRECTORY CATEGORY NAMES on 2026-08-03. This table was keyed entirely by the
-// friendly labels of the deleted Home Prep dropdown, and the Property Preparation card
-// offers directory categories — so once that dropdown went, only four of these keys
-// ('Carpet Cleaning', 'Pest Inspection / Treatment', 'Pressure Washing', 'Window Cleaning')
-// were still reachable and everything else silently fell to the 1.0 default. Staging would
-// have booked 1.0 instead of 2.0 on every job. The old labels are kept below as aliases so
-// an estimate saved before the change books the hours it was quoted at.
-var PREP_TC_HRS = {
-  // Directory categories — what the card actually offers.
-  'Appliance Repair':            0.5,
-  'Carpet Cleaning':             1.0,
-  'Deep Cleaning':               1.0,
-  'Floor Refinishing':           1.5,
-  'General Contractor':          2.0,
-  'Handyman':                    1.0,
-  'HVAC':                        0.5,
-  'Home Staging':                2.0,
-  'Landscaper':                  1.0,
-  // 1.5 rather than 2.0: the old list split this into a full interior repaint (2.0) and a
-  // touch-up (1.0), and the directory has one Painting category for both. The scope note on
-  // the line is what says which one it is; the number is the middle of the two rather than
-  // billing a $400 touch-up as if it were a whole-house repaint.
-  'Painting':                    1.5,
-  'Pest Inspection / Treatment': 0.5,
-  'Pool & Spa Service':          0.5,
-  'Pressure Washing':            0.5,
-  'Window Cleaning':             1.0,
-  // Legacy labels from the deleted dropdown — same hours as the category each mapped to.
-  'Appliance Service / Repair':  0.5,
-  'Deep Clean / Move-Out Clean': 1.0,
-  'Full Interior Paint':         2.0,
-  'Handyman Services':           1.0,
-  'HVAC Service':                0.5,
-  'Landscaping / Curb Appeal':   1.0,
-  'Minor Repairs':               1.0,
-  'Pool / Spa Service':          0.5,
-  'Professional Staging':        2.0,
-  'Touch-Up / Interior Paint':   1.0
-};
+// PREP_TC_HRS was deleted on 2026-08-03 and folded into COORD_TOUCHES beside the vendor
+// hours. It was a second table of the same thing in a different shape — hours where the
+// other held hours, but hand-tuned separately — and two lists that mean the same thing
+// drift. Every one of its values was a multiple of half an hour, so it converted to touch
+// counts exactly; prepLineTCHrs still exists and still returns the same numbers.
 
 // Prep coordination hours. No longer gated on a checkbox — inclusion IS having lines, so
 // the hours follow the lines. The old guard read e-prep-enabled directly, which is how a
@@ -13822,6 +13846,8 @@ function renderVendorSourcing(jobId, job, est) {
   var psrc = job.prepSourcing   || {};
   var csrc = job.collSourcing   || {};
   var lsrc = job.logisticsSourcing || {};
+  // Standalone prep bills no hours, so there is no coordination figure to check against.
+  var _noCoord = ((est.svc || job.svc) === 'prep');
 
   if (svcLines.length) {
     html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:2px 0 6px;">Service Vendors</div>';
@@ -13841,6 +13867,7 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
           (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
+          _coordHrsField('setJobVendorCoordHrs(' + jobId + ',' + i + ',this.value)', coordHrsFor(v.type, 'vendor'), rec, _noCoord) +
         '</div>' + _vendorRefLine(rec) +
       '</div>';
     }).join('');
@@ -13864,6 +13891,7 @@ function renderVendorSourcing(jobId, job, est) {
         '<select onchange="setLogisticsStatus(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
         '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
         '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setLogisticsQuote(' + jobId + ',\'' + cat.key + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(quote !== '') + '">' +
+        _coordHrsField('setLogisticsCoordHrs(' + jobId + ',\'' + cat.key + '\',this.value)', coordHrsFor(cat.label, 'vendor'), rec, _noCoord) +
       '</div>' + _vendorRefLine(rec) +
     '</div>';
   }).join('');
@@ -13892,10 +13920,17 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setPrepVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
           (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
+          _coordHrsField('setPrepVendorCoordHrs(' + jobId + ',' + i + ',this.value)', coordHrsFor(p.type, 'prep'), rec, _noCoord) +
         '</div>' + _vendorRefLine(rec) +
       '</div>';
     }).join('');
-    html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Prep vendors are paid directly by the client; Havellin\'s ' + (((est.svc || job.svc) === 'prep') ? '30% GC / Site Management Fee' : '15% Service Management Fee (folded in with all coordinated vendors)') + ' is calculated on these actuals at invoicing.</div>';
+    // Said "15% Service Management Fee (folded in with all coordinated vendors)" on a bundled
+    // job until 2026-08-03, long after SMF_PCT went to zero — promising a fee the app does not
+    // charge, on the screen where the actuals that fee would have been computed from are typed.
+    html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Prep vendors are paid directly by the client; '
+      + (((est.svc || job.svc) === 'prep')
+          ? 'Havellin\'s 30% GC / Site Management Fee is calculated on these actuals at invoicing.'
+          : 'Havellin charges no fee on them — the coordination is billed hourly, in your logged hours.') + '</div>';
   }
 
   if (colls.length) {
@@ -13934,6 +13969,7 @@ function renderVendorSourcing(jobId, job, est) {
       '</div>';
     }).join('');
   }
+  html += coordHrsRollup(job, est);
   return html;
 }
 function refreshVendorSourcing(jobId) {
@@ -14036,6 +14072,88 @@ function setLogisticsQuote(jobId, key, val) {
 function setLogisticsStatus(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
   job.logisticsSourcing[key].status = val; saveJobs(); refreshVendorSourcing(jobId);
+}
+
+// ── ACTUAL COORDINATION HOURS (optional, observational) ──────────────────────
+// How long this vendor ACTUALLY took to coordinate, recorded beside its actual quote —
+// what it cost and what it took, the same gesture. Exists for one reason: COORD_TOUCHES is
+// currently judgement, and the hours log records {date, activity, members[]} with no vendor
+// attribution, so nothing in the app could ever tell you whether a mover really is six
+// touches. A few real jobs of these and the counts tune themselves off evidence.
+//
+// PURELY OBSERVATIONAL — it must never reach pricing, and here is the reason, because it
+// looks like it should. The client is billed off the HOURS LOG (actTC), which already
+// contains the time spent phoning that mover; it is simply not attributable to them. So
+// this is a breakdown of hours already logged and already billed, not additional hours.
+// Feeding it into anything would bill the same time twice.
+//
+// Never required, never gates anything, and if nobody ever fills it in the app behaves
+// exactly as it does today. That is deliberate — it is the disposable half of this change.
+function setJobVendorCoordHrs(jobId, i, val) {
+  var job = _svcJob(jobId, i); if (!job) return;
+  job.vendorSourcing[i].coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+}
+function setPrepVendorCoordHrs(jobId, i, val) {
+  var job = _prepJob(jobId, i); if (!job) return;
+  job.prepSourcing[i].coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+}
+function setLogisticsCoordHrs(jobId, key, val) {
+  var job = _logiJob(jobId, key); if (!job) return;
+  job.logisticsSourcing[key].coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+}
+
+// The input plus its estimate, for one sourcing row. `est` is the touch-derived figure the
+// quote was built on, shown so there is something to compare against — the same idea as the
+// "Budgeted: $X" the money field already carries.
+function _coordHrsField(setter, est, rec, hide) {
+  // Suppressed on a standalone Home Prep job. That engagement bills NO hours at all — the
+  // 30% is the whole revenue and calcAll zeroes prepTCHrs on it — so the estimate has no
+  // per-vendor figure, and printing "est 1.5" against a quote that priced zero would invent
+  // a number to check against.
+  if (hide) return '';
+  var v = (rec && rec.coordHrs != null && rec.coordHrs !== '') ? rec.coordHrs : '';
+  var off = v !== '' && est > 0 && Math.abs(Number(v) - est) >= 1;
+  return '<span style="font-size:12px;color:var(--gray);">Coord hrs</span>' +
+    '<input type="number" step="0.5" min="0" value="' + esc(String(v)) + '" ' +
+      'title="Optional — roughly how long coordinating this vendor actually took. Not billed; ' +
+      'your logged hours already cover it. Recorded so the estimate’s figure can be checked." ' +
+      'onchange="' + setter + '" style="width:64px;font-size:12px;' + _fldBg(v !== '') + '">' +
+    '<span style="font-size:10px;color:' + (off ? 'var(--warn-tx)' : 'var(--gray)') + ';">est ' + est.toFixed(1) + '</span>';
+}
+
+// Estimated vs recorded across every sourcing row on the job. Scattered entries are not a
+// signal; the rollup is. Hidden until something has actually been recorded.
+function coordHrsRollup(job, est) {
+  if (((est && est.svc) || job.svc) === 'prep') return '';   // no hours estimated, none billed
+  // Estimated side comes from the SAVED estimate, not from re-walking the lines. Those are the
+  // figures the client was actually quoted, and they are the thing being checked. Re-deriving
+  // would also sweep in the End-of-Job Logistics slots, which are empty placeholders the
+  // estimate never priced — inflating "estimated" with hours nobody ever quoted.
+  var estTot = (est.vendorTCHrs != null || est.prepTCHrs != null)
+    ? (Number(est.vendorTCHrs || 0) + Number(est.prepTCHrs || 0))
+    : ((est.vendors || []).reduce(function(a, v){ return a + coordHrsFor(v.type, 'vendor'); }, 0) +
+       ((est.prepEnabled && est.prepItems) ? est.prepItems : []).reduce(function(a, p){ return a + coordHrsFor(p.type, 'prep'); }, 0));
+  estTot = Math.round(estTot * 10) / 10;
+  // Recorded side sweeps everything, INCLUDING logistics slots. A hauler booked mid-job is
+  // real coordination that really happened; it was just never in the quote, which is one of
+  // the things the variance is there to show.
+  var actTot = 0, n = 0;
+  [job.vendorSourcing, job.prepSourcing, job.logisticsSourcing].forEach(function(src) {
+    Object.keys(src || {}).forEach(function(k) {
+      var rec = src[k] || {};
+      if (rec.coordHrs != null && rec.coordHrs !== '') { actTot += Number(rec.coordHrs) || 0; n++; }
+    });
+  });
+  actTot = Math.round(actTot * 10) / 10;
+  if (!n) return '';
+  var diff = actTot - estTot;
+  return '<div style="margin-top:8px;padding:7px 10px;border:1px solid var(--border);border-left:3px solid var(--bronze);' +
+    'border-radius:4px;background:var(--cream);font-size:11px;color:var(--gray-dk);">' +
+    '<strong>Coordination time:</strong> estimated ' + estTot.toFixed(1) + ' hrs · recorded ' + actTot.toFixed(1) +
+    ' hrs across ' + n + ' vendor' + (n === 1 ? '' : 's') +
+    (Math.abs(diff) >= 1 ? ' <span style="color:var(--warn-tx);font-weight:600;">(' + (diff > 0 ? '+' : '') + diff.toFixed(1) + ')</span>' : '') +
+    '<div style="margin-top:3px;color:var(--gray);">Not billed — your logged hours already include this time. Recorded so the estimate’s per-vendor figures can be checked against real jobs.</div>' +
+  '</div>';
 }
 
 // ── PHASE 4: VENDOR SCORECARD (post-job write-back to the directory) ───────────
