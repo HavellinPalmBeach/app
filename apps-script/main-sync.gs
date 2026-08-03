@@ -415,6 +415,25 @@ function deleteJobFromSheet(id) {
   for (var r = data.length - 1; r >= 1; r--) {
     if (String(data[r][idCol]) === String(id)) { sheet.deleteRow(r + 1); break; }
   }
+  // Purge the job's records from the keyed stores too. Deleting a job used to remove only
+  // the Jobs row, so its estimate, job plan and logs stayed behind forever — invisible in
+  // the app, but still serialized into every subsequent write. That is how the sheet ends
+  // up holding more estimates than the app has jobs, and every orphan pushes the blob
+  // closer to the per-cell character cap for no benefit at all.
+  //
+  // Deliberately keyed on the same id the app uses, and silent about a miss: a job with no
+  // estimate is normal, not an error.
+  var key = String(id);
+  [['EstimateStore', getEstimateStore], ['JobPlanStore', getJobPlanStore], ['LogStore', getLogStore]]
+    .forEach(function(pair) {
+      try {
+        var store = pair[1]();
+        if (store && Object.prototype.hasOwnProperty.call(store, key)) {
+          delete store[key];
+          _writeStoreBlob(pair[0], store);
+        }
+      } catch (e) { Logger.log('purge ' + pair[0] + ' for ' + key + ': ' + e); }
+    });
 }
 
 // ══ ESTIMATES (one row per job — most current version) ═══════════════════════════

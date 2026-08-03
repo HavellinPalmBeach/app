@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:10am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:44am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7277,13 +7277,33 @@ function editEstimateForJob(jobId) {
   // Suppress auto-save during clear+restore to prevent overwriting saved estimate
   window._suppressEstimateAutoSave = true;
 
+  // LOCK THE BUILD AREA WHILE THE FETCH IS IN FLIGHT.
+  //
+  // refreshEstimateFromCloud makes TWO sequential Apps Script round trips — loadJobs,
+  // then loadEstimates — and Apps Script is routinely 1-3 seconds per call, longer on a
+  // phone. The room grid used to stay live and editable for that entire window, and the
+  // callback opens with clearAllRooms(). So a concierge who picked the job and started
+  // ticking rooms straight away had every tick silently discarded the moment the fetch
+  // landed, and the grid reset to whatever the sheet held. Save after that and the
+  // thinner state is what persists — which is how a fully-scored walkthrough comes back
+  // as one room.
+  //
+  // The rooms are not the only casualty (adjustments, vendors and collections restore the
+  // same way), so the lock covers the whole build column rather than just the grid.
+  setEstimateLoading(true);
+
   // Cloud-authoritative open: pull the latest jobs + this job's estimate fresh from
   // the sheet BEFORE loading, so the Estimate tab can never edit and re-save a stale
   // local copy (which could silently drop hours and overwrite the good cloud record).
   // Same pattern as the Client Estimate tab. onReady runs 'cloud' or 'offline'.
   refreshEstimateFromCloud(jobId, function(){
+    setEstimateLoading(false);
     var hasSavedEst = loadEstimateForJob(jobId);
     var savedEstSnapshot = hasSavedEst && estimateHasContent(currentEstimate) ? currentEstimate : null;
+    // Belt and braces behind the lock: if anything IS in scope at this point the lock was
+    // bypassed somehow, and discarding it silently is the failure this whole block exists
+    // to stop. Say so rather than wiping it without a word.
+    var _scopedNow = document.querySelectorAll('#room-table-wrap .scope-toggle[data-state="in"]').length;
     clearAllRooms();
     if (savedEstSnapshot) {
       currentEstimate = savedEstSnapshot;
@@ -7296,6 +7316,10 @@ function editEstimateForJob(jobId) {
     // The sheet is behind this device. Say so at the moment it matters — the estimator is
     // looking at the work right now and can re-save it — rather than letting them find out
     // later on another device that the cloud never got it.
+    if (_scopedNow > 0) {
+      showFB('e-fb','warn', _scopedNow + ' room' + (_scopedNow === 1 ? '' : 's') + ' you had scored were replaced by the saved estimate for this client. '
+        + 'Nothing was saved from them — re-score anything that is missing before saving.');
+    }
     if (window._estCloudBehind) {
       var _cb = window._estCloudBehind;
       var _when = function(ms){ return ms ? new Date(ms).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'never'; };
@@ -7312,6 +7336,30 @@ function editEstimateForJob(jobId) {
     updateApprovalUI();
     showFB('e-fb', 'info', 'Estimate ready. Score rooms then save and approve.');
   });
+}
+
+// Blocks input on the estimate build area while a saved estimate is being fetched, and
+// says why. Anything typed or ticked before the fetch lands is thrown away by the restore
+// that follows it, so the honest thing is to not accept it in the first place — an
+// unexplained dead tab is worse than a labelled one, hence the banner.
+function setEstimateLoading(on) {
+  var col = document.getElementById('est-build-col');
+  var top = document.getElementById('est-job-grid');
+  [col, top].forEach(function(el) {
+    if (!el) return;
+    el.style.pointerEvents = on ? 'none' : '';
+    el.style.opacity       = on ? '0.45' : '';
+  });
+  var bar = document.getElementById('est-loading-bar');
+  if (!bar && on && col && col.parentNode) {
+    bar = document.createElement('div');
+    bar.id = 'est-loading-bar';
+    bar.className = 'alert a-info';
+    bar.style.cssText = 'margin:0 0 1rem;';
+    bar.innerHTML = '<strong>Loading the saved estimate for this client…</strong> Scoring is locked for a moment so nothing you enter is overwritten by what comes back.';
+    col.parentNode.insertBefore(bar, col);
+  }
+  if (bar) bar.style.display = on ? 'block' : 'none';
 }
 
 function restoreEstimateToUI(est) {
