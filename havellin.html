@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:44am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:59am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5600,24 +5600,7 @@ function loadJobIntoEstimate() {
   // Clear the prior job's data from view immediately (see neutralizeEstimateView).
   neutralizeEstimateView();
 
-  // Home reference strip — beds/baths/sqft from intake, for glancing at during the
-  // walkthrough so you can sanity-check the rooms you've ticked against the property.
-  var refEl = document.getElementById('e-job-ref');
-  if (refEl) {
-    var _num = function(v){ var n = parseFloat(v); return isNaN(n) ? null : n; };
-    var refBits = [];
-    if (_num(job.beds)  != null) refBits.push('<strong>' + esc(job.beds)  + '</strong> bd');
-    if (_num(job.baths) != null) refBits.push('<strong>' + esc(job.baths) + '</strong> full' + (_num(job.halfBaths) ? ' + <strong>' + esc(job.halfBaths) + '</strong> half' : '') + ' ba');
-    if (_num(job.sqft)  != null) refBits.push('<strong>' + _num(job.sqft).toLocaleString() + '</strong> sqft');
-    if (_num(job.yearsInHome) != null) refBits.push('<strong>' + esc(job.yearsInHome) + '</strong> yrs in home');
-    if (_num(job.propVal) != null) refBits.push('Property value <strong>$' + _num(job.propVal).toLocaleString() + '</strong>');
-    if (refBits.length) {
-      refEl.innerHTML = '<span style="text-transform:uppercase;font-size:10px;letter-spacing:.05em;color:var(--gray);margin-right:8px;">Home</span>' + refBits.join(' &nbsp;·&nbsp; ');
-      refEl.style.display = '';
-    } else {
-      refEl.innerHTML = ''; refEl.style.display = 'none';
-    }
-  }
+  renderJobRefStrip(job);
 
   // Load service type and dates
   var svcEl = document.getElementById('e-svc');
@@ -5763,6 +5746,34 @@ function applyOpenedEstimate(jobId, job, status) {
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
+}
+
+// Home reference strip — beds/baths/sqft/value from intake, for glancing at during the
+// walkthrough so you can sanity-check the rooms you've ticked against the property. It is
+// also what the room-coverage flag compares against, so a concierge who cannot see it has
+// no way to judge that warning.
+//
+// Lives here rather than inside loadJobIntoEstimate because BOTH open paths need it and
+// only one of them was calling it. Reopening a SAVED estimate takes the
+// restoreEstimateToUI branch, which never populated this — so the strip simply vanished
+// on every job that already had an estimate, which is every job you go back to edit.
+function renderJobRefStrip(job) {
+  var refEl = document.getElementById('e-job-ref');
+  if (!refEl) return;
+  if (!job) { refEl.innerHTML = ''; refEl.style.display = 'none'; return; }
+  var _num = function(v){ var n = parseFloat(v); return isNaN(n) ? null : n; };
+  var refBits = [];
+  if (_num(job.beds)  != null) refBits.push('<strong>' + esc(job.beds)  + '</strong> bd');
+  if (_num(job.baths) != null) refBits.push('<strong>' + esc(job.baths) + '</strong> full' + (_num(job.halfBaths) ? ' + <strong>' + esc(job.halfBaths) + '</strong> half' : '') + ' ba');
+  if (_num(job.sqft)  != null) refBits.push('<strong>' + _num(job.sqft).toLocaleString() + '</strong> sqft');
+  if (_num(job.yearsInHome) != null) refBits.push('<strong>' + esc(job.yearsInHome) + '</strong> yrs in home');
+  if (_num(job.propVal) != null) refBits.push('Property value <strong>$' + _num(job.propVal).toLocaleString() + '</strong>');
+  if (refBits.length) {
+    refEl.innerHTML = '<span style="text-transform:uppercase;font-size:10px;letter-spacing:.05em;color:var(--gray);margin-right:8px;">Home</span>' + refBits.join(' &nbsp;·&nbsp; ');
+    refEl.style.display = '';
+  } else {
+    refEl.innerHTML = ''; refEl.style.display = 'none';
+  }
 }
 
 function clearEstimateTab() {
@@ -7308,6 +7319,10 @@ function editEstimateForJob(jobId) {
     if (savedEstSnapshot) {
       currentEstimate = savedEstSnapshot;
       restoreEstimateToUI(savedEstSnapshot);
+      // The live job record, not savedEstSnapshot.job — intake details edited since the
+      // estimate was saved should read current here, since that is what the engine and
+      // the coverage flag are using.
+      renderJobRefStrip(jobs.find(function(j){ return j.id === jobId; }) || savedEstSnapshot.job);
     } else {
       loadJobIntoEstimate();   // no saved estimate for this job — fresh build
     }
