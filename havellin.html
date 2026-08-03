@@ -687,7 +687,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 11:18am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 11:34am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5823,6 +5823,25 @@ function clearEstimateTab() {
   if (svcEl) svcEl.value = '';
   var propValEl = document.getElementById('e-propval');
   if (propValEl) propValEl.value = '';
+  // THE INTAKE-DERIVED FIELDS, which nothing was clearing.
+  //
+  // e-sqft is the backbone of the hours engine: with no rooms ticked the volume factor is
+  // neutral, so square footage ALONE produces a complete estimate. Leaving the previous
+  // job's 10,000 sqft here meant Clear gave you a blank Job panel — no client, no service
+  // type, no start date — sitting beside a live $44,900 total, a 9-day timeline, and a
+  // crew of 5 specialists and 2 concierges that the engine had just recommended off that
+  // stale footprint. The crew dropdowns look like leftovers but are worse than that: they
+  // were freshly computed from a property that is no longer on screen.
+  //
+  // loadJobIntoEstimate never showed this because it overwrites sqft from the job it is
+  // opening one line later. Only the Clear path — the button, and the automatic clear
+  // after a save — was exposed.
+  ['e-sqft', 'e-years-in-home'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['e-sqft-display', 'e-years-in-home-display'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.textContent = '—';
+  });
   var startEl = document.getElementById('e-start-date');
   if (startEl) startEl.value = '';
   var targetEl = document.getElementById('e-target-date');
@@ -5849,6 +5868,12 @@ function clearEstimateTab() {
   renderVehicles();
   resetEstimateExtras();   // package + third-party vendors + home prep
   _estimateAlphaPin = null;   // nothing loaded — back to the current Settings α
+  var _tp = document.getElementById('tp-target'); if (_tp) _tp.value = '';
+  // Recompute once against the now-empty inputs so every derived readout — the summary,
+  // the crew badge, the timeline, the planner — goes to zero rather than keeping the last
+  // job's numbers on screen. calcAll reassigns currentEstimate, so null it AFTER.
+  _engineInputs = null;
+  calcAll();
   currentEstimate = null;
   estimateApproved = false;
   estimateSubmitted = false;
@@ -11460,16 +11485,67 @@ function flushPendingWrites() {
   });
 }
 
+// ── OUTBOUND COALESCER ───────────────────────────────────────────────────────
+// Collect writes for a moment, drop duplicates, then send them ONE AT A TIME.
+//
+// One press of Save & Preview used to fire FOUR writes within a single millisecond —
+// measured: saveAllJobs twice (identical: saveEstimateAndPreview calls saveJobs(), and
+// saveEstimateState() calls it again), saveAllEstimates, and a per-job write whose
+// contents are already inside saveAllJobs.
+//
+// Server-side every one of those takes LockService.getScriptLock().waitLock(20000), and
+// the script lock is GLOBAL to the deployment — so four simultaneous writes queue behind
+// each other, each holding the next up while it reads its whole store, merges and writes
+// it back. When one waits long enough to blow the web app's execution ceiling it fails,
+// the durable queue lights "N unsaved changes — retrying…", and it lands on the retry once
+// the lock is free. That is the transient failure-then-recovery, and it is self-inflicted:
+// we were competing with ourselves for our own lock.
+//
+// Coalescing by _writeKey collapses the duplicate saveAllJobs to one; sending
+// sequentially means nothing ever waits on a lock we are holding ourselves. Failures
+// still fall through to the durable retry queue exactly as before.
+var _outbox = {};
+var _outboxTimer = null;
+var _outboxSending = false;
+var _OUTBOX_WINDOW = 250;   // long enough to catch a burst from one user action
+
+function _flushOutbox() {
+  _outboxTimer = null;
+  // A batch is already going out — let it finish, then take whatever accumulated.
+  if (_outboxSending) { _outboxTimer = setTimeout(_flushOutbox, _OUTBOX_WINDOW); return; }
+  var keys = Object.keys(_outbox);
+  if (!keys.length) return;
+  var batch = keys.map(function(k){ var w = _outbox[k]; delete _outbox[k]; return w; });
+  _outboxSending = true;
+  var i = 0;
+  (function next() {
+    if (i >= batch.length) {
+      _outboxSending = false;
+      // Anything queued while this batch was in flight goes in the next one.
+      if (Object.keys(_outbox).length && !_outboxTimer) _outboxTimer = setTimeout(_flushOutbox, _OUTBOX_WINDOW);
+      return;
+    }
+    var w = batch[i++];
+    postSyncTo(w.target, w.body)
+      .then(function(res){
+        if (res && res.ok) { if (w.okMsg) showSyncBadge(w.okMsg); }
+        else _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, res && res.error);
+      })
+      .catch(function(e){ _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, e && e.message); })
+      .then(next, next);
+  })();
+}
+
 // The one entry point for verified cross-device writes to the MAIN sheet.
-// Directory writes use queuedDirectoryWrite below, which shares this same queue.
+// Directory writes use queuedDirectoryWrite below, which shares the retry queue.
 function queuedPostSync(body, okMsg, failMsg) {
   if (!SHEETS_SYNC_URL) return;
-  postSync(body)
-    .then(function(res){
-      if (res && res.ok) { if (okMsg) showSyncBadge(okMsg); }
-      else _enqueueWrite('main', body, okMsg, failMsg, res && res.error);
-    })
-    .catch(function(e){ _enqueueWrite('main', body, okMsg, failMsg, e && e.message); });
+  // Keyed the same way the retry queue keys things, so a newer full snapshot supersedes
+  // an older queued one rather than both being sent. Payloads are held by reference, so
+  // a store mutated between queueing and sending goes out at its newest state — which is
+  // the behaviour we want and matches the newest-wins merge on the sheet.
+  _outbox[_writeKey(body, 'main')] = { target: 'main', body: body, okMsg: okMsg, failMsg: failMsg };
+  if (!_outboxTimer && !_outboxSending) _outboxTimer = setTimeout(_flushOutbox, _OUTBOX_WINDOW);
 }
 
 function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded) {
