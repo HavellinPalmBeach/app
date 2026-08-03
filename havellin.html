@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 5:27pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 5:44pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6397,6 +6397,181 @@ function _fixedFeeBlurb(e) {
     + 'yours.' + scope + ' Third-party vendors are invoiced to you directly at cost.';
 }
 
+// ─── CLIENT JOB PLAN ─────────────────────────────────────────────────────────
+// The client-facing translation of the internal Job Plan's architecture. We are
+// asking for $20k–$100k on the strength of this document, and until now it said
+// what we would do in one paragraph and listed the rooms in a run-on sentence.
+//
+// THE ANTI-DRIFT RULE, and it is the whole design: which phases a client sees is
+// derived from `JOB_STEPS[svc]` — the same table that PRICED the job. A probate
+// job prices a `document` step and a `legal` step, so it gets the documentation
+// and court-filing phases; Home Cleanout prices neither and gets neither. The
+// narrative and the number cannot disagree, because they read the same source.
+// Never hardcode a phase list per service here; add the step to JOB_STEPS instead.
+//
+// Depth scales with DOCUMENTATION LEVEL, not with project value: a formal
+// (court/attorney-grade) engagement gets the fuller completion criteria because
+// that is what those clients actually need, while a $20k downsizing gets the same
+// structural thoroughness rather than reading as an afterthought.
+//
+// Deliberately silent on durations and dates. `_fixedFeeBlurb` withholds the day
+// count for the same reason: a number beside a phase reads as a delivery
+// commitment, and the pace here is set by how fast the client makes decisions.
+// Sequence and completion gates only.
+function _cePhases(e, job) {
+  var svc = e.svc || '';
+  var steps = (typeof JOB_STEPS !== 'undefined' && JOB_STEPS[svc]) ? JOB_STEPS[svc] : {};
+  var isMM         = svc === 'downsizing_move';
+  var isDownsizing = svc === 'downsizing' || isMM;
+  var isPrep       = svc === 'prep';
+  var isProbate    = svc === 'probate' || svc === 'contested_probate';
+  var isContested  = svc === 'contested_probate';
+  var hasDoc       = !!steps.document;                       // documentation is priced
+  var hasLegal     = !!steps.legal;                          // court/legal work is priced
+  var hasDisp      = !!steps.disposition;                    // outbound disposition streams
+  var deep         = (typeof isFormalDoc === 'function') ? isFormalDoc(job) : false;
+  var hasColl      = (e.collections || []).length > 0;
+  var P = [];
+
+  // ── Standalone Home Prep runs a different shape entirely: no sorting, no
+  // disposition, no crew — it is vendor management from end to end.
+  if (isPrep) {
+    P.push({
+      title: 'Scoping &amp; Sourcing',
+      body: 'We walk the property and define exactly what it needs to show at its best — no more, because work that does not move the sale price is money spent for nothing. Each trade is then sourced from vendors we already use, scoped in writing, and quoted, so you are choosing between real numbers rather than approving an allowance.',
+      need: 'A decision on how far you want to take the property, and access for the trades to quote.',
+      done: 'Every line of work is scoped, quoted, and approved by you before a single vendor is booked.'
+    });
+    P.push({
+      title: 'Execution &amp; Oversight',
+      body: 'We schedule the trades in the order the work has to happen, hold the keys, meet each crew on site, and inspect the work against the scope you approved. You are not chasing contractors or arbitrating between them — that is the entire point of the engagement.',
+      need: 'Nothing day to day. We will come to you if a trade finds something behind a wall.',
+      done: 'Each trade signs off only after its work is inspected and accepted against the approved scope.'
+    });
+    P.push({
+      title: 'Show-Ready Handover',
+      body: 'A final walkthrough with a punch list, everything corrected, and the property photographed in its finished state. Vendor invoices are collected, reconciled and handed over with the file.',
+      need: 'A walkthrough with us at the end, so nothing is called finished that you have not seen.',
+      done: 'The punch list is cleared, the invoices reconcile, and the property is ready to photograph and list.'
+    });
+    return P;
+  }
+
+  // ── Phase 1 · Before we start ───────────────────────────────────────────────
+  var beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through exactly how the work will run — the daily rhythm, who will be in your home, and the decisions you will be asked to make in every room. We confirm access, parking, elevator and building rules, and brief the crew on the property before anyone arrives.';
+  if (hasDoc) {
+    beforeBody += ' We also confirm authority: a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.';
+  }
+  P.push({
+    title: 'Before We Start',
+    body: beforeBody,
+    need: hasDoc
+      ? 'A signed engagement agreement, the deposit, and documentation of who holds authority to make decisions for the estate.'
+      : 'A signed engagement agreement, the deposit, and confirmation of who holds decision authority.',
+    done: 'No crew is scheduled until the agreement is signed and the deposit is received. That is a hard rule, not a preference.'
+  });
+
+  // ── Phase 2 · Sorting & decisions ───────────────────────────────────────────
+  var sortTitle = 'Sorting &amp; Decisions' + (hasDoc ? ' &amp; Documentation' : '');
+  var sortBody;
+  if (isDownsizing) {
+    sortBody = 'We work alongside you, one room at a time, in the same order the estimate lists them. Every item is sorted into keep, sell, donate, or dispose — and nothing is decided for you. Property Specialists do the handling and the lifting so you are making decisions rather than moving furniture, and your Transition Concierge keeps the plan moving room to room.';
+  } else if (hasDoc) {
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. Items that may carry real value are set aside and flagged for the right specialist before anything moves.';
+  } else {
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting contents and routing each item to where it is going. Anything that looks like it carries value is pulled aside and reviewed with you before the room is cleared, so nothing of consequence leaves the house by accident.';
+  }
+  if (hasColl) {
+    sortBody += ' The collections identified at the walkthrough are handled on their own track, matched to the specialist partner named in the disposition plan below.';
+  }
+  P.push({
+    title: sortTitle,
+    body: sortBody,
+    need: 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.',
+    done: deep
+      ? 'A room is complete when every item in it has been routed, the retained list is confirmed with you in writing, and the room’s inventory is acknowledged before anything leaves it.'
+      : 'A room is complete when every item in it has been routed and the retained list is confirmed with you in writing.'
+  });
+
+  // ── Phase 3 · Packing / disposition ─────────────────────────────────────────
+  if (hasDisp) {
+    P.push({
+      title: 'Packing &amp; Disposition',
+      body: 'Every decision from the previous phase is carried out. Items for sale go to the consignment, auction or dealer partner named in the plan; donations are collected and receipted for your tax records; disposal is hauled; sensitive documents are shredded. Retained items are packed and labeled. Your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.',
+      need: 'Confirmation of the retained list before it is packed, and a decision on anything a specialist values differently than expected.',
+      done: hasDoc
+        ? 'Every disposition stream is cleared, each outcome is recorded against its inventory line, and any proceeds are routed to the estate account.'
+        : 'Every disposition stream is cleared and only the items you are keeping remain, boxed and labeled.'
+    });
+  } else {
+    P.push({
+      title: 'Packing &amp; Preparation',
+      body: 'Everything you are keeping is packed and labeled by the room it is going to, so unpacking is a matter of putting boxes where they belong rather than opening every one to find out what is inside. Sale, donation and disposal items leave in the same pass.',
+      need: 'A confirmed keep list before packing starts.',
+      done: 'Everything retained is packed and labeled by destination, and the property is ready for the next step.'
+    });
+  }
+
+  // ── Phase 4 · Move day (move management only) ───────────────────────────────
+  if (isMM) {
+    P.push({
+      title: 'Move Day',
+      body: 'Your Transition Concierge supervises at both ends — the crew loading at the current home and the placement at the new one. Furniture goes where the placement plan says it goes, beds are made, and the kitchen and bathrooms are functional before we leave. You arrive to a home, not to a wall of boxes.',
+      need: 'Sign-off on the furniture placement plan before move day, and someone reachable that day.',
+      done: 'The placement plan is executed, essentials are unpacked and working, and you have walked the new home with us.'
+    });
+  }
+
+  // ── Phase 5 · Close-out ─────────────────────────────────────────────────────
+  var closeBody = 'We walk every room, closet, attic, garage and outdoor space with you and confirm the property is finished. Vendor invoices are collected and reconciled, hours are reconciled against the estimate, and your final invoice is generated from the actual logged hours — not from the estimate.';
+  if (hasLegal) {
+    closeBody += ' The verified inventory is prepared with date-of-death fair market value for every asset, appraisals attached as supporting documentation, non-probate assets excluded, and the whole package served on interested parties and filed within the statutory deadline.';
+  }
+  P.push({
+    title: 'Close-Out' + (hasLegal ? ' &amp; Court Filing' : ''),
+    body: closeBody,
+    need: 'A final walkthrough with us, and sign-off on the disposition summary.',
+    done: deep
+      ? 'The property is confirmed clear and photographed, the financial close reconciles, the filing is complete, and the full job file is archived and retained for seven years.'
+      : 'The property is confirmed clear and photographed, the financial close reconciles, and the complete job file is archived and available to you.'
+  });
+
+  if (isContested) {
+    P.push({
+      title: 'Throughout — Neutrality',
+      body: 'On a contested matter we take direction only from the authorized representative, keep records that are neutral on their face, and document every item and every decision to a standard that holds up when it is read by someone looking for a problem. We do not take sides between interested parties and we do not release anything to anyone without the representative’s written authority.',
+      need: 'A single named point of authority, and written instruction before anything is released.',
+      done: 'This one does not end at a phase boundary — it governs the entire engagement.'
+    });
+  }
+
+  return P;
+}
+
+// Spaces in scope, grouped the way the Build Estimate grid groups them. The flat
+// comma list this replaces dropped the section, which on a two-storey house printed
+// "Primary Suite … Primary Suite", "Bedroom 2 … Bedroom 2", "Half Bath … Half Bath"
+// — real first-floor and second-floor rooms reading as duplicated typing on a
+// six-figure proposal. Order follows `idx`, so it matches the estimate and the
+// Job Plan; a room saved without one keeps its stored position at the end.
+function _ceGroupedSpaces(rooms) {
+  var order = [], byName = {};
+  rooms.slice().map(function(r, i){ return { r: r, i: i }; })
+    .sort(function(a, b){
+      var ai = (typeof a.r.idx === 'number') ? a.r.idx : Infinity;
+      var bi = (typeof b.r.idx === 'number') ? b.r.idx : Infinity;
+      return ai - bi || a.i - b.i;
+    })
+    .forEach(function(x) {
+      var sec = x.r.section || 'Additional Spaces';
+      if (!byName[sec]) { byName[sec] = []; order.push(sec); }
+      byName[sec].push(esc(x.r.name));
+    });
+  return order.map(function(sec) {
+    return { section: sec, rooms: byName[sec] };
+  });
+}
+
 function proposedPlanRow(e) {
   function andList(a) {
     if (a.length <= 1) return a.join('');
@@ -6444,26 +6619,140 @@ function proposedPlanRow(e) {
       '<span style="color:var(--bronze);font-weight:700;">' + n[0] + ':</span> ' + n[1] + '</div>';
   }).join('');
 
-  // Confirmed Spaces now lives inside this box, directly under the narrative.
-  var rooms = (e.rooms || []).filter(function(r){ return !r.excluded; }).map(function(r){ return esc(r.name); });
-  var spacesLine = rooms.length
-    ? '<div style="margin-top:7px;font-size:11.5px;color:var(--gray-dk);line-height:1.5;"><span style="color:var(--bronze);font-weight:700;">Confirmed Spaces:</span> ' + rooms.join(', ') + '</div>'
-    : '';
+  return { narrative: narrative, notesHtml: notesHtml };
+}
 
-  // Excluded spaces — the homeowner told us they'll handle these themselves, so we
-  // priced no work in them. Call them out explicitly so the client sees the boundary.
-  var exclRooms = (e.rooms || []).filter(function(r){ return r.excluded; }).map(function(r){ return esc(r.name); });
-  var exclLine = exclRooms.length
-    ? '<div style="margin-top:7px;font-size:11.5px;color:#A32D2D;line-height:1.5;"><span style="font-weight:700;">Excluded — you will handle ' + (exclRooms.length === 1 ? 'this space' : 'these spaces') + ':</span> ' + exclRooms.join(', ') + '. No work in ' + (exclRooms.length === 1 ? 'this area was' : 'these areas was') + ' included in the pricing below.</div>'
-    : '';
+// ── The section itself ───────────────────────────────────────────────────────
+// Block-level, not a table row: it sits above the fee tables under one
+// "Havellin Job Plan & Services" band, so the client reads what they are buying
+// before they read what it costs.
+function clientJobPlanSection(e, job) {
+  var _j = job || (typeof jobs !== 'undefined' ? jobs.find(function(j){ return j.id === e.jobId; }) : null) || {};
+  var parts = proposedPlanRow(e);
+  var deep = (typeof isFormalDoc === 'function') ? isFormalDoc(_j) : false;
+  var isPrep = e.svc === 'prep';
+  var steps = (typeof JOB_STEPS !== 'undefined' && JOB_STEPS[e.svc]) ? JOB_STEPS[e.svc] : {};
 
-  return '<tr><td colspan="4" style="padding:11px 14px;background:var(--white);border-left:3px solid var(--bronze);">' +
-    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin-bottom:5px;">Proposed Plan</div>' +
-    '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + narrative + '</div>' +
-    spacesLine +
-    exclLine +
-    notesHtml +
-    '</td></tr>';
+  var SUB = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bronze);margin:0 0 6px;';
+  var BODY = 'font-size:12px;color:var(--gray-dk);line-height:1.65;';
+  // break-inside on each block so a phase never splits across a printed page —
+  // half a completion criterion at a page break is worse than a short page.
+  var BLOCK = 'padding:12px 14px;background:var(--white);border-left:3px solid var(--bronze);margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;';
+
+  var html = '';
+
+  // 1 · How we work — the service-specific narrative, unchanged.
+  html += '<div style="' + BLOCK + '">'
+    + '<div style="' + SUB + '">How We Work</div>'
+    + '<div style="' + BODY + '">' + parts.narrative + '</div>'
+    + '</div>';
+
+  // 2 · Scope, grouped by section.
+  var incl = (e.rooms || []).filter(function(r){ return !r.excluded; });
+  var excl = (e.rooms || []).filter(function(r){ return r.excluded; });
+  if (incl.length) {
+    var groups = _ceGroupedSpaces(incl);
+    html += '<div style="' + BLOCK + '">'
+      + '<div style="' + SUB + '">Spaces In Scope &nbsp;·&nbsp; ' + incl.length + '</div>'
+      + groups.map(function(g) {
+          return '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.55;margin-bottom:4px;">'
+            + '<span style="color:var(--bronze);font-weight:700;">' + esc(g.section) + ' (' + g.rooms.length + '):</span> '
+            + g.rooms.join(' &middot; ') + '</div>';
+        }).join('')
+      + (excl.length
+          ? '<div style="margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11.5px;color:#A32D2D;line-height:1.5;">'
+            + '<span style="font-weight:700;">Excluded — you will handle ' + (excl.length === 1 ? 'this space' : 'these spaces') + ':</span> '
+            + excl.map(function(r){ return esc(r.name); }).join(' &middot; ')
+            + '. No work in ' + (excl.length === 1 ? 'this area is' : 'these areas is') + ' included in the pricing below.</div>'
+          : '')
+      + '</div>';
+  }
+
+  // 3 · How the work runs — the phases.
+  var phases = _cePhases(e, _j);
+  if (phases.length) {
+    html += '<div style="' + BLOCK + '">'
+      + '<div style="' + SUB + '">How The Work Runs</div>'
+      + '<div style="font-size:11.5px;color:var(--gray);line-height:1.55;margin-bottom:9px;font-style:italic;">'
+      + 'Each stage below has to finish before the next begins. We have deliberately not put dates against them — the pace is set by how quickly decisions can be made, and a date here would be a promise about your calendar rather than ours.</div>'
+      + phases.map(function(p, i) {
+          return '<div style="margin-top:' + (i ? '11px' : '0') + ';padding-top:' + (i ? '10px' : '0') + ';'
+            + (i ? 'border-top:1px solid var(--border);' : '') + 'break-inside:avoid;page-break-inside:avoid;">'
+            + '<div style="font-size:12px;font-weight:700;color:var(--gray-dk);margin-bottom:3px;">'
+            + '<span style="color:var(--bronze);">' + (i + 1) + '.</span> ' + p.title + '</div>'
+            + '<div style="' + BODY + '">' + p.body + '</div>'
+            + '<div style="font-size:11px;color:var(--gray-dk);line-height:1.5;margin-top:5px;">'
+            + '<span style="color:var(--bronze);font-weight:700;">What we need from you:</span> ' + p.need + '</div>'
+            + '<div style="font-size:11px;color:var(--gray-dk);line-height:1.5;margin-top:3px;">'
+            + '<span style="color:var(--bronze);font-weight:700;">Complete when:</span> ' + p.done + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  // 4 · What we coordinate — vendors, collections, prep, site conditions.
+  if (parts.notesHtml) {
+    html += '<div style="' + BLOCK + '">'
+      + '<div style="' + SUB + '">What We Coordinate For You</div>'
+      + '<div style="margin-top:-5px;">' + parts.notesHtml + '</div>'
+      + '</div>';
+  }
+
+  // 5 · What you are left holding. This is where a formal engagement earns its
+  // premium — on a court-supervised matter the file IS the deliverable — so the
+  // depth here follows the documentation level rather than the dollar value.
+  if (!isPrep) {
+    var records = ['Photographs of every room, before and after'];
+    if (steps.document) records.push('An itemised inventory of the contents of consequence — description, location, condition, and estimated value');
+    if ((e.collections || []).length) records.push('A disposition record for every collection: where it went, through whom, and for what');
+    records.push('Every third-party vendor invoice, collected and reconciled');
+    if (steps.disposition) records.push('Donation receipts, for your tax records');
+    records.push('A final invoice built from the actual logged hours, reconciled line by line against this estimate');
+    if (deep) {
+      records.push('A verified inventory to the standard the court requires, carrying date-of-death fair market value for every asset');
+      records.push('A chain-of-custody log for each documented item — who handled it, when, and where it went');
+      records.push('Independent appraisals attached as supporting documentation');
+      records.push('The complete file retained for seven years');
+    } else {
+      records.push('The complete job file, filed in a folder shared with you');
+    }
+    html += '<div style="' + BLOCK + '">'
+      + '<div style="' + SUB + '">What You Receive</div>'
+      + '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.55;">'
+      + records.map(function(r){ return '<div style="margin-bottom:3px;"><span style="color:var(--bronze);">&#8212;</span> ' + r + '</div>'; }).join('')
+      + '</div>'
+      + (deep
+          ? '<div style="margin-top:7px;font-size:11px;color:var(--gray);line-height:1.5;font-style:italic;">This engagement is documented to court and attorney standard. The records above are prepared to be read by counsel, a judge, or an interested party who is looking for a problem.</div>'
+          : '')
+      + '</div>';
+  }
+
+  // 6 · What we need from the client, gathered in one place. The honest version of
+  // this is also the cheapest overrun insurance we have: the estimate assumes
+  // decisions arrive at a working pace, and saying so here beats saying it later.
+  var asks = [];
+  if (!isPrep) {
+    asks.push(['Decision authority', steps.document
+      ? 'One named person with the authority to make decisions for the estate. Where that authority is limited, we need to know the limits in writing before we start.'
+      : 'One named person who can make the final call on what stays and what goes.']);
+    asks.push(['Availability', 'Time with us during the sorting phase. This is the single biggest driver of how long the project runs — the crew can only move as fast as the decisions do.']);
+  }
+  asks.push(['Access', 'Keys or codes, parking, and any building, HOA or elevator rules, confirmed before the first day.']);
+  if (e.heirs) {
+    asks.push(['Multiple parties', 'Several people are involved in decisions on this engagement. The estimate accounts for that coordination — what we need from you is one point of contact who speaks for the group.']);
+  }
+  if (e.access) {
+    asks.push(['Site conditions', 'Stairs or no elevator here. The extra handling time is already in the hours below; what we need is a loading route agreed before Day 1.']);
+  }
+  html += '<div style="' + BLOCK + 'margin-bottom:1.1rem;">'
+    + '<div style="' + SUB + '">What We Need From You</div>'
+    + asks.map(function(a) {
+        return '<div style="margin-top:4px;font-size:11.5px;color:var(--gray-dk);line-height:1.55;">'
+          + '<span style="color:var(--bronze);font-weight:700;">' + a[0] + ':</span> ' + a[1] + '</div>';
+      }).join('')
+    + '</div>';
+
+  return html;
 }
 
 // Job picker for the Client Estimate tab — mirrors the Agreement / Job Plan /
@@ -6508,13 +6797,15 @@ function loadClientEstimateFromSelect() {
 // vendor estimates (billed at cost), then Havellin's 30% management fee on that spend,
 // then the combined total. No labor lines, no empty "Third-Party Vendors To Be Engaged"
 // section, no fee shown twice — just the three numbers that matter, in order.
-function buildPrepEstimateBody(e) {
+function buildPrepEstimateBody(e, job) {
   var prepRows = (e.prepItems||[]).filter(function(p){ return p.cost > 0; }).map(function(p){
     return '<tr><td>' + esc(p.type) + '</td><td class="r">' + fmt(p.cost) + '</td></tr>';
   }).join('') || '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No prep vendors estimated yet</td></tr>';
   return '' +
-    // Proposed Plan (reuses the shared, service-specific narrative box)
-    '<table class="ce-tbl" style="margin-bottom:1.1rem;"><tbody>' + proposedPlanRow(e) + '</tbody></table>' +
+    // Standalone prep gets the same structured plan as every other service — its
+    // three phases are sourcing, oversight and handover rather than sort/pack/close.
+    '<div class="ce-section-hdr">Havellin Job Plan &amp; Services</div>' +
+    clientJobPlanSection(e, job) +
 
     // 1) Vendors first — billed at cost
     '<div class="ce-section-hdr">Home Prep Vendors — Estimated (billed to you at cost)</div>' +
@@ -6705,13 +6996,13 @@ function renderClientEstimate() {
   var _onsitePsFee = (e.psFee||0) - _destPsFee;
 
   if (e.svc === 'prep') {
-    html += buildPrepEstimateBody(e);
+    html += buildPrepEstimateBody(e, job);
   } else {
   html +=
-    '<div class="ce-section-hdr">Havellin Services</div>' +
+    '<div class="ce-section-hdr">Havellin Job Plan &amp; Services</div>' +
+    clientJobPlanSection(e, job) +
     '<table class="ce-tbl">' +
     '<tbody>' +
-    proposedPlanRow(e) +
     // Fixed-price mode: a single firm flat-fee line replaces the hourly TC/PS breakdown.
     // The materials/SMF/GC coordination fees are folded into the flat fee (they were part
     // of the hourly basis it was derived from), so no separate fee lines are shown.

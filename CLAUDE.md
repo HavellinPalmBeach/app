@@ -61,6 +61,39 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   triggers a playbook pass too, and the playbook is the one that goes stale more dangerously —
   a wrong manual entry misinforms, a wrong playbook step strands somebody mid-job.
 
+## Havellin Job Plan & Services — the estimate now states the METHOD (BUILT 2026-08-03)
+**Anthony: "this is a big ticket item, twenty to a hundred thousand dollars, and I want a
+detailed job plan that lives up to the ticket price."** The old *Proposed Plan* was ONE table
+row: a paragraph, a run-on room list, and up to four notes. Replaced by a structured section
+above the fee tables under a renamed band, `clientJobPlanSection(e, job)`.
+- **`_cePhases(e, job)` derives the phases from `JOB_STEPS[svc]` — the table that PRICED the
+  job. This is the whole design and the thing not to undo.** Probate prices a `document` and a
+  `legal` step, so it gets the documentation and court-filing phases; Home Cleanout prices
+  neither and gets neither; `downsizing_move` gets Move Day. The narrative and the number
+  cannot disagree because they read one source. **Never hardcode a per-service phase list
+  here** — add the step to `JOB_STEPS` and the client document follows.
+- Each phase carries three fields: **what we do · what we need from you · complete when**. The
+  "complete when" is the internal Job Plan's phase GATE said in client language, which is what
+  makes the document read as a method rather than a brochure.
+- **DELIBERATELY NO DATES OR DURATIONS, and there is a test asserting the phase copy contains
+  no day/week count.** Same reasoning as `_fixedFeeBlurb`: a number beside a phase reads as a
+  delivery commitment, and the pace is set by how fast the CLIENT decides. Decided with Anthony.
+- **Depth scales with DOCUMENTATION LEVEL (`isFormalDoc`), not project value** — his call. A
+  formal engagement gets the fuller completion criteria and the court-grade records list
+  (date-of-death FMV, chain of custody, appraisals attached, 7-year retention); a $20k
+  downsizing keeps every phase rather than reading as an afterthought.
+- **Spaces are grouped by section with counts**, ordered by `idx`. The flat list this replaces
+  dropped the section, so a two-storey house printed *Primary Suite … Primary Suite*, *Half
+  Bath … Half Bath*, *Bedroom 2 … Bedroom 2* — real first/second-floor rooms reading as
+  duplicated typing on a six-figure proposal. **Grouping is a correctness fix, not styling.**
+- `proposedPlanRow` no longer returns a `<tr>`; it returns `{narrative, notesHtml}` and is a
+  helper of the new section. Both call sites moved (`buildPrepEstimateBody` takes `job` now).
+- **Standalone prep gets its own three phases** — Scoping & Sourcing · Execution & Oversight ·
+  Show-Ready Handover — not the sort/pack playbook, and no records block (it has no inventory).
+- Phase blocks carry `break-inside:avoid`; half a completion criterion across a page break is
+  worse than a short page.
+- 77 checks driving the real `renderClientEstimate` across all seven service types.
+
 ## Empty third-party section suppressed + Job Plan rooms in walkthrough order (BUILT 2026-08-03)
 Two cosmetics reported on the same pass, both about a screen saying something it shouldn't.
 - **The client estimate always printed the third-party block, empty.** A heading, an italic
