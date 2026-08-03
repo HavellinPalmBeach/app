@@ -705,7 +705,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 6:58pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:01pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7200,10 +7200,22 @@ function renderClientEstimate() {
       // based on actual hours worked") was the fourth statement of that same fact — the fee
       // line now says it, the heading says it, and Terms says it twice.
       ? '<div class="ce-note">Any change to the scope described above will be documented in a written change order, with any price adjustment agreed before the additional work proceeds. Third-party vendor costs are billed separately at cost.</div>'
-      : '<div class="ce-note">This estimate is based on the initial property walkthrough. Final charges reflect actual hours worked. If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</div>' +
-        ((e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate')
-          ? '<div class="ce-note" style="margin-top:6px;"><strong>Billing — probate / estate:</strong> This engagement is billed on actual logged Transition Concierge and Property Specialist hours (time-and-materials). An itemized, hour-by-hour record is maintained and provided to the Personal Representative and, as required, the court. No fixed-price contingency is applied.</div>'
-          : '')) +
+      // ONE note, not two. These used to be stacked boxes that both said the same
+      // thing — "final charges reflect actual hours worked" and "billed on actual
+      // logged Transition Concierge and Property Specialist hours" are one fact
+      // stated twice, immediately below a table of hours. The dropped sentence,
+      // "No fixed-price contingency is applied", described something absent from a
+      // document that never offered one; same reason the no-dates preamble went.
+      // What survives is everything said once: the basis, the 15% threshold, and —
+      // on court-supervised work only — the hour-by-hour record.
+      : (function() {
+          var isCourt = (e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate');
+          return '<div class="ce-note">This estimate is based on the initial property walkthrough. '
+            + 'Final charges reflect the Transition Concierge and Property Specialist hours actually worked and logged; '
+            + 'if those exceed this estimate by more than 15%, we will tell you before continuing.'
+            + (isCourt ? ' An itemized, hour-by-hour record is maintained throughout and provided to the Personal Representative and, where the court requires it, to the court.' : '')
+            + '</div>';
+        })()) +
 
     (function() {
       var cols = e.collections || [];
@@ -7213,7 +7225,10 @@ function renderClientEstimate() {
         return '<tr><td>' + esc(c.name) + '</td><td>' + (dispNames[c.disp]||c.disp) + '</td></tr>';
       }).join('');
       return '<div class="ce-band" style="margin-top:1rem;">Notable Collections — Disposition Plan</div>' +
-        '<table class="ce-tbl" style="margin-bottom:1.25rem;"><thead><tr><th>Collection / Item</th><th>Proposed Disposition</th></tr></thead>' +
+        // No column header row — the band above already names the section, and
+        // "Collection / Item" over a list of collections says nothing the reader
+        // did not already have. Two stacked header bars for one small table.
+        '<table class="ce-tbl" style="margin-bottom:1.25rem;">' +
         '<tbody>' + rows + '</tbody></table>';
     })() +
 
@@ -7244,7 +7259,7 @@ function renderClientEstimate() {
           '</td><td>' + flags.join('<br>') + '</td></tr>';
       }).join('');
       return '<div class="ce-band" style="margin-top:1rem;">Vehicles &amp; Watercraft</div>' +
-        '<table class="ce-tbl"><thead><tr><th>Vehicle / Watercraft</th><th>Status</th></tr></thead>' +
+        '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody></table>' +
         '<div style="font-size:11px;color:var(--gray);padding:6px 10px 0;font-style:italic;">' +
         'Each vehicle above is included in the estate documentation. The disposition path — sale, ' +
