@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 8:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 9:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6433,7 +6433,7 @@ function loadClientEstimateFromSelect() {
 // Home Prep for Sale client estimate body — a purpose-built, minimal layout. The
 // fee-only model reads cleanest vendors-first: the client sees the third-party prep
 // vendor estimates (billed at cost), then Havellin's 30% management fee on that spend,
-// then the combined total. No labor lines, no empty "Third-Party Vendors Engaged"
+// then the combined total. No labor lines, no empty "Third-Party Vendors To Be Engaged"
 // section, no fee shown twice — just the three numbers that matter, in order.
 function buildPrepEstimateBody(e) {
   var prepRows = (e.prepItems||[]).filter(function(p){ return p.cost > 0; }).map(function(p){
@@ -6691,7 +6691,11 @@ function renderClientEstimate() {
         '<tbody>' + rows + '</tbody></table>';
     })() +
 
-    '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendors Engaged</div>' +
+    // "To Be Engaged" — this is the ESTIMATE, so nobody has been engaged yet. The costs
+    // beside each row are estimates and the vendors are proposals; the past tense read as
+    // a statement that the work was already booked. The invoice has no equivalent heading,
+    // so there is no past-tense counterpart to keep in step with this.
+    '<div class="ce-section-hdr" style="margin-top:1rem;">Third-Party Vendors To Be Engaged</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
