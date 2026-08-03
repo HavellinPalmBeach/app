@@ -87,15 +87,53 @@ function doPost(e) {
 
 // ══ STORE HELPERS ════════════════════════════════════════════════════════════════
 
-// Write a store object/array as a single JSON blob in row 2 of the named sheet.
+// A Google Sheets cell holds at most 50,000 characters. Every store here is one JSON
+// blob, and setValue() on a longer string THROWS — "Exceeds the maximum number of
+// characters allowed in a cell" — which fails the whole doPost. The app then reports a
+// failed sync, and because opening a job lets the sheet's copy win, the next open serves
+// the last SUCCESSFUL (older, smaller) blob straight over the work that never landed.
+// Silent revert: you save, come back, and the rooms you scored are gone.
+//
+// Measured on the real app: one fully-scored estimate serializes to about 16,250
+// characters, so EstimateStore blew the cap at the fourth such job. Chunked across rows
+// instead — column B of rows 2..N, reassembled on read. Reading an existing single-row
+// blob is unchanged, so no migration step.
+var _BLOB_CHUNK = 45000;   // headroom under the 50,000 cap
+
 function _writeStoreBlob(sheetName, obj) {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) { sheet = ss.insertSheet(sheetName); sheet.appendRow(['Updated', 'JSON']); }
   var json = JSON.stringify(obj);
-  var data = sheet.getDataRange().getValues();
-  if (data.length > 1) sheet.getRange(2, 1, 1, 2).setValues([[new Date().toISOString(), json]]);
-  else sheet.appendRow([new Date().toISOString(), json]);
+  var chunks = [];
+  for (var i = 0; i < json.length; i += _BLOB_CHUNK) chunks.push(json.substr(i, _BLOB_CHUNK));
+  if (!chunks.length) chunks.push('');
+  var stamp = new Date().toISOString();
+  // Clear every old data row first. Without this a blob that shrinks leaves the tail of
+  // the previous, longer one behind, and the reader concatenates JSON + garbage.
+  var last = sheet.getLastRow();
+  if (last > 1) sheet.getRange(2, 1, last - 1, 2).clearContent();
+  var rows = chunks.map(function(c, n) { return [n === 0 ? stamp : '', c]; });
+  sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+}
+
+// Reassemble a chunked blob. Falls back cleanly to the old single-cell layout, and to
+// the caller's empty value when the sheet is missing, blank, or holds unparseable JSON.
+function _readStoreBlob(sheetName, empty) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return empty;
+  var last = sheet.getLastRow();
+  if (last < 2) return empty;
+  var col = sheet.getRange(2, 2, last - 1, 1).getValues();
+  var json = '';
+  for (var i = 0; i < col.length; i++) {
+    var v = col[i][0];
+    if (v === '' || v === null || v === undefined) break;   // first blank ends the blob
+    json += String(v);
+  }
+  if (!json) return empty;
+  try { return JSON.parse(json); } catch (e) { return empty; }
 }
 
 // Merge two {key: entry} stores. Per key keep the entry with the newer savedAt;
@@ -123,12 +161,7 @@ function saveEstimateStore(incoming) {
 }
 
 function getEstimateStore() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('EstimateStore');
-  if (!sheet) return {};
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2 || !data[1][1]) return {};
-  try { return JSON.parse(data[1][1]); } catch(e) { return {}; }
+  return _readStoreBlob('EstimateStore', {});
 }
 
 // ══ JOB PLAN STORE (merge by jobId) ══════════════════════════════════════════════
@@ -142,12 +175,7 @@ function saveJobPlanStore(incoming) {
 }
 
 function getJobPlanStore() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('JobPlanStore');
-  if (!sheet) return {};
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2 || !data[1][1]) return {};
-  try { return JSON.parse(data[1][1]); } catch(e) { return {}; }
+  return _readStoreBlob('JobPlanStore', {});
 }
 
 // ══ CHANGE ORDER STORE (merge a flat array by co.id) ═════════════════════════════
@@ -176,12 +204,7 @@ function saveChangeOrderStore(incoming) {
 }
 
 function getChangeOrderStore() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('ChangeOrderStore');
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2 || !data[1][1]) return [];
-  try { return JSON.parse(data[1][1]); } catch(e) { return []; }
+  return _readStoreBlob('ChangeOrderStore', []);
 }
 
 // ══ LOG STORE (merge { jobId: [entries] } by entry.id) ═══════════════════════════
@@ -207,12 +230,7 @@ function saveLogStore(incoming) {
 }
 
 function getLogStore() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('LogStore');
-  if (!sheet) return {};
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2 || !data[1][1]) return {};
-  try { return JSON.parse(data[1][1]); } catch(e) { return {}; }
+  return _readStoreBlob('LogStore', {});
 }
 
 // ══ CONTRACTOR STORE (merge added[] and defaults[] by id) ════════════════════════
@@ -243,15 +261,8 @@ function _mergeArrayById(existing, incoming) {
 }
 
 function getContractorStore() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('ContractorStore');
-  if (!sheet) return { added: [], defaults: [] };
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2 || !data[1][1]) return { added: [], defaults: [] };
-  try {
-    var obj = JSON.parse(data[1][1]) || {};
-    return { added: obj.added || [], defaults: obj.defaults || [] };
-  } catch(e) { return { added: [], defaults: [] }; }
+  var obj = _readStoreBlob('ContractorStore', null) || {};
+  return { added: obj.added || [], defaults: obj.defaults || [] };
 }
 
 function saveContractorStore(incoming) {

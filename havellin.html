@@ -665,7 +665,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 9:58am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:10am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7293,6 +7293,17 @@ function editEstimateForJob(jobId) {
     }
     window._suppressEstimateAutoSave = false;
     rebuildDropdowns();
+    // The sheet is behind this device. Say so at the moment it matters — the estimator is
+    // looking at the work right now and can re-save it — rather than letting them find out
+    // later on another device that the cloud never got it.
+    if (window._estCloudBehind) {
+      var _cb = window._estCloudBehind;
+      var _when = function(ms){ return ms ? new Date(ms).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'never'; };
+      showFB('e-fb','warn','Showing this device’s copy — it is newer than the cloud. Saved here ' + _when(_cb.localAt)
+        + '; the sheet last has ' + _when(_cb.cloudAt) + '. A previous save did not reach the cloud. '
+        + 'Hit Save & Preview again, and if it fails a second time tell Anthony before building on it.');
+      window._estCloudBehind = null;
+    }
     // Reset approval unless already approved
     if (!estimateStore[jobId] || !estimateStore[jobId].approved) {
       estimateApproved = false;
@@ -9205,10 +9216,29 @@ function refreshEstimateFromCloud(jobId, onReady) {
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (!data || typeof data.estimates !== 'object' || data.estimates === null) { onReady('offline'); return; }
+      window._estCloudBehind = null;
       if (data.estimates[jobId]) {
         var rec = data.estimates[jobId];
         normalizeLegacyRoomKeys(rec);
-        estimateStore[jobId] = rec;            // cloud wins whenever the sheet has a record
+        // Cloud wins — but NOT over a local record that is demonstrably newer. It used to
+        // win unconditionally, and that turned any failed write into silent data loss:
+        // the save throws in Apps Script (see the 50,000-character cell cap in
+        // main-sync.gs), the sheet keeps yesterday's smaller blob, and reopening the job
+        // serves that blob over the rooms you just scored. You get no error at the moment
+        // it matters — just an estimate that quietly went back in time.
+        //
+        // Both sides already carry savedAt, so the comparison needs no new data. Local
+        // only wins when it is newer AND has real content, so an empty placeholder can
+        // never mask a real saved estimate — which is the failure this rule replaced.
+        var _local    = estimateStore[jobId];
+        var _cloudAt  = Number(rec.savedAt) || 0;
+        var _localAt  = Number(_local && _local.savedAt) || 0;
+        var _localOK  = _local && _local.estimate && estimateHasContent(_local.estimate);
+        if (_localOK && _localAt > _cloudAt) {
+          window._estCloudBehind = { localAt: _localAt, cloudAt: _cloudAt };
+        } else {
+          estimateStore[jobId] = rec;
+        }
       } else {
         // Sheet reached but has no record for this job. Don't delete a local copy
         // that actually has content — it may be an estimate saved on this device while
