@@ -79,6 +79,8 @@ The app checks you on this. Under the room grid it compares the bedrooms and bat
 
 If it says nothing at all, intake never captured the bed and bath counts. Go and fill them in — the check has nothing to compare against without them.
 
+**Looking for a second half bath?** There are five to find: *Half Bath* in **Entry & Living**, in **Kitchen & Utility**, and in both the **First Floor** and **Second Floor Bedrooms & Bathrooms** sections, plus *Pool / Cabana Half Bath* in **Exterior & Auxiliary**. Tick the one that matches where the powder room actually is. Don't reach for *Additional Bathroom(s)* — that counts as a *full* bath, so it pushes the wrong number up and leaves the half-bath shortfall exactly where it was.
+
 ### The job settings that change the price
 
 | Setting | What it does to the quote | When to use it |
@@ -410,6 +412,8 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Fixed-price toggle is disabled | It's a probate or contested probate job. Those bill on logged hours. |
 | The estimate won't save | No rooms are scored. Score at least one — and read the coverage badge before you settle for one. |
 | Amber badge: "walkthrough looks incomplete" | Fewer bedrooms or baths scored than intake recorded. It won't block you; finish the walkthrough anyway. |
+| Amber badge says "1 of 2 half baths" and you've ticked the only one you can find | There are five *Half Bath* rows, not one — Entry & Living, Kitchen & Utility, both bedroom floors, and *Pool / Cabana Half Bath* under Exterior & Auxiliary. Tick the one matching where the powder room is. If the house genuinely has fewer half baths than intake recorded, the intake figure is wrong — fix it there. |
+| You ticked *Additional Bathroom(s)* for a powder room and the badge got worse | That row counts as a *full* bath. Untick it and use a *Half Bath* row instead. |
 | Crew size keeps changing by itself | Correct — it tracks the recommendation while you score. It stops the moment you set it yourself. |
 | Crew badge: "2 assigned, 6 recommended — runs 23 days instead of 9" | You've staffed below what the job needs. That's allowed and it is priced as staffed — longer job, more concierge days, higher fee. Go back up unless the small crew is a real constraint. |
 | Fixed price warns it is "+41% over the hourly basis" | You typed a fee and the estimate has moved since. The panel shows the current suggestion — one click to take it. |

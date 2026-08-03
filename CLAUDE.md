@@ -14,11 +14,12 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/home-prep-sale-consolidation-13yxt9`
-  (was `claude/field-app-formatting-9eu5ff`; before that `claude/zen-ride-v4x393`, deleted
-  from the remote — don't chase either.)
+- Active feature branch: `claude/master-suite-cleaning-hours-g62ink`
+  (was `claude/home-prep-sale-consolidation-13yxt9`; before that
+  `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
+  remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/home-prep-sale-consolidation-13yxt9:main`
+  `git push origin claude/master-suite-cleaning-hours-g62ink:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -174,6 +175,35 @@ arrange, work to inspect, a settlement to reconcile.
 - 47 jsdom checks on the estimate path + 22 downstream (Job Plan sourcing, all three invoice
   stages bundled and standalone, both agreements, zero load errors) — all green.
 
+## Room coverage — half baths were unreachable, and ROOMS was secretly append-only (BUILT 2026-08-03)
+**The coverage badge could never clear on a house with two powder rooms**, so a fully-walked
+estate read as an unfinished walkthrough forever and the one check that catches a half-scored
+house — the expensive failure, since scores are averaged and applied to the whole sqft — was
+teaching people to ignore it.
+- `roomCoverage` counts by **name membership over the scored rows**, so duplicates count: beds
+  and full baths appear in both floor sections and reach 8 and 14. `COVERAGE_HALF_BATHS` was
+  `['Half Bath']` and `Half Bath` existed in **exactly one section** (Kitchen & Utility) — a
+  hard ceiling of **1** against an intake field that accepts any number.
+- **The rule to keep:** the reachable count for a kind is the number of GRID ROWS carrying that
+  name, not the number of distinct names on the list. Raising an intake count past what the grid
+  can reach makes the badge unclearable. Reachable now: **beds 11, full baths 17, half baths 5**.
+- Added `Half Bath` to Entry & Living, First Floor and Second Floor Bedrooms & Bathrooms, plus
+  `Pool / Cabana Half Bath` in Exterior & Auxiliary (weight 0.5, in `EXTERIOR_ROOMS` so it adds
+  load rather than modulating the under-air baseline — a cabana bath is not inside the sqft).
+- **`Additional Bathroom(s)` is deliberately still a FULL bath.** Reclassifying it would change
+  what already-saved estimates mean. It remains a plural row counted once, so a house with
+  several surplus baths can still read short — the honest fix there is the per-room `mult`
+  field, which `includedRooms` already carries hardcoded to 1 and nothing has ever built.
+- **The trap, and it nearly shipped: `loadEstimate` matched saved rooms by `idx` FIRST.** `idx`
+  is a running counter across the whole `ROOMS` array, so inserting any row shifts every index
+  after it and a saved estimate restores its scores onto whatever row inherited its old number
+   — silently, on reopen, no error. Same shape as the vendor row-index bug. **Order is now
+  section+name → idx → plain name**, `idx` constrained to its own section (it survives only to
+  rescue a RENAMED custom `Other` row, which no name lookup can match by definition), and a
+  `_claim` guard stops two rows restoring from one saved record. **ROOMS is safe to edit now;
+  it was not before.** Don't put `idx` back in front.
+- 50 jsdom checks (34 unit + 16 driving the real grid and badge), zero load errors.
+
 ## Docs / operations manual (`manual.html`)
 - `manual.html` is the internal operations manual. It is **hand-maintained** and does
   NOT auto-sync with the app, so it drifts whenever the app changes.
@@ -195,7 +225,18 @@ arrange, work to inspect, a settlement to reconcile.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (third pass, same day)** — both documents, against
+- Last reconciled against the app: **2026-08-03 (fourth pass, same day)** — both documents, against
+  the half-bath coverage fix. Nothing either document said was falsified (neither enumerates the
+  room list), so this pass ADDS rather than corrects. Manual §5b: a note stating **the badge counts
+  grid rows, so intake can only ask for what the grid can reach** — with the reachable ceilings
+  (11 / 17 / 5) and the instruction to add rows in the same change as any intake count that
+  outgrows them · where the five half baths now live and why the cabana one is exterior · why
+  `Additional Bathroom(s)` is still a full bath and still counted once. Playbook Step 2: the same
+  in field language, plus **two new symptom→cause rows** (ticked the only half bath you can find ·
+  used `Additional Bathroom(s)` for a powder room and made it worse). The `.md` copies were
+  hand-edited to match rather than regenerated — the converter is not in this session's scratchpad
+  — so the four files were diffed for parity afterwards.
+- Prior pass **2026-08-03 (third pass, same day)** — both documents, against
   the touch model and the optional `coordHrs` capture. Manual: **NEW §5d-i "The touch model"** —
   the rule as a `.flow` block, a touches→hours→categories table, why it is a rule rather than a
   list, the coordination-not-attendance note moved into it, and an explicit **do-not-scale-by-cost**

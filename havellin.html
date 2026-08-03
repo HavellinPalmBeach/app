@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 2:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 7:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2787,6 +2787,7 @@ var ROOMS = [
     {name:'Dining Room',tc:0.55,ps:1.00},
     {name:'Family Room / Great Room',tc:0.70,ps:1.10},
     {name:'Sunroom',tc:0.55,ps:0.80},
+    {name:'Half Bath',tc:0.22,ps:0.30},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
   {section:'Kitchen & Utility',rooms:[
@@ -2825,6 +2826,7 @@ var ROOMS = [
     {name:'Bathroom 3',tc:0.22,ps:0.35},
     {name:'Bedroom 4',tc:0.55,ps:0.80},
     {name:'Bathroom 4',tc:0.22,ps:0.35},
+    {name:'Half Bath',tc:0.22,ps:0.30},
     {name:'Additional Bathroom(s)',tc:0.22,ps:0.35}
   ]},
   {section:'Second Floor Bedrooms & Bathrooms',rooms:[
@@ -2841,6 +2843,7 @@ var ROOMS = [
     {name:'Bathroom 3',tc:0.22,ps:0.35},
     {name:'Bedroom 4',tc:0.55,ps:0.80},
     {name:'Bathroom 4',tc:0.22,ps:0.35},
+    {name:'Half Bath',tc:0.22,ps:0.30},
     {name:'Additional Bathroom(s)',tc:0.22,ps:0.35}
   ]},
   {section:'Second Floor Flex Space',rooms:[
@@ -2865,6 +2868,7 @@ var ROOMS = [
     {name:'Casita',tc:2.10,ps:4.20},
     {name:'Furnished Patio',tc:0.55,ps:0.95},
     {name:'Outdoor Kitchen',tc:0.55,ps:0.95},
+    {name:'Pool / Cabana Half Bath',tc:0.22,ps:0.30},
     {name:'Pool House',tc:1.35,ps:2.70},
     {name:'Screened Porch',tc:0.45,ps:0.85},
     {name:'Shed',tc:0.70,ps:1.65},
@@ -2981,6 +2985,10 @@ var ROOM_WEIGHT = {
   'Garage (1-car)':2.5,'Garage (2-car)':3.5,'Garage (3+ car)':4.5,
   'Storage Room / Oversized Closets':2.5,'Mechanical / Utility Room':0.5,
   'Balcony':0.5,'Boat House':2.0,'Casita':2.5,'Furnished Patio':2.2,'Outdoor Kitchen':1.0,
+  // Cabana powder room: towels, toiletries, a small cabinet. Sits between the interior
+  // Half Bath (0.4, which only modulates the sqft baseline) and Pool House — Bath (1.0,
+  // a full bath in guest quarters). Exterior weights are absolute load, not a modulator.
+  'Pool / Cabana Half Bath':0.5,
   'Pool House':2.7,'Screened Porch':1.0,'Shed':1.65,
   // Outbuildings broken into sub-rooms (each additive). Per-building sub-room weights
   // sum to a full small dwelling: Guest House 7.0, Pool House w/ quarters 4.5, Cottage 5.5.
@@ -2992,7 +3000,8 @@ var ROOM_WEIGHT = {
 // Exterior / non-under-air spaces — added on top of the sqft-anchored interior.
 var EXTERIOR_ROOMS = {
   'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Balcony':1,'Boat House':1,
-  'Casita':1,'Furnished Patio':1,'Outdoor Kitchen':1,'Pool House':1,'Screened Porch':1,'Shed':1,
+  'Casita':1,'Furnished Patio':1,'Outdoor Kitchen':1,'Pool / Cabana Half Bath':1,
+  'Pool House':1,'Screened Porch':1,'Shed':1,
   'Guest House — Bedroom(s)':1,'Guest House — Living Room':1,'Guest House — Kitchen / Bar':1,'Guest House — Bath':1,
   'Pool House — Living / Bedroom':1,'Pool House — Kitchen / Bar':1,'Pool House — Bath':1,
   "Caretaker's Cottage — Bedroom(s)":1,"Caretaker's Cottage — Living / Kitchen":1,"Caretaker's Cottage — Bath":1,
@@ -3007,6 +3016,7 @@ function engineIsExterior(name){ return !!EXTERIOR_ROOMS[name]; }
 // (high-end more often than not, but you still score up when you see the marble).
 var ROOM_DEFAULTS = {
   'Entryway / Foyer':{vol:1,cplx:1},'Half Bath':{vol:1,cplx:1},
+  'Pool / Cabana Half Bath':{vol:1,cplx:1},
   'Bathroom 2':{vol:1,cplx:1},'Bathroom 3':{vol:1,cplx:1},'Bathroom 4':{vol:1,cplx:1},
   'Additional Bathroom(s)':{vol:1,cplx:1},
   'Laundry Room':{vol:1,cplx:1},'Mudroom / Utility Entry':{vol:1,cplx:1},
@@ -3263,8 +3273,20 @@ var COVERAGE_BEDROOMS = ['Primary Suite','Bedroom 2','Bedroom 3','Bedroom 4',
 var COVERAGE_FULL_BATHS = ['Primary Bath','His Primary Bath','Hers Primary Bath',
   'Bathroom 2','Bathroom 3','Bathroom 4','Additional Bathroom(s)',
   'Guest House — Bath','Pool House — Bath',"Caretaker's Cottage — Bath"];
-var COVERAGE_HALF_BATHS = ['Half Bath'];
+var COVERAGE_HALF_BATHS = ['Half Bath','Pool / Cabana Half Bath'];
 
+// These are counted by NAME MEMBERSHIP over the scored rows, and scoredNames carries a
+// duplicate for every row that shares a name — so the reachable count for each kind is
+// the number of GRID ROWS with that name, not the number of distinct names above. That
+// is the constraint to check when this list is edited: if intake can record a number
+// the grid has no rows to reach, the badge can never clear and a fully-walked house
+// reads as incomplete forever.
+//
+// 2026-08-03: 'Half Bath' existed in exactly ONE section (Kitchen & Utility), so the
+// half-bath count was hard-capped at 1 and any property with two powder rooms could
+// never go green. Rows added to Entry & Living, both bedroom floors, and a
+// 'Pool / Cabana Half Bath' in Exterior & Auxiliary — ceiling is now 5. Reachable
+// today: beds 11, full baths 17, half baths 5.
 function roomCoverage(scoredNames) {
   var count = function(list) {
     return scoredNames.filter(function(n){ return list.indexOf(n) >= 0; }).length;
@@ -7667,8 +7689,23 @@ function restoreEstimateToUI(est) {
   var _pnEl = document.getElementById('e-private-note');
   if (_pnEl) _pnEl.value = _privateWalkNote;
 
-  // Restore room checkboxes and scores — match by saved index first, fall back to name+section
-  // Build lookups: by index, by "section:::name", and by plain name (legacy saves without section)
+  // Restore room checkboxes and scores — match by SECTION + NAME first, index second.
+  //
+  // The order used to be the other way round, and that made ROOMS an append-only list
+  // nobody had written down as append-only. `idx` is a running counter across the whole
+  // ROOMS array (see the ri loop below), so inserting one row shifts every index after
+  // it, and a saved estimate restored its scores onto whatever row inherited its old
+  // number — silently, on reopen, with no error. Adding the missing Half Bath rows on
+  // 2026-08-03 would have scrambled every estimate saved before it.
+  //
+  // Section + name is stable across inserts and reorders and is already stored on every
+  // saved room (calcAll pushes both). `idx` survives only as the rescue for a RENAMED
+  // custom "Other" row, whose saved name matches no row in the grid by definition — and
+  // it is now constrained to its own section, so it can no longer reach across the file
+  // and claim an unrelated row.
+  //
+  // Build lookups: by "section:::name", by index, and by plain name (legacy saves that
+  // predate the section field).
   var byIdx = {};
   var bySectionName = {};
   var byNameFirst = {}; // plain-name fallback: first match wins (for old saves without section)
@@ -7679,6 +7716,14 @@ function restoreEstimateToUI(est) {
     var nk = (sr.name||'').toLowerCase().trim();
     if (!byNameFirst[nk]) byNameFirst[nk] = sr; // first occurrence wins
   });
+  // A saved room belongs to one grid row. Without this, two rows sharing a name inside
+  // one section would both restore from the same record.
+  var _usedSaved = [];
+  var _claim = function(sr) {
+    if (!sr || _usedSaved.indexOf(sr) >= 0) return null;
+    _usedSaved.push(sr);
+    return sr;
+  };
 
   // Suppress auto-save during the restore loop — each toggleRoom() fires calcAll()
   // which would overwrite estimateStore with a partially-restored state. One clean
@@ -7689,19 +7734,23 @@ function restoreEstimateToUI(est) {
   ROOMS.forEach(function(sec) {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
-      // 1. Match by saved index (most reliable)
-      // 2. Fall back to section+name (handles ROOMS reorders without cross-floor bleed)
+      // 1. Section + name — stable across ROOMS inserts and reorders
+      // 2. Saved index, but ONLY when it lands back in its own section (a renamed
+      //    custom "Other" row, which no name lookup can match)
       // 3. Last resort: plain name for very old saves that had no section field
-      var savedRoom = byIdx[ri] || null;
+      var sk = ((sec.section||'') + ':::' + (r.name||'')).toLowerCase().trim();
+      var savedRoom = _claim(bySectionName[sk]);
       if (!savedRoom) {
-        var sk = ((sec.section||'') + ':::' + (r.name||'')).toLowerCase().trim();
-        savedRoom = bySectionName[sk] || null;
+        var byI = byIdx[ri];
+        var sameSection = byI && byI.section
+          && (byI.section||'').toLowerCase().trim() === (sec.section||'').toLowerCase().trim();
+        if (sameSection) savedRoom = _claim(byI);
       }
       if (!savedRoom) {
         var nk = (r.name||'').toLowerCase().trim();
         var candidate = byNameFirst[nk];
         // Only use plain-name match if the candidate has no section info (legacy save)
-        if (candidate && !candidate.section) savedRoom = candidate;
+        if (candidate && !candidate.section) savedRoom = _claim(candidate);
       }
       if (savedRoom) {
         var chk = document.getElementById('chk-' + id);
