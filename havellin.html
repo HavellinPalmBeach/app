@@ -692,7 +692,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 10:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 11:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -906,6 +906,12 @@ body.no-smf .smf-col{display:none;}
         <div><label>Full baths</label><input type="number" id="i-baths" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
         <div><label>Half baths</label><input type="number" id="i-half-baths" placeholder="e.g. 2" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
       </div>
+      <!-- These three are what the room-coverage badge on Build Estimate checks the
+           walkthrough against, and it counts MAIN-HOUSE rows only. Counting a guest house
+           or casita bedroom here makes the badge unclearable — the grid has no outbuilding
+           bedroom rows to score against it. Outbuildings are captured as whole buildings in
+           the Outbuildings & Guest Quarters section of the room grid instead. -->
+      <div style="font-size:11px;color:var(--gray);margin-top:-4px;margin-bottom:8px;">Main house only — guest houses, casitas and cottages are captured on the walkthrough, not here.</div>
       <label>Approximate home value <span style="font-weight:400;color:var(--gray);">(market / Zillow estimate)</span></label>
       <input type="text" id="i-home-value" placeholder="e.g. $3,200,000" inputmode="numeric" oninput="formatMoneyInput(this)">
       <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ballpark $ value — informs the Premium Estate rate decision and the real-estate referral angle.</div>
@@ -2864,26 +2870,38 @@ var ROOMS = [
   {section:'Exterior & Auxiliary',rooms:[
     {name:'Balcony',tc:0.30,ps:0.55},
     {name:'Boat House',tc:0.85,ps:1.95},
-    {name:'Casita',tc:2.10,ps:4.20},
+    // Casita moved to Outbuildings & Guest Quarters (2026-08-03) — it is guest
+    // accommodation, and sitting in this list beside the patio and the shed put it two
+    // sections away from the Guest House rows it has to be chosen against.
     {name:'Furnished Patio',tc:0.55,ps:0.95},
     {name:'Outdoor Kitchen',tc:0.55,ps:0.95},
     {name:'Pool / Cabana Half Bath',tc:0.22,ps:0.30},
-    {name:'Pool House',tc:1.35,ps:2.70},
+    // Renamed from the bare "Pool House". There is a second pool-house row in Outbuildings
+    // for one WITH living quarters (4.5 vs 2.7), and with both called "Pool House" nothing
+    // on screen said which to pick — so ticking both silently double-counted the same
+    // building by 2.7 load units, about 7 PS hours on a mid-size estate.
+    {name:'Pool House / Cabana — no living quarters',tc:1.35,ps:2.70},
     {name:'Screened Porch',tc:0.45,ps:0.85},
     {name:'Shed',tc:0.70,ps:1.65},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
   {section:'Outbuildings & Guest Quarters',rooms:[
-    {name:'Guest House — Bedroom(s)',tc:0.85,ps:1.40},
-    {name:'Guest House — Living Room',tc:0.95,ps:1.50},
-    {name:'Guest House — Kitchen / Bar',tc:1.05,ps:1.40},
-    {name:'Guest House — Bath',tc:0.45,ps:0.70},
-    {name:'Pool House — Living / Bedroom',tc:0.85,ps:1.40},
-    {name:'Pool House — Kitchen / Bar',tc:0.75,ps:1.05},
-    {name:'Pool House — Bath',tc:0.45,ps:0.70},
-    {name:"Caretaker's Cottage — Bedroom(s)",tc:0.85,ps:1.40},
-    {name:"Caretaker's Cottage — Living / Kitchen",tc:1.10,ps:1.70},
-    {name:"Caretaker's Cottage — Bath",tc:0.45,ps:0.70},
+    // ONE ROW PER BUILDING, sized by bedroom count (2026-08-03). This was eleven rows —
+    // every outbuilding broken into bedroom / living / kitchen / bath — which is a level of
+    // detail nobody uses on a detached building: you score a guest house 3/3 as a whole and
+    // move on. Sized in bedrooms because that is how anyone describes one out loud ("there's
+    // a two-bed guest house"), and it is the one dimension that actually moves the contents.
+    //
+    // Weights are the old per-building sub-room SUMS, so a fully-ticked building prices
+    // exactly as before; each extra bedroom adds the old bedroom weight of 2.0.
+    {name:'Casita — bedroom & bath',tc:0.85,ps:1.30},
+    {name:'Pool House — with living quarters',tc:1.35,ps:2.70},
+    {name:'Guest House — 1 bedroom',tc:1.60,ps:2.60},
+    {name:'Guest House — 2 bedroom',tc:2.05,ps:3.35},
+    {name:'Guest House — 3 bedroom',tc:2.50,ps:4.10},
+    {name:"Caretaker's Cottage — 1 bedroom",tc:1.25,ps:2.05},
+    {name:"Caretaker's Cottage — 2 bedroom",tc:1.70,ps:2.80},
+    {name:"Caretaker's Cottage — 3 bedroom",tc:2.15,ps:3.55},
     {name:'Additional Outbuilding Room',tc:0.85,ps:1.30,custom:true}
   ]}
 ];
@@ -2983,27 +3001,37 @@ var ROOM_WEIGHT = {
   'Bonus Room':1.8,'Additional Office':1.8,'Additional Sitting Room':1.6,
   'Garage (1-car)':2.5,'Garage (2-car)':3.5,'Garage (3+ car)':4.5,
   'Storage Room / Oversized Closets':2.5,'Mechanical / Utility Room':0.5,
-  'Balcony':0.5,'Boat House':2.0,'Casita':2.5,'Furnished Patio':2.2,'Outdoor Kitchen':1.0,
+  'Balcony':0.5,'Boat House':2.0,'Furnished Patio':2.2,'Outdoor Kitchen':1.0,
   // Cabana powder room: towels, toiletries, a small cabinet. Sits between the interior
-  // Half Bath (0.4, which only modulates the sqft baseline) and Pool House — Bath (1.0,
-  // a full bath in guest quarters). Exterior weights are absolute load, not a modulator.
+  // Half Bath (0.4, which only modulates the sqft baseline) and a full bath in guest
+  // quarters. Exterior weights are absolute load, not a modulator.
   'Pool / Cabana Half Bath':0.5,
-  'Pool House':2.7,'Screened Porch':1.0,'Shed':1.65,
-  // Outbuildings broken into sub-rooms (each additive). Per-building sub-room weights
-  // sum to a full small dwelling: Guest House 7.0, Pool House w/ quarters 4.5, Cottage 5.5.
-  'Guest House — Bedroom(s)':2.0,'Guest House — Living Room':2.0,'Guest House — Kitchen / Bar':2.0,'Guest House — Bath':1.0,
-  'Pool House — Living / Bedroom':2.0,'Pool House — Kitchen / Bar':1.5,'Pool House — Bath':1.0,
-  "Caretaker's Cottage — Bedroom(s)":2.0,"Caretaker's Cottage — Living / Kitchen":2.5,"Caretaker's Cottage — Bath":1.0,
+  'Pool House / Cabana — no living quarters':2.7,'Screened Porch':1.0,'Shed':1.65,
+  // ── Outbuildings: ONE WEIGHT PER BUILDING, sized by bedroom count ──────────────
+  // These replaced eleven per-sub-room rows on 2026-08-03. Each weight is the SUM of the
+  // sub-rooms it replaces, so a fully-ticked building prices exactly as it did before:
+  //   Guest House 2.0 bed + 2.0 living + 2.0 kitchen/bar + 1.0 bath = 7.0
+  //   Cottage     2.0 bed + 2.5 living/kitchen + 1.0 bath          = 5.5
+  //   Pool House  2.0 living/bed + 1.5 kitchen/bar + 1.0 bath      = 4.5
+  // Each additional bedroom adds the old bedroom weight, 2.0.
+  //
+  // The ladder is meant to be read top to bottom — casita (a bed and a bath) → pool house
+  // with quarters → cottage → guest house. If a size is ever added, keep the +2.0 step or
+  // the ladder stops being predictable.
+  'Casita — bedroom & bath':2.5,
+  'Pool House — with living quarters':4.5,
+  'Guest House — 1 bedroom':7.0,'Guest House — 2 bedroom':9.0,'Guest House — 3 bedroom':11.0,
+  "Caretaker's Cottage — 1 bedroom":5.5,"Caretaker's Cottage — 2 bedroom":7.5,"Caretaker's Cottage — 3 bedroom":9.5,
   'Additional Outbuilding Room':2.0
 };
 // Exterior / non-under-air spaces — added on top of the sqft-anchored interior.
 var EXTERIOR_ROOMS = {
   'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Balcony':1,'Boat House':1,
-  'Casita':1,'Furnished Patio':1,'Outdoor Kitchen':1,'Pool / Cabana Half Bath':1,
-  'Pool House':1,'Screened Porch':1,'Shed':1,
-  'Guest House — Bedroom(s)':1,'Guest House — Living Room':1,'Guest House — Kitchen / Bar':1,'Guest House — Bath':1,
-  'Pool House — Living / Bedroom':1,'Pool House — Kitchen / Bar':1,'Pool House — Bath':1,
-  "Caretaker's Cottage — Bedroom(s)":1,"Caretaker's Cottage — Living / Kitchen":1,"Caretaker's Cottage — Bath":1,
+  'Furnished Patio':1,'Outdoor Kitchen':1,'Pool / Cabana Half Bath':1,
+  'Pool House / Cabana — no living quarters':1,'Screened Porch':1,'Shed':1,
+  'Casita — bedroom & bath':1,'Pool House — with living quarters':1,
+  'Guest House — 1 bedroom':1,'Guest House — 2 bedroom':1,'Guest House — 3 bedroom':1,
+  "Caretaker's Cottage — 1 bedroom":1,"Caretaker's Cottage — 2 bedroom":1,"Caretaker's Cottage — 3 bedroom":1,
   'Additional Outbuilding Room':1
 };
 function engineRoomWeight(name){ return ROOM_WEIGHT[name] !== undefined ? ROOM_WEIGHT[name] : 2.0; }
@@ -3327,11 +3355,17 @@ function applyTimelinePlan(crew, withRush) {
 //
 // A flag, not a gate. Saving with zero rooms is already refused; past that a concierge
 // mid-walkthrough knows the estimate is incomplete and does not need to be stopped.
-var COVERAGE_BEDROOMS = ['Primary Suite','Bedroom 2','Bedroom 3','Bedroom 4',
-  'Guest House — Bedroom(s)','Pool House — Living / Bedroom',"Caretaker's Cottage — Bedroom(s)"];
+// MAIN-HOUSE ROWS ONLY. Intake records the bedrooms and baths of the house, not of the
+// guest quarters — there is no intake field for outbuildings at all — so counting an
+// outbuilding bedroom against that figure let the badge clear on a house that was never
+// fully walked: score four main bedrooms plus a guest house and a pool house against an
+// intake of six and roomCoverage returned 6, green, with two main bedrooms unscored. A
+// false green on the one check that catches a half-scored house is worse than no check.
+// Outbuildings are now one row per building anyway, with no bedroom or bath sub-rows to
+// count. Don't add outbuilding rows back to these lists.
+var COVERAGE_BEDROOMS = ['Primary Suite','Bedroom 2','Bedroom 3','Bedroom 4'];
 var COVERAGE_FULL_BATHS = ['Primary Bath','His Primary Bath','Hers Primary Bath',
-  'Bathroom 2','Bathroom 3','Bathroom 4','Additional Bathroom(s)',
-  'Guest House — Bath','Pool House — Bath',"Caretaker's Cottage — Bath"];
+  'Bathroom 2','Bathroom 3','Bathroom 4','Additional Bathroom(s)'];
 var COVERAGE_HALF_BATHS = ['Half Bath','Pool / Cabana Half Bath'];
 
 // These are counted by NAME MEMBERSHIP over the scored rows, and scoredNames carries a
@@ -3345,7 +3379,9 @@ var COVERAGE_HALF_BATHS = ['Half Bath','Pool / Cabana Half Bath'];
 // half-bath count was hard-capped at 1 and any property with two powder rooms could
 // never go green. Rows added to Entry & Living, both bedroom floors, and a
 // 'Pool / Cabana Half Bath' in Exterior & Auxiliary — ceiling is now 5. Reachable
-// today: beds 11, full baths 17, half baths 5.
+// today: beds 8, full baths 14, half baths 5 — all main-house rows, counted across the
+// First Floor and Second Floor sections. (Beds and full baths were 11 and 17 until the
+// outbuilding rows came off these lists later the same day; see COVERAGE_BEDROOMS.)
 function roomCoverage(scoredNames) {
   var count = function(list) {
     return scoredNames.filter(function(n){ return list.indexOf(n) >= 0; }).length;

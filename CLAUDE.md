@@ -175,6 +175,35 @@ arrange, work to inspect, a settlement to reconcile.
 - 47 jsdom checks on the estimate path + 22 downstream (Job Plan sourcing, all three invoice
   stages bundled and standalone, both agreements, zero load errors) — all green.
 
+## Outbuildings consolidated + a FALSE GREEN on room coverage (BUILT 2026-08-03)
+**Eleven per-sub-room outbuilding rows became nine per-building rows sized by bedroom count**,
+and fixing the section surfaced a worse bug beside it.
+- **The false green, and it is the important half.** `COVERAGE_BEDROOMS` / `COVERAGE_FULL_BATHS`
+  carried the outbuilding bedroom and bath rows, but intake has **no outbuilding field at all** —
+  its beds/baths are the main house. So four main bedrooms + a guest house + a pool house against
+  an intake of 6 returned `beds: 6` and the badge went **green with two main bedrooms never
+  walked**. A false clear on the one check that catches a half-scored house is worse than no
+  check. Outbuilding rows are off both lists; intake gained a *Main house only* hint, because the
+  converse (counting a casita bedroom at intake) makes the badge unclearable — same shape as the
+  half-bath bug. **Reachable is now beds 8, full baths 14, half baths 5** (was 11 / 17 / 5).
+- **The pool house was in the grid TWICE under the same name.** `Pool House` (Exterior, 2.7) and
+  `Pool House — Living / Bedroom` + `Kitchen / Bar` + `Bath` (Outbuildings, 4.5) are one building;
+  the split was meant to be cabana vs. with-quarters and nothing said so. Ticking both
+  double-counted 2.7 load units ≈ **7 PS hours**, invisibly. Now
+  `Pool House / Cabana — no living quarters` and `Pool House — with living quarters`.
+- **Weights are the old sub-room SUMS, so a fully-ticked building prices identically** — Guest
+  House 7.0 (2+2+2+1), Cottage 5.5 (2+2.5+1), Pool House 4.5 (2+1.5+1). Each extra bedroom adds
+  **2.0**, the old bedroom weight; keep that step if a size is added. Casita moved out of Exterior
+  into this section at its unchanged 2.5, making the ladder legible: casita → pool house →
+  cottage → guest house.
+- Per-sub-room volume/complexity and per-sub-room notes/media are gone for outbuildings. That was
+  the accepted trade — nobody scores a detached guest house room by room.
+- **No alias map: old sub-room names are simply gone, so any estimate saved earlier loses its
+  outbuildings on reopen.** Deliberate — Anthony confirmed the app holds only dummy jobs. If real
+  estimates ever predate a room rename, add aliases instead; `loadEstimate` matches section+name
+  first, so a rename without one silently drops the room and reprices lower.
+- 94 jsdom checks on this alone (230 across five suites).
+
 ## Client estimate document — vehicles, the fixed-price line, and a fixed-price hours leak (BUILT 2026-08-03)
 - **Vehicles reached NO client document.** Captured since 2026-07-15, saved on the snapshot,
   bridged to inventory — and absent from the client estimate entirely, while collections beside
@@ -293,7 +322,16 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (sixth pass, same day)** — both documents, against
+- Last reconciled against the app: **2026-08-03 (seventh pass, same day)** — both documents, against
+  the outbuilding consolidation. This pass CORRECTS the reachable ceilings the fourth pass added
+  (11 / 17 → **8 / 14**, half baths unchanged at 5) and adds: manual §5b a note that **intake's
+  bed/bath counts are the main house and outbuildings no longer satisfy them**, naming the false
+  green it fixes · a new **"Outbuildings & guest quarters — one row per building"** subsection with
+  the row/weight/replaces table and the sum-of-sub-rooms derivation · a note on the duplicated pool
+  house and what ticking both used to cost. Playbook Step 2: the same in field language plus
+  **three new symptom→cause rows** (where the guest house kitchen row went · can't find the casita ·
+  which pool house row). `.md` copies hand-edited to match and diffed for parity.
+- Prior pass **2026-08-03 (sixth pass, same day)** — both documents, against
   the client-estimate changes. Manual §5g gained a note stating the **flag-at-estimate /
   route-on-the-job** rule, what the client now sees, why KBB/NADA and the appraiser name stay off
   their copy, and the correction that **Collector / classic sets `needsAppr` rather than routing

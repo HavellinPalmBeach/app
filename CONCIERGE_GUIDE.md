@@ -83,6 +83,10 @@ The app checks you on this. Under the room grid it compares the bedrooms and bat
 
 If it says nothing at all, intake never captured the bed and bath counts. Go and fill them in — the check has nothing to compare against without them.
 
+**Guest house, casita, cottage, pool house?** They live in **Outbuildings & Guest Quarters** and you score each one as a *whole building* — pick the row matching its bedroom count and set volume and complexity once. There are no separate rows for its kitchen or its bath any more. Two things to get right: the **casita** moved here out of Exterior & Auxiliary, and the pool house now appears in exactly one place depending on what it is — *Pool House / Cabana — no living quarters* under Exterior, or *Pool House — with living quarters* here. It used to be in both lists under the same name, and ticking both charged the client for it twice.
+
+Outbuildings don't count toward the bedroom and bath numbers from intake — those are the main house. A four-bedroom house with a two-bed guest house is *4* at intake, not 6. Put 6 in and the coverage badge can never clear.
+
 **Looking for a second half bath?** There are five to find: *Half Bath* in **Entry & Living**, in **Kitchen & Utility**, and in both the **First Floor** and **Second Floor Bedrooms & Bathrooms** sections, plus *Pool / Cabana Half Bath* in **Exterior & Auxiliary**. Tick the one that matches where the powder room actually is. Don't reach for *Additional Bathroom(s)* — that counts as a *full* bath, so it pushes the wrong number up and leaves the half-bath shortfall exactly where it was.
 
 ### The job settings that change the price
@@ -422,6 +426,9 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Amber badge: "walkthrough looks incomplete" | Fewer bedrooms or baths scored than intake recorded. It won't block you; finish the walkthrough anyway. |
 | Amber badge says "1 of 2 half baths" and you've ticked the only one you can find | There are five *Half Bath* rows, not one — Entry & Living, Kitchen & Utility, both bedroom floors, and *Pool / Cabana Half Bath* under Exterior & Auxiliary. Tick the one matching where the powder room is. If the house genuinely has fewer half baths than intake recorded, the intake figure is wrong — fix it there. |
 | You ticked *Additional Bathroom(s)* for a powder room and the badge got worse | That row counts as a *full* bath. Untick it and use a *Half Bath* row instead. |
+| The guest house has its own kitchen and bath — where are those rows? | Gone on purpose. Score the whole building on one row, sized by bedrooms. Its kitchen and bath are already in that weight. |
+| Can't find the casita | It moved from Exterior & Auxiliary into Outbuildings & Guest Quarters. |
+| Two pool house rows — which one? | Whether it has living quarters. Cabana or changing room → the Exterior row. Bedroom, kitchen or bath → the Outbuildings row. Never both; that bills it twice. |
 | A room's hours look far too low for what's in it | Room rows are *packing only*. Sorting, documentation and haul-out are job-level. Read the breakdown under the fee lines in the Estimate Summary for the whole picture. |
 | Crew size keeps changing by itself | Correct — it tracks the recommendation while you score. It stops the moment you set it yourself. |
 | Crew badge: "2 assigned, 6 recommended — runs 23 days instead of 9" | You've staffed below what the job needs. That's allowed and it is priced as staffed — longer job, more concierge days, higher fee. Go back up unless the small crew is a real constraint. |

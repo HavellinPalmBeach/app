@@ -163,11 +163,29 @@ Room sections launch **collapsed** so the estimate opens compact, and run **two 
 
 It is a *flag, not a gate* — a concierge mid-walkthrough knows the estimate is incomplete and does not need to be stopped. Saving with *zero* rooms is already refused, which is the case worth blocking. The check goes quiet if intake never captured bed/bath counts, so fill those in at intake (§4) or this check has nothing to compare against.
 
-> **The badge counts grid rows, so intake can only ask for what the grid can reach.** Each bedroom and bath is counted by matching the room's name against the rows you scored, which means the highest number reachable for a given kind is the number of *rows carrying that name* — not the number of rooms the house has. Reachable today: **11 bedrooms, 17 full baths, 5 half baths**. Until 2026-08-03 *Half Bath* existed in exactly one section, so the half-bath count was capped at **1** and any property with two powder rooms stayed amber no matter how completely it was walked. If a count is ever raised at intake beyond what the grid can reach, the badge becomes unclearable and stops meaning anything — add the rows in the same change.
+> **The badge counts grid rows, so intake can only ask for what the grid can reach.** Each bedroom and bath is counted by matching the room's name against the rows you scored, which means the highest number reachable for a given kind is the number of *rows carrying that name* — not the number of rooms the house has. Reachable today: **8 bedrooms, 14 full baths, 5 half baths** — all *main-house* rows, counted across the First Floor and Second Floor sections. Until 2026-08-03 *Half Bath* existed in exactly one section, so the half-bath count was capped at **1** and any property with two powder rooms stayed amber no matter how completely it was walked. If a count is ever raised at intake beyond what the grid can reach, the badge becomes unclearable and stops meaning anything — add the rows in the same change.
 
 **Where the half baths are.** *Half Bath* now appears in **Entry & Living** (the powder room off the foyer), **Kitchen & Utility**, and both **First Floor** and **Second Floor Bedrooms & Bathrooms**. A fifth, **Pool / Cabana Half Bath**, sits in **Exterior & Auxiliary** — it is an exterior room, so it adds load on top of the under-air baseline rather than modulating it (§5i), which is right for a cabana bath that is not inside the square footage. All five open at 1/1 and count toward the intake half-bath tally.
 
 *Additional Bathroom(s)* is still classified as a **full** bath, and it is a plural row counted once — so a house with several surplus baths can still read short. Use the dedicated half-bath rows for powder rooms rather than pressing *Additional Bathroom(s)* into service, which moves the full-bath count up while leaving the half-bath count where it was.
+
+> **Intake's bed and bath counts are the MAIN HOUSE, and outbuildings no longer count toward them (changed 2026-08-03).** A guest house bedroom used to satisfy the intake figure, so scoring four main bedrooms plus a guest house and a pool house against an intake of six turned the badge *green* with two main bedrooms never walked — a false clear on the one check that catches a half-scored house. Outbuilding rows are off both coverage lists. Enter main-house counts at intake; capture the guest quarters on the walkthrough (§5b, Outbuildings & Guest Quarters). Putting a casita's bedroom into the intake figure now makes the badge unclearable, because the grid has no outbuilding bedroom row to score against it.
+
+#### Outbuildings & guest quarters — one row per building
+
+Detached buildings are scored as **whole buildings sized by bedroom count**, not room by room. Until 2026-08-03 this section carried eleven rows (each building split into bedroom / living / kitchen / bath), which is a level of detail nobody uses on a detached structure — you score a guest house 3/3 as a whole and move on. The rows now are:
+
+| Row | Weight | Replaces |
+| --- | --- | --- |
+| Casita — bedroom & bath | 2.5 | the old *Casita* row, moved here out of Exterior & Auxiliary |
+| Pool House — with living quarters | 4.5 | Pool House living/bedroom + kitchen/bar + bath |
+| Guest House — 1 / 2 / 3 bedroom | 7.0 / 9.0 / 11.0 | Guest House bedroom + living + kitchen/bar + bath, then +2.0 a bedroom |
+| Caretaker's Cottage — 1 / 2 / 3 bedroom | 5.5 / 7.5 / 9.5 | Cottage bedroom + living/kitchen + bath, then +2.0 a bedroom |
+| Additional Outbuilding Room | 2.0 | unchanged — still a free-text row |
+
+Each weight is the **sum of the sub-rooms it replaces**, so a fully-ticked building prices exactly as it did before; only the number of clicks changed. Every additional bedroom adds 2.0, the old bedroom weight — keep that step if a size is ever added.
+
+> **The pool house was in the list twice, and ticking both double-charged it.** A bare *Pool House* row sat in Exterior & Auxiliary (2.7) while three *Pool House — …* sub-rows sat here (4.5 together). They are the same building — the split was meant to be cabana versus one with living quarters, but nothing on screen said so. The Exterior row is now **Pool House / Cabana — no living quarters** and this section has **Pool House — with living quarters**. Pick one. On a mid-size estate the old double-tick was worth about 7 specialist hours nobody would have questioned.
 
 ### 5c. Job Settings
 
