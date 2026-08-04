@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 8:02pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.03 · 8:08pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -768,6 +768,18 @@ body.no-smf .smf-col{display:none;}
         <option value="prep">Home Prep for Sale</option>
       </select>
       <div class="divider" style="margin:14px 0 10px;"></div>
+      <!-- Home Cleanout is the ONE service that runs both ways: a landlord or a relocating
+           owner clearing their own property, and — just as often — the house of somebody who
+           has just died. Estate Settlement and both probates are decedent work by definition
+           and need no question asked. Without this box a decedent cleanout has no way to say
+           so, and every document addresses a dead man as the client. See isDecedentJob. -->
+      <div id="i-decedent-wrap" style="display:none;margin-bottom:10px;padding:8px 10px;background:var(--tan);border-radius:4px;">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;font-weight:600;">
+          <input type="checkbox" id="i-decedent" onchange="toggleIntakeFields()" style="width:auto;margin:0;">
+          <span>This is the property of someone who has died</span>
+        </label>
+        <div style="font-size:10px;color:var(--gray);margin-top:4px;">Sets how every client document is written — to the authorized representative rather than to the owner. Leave unticked for a living owner clearing their own property.</div>
+      </div>
       <div id="i-client-hdr" class="sec" style="margin-bottom:6px;">Client Information</div>
       <label id="i-name-label">Client name <span style="color:#A32D2D;font-weight:700;">*</span></label>
       <div class="row" style="margin-top:4px;">
@@ -830,13 +842,13 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Authorized Representative <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(person authorized to direct the estate)</span></div>
+        <div class="sec" style="margin-bottom:6px;">Authorized Representative <span id="i-auth-req-note" style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(person authorized to direct the estate)</span></div>
         <div class="row">
-          <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-fname" placeholder="First name"></div>
-          <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-lname" placeholder="Last name"></div>
+          <div><label>First name <span class="req-est" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-fname" placeholder="First name"></div>
+          <div><label>Last name <span class="req-est" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-lname" placeholder="Last name"></div>
         </div>
         <div class="row">
-          <div><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <div><label>Role / Authority <span class="req-est" style="color:#A32D2D;font-weight:700;">*</span></label>
             <select id="i-executor-role">
               <option value="">Select role</option>
               <option value="Estate Attorney">Estate Attorney</option>
@@ -856,8 +868,8 @@ body.no-smf .smf-col{display:none;}
           <div></div>
         </div>
         <div class="row">
-          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
-          <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
+          <div><label>Phone <span class="req-est" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
+          <div><label>Email <span class="req-est" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
         </div>
       </div>
       <div id="probate-fields" style="display:none;">
@@ -4106,6 +4118,10 @@ function isDecedentJob(job, svcKey) {
   var svc = svcKey || (job && (job.svc || job.serviceType)) || '';
   if (DECEDENT_SERVICES[svc]) return true;
   if (!job) return false;
+  // Asked outright at intake on a Home Cleanout, which is the one service that genuinely
+  // runs both ways. The two signals below are the safety net under it: a job edited or
+  // imported without the tick still reads as a decedent job once either is present.
+  if (job.decedent === true) return true;
   if (job.deathDate) return true;
   if (job.executor && String(job.executor).trim()) return true;
   return false;
@@ -5799,12 +5815,35 @@ function toggleIntakeFields() {
   var svc = document.getElementById('i-svc') ? document.getElementById('i-svc').value : '';
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
   var isProbate = (svc === 'probate' || svc === 'contested_probate');
+
+  // The decedent tick box is offered on Home Cleanout ONLY. The three estate services
+  // are decedent work by definition and asking would be noise; every other service
+  // (downsizing, move, prep) is a living owner by definition and the question is wrong.
+  var askDecedent = (svc === 'home_cleanout');
+  var decWrap = document.getElementById('i-decedent-wrap');
+  var decBox  = document.getElementById('i-decedent');
+  if (decWrap) decWrap.style.display = askDecedent ? 'block' : 'none';
+  if (decBox && !askDecedent) decBox.checked = false;   // never leave it set on a service that cannot show it
+
+  // isEstate still drives what is REQUIRED and what the probate clock needs. isDeceased
+  // drives only how the intake form ADDRESSES the client, and is what the client
+  // documents read downstream (isDecedentJob). Keep them apart: a decedent cleanout is
+  // written to a representative without being held to probate's mandatory fields.
+  var isDeceased = isEstate || (askDecedent && !!(decBox && decBox.checked));
+
   // Probate-only fields
   var pf = document.getElementById('probate-fields');
   if (pf) pf.style.display = isProbate ? 'block' : 'none';
-  // Authorized rep (estate + probate)
+  // Authorized rep — required on the estate services, offered (optional) on a decedent cleanout
   var af = document.getElementById('estate-auth-fields');
-  if (af) af.style.display = isEstate ? 'block' : 'none';
+  if (af) af.style.display = isDeceased ? 'block' : 'none';
+  var authReq = document.getElementById('i-auth-req-note');
+  if (authReq) authReq.textContent = isEstate
+    ? '(person authorized to direct the estate — all fields required)'
+    : '(the client is deceased — this is who every document is addressed to; name plus a phone or email required)';
+  // The asterisks come off on a cleanout, where nothing here is enforced.
+  var af2 = document.getElementById('estate-auth-fields');
+  if (af2) af2.querySelectorAll('.req-est').forEach(function(s){ s.style.display = isEstate ? 'inline' : 'none'; });
   // Downsizing destination
   var df = document.getElementById('downsizing-dest-fields');
   if (df) df.style.display = (svc === 'downsizing_move') ? 'block' : 'none';
@@ -5814,25 +5853,25 @@ function toggleIntakeFields() {
   var hdr = document.getElementById('i-client-hdr');
   var phoneReq = document.getElementById('i-phone-req');
   var emailReq = document.getElementById('i-email-req');
-  if (note) note.style.display = isEstate ? 'block' : 'none';
-  if (nameLabel) nameLabel.innerHTML = isEstate
+  if (note) note.style.display = isDeceased ? 'block' : 'none';
+  if (nameLabel) nameLabel.innerHTML = isDeceased
     ? 'Deceased full name <span style="color:#A32D2D;font-weight:700;">*</span>'
     : 'Client name <span style="color:#A32D2D;font-weight:700;">*</span>';
-  if (hdr) hdr.textContent = isEstate ? 'Deceased / Estate' : 'Client Information';
-  if (phoneReq) phoneReq.style.display = isEstate ? 'none' : 'inline';
-  if (emailReq) emailReq.style.display = isEstate ? 'none' : 'inline';
+  if (hdr) hdr.textContent = isDeceased ? 'Deceased / Estate' : 'Client Information';
+  if (phoneReq) phoneReq.style.display = isDeceased ? 'none' : 'inline';
+  if (emailReq) emailReq.style.display = isDeceased ? 'none' : 'inline';
   // Deceased clients have no phone/email — block those fields entirely and route
   // contact collection to the authorized representative below.
   var phoneEl = document.getElementById('i-phone');
   var emailEl = document.getElementById('i-email');
   [phoneEl, emailEl].forEach(function(el){
     if (!el) return;
-    el.disabled = isEstate;
-    if (isEstate) { el.value = ''; el.placeholder = 'N/A — deceased; use rep contact below'; el.style.opacity = '0.5'; }
+    el.disabled = isDeceased;
+    if (isDeceased) { el.value = ''; el.placeholder = 'N/A — deceased; use rep contact below'; el.style.opacity = '0.5'; }
     else { el.style.opacity = ''; }
   });
-  if (phoneEl && !isEstate) phoneEl.placeholder = '(561) 555-0100';
-  if (emailEl && !isEstate) emailEl.placeholder = 'client@email.com';
+  if (phoneEl && !isDeceased) phoneEl.placeholder = '(561) 555-0100';
+  if (emailEl && !isDeceased) emailEl.placeholder = 'client@email.com';
 }
 
 function saveIntake() {
@@ -5865,11 +5904,16 @@ function saveIntake() {
   var destBaths= (document.getElementById('i-dest-baths')||{}).value? document.getElementById('i-dest-baths').value.trim(): '';
 
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
+  // A ticked decedent cleanout DISABLES the client phone and email (toggleIntakeFields),
+  // so requiring them here would make the form unsubmittable. It does NOT pull in the
+  // estate services' mandatory representative block — see below.
+  var decBoxV = document.getElementById('i-decedent');
+  var isDeceasedV = isEstate || (svc === 'home_cleanout' && !!(decBoxV && decBoxV.checked));
   var missing = [];
   if (!fname) missing.push('First name');
   if (!lname) missing.push('Last name');
-  if (!isEstate && !phone) missing.push('Phone');
-  if (!isEstate && !email) missing.push('Email');
+  if (!isDeceasedV && !phone) missing.push('Phone');
+  if (!isDeceasedV && !email) missing.push('Email');
   if (!addr) missing.push('Property address');
   if (!city) missing.push('City');
   if (!zip) missing.push('Zip');
@@ -5890,6 +5934,15 @@ function saveIntake() {
     if (!document.getElementById('i-executor-role').value) missing.push('Authorized rep role');
     if (!document.getElementById('i-executor-phone').value.trim()) missing.push('Authorized rep phone');
     if (!document.getElementById('i-executor-email').value.trim()) missing.push('Authorized rep email');
+  } else if (isDeceasedV) {
+    // Decedent cleanout: the full estate block is NOT imposed, but the client's own phone
+    // and email are disabled, so without a representative there is literally nobody to
+    // send the estimate to. Name plus one working contact method is the floor.
+    var rlnV = (document.getElementById('i-executor-lname')||{}).value || '';
+    var rphV = (document.getElementById('i-executor-phone')||{}).value || '';
+    var remV = (document.getElementById('i-executor-email')||{}).value || '';
+    if (!rlnV.trim()) missing.push('Authorized rep last name (the client is deceased — documents go to the rep)');
+    if (!rphV.trim() && !remV.trim()) missing.push('Authorized rep phone or email');
   }
 
   // Additional mandatory fields for probate
@@ -5929,6 +5982,10 @@ function saveIntake() {
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
     probateDeadline: document.getElementById('i-probate-deadline') ? document.getElementById('i-probate-deadline').value : '',
     deathDate:  document.getElementById('i-date-of-death') ? document.getElementById('i-date-of-death').value : '',
+    // Explicit answer to "is the client dead", asked only where the service type cannot
+    // settle it (Home Cleanout). Read by isDecedentJob, which decides the voice of every
+    // client document and which of the two agreement forms is generated.
+    decedent:   isDeceasedV,
     lettersDate:document.getElementById('i-letters-date')  ? document.getElementById('i-letters-date').value  : '',
     probateAttyFname: document.getElementById('i-probate-atty-fname') ? document.getElementById('i-probate-atty-fname').value.trim() : '',
     probateAttyLname: document.getElementById('i-probate-atty-lname') ? document.getElementById('i-probate-atty-lname').value.trim() : '',
@@ -6030,6 +6087,9 @@ function resetIntakeFields() {
     var el = document.getElementById(id);
     if (el) el.value = INTAKE_FIELD_DEFAULTS[id] || '';
   });
+  // A checkbox ignores .value, so the loop above cannot clear it — and a decedent flag
+  // left ticked from the previous client is exactly the leak INTAKE_FIELDS exists to stop.
+  var decR = document.getElementById('i-decedent'); if (decR) decR.checked = false;
   var pd = document.getElementById('i-probate-deadline'); if (pd) delete pd.dataset.userEdited;
   var dfb = document.getElementById('i-deadline-fb'); if (dfb) dfb.textContent = '';
   var fb = document.getElementById('i-fb'); if (fb) fb.innerHTML = '';
@@ -19511,7 +19571,13 @@ function showEditClient(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var isProbate = (job.svc === 'probate' || job.svc === 'contested_probate');
-  var isEstate = (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate');
+  // Deliberately NOT isDecedentJob: that predicate reads job.executor, and this decides
+  // whether to SHOW the executor field — gating it on itself would mean a rep entered by
+  // mistake could never be cleared. The stored decedent flag and the date of death are
+  // safe to read (neither is edited in this block), and without them a decedent Home
+  // Cleanout could not correct its representative after intake.
+  var isEstate = (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate'
+                  || job.decedent === true || !!job.deathDate);
   var svcLabels = SVC_LABELS;
 
   var m = document.getElementById('edit-client-modal');
