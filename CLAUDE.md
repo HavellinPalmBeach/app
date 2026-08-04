@@ -39,10 +39,16 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
-## LIVING client vs DECEASED client — the rule every document obeys (2026-08-03)
+## LIVING client vs DECEASED client — the SERVICE TYPE decides, always (2026-08-03)
 **Anthony: "there should be a rule about the language for projects when the client is alive
 versus when the client is deceased… applied to estimates and engagement agreements
-accordingly."** It is now one predicate, `isDecedentJob(job, svcKey)`, and both documents read it.
+accordingly."** Then, correcting the first build: **"Home cleanout is by definition for a live
+client, whereas an estate settlement is for a deceased client."** It is one predicate,
+`isDecedentJob(job, svcKey)`, and it is a **pure service-type lookup**.
+
+| LIVING | DECEASED |
+|---|---|
+| Downsizing · Downsizing & Move Management · **Home Cleanout** · Home Prep for Sale | **Estate Settlement** (`cleanout`) · Probate (`probate`) · Contested Probate (`contested_probate`) |
 
 | | LIVING owner | DECEASED owner |
 |---|---|---|
@@ -53,49 +59,44 @@ accordingly."** It is now one predicate, `isDecedentJob(job, svcKey)`, and both 
 | Before anything moves | a confirmed keep list | **written authority**, after they read the inventory |
 | Heirs on site | they are the client | courtesy, and **no instruction taken from them** |
 
-- **Service type settles it in almost every case, but not always** — and that gap is the whole
-  reason the predicate exists. A **Home Cleanout is routinely a just-died house** and prices no
-  documentation step, so a service-type test called it a living-owner job. A recorded
-  **date of death** or **authorised representative** now settles it too.
-- **THE PREDICATE WAS UNREACHABLE ON THE ONE SERVICE IT WAS WRITTEN FOR — found while documenting
-  it, fixed in the same pass.** `toggleIntakeFields` gates the rep block and the date-of-death
-  field on `isEstate = cleanout || probate || contested_probate` — **the exact three services
-  `DECEDENT_SERVICES` already covers**. So on a plain `home_cleanout` both fallback signals were
-  *hidden*, and the safety net could only ever fire on hand-edited or imported data. The rule
-  read as built and was inert on the only case it existed for.
-  - Fixed with **one tick box, `i-decedent`, on `home_cleanout` and nothing else** — *"This is the
-    property of someone who has died."* The three estate services are decedent work by definition
-    and asking is noise; downsizing/move/prep are living owners by definition and the question is
-    wrong. Stored as `job.decedent`, read first by `isDecedentJob`.
-  - **`isEstate` and `isDeceased` are now separate variables in that function, and must stay
-    separate.** `isEstate` still drives what is REQUIRED and the probate clock; `isDeceased`
-    drives only how the form ADDRESSES the client. A ticked cleanout gets the deceased framing
-    **without** being held to probate's five mandatory rep fields — the `.req-est` asterisks come
-    off with them.
-  - **It does require the rep's last name + a phone or an email**, and that is not bureaucracy:
-    ticking the box DISABLES the client's own phone and email, so without a rep there is literally
-    nobody to send the estimate to. Relaxing this strands the job.
-  - **`resetIntakeFields` clears it by hand** — the `INTAKE_FIELDS` loop sets `.value`, which a
-    checkbox ignores, so a decedent flag would have leaked into the next client. Same class of bug
-    as the tenure/referral leak that list was written to stop. It is also force-cleared whenever
-    the service changes to one that cannot show it.
-  - `showEditClient` now shows the rep block on `job.decedent || job.deathDate` too, so a ticked
-    cleanout can correct its representative after intake. **It still must not read `job.executor`**
-    — that is the field it edits, and gating the field on itself means a rep entered by mistake
-    can never be cleared.
+- **The catalogue was already split down this line and nothing needed adding.** The key names
+  mislead: `cleanout` is **Estate Settlement** (deceased) and `home_cleanout` is **Home Cleanout**
+  (living). Reading `home_cleanout` as "might be a just-died house" is the mistake — that job is
+  an Estate Settlement, a different engagement at a different price.
+- **`DECEDENT_SERVICES` and `JOB_STEPS[svc].document` select exactly the same three services**, and
+  that is not a coincidence: documentation is what a decedent engagement sells. They stay separate
+  tests because they answer different questions — `document` is what the client is **charged** for,
+  `isDecedentJob` is **who we write to** — and the first catalogue change could split them.
+  A test asserts the partition both ways.
+- **DO NOT ADD FALLBACKS ON `job.deathDate` OR `job.executor`. They were both there for one commit
+  and both came out; do not re-propose them.**
+  - Neither is **reachable**: `toggleIntakeFields` shows the date-of-death field and the rep block
+    only on the three services that already answer *deceased*.
+  - The executor one is **wrong as a death signal**. The role list offers **Power of Attorney** and
+    **Family Member**, and a POA acts for a **living** person — it terminates on death. A POA
+    managing a living parent's downsizing is ordinary work here. That fallback would have silently
+    reclassified those jobs the moment the rep block was offered on a living-client service.
+  - **The lesson, and it cost a whole commit:** the first build added a `home_cleanout` tick box
+    ("This is the property of someone who has died") to make the unreachable fallbacks reachable.
+    It was scaffolding under a premise that was simply false, and it invited the worse error —
+    ticking a box instead of picking Estate Settlement, which mis-prices the job while making the
+    documents read as estate work. **When a rule needs a manual override to work, check the rule
+    before building the override.**
 - **KEEP VOICE SEPARATE FROM PRICING.** `JOB_STEPS[svc].document` answers *does a documentation
-  stage exist* — it is what the client is being charged for. `isDecedentJob` answers *who are we
-  writing to*. A decedent Home Cleanout is addressed to the representative **without** claiming a
-  court-grade inventory it is not selling. Its stage 2 is `Sorting & Inventory`, not
-  `Sorting, Documentation & Inventory`.
-- **THE AGREEMENT ROUTING CHANGED, and it is a real behaviour change.** It named four service
-  types, so a Home Cleanout of a deceased owner's home got the **standard agreement — written
-  throughout to a living owner of their own property**. It now routes on the predicate.
-  ⚠️ **A decedent cleanout will now generate the estate-form agreement.** Confirm that is what
-  Anthony wants before a real one goes out.
-- 36 checks on the predicate, its two consumers and the intake path, plus 27 driving the real
+  stage exist* — what the client is being charged for. `isDecedentJob` answers *who are we writing
+  to*. The stage-2 title is `hasDoc ? 'Sorting, Documentation & Inventory' : 'Sorting & Decisions'`
+  — **two arms, not three**. A middle `isDeceased && !hasDoc` arm was there for a decedent job
+  pricing no documentation step, and no such job exists.
+- **THE AGREEMENT ROUTING CHANGED, and it is a real behaviour change.** It named four service types,
+  one of which was the plain `home_cleanout` — so a **Home Cleanout got the estate-form agreement**
+  despite being living-owner work, while `cleanout` (Estate Settlement) was routed correctly. It now
+  reads the predicate, so the estimate and the agreement cannot disagree about who the client is.
+  ⚠️ **Any cleanout agreement issued before 2026-08-03 is worth re-reading.**
+- `showEditClient` keeps its own service-type expression rather than calling the predicate, because
+  it also accepts a legacy `'estate'` key.
+- 37 checks on the predicate, the catalogue partition and both consumers, plus 45 driving the real
   `toggleIntakeFields` against the real intake markup in jsdom (`intake-decedent-dom.js`).
-  **363 across eight suites.**
+  **382 across eight suites.**
 
 ## Writing client-facing copy — the standing rule (Anthony, 2026-08-03)
 **If a line explains something the reader can already see, or explains why something is
@@ -759,27 +760,30 @@ teaching people to ignore it.
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
 - Last reconciled against the app: **2026-08-03 (eleventh pass, same day)** — both documents, against
-  the estate-playbook stage rewrite and the living/deceased rule. **This pass found a live defect
-  rather than just recording one**, which is the argument for doing them properly: writing up
-  "a date of death or a representative also settles it" sent me to check where those fields are
-  entered, and they are hidden on exactly the service the sentence was about. See the LIVING vs
-  DECEASED section — the intake tick box came out of this pass, not the build before it.
-  - Manual **§7** gained four notes, in this order: **the rule itself** (the three signals, the
-    living/deceased table, and the instruction to keep voice separate from whether documentation is
-    priced), **the stages branching on job family** (estate stage 2 catalogues and removes nothing,
-    stage 3 gates on written authority, downsizing keeps the decision-paced language), **never ask
-    for the will** (ask for the Letters and the designated-items list; a will found in the house is
-    sequestered against a signed receipt — checked against §11 Phase 0/1 rather than invented), and
-    **who stage 1 says we work for**. **§4** gained the tick box; **§8** now states which of the two
-    agreement forms a job gets and that the routing changed.
-  - Playbook **Step 1** gained the tick box as a bullet and a red `.stop` saying plainly what
-    getting it wrong looks like; **Step 3** three `.stop` blocks (the living/deceased question, how
-    the estate document differs and the two on-job commitments it makes, never ask for the will);
-    **Step 6** a `.stop` on the two agreement forms and the instruction to fix intake rather than
-    edit the document. **Eight new symptom→cause rows.**
-  - **One thing corrected mid-pass:** the will note went into `manual.html` as `class="stop"`, a
-    class the manual does not define — it would have rendered as an unstyled div. The manual's
-    vocabulary is `.note`; `.stop` is the playbook's. Both files were tag-balance checked after.
+  the estate-playbook stage rewrite and the living/deceased rule. **This pass is also where the rule
+  got corrected**, which is the argument for doing them properly: writing up "a date of death or a
+  representative also settles it" sent me to check where those fields are entered, they were hidden
+  on exactly the service the sentence was about, and Anthony's answer to the gap was that the gap is
+  not real — a Home Cleanout is a living client and a deceased owner's house is an Estate Settlement.
+  Both documents now state the split as the service catalogue, not as a question anyone answers.
+  - Manual **§4** states the service type IS the decision and that picking the wrong one mis-prices
+    the job as well as mis-addressing the document. **§7** gained four notes: **the rule** (the two
+    halves of the catalogue named in full, and the do-not-add-fallbacks instruction with the POA
+    reasoning), **the stages branching on job family** (estate stage 2 catalogues and removes
+    nothing, stage 3 gates on written authority, downsizing keeps decision-paced language, Home
+    Cleanout keeps a simpler living-owner version), **never ask for the will** (ask for the Letters
+    and the designated-items list — checked against §11 Phase 0/1 rather than invented), and **who
+    stage 1 says we work for**. **§8** states which of the two agreement forms a job gets and that
+    the routing changed.
+  - Playbook **Step 1** leads with Home-Cleanout-vs-Estate-Settlement and a red `.stop` naming both
+    consequences of getting it wrong; **Step 3** three `.stop` blocks (which version and why, how the
+    estate document differs plus the two on-job commitments it makes, never ask for the will);
+    **Step 6** a `.stop` on the two agreement forms. **Eight new symptom→cause rows**, including one
+    for the reader hunting a "client is deceased" tick box that deliberately does not exist.
+  - **Two things corrected mid-pass:** the will note went into `manual.html` as `class="stop"`, a
+    class the manual does not define — it would have rendered as an unstyled div (the manual's
+    vocabulary is `.note`; `.stop` is the playbook's). And every doc block describing the tick box
+    was rewritten when the tick box came out. Both HTML files tag-balance checked after.
 - Prior pass **2026-08-03 (tenth pass, same day)** — both documents, against
   the client-estimate rebuild and the licence correction. **The compliance item is the one that
   matters:** manual §1 and playbook Step 3 now state plainly that Havellin is **insured and bonded,
