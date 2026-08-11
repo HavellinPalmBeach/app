@@ -40,6 +40,37 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## ⚠️ THE TEST COUNTS IN THIS FILE ARE NOT RUNNABLE — nothing is committed (2026-08-11)
+**This file cites test counts on nearly every section — 382 across eight suites, 230, 222, 138,
+136, 112, 94, 77, 50, 47, 46, 40 — and NOT ONE of those tests is in the repository.** `.gitignore`
+excludes only `node_modules`, `package-lock.json` and `.DS_Store`; there is no test file, no
+runner, no `package.json`. Every harness was written into a session scratchpad and died with the
+session that wrote it.
+- **Read those counts as a record of what WAS checked once, not as coverage you have.** They are
+  still worth keeping — they say which claims were verified and how hard — but a green count
+  beside a section is not a safety net, and no change you make today will be caught by any of them.
+- **This has already cost real work, and the evidence is in this file.** The `MANUAL.md` /
+  `CONCIERGE_GUIDE.md` converter is scratchpad-only by the same habit, and the fourth docs pass
+  records it plainly: *"the converter is not in this session's scratchpad — so the four files were
+  diffed for parity afterwards."* A pass that should have been a regeneration became hand-editing
+  four files and diffing them. The harnesses will bite the same way, only more expensively — the
+  things they caught (the licence claim surviving in two agreement footers, the `idx`-first restore
+  silently repointing saved rooms, the tenure double-count) are all **silent** failures that no one
+  notices by clicking around.
+- **The fix is committing them, not rewriting them from scratch.** Anything reconstructed should
+  land in the repo with a runner, in the same commit as the change it verifies. Until that exists,
+  every pricing-engine and client-document change is unguarded, which is the single biggest reason
+  to be careful in those two areas specifically.
+- **Keep the harness technique — it is non-obvious and was arrived at the hard way.** Booting the
+  whole 1.2 MB file in jsdom **times out**, so the working harnesses pull `function NAME(` blocks
+  out by source text and drive them in a `vm` sandbox. Some suites (the intake-decedent one) do run
+  real markup in jsdom, but against extracted fragments rather than the whole document. Anyone
+  starting from `jsdom.fromFile('havellin.html')` will conclude the app is untestable and be wrong.
+- Related and smaller: the `.md` converters for the manual and the playbook belong in the repo for
+  the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
+  generated and must be regenerated in the same commit as any edit, which is only reliable if the
+  generator still exists.
+
 ## LIVING client vs DECEASED client — the SERVICE TYPE decides, always (2026-08-03)
 **Anthony: "there should be a rule about the language for projects when the client is alive
 versus when the client is deceased… applied to estimates and engagement agreements
