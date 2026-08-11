@@ -20,13 +20,14 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/photo-sync-google-drive-69ykub`
-  (was `claude/master-suite-cleaning-hours-g62ink`, then
+- Active feature branch: `claude/app-build-status-testing-mf5nq2`
+  (was `claude/photo-sync-google-drive-69ykub`, then
+  `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/photo-sync-google-drive-69ykub:main`
+  `git push origin claude/app-build-status-testing-mf5nq2:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -487,9 +488,12 @@ jsdom times out, so the harness pulls `function NAME(` blocks by source text ins
   happened. Moved above both render calls; the duplicate second call is gone.
 - **`savePhotoRefs` swallowed quota errors in a bare `catch(e) {}`.** That leaves the photo in
   Drive and missing from the inventory, and the inventory is the court record. Warns once now.
-- ⚠️ **`manual.html` + `concierge-guide.html` need a pass** — the capture gate moved from
+- ~~⚠️ **`manual.html` + `concierge-guide.html` need a pass** — the capture gate moved from
   *active* to *won*, three refusals that were silent now speak, and the playbook's symptom→cause
-  table has no row for "took photos and nothing happened." Not done here.
+  table has no row for "took photos and nothing happened." Not done here.~~
+  **Done in the eighth pass, same day** — manual §10 carries the gate correction and the three
+  refusals, the playbook's Step 10a has the `.stop`, and the symptom row exists ("took photos and
+  nothing happened"). Verified again 2026-08-11.
 
 ## Home Prep consolidation + vendor coordination hours — BUILT 2026-08-03
 **One entry point for prep, and third-party vendors finally bill the hours the estimate has
@@ -1184,8 +1188,21 @@ the QuickBooks posting layer is deliberately NOT, pending Laura's September char
 - **Gates now live:** staffing (`confirmJobTeam`) refuses an unwon job; the Job Plan
   withholds the staffing/hours section until won (it previously tested `estRec.approved` —
   the manager's PIN — so it looked like this rule while enforcing a different one).
-- Remaining: Wave 3 (payment record → DocuSign → Stripe → QB), Wave 4 (hours gated on
-  `funded`). 222 jsdom checks green.
+- ~~Remaining: Wave 3 (payment record → DocuSign → Stripe → QB), Wave 4 (hours gated on
+  `funded`).~~ 222 jsdom checks green.
+  **Wave 4 IS BUILT — do not rebuild it.** `buildLogTeamRows` disables the whole hours form on
+  `fundedOK` and `saveLogEntry` refuses outright, naming the outstanding balance
+  (`13114` / `13281`). It is the one gate in the app with no override, which is only safe because
+  the deposit is never waived. Staffing deliberately stays allowed from `won`, before the money —
+  the team gate and the money gate are separate on purpose.
+  **Wave 3 is the part still open, and only in pieces:** the payment record is built (three stages,
+  evidence capture, cheque handling). **DocuSign does not exist** — zero references in the file;
+  sent and signed are marked by hand. **Stripe is one-way** — `generateStripeLink` now reports
+  failure honestly instead of claiming success on an opaque response, but nothing reads BACK: no
+  webhook, no `clearedOn` write, no auto-populated payment, and `copyStripeLink` is still a message
+  stub. **QuickBooks is deliberately not built**, pending Laura's September chart of accounts.
+  *This line said "Wave 4 remaining" for over a week after it shipped and read as outstanding work —
+  the same way the unearned-revenue flag above it did. Clear these when the work lands.*
 
 ## Client lifecycle rebuild (decided 2026-07-30, NOT yet built)
 - Full findings + target state machine + build order: `LIFECYCLE_AUDIT.md`.
