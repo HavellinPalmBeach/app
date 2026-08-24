@@ -281,4 +281,46 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!ctx.invNeedsAppraisal({ category: 'Furniture', fmv: '50000' }),
        'a non-intrinsic category does not route on value alone (per the existing rule)');
   }
+
+  // ── The guardrail has to offer the FIX, not only the escape hatch ───────────
+  group('the appraisal guardrail lets you link an appraiser from the panel');
+  {
+    const g = sandbox({
+      fns: ['_renderAppraisalGuardrail', '_invGuardrailItems', '_invHasAppraisal',
+            '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal',
+            '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
+            'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
+            'resolveDocLevel', 'docLevelFloor', '_gate706', 'isDecedentJob'],
+      vars: ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+             'DECEDENT_SERVICES'],
+    });
+    const job = { id: 5, svc: 'cleanout', gate706: 'yes',
+                  appraisers: [{ id: 77, name: 'Marie Wayland', firm: 'Appraisals by the Sea', credential: 'ISA' }] };
+    g.jobs.push(job);
+    g._photoRefs[5] = [{ stableId: 'c1', label: 'inventory', collId: null,
+                         objectName: 'Coin Collection', category: 'Collectibles', fmv: '500000' }];
+
+    const panel = g._renderAppraisalGuardrail(job);
+    has(panel, 'Coin Collection', 'the flagged item is named');
+    has(panel, '_invSetAppraiser(5,', 'and the row carries a picker that links it');
+    has(panel, 'Marie Wayland', 'listing the roster appraisers by name');
+    has(panel, 'waiveAppraisal(5,', 'Waive is still there');
+    lacks(panel, 'Link each to an appraiser above',
+          'the instruction no longer points at the roster, which cannot link anything');
+
+    // With an empty roster the picker would be a dropdown with nothing in it.
+    const bare = { id: 6, svc: 'cleanout', gate706: 'yes', appraisers: [] };
+    g.jobs.push(bare);
+    g._photoRefs[6] = [{ stableId: 'c2', label: 'inventory', collId: null,
+                         objectName: 'Silver service', category: 'Silver & Precious Metal', fmv: '9000' }];
+    const empty = g._renderAppraisalGuardrail(bare);
+    has(empty, 'Add an appraiser to the roster above first',
+        'an empty roster says so instead of offering an empty dropdown');
+    lacks(empty, '<select', 'and renders no picker at all');
+
+    // Linking clears the item off the panel — that is the whole loop.
+    g._photoRefs[5][0].apprId = 77;
+    eq(g._invGuardrailItems(5).length, 0, 'a linked item leaves the guardrail');
+    eq(g._renderAppraisalGuardrail(job), '', 'and the panel disappears once nothing is outstanding');
+  }
 };

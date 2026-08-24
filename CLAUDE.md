@@ -89,6 +89,26 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## The guardrail offered the escape hatch and not the fix (BUILT 2026-08-24)
+Reported as *"what does this mean? and i can't assign an appraiser to the coin collection as
+far as i can tell."* He was right, and the panel's own wording was sending him the wrong way.
+- **`_renderAppraisalGuardrail` offered exactly one action per row: Waive.** The heading said
+  *"link each to an appraiser above"* — where **above** is the roster, which is where appraisers
+  are ADDED, not where they are linked. The only linking control in the app was the
+  **Appraisal Doc** cell: column fifteen of twenty-nine, reachable only by scrolling a wide
+  table sideways. So the panel named the problem, named the item, and the one action within
+  reach was the one you should not take. **A panel that reports a blocker must carry the fix.**
+- The picker is now on the row. An **empty roster says so** rather than rendering a dropdown
+  with nothing in it.
+- **`_invSetAppraiser` now redraws the whole tab**, because the link can be made from either
+  surface and each must reflect the other. It also stamps `_invTouch` now — it did not, so a
+  link could be lost to the per-item merge.
+- **A SECOND copy of the vehicle naming rule** was still joining year + desc in
+  `_renderInventoryImportPanel`, so the import panel printed *1960 1960 Corvette Stingray*
+  beside a manifest row that read correctly. Both call `_vehicleLineName` now, and a test
+  asserts neither join survives. Two copies of one rule is how these drift.
+- **260 committed checks.**
+
 ## Two things found in a real client workbook (BUILT 2026-08-24)
 Anthony redeployed and sent a screenshot of the synced Inventory sheet. The columns landed
 correctly — which is the evidence the header-lookup fix works — and two defects were visible

@@ -216,6 +216,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx._vehicleLineName({ year: '', desc: 'Boston Whaler 210' }), 'Boston Whaler 210', 'no year, no prefix');
     eq(ctx._vehicleLineName({ year: '2025', desc: '' }), '2025 Vehicle', 'a bare year still reads as something');
     eq(ctx._vehicleLineName({}), 'Vehicle', 'and an empty record does not produce an empty name');
+
+    // There were TWO copies of this rule — materializeVehicle and the import panel — and
+    // only one was fixed first time round, so the panel went on printing "1960 1960
+    // Corvette Stingray" beside a manifest row that read correctly.
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    lacks(src, "[v.year, v.desc].filter(Boolean).join(' ')",
+          'the import panel calls the shared namer rather than repeating the join');
+    lacks(src, "[veh.year, veh.desc].filter(Boolean).join(' ')",
+          'and so does materializeVehicle');
   }
 
   group('a quantity beside a value says which the value is');

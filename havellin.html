@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:02pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:06pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12390,7 +12390,7 @@ function _renderInventoryImportPanel(jobId) {
       + '</tr>';
   });
   imp.vehicles.forEach(function(v) {
-    var name = [v.year, v.desc].filter(Boolean).join(' ') || 'Vehicle';
+    var name = _vehicleLineName(v);   // one rule, one place — this copy printed the year twice
     rows += '<tr>'
       + '<td style="font-size:11px;"><strong>' + esc(name) + '</strong> <span style="color:var(--gray);">&middot; vehicle</span>' + (v.collector ? ' <span style="color:var(--bronze);font-weight:700;">collector</span>' : '') + '</td>'
       + '<td style="font-size:11px;color:var(--gray);">Vehicles &amp; Watercraft</td>'
@@ -12450,8 +12450,12 @@ function _invSetAppraiser(jobId, stableId, apprId) {
   var a = _jobAppraisers(jobId).find(function(x){ return String(x.id) === String(apprId); });
   ref.apprId = apprId || '';
   ref.apprDoc = a ? _apprLabel(a) : '';
-  _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
-  _invRefreshGuardrail(jobId); _invRefreshSummary(jobId);
+  _setPhotoRef(jobId, _invTouch(ref)); savePhotoRefs(jobId);
+  // Full redraw: the link can be made from the guardrail panel OR from the Appraisal Doc
+  // cell, and each has to reflect the other. It is a select change, not typing, so there
+  // is no half-typed input to destroy.
+  if (typeof renderInventoryTab === 'function') renderInventoryTab();
+  else { _invRefreshGuardrail(jobId); _invRefreshSummary(jobId); }
   _scheduleInventorySync(jobId);
 }
 
@@ -12572,16 +12576,31 @@ function _renderAppraisalGuardrail(job) {
   var items = _invGuardrailItems(job.id);
   if (!items.length) return '';
   var formal = isFormalDoc(job);
+  // THE PANEL USED TO OFFER ONLY *WAIVE*, and told you to "link each to an appraiser
+  // above" — where "above" is the roster, which is where appraisers are ADDED, not where
+  // they are linked. The only linking control was the Appraisal Doc cell, column fifteen
+  // of a twenty-nine-column table you have to scroll sideways to reach. So the panel
+  // named the problem, named the item, and the one action in reach was the one you should
+  // not take. Reported as "I can't assign an appraiser to the coin collection as far as I
+  // can tell" — which was accurate. The picker now lives on the row.
+  var apprs = _jobAppraisers(job.id);
   var rows = items.map(function(r){
     var fmv = (r.fmv != null && r.fmv !== '') ? '$' + Number(r.fmv).toLocaleString() : 'no value yet';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
-      + '<span>' + esc(r.objectName || '(unnamed)') + ' <span style="color:var(--gray);">· ' + esc(r.category || '') + ' · ' + fmv + ' · ' + esc(invAppraiserFor(r.category) || 'specialist') + '</span></span>'
-      + '<button class="btn-s" onclick="waiveAppraisal(' + job.id + ',\'' + r.stableId + '\')" title="Log a reason and waive the requirement for this item">Waive</button>'
+    var link = apprs.length
+      ? '<select onchange="_invSetAppraiser(' + job.id + ',\'' + r.stableId + '\',this.value)" style="font-size:11px;padding:2px 4px;max-width:200px;" title="Link this item to a roster appraiser">'
+          + '<option value="">&mdash; link an appraiser &mdash;</option>'
+          + apprs.map(function(a){ return '<option value="' + a.id + '">' + esc(_apprLabel(a)) + '</option>'; }).join('')
+        + '</select>'
+      : '<span style="font-size:10px;color:var(--gray);font-style:italic;">Add an appraiser to the roster above first</span>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;flex-wrap:wrap;">'
+      + '<span style="min-width:0;flex:1 1 auto;">' + esc(r.objectName || '(unnamed)') + ' <span style="color:var(--gray);">· ' + esc(r.category || '') + ' · ' + fmv + ' · ' + esc(invAppraiserFor(r.category) || 'specialist') + '</span></span>'
+      + '<span style="display:flex;align-items:center;gap:6px;flex:0 0 auto;">' + link
+      + '<button class="btn-s" onclick="waiveAppraisal(' + job.id + ',\'' + r.stableId + '\')" title="Log a reason and waive the requirement for this item">Waive</button></span>'
       + '</div>';
   }).join('');
   var head = formal
-    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need a qualified appraiser record before this estate&rsquo;s inventory is complete. Link each to an appraiser above, or Waive with a logged reason.'
-    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal don&rsquo;t have an appraiser record yet. Add appraisers above and link them, or leave as reasonable estimates on a standard job.';
+    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need a qualified appraiser record before this estate&rsquo;s inventory is complete. Link each to an appraiser on its own row below, or Waive with a logged reason.'
+    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal don&rsquo;t have an appraiser record yet. Link one on its own row below &mdash; add them to the roster above first if the roster is empty &mdash; or leave as reasonable estimates on a standard job.';
   return '<div class="card" style="margin-bottom:1rem;border:1px solid ' + (formal ? '#E3B7B7' : 'var(--border-md)') + ';">'
     + '<div class="alert ' + (formal ? 'a-err' : 'a-warn') + '" style="font-size:11.5px;margin-bottom:8px;">' + head + '</div>'
     + rows + '</div>';
