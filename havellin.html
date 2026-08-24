@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1490,7 +1490,7 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
-        <select id="inv-job" onchange="renderInventoryTab()" style="width:340px;font-size:12px;"><option value="">Select client</option></select>
+        <select id="inv-job" onchange="onInventoryJobChange()" style="width:340px;font-size:12px;"><option value="">Select client</option></select>
       </div>
     </div>
   </div>
@@ -10836,11 +10836,17 @@ function _cleanName(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g,''
 // Pull one job's manifest from the server and merge it in, then re-render whatever
 // asked. Used when a job is opened, so a device that did not take the photos still
 // sees the valuations somebody else entered.
+// Jobs whose server-side manifest this device has successfully read at least once.
+var _invCloudSeen = {};
 function refreshPhotoRefs(jobId, cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
   fetch(SHEETS_SYNC_URL + '?action=loadMedia&jobId=' + encodeURIComponent(jobId))
     .then(function(r){ return r.json(); })
     .then(function(d){
+      // Record that this device has SEEN the server's copy of this job, which is a
+      // different fact from whether the merge changed anything. The workbook write is
+      // gated on it — see _scheduleInventorySync.
+      if (d && d.ok) _invCloudSeen[jobId] = true;
       var remote = d && d.ok && d.media && d.media[String(jobId)] && d.media[String(jobId)].items;
       if (!remote || !remote.length) { if (cb) cb(false); return; }
       _photoRefs[jobId] = mergeMediaItems(_photoRefs[jobId] || [], remote);
@@ -12362,6 +12368,7 @@ function _pushInvLine(jobId, o) {
   o.filename = ''; o.driveFileUrl = null;
   if (o.category == null) o.category = INV_DEFAULT_CATEGORY;
   if (o.qty == null) o.qty = '1';
+  if (!o.updatedAt) o.updatedAt = o.ts || Date.now();   // its own merge clock from birth
   _setPhotoRef(jobId, o);
 }
 
@@ -12691,6 +12698,36 @@ function unshareInventory(jobId) {
   });
 }
 
+// ── Hydrate this device's copy before rendering ───────────────────────────────
+// THE INVENTORY TAB NEVER DID THIS. `loadPhotoRefs` is called from ONE place in the whole
+// app — `loadJobPlanTab` — so selecting a client on the Inventory tab after a page reload,
+// without opening that client's Job Plan first, rendered an EMPTY manifest against a
+// perfectly good localStorage. Everything looked unsaved: the table was blank and the
+// "From the Estimate Walkthrough" panel re-offered every collection and vehicle that had
+// already been imported, because `_importedSourceSet` reads the same empty array.
+//
+// Reported as "all of the items i added from the estimate walkthrough are now back … it
+// doesn't seem to be saving." Nothing was failing to save. Both copies — this device's and
+// the MediaStore — were intact; the tab was reading neither.
+//
+// Once per session per job: the in-memory copy is authoritative after that, because every
+// mutation writes through `savePhotoRefs` immediately.
+var _invHydrated = {};
+function _invEnsureLoaded(jobId) {
+  if (!jobId || _invHydrated[jobId]) return;
+  _invHydrated[jobId] = true;
+  if (typeof loadPhotoRefs === 'function') loadPhotoRefs(jobId);
+}
+
+// Selecting a client has to pull from the server too, not just redraw. The cloud refresh
+// ran on TAB OPEN only, where the job picker is usually still on "Select client" — so it
+// took its `if (!jobId) return` and the one moment a job actually became current was the
+// one moment nothing fetched.
+function onInventoryJobChange() {
+  renderInventoryTab();
+  _invRefreshFromCloud();
+}
+
 // Fetch the selected job's manifest and redraw if the merge actually changed something.
 // Silent by design: this runs on every tab open and a badge each time would be noise.
 function _invRefreshFromCloud() {
@@ -12713,6 +12750,7 @@ function renderInventoryTab() {
   if (!jobId) { cont.innerHTML = '<div class="empty-state">Select a client to view their estate inventory.</div>'; return; }
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) { cont.innerHTML = '<div class="empty-state">Job not found.</div>'; return; }
+  _invEnsureLoaded(jobId);
   var items = _invAssignItemNos(jobId);
   var summary = _renderInventorySummary(job, items);
   // Captured At / Photo Filename are hidden on screen to save room; they remain in
@@ -12829,8 +12867,22 @@ function _scheduleInventorySync(jobId) {
                   'Inventory saved \u2713', 'Inventory not saved \u2014 still on this device only');
     var job = jobs.find(function(j){ return j.id === jobId; });
     if (job && job.driveFolder) {
-      postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
-                    'Inventory workbook synced \u2713', 'Inventory sync failed');
+      // ⚠ THE TWO WRITES HAVE DIFFERENT BLAST RADII AND ONLY ONE IS SAFE ON A PARTIAL VIEW.
+      // saveMedia MERGES per item on the server, so sending an incomplete list loses
+      // nothing — an item the server holds and this device has not seen simply survives.
+      // saveInventory REBUILDS the client's workbook sheet from the rows it is handed, so
+      // sending an incomplete list silently truncates the document that goes to the
+      // attorney. That happened for real: a manifest of three was rendered as one because
+      // the tab had never hydrated, and the next edit rewrote the workbook with one row.
+      // So the destructive write waits until this device has actually read the server's
+      // copy of this job. The record (saveMedia) is never gated; only the projection is.
+      if (_invCloudSeen[jobId]) {
+        postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
+                      'Inventory workbook synced \u2713', 'Inventory sync failed');
+      } else {
+        showSyncBadge('Workbook held \u2014 manifest not loaded from the server yet', false);
+        refreshPhotoRefs(jobId, function(){ renderInventoryTab(); });
+      }
     }
   }, 2500);
 }

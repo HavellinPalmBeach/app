@@ -98,4 +98,66 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'an empty directory explains itself rather than rendering an empty dropdown');
     lacks(html, '<select', 'and offers no control there is nothing to put in');
   }
+
+  // ── The Inventory tab rendered without ever hydrating what it was rendering ──
+  group('inventory: the tab loads the manifest it is about to draw');
+  {
+    // Reported as "all of the items i added from the estimate walkthrough are now back in
+    // the 'from the estimate walkthrough' section … it doesn't seem to be saving."
+    // Nothing was failing to save. loadPhotoRefs was called from exactly ONE place in the
+    // app — loadJobPlanTab — so selecting a client on the Inventory tab after a page
+    // reload, without opening that client's Job Plan first, drew an empty manifest against
+    // a perfectly good localStorage, and _importedSourceSet re-offered every import.
+    const ctx = sandbox({ fns: ['_invEnsureLoaded', 'loadPhotoRefs', '_loadPendingPhotoData',
+                                '_pendingPhotoKey'],
+                          vars: ['_invHydrated'],
+                          stubs: { _photoRetryData: {} } });
+    ctx.__store['hav_media_4'] = JSON.stringify([
+      { stableId: 'v1', label: 'inventory', objectName: '2026 Bentley SUV' },
+      { stableId: 'c1', label: 'inventory', objectName: 'Coin Collection' },
+    ]);
+    eq(ctx._photoRefs[4], undefined, 'nothing is in memory on a fresh load');
+    ctx._invEnsureLoaded(4);
+    eq((ctx._photoRefs[4] || []).length, 2, 'hydrating pulls this device\'s copy back');
+
+    // Once per session: the in-memory copy is authoritative after that, because every
+    // mutation writes through savePhotoRefs immediately.
+    ctx._photoRefs[4].push({ stableId: 'x', label: 'inventory' });
+    ctx._invEnsureLoaded(4);
+    eq(ctx._photoRefs[4].length, 3, 'a second call does not clobber newer in-memory work');
+    ctx._invEnsureLoaded(0);
+    ok(true, 'and no job id is a no-op rather than a throw');
+  }
+
+  group('inventory: selecting a client also pulls from the server');
+  {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    has(src, 'onchange="onInventoryJobChange()"',
+        'the job picker runs the cloud refresh, not just a redraw');
+    const f = src.slice(src.indexOf('function onInventoryJobChange('));
+    has(f.slice(0, 300), '_invRefreshFromCloud()',
+        'because the tab-open refresh bails on "Select client" — the one moment a job '
+        + 'becomes current was the one moment nothing fetched');
+    const r = src.slice(src.indexOf('function renderInventoryTab('));
+    has(r.slice(0, 900), '_invEnsureLoaded(jobId)', 'and the render hydrates before it draws');
+  }
+
+  group('inventory: the destructive write waits for the full picture');
+  {
+    // saveMedia MERGES per item server-side, so a partial list loses nothing. The workbook
+    // write REBUILDS the sheet from the rows it is handed, so a partial list silently
+    // truncates the document that goes to the attorney — which is what happened: a
+    // three-item manifest was rendered as one, and the next edit rewrote the workbook
+    // with one row. Only the projection is gated; the record never is.
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    const f = src.slice(src.indexOf('function _scheduleInventorySync('));
+    const body = f.slice(0, f.indexOf('\nfunction buildMediaPayload'));
+    const media = body.indexOf("type: 'saveMedia'");
+    const wb = body.indexOf("type: 'saveInventory'");
+    ok(media >= 0 && wb > media, 'the record is written before the projection');
+    ok(body.indexOf('_invCloudSeen[jobId]') > media && body.indexOf('_invCloudSeen[jobId]') < wb,
+       'and the workbook write is gated on having read the server copy');
+    lacks(body.slice(0, media), '_invCloudSeen', 'the manifest write is NOT gated');
+    has(body, 'Workbook held', 'a held workbook says so rather than failing silently');
+  }
 };

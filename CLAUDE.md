@@ -89,6 +89,31 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## The Inventory tab never loaded the manifest it was drawing (BUILT 2026-08-24)
+Reported as *"all of the items i added from the estimate walkthrough are now back in the
+'from the estimate walkthrough' section … it doesn't seem to be saving."* **Nothing was
+failing to save.** Both copies were intact. The tab was reading neither.
+- **`loadPhotoRefs` was called from exactly ONE place in the whole app** — `loadJobPlanTab`.
+  So selecting a client on the Inventory tab after a page reload, without opening that
+  client's Job Plan first, rendered an EMPTY manifest against a perfectly good
+  localStorage — and `_importedSourceSet` reads the same empty array, so the import panel
+  re-offered every collection and vehicle already brought in. `_invEnsureLoaded(jobId)`
+  now hydrates once per session, inside `renderInventoryTab`.
+- **`_invRefreshFromCloud` ran on TAB OPEN only** — where the picker is still on *Select
+  client*, so it took its `if (!jobId) return`. The one moment a job actually became
+  current, the select's `onchange`, only redrew. Now `onInventoryJobChange()`.
+- **⚠ THE TWO SYNC WRITES HAVE DIFFERENT BLAST RADII AND ONLY ONE IS SAFE ON A PARTIAL VIEW.**
+  `saveMedia` **merges per item** server-side, so an incomplete list loses nothing.
+  `saveInventory` **rebuilds the workbook sheet** from the rows it is handed, so an
+  incomplete list silently truncates the document that goes to the attorney. That happened
+  for real within minutes of the load bug: a three-item manifest rendered as one, and the
+  next edit rewrote the client's workbook with **one row**. The workbook write now waits on
+  `_invCloudSeen[jobId]` — this device having actually read the server's copy — and says
+  *"Workbook held"* rather than skipping silently. **The record is never gated; only the
+  projection is.** Do not gate `saveMedia`, and do not un-gate `saveInventory`.
+- `_pushInvLine` now stamps `updatedAt` at birth rather than leaning on the `ts` fallback.
+- **286 committed checks.**
+
 ## A blank printout, and money that could never show a dollar sign (BUILT 2026-08-24)
 Two reports minutes apart, both real, both older than anything built this week.
 - **`_printDocument(html)` — ONE print path, and do not hand-roll the sequence again.**
