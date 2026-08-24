@@ -20,14 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/app-build-status-testing-mf5nq2`
-  (was `claude/photo-sync-google-drive-69ykub`, then
+- Active feature branch: `claude/code-audit-document-review-jilk87`
+  (was `claude/app-build-status-testing-mf5nq2`, then
+  `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/app-build-status-testing-mf5nq2:main`
+  `git push origin claude/code-audit-document-review-jilk87:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -40,12 +41,28 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
-## ⚠️ THE TEST COUNTS IN THIS FILE ARE NOT RUNNABLE — nothing is committed (2026-08-11)
-**This file cites test counts on nearly every section — 382 across eight suites, 230, 222, 138,
-136, 112, 94, 77, 50, 47, 46, 40 — and NOT ONE of those tests is in the repository.** `.gitignore`
-excludes only `node_modules`, `package-lock.json` and `.DS_Store`; there is no test file, no
-runner, no `package.json`. Every harness was written into a session scratchpad and died with the
-session that wrote it.
+## ⚠️ THE HISTORICAL TEST COUNTS ARE STILL NOT RUNNABLE — but there is a harness now (2026-08-24)
+**A committed harness finally exists: `tests/harness.js`, `tests/run.js`, `tests/inventory.test.js`,
+and `npm test` / `node tests/run.js`.** 43 checks, zero dependencies, running against the real
+source. Everything below about the *older* counts still stands — those tests remain lost — but the
+"nothing is committed" state that this section was written to describe is over. **Add to the
+committed suite rather than starting a new scratchpad harness; that habit is what this section
+exists to break.**
+- The harness uses exactly the technique described below: it pulls `function NAME(` blocks and
+  top-level `var` declarations out of `havellin.html` **by source text** and runs them in a `vm`
+  sandbox with a minimal DOM/localStorage stub. The code under test is the real code, so a test
+  cannot drift from the app. `tests/harness.js` carries the brace scanner that makes this work
+  (it has to skip strings, comments and regex literals — the file is mostly HTML built in quoted
+  strings, so a naive depth counter goes wrong within a few hundred bytes).
+- **It earns its keep already.** Writing the firearms gate, the first version filtered the
+  awaiting-authority report through `invNeedsAppraisal`. The test caught that a $900 shotgun —
+  below the $3,000 threshold, so never on the worklist — was therefore reported nowhere at all.
+  That is precisely the silent-failure class this section warns about, and it was found in the
+  same hour it was written rather than on a job.
+
+**The older counts — 382 across eight suites, 230, 222, 138, 136, 112, 94, 77, 50, 47, 46, 40 —
+are NOT in the repository and were never committed.** Every one of those harnesses was written
+into a session scratchpad and died with the session that wrote it.
 - **Read those counts as a record of what WAS checked once, not as coverage you have.** They are
   still worth keeping — they say which claims were verified and how hard — but a green count
   beside a section is not a safety net, and no change you make today will be caught by any of them.
@@ -58,9 +75,10 @@ session that wrote it.
   silently repointing saved rooms, the tenure double-count) are all **silent** failures that no one
   notices by clicking around.
 - **The fix is committing them, not rewriting them from scratch.** Anything reconstructed should
-  land in the repo with a runner, in the same commit as the change it verifies. Until that exists,
-  every pricing-engine and client-document change is unguarded, which is the single biggest reason
-  to be careful in those two areas specifically.
+  land in the repo with a runner, in the same commit as the change it verifies. **The runner now
+  exists** (`tests/run.js`), so there is no longer an excuse to write one into a scratchpad —
+  reconstruct into `tests/` and it survives. The pricing engine and the client documents are still
+  the two unguarded areas and still the reason to be careful there specifically.
 - **Keep the harness technique — it is non-obvious and was arrived at the hard way.** Booting the
   whole 1.2 MB file in jsdom **times out**, so the working harnesses pull `function NAME(` blocks
   out by source text and drive them in a `vm` sandbox. Some suites (the intake-decedent one) do run
@@ -70,6 +88,55 @@ session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## Firearms authority · exempt subtotal · permanent item numbers (BUILT 2026-08-24)
+First commit off the Estate Job Operational Spec / Contents Valuation SOP audit. Three things
+that were wrong in the app rather than missing from it, plus the test harness this repo has
+wanted for a month.
+
+- **A firearm never moves on Havellin's say-so, and the app was printing an instruction saying
+  it could.** `printAppraisalWorklist` grouped flagged firearms under a Firearms Specialist (FFL)
+  and produced a handover packet **on day one**, with nothing in front of it.
+  - **AUTHORITY and CUSTODY are different questions and must stay apart.** Authority is the PR's,
+    on counsel's advice — that is what "route it to the attorney" means, route the *decision*.
+    Custody is the FFL's, because nobody else may lawfully take possession and move it. Havellin
+    never transports; the dealer collects from the property. **So FFL routing is correct and
+    stays** — the SOP's "never to a Havellin vendor" reads as forbidding it, but an attorney is
+    not a firearms custodian and the instruction is not executable as written.
+  - `invIsFirearm` / `invFirearmAuthorized` / `invReleaseBlocked`. Authority is recorded on the
+    item with fields that already existed — **Authorized By + Approval Date**, dealer in
+    **Channel / Recipient**. No schema change.
+  - **`_apprWithheld` deliberately does NOT filter through `invNeedsAppraisal`, and the test is
+    what found that.** The first version did. `invNeedsAppraisal` answers a *valuation* question
+    (intrinsic category, no value yet or ≥ $3,000), so a **$900 shotgun with a value recorded is
+    not on the worklist at all** — and was therefore reported nowhere. The cheap ordinary firearm
+    is the one most likely to get picked up without a second thought. Don't re-narrow this.
+  - The worklist *says* what it is holding and why, rather than silently omitting it.
+  - ⚠️ **Still open, for counsel: NFA items.** Suppressors, SBRs and machine guns are a different
+    transfer path (ATF Form 5 to the estate) where a mistake is a felony, not paperwork. There is
+    no NFA sub-flag yet and a Palm Beach gun safe can easily hold a suppressor.
+- **Exempt property had no subtotal, so the §732.402 claim could not be tested from the document
+  that reports it.** `printCourtInventory` ran ONE accumulator across both sections, folding
+  exempt property into "Total tangible personal property" with no exempt figure anywhere.
+  `section()` now returns `{html, total}`; the exempt section carries its own total and a cap
+  check against `EXEMPT_CAP_732_402` (20000).
+  - **The cap notice is a PROMPT TO CHECK, never an assertion the claim fails.** The allowance is
+    for household furniture, furnishings and appliances; motor vehicles are separate; the app
+    cannot tell which flagged items fall in that class. The wording says so — keep it that way.
+  - **Also fixed: an item on the Trust track AND ticked exempt fell between the two tests.** The
+    exempt section filtered on `flagExempt` alone, so it rendered inside the *probate* schedule
+    it is excluded from; and the "excluded" note tested `!isProbateAsset && !flagExempt`, so it
+    was left out of that count as well. Nothing on the page disclosed it. Non-probate is now out
+    of the schedule entirely, exempt or not, and counted in the excluded note.
+- **"Item #" was the render position, not an ID.** Recomputed on every draw and every workbook
+  sync, so removing one manual line renumbered everything below it — in the app, in the client's
+  workbook, and against any receipt, photo caption or email that had cited a number. Receipts
+  point AT these numbers. `_invAssignItemNos` assigns once, stores `itemNo`, never reassigns;
+  `savePhotoRefs` persists it; snapshots carry it so two snapshots diff by identity rather than
+  by object name. **Gaps after a deletion are correct** — a missing number means an item was
+  removed, which is what a reader should be able to see.
+- **43 committed checks** (`node tests/run.js` / `npm test`). See the harness section at the top.
+
 
 ## LIVING client vs DECEASED client — the SERVICE TYPE decides, always (2026-08-03)
 **Anthony: "there should be a rule about the language for projects when the client is alive

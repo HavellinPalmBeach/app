@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.11 · 12:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 4:49pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10811,7 +10811,7 @@ function savePhotoRefs(jobId) {
   try {
     var refs = (_photoRefs[jobId] || []).map(function(r) {
       return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId, manual:r.manual,
-               seq:r.seq, objectName:r.objectName, category:r.category, disposition:r.disposition,
+               seq:r.seq, itemNo:r.itemNo, objectName:r.objectName, category:r.category, disposition:r.disposition,
                qty:r.qty, condition:r.condition, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
@@ -11119,6 +11119,12 @@ function setValBasis(jobId, v) {
 var INV_ASSET_TRACKS = ['Probate','Trust','Non-probate','Homestead','Exempt'];
 function _invTrack(ref) { return (ref && ref.assetTrack) || 'Probate'; }
 function _invIsProbateAsset(ref) { var t = _invTrack(ref); return t === 'Probate'; }
+// §732.402 protects household furniture, furnishings and appliances up to this value
+// (motor vehicles and the education-savings items are separate allowances and are NOT
+// counted against it). The app cannot tell on its own which flagged items fall inside
+// the furniture/furnishings/appliances class, so this is a PROMPT TO CHECK WITH COUNSEL
+// when the flagged total runs over — never an assertion that the claim is bad.
+var EXEMPT_CAP_732_402 = 20000;
 // §2032 alternate valuation date: a taxable estate may elect to value assets as of six
 // months after death. estateValueDate() is the date item values peg to when the item
 // has no explicit valuation date.
@@ -11174,6 +11180,30 @@ function _jobInvRefs(jobId) {
     .sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
 }
 
+// ── Item numbers are PERMANENT ────────────────────────────────────────────────
+// "Item #" used to be the row's position in the current render — recomputed on every
+// draw and on every workbook sync. Remove one manual line and every item below it
+// silently renumbered, in the app, in the client's workbook, and against any receipt,
+// photo caption or email that had already cited a number. Receipts and manifests point
+// AT these numbers, which is the whole reason §7 of the spec asks for an Item ID.
+// So the number is assigned once, stored on the item, and never reassigned. Gaps after
+// a deletion are correct and informative: a missing number means an item was removed,
+// which is exactly what a reader should be able to see.
+function _invAssignItemNos(jobId) {
+  var refs = _jobInvRefs(jobId);
+  var max = 0, dirty = false;
+  refs.forEach(function(r){ var n = parseInt(r.itemNo, 10); if (n > max) max = n; });
+  refs.forEach(function(r){
+    if (!(parseInt(r.itemNo, 10) > 0)) { r.itemNo = ++max; dirty = true; }
+  });
+  if (dirty) savePhotoRefs(jobId);   // backfill persists, so it happens once per job
+  return refs;
+}
+function _invItemNo(ref) {
+  var n = parseInt(ref && ref.itemNo, 10);
+  return n > 0 ? String(n) : '—';
+}
+
 function _invRoomName(jobId, roomIdx) {
   var estRec = estimateStore[jobId];
   var rooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
@@ -11217,7 +11247,7 @@ function populateInventorySelect() {
 
 function _invCellRead(ref, col, job, displaySeq) {
   switch (col.key) {
-    case 'seq': return String(displaySeq);
+    case 'seq': return _invItemNo(ref);
     case 'room': return esc(_invRoomName(job.id, ref.roomIdx));
     case 'objectName': return esc(ref.objectName || '—');
     case 'category': return esc(ref.category || '—');
@@ -11391,7 +11421,7 @@ function _invNetDisplay(ref) {
 
 function _invCell(jobId, ref, col, job, seq) {
   if (col.key === 'seq') {
-    var s = String(seq);
+    var s = _invItemNo(ref);
     if (ref.manual) {
       s += ' <span style="font-size:8px;color:var(--bronze);font-weight:700;" title="Manual line item (no photo)">M</span>'
         +  ' <a href="#" onclick="removeInventoryManualItem(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Remove line item" style="color:#c0392b;text-decoration:none;font-weight:700;">✕</a>';
@@ -11457,6 +11487,26 @@ function removeInventoryManualItem(jobId, stableId) {
 }
 
 // ── Appraisal worklist ────────────────────────────────────────────────────────
+// ── Firearms: authority before release ────────────────────────────────────────
+// A firearm never moves on Havellin's say-so. Two different things were being run
+// together and they have to stay apart:
+//   AUTHORITY  — who decides what happens. The PR, on counsel's advice. That is what
+//                "route it to the attorney" means: route the DECISION, not the object.
+//   CUSTODY    — who may lawfully possess and move it. Only an FFL. Havellin never
+//                transports; the dealer collects from the property.
+// So FFL routing is right and stays. What was missing is the gate in front of it:
+// `printAppraisalWorklist` would print a Firearms packet on day one, which is a
+// printed instruction to hand over a firearm nobody has authorised releasing.
+// The authority is recorded on the item itself with the fields that already exist —
+// Authorized By + Approval Date — and the named dealer goes in Channel / Recipient.
+// Until both are present the item is withheld from the worklist and the document
+// says so, rather than quietly omitting it.
+function invIsFirearm(ref) { return !!ref && ref.category === 'Firearms'; }
+function invFirearmAuthorized(ref) {
+  return !!(ref && String(ref.authBy || '').trim() && String(ref.approvalDate || '').trim());
+}
+function invReleaseBlocked(ref) { return invIsFirearm(ref) && !invFirearmAuthorized(ref); }
+
 // Group every manifest item flagged for a specialist by its appraiser type, so each
 // appraiser can be handed a clean packet of just their items (photos + condition +
 // room). This is the payoff of the shared taxonomy's appraiser routing.
@@ -11464,10 +11514,21 @@ function _apprGroups(jobId) {
   var groups = {};
   _jobInvRefs(jobId).forEach(function(r) {
     if (!invNeedsAppraisal(r)) return;
+    if (invReleaseBlocked(r)) return;       // firearm with no written PR authority — see above
     var a = invAppraiserFor(r.category) || 'Specialist Appraiser';
     (groups[a] = groups[a] || []).push(r);
   });
   return groups;
+}
+
+// EVERY firearm without written authority, not only the ones flagged for a specialist.
+// `invNeedsAppraisal` answers a VALUATION question — intrinsic category, no value yet or
+// at/above the $3,000 threshold — so a $900 shotgun with a value recorded against it is
+// not on the worklist at all. It still may not be handed to anyone. Filtering this report
+// through the appraisal test would have made the notice silent on exactly the cheap,
+// ordinary firearms most likely to be picked up and moved without a second thought.
+function _apprWithheld(jobId) {
+  return _jobInvRefs(jobId).filter(function(r){ return invReleaseBlocked(r); });
 }
 
 // Items flagged at the estimate (collections marked appraise/firearms, collector
@@ -11488,11 +11549,15 @@ function _apprEstimateFlags(jobId) {
 function takeInventorySnapshot(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var items = _jobInvRefs(jobId);
+  var items = _invAssignItemNos(jobId);
   var label = (window.prompt('Label for this snapshot (e.g. "Filed with court", "As of walkthrough"):', '') || '').trim();
   var totalFMV = 0;
+  // itemNo travels with the snapshot so two snapshots can be diffed by IDENTITY. Without
+  // it the only key was the object name, which is exactly what an amended-inventory trail
+  // cannot rely on — names get corrected, and a corrected name reads as a deletion plus
+  // an addition rather than as the same item.
   var snapItems = items.map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) totalFMV += n;
-    return { object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r) }; });
+    return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r) }; });
   if (!job.invSnapshots) job.invSnapshots = [];
   job.invSnapshots.push({ ts: Date.now(), label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: totalFMV, items: snapItems });
   saveJobs();
@@ -11527,7 +11592,7 @@ function printInventorySnapshot(jobId, ts) {
   var snap = (job.invSnapshots || []).find(function(s){ return String(s.ts) === String(ts); });
   if (!snap) return;
   var rows = snap.items.map(function(it, i){
-    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + (i + 1) + '</td>'
+    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(String(it.itemNo || (i + 1))) + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.object || '—') + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.category || '—') + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.track || '—') + '</td>'
@@ -11598,7 +11663,7 @@ function printCourtInventory(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
-  var items = _jobInvRefs(jobId);
+  var items = _invAssignItemNos(jobId);
   var formal = isFormalDoc(job);
   var guard = _invGuardrailItems(jobId);
   var draft = formal && guard.length > 0;
@@ -11607,10 +11672,15 @@ function printCourtInventory(jobId) {
   var vdate = estateValueDate(job);
   var vdateStr = vdate ? fmtDate2(vdate) : '—';
   var vlabel = job.avd ? 'the alternate valuation date' : 'date of death';
-  var excluded = items.filter(function(r){ return !_invIsProbateAsset(r) && !r.flagExempt; });
-  var total = 0;
+  // Non-probate is out of this schedule ENTIRELY, exempt or not. This used to read
+  // `!isProbateAsset && !flagExempt`, which meant a Trust-track item also ticked exempt
+  // fell between the two tests: it rendered inside the Exempt section — on the probate
+  // schedule it is excluded from — and was left out of the "excluded" count as well, so
+  // nothing on the page said it was there.
+  var excluded = items.filter(function(r){ return !_invIsProbateAsset(r); });
   function section(title, list) {
-    if (!list.length) return '';
+    if (!list.length) return { html: '', total: 0 };
+    var total = 0;
     var byCat = {};
     list.forEach(function(r){ var c = r.category || 'General/Household'; (byCat[c] = byCat[c] || []).push(r); });
     var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + esc(title) + '</div>';
@@ -11625,10 +11695,25 @@ function printCourtInventory(jobId) {
         + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody>'
         + '<tfoot><tr><td colspan="2" style="padding:2px 6px;text-align:right;font-weight:600;">' + esc(cat) + ' subtotal</td><td style="padding:2px 6px;text-align:right;font-weight:600;">' + _invMoney(sub) + '</td></tr></tfoot></table>';
     });
-    return h;
+    return { html: h, total: total };
   }
-  var body = section('Tangible Personal Property', items.filter(function(r){ return _invIsProbateAsset(r) && !r.flagExempt; }))
-           + section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return r.flagExempt; }));
+  // Two sections, two totals. One shared accumulator used to run across both, so the
+  // exempt property was folded silently into "Total tangible personal property" and
+  // there was no exempt figure anywhere on the document — which is the one number a
+  // reader needs in order to test the §732.402 claim at all.
+  var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invIsProbateAsset(r) && !r.flagExempt; }));
+  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invIsProbateAsset(r) && r.flagExempt; }));
+  var exemptTotal = exemptSec.total;
+  var overCap = exemptTotal > EXEMPT_CAP_732_402;
+  var body = estateSec.html
+           + exemptSec.html
+           + (exemptSec.html
+               ? '<div style="display:flex;justify-content:flex-end;font-size:11.5px;font-weight:700;margin-top:6px;padding-top:4px;border-top:1px solid #bbb;">Total exempt property claimed: &nbsp;' + _invMoney(exemptTotal) + '</div>'
+                 + (overCap
+                     ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">Exceeds the $' + EXEMPT_CAP_732_402.toLocaleString() + ' §732.402 allowance for household furniture, furnishings and appliances &mdash; confirm the composition of this claim with counsel. Motor vehicles are a separate allowance and are not counted here.</div>'
+                     : '')
+               : '');
+  var total = estateSec.total + exemptTotal;
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Tangible Personal Property</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + (job.probateCase ? ' &middot; Case ' + esc(job.probateCase) : '') + '</div>'
@@ -11718,6 +11803,16 @@ function printAppraisalWorklist(jobId) {
         + '<thead><tr style="text-align:left;color:#888;"><th style="padding:3px 6px;">#</th><th style="padding:3px 6px;">Object</th><th style="padding:3px 6px;">Category</th><th style="padding:3px 6px;">Room</th><th style="padding:3px 6px;">Condition</th><th style="padding:3px 6px;">Photo</th></tr></thead>'
         + '<tbody>' + rows + '</tbody></table></div>';
     });
+  }
+  var withheld = _apprWithheld(jobId);
+  if (withheld.length) {
+    html += '<div style="margin-top:14px;border:1px solid #A32D2D;border-radius:3px;padding:10px 12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#A32D2D;margin-bottom:4px;">'
+      + withheld.length + ' firearm' + (withheld.length > 1 ? 's are' : ' is') + ' awaiting written authority</div>'
+      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until the personal representative has authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the authority on the item — Authorized By and Approval Date, with the dealer in Channel / Recipient — and the item joins this worklist. The dealer collects from the property; Havellin does not transport firearms.</div>'
+      + '<div style="font-size:11px;color:#666;margin-top:6px;">'
+      + withheld.map(function(r){ return esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
+      + '</div></div>';
   }
   var f = _apprEstimateFlags(jobId);
   if (f.collections || f.vehicles) {
@@ -12053,7 +12148,7 @@ function renderInventoryTab() {
   if (!jobId) { cont.innerHTML = '<div class="empty-state">Select a client to view their estate inventory.</div>'; return; }
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) { cont.innerHTML = '<div class="empty-state">Job not found.</div>'; return; }
-  var items = _jobInvRefs(jobId);
+  var items = _invAssignItemNos(jobId);
   var summary = _renderInventorySummary(job, items);
   // Captured At / Photo Filename are hidden on screen to save room; they remain in
   // the data model and the workbook export. Photo Link still gives one-click access.
@@ -12101,7 +12196,7 @@ function renderInventoryTab() {
 // a formula (=Gross−Fees) per the schema.
 function _invExportValue(ref, col, job, seq) {
   switch (col.key) {
-    case 'seq': return seq;
+    case 'seq': return (parseInt(ref.itemNo, 10) > 0) ? parseInt(ref.itemNo, 10) : '';
     case 'room': return (ref.roomIdx == null) ? '' : _invRoomName(job.id, ref.roomIdx);
     case 'ts': return ref.ts ? new Date(ref.ts).toISOString() : '';
     case 'driveFileUrl': return ref.driveFileUrl || '';
@@ -12116,7 +12211,7 @@ function _invExportValue(ref, col, job, seq) {
 
 function buildInventoryPayload(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; }) || {};
-  var items = _jobInvRefs(jobId);
+  var items = _invAssignItemNos(jobId);
   // Column A = Job ID, then the 25 manifest columns (includes the on-screen-hidden ones).
   var columns = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.header; }));
   var rows = items.map(function(ref, i){

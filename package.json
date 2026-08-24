@@ -1,0 +1,8 @@
+{
+  "name": "havellin-app",
+  "private": true,
+  "description": "Havellin Palm Beach — single-file app. Tests lift real source out of havellin.html; see tests/harness.js.",
+  "scripts": {
+    "test": "node tests/run.js"
+  }
+}
