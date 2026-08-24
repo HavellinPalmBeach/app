@@ -89,6 +89,68 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## MAIV — the $3,000 that is an AGGREGATE, not a per-item test (BUILT 2026-08-24)
+**⚠ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs` changed, and the change fixes a bug
+that is live right now (see the last bullet). Treas. Reg. §20.2031-6(b), the SOP's number one.
+
+- **The app already had a $3,000 and it was the wrong one.** `invNeedsAppraisal` asks whether ONE
+  object is worth enough for a specialist. The regulation asks whether the estate's articles of
+  marked artistic or intrinsic value, **added up**, exceed $3,000 — in which case an expert's
+  appraisal **under oath** must be filed with the Form 706. **Do not collapse these into one test.**
+  - **The case that motivated it: thirty $500 pieces of silver.** Not one is near the per-item
+    threshold and every one carries a recorded value, so nothing is flagged, the Appraisal
+    Worklist has **no groups on it at all**, and the estate owes an expert appraisal on $15,000
+    of silverware. The app said nothing. Same silent-omission shape as the $900 shotgun.
+  - So `_maivWorklistBlock` renders **whether or not anything made the per-item cut**, and the
+    "nothing is flagged" message now says it answers the per-item test only.
+- **`invIsMAIV` is tri-state and overrides in BOTH directions.** Fires by default on the nine
+  intrinsic categories (Anthony's call). `'no'` forces out a $40 mass-produced print sitting in
+  Art & Décor — carrying it in overstates the estate. `'yes'` forces in a **fur coat** or a
+  **rare book library**, which the regulation names by name and the app has no category for.
+  **That is why `maivCat` is its own field and not a pure derivation** — don't "simplify" it away.
+- **The aggregate spans the GROSS ESTATE, not the probate track.** The reg says "included in the
+  gross estate" and a revocable trust's contents are in it. **Do not reuse `_invIsProbateAsset`
+  here** — on Palm Beach estates, where nearly everything is in trust, that would understate the
+  aggregate to near zero. There is a test.
+- **`settled` is the guard against the failure this exists to prevent.** An unvalued MAIV article
+  makes the total a **floor**. While anything is blank the app says "at least $X … cannot be
+  tested yet" and refuses to conclude — a partial sum landing under $3,000 is not an estate under
+  $3,000, and printing "under the aggregate" against it reads as a clearance. Tested both ways.
+- **`maivFilingApplies` reads the 706 answer, NOT `isFormalDoc`.** A recorded dispute forces
+  Strict Mode without making a federal return due. Reading `isFormalDoc` would assert a federal
+  filing requirement on an estate that files nothing. On a no-706 estate the aggregate still
+  prints — useful as a read on where the value sits — but as a guide, never as a requirement.
+- **Context from Anthony that raises the stakes:** most of his estates are over the $15M
+  exemption, and portability makes many of the rest file anyway. So **Strict Mode is the normal
+  operating mode, not the exception** ($100 itemisation, not $1,000), and MAIV fires on nearly
+  every job. Volume — the rate card, the grouping validator — is the binding constraint.
+- **⚠ `_writeInventorySheet` in `saveInventory.gs` had HARDCODED COLUMN NUMBERS and they were
+  already wrong.** The Summary sheet was converted to header lookup on 2026-08-24; this function
+  was not. The moment `flagNFA` was inserted, the Net formula was being written into the **Fees**
+  column and the currency formats onto Approval Date / Gross / Fees — on the workbook that goes
+  to the attorney, over the field recording who authorised a firearms release. Now resolved by
+  header like the Summary, and a test drives the real `.gs` function against the real app column
+  list. **Never reintroduce a literal column index there.** The manifest is 30 columns wide now
+  (A..AD), so the letter helper's multi-letter path is live too.
+- **`savePhotoRefs` is a WHITELIST, and a new column not added to it is dropped silently on
+  every save.** `flagMAIV`/`maivCat` were exactly that risk. The new test walks **every editable
+  `INVENTORY_COLUMNS` key** through a real save/reload, so the next column is caught too.
+- **240 committed checks.**
+
+## Strict Mode says what it costs (BUILT 2026-08-24)
+Reported as *"do these strict mode flags make sense to you? i'm confused."* Three fixes, no
+change to the escalate-only rule.
+- **`docStandardEffect(job)` names the two numbers the level moves** — the individual-listing
+  threshold and the specialist threshold — and every branch of the readout carries it. Standard
+  $1,000 / $3,000 · Strict $100 / $3,000 · Strict with a dispute $100 / $500. **A level asserted
+  without its consequences is a label, not an explanation**; that is what drew the complaint.
+- **Amber is scoped to the unanswered 706.** The question defaults to Unknown and unknown counts
+  as yes, so EVERY new estate job opens in Strict Mode — and was drawing an amber alert on a form
+  nobody had filled in yet. A filed 706, a recorded dispute and contested probate are settled,
+  correct states and now read as information.
+- The dispute hint said *"Drops the specialist-appraisal threshold to $500"* even with **No**
+  selected, which reads as a claim about the current threshold. Now *"Ticking it drops …"*.
+
 ## Firearms authority · exempt subtotal · permanent item numbers (BUILT 2026-08-24)
 First commit off the Estate Job Operational Spec / Contents Valuation SOP audit. Three things
 that were wrong in the app rather than missing from it, plus the test harness this repo has

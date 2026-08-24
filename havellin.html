@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:49pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10903,6 +10903,7 @@ function savePhotoRefs(jobId) {
                seq:r.seq, itemNo:r.itemNo, objectName:r.objectName, category:r.category, disposition:r.disposition,
                qty:r.qty, condition:r.condition, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed, flagNFA:r.flagNFA,
+               flagMAIV:r.flagMAIV, maivCat:r.maivCat,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
                dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
                apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason, assetTrack:r.assetTrack, custodyLog:r.custodyLog,
@@ -11056,6 +11057,116 @@ function invNeedsAppraisal(ref, job){
   return isNaN(v) || v >= invAppraisalThreshold(job);
 }
 var INV_DISPOSITIONS = ['Auction','Consign','Donate','Hold','Junk','Keep','Sell'];
+
+// ── Marked artistic or intrinsic value (Treas. Reg. §20.2031-6(b)) ────────────
+// THE TEST IS AN AGGREGATE, AND THAT IS THE WHOLE POINT OF THIS BLOCK. The app already
+// had a per-item threshold (invNeedsAppraisal, $3,000, or $500 on a disputed estate) and
+// the two are easy to confuse because they share a number. They are different questions:
+//
+//   per item  — is THIS object worth enough that a specialist should value it?
+//   aggregate — do the estate's articles of marked artistic or intrinsic value, ADDED UP,
+//               exceed $3,000, so that an expert's appraisal under oath must be filed
+//               with the federal estate tax return?
+//
+// Thirty $500 pieces of silver trip the aggregate while no single piece comes anywhere
+// near the per-item figure. Before this, such an estate produced an EMPTY appraisal
+// worklist and the app said nothing — the same silent-omission shape as the $900 shotgun
+// that was below the appraisal threshold and therefore reported nowhere.
+//
+// COMPUTED OVER EVERY ITEM, NOT JUST THE PROBATE TRACK. The regulation says "included in
+// the gross estate", and a revocable trust's contents are in the gross estate even though
+// they are off the §733.604 probate schedule. Do not reuse _invIsProbateAsset here.
+var MAIV_AGGREGATE_THRESHOLD = 3000;
+
+// The regulation's own vocabulary, so the worklist and the methodology statement can cite
+// it in the words a reviewer will be reading. Furs and books have NO app category — they
+// land in General/Household — which is exactly why the class is its own field rather than
+// derived only: a fur coat or a rare book library can be brought into the aggregate by
+// hand without inventing a thirteenth item category for it.
+var MAIV_CATEGORIES = [
+  'Paintings, prints & statuary',
+  'Antiques',
+  'Jewelry',
+  'Furs',
+  'Silverware',
+  'Books & manuscripts',
+  'Oriental rugs',
+  'Coin & stamp collections',
+  'Other articles of marked value'
+];
+var MAIV_OTHER = 'Other articles of marked value';
+
+// Item category → regulation class. A category absent from this map is not MAIV by
+// default. Vehicles are deliberately absent: the reg's list does not reach them and they
+// are valued on their own evidence.
+var MAIV_BY_CATEGORY = {
+  'Art & Décor':             'Paintings, prints & statuary',
+  'Antiques':                'Antiques',
+  'Jewelry & Watches':       'Jewelry',
+  'Silver & Precious Metal': 'Silverware',
+  'Rugs & Carpets':          'Oriental rugs',
+  'Collectibles':            'Coin & stamp collections',
+  'Firearms':                MAIV_OTHER,
+  'Wine & Spirits':          MAIV_OTHER,
+  'Musical Instruments':     MAIV_OTHER
+};
+function invMAIVDefaultCat(cat) { return MAIV_BY_CATEGORY[cat] || ''; }
+
+// MAIV FIRES BY DEFAULT on the categories above — decided with Anthony. The per-item
+// control is an override in BOTH directions, tri-state on purpose: '' auto, 'yes' force
+// in, 'no' force out. A $40 mass-produced print sitting in Art & Décor is not an article
+// of marked artistic value, and carrying it into the aggregate overstates the estate's
+// exposure; a fur in General/Household is one, and nothing derives it.
+function invIsMAIV(ref) {
+  if (!ref) return false;
+  var o = String(ref.flagMAIV || '').toLowerCase();
+  if (o === 'no')  return false;
+  if (o === 'yes') return true;
+  return !!invMAIVDefaultCat(ref.category);
+}
+function invMAIVCategory(ref) {
+  if (!ref || !invIsMAIV(ref)) return '';
+  return ref.maivCat || invMAIVDefaultCat(ref.category) || MAIV_OTHER;
+}
+
+// `settled` is the guard against the failure this whole block exists to prevent. An
+// unvalued MAIV article makes the total a FLOOR, not a total, so the app must never
+// print "under the aggregate" while any of them is still blank — that reads as a
+// clearance and it is not one.
+function maivAggregate(items) {
+  var total = 0, count = 0, unvalued = 0;
+  (items || []).forEach(function(r){
+    if (!invIsMAIV(r)) return;
+    count++;
+    var v = parseFloat(r.fmv);
+    if (isNaN(v)) unvalued++; else total += v;
+  });
+  return { total: total, count: count, unvalued: unvalued,
+           settled: unvalued === 0, over: total > MAIV_AGGREGATE_THRESHOLD };
+}
+
+// §20.2031-6 governs what is filed WITH A 706. A dispute forces Strict Mode without
+// making a return due, so this reads the 706 answer itself rather than isFormalDoc —
+// they are not the same question and conflating them would assert a federal filing
+// requirement on an estate that files nothing.
+function maivFilingApplies(job) {
+  return !!job && isDecedentJob(job, job.svc) && _gate706(job);
+}
+
+// One sentence describing the aggregate, used by both surfaces so the summary panel and
+// the printed worklist cannot state it differently.
+function maivStatement(items) { return maivStatement_(maivAggregate(items)); }
+function maivStatement_(a) {
+  if (!a.count) return '';
+  var arts = a.count + ' article' + (a.count > 1 ? 's' : '') + ' of marked artistic or intrinsic value';
+  var cap  = '$' + MAIV_AGGREGATE_THRESHOLD.toLocaleString() + ' aggregate';
+  if (!a.settled) {
+    return arts + ' total at least ' + _invMoney(a.total) + ', but ' + a.unvalued
+      + ' of them still ' + (a.unvalued > 1 ? 'have' : 'has') + ' no value recorded, so the '
+      + cap + ' cannot be tested yet.';
+  }
+  return arts + ' total ' + _invMoney(a.total) + ', ' + (a.over ? 'over' : 'under') + ' the ' + cap + '.';
+}
 
 function _invRefs(jobId, roomIdx) {
   return (_photoRefs[jobId] || []).filter(function(r){
@@ -11254,6 +11365,8 @@ var INVENTORY_COLUMNS = [
   {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date'},
   {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select'},
   {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage',  edit:'text'},
+  {key:'flagMAIV',     header:'MAIV §20.2031-6',     kind:'manage',  edit:'maivSelect'},
+  {key:'maivCat',      header:'MAIV Class',          kind:'manage',  edit:'maivCatSelect'},
   {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage',  edit:'flag'},
   {key:'flagBequest',  header:'Specific Bequest',    kind:'manage',  edit:'flag'},
   {key:'flagDisputed', header:'Disputed',            kind:'manage',  edit:'flag'},
@@ -11403,6 +11516,8 @@ function _invCellRead(ref, col, job, displaySeq) {
     case 'approvalDate': case 'dispDate': return ref[col.key] ? esc(fmtDate2(ref[col.key])) : '—';
     case 'fmv': case 'gross': case 'fees': { var m = _money(ref[col.key]); return m || '—'; }
     case 'flagNFA': return invIsFirearm(ref) ? (ref.flagNFA ? 'Yes' : '—') : '';
+    case 'flagMAIV': return invIsMAIV(ref) ? 'Yes' : '—';
+    case 'maivCat': return esc(invMAIVCategory(ref) || '—');
     case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '—';
     default: { var v = ref[col.key]; return (v === undefined || v === null || v === '') ? '—' : esc(String(v)); }
   }
@@ -11447,11 +11562,15 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
     + hdrRow('Last Updated', _invDateTime(Date.now()))
     + '</div>';
+  var maiv = maivAggregate(items);
   var totals = '<div>'
     + hdrRow('Total Items', String(items.length))
     + hdrRow('Total Estimated FMV', _money(totalFMV) || '$0')
     + hdrRow('Items Awaiting Valuation', String(awaiting))
     + hdrRow('Needs Specialist Appraisal', String(nAppr))
+    + hdrRow('MAIV Articles (§20.2031-6(b))', maiv.count
+        ? String(maiv.count) + ' &middot; ' + (maiv.settled ? '' : 'at least ') + _invMoney(maiv.total)
+        : '0')
     + hdrRow('Disputed / Hold', String(nDisp))
     + hdrRow('Specific Bequests', String(nBequest))
     + hdrRow('Exempt §732.402', String(nExempt))
@@ -11472,8 +11591,25 @@ function _renderInventorySummary(job, items) {
   return '<div class="card" style="margin-bottom:1rem;"><div class="sec">Estate Inventory — Summary</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:14px;">' + header + totals + '</div>'
     + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;">' + catTable + dispTable + '</div>'
+    + _maivSummaryNotice(job, maiv)
     + '<div style="font-size:10px;color:var(--gray);margin-top:10px;font-style:italic;">Tangible personal property only. The §733.604 court inventory (real property, accounts, securities) is the PR’s filing, prepared with counsel.</div>'
     + '</div>';
+}
+
+// The aggregate only becomes a FILING requirement on an estate lodging a 706, so the
+// notice is scoped to that. On an estate filing none the row above is still shown —
+// it is a useful read on where the value sits — but asserting a federal requirement
+// there would be wrong.
+function _maivSummaryNotice(job, maiv) {
+  if (!maiv.count || !maivFilingApplies(job)) return '';
+  if (!maiv.settled) {
+    return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;">&#9878; ' + esc(maivStatement_(maiv))
+      + ' Value them before the return is prepared &mdash; an untested aggregate is not the same as one under the cap.</div>';
+  }
+  if (!maiv.over) return '';
+  return '<div class="alert a-info" style="font-size:11px;line-height:1.5;">&#9878; <strong>Expert appraisal required with the return.</strong> '
+    + esc(maivStatement_(maiv))
+    + ' Treas. Reg. §20.2031-6(b) requires the appraisal of an expert, under oath, to be filed with the Form 706, with the executor&rsquo;s statement as to the completeness of the itemised list and the appraiser&rsquo;s qualifications.</div>';
 }
 
 // ── Build 2: inline editing of app-manage columns + manual line items ─────────
@@ -11483,6 +11619,9 @@ function _invColEditable(ref, col) {
   // invites it being set on something it cannot describe, and the column is already
   // one of twenty-six — it earns its width only where it means something.
   if (col.key === 'flagNFA') return invIsFirearm(ref);
+  // Same rule, same reason: a regulation class on an article that is not MAIV
+  // describes nothing, and the column is already one of twenty-eight.
+  if (col.key === 'maivCat') return invIsMAIV(ref);
   if (col.edit) return true;                       // manage columns + disposition
   // Capture-origin columns are editable only on manual (non-photo) rows.
   if (ref.manual && (col.key === 'objectName' || col.key === 'room' || col.key === 'category')) return true;
@@ -11550,6 +11689,21 @@ function _invInput(jobId, ref, col, job) {
       var ot = INV_ASSET_TRACKS.map(function(x){ return '<option' + ((v || 'Probate') === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
       return '<select ' + on + ' ' + base + '>' + ot + '</select>';
     }
+    case 'maivSelect': {
+      // Tri-state, and the auto option NAMES what it resolves to — a bare "Auto" leaves
+      // the reader unable to tell whether this article is in the aggregate or not.
+      var dflt = invMAIVDefaultCat(ref.category);
+      var om = ['<option value=""' + (!v ? ' selected' : '') + '>Auto &mdash; ' + (dflt ? 'yes' : 'no') + '</option>',
+                '<option value="yes"' + (v === 'yes' ? ' selected' : '') + '>Yes</option>',
+                '<option value="no"' + (v === 'no' ? ' selected' : '') + '>No</option>'].join('');
+      return '<select ' + on + ' ' + base + ' title="Counts this article toward the §20.2031-6(b) $'
+        + MAIV_AGGREGATE_THRESHOLD.toLocaleString() + ' aggregate">' + om + '</select>';
+    }
+    case 'maivCatSelect': {
+      var cur = invMAIVCategory(ref);
+      var ok2 = MAIV_CATEGORIES.map(function(x){ return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      return '<select ' + on + ' ' + base + '>' + ok2 + '</select>';
+    }
     case 'flag':
       return '<input type="checkbox" ' + (v ? 'checked' : '') + ' onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--gray-dk);">';
     case 'text': default:
@@ -11594,11 +11748,14 @@ function _invEdit(jobId, stableId, key, el) {
     if (netEl) netEl.textContent = _invNetDisplay(ref);
   }
   // These feed the Summary rollups; refresh only the summary (table inputs keep focus).
-  if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','disposition','category','qty'].indexOf(key) >= 0) {
+  if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','flagMAIV','maivCat','disposition','category','qty'].indexOf(key) >= 0) {
     _invRefreshSummary(jobId);
   }
   // FMV / category changes can move an item in or out of the appraisal guardrail.
   if (key === 'fmv' || key === 'category') _invRefreshGuardrail(jobId);
+  // Forcing MAIV on or off changes whether the class beside it is editable at all, so
+  // that row has to be redrawn rather than left showing a control that no longer applies.
+  if (key === 'flagMAIV' && typeof renderInventoryTab === 'function') renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
 
@@ -11938,6 +12095,69 @@ function printDispositionLedger(jobId) {
   pt.innerHTML = '';
 }
 
+// The aggregate block on the printed worklist. It renders whether or not any individual
+// item made the per-item cut, because the two tests are independent and the case worth
+// catching — many modest articles, none individually flagged — is exactly the one where
+// the list above is empty.
+function _maivWorklistBlock(job, items, maiv) {
+  if (!maiv.count) return '';
+  var byClass = {};
+  items.forEach(function(r){
+    if (!invIsMAIV(r)) return;
+    var c = invMAIVCategory(r);
+    var b = byClass[c] = byClass[c] || { n: 0, total: 0, unvalued: 0 };
+    b.n++;
+    var v = parseFloat(r.fmv);
+    if (isNaN(v)) b.unvalued++; else b.total += v;
+  });
+  var rows = Object.keys(byClass).sort().map(function(c){
+    var b = byClass[c];
+    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(c) + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + b.n + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + (b.unvalued ? b.unvalued : '—') + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(b.total) + '</td></tr>';
+  }).join('');
+
+  var applies = maivFilingApplies(job);
+  var tone = (applies && (maiv.over || !maiv.settled)) ? '#8a6d3b' : '#999';
+  var tail = '';
+  if (!applies) {
+    tail = 'Treas. Reg. §20.2031-6(b) governs what is filed with a federal estate tax return. '
+      + 'This estate is not recorded as filing one, so the aggregate is reported here as a guide '
+      + 'to where the value sits rather than as a filing requirement.';
+  } else if (!maiv.settled) {
+    tail = 'The aggregate cannot be tested until every article above carries a value. '
+      + 'An untested total is not a total under the cap — value them before the return is prepared.';
+  } else if (maiv.over) {
+    tail = '<strong>An expert appraisal must be filed with the return.</strong> Where these articles exceed $'
+      + MAIV_AGGREGATE_THRESHOLD.toLocaleString() + ' in aggregate, Treas. Reg. §20.2031-6(b) requires the appraisal of an expert, '
+      + 'under oath, to be filed with the Form 706, together with the executor&rsquo;s statement as to the completeness '
+      + 'of the itemised list and the qualifications of the appraiser. This is separate from the per-item flags above '
+      + 'and is not satisfied by them.';
+  } else {
+    tail = 'Below the $' + MAIV_AGGREGATE_THRESHOLD.toLocaleString() + ' aggregate, so §20.2031-6(b) does not require an '
+      + 'expert appraisal to be filed with the return. Re-check this as values are recorded.';
+  }
+
+  return '<div style="margin-top:14px;border:1px solid ' + tone + ';border-radius:3px;padding:10px 12px;">'
+    + '<div style="font-size:12px;font-weight:700;color:' + tone + ';margin-bottom:2px;">'
+    + 'Articles of marked artistic or intrinsic value &mdash; Treas. Reg. §20.2031-6(b)</div>'
+    + '<div style="font-size:11px;color:#3c3228;line-height:1.5;margin-bottom:6px;">' + esc(maivStatement_(maiv)) + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:6px;">'
+    + '<thead><tr style="text-align:left;color:#888;"><th style="padding:2px 6px;">Class</th>'
+    + '<th style="padding:2px 6px;text-align:right;">Articles</th>'
+    + '<th style="padding:2px 6px;text-align:right;">Unvalued</th>'
+    + '<th style="padding:2px 6px;text-align:right;">Value</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody>'
+    + '<tfoot><tr style="font-weight:700;border-top:1px solid #333;"><td style="padding:3px 6px;">Total</td>'
+    + '<td style="padding:3px 6px;text-align:right;">' + maiv.count + '</td>'
+    + '<td style="padding:3px 6px;text-align:right;">' + (maiv.unvalued || '—') + '</td>'
+    + '<td style="padding:3px 6px;text-align:right;">' + _invMoney(maiv.total) + '</td></tr></tfoot></table>'
+    + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">' + tail + '</div>'
+    + '<div style="font-size:10px;color:#888;font-style:italic;margin-top:5px;">Counted across the whole gross estate, including items tagged Trust or Non-probate that are outside the §733.604 probate schedule.</div>'
+    + '</div>';
+}
+
 function printAppraisalWorklist(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var pt = document.getElementById('print-target');
@@ -11949,8 +12169,17 @@ function printAppraisalWorklist(jobId) {
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:4px;">Appraisal Worklist</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
     + '<div style="font-size:11px;color:#888;margin-bottom:16px;">Items flagged for specialist appraisal &middot; value as of date of death' + dod + ' &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>';
+  var maivItems = _jobInvRefs(jobId);
+  var maiv = maivAggregate(maivItems);
   if (!names.length) {
-    html += '<div style="font-size:12px;color:#888;">No items are currently flagged for appraisal. Flag intrinsic items (art, jewelry, silver, rugs, etc.) in the manifest or capture them on the Job Plan.</div>';
+    // This message used to end the document. It cannot: the per-item test and the
+    // §20.2031-6(b) aggregate are different questions, so an estate whose every article
+    // is individually below the threshold can have NO groups here and still owe an
+    // expert appraisal under oath. Say what this list does and does not answer, and let
+    // the aggregate block below speak for itself.
+    html += '<div style="font-size:12px;color:#888;">No individual item is currently flagged for specialist appraisal'
+      + (maiv.count ? ' — but see the aggregate below, which is a separate test.' : '. Flag intrinsic items (art, jewelry, silver, rugs, etc.) in the manifest or capture them on the Job Plan.')
+      + '</div>';
   } else {
     names.forEach(function(a) {
       var rows = groups[a].map(function(r, i) {
@@ -11970,6 +12199,7 @@ function printAppraisalWorklist(jobId) {
         + '<tbody>' + rows + '</tbody></table></div>';
     });
   }
+  html += _maivWorklistBlock(job, maivItems, maiv);
   var withheld = _apprWithheld(jobId);
   var nfa = _apprNFA(jobId);
   if (nfa.length) {
@@ -12453,6 +12683,8 @@ function _invExportValue(ref, col, job, seq) {
     case 'qty': return (ref.qty != null && ref.qty !== '') ? ref.qty : 1;
     case 'fmv': case 'gross': case 'fees': { var n = parseFloat(ref[col.key]); return isNaN(n) ? '' : n; }
     case 'flagNFA': return (invIsFirearm(ref) && ref.flagNFA) ? 'Yes' : '';
+    case 'flagMAIV': return invIsMAIV(ref) ? 'Yes' : '';
+    case 'maivCat': return invMAIVCategory(ref);
     case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '';
     default: { var v = ref[col.key]; return (v == null) ? '' : v; }
   }

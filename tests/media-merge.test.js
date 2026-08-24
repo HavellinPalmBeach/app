@@ -17,6 +17,8 @@ function it(id, over) {
   return Object.assign({ stableId: id, label: 'inventory', collId: null, ts: 1000 }, over);
 }
 const ids = (list) => list.map((r) => r.stableId);
+// 1-based column number → spreadsheet letter (AA, AB … now that the manifest is 30 wide).
+function _letter(n) { let out = ''; while (n > 0) { out = String.fromCharCode(65 + ((n - 1) % 26)) + out; n = Math.floor((n - 1) / 26); } return out; }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const ctx = sandbox({ fns: ['mergeMediaItems'] });
@@ -147,9 +149,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
             '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs',
             '_warnPhotoStoreFull', 'resolveValBasis', 'estateValueDate', '_avdDate',
-            'invIsFirearm'],
+            'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat'],
       vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS',
-             'INV_VAL_BASES'],
+             'INV_VAL_BASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
     });
     p2.jobs.push({ id: 3, name: 'Estate', hvlId: 'HVL-3' });
     p2._photoRefs[3] = [it('a', { label: 'inventory', category: 'Firearms', fmv: '100' })];
@@ -170,6 +172,61 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Column letters are looked up by header, so inserting a column cannot repoint a
     // formula at the wrong data — which is live risk now that flagNFA was inserted.
     has(gs, '_invColLetter(cols,', 'summary formulas resolve columns by header name');
+  }
+
+  group('the workbook writes its formulas at the columns the app actually sent');
+  {
+    // THIS IS THE BUG THAT MOTIVATED THE TEST. _writeSummarySheet was converted to
+    // header lookup on 2026-08-24; _writeInventorySheet was not, and kept literal column
+    // numbers. The moment flagNFA was inserted, the Net formula was being written into
+    // the FEES column and the currency formats landed on Approval Date. The workbook is
+    // the document that goes to the attorney, so this drives the real .gs function
+    // against the real app column list — if either side moves, this fails.
+    const gs = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
+    const pick = (name) => {
+      const m = gs.match(new RegExp('function ' + name + '\\([\\s\\S]*?\\n\\}'));
+      ok(!!m, name + ' is present in saveInventory.gs');
+      return m[0];
+    };
+    const gctx = {};
+    vm.createContext(gctx);
+    vm.runInContext(pick('_invColLetter') + '\n' + pick('_writeInventorySheet'), gctx,
+                    { filename: 'saveInventory.gs (extracted)' });
+
+    const cap = { formulas: [], formats: [], values: [] };
+    const sheet = {
+      clear() {}, setFrozenRows() {}, autoResizeColumns() {},
+      getRange(r, c) {
+        return {
+          setValues(v) { cap.values.push({ r, c, v }); return this; },
+          setFormulas(f) { cap.formulas.push({ r, c, f }); return this; },
+          setNumberFormat(f) { cap.formats.push({ r, c, f }); return this; },
+          setFontWeight() { return this; }, setBackground() { return this; },
+        };
+      },
+    };
+    const ss = { getSheetByName: () => sheet, insertSheet: () => sheet };
+
+    // The real header list, straight out of the app.
+    const p3 = sandbox({ vars: ['INVENTORY_COLUMNS'] });
+    const columns = ['Job ID'].concat(p3.INVENTORY_COLUMNS.map((c) => c.header));
+    const col = (h) => columns.indexOf(h) + 1;
+    gctx._writeInventorySheet(ss, { columns, rows: [columns.map(() => '')] });
+
+    eq(cap.formulas.length, 1, 'exactly one block of formulas is written');
+    eq(cap.formulas[0].c, col('Net to Estate'),
+       'and it lands on Net to Estate — not on whatever column happens to sit at index 24');
+    has(cap.formulas[0].f[0][0], _letter(col('Gross Proceeds')) + '2',
+        'the formula reads the Gross Proceeds column');
+    has(cap.formulas[0].f[0][0], _letter(col('Fees')) + '2', 'and the Fees column');
+
+    const moneyCols = cap.formats.filter((f) => f.f === '$#,##0').map((f) => f.c).sort((a, b) => a - b);
+    eq(moneyCols, [col('Estimated FMV'), col('Gross Proceeds'), col('Fees'), col('Net to Estate')].sort((a, b) => a - b),
+       'the currency formats land on the four money columns and nothing else');
+
+    lacks(pick('_writeInventorySheet'), 'getRange(2, 24',
+          'no literal column index survives in the inventory writer');
+    lacks(pick('_writeInventorySheet'), 'getRange(2, 22', 'nor the currency-format one');
   }
 
   group('the manifest must not reach the folder shared with counsel');

@@ -21,8 +21,11 @@
  * PAYLOAD (from buildInventoryPayload in havellin.html)
  *   { jobId, hvlId, estate, address, deathDate, lettersDate, deadline,
  *     preparedBy, driveFolder, lastUpdated,
- *     columns: [26 header strings, col A..Z],
- *     rows:    [ [26 cell values], ... ] }     // Net (col X) sent blank — written as a formula
+ *     columns: [header strings, one per manifest column, col A onwards],
+ *     rows:    [ [one cell value per column], ... ] }   // Net sent blank — written as a formula
+ *
+ * The column COUNT is not fixed and must never be assumed. Resolve positions with
+ * _invColLetter / indexOf against payload.columns.
  */
 
 // ── Summary rollup labels ─────────────────────────────────────────────────────
@@ -101,22 +104,39 @@ function _writeInventorySheet(ss, payload) {
 
   var cols = payload.columns || [];
   var rows = payload.rows || [];
-  var nCol = cols.length;            // 26
+  var nCol = cols.length;
 
   sh.getRange(1, 1, 1, nCol).setValues([cols]).setFontWeight('bold').setBackground('#efe9dd');
   sh.setFrozenRows(1);
 
+  // ⚠ THESE WERE HARDCODED COLUMN NUMBERS AND THEY WENT WRONG THE MOMENT A COLUMN WAS
+  // INSERTED. The Summary sheet below was converted to header lookup on 2026-08-24 and
+  // this function was not, so when flagNFA was added the Net formula was written into
+  // the Fees column and the currency formats landed on Approval Date / Gross / Fees.
+  // The client's workbook is the document that goes to the attorney; a formula sitting
+  // on top of a field that records who authorised a firearms release is not a cosmetic
+  // defect. Resolve by HEADER NAME here too, and never reintroduce a literal index.
+  var idx = function(header) { var i = cols.indexOf(header); return i < 0 ? 0 : i + 1; };
+  var cFmv   = idx('Estimated FMV');
+  var cGross = idx('Gross Proceeds');
+  var cFees  = idx('Fees');
+  var cNet   = idx('Net to Estate');
+
   if (rows.length) {
     sh.getRange(2, 1, rows.length, nCol).setValues(rows);
-    // Net (col X = 24) = Gross (V=22) − Fees (W=23); blank when both empty.
-    var netFormulas = [];
-    for (var r = 0; r < rows.length; r++) {
-      var rr = r + 2;
-      netFormulas.push(['=IF(AND(V' + rr + '="",W' + rr + '=""),"",N(V' + rr + ')-N(W' + rr + '))']);
+    if (cNet && cGross && cFees) {
+      var gL = _invColLetter(cols, 'Gross Proceeds');
+      var fL = _invColLetter(cols, 'Fees');
+      var netFormulas = [];
+      for (var r = 0; r < rows.length; r++) {
+        var rr = r + 2;
+        netFormulas.push(['=IF(AND(' + gL + rr + '="",' + fL + rr + '=""),"",N(' + gL + rr + ')-N(' + fL + rr + '))']);
+      }
+      sh.getRange(2, cNet, rows.length, 1).setFormulas(netFormulas);
     }
-    sh.getRange(2, 24, rows.length, 1).setFormulas(netFormulas);
-    sh.getRange(2, 12, rows.length, 1).setNumberFormat('$#,##0');   // L Estimated FMV
-    sh.getRange(2, 22, rows.length, 3).setNumberFormat('$#,##0');   // V,W,X Gross/Fees/Net
+    [cFmv, cGross, cFees, cNet].forEach(function(c) {
+      if (c) sh.getRange(2, c, rows.length, 1).setNumberFormat('$#,##0');
+    });
   }
   sh.autoResizeColumns(1, Math.min(nCol, 9));
 }

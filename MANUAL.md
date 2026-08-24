@@ -640,7 +640,7 @@ On each Job Plan room card, use **Capture item** to photograph individual object
 
 ### Categories & appraiser routing
 
-Every item has a category from the shared taxonomy. Each category knows which specialist appraiser it routes to and whether it's subject to the IRS **$3,000** formal-appraisal rule for art/jewelry/etc. Categories: Antiques · Art & Décor · Collectibles · Electronics & Appliances · Firearms · Furniture · General/Household · Jewelry & Watches · Musical Instruments · Rugs & Carpets · Silver & Precious Metal · Vehicles & Watercraft · Wine & Spirits.
+Every item has a category from the shared taxonomy. Each category knows which specialist appraiser it routes to and whether items in it are treated as carrying **marked artistic or intrinsic value** — which drives two *different* $3,000 tests, one per item and one across the estate. See *Two different $3,000 tests* below; confusing them is the mistake this section exists to prevent. Categories: Antiques · Art & Décor · Collectibles · Electronics & Appliances · Firearms · Furniture · General/Household · Jewelry & Watches · Musical Instruments · Rugs & Carpets · Silver & Precious Metal · Vehicles & Watercraft · Wine & Spirits.
 
 ### From the estimate walkthrough (the bridge)
 
@@ -653,6 +653,32 @@ Add a roster of named appraisers — name, firm, **credential** (ISA / ASA / AAA
 ### The $3,000 appraisal guardrail
 
 Items flagged for appraisal that aren't yet linked to an appraiser surface a panel: a **soft amber nudge on Standard** jobs, a **red block on Formal** jobs (the inventory isn't complete until each is appraised). Per-item **Waive** logs a reason. On a Formal job, the Court Inventory export stamps *DRAFT* until every flagged item is appraised or waived.
+
+### Two different $3,000 tests — per item, and across the estate
+
+The app carries two thresholds that share a number and answer different questions. Read this once and the rest of the section follows.
+
+| Test | Question | Where it shows |
+|---|---|---|
+| **Per item** — $3,000, or $500 in Strict Mode with a recorded dispute | Is *this object* worth enough that a specialist should value it? | The ⚑ flag on the row, the guardrail panel, the per-specialist groups on the Appraisal Worklist |
+| **Aggregate** — Treas. Reg. §20.2031-6(b), $3,000, never indexed | Do the estate's articles of marked artistic or intrinsic value, *added up*, exceed $3,000 — so that an expert's appraisal under oath must be filed with the Form 706? | The *MAIV Articles* row in the Summary, and its own block on the Appraisal Worklist |
+
+> **An estate can pass every per-item test and still fail the aggregate.** Thirty $500 pieces of silver: not one is near $3,000, every one carries a recorded value, so nothing is flagged and the Appraisal Worklist has *no groups on it at all* — and the estate owes an expert appraisal under oath on $15,000 of silverware. Until 2026-08-24 the app said nothing in that case. The aggregate block now prints whether or not anything made the per-item cut, and the empty-worklist message points at it.
+
+### MAIV — marked artistic or intrinsic value
+
+Two manifest columns: **MAIV §20.2031-6** (Auto / Yes / No) and **MAIV Class**.
+
+- **It fires by default** on Art & Décor, Antiques, Jewelry & Watches, Silver & Precious Metal, Rugs & Carpets, Collectibles, Firearms, Wine & Spirits and Musical Instruments. Furniture, Electronics, General/Household and Vehicles do not.
+- **The control overrides in both directions**, and both directions matter. A $40 mass-produced print sitting in Art & Décor is not an article of marked artistic value and carrying it in overstates the estate's exposure — set it to *No*. A fur coat or a rare book library filed under General/Household *is* one and nothing derives it — set it to *Yes* and pick the class.
+- **MAIV Class uses the regulation's own words** — paintings/prints/statuary · antiques · jewelry · **furs** · silverware · **books & manuscripts** · oriental rugs · coin & stamp collections · other articles of marked value. Furs and books have no item category on purpose: the class is a separate field precisely so they can be captured without inventing a fourteenth category.
+- **The class cell only opens on an article that is MAIV**, the same rule the NFA tick follows on non-firearms.
+
+> **Counted across the whole gross estate, not the probate schedule.** The regulation says "included in the gross estate", and a revocable trust's contents are in the gross estate even though they sit outside the §733.604 filing. So Trust and Non-probate items *are* in the aggregate — which matters here, where a great many estates hold everything in trust. Do not reuse the Court Inventory's probate filter for this.
+
+> **An untested aggregate is never reported as one under the cap.** An article with no value recorded makes the total a *floor*. While anything is unvalued the app says "at least $X … cannot be tested yet" and refuses to conclude, because printing "under the aggregate" against a partial sum reads as a clearance and is not one.
+
+> **The filing requirement is scoped to the 706, not to Strict Mode.** A recorded dispute forces Strict Mode without making a federal return due, so the block reads the *706 answer itself*. On an estate filing no return the aggregate still prints — it is a useful read on where the value sits — but as a guide, never as a requirement.
 
 ### Valuation basis & date
 
@@ -678,7 +704,7 @@ Items flagged for appraisal that aren't yet linked to an appraiser surface a pan
 
 Until 2026-08-24 it lived **only in one browser's localStorage**. The workbook write was one-way and nothing read back, so two devices held two different manifests of the same estate and the last sync overwrote the other wholesale; clearing site data destroyed the record. It now persists to a **MediaStore** blob in the main spreadsheet, beside jobs and estimates, via `saveMedia` / `loadMedia`.
 
-> **It is deliberately NOT in the job's Drive folder.** *Share w/ Counsel* grants read-only access to the whole Estate Inventory folder, and the manifest carries custody logs, appraisal-waiver reasons and upload state — none of which counsel has any business reading. The *workbook* still goes to Drive: it is the 26 display columns and no internals. A test asserts `saveMediaStore` never touches `DriveApp`.
+> **It is deliberately NOT in the job's Drive folder.** *Share w/ Counsel* grants read-only access to the whole Estate Inventory folder, and the manifest carries custody logs, appraisal-waiver reasons and upload state — none of which counsel has any business reading. The *workbook* still goes to Drive: it is the manifest's display columns and no internals. A test asserts `saveMediaStore` never touches `DriveApp`.
 
 > **The merge is per ITEM, not per job, and must stay that way.** `_mergeStoreByKey` — the helper the other stores use — keeps whichever whole entry is newer. For an inventory that means two people editing *different items on the same job* still clobber each other. Every mutation stamps `updatedAt` and the merge resolves item by item against it. Removal writes a `deletedAt` tombstone rather than deleting the row, because absence is indistinguishable from "this device has not seen it yet" and a union merge would resurrect every deletion.
 
