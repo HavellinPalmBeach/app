@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:06pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11455,6 +11455,10 @@ function _invItemNo(ref) {
 function _invRoomName(jobId, roomIdx) {
   var estRec = estimateStore[jobId];
   var rooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  // A manual line item — cash, an account, a coin collection — has no room, and printing
+  // "Room undefined" beside it on a document handed to an appraiser is worse than saying
+  // nothing. Matches the wording the room picker itself uses.
+  if (roomIdx == null || roomIdx === '') return 'Unassigned / estate-wide';
   var room = rooms.find(function(r){ return r.idx === roomIdx; });
   return room ? room.name : ('Room ' + roomIdx);
 }
@@ -11666,8 +11670,21 @@ function _invInput(jobId, ref, col, job) {
   switch (ctrl) {
     case 'number':
       return '<input type="number" min="0" step="1" value="' + esc(v != null ? v : '') + '" ' + on + ' ' + base + '>';
-    case 'currency':
-      return '<input type="number" min="0" step="0.01" placeholder="$" value="' + esc(v != null ? v : '') + '" ' + on + ' ' + base + '>';
+    case 'currency': {
+      // A <input type="number"> CANNOT display "$" or a thousands separator — the browser
+      // rejects any non-numeric character in its value. Reported as "the FMV items do not
+      // carry $ or any currency formatting"; it was never a styling choice, the control
+      // simply could not do it. A text input formatted as you type can.
+      //
+      // THE TRAP THIS WALKS PAST, because it already cost a commit on the prep card:
+      // formatMoneyInput rewrites the field to "$8,000", so anything that then reads
+      // el.value with parseFloat gets NaN and stores 0 — silently, on every keystroke,
+      // while the field goes on displaying the number. _invEdit converts these keys with
+      // moneyToNumber instead.
+      var _n = parseFloat(v);
+      var mv = (v === '' || v == null || isNaN(_n)) ? '' : '$' + _n.toLocaleString();
+      return '<input type="text" inputmode="decimal" placeholder="$" value="' + esc(mv) + '" oninput="formatMoneyInput(this)" ' + on + ' ' + base + '>';
+    }
     case 'date': {
       var ttl = col.key === 'valDate' ? ' title="Defaults to date of death if left blank"' : '';
       return '<input type="date" value="' + esc(v || '') + '"' + ttl + ' ' + on + ' ' + base + '>';
@@ -11738,6 +11755,14 @@ function _invEdit(jobId, stableId, key, el) {
   if (!ref) return;
   if (key === 'roomIdx') {
     ref.roomIdx = (el.value === '') ? null : parseInt(el.value);
+  } else if (key === 'fmv' || key === 'gross' || key === 'fees') {
+    // BLANK MUST STAY BLANK. "No value recorded" is a real state and a different one from
+    // zero: it is what the Items Awaiting Valuation count reports, what keeps an item on
+    // the appraisal worklist, and what makes the §20.2031-6(b) aggregate untestable.
+    // moneyToNumber('') returns 0, so a cleared field would silently assert the item is
+    // worth nothing.
+    var _raw = String(el.value == null ? '' : el.value).replace(/[^0-9.]/g, '');
+    ref[key] = (_raw === '') ? '' : moneyToNumber(el.value);
   } else {
     ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
   }
@@ -11927,8 +11952,7 @@ function printInventorySnapshot(jobId, ts) {
     + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Captured ' + esc(_invDateTime(snap.ts)) + (snap.label ? ' &middot; ' + esc(snap.label) : '') + ' &middot; ' + snap.count + ' items &middot; total ' + (_invMoney(snap.totalFMV)) + '</div>'
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">#</th><th style="padding:2px 6px;">Object</th><th style="padding:2px 6px;">Category</th><th style="padding:2px 6px;">Track</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '</div>';
-  window.print();
-  pt.innerHTML = '';
+  _printDocument(pt.innerHTML);
 }
 
 // ── Chain-of-custody event log (per item) ─────────────────────────────────────
@@ -11980,6 +12004,39 @@ function removeCustodyEvent(idx) {
 // homestead/exempt separated, NO internal figures) that feeds counsel's filing, and
 // a Disposition/Accounting Ledger (proceeds, fees, net, receipts, custody) for the
 // fiduciary accounting. Havellin's own margin never appears on either.
+// ── One print path for every generated document ───────────────────────────────
+// `printAgreement` has always done this properly, and carried the reason in a comment:
+// the dialog must not open until the DOM and the print stylesheet have settled, and the
+// target must not be cleared until after the dialog closes. Five other printers did it
+// synchronously — assign, print, clear, all on the same tick — and on any browser that
+// defers the dialog by even a frame the target is already EMPTY by the time the page is
+// rendered. Reported as "I hit appraisal worklist and a blank doc comes up to print."
+// Route every generated document through here; do not hand-roll the sequence again.
+function _printDocument(html) {
+  var pt = document.getElementById('print-target');
+  if (!pt) return false;
+  if (!html) { alert('There is nothing to print on this document yet.'); return false; }
+  pt.innerHTML = html;
+  var panels = document.querySelectorAll('.panel');
+  Array.prototype.forEach.call(panels, function(p) {
+    p.dataset.wasActive = p.classList.contains('active') ? '1' : '0';
+    p.classList.remove('active');
+  });
+  pt.style.display = 'block';
+  setTimeout(function() {
+    window.print();
+    setTimeout(function() {
+      pt.style.display = 'none';
+      pt.innerHTML = '';
+      Array.prototype.forEach.call(panels, function(p) {
+        if (p.dataset.wasActive === '1') p.classList.add('active');
+        delete p.dataset.wasActive;
+      });
+    }, 500);
+  }, 150);
+  return true;
+}
+
 function _invMoney(v) { var n = parseFloat(v); return isNaN(n) ? '—' : '$' + Math.round(n).toLocaleString(); }
 
 function printCourtInventory(jobId) {
@@ -12054,9 +12111,7 @@ function printCourtInventory(jobId) {
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>'
     + '</div>';
-  pt.innerHTML = html;
-  window.print();
-  pt.innerHTML = '';
+  _printDocument(html);
 }
 
 function printDispositionLedger(jobId) {
@@ -12095,9 +12150,7 @@ function printDispositionLedger(jobId) {
         : '<div style="font-size:12px;color:#888;">No items have been disposed yet.</div>')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Proceeds are net to the estate less the partner&rsquo;s fees. Havellin charges no commission on sales, consignments, or auction results; Havellin service fees are billed separately and do not appear here.</div>'
     + '</div>';
-  pt.innerHTML = html;
-  window.print();
-  pt.innerHTML = '';
+  _printDocument(html);
 }
 
 // The aggregate block on the printed worklist. It renders whether or not any individual
@@ -12234,9 +12287,7 @@ function printAppraisalWorklist(jobId) {
       + ' from the estimate ' + ((f.collections + f.vehicles) > 1 ? 'are' : 'is') + ' not yet in the inventory — add them on the Job Plan to include them here.</div>';
   }
   html += '</div>';
-  pt.innerHTML = html;
-  window.print();
-  pt.innerHTML = '';
+  _printDocument(html);
 }
 
 // ── Collections / Vehicles → Inventory bridge ─────────────────────────────────
@@ -18242,8 +18293,7 @@ function printJobPlan() {
     '<h2 style="font-family:\'Cormorant Garamond\',serif;color:#3c3228;margin-bottom:4px;">Havellin Palm Beach — Job Plan</h2>' +
     '<div style="font-size:11px;color:#888;margin-bottom:16px;">Internal working document · ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>' +
     hdrHTML + content.innerHTML + '</div>';
-  window.print();
-  pt.innerHTML = '';
+  _printDocument(pt.innerHTML);
 }
 
 // (Removed syncLogToSheets — a silent no-cors single-entry post the backend

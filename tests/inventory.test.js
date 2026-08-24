@@ -323,4 +323,64 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(g._invGuardrailItems(5).length, 0, 'a linked item leaves the guardrail');
     eq(g._renderAppraisalGuardrail(job), '', 'and the panel disappears once nothing is outstanding');
   }
+
+  group('printing: assign, print, clear cannot happen on one tick');
+  {
+    // "I hit appraisal worklist and a blank doc comes up to print." Five printers set
+    // #print-target, called window.print(), and cleared it synchronously. On a browser
+    // that defers the dialog by a frame the target is empty by the time it renders.
+    // printAgreement always did it correctly and said why in a comment; the others now
+    // share that path.
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    lacks(src, "window.print();\n  pt.innerHTML = '';",
+          'no printer clears the target on the same tick as the dialog');
+    const printers = ['printCourtInventory', 'printDispositionLedger', 'printAppraisalWorklist',
+                      'printInventorySnapshot', 'printJobPlan'];
+    printers.forEach((name) => {
+      const at = src.indexOf('function ' + name + '(');
+      if (at < 0) return;                       // renamed upstream; the lacks() above still guards
+      const body = src.slice(at, src.indexOf('\nfunction ', at + 10));
+      has(body, '_printDocument(', name + ' goes through the shared print path');
+    });
+    const h = src.slice(src.indexOf('function _printDocument('));
+    const hb = h.slice(0, h.indexOf('\nfunction ', 10));
+    has(hb, 'setTimeout', 'the shared path defers the dialog until styles have settled');
+    has(hb, 'nothing to print', 'and refuses to open an empty dialog at all');
+  }
+
+  group('a cleared value stays blank, and money shows as money');
+  {
+    const m = sandbox({ fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
+                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber'],
+                        stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {},
+                                 _scheduleInventorySync() {}, _invNetDisplay: () => '' } });
+    m._photoRefs[2] = [{ stableId: 'a', label: 'inventory', collId: null, fmv: '500000' }];
+
+    m._invEdit(2, 'a', 'fmv', { value: '$12,500' });
+    eq(m._photoRefs[2][0].fmv, 12500,
+       'a formatted "$12,500" is stored as a number — parseFloat on that string gives NaN');
+
+    m._invEdit(2, 'a', 'fmv', { value: '' });
+    eq(m._photoRefs[2][0].fmv, '',
+       'CLEARING the field leaves it blank, not 0 — "no value recorded" is a real state');
+
+    m._invEdit(2, 'a', 'gross', { value: '$0' });
+    eq(m._photoRefs[2][0].gross, 0, 'an explicit zero is still an explicit zero');
+
+    // And the control itself has to be one that can render a dollar sign at all.
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    const f = src.slice(src.indexOf('function _invInput('));
+    const body = f.slice(0, f.indexOf('\nfunction _invNetDisplay'));
+    lacks(body, '<input type="number" min="0" step="0.01"',
+          'the currency cell is no longer a number input, which cannot display "$"');
+    has(body, 'formatMoneyInput(this)', 'it formats as you type');
+  }
+
+  group('a manual line item has no room, and says so');
+  {
+    const r = sandbox({ fns: ['_invRoomName'] });
+    eq(r._invRoomName(1, null), 'Unassigned / estate-wide',
+       'not "Room undefined" on a document handed to an appraiser');
+    eq(r._invRoomName(1, undefined), 'Unassigned / estate-wide', 'same for undefined');
+  }
 };

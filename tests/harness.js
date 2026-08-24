@@ -171,6 +171,12 @@ function sandbox({ fns = [], vars = [], stubs = {} } = {}) {
       removeItem(k) { delete store[k]; },
     },
     alert() {},
+    // The real _printDocument defers the dialog and clears the target afterwards (see the
+    // comment on it in havellin.html — clearing on the same tick is what produced a blank
+    // printout). Deferral is untestable in a vm with no timers and no layout, so the
+    // sandbox captures the document synchronously instead; the deferral itself is asserted
+    // against the source text in inventory.test.js.
+    _printDocument(html) { printTarget.innerHTML = html; ctx.__printed = html; return !!html; },
     // App-wide state the extracted functions close over.
     jobs: [],
     _photoRefs: {},

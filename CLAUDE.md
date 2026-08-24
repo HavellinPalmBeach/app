@@ -89,6 +89,33 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## A blank printout, and money that could never show a dollar sign (BUILT 2026-08-24)
+Two reports minutes apart, both real, both older than anything built this week.
+- **`_printDocument(html)` — ONE print path, and do not hand-roll the sequence again.**
+  Reported as *"i hit appraisal worklist and a blank doc comes up to print."* Five printers
+  did `pt.innerHTML = html; window.print(); pt.innerHTML = '';` **on one tick**. On any
+  browser that defers the dialog by a frame, the target is already empty when the page
+  renders. **`printAgreement` has always done it correctly and carried the reason in a
+  comment** — deactivate the panels, show the target, `setTimeout` before `print()`, clear
+  in a nested timeout — and five copies beside it ignored it. All five route through the
+  shared helper now, which also **refuses to open an empty dialog** rather than printing
+  nothing. The harness stubs it synchronously; the deferral is asserted on the source text.
+- **`<input type="number">` cannot display a `$` or a thousands separator.** Reported as
+  *"the FMV items do not carry $ or any currency formatting"* — it was never a styling
+  choice, the control rejects any non-numeric character in its value. Now a text input with
+  `formatMoneyInput` as you type.
+  - **The trap this walks past, which already cost a commit on the prep card:**
+    `formatMoneyInput` rewrites the field to `$8,000`, so any reader doing `parseFloat` on
+    it gets `NaN` and stores **0**, silently, while the field goes on showing the number.
+    `_invEdit` converts `fmv`/`gross`/`fees` with `moneyToNumber`.
+  - **AND A CLEARED FIELD MUST STAY BLANK.** `moneyToNumber('')` returns 0, and "no value
+    recorded" is a different state from zero — it is what *Items Awaiting Valuation* counts,
+    what keeps an item on the appraisal worklist, and what makes the §20.2031-6(b) aggregate
+    untestable. Storing 0 would silently assert the item is worth nothing. Tested.
+- `_invRoomName` printed **"Room undefined"** beside every manual line item on the worklist
+  handed to an appraiser. Now *Unassigned / estate-wide*, the wording the room picker uses.
+- **275 committed checks.**
+
 ## The guardrail offered the escape hatch and not the fix (BUILT 2026-08-24)
 Reported as *"what does this mean? and i can't assign an appraiser to the coin collection as
 far as i can tell."* He was right, and the panel's own wording was sending him the wrong way.
