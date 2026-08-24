@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 4:49pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10813,7 +10813,7 @@ function savePhotoRefs(jobId) {
       return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId, manual:r.manual,
                seq:r.seq, itemNo:r.itemNo, objectName:r.objectName, category:r.category, disposition:r.disposition,
                qty:r.qty, condition:r.condition, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
-               apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed,
+               apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed, flagNFA:r.flagNFA,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
                dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
                apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason, assetTrack:r.assetTrack, custodyLog:r.custodyLog,
@@ -11163,6 +11163,7 @@ var INVENTORY_COLUMNS = [
   {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage',  edit:'flag'},
   {key:'flagBequest',  header:'Specific Bequest',    kind:'manage',  edit:'flag'},
   {key:'flagDisputed', header:'Disputed',            kind:'manage',  edit:'flag'},
+  {key:'flagNFA',      header:'NFA Item',            kind:'manage',  edit:'flag'},
   {key:'channel',      header:'Channel / Recipient', kind:'manage',  edit:'text'},
   {key:'authBy',       header:'Authorized By',       kind:'manage',  edit:'text'},
   {key:'approvalDate', header:'Approval Date',       kind:'manage',  edit:'date'},
@@ -11267,6 +11268,7 @@ function _invCellRead(ref, col, job, displaySeq) {
     }
     case 'approvalDate': case 'dispDate': return ref[col.key] ? esc(fmtDate2(ref[col.key])) : '—';
     case 'fmv': case 'gross': case 'fees': { var m = _money(ref[col.key]); return m || '—'; }
+    case 'flagNFA': return invIsFirearm(ref) ? (ref.flagNFA ? 'Yes' : '—') : '';
     case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '—';
     default: { var v = ref[col.key]; return (v === undefined || v === null || v === '') ? '—' : esc(String(v)); }
   }
@@ -11339,6 +11341,10 @@ function _renderInventorySummary(job, items) {
 // ── Build 2: inline editing of app-manage columns + manual line items ─────────
 function _invColEditable(ref, col) {
   if (col.kind === 'formula') return false;
+  // NFA is a firearms question and nothing else. Offering the tick box on a sofa
+  // invites it being set on something it cannot describe, and the column is already
+  // one of twenty-six — it earns its width only where it means something.
+  if (col.key === 'flagNFA') return invIsFirearm(ref);
   if (col.edit) return true;                       // manage columns + disposition
   // Capture-origin columns are editable only on manual (non-photo) rows.
   if (ref.manual && (col.key === 'objectName' || col.key === 'room' || col.key === 'category')) return true;
@@ -11529,6 +11535,22 @@ function _apprGroups(jobId) {
 // ordinary firearms most likely to be picked up and moved without a second thought.
 function _apprWithheld(jobId) {
   return _jobInvRefs(jobId).filter(function(r){ return invReleaseBlocked(r); });
+}
+
+// NFA items — suppressors, short-barrelled rifles and shotguns, machine guns.
+// This flag protects nobody at Havellin, and that is the point of writing down what it
+// IS for: Havellin never possesses or transports a firearm, so the transfer itself is
+// the dealer's problem either way. It exists for three narrower reasons —
+//   1. the dealer needs telling in advance, because not every FFL is licensed to take
+//      an NFA item and a wasted collection trip is a real cost;
+//   2. Form 5 to the estate runs in MONTHS, so it is a closing-timeline item the
+//      representative and counsel should hear about on day two, not at handover;
+//   3. recognition. A suppressor reads as a plain metal tube and an SBR as a short
+//      rifle. The risk is not mishandling one, it is never categorising it as a firearm
+//      at all — in which case the authority gate above never fires for it.
+// Reason 3 is why the crew checklist in Phase 1 names them by appearance.
+function _apprNFA(jobId) {
+  return _jobInvRefs(jobId).filter(function(r){ return invIsFirearm(r) && r.flagNFA; });
 }
 
 // Items flagged at the estimate (collections marked appraise/firearms, collector
@@ -11805,6 +11827,16 @@ function printAppraisalWorklist(jobId) {
     });
   }
   var withheld = _apprWithheld(jobId);
+  var nfa = _apprNFA(jobId);
+  if (nfa.length) {
+    html += '<div style="margin-top:14px;border:1px solid #8a6d3b;border-radius:3px;padding:10px 12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#8a6d3b;margin-bottom:4px;">'
+      + nfa.length + ' NFA item' + (nfa.length > 1 ? 's' : '') + ' &mdash; tell the dealer before they come out</div>'
+      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Registered NFA items transfer on a different path (ATF Form 5 to the estate) and it runs in months, not days. Confirm the dealer holds the right licence to take them, and put the timeline in front of the representative and counsel now rather than at handover &mdash; an estate trying to close does not want to discover this last.</div>'
+      + '<div style="font-size:11px;color:#666;margin-top:6px;">'
+      + nfa.map(function(r){ return esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
+      + '</div></div>';
+  }
   if (withheld.length) {
     html += '<div style="margin-top:14px;border:1px solid #A32D2D;border-radius:3px;padding:10px 12px;">'
       + '<div style="font-size:12px;font-weight:700;color:#A32D2D;margin-bottom:4px;">'
@@ -12204,6 +12236,7 @@ function _invExportValue(ref, col, job, seq) {
     case 'valDate': return ref.valDate || estateValueDate(job) || '';
     case 'qty': return (ref.qty != null && ref.qty !== '') ? ref.qty : 1;
     case 'fmv': case 'gross': case 'fees': { var n = parseFloat(ref[col.key]); return isNaN(n) ? '' : n; }
+    case 'flagNFA': return (invIsFirearm(ref) && ref.flagNFA) ? 'Yes' : '';
     case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '';
     default: { var v = ref[col.key]; return (v == null) ? '' : v; }
   }
@@ -17274,7 +17307,8 @@ function renderJobPlan(jobId, job, est) {
         'Items for formal appraisal flagged on a separate tab (jewelry, art, antiques, firearms, coins/metals, vehicles)',
         'Potentially exempt property logged (§732.402 — household ≤ $20K, up to 2 vehicles)',
         'Wills/codicils, trusts, deeds, titles, financial &amp; military records sequestered and turned over to PR/attorney with signed receipt',
-        'Cash, jewelry, firearms, documents NEVER removed without PR/attorney sign-off']) : '') +
+        'Cash, jewelry, firearms, documents NEVER removed without PR/attorney sign-off',
+        'Suppressors, short-barrelled rifles/shotguns and any registered NFA item flagged on sight &mdash; a suppressor looks like a plain metal tube and will not read as a firearm unless someone says so']) : '') +
     renderDailyCloseBlock(jobId,1);
 
   // ── Phase 2 ──────────────────────────────────────────────────────────────────

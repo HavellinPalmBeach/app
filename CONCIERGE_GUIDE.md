@@ -348,6 +348,37 @@ On estate and probate jobs, the manifest assembles from three places: items you 
 
 > Everything in the inventory is documentation support, not a legal or appraisal opinion. The estate attorney and a credentialed appraiser remain the authority.
 
+### f. Firearms — and what NFA actually means
+
+Firearms come up more often than people expect on Palm Beach estates, and the rule is short: **nobody on a Havellin crew touches one. Ever.** Not to move it out of the way, not to make a room safe to work in, not to put it somewhere sensible. If a firearm is in the way, the room waits.
+
+> **⚠** **What to do, in order.** Photograph it where it lies, before anything in that room is moved. Leave it exactly where it is and secure the room or the container. Tell your Transition Concierge the same day — not at the end of the week. The TC notifies the representative and the estate attorney in writing within 24 hours. Nothing else happens until the representative has authorised the transfer *to a named licensed dealer*, in writing.
+
+The dealer collects from the property. **Havellin does not transport firearms and does not ride along with them.** That is not caution, it is the whole reason we can be in the house at all: we never take possession, so possession is never our problem.
+
+Two different questions get run together here and it helps to keep them apart. **Who decides** what happens to the guns is the representative, advised by counsel — that is what "send it to the attorney" means, you are sending the *decision*. **Who may legally carry them** is the dealer, and only the dealer. An attorney is not a firearms custodian and cannot take them off your hands.
+
+### NFA items — the ones that don't look like guns
+
+"NFA" is the National Firearms Act. It covers a short list of items that the federal government tracks individually, by serial number, on a registry — and they move on a completely different and much slower path than an ordinary shotgun.
+
+**What you are looking for:**
+
+- **Suppressors** (also called silencers or cans) — a metal tube, usually six to ten inches, often with threading at one end. *It looks like plumbing.* This is the one people miss.
+- **Short-barrelled rifles and shotguns** — a rifle with a barrel under 16 inches or a shotgun under 18. Reads as "a small gun" unless you are measuring.
+- **Machine guns** — anything fully automatic. Rare, but they exist in collections here.
+- **Anything in a gun safe you cannot identify.** Flag it and let the dealer say what it is.
+
+> **⚠** **The risk with an NFA item is not that you mishandle it. It is that nobody recognises it as a firearm in the first place.** A suppressor sitting in a drawer gets logged as a metal tube, or as nothing, and the whole authority process never starts for it. If you find something in a gun safe, a gun case, or a locked box and you are not certain what it is — photograph it, do not touch it, and flag it as a firearm. Being wrong costs the desk ten minutes. Being wrong the other way is a federal offence for somebody.
+
+**In the app:** set the item's category to *Firearms* and tick **NFA Item** on the inventory row. The tick box only appears on firearms rows. It changes nothing about the authority rule — every firearm waits for written authority either way — but it puts the item on a separate notice on the Appraisal Worklist so the desk can warn the dealer before they drive out.
+
+Why the desk cares: not every licensed dealer is licensed for NFA items, so an unannounced one can mean a wasted collection trip. And transferring a registered NFA item to an estate runs on an ATF Form 5, which takes **months**. On an estate trying to close, that is a schedule item the representative and the attorney want to hear about on day two, not at handover.
+
+> **What you never do:** tell a family member what a gun is worth, agree to "just hold onto it," hand one to a beneficiary who asks for it, take one home for safekeeping, or move one between rooms. If a beneficiary presses, the line is: *"I'm not able to handle firearms — that goes through the representative and a licensed dealer. Let me get you the right person."*
+
+> Havellin is not a firearms expert and this is not legal advice to a client. If anything about a firearm on a job is unclear, it stops and goes to the representative and counsel. That is always the correct answer and nobody will ever be criticised for it.
+
 ## Step 11 & 12 · Invoices — Invoices tab
 
 Select the job, then pick a **Stage**. The stage advances by itself as you record payments, so it's usually already on the right one.
@@ -451,6 +482,10 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| A firearm you flagged isn't on the Appraisal Worklist | Correct, and deliberate. Nothing goes on that list until the representative has authorised the transfer to a **named** dealer in writing. Record it on the item — *Authorized By* and *Approval Date*, dealer in *Channel / Recipient* — and it appears. The worklist prints a note saying what it is holding, so a held item never reads as a forgotten one. |
+| You can't find the **NFA Item** tick box | It only appears on rows whose category is *Firearms*. Set the category first. On anything else the column shows blank on purpose — an NFA tick on a sofa describes nothing. |
+| A cheap gun never showed up anywhere on the worklist | Anything under $3,000 with a value recorded isn't flagged for a specialist, so it was never worklist-bound. It *is* still listed on the awaiting-authority notice — that notice covers **every** firearm without written authority, not just the expensive ones. |
+| You found a metal tube in a gun safe and don't know what it is | Treat it as a firearm. Photograph it, touch nothing, flag it, tell your TC the same day. It may be a suppressor, which is an NFA item and a different transfer path entirely. Nobody is ever criticised for over-flagging this. |
 | You took photos and nothing happened — no count, no flag, no message | Fixed 2026-08-03. The app required the job to be *Active* and it was only *Won*, so it discarded the shot silently. It captures from *Won* now, and says so out loud if it ever does refuse. **Photos taken in that window before that date are not in Drive** — re-shoot if you still can. |
 | A room card shows a red **⚠ not saved** | That upload failed and the photo is not in Drive. Hit **Retry** on that shot — it works across sessions now, so yesterday's failure can still be sent today. |
 | Retry says the photo can no longer be retried | The device had no room to hold the image. It's gone — take the shot again. |

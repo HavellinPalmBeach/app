@@ -14,7 +14,7 @@ const INV_FNS = [
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo',
-  '_apprGroups', '_apprWithheld',
+  '_apprGroups', '_apprWithheld', '_apprNFA',
   '_invTrack', '_invIsProbateAsset',
   'savePhotoRefs', '_warnPhotoStoreFull',
 ];
@@ -105,6 +105,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(Object.keys(ctx._apprGroups(1)).length, 0, 'and does not appear on the worklist');
     eq(ctx._apprWithheld(1).map((r) => r.objectName), ['Shotgun'],
        'but it IS reported as awaiting authority');
+  }
+
+  group('firearms: NFA items');
+  {
+    const can  = item({ objectName: 'Suppressor', category: 'Firearms', fmv: '800', flagNFA: true });
+    const gun  = item({ objectName: 'Shotgun',    category: 'Firearms', fmv: '900' });
+    const sofa = item({ objectName: 'Sofa', category: 'Furniture', fmv: '400', flagNFA: true });
+    const ctx  = ctxWith([can, gun, sofa]);
+
+    eq(ctx._apprNFA(1).map((r) => r.objectName), ['Suppressor'],
+       'only firearms carrying the flag are reported as NFA');
+    // A flag set on a non-firearm cannot describe anything, so it must not count —
+    // the column is not offered on those rows, but stale or imported data can carry it.
+    lacks(ctx._apprNFA(1).map((r) => r.objectName).join(), 'Sofa',
+          'the flag is inert outside the Firearms category');
+
+    // NFA is a disclosure, NOT a second gate: the authority rule is unchanged by it.
+    ok(ctx.invReleaseBlocked(can), 'an unauthorised NFA item is blocked like any firearm');
+    can.authBy = 'J. Smith, PR'; can.approvalDate = '2026-09-01';
+    ok(!ctx.invReleaseBlocked(can), 'authority releases it on the same terms');
+    eq(ctx._apprNFA(1).length, 1,
+       'and it is STILL reported as NFA once authorised — the dealer needs telling either way');
   }
 
   // ── 2. Item numbers are permanent ──────────────────────────────────────────

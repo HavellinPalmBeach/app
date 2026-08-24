@@ -135,7 +135,32 @@ wanted for a month.
   `savePhotoRefs` persists it; snapshots carry it so two snapshots diff by identity rather than
   by object name. **Gaps after a deletion are correct** — a missing number means an item was
   removed, which is what a reader should be able to see.
-- **43 committed checks** (`node tests/run.js` / `npm test`). See the harness section at the top.
+- **NFA sub-flag added the same day**, on Anthony's call. `flagNFA`, offered **only on Firearms rows**
+  (`_invColEditable` returns false elsewhere — an NFA tick on a sofa describes nothing). It is
+  **not a second gate**: every firearm waits for authority either way. Anthony's challenge was fair —
+  *"we are not transporting any of it, so not really sure it matters"* — and he is right that it
+  protects Havellin from nothing. Write down what it IS for so nobody removes it as redundant:
+  **(1)** not every dealer may take an NFA item, so an unannounced one is a wasted collection trip;
+  **(2)** Form 5 to the estate runs in **months**, so it is a closing-timeline item the PR and counsel
+  need on day two; **(3)** **recognition** — a suppressor reads as a plain metal tube, so the real
+  risk is that it is never categorised as a firearm at all and the authority gate never fires.
+  Reason 3 is why the Phase 1 crew checklist now names these items **by appearance, not by law**.
+- **Training material, not just a flag.** Anthony: *"we also have to have training materials around
+  firearms and what NFA even means to people and what they should do."* Playbook **Step 10f** is the
+  field procedure (never touch · photograph in place · tell the TC same day · nothing moves without
+  written authority · what a suppressor looks like · the scripted line for a beneficiary who asks),
+  with two `.stop` blocks and four new symptom→cause rows. Manual **§10a** carries the mechanics.
+  A flag nobody understands is worse than no flag — it looks like coverage.
+- **⚠️ `MANUAL.md` / `CONCIERGE_GUIDE.md` were hand-edited again, and the converter STILL is not in
+  the repo.** One was written this session and **abandoned**: a regex HTML→MD converter did not
+  converge (192 lines of drift, then 915 after a "fix"), and shipping one that silently truncates
+  is worse than none — a lazy `<div ...>([\s\S]*?)</div>` stops at the first nested close, and
+  `manual.html` already contains one such note. If this is attempted again: the `<h4>` in
+  `manual.html` is **fine** (it carries an inline `style`), so do not "fix" it; and the real
+  problem is that the committed `.md` files were themselves hand-edited inconsistently, so there
+  is no faithful target to converge on. Consider regenerating BOTH from scratch and accepting a
+  large one-time diff, rather than trying to match what is there.
+- **48 committed checks** (`node tests/run.js` / `npm test`). See the harness section at the top.
 
 
 ## LIVING client vs DECEASED client — the SERVICE TYPE decides, always (2026-08-03)

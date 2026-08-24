@@ -674,6 +674,26 @@ Items flagged for appraisal that aren't yet linked to an appraiser surface a pan
 
 > All inventory valuations are documentation support, not a legal or appraisal opinion — the estate attorney and a credentialed appraiser remain the authority on any estate.
 
+### Firearms — the authority gate, and the NFA flag
+
+A firearm is the one category where the app deliberately refuses to produce a document. **Nothing reaches the Appraisal Worklist until the personal representative has authorised the transfer to a named licensed dealer, in writing.** Before 2026-08-24 it did not: flagged firearms were grouped under a Firearms Specialist (FFL) and a handover packet printed on day one, which is a printed instruction to release a firearm nobody had authorised releasing.
+
+Authority is recorded on the item itself, using columns that already existed — **Authorized By** and **Approval Date**, with the dealer named in **Channel / Recipient**. There is no separate firearms screen and no new field to learn.
+
+> **Authority and custody are different questions, and the app keeps them apart.** *Authority* — who decides what happens — belongs to the representative on counsel's advice; that is what routing a firearm "to the attorney" means, routing the *decision*. *Custody* — who may lawfully possess and move it — belongs to the dealer, because nobody else may. So FFL routing is correct and stays; the change was adding the gate in front of it. Havellin never transports a firearm: the dealer collects from the property.
+
+> **The awaiting-authority notice is NOT filtered through the appraisal test, and this is deliberate.** `invNeedsAppraisal` answers a valuation question — an intrinsic category with no value yet, or a value at or above $3,000. A $900 shotgun with a value recorded against it is therefore never on the worklist at all, and an earlier version of this feature consequently reported it *nowhere*. The cheap, ordinary firearm is the one most likely to be picked up without a second thought. Do not re-narrow this filter.
+
+**NFA Item** is a tick box on the inventory row, offered only where the category is *Firearms*. It changes nothing about the authority rule — every firearm waits either way — and it protects Havellin from nothing, since Havellin never takes possession. It exists for three narrower reasons, and they are worth knowing so nobody "simplifies" it away:
+
+- **The dealer needs telling in advance.** Not every licensed dealer may take an NFA item, so an unannounced one can mean a wasted collection trip.
+- **It is a closing-timeline item.** Transferring a registered NFA item to an estate runs on an ATF Form 5 and takes months, not days. The representative and counsel should hear that on day two, not at handover.
+- **Recognition.** A suppressor reads as a plain metal tube and a short-barrelled rifle as a small gun. The risk is not mishandling one — it is never categorising it as a firearm at all, in which case the authority gate never fires for it. This is why the Phase 1 crew checklist names these items by appearance rather than by law.
+
+NFA-flagged items print on their own notice on the Appraisal Worklist, separate from the awaiting-authority list, carrying the Form 5 timeline warning. An item appears there whether or not it has been authorised — the dealer needs telling regardless.
+
+> Still open and flagged for counsel: the app has no view on *which* dealer may take an NFA item, and does not attempt one. It reports; the decision is the representative's and the dealer's.
+
 ## 11. Job Plan & Log Hours
 
 **Tab: Job Plan** → select job. Generates once the estimate is approved. For labor-based services it runs the phase playbook (Phase 0 Pre-Job → Phase 4 Close-Out), vendor & partner sourcing, and daily hours logging. For **Home Prep for Sale** it is the streamlined vendor/budget/checklist view described in Section 6c.
