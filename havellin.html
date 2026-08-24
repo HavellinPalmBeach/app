@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:52pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -890,6 +890,49 @@ body.no-smf .smf-col{display:none;}
           <div><label>Property sale required?</label><select id="i-probate-sale"><option value="">Select</option><option value="yes">Yes — property must be sold</option><option value="no">No — heirs retaining property</option><option value="maybe">Under discussion</option></select></div>
           <div></div>
         </div>
+
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Documentation Standard</div>
+        <div style="font-size:10.5px;color:var(--gray);margin-bottom:7px;line-height:1.5;">
+          Answered once, at engagement. These set how strictly the estate is documented, and they are
+          <strong>facts, not judgment calls</strong> &mdash; get them from the representative or counsel.
+          The strictness they produce <strong>cannot be lowered</strong> later.
+        </div>
+        <div class="row">
+          <div><label>Federal estate tax return (Form 706) being filed?</label>
+            <select id="i-gate-706" onchange="onDocGateChange()">
+              <option value="">Unknown &mdash; treated as yes</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Unknown counts as yes. Do not downgrade this on a verbal &ldquo;probably not&rdquo; &mdash; it needs an answer from the attorney or PR.</div>
+          </div>
+          <div><label>Known dispute, contest, or elective share?</label>
+            <select id="i-gate-dispute" onchange="onDocGateChange()">
+              <option value="">No / not known</option>
+              <option value="yes">Yes &mdash; contested or likely to be</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Drops the specialist-appraisal threshold to $500 per item.</div>
+          </div>
+        </div>
+        <div class="row">
+          <div><label>Separate writing under &sect;732.515?</label>
+            <select id="i-gate-separate-writing">
+              <option value="">Unknown</option>
+              <option value="yes">Yes &mdash; a list of designated items exists</option>
+              <option value="no">No</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">If yes, ask for the list before anything is handled &mdash; those items are set aside on sight.</div>
+          </div>
+          <div><label>Exempt property claimed under &sect;732.402?</label>
+            <select id="i-gate-exempt">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">If yes, furniture, furnishings and appliances need valuing precisely enough to test the $20,000 allowance.</div>
+          </div>
+        </div>
+        <div id="i-gate-readout" style="margin-bottom:6px;"></div>
         <div class="divider"></div>
       </div>
       <label>Notes</label>
@@ -5848,6 +5891,7 @@ function toggleIntakeFields() {
   });
   if (phoneEl && !isEstate) phoneEl.placeholder = '(561) 555-0100';
   if (emailEl && !isEstate) emailEl.placeholder = 'client@email.com';
+  if (typeof onDocGateChange === 'function') onDocGateChange();
 }
 
 function saveIntake() {
@@ -5977,6 +6021,10 @@ function saveIntake() {
     re:document.getElementById('i-re').value,
     premium:document.getElementById('i-prem').value==='yes',
     docLevel:(document.getElementById('i-doclevel')||{}).value||'',
+    gate706:            (document.getElementById('i-gate-706')||{}).value||'',
+    gateDispute:        (document.getElementById('i-gate-dispute')||{}).value||'',
+    gateSeparateWriting:(document.getElementById('i-gate-separate-writing')||{}).value||'',
+    gateExempt:         (document.getElementById('i-gate-exempt')||{}).value||'',
     status:'new',
     havellinEst:null, totalEst:null, inRange:null, approved:false,
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
@@ -6036,6 +6084,7 @@ var INTAKE_FIELDS = [
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
+  'i-gate-706', 'i-gate-dispute', 'i-gate-separate-writing', 'i-gate-exempt',
   'i-dest-addr', 'i-dest-city', 'i-dest-zip', 'i-dest-sqft', 'i-dest-beds', 'i-dest-baths'
 ];
 
@@ -11005,12 +11054,16 @@ function invIsIntrinsic(cat){ return !!invCatMeta(cat).intrinsic; }
 // Should this item go to a specialist? Intrinsic category with no value entered yet,
 // or any value at/above the formal-appraisal threshold. (Vehicles route via their own
 // collector flag, not here, so an ordinary car doesn't nag for an appraisal.)
-function invNeedsAppraisal(ref){
+// `job` is REQUIRED in practice, not optional: G6 halves the threshold, so a caller that
+// omits it silently evaluates a disputed estate at the ordinary $3,000 and under-flags
+// exactly the estate where under-flagging is least affordable. A test asserts every call
+// site passes one.
+function invNeedsAppraisal(ref, job){
   if (!ref) return false;
   if (ref.needsAppr) return true;            // explicit flag (e.g. an imported collector vehicle)
   if (!invIsIntrinsic(ref.category)) return false;
   var v = parseFloat(ref.fmv);
-  return isNaN(v) || v >= INV_APPRAISAL_THRESHOLD;
+  return isNaN(v) || v >= invAppraisalThreshold(job);
 }
 var INV_DISPOSITIONS = ['Auction','Consign','Donate','Hold','Junk','Keep','Sell'];
 
@@ -11030,7 +11083,7 @@ function _renderRoomInventoryList(jobId, roomIdx) {
           ? '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>'
           : '<span style="color:var(--gray);">…</span>');
     var meta = [r.category, r.disposition].filter(Boolean).map(function(x){ return esc(x); }).join(' · ');
-    var apprFlag = invNeedsAppraisal(r)
+    var apprFlag = invNeedsAppraisal(r, _invJob(jobId))
       ? ' <span title="Likely needs a specialist appraisal — routed to a ' + esc(invAppraiserFor(r.category) || 'specialist') + '" style="color:var(--bronze);font-weight:700;">&#9873;</span>'
       : '';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:10px;padding:1px 0;">'
@@ -11226,6 +11279,8 @@ var INVENTORY_COLUMNS = [
   {key:'assetTrack',   header:'Asset Track',         kind:'manage',  edit:'trackSelect'}
 ];
 
+function _invJob(jobId) { return jobs.find(function(j){ return j.id === jobId; }) || null; }
+
 function _jobInvRefs(jobId) {
   return (_photoRefs[jobId] || [])
     .filter(function(r){ return r.label === 'inventory' && !r.collId && !r.deletedAt; })
@@ -11377,7 +11432,7 @@ function _renderInventorySummary(job, items) {
     if (r.flagDisputed || r.disposition === 'Hold') nDisp++;
     if (r.flagBequest) nBequest++;
     if (r.flagExempt) nExempt++;
-    if (invNeedsAppraisal(r)) nAppr++;
+    if (invNeedsAppraisal(r, job)) nAppr++;
     var g = parseFloat(r.gross); if (!isNaN(g)) gross += g;
     var fe = parseFloat(r.fees);  if (!isNaN(fe)) fees += fe;
   });
@@ -11616,8 +11671,9 @@ function invReleaseBlocked(ref) { return invIsFirearm(ref) && !invFirearmAuthori
 // room). This is the payoff of the shared taxonomy's appraiser routing.
 function _apprGroups(jobId) {
   var groups = {};
+  var _j = _invJob(jobId);
   _jobInvRefs(jobId).forEach(function(r) {
-    if (!invNeedsAppraisal(r)) return;
+    if (!invNeedsAppraisal(r, _j)) return;
     if (invReleaseBlocked(r)) return;       // firearm with no written PR authority — see above
     var a = invAppraiserFor(r.category) || 'Specialist Appraiser';
     (groups[a] = groups[a] || []).push(r);
@@ -12259,7 +12315,7 @@ function _invHasAppraisal(jobId, ref) {
 }
 function _invGuardrailItems(jobId) {
   return _jobInvRefs(jobId).filter(function(r){
-    return invNeedsAppraisal(r) && !_invHasAppraisal(jobId, r) && !r.apprWaived;
+    return invNeedsAppraisal(r, _invJob(jobId)) && !_invHasAppraisal(jobId, r) && !r.apprWaived;
   });
 }
 function waiveAppraisal(jobId, stableId) {
@@ -17371,12 +17427,116 @@ function renderPrepJobPlan(jobId, job, est) {
 // Defaults from service type when unset: contested probate is always formal; every
 // other job is standard until a TC sets it. This is a documentation decision, kept
 // deliberately separate from the Premium-estate *rate* toggle.
+// ── Strict Mode ───────────────────────────────────────────────────────────────
+// The documentation level used to be a pure judgment call on a dropdown whose own hint
+// named the real trigger — "a large estate that may owe estate tax". That is a FACT
+// somebody knows, not an opinion, so it is now asked as a fact at intake and the level
+// is computed from the answer.
+//
+// ESCALATE-ONLY, and this is the rule that matters. The gates set a floor. The manual
+// control can raise the level above that floor and can never lower it, because you are
+// always allowed to be stricter and never allowed to be looser — which is the same logic
+// that makes an unknown 706 answer count as a yes. A control that appears to lower it
+// and silently does not would be worse than no control, so the dropdown disables itself
+// and says why whenever the gates have already forced Formal.
+function _gateYes(v)     { return String(v || '').toLowerCase() === 'yes'; }
+// Unknown counts as yes: an estate that MIGHT file a 706 is documented as though it will.
+function _gate706(job)   { return !job || String(job.gate706 || '') !== 'no'; }
+function gateDispute(job){ return !!job && (_gateYes(job.gateDispute) || job.svc === 'contested_probate'); }
+
+// The floor the gates impose, ignoring any manual choice.
+function docLevelFloor(job) {
+  if (!job) return 'standard';
+  if (job.svc === 'contested_probate') return 'formal';   // contested is always formal
+  if (gateDispute(job)) return 'formal';                  // G6
+  if (_gate706(job) && isDecedentJob(job, job.svc)) return 'formal';  // G2, decedent work only
+  return 'standard';
+}
+
+// Why the floor is where it is — shown at intake and in the manual, so nobody has to
+// reverse-engineer it from the dropdown being disabled.
+function docLevelFloorReason(job) {
+  if (!job) return '';
+  if (job.svc === 'contested_probate') return 'Contested probate is always documented to court standard.';
+  if (gateDispute(job)) return 'A dispute or elective share is recorded, so this estate is documented to court standard and the specialist-appraisal threshold drops to $' + invAppraisalThreshold(job).toLocaleString() + ' per item.';
+  if (_gate706(job) && isDecedentJob(job, job.svc)) {
+    return String(job.gate706 || '') === 'yes'
+      ? 'A federal estate tax return (Form 706) is being filed, so the §20.2031-6 documentation standard applies.'
+      : 'The 706 question is unanswered, and unknown counts as yes. Answer it with the attorney or PR to lift this.';
+  }
+  return '';
+}
+
+// Draw the live readout under the gates and enforce escalate-only on the dropdown.
+// Reads the FORM, not a saved job, because it runs while intake is being filled in.
+function onDocGateChange() {
+  var g = function(id){ var el = document.getElementById(id); return el ? el.value : ''; };
+  var draft = {
+    svc: (document.getElementById('i-svc') || {}).value || '',
+    gate706: g('i-gate-706'), gateDispute: g('i-gate-dispute'), docLevel: g('i-doclevel')
+  };
+  var floor  = docLevelFloor(draft);
+  var reason = docLevelFloorReason(draft);
+  var sel = document.getElementById('i-doclevel');
+  var out = document.getElementById('i-gate-readout');
+
+  if (sel) {
+    if (floor === 'formal') {
+      // The gates have already forced it. Show that, and stop the control pretending
+      // it can be lowered — a dropdown that silently ignores you is worse than none.
+      sel.value = 'formal';
+      sel.disabled = true;
+      sel.title = reason;
+    } else {
+      sel.disabled = false;
+      sel.title = '';
+    }
+  }
+  if (!out) return;
+  var lvl = resolveDocLevel(draft);
+  if (floor === 'formal') {
+    out.innerHTML = '<div class="alert a-warn" style="font-size:11.5px;line-height:1.5;">'
+      + '&#9878; <strong>Strict Mode &mdash; formal documentation.</strong> ' + esc(reason)
+      + ' It cannot be lowered here; change the answer above if it is wrong.</div>';
+  } else if (lvl === 'formal') {
+    out.innerHTML = '<div class="alert a-info" style="font-size:11.5px;line-height:1.5;">'
+      + 'Formal documentation, set by hand. The gates do not require it &mdash; you can still return this to Standard.</div>';
+  } else {
+    out.innerHTML = '<div style="font-size:11px;color:var(--gray);line-height:1.5;">'
+      + 'Standard documentation. Specialist appraisal at $' + INV_APPRAISAL_THRESHOLD.toLocaleString()
+      + ' per item. You may raise this to Formal above; the gates never lower it.</div>';
+  }
+}
+
 function resolveDocLevel(job) {
   if (!job) return 'standard';
-  if (job.docLevel === 'formal' || job.docLevel === 'standard') return job.docLevel;
-  return (job.svc === 'contested_probate') ? 'formal' : 'standard';
+  var floor = docLevelFloor(job);
+  if (floor === 'formal') return 'formal';          // the gates win — never lowered
+  return (job.docLevel === 'formal') ? 'formal' : 'standard';   // manual may only escalate
 }
 function isFormalDoc(job) { return resolveDocLevel(job) === 'formal'; }
+
+// ── Per-job appraisal threshold ───────────────────────────────────────────────
+// A CONSTANT until 2026-08-24. G6 drops it to $500, so it is a function of the job now
+// and every reader must go through this — two thresholds live at once is precisely the
+// shape of the workbook-rollup bug (a hardcoded copy asserting it matched the real one).
+var INV_APPRAISAL_THRESHOLD_DISPUTED = 500;
+function invAppraisalThreshold(job) {
+  return gateDispute(job) ? INV_APPRAISAL_THRESHOLD_DISPUTED : INV_APPRAISAL_THRESHOLD;
+}
+
+// ── Individual-listing threshold ──────────────────────────────────────────────
+// Two modes, agreed 2026-08-24. Treas. Reg. 20.2031-6(a) caps a room-grouped lot at
+// $100 an article, but it governs what is filed WITH A 706 — on an estate that files
+// none, §733.604 asks for "reasonable detail" instead. So the reg's figure applies in
+// Strict Mode and $1,000 otherwise, and the Methodology Statement prints which was used.
+// Nothing consumes this yet; the tiering build does. It lives here so there is one
+// definition when it does.
+var INV_LISTING_THRESHOLD_STRICT = 100;
+var INV_LISTING_THRESHOLD_STANDARD = 1000;
+function invListingThreshold(job) {
+  return isFormalDoc(job) ? INV_LISTING_THRESHOLD_STRICT : INV_LISTING_THRESHOLD_STANDARD;
+}
 
 function renderJobPlan(jobId, job, est) {
   var plan   = getJobPlan(jobId);

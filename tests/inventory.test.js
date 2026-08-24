@@ -14,6 +14,7 @@ const INV_FNS = [
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
+  '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
   '_apprGroups', '_apprWithheld', '_apprNFA',
   '_invTrack', '_invIsProbateAsset',
   'savePhotoRefs', '_warnPhotoStoreFull',
@@ -214,10 +215,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const COURT_FNS = INV_FNS.concat([
       '_invMoney', 'printCourtInventory', 'isFormalDoc', 'resolveDocLevel',
+      'docLevelFloor', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', '_invHasAppraisal', '_jobAppraisers',
     ]);
-    const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES']);
+    const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED']);
 
     function courtCtx(items) {
       const ctx = sandbox({ fns: COURT_FNS, vars: COURT_VARS });

@@ -210,6 +210,38 @@ Second commit off the audit. **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — bot
     reader can see the breakdown reconcile.
 - **89 committed checks.**
 
+## Intake gates + Strict Mode — escalate-only (BUILT 2026-08-24)
+Off the Contents Valuation SOP §1. Anthony's call: **only escalate.** App-only, no redeploy.
+
+- **The documentation level was a pure judgment call whose own hint named the real trigger** —
+  *"a large estate that may owe estate tax"*. That is a FACT somebody knows, not an opinion, so
+  it is asked as a fact at intake and the level is computed from the answer.
+- **Four gates added** (`gate706`, `gateDispute`, `gateSeparateWriting`, `gateExempt`). G3 date of
+  death and G7 attorney already existed; **G1 matter type stays the service type** — do not add
+  Summary administration or Guardianship to the catalogue casually, the service type IS the price.
+- **`docLevelFloor(job)` is what the gates impose; `resolveDocLevel` applies escalate-only.**
+  The manual dropdown may raise the level above the floor and can NEVER lower it — you are always
+  allowed to be stricter and never looser, the same logic that makes an unknown 706 count as a yes.
+  - **The control disables itself when the gates force Formal, and says why.** A dropdown that
+    appears to lower it and silently does not is worse than no dropdown.
+  - `docLevelFloorReason` states the cause in words, so nobody reverse-engineers it from a
+    greyed-out control. The 706 reason names **Form 706**, matching the question that set it.
+- **G2 is decedent-work only.** `_gate706` is ANDed with `isDecedentJob` — a downsizing cannot owe
+  estate tax and must not be dragged into Strict Mode by an unanswered question.
+- **`INV_APPRAISAL_THRESHOLD` is no longer a constant.** G6 drops it to **$500**, so
+  `invAppraisalThreshold(job)` is the only legitimate reader and `invNeedsAppraisal(ref, job)`
+  takes the job. **A call site that omits it silently evaluates a disputed estate at $3,000** and
+  under-flags precisely the estate where under-flagging is least affordable — there is a test
+  asserting no single-argument call survives.
+- **`invListingThreshold(job)` — $100 in Strict Mode, $1,000 otherwise.** Nothing consumes it yet;
+  the tiering build does. It lives here so there is one definition when it does. The reasoning:
+  Treas. Reg. 20.2031-6(a) caps a room-grouped lot at $100 an article, but it governs what is
+  filed WITH a 706 — on an estate filing none, §733.604 asks for "reasonable detail" instead.
+- **The service field is `i-svc`, not `i-service`.** The first draft guessed and would have left
+  `draft.svc` empty, so `isDecedentJob` returned false and G2 never fired — a silently disabled
+  gate. A test now asserts the readout reads the real field.
+- **155 committed checks.**
+
 ## A permanent sync error retried forever and never said why (BUILT 2026-08-24)
 Reported minutes after the Apps Script redeploy: *"green check in the lower right, but a red flag
 on the left saying 1 unsaved change - retrying. it never resolves."*
