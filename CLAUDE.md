@@ -210,6 +210,48 @@ Second commit off the audit. **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — bot
     reader can see the breakdown reconcile.
 - **89 committed checks.**
 
+## The iPad bug: an empty estimateStore meant two things (BUILT 2026-08-24)
+Reported from a real device: *"on my ipad the job plan is not loading at all for clients, but I
+can see them on my desktop."* Plus three smaller things found in the same pass. App-only — no
+Apps Script redeploy.
+
+- **`loadEstimateState` hydrates from localStorage SYNCHRONOUSLY and then fetches.** On a machine
+  that has used the app before, the local cache is warm and every gate reads a populated store
+  immediately. On one with a **cold cache** — a new iPad, cleared data, or Safari's routine
+  eviction of storage for a site not visited in a week — `estimateStore` is `{}` at the moment
+  the Job Plan renders. The gate then said *"Job Plan generates once the estimate is approved
+  and locked."* **The estimate is not unapproved. It is unread.** Those are different states.
+  - **And it never corrected itself.** The fetch landed and called `rebuildDropdowns()` alone,
+    so the tab stayed wrong until you navigated away and back. **Exactly the same shape as the
+    `loadPhotoRefs` bug of 2026-08-03** — render before the data, never re-render after.
+  - New `_estStoreState` (`loading` / `ready` / `offline`) and `_estStoreLanded()`, which
+    re-renders the Job Plan or Inventory tab if either is open. **The failure path resolves the
+    flag too** — a silent `catch` leaves the UI stuck on "loading" forever, which is how the
+    original bug felt.
+  - The gate is now four honest states: loading · unreachable · no estimate · not approved.
+  - **Do not collapse these back into one test.** A falsy `estimateStore[jobId]` says nothing
+    about approval and never did.
+- **Vehicles and collections from the estimate are NOT items, and nothing said so.** A job with
+  three vehicles on the estimate showed nothing on the Job Plan and nothing on the Inventory tab.
+  That is by design — `materializeVehicle` imports with a blank disposition precisely so the JOB
+  decides, not the estimate — but the only thing offering the import was a panel on the Inventory
+  tab, which renders nothing when there is nothing to import **and nothing when the store is
+  cold**. The Job Plan now carries a banner naming what is pending and where to add it.
+- **Appraisers now populate from the Vendor Directory.** The roster was pure free text, so you
+  retyped a firm that already existed two tabs over — and that copy could not be rated, could not
+  be kept current, and never reached the Quo dialer. `_appraiserVendors()` filters the directory
+  to the six appraiser categories, **excludes `Do Not Use`** (we walked away for a reason), and
+  matches on a vendor's SECOND listed category too. The picker prefills name / firm / credential
+  from `license_cert`; the free-text fields survive for a genuine one-off.
+- **Two cosmetics.** The Inventory subtitle still said *"valuation & disposition detail comes in
+  the next build"* — that shipped in Build 2, and the columns were right underneath it. And the
+  summary's `hdrRow` had no shrink floor, so a long label (*§733.604 Inventory Deadline*) starved
+  the value beside it and *"— (date of death)"* wrapped to three lines.
+- **Field mode note, worth knowing:** the four `data-field` tabs are Intake, Build Estimate, Job
+  Plan and Vendors. **Inventory is NOT among them**, so it is hidden in field mode. That was not
+  the cause of this report, but it will look like a missing tab to somebody on an iPad.
+- **104 committed checks.**
+
 ## LIVING client vs DECEASED client — the SERVICE TYPE decides, always (2026-08-03)
 **Anthony: "there should be a rule about the language for projects when the client is alive
 versus when the client is deceased… applied to estimates and engagement agreements

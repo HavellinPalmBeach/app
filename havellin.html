@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:44pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1451,7 +1451,7 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:13px;font-weight:600;">Estate Inventory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Per-client tangible personal property manifest. Captured items populate automatically; valuation &amp; disposition detail comes in the next build.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Per-client tangible personal property manifest. Items captured on the Job Plan appear here. Valuation, disposition and custody are edited in the shaded columns; collections and vehicles flagged on the estimate are brought in below.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
@@ -10255,6 +10255,11 @@ function loadJobs() {
 }
 // Per-job estimate store
 var estimateStore = {};  // { jobId: { estimate, approved, approvedBy, approvedAt } }
+// Has the cloud estimate load finished? 'loading' until the fetch resolves either way.
+// This exists because an EMPTY estimateStore has two completely different meanings —
+// "this job has no estimate" and "the estimates have not arrived yet" — and every gate
+// that reads it was treating them as the same thing. See loadJobPlanTab.
+var _estStoreState = 'loading';
 
 // ── Estimate scratch (session-only, non-authoritative) ───────────────────────
 // While building an estimate we hold the in-progress working copy in a dedicated
@@ -10447,9 +10452,37 @@ function loadEstimateState() {
           rebuildDropdowns();
           showSyncBadge('Estimates synced from cloud ✓');
         }
+        _estStoreState = 'ready';
+        _estStoreLanded();
       })
-      .catch(function(){ /* offline — local cache remains as last-known fallback */ });
+      .catch(function(){
+        // Offline — the local cache remains as last-known fallback. Mark it resolved
+        // so the UI stops saying "loading" and says what is actually true instead.
+        _estStoreState = 'offline';
+        _estStoreLanded();
+      });
+  } else {
+    _estStoreState = 'ready';   // no sync URL configured; local cache is all there is
   }
+}
+
+// The estimates arrived AFTER the screen was drawn. Redraw whatever is open that
+// depends on them.
+//
+// THE BUG THIS FIXES, because it only shows up on a second device: loadEstimateState
+// hydrates estimateStore from localStorage synchronously and then fetches. On a machine
+// that has used the app before, the local cache is warm and every gate reads a populated
+// store immediately. On a machine with a COLD cache — a new iPad, cleared data, or
+// Safari's routine eviction of storage for a site not visited in a week — the store is
+// {} at the moment the Job Plan renders, so every client fell through to "Job Plan
+// generates once the estimate is approved and locked". The fetch then landed and called
+// rebuildDropdowns() only, so the message never corrected itself: the tab stayed wrong
+// until you navigated away and back. Same shape as the photo-refs bug of 2026-08-03.
+function _estStoreLanded() {
+  var jp = document.getElementById('panel-job-plan');
+  if (jp && jp.classList.contains('active') && typeof loadJobPlanTab === 'function') loadJobPlanTab();
+  var iv = document.getElementById('panel-inventory');
+  if (iv && iv.classList.contains('active') && typeof renderInventoryTab === 'function') renderInventoryTab();
 }
 
 function loadEstimateForJob(jobId) {
@@ -11350,8 +11383,12 @@ function _renderInventorySummary(job, items) {
   });
   var dt = function(v){ return v ? fmtDate2(v) : '—'; };
   var hdrRow = function(l, v){
-    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:12px;">'
-      + '<span style="color:var(--gray);">' + l + '</span><span style="font-weight:600;text-align:right;">' + v + '</span></div>';
+    // The label column must be allowed to shrink and the value column must be allowed
+    // to keep its own width, or a long label ("§733.604 Inventory Deadline") starves the
+    // value beside it and something as short as "— (date of death)" wraps to three lines.
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:12px;">'
+      + '<span style="color:var(--gray);min-width:0;flex:1 1 auto;">' + l + '</span>'
+      + '<span style="font-weight:600;text-align:right;flex:0 0 auto;max-width:62%;">' + v + '</span></div>';
   };
   var header = '<div>'
     + hdrRow('Client / Estate', esc(job.name || '—'))
@@ -11359,7 +11396,7 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Property Address', esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—'))
     + hdrRow('Date of Death', dt(job.deathDate))
     + hdrRow('Valuation Basis', '<select onchange="setValBasis(' + job.id + ',this.value)" style="font-size:11px;padding:2px 4px;">' + INV_VAL_BASES.map(function(b){ return '<option' + (b === resolveValBasis(job) ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>')
-    + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;justify-content:flex-end;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>')
+    + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>')
     + hdrRow('Letters Issued', dt(job.lettersDate))
     + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))
     + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
@@ -12125,6 +12162,64 @@ function _invSetAppraiser(jobId, stableId, apprId) {
   _scheduleInventorySync(jobId);
 }
 
+// ── Appraisers come from the Vendor Directory ─────────────────────────────────
+// The roster used to be pure free text, so you retyped a firm that already existed two
+// tabs over — and the copy you typed could not be rated, could not be kept current, and
+// never reached the Quo dialer. The directory already carries these people, with the
+// License / cert field that is exactly the credential this roster asks for.
+// Free text survives for a one-off appraiser who is genuinely not in the directory.
+var APPRAISER_DIR_CATEGORIES = [
+  'Antiques & Furniture Appraiser', 'Art Appraiser', 'Jewelry & Watch Appraiser',
+  'Real Estate Appraiser', 'Vehicle / Boat Appraiser', 'Wine Appraiser'
+];
+
+// Directory rows serving any appraiser category, de-duplicated and sorted by name.
+function _appraiserVendors() {
+  if (typeof vendorDirectory === 'undefined' || !vendorDirectory) return [];
+  var want = {};
+  APPRAISER_DIR_CATEGORIES.forEach(function(c){ want[c] = 1; });
+  return vendorDirectory.filter(function(v){
+    if (String(v.status || '').trim() === 'Do Not Use') return false;   // never offer one we walked away from
+    return vendorCats(v).some(function(c){ return want[c]; });
+  }).sort(function(a, b){
+    return String(a.vendor_name || '').localeCompare(String(b.vendor_name || ''));
+  });
+}
+
+// Prefill the roster's free-text fields from the chosen directory row. The fields stay
+// editable — the directory is a starting point, not a lock.
+function _apprPickVendor(sel) {
+  var v = _appraiserVendors()[parseInt(sel.value, 10)];
+  var set = function(id, val){ var el = document.getElementById(id); if (el && val != null) el.value = val; };
+  if (!v) return;                       // "— type one in —" leaves whatever is there
+  var contact = (typeof _vendorContact === 'function') ? _vendorContact(v) : '';
+  set('appr-name', contact || v.vendor_name || '');
+  set('appr-firm', v.vendor_name || '');
+  // License / cert is the directory's own credential field. Only adopt it when it
+  // matches one of the recognised bodies; a free-text licence number is not a credential.
+  var lic = String(v.license_cert || v.license || '').trim();
+  var credEl = document.getElementById('appr-cred');
+  if (credEl && lic) {
+    for (var i = 0; i < INV_APPRAISER_CREDS.length; i++) {
+      if (lic.toUpperCase().indexOf(INV_APPRAISER_CREDS[i].toUpperCase()) >= 0) { credEl.value = INV_APPRAISER_CREDS[i]; break; }
+    }
+  }
+}
+
+// The picker itself. Empty directory => a note rather than an empty dropdown, so the
+// reason there is nothing to choose is visible.
+function _apprPickerHtml() {
+  var list = _appraiserVendors();
+  if (!list.length) {
+    return '<div style="font-size:10px;color:var(--gray);margin-bottom:3px;">No appraisers in the Vendor Directory yet &mdash; type one in below.</div>';
+  }
+  var opts = '<option value="">From Vendor Directory&hellip;</option>' + list.map(function(v, i){
+    var cats = vendorCats(v).filter(function(c){ return APPRAISER_DIR_CATEGORIES.indexOf(c) >= 0; }).join(' / ');
+    return '<option value="' + i + '">' + esc(v.vendor_name || '(unnamed)') + (cats ? ' — ' + esc(cats) : '') + '</option>';
+  }).join('');
+  return '<select onchange="_apprPickVendor(this)" style="font-size:11px;width:100%;margin-bottom:3px;">' + opts + '</select>';
+}
+
 function _renderAppraiserRoster(job) {
   var apprs = job.appraisers || [];
   var credOpts = '<option value="">Credential…</option>' + INV_APPRAISER_CREDS.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
@@ -12144,7 +12239,7 @@ function _renderAppraiserRoster(job) {
     + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th></th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr>'
-    + '<td><input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></td>'
+    + '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></td>'
     + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
     + '<td style="font-size:11px;"><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
     + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
@@ -14571,7 +14666,25 @@ function loadJobPlanTab() {
   }
   var estRec = estimateStore[jobId];
   var isApproved = (estRec && estRec.approved) || job.approved;
-  if (!estRec || !isApproved) {
+  if (!estRec) {
+    var ls3a = document.getElementById('plan-log-section');
+    if (ls3a) ls3a.style.display = 'none';
+    // NOT the same as "there is no estimate". On a device whose local cache is cold the
+    // store is still empty at this moment, and asserting the estimate is unapproved is
+    // simply false — it is unread. _estStoreLanded re-renders this tab when it arrives.
+    if (_estStoreState === 'loading') { empty('Loading estimates&hellip;'); return; }
+    if (_estStoreState === 'offline') {
+      empty('<strong>Could not reach the estimate store.</strong><br><br>'
+        + 'This job&rsquo;s estimate has not been loaded on this device, and the sync could not be '
+        + 'reached to fetch it. Check the connection and the Google Sheets Sync URL in Settings, '
+        + 'then reopen this tab.<br><span style="font-size:11px;color:var(--gray);">Nothing is lost '
+        + '&mdash; the estimate is safe in the sheet.</span>');
+      return;
+    }
+    empty('No estimate exists for this job yet. Build one on the Build Estimate tab.');
+    return;
+  }
+  if (!isApproved) {
     var ls3 = document.getElementById('plan-log-section');
     if (ls3) ls3.style.display = 'none';
     empty('Job Plan generates once the estimate is approved and locked.'); return;
@@ -17591,7 +17704,24 @@ function renderJobPlan(jobId, job, est) {
     return placeholder + sourcingCard + roomDocsCard;
   }
 
-  return _midBanner +
+  // Collections and vehicles flagged during the estimate walkthrough are NOT items yet.
+  // They live on the estimate snapshot and are brought into the manifest deliberately,
+  // one at a time, because the job decides the disposition rather than the estimate
+  // (materializeVehicle imports with a blank disposition for exactly that reason).
+  // But nothing said so anywhere: a job with three vehicles on the estimate showed no
+  // items here and no items on the Inventory tab, with no hint that anything was
+  // pending. Reported from a real job on 2026-08-24.
+  var _pend = (typeof _importableFromEstimate === 'function') ? _importableFromEstimate(jobId) : { collections: [], vehicles: [] };
+  var _nPend = _pend.collections.length + _pend.vehicles.length;
+  var _pendBanner = _nPend ? '<div class="alert a-info" style="margin-bottom:12px;font-size:12.5px;line-height:1.5;">'
+      + '&#128230; <strong>' + _nPend + ' item' + (_nPend > 1 ? 's' : '') + ' from the estimate walkthrough '
+      + (_nPend > 1 ? 'are' : 'is') + ' not in the inventory yet</strong> &mdash; '
+      + [_pend.collections.length ? _pend.collections.length + ' collection' + (_pend.collections.length > 1 ? 's' : '') : '',
+         _pend.vehicles.length ? _pend.vehicles.length + ' vehicle' + (_pend.vehicles.length > 1 ? 's' : '') : ''].filter(Boolean).join(' and ')
+      + '. They are added deliberately rather than automatically, because the job decides the disposition, not the estimate. '
+      + 'Bring them in from <strong>Inventory &rarr; From the Estimate Walkthrough</strong>.</div>' : '';
+
+  return _midBanner + _pendBanner +
     planPhaseWrap('p0','Phase 0 — Pre-Job'+(isDocJob?' & Authority':''), p0) +
     planPhaseWrap('p1','Phase 1 — Sort, Decisions'+(isDocJob?' & Documentation':''), p1) +
     planPhaseWrap('p2','Phase 2 — '+(isDisposal?'Pack & Disposition':'Pack & Prepare'), p2) +
