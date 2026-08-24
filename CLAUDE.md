@@ -210,6 +210,31 @@ Second commit off the audit. **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — bot
     reader can see the breakdown reconcile.
 - **89 committed checks.**
 
+## A permanent sync error retried forever and never said why (BUILT 2026-08-24)
+Reported minutes after the Apps Script redeploy: *"green check in the lower right, but a red flag
+on the left saying 1 unsaved change - retrying. it never resolves."*
+
+- **Two writes fire on an inventory change** — `saveInventory` (the client's Drive workbook) and
+  `saveMedia` (the durable manifest). The workbook one landed, which is the green check. The
+  manifest one hit a backend that did not know the action.
+- **A stale backend answers with a perfectly well-formed failure**, not a network error:
+  `{ok:false, error:'Unknown type: saveMedia'}`, or a `ReferenceError` when the dispatch line is
+  present but the handler it names is not — a half-applied paste. `_flushOutbox` treats any
+  `ok:false` as retryable, so it went into the backoff queue **forever**.
+- **And the reason was unreadable.** `_enqueueWrite` put the server's error into a `showSyncBadge`
+  toast that is gone in four seconds; the persistent chip said only *"1 unsaved change — retrying…"*.
+  The single piece of information identifying the problem was the one piece nobody could see, which
+  is why this arrived as a question rather than a fix.
+- `_isBackendStaleError` classifies `unknown type|unknown action|is not defined|not a function`.
+  Such a write is **held, not hammered**: it stays queued so a later redeploy picks it up, but no
+  retry is scheduled, and the chip reads **"Apps Script needs redeploying"** with the server's own
+  error in the tooltip. Tapping the chip clears the blocked flag — that is the user saying they
+  have fixed the deployment.
+- **Keep the transient cases out of that pattern.** A network drop, and Apps Script's login/HTML
+  interstitial (which genuinely does work on the next attempt), must stay retryable. There are
+  tests on both directions.
+- **124 committed checks.**
+
 ## The iPad bug: an empty estimateStore meant two things (BUILT 2026-08-24)
 Reported from a real device: *"on my ipad the job plan is not loading at all for clients, but I
 can see them on my desktop."* Plus three smaller things found in the same pass. App-only — no

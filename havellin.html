@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:44pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:52pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12860,12 +12860,34 @@ function updatePendingIndicator() {
       + 'padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;'
       + 'background:var(--err-bg);color:var(--err-tx);box-shadow:0 2px 10px rgba(0,0,0,0.18);';
     el.title = 'Unsaved changes not yet synced — tap to retry now';
-    el.onclick = function(){ _retryStep = 0; flushPendingWrites(); };
+    el.onclick = function(){
+      // Clear the blocked flag on a manual tap — the user is telling us they fixed it.
+      Object.keys(_pendingWrites).forEach(function(k){ _pendingWrites[k].blocked = false; });
+      _retryStep = 0; flushPendingWrites();
+    };
     document.body.appendChild(el);
   }
   var n = _pendingCount();
   if (n > 0) {
-    el.textContent = '⚠ ' + n + ' unsaved change' + (n > 1 ? 's' : '') + ' — retrying…';
+    var blocked = [], reasons = [];
+    Object.keys(_pendingWrites).forEach(function(k){
+      var w = _pendingWrites[k];
+      if (w.blocked) blocked.push((w.body && w.body.type) || k);
+      if (w.lastError && reasons.indexOf(w.lastError) < 0) reasons.push(w.lastError);
+    });
+    if (blocked.length) {
+      // Name the action and say the one thing that fixes it. "Retrying" would be a lie.
+      el.textContent = '⚠ ' + n + ' change' + (n > 1 ? 's' : '') + ' not saved — Apps Script needs redeploying';
+      el.title = 'The server rejected: ' + blocked.join(', ')
+        + '\n\n' + reasons.join('\n')
+        + '\n\nThe deployed Apps Script is older than this app. Re-deploy it '
+        + '(Extensions → Apps Script → Deploy → Manage deployments → New version), '
+        + 'then tap here to send these again. Nothing is lost in the meantime.';
+    } else {
+      el.textContent = '⚠ ' + n + ' unsaved change' + (n > 1 ? 's' : '') + ' — retrying…';
+      el.title = (reasons.length ? reasons.join('\n') + '\n\n' : '')
+        + 'Unsaved changes not yet synced — tap to retry now';
+    }
     el.style.display = 'inline-block';
   } else {
     el.style.display = 'none';
@@ -12971,13 +12993,28 @@ function queuedPostSync(body, okMsg, failMsg) {
   if (!_outboxTimer && !_outboxSending) _outboxTimer = setTimeout(_flushOutbox, _OUTBOX_WINDOW);
 }
 
+// Some failures will NEVER succeed by retrying. When the deployed Apps Script is older
+// than the app — the dispatch line missing, or the handler it names not defined — the
+// server answers with a perfectly well-formed { ok:false, error:'Unknown type: saveMedia' }
+// or a ReferenceError, and the old behaviour was to retry that with backoff forever. The
+// chip said "1 unsaved change — retrying…" and the actual reason flashed past in a
+// four-second toast, so the one piece of information that identifies the problem was the
+// one piece nobody could read. Reported 2026-08-24 after a redeploy that half-landed.
+function _isBackendStaleError(errText) {
+  return /unknown (type|action)|is not defined|not a function/i.test(String(errText || ''));
+}
+
 function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded) {
+  var stale = _isBackendStaleError(errText);
   _pendingWrites[_writeKey(body, target)] = {
-    target: target || 'main', body: body, okMsg: okMsg, failMsg: failMsg, onLanded: onLanded
+    target: target || 'main', body: body, okMsg: okMsg, failMsg: failMsg, onLanded: onLanded,
+    lastError: errText || '', blocked: stale
   };
-  showSyncBadge((failMsg || 'Sync failed') + (errText ? ' — ' + errText : '') + ' — will retry', true);
+  showSyncBadge((failMsg || 'Sync failed') + (errText ? ' — ' + errText : '') + (stale ? '' : ' — will retry'), true);
   updatePendingIndicator();
-  _scheduleRetry();
+  // A blocked write stays in the queue so nothing is lost and a later redeploy picks it
+  // up — but it is not hammered in the meantime, and the chip says what to do instead.
+  if (!stale) _scheduleRetry();
 }
 
 // ── Directory writes (vendor + referral-partner web apps) ────────────────────
