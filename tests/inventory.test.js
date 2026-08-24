@@ -455,4 +455,106 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(body, '_importedSourceSet(jobId)', name + ' refuses a second import of the same line');
     });
   }
+
+  group('29 columns is not a table — the manifest shows one slice at a time');
+  {
+    const v = sandbox({ fns: ['_invVisibleCols', 'setInvView'],
+                        vars: ['INVENTORY_COLUMNS', 'INV_VIEWS', '_invView'],
+                        stubs: { renderInventoryTab() {} } });
+    const keys = () => v._invVisibleCols().map((c) => c.key);
+
+    // Identity columns are always on screen — a row you cannot identify is useless.
+    ['val', 'disp', 'flags', 'all'].forEach((view) => {
+      v.setInvView(view);
+      ['seq', 'objectName', 'category'].forEach((k) =>
+        ok(keys().indexOf(k) >= 0, `${k} is pinned in the ${view} view`));
+    });
+
+    v.setInvView('val');
+    ok(keys().indexOf('fmv') >= 0, 'Valuation shows FMV');
+    ok(keys().indexOf('gross') < 0, 'and hides the disposition money');
+    ok(keys().indexOf('flagNFA') < 0, 'and the flags');
+
+    v.setInvView('disp');
+    ok(keys().indexOf('gross') >= 0, 'Disposition shows the proceeds');
+    ok(keys().indexOf('fmv') < 0, 'and hides the valuation');
+
+    v.setInvView('flags');
+    ok(keys().indexOf('flagMAIV') >= 0, 'Flags shows MAIV');
+    ok(keys().indexOf('assetTrack') >= 0, 'and the asset track');
+
+    v.setInvView('all');
+    const all = keys().length;
+    v.setInvView('val');
+    ok(keys().length < all, 'a slice really is smaller than everything');
+    ok(keys().length <= 12, 'and small enough to read without scrolling sideways forever');
+
+    // Every column must belong somewhere, or it becomes unreachable in the UI.
+    const orphan = v.INVENTORY_COLUMNS.filter((c) => !c.hideInTab && !c.pin && !c.group);
+    eq(orphan.map((c) => c.key), [], 'no visible column is missing a view');
+
+    // The EXPORT is unaffected — the workbook always carries every column.
+    eq(v.INVENTORY_COLUMNS.length, 29, 'the manifest is still 29 columns wide on export');
+  }
+
+  group('a removed item can be brought back');
+  {
+    // The tombstone keeps every value on the row. That was designed for merge
+    // correctness, and it means a mis-click is fully recoverable — but nothing offered
+    // it back, so a $500,000 line with a linked appraiser was gone for good.
+    const r = sandbox({ fns: ['_invRemovedRows', 'restoreInventoryItem', '_getPhotoRef',
+                              '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull',
+                              '_invTouch', '_jobInvRefs'],
+                        stubs: { renderInventoryTab() {}, _scheduleInventorySync() {} } });
+    r._photoRefs[1] = [{ stableId: 'c', label: 'inventory', collId: null, itemNo: 3,
+                         objectName: 'Coin Collection', fmv: 500000, apprDoc: 'Marie Wayland',
+                         deletedAt: 900 }];
+    eq(r._invRemovedRows(1).length, 1, 'the removed row is still there to offer back');
+    eq(r._jobInvRefs(1).length, 0, 'while staying out of the live manifest');
+
+    r.restoreInventoryItem(1, 'c');
+    eq(r._jobInvRefs(1).length, 1, 'restoring returns it to the manifest');
+    eq(r._photoRefs[1][0].itemNo, 3, 'with its ORIGINAL item number — receipts still point at it');
+    eq(r._photoRefs[1][0].fmv, 500000, 'and its valuation');
+    eq(r._photoRefs[1][0].apprDoc, 'Marie Wayland', 'and its linked appraiser');
+    ok(r._photoRefs[1][0].updatedAt > 900,
+       'stamped newer than the tombstone, so the undelete wins the merge on every device');
+  }
+
+  group('linking an appraiser answers the valuation-source question');
+  {
+    const a = sandbox({ fns: ['_invSetAppraiser', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
+                              '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch'],
+                        stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
+                                 _invRefreshGuardrail() {}, _invRefreshSummary() {} } });
+    a.jobs.push({ id: 1, appraisers: [{ id: 7, name: 'Marie Wayland', firm: 'Appraisals by the Sea' }] });
+    a._photoRefs[1] = [{ stableId: 'x', label: 'inventory', collId: null }];
+
+    a._invSetAppraiser(1, 'x', 7);
+    eq(a._photoRefs[1][0].valSource, 'Appraisal',
+       'linking a credentialed appraiser IS the valuation source — it fills itself in');
+
+    a._photoRefs[1][0].valSource = 'Dealer quote';
+    a._invSetAppraiser(1, 'x', 7);
+    eq(a._photoRefs[1][0].valSource, 'Dealer quote',
+       'but it never overwrites a source somebody chose deliberately');
+
+    a._photoRefs[1][0].valSource = 'Appraisal';
+    a._invSetAppraiser(1, 'x', '');
+    eq(a._photoRefs[1][0].valSource, '',
+       'unlinking clears it — "Appraisal" with no appraiser is the unsupported claim the '
+       + 'guardrail exists to catch');
+  }
+
+  group('the firm is named once, not twice');
+  {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    const f = src.slice(src.indexOf('function _apprPickVendor('));
+    const body = f.slice(0, f.indexOf('\nfunction _apprPickerHtml'));
+    has(body, "wrap.style.display = 'none'",
+        'picking a directory vendor hides the Firm box — the dropdown already names it');
+    has(body, "wrap.style.display = ''", 'and clearing the picker brings it back for free text');
+    has(body, "placeholder = 'Contact at ", 'the remaining field says what it wants');
+    has(src, 'id="appr-firm-wrap"', 'the wrapper exists to hide');
+  }
 };

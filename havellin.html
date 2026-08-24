@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:32pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11356,37 +11356,56 @@ function setEstateAVD(jobId, on) {
   renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
+// `pin` columns are always on screen — they are what identifies a row. Everything else
+// belongs to ONE view, because 29 columns side by side is not a table anybody can read and
+// the answer to "scrolling right is not ideal" is fewer columns, not a wider screen.
+// Reported 2026-08-24: "there are an insane number of columns here."
 var INVENTORY_COLUMNS = [
-  {key:'seq',          header:'Item #',              kind:'capture'},
-  {key:'room',         header:'Room',                kind:'capture'},
-  {key:'objectName',   header:'Object Name',         kind:'capture'},
-  {key:'category',     header:'Category',            kind:'capture'},
-  {key:'disposition',  header:'Disposition',         kind:'capture', edit:'dispSelect'},
+  {key:'seq',          header:'Item #',              kind:'capture', pin:true},
+  {key:'objectName',   header:'Object Name',         kind:'capture', pin:true},
+  {key:'category',     header:'Category',            kind:'capture', pin:true},
+  {key:'room',         header:'Room',                kind:'capture', group:'val'},
   {key:'ts',           header:'Captured At',         kind:'capture', hideInTab:true},
   {key:'filename',     header:'Photo Filename',      kind:'capture', hideInTab:true},
-  {key:'driveFileUrl', header:'Photo Link',          kind:'capture'},
-  {key:'qty',          header:'Qty',                 kind:'manage',  edit:'number'},
-  {key:'condition',    header:'Condition',           kind:'manage',  edit:'select'},
-  {key:'fmv',          header:'Estimated FMV',       kind:'manage',  edit:'currency'},
-  {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date'},
-  {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select'},
-  {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage',  edit:'text'},
-  {key:'flagMAIV',     header:'MAIV §20.2031-6',     kind:'manage',  edit:'maivSelect'},
-  {key:'maivCat',      header:'MAIV Class',          kind:'manage',  edit:'maivCatSelect'},
-  {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage',  edit:'flag'},
-  {key:'flagBequest',  header:'Specific Bequest',    kind:'manage',  edit:'flag'},
-  {key:'flagDisputed', header:'Disputed',            kind:'manage',  edit:'flag'},
-  {key:'flagNFA',      header:'NFA Item',            kind:'manage',  edit:'flag'},
-  {key:'channel',      header:'Channel / Recipient', kind:'manage',  edit:'text'},
-  {key:'authBy',       header:'Authorized By',       kind:'manage',  edit:'text'},
-  {key:'approvalDate', header:'Approval Date',       kind:'manage',  edit:'date'},
-  {key:'gross',        header:'Gross Proceeds',      kind:'manage',  edit:'currency'},
-  {key:'fees',         header:'Fees',                kind:'manage',  edit:'currency'},
-  {key:'net',          header:'Net to Estate',       kind:'formula'},
-  {key:'dispDate',     header:'Date of Disposition', kind:'manage',  edit:'date'},
-  {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text'},
-  {key:'assetTrack',   header:'Asset Track',         kind:'manage',  edit:'trackSelect'}
+  {key:'driveFileUrl', header:'Photo Link',          kind:'capture', group:'val'},
+  {key:'qty',          header:'Qty',                 kind:'manage',  edit:'number',    group:'val'},
+  {key:'condition',    header:'Condition',           kind:'manage',  edit:'select',    group:'val'},
+  {key:'fmv',          header:'Estimated FMV',       kind:'manage',  edit:'currency',  group:'val'},
+  {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date',      group:'val'},
+  {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select',    group:'val'},
+  {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage',  edit:'text',      group:'val'},
+  {key:'flagMAIV',     header:'MAIV §20.2031-6',     kind:'manage',  edit:'maivSelect',    group:'flags'},
+  {key:'maivCat',      header:'MAIV Class',          kind:'manage',  edit:'maivCatSelect', group:'flags'},
+  {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage',  edit:'flag',      group:'flags'},
+  {key:'flagBequest',  header:'Specific Bequest',    kind:'manage',  edit:'flag',      group:'flags'},
+  {key:'flagDisputed', header:'Disputed',            kind:'manage',  edit:'flag',      group:'flags'},
+  {key:'flagNFA',      header:'NFA Item',            kind:'manage',  edit:'flag',      group:'flags'},
+  {key:'assetTrack',   header:'Asset Track',         kind:'manage',  edit:'trackSelect', group:'flags'},
+  {key:'disposition',  header:'Disposition',         kind:'capture', edit:'dispSelect', group:'disp'},
+  {key:'channel',      header:'Channel / Recipient', kind:'manage',  edit:'text',      group:'disp'},
+  {key:'authBy',       header:'Authorized By',       kind:'manage',  edit:'text',      group:'disp'},
+  {key:'approvalDate', header:'Approval Date',       kind:'manage',  edit:'date',      group:'disp'},
+  {key:'gross',        header:'Gross Proceeds',      kind:'manage',  edit:'currency',  group:'disp'},
+  {key:'fees',         header:'Fees',                kind:'manage',  edit:'currency',  group:'disp'},
+  {key:'net',          header:'Net to Estate',       kind:'formula', group:'disp'},
+  {key:'dispDate',     header:'Date of Disposition', kind:'manage',  edit:'date',      group:'disp'},
+  {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text',      group:'disp'}
 ];
+// Which slice of the manifest is on screen. Valuation first — it is what you do first.
+var INV_VIEWS = [
+  {key:'val',   label:'Valuation'},
+  {key:'disp',  label:'Disposition'},
+  {key:'flags', label:'Flags & Track'},
+  {key:'all',   label:'Everything'}
+];
+var _invView = 'val';
+function setInvView(v) { _invView = v; renderInventoryTab(); }
+function _invVisibleCols() {
+  return INVENTORY_COLUMNS.filter(function(c) {
+    if (c.hideInTab) return false;
+    return c.pin || _invView === 'all' || c.group === _invView;
+  });
+}
 
 function _invJob(jobId) { return jobs.find(function(j){ return j.id === jobId; }) || null; }
 
@@ -12557,6 +12576,13 @@ function _invSetAppraiser(jobId, stableId, apprId) {
   var a = _jobAppraisers(jobId).find(function(x){ return String(x.id) === String(apprId); });
   ref.apprId = apprId || '';
   ref.apprDoc = a ? _apprLabel(a) : '';
+  // Reported as "if Marie Wayland is attached to the coin collection, do i need a drop
+  // down for valuation source?" — no. Linking a credentialed appraiser IS the answer to
+  // that question, so it fills itself in. It does not OVERWRITE a source somebody chose
+  // deliberately; and unlinking clears it, because "Appraisal" with no appraiser behind
+  // it is precisely the unsupported claim the guardrail exists to catch.
+  if (a) { if (!ref.valSource) ref.valSource = 'Appraisal'; }
+  else if (ref.valSource === 'Appraisal') { ref.valSource = ''; }
   _setPhotoRef(jobId, _invTouch(ref)); savePhotoRefs(jobId);
   // Full redraw: the link can be made from the guardrail panel OR from the Appraisal Doc
   // cell, and each has to reflect the other. It is a select change, not typing, so there
@@ -12595,7 +12621,14 @@ function _appraiserVendors() {
 function _apprPickVendor(sel) {
   var v = _appraiserVendors()[parseInt(sel.value, 10)];
   var set = function(id, val){ var el = document.getElementById(id); if (el && val != null) el.value = val; };
-  if (!v) return;                       // "— type one in —" leaves whatever is there
+  var wrap = document.getElementById('appr-firm-wrap');
+  var nameEl = document.getElementById('appr-name');
+  if (!v) {
+    // Back to free text: the firm has to be typed, because nothing names it any more.
+    if (wrap) wrap.style.display = '';
+    if (nameEl) nameEl.placeholder = 'Name';
+    return;
+  }
   var contact = (typeof _vendorContact === 'function') ? _vendorContact(v) : '';
   set('appr-name', contact || v.vendor_name || '');
   set('appr-firm', v.vendor_name || '');
@@ -12608,6 +12641,11 @@ function _apprPickVendor(sel) {
       if (lic.toUpperCase().indexOf(INV_APPRAISER_CREDS[i].toUpperCase()) >= 0) { credEl.value = INV_APPRAISER_CREDS[i]; break; }
     }
   }
+  // The dropdown already NAMES the firm. A box underneath repeating it is the same string
+  // twice on one row — reported as "do we need the company name twice?". The input stays
+  // in the DOM (addAppraiser still reads it), it just stops being shown.
+  if (wrap) wrap.style.display = 'none';
+  if (nameEl) nameEl.placeholder = 'Contact at ' + (v.vendor_name || 'the firm');
 }
 
 // The picker itself. Empty directory => a note rather than an empty dropdown, so the
@@ -12643,7 +12681,7 @@ function _renderAppraiserRoster(job) {
     + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th></th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr>'
-    + '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></td>'
+    + '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><div id="appr-firm-wrap"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></div></td>'
     + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
     + '<td style="font-size:11px;"><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
     + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
@@ -12795,6 +12833,41 @@ function _invRefreshFromCloud() {
 // deleting them. The app cannot know which copy carries the edits somebody made, so the
 // choice is the user's — but leaving two identical lines on a court schedule unremarked is
 // not an option either.
+// Removal writes a tombstone — the row and every value on it are still there. That was
+// designed for merge correctness (absence is not deletion), and it means an accidental
+// delete is fully recoverable; nothing surfaced that. Losing a $500,000 line with a linked
+// appraiser to a mis-click, with a perfect copy sitting in the store, is not acceptable.
+function _invRemovedRows(jobId) {
+  return (_photoRefs[jobId] || [])
+    .filter(function(r){ return r.label === 'inventory' && !r.collId && r.deletedAt; })
+    .sort(function(a, b){ return (b.deletedAt || 0) - (a.deletedAt || 0); });
+}
+function restoreInventoryItem(jobId, stableId) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref) return;
+  delete ref.deletedAt;
+  _invTouch(ref);            // newer than the tombstone, so the undelete wins the merge
+  _setPhotoRef(jobId, ref);
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+}
+function _renderRemovedRows(jobId) {
+  var gone = _invRemovedRows(jobId);
+  if (!gone.length) return '';
+  var rows = gone.slice(0, 12).map(function(r){
+    var val = (r.fmv !== '' && r.fmv != null) ? ' · ' + _invMoney(r.fmv) : '';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
+      + '<span>#' + esc(_invItemNo(r)) + ' &middot; ' + esc(r.objectName || '(unnamed)') + '<span style="color:var(--gray);">' + esc(val)
+      + (r.apprDoc ? ' · ' + esc(r.apprDoc) : '') + '</span></span>'
+      + '<button class="btn-s" onclick="restoreInventoryItem(' + jobId + ',\'' + r.stableId + '\')">Restore</button></div>';
+  }).join('');
+  return '<div class="card" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Removed items <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">('
+    + gone.length + ' &mdash; nothing is thrown away; restore keeps the original item number)</span></div>'
+    + rows + '</div>';
+}
+
 function _renderDuplicateImportNotice(jobId) {
   var groups = _invDuplicateImports(jobId);
   if (!groups.length) return '';
@@ -12823,7 +12896,7 @@ function renderInventoryTab() {
   var summary = _renderInventorySummary(job, items);
   // Captured At / Photo Filename are hidden on screen to save room; they remain in
   // the data model and the workbook export. Photo Link still gives one-click access.
-  var cols = INVENTORY_COLUMNS.filter(function(c){ return !c.hideInTab; });
+  var cols = _invVisibleCols();
   var inner;
   if (!items.length) {
     // No table when empty — a full-width table would push the message off-screen.
@@ -12856,10 +12929,20 @@ function renderInventoryTab() {
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
     + '</div>'
     + '</div>'
+    + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+    + '<span style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;">Columns</span>'
+    + INV_VIEWS.map(function(v){
+        var on = (_invView === v.key);
+        return '<button class="btn-s" onclick="setInvView(\'' + v.key + '\')" style="font-size:10.5px;'
+          + (on ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '')
+          + '">' + esc(v.label) + '</button>';
+      }).join('')
+    + '<span style="font-size:10px;color:var(--gray);">Item #, Object Name and Category stay put.</span>'
+    + '</div>'
     + _renderDuplicateImportNotice(jobId)
     + inner
     + '</div>';
-  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>' + _renderInventorySnapshots(job) + table;
+  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>' + _renderRemovedRows(jobId) + _renderInventorySnapshots(job) + table;
 }
 
 // ── Build 3: push the manifest to the per-client Google workbook ───────────────

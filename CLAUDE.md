@@ -89,6 +89,33 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## Four things reported off one screenshot (BUILT 2026-08-24)
+*"there are an insane number of columns here and scrolling right is not ideal … if Marie
+Wayland is attached to the coin collection, do i need a drop down for valuation source? …
+do we need the company name twice?"*
+- **The manifest shows ONE SLICE at a time.** 29 columns is not a table anybody reads.
+  `INVENTORY_COLUMNS` entries carry `pin` or a `group` — **Valuation · Disposition ·
+  Flags & Track · Everything** — and Item # / Object Name / Category are pinned in every
+  view. **The EXPORT is untouched: the workbook always carries all 29.** A test asserts no
+  visible column is missing a group, or it becomes unreachable in the UI.
+- **Linking an appraiser sets Valuation Source to *Appraisal* by itself.** Anthony's
+  question was the right one — a credentialed appraiser on the row IS the answer to "where
+  did this value come from". It never overwrites a source chosen deliberately, and
+  **unlinking clears it**, because *Appraisal* with no appraiser behind it is exactly the
+  unsupported claim the guardrail exists to catch.
+- **The firm was named twice on the appraiser row** — once in the directory dropdown and
+  again in the Firm box below it. Picking a vendor now hides that box (the input stays in
+  the DOM, `addAppraiser` still reads it) and the Name field becomes *Contact at &lt;firm&gt;*.
+  Clearing the picker brings it back for a genuine one-off.
+- **⚠ RESTORE. A tombstone keeps every value on the row and nothing offered it back.**
+  That design exists for merge correctness — absence is not deletion — and it means an
+  accidental delete is fully recoverable. Nothing surfaced it, so a **$500,000 line with a
+  linked appraiser was lost to a mis-click** with a perfect copy sitting in the store. A
+  *Removed items* card now lists them with **Restore**, which returns the row with its
+  **original item number** and stamps `updatedAt` so the undelete beats the tombstone on
+  every device. Do not "clean up" tombstones — they are the undo buffer.
+- **338 committed checks.**
+
 ## Item numbers collided across a merge (BUILT 2026-08-24)
 The load fix worked and pulled the server's copy back — onto a device that had re-imported
 the same estimate lines while the manifest looked empty. Six rows numbered **1,2,1,2,3,1**.
