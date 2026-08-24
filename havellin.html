@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:12pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -911,25 +911,7 @@ body.no-smf .smf-col{display:none;}
               <option value="">No / not known</option>
               <option value="yes">Yes &mdash; contested or likely to be</option>
             </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Drops the specialist-appraisal threshold to $500 per item.</div>
-          </div>
-        </div>
-        <div class="row">
-          <div><label>Separate writing under &sect;732.515?</label>
-            <select id="i-gate-separate-writing">
-              <option value="">Unknown</option>
-              <option value="yes">Yes &mdash; a list of designated items exists</option>
-              <option value="no">No</option>
-            </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">If yes, ask for the list before anything is handled &mdash; those items are set aside on sight.</div>
-          </div>
-          <div><label>Exempt property claimed under &sect;732.402?</label>
-            <select id="i-gate-exempt">
-              <option value="">Unknown</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">If yes, furniture, furnishings and appliances need valuing precisely enough to test the $20,000 allowance.</div>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Contested Probate already counts as disputed &mdash; leave this alone there. Tick it when an <em>ordinary</em> probate turns contested mid-job, so documentation tightens without changing the service type and re-pricing the engagement. Drops the specialist-appraisal threshold to $500 per item.</div>
           </div>
         </div>
         <div id="i-gate-readout" style="margin-bottom:6px;"></div>
@@ -6023,8 +6005,6 @@ function saveIntake() {
     docLevel:(document.getElementById('i-doclevel')||{}).value||'',
     gate706:            (document.getElementById('i-gate-706')||{}).value||'',
     gateDispute:        (document.getElementById('i-gate-dispute')||{}).value||'',
-    gateSeparateWriting:(document.getElementById('i-gate-separate-writing')||{}).value||'',
-    gateExempt:         (document.getElementById('i-gate-exempt')||{}).value||'',
     status:'new',
     havellinEst:null, totalEst:null, inRange:null, approved:false,
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
@@ -6084,7 +6064,7 @@ var INTAKE_FIELDS = [
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
-  'i-gate-706', 'i-gate-dispute', 'i-gate-separate-writing', 'i-gate-exempt',
+  'i-gate-706', 'i-gate-dispute',
   'i-dest-addr', 'i-dest-city', 'i-dest-zip', 'i-dest-sqft', 'i-dest-beds', 'i-dest-baths'
 ];
 

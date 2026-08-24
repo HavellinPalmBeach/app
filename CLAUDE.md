@@ -216,9 +216,19 @@ Off the Contents Valuation SOP §1. Anthony's call: **only escalate.** App-only,
 - **The documentation level was a pure judgment call whose own hint named the real trigger** —
   *"a large estate that may owe estate tax"*. That is a FACT somebody knows, not an opinion, so
   it is asked as a fact at intake and the level is computed from the answer.
-- **Four gates added** (`gate706`, `gateDispute`, `gateSeparateWriting`, `gateExempt`). G3 date of
-  death and G7 attorney already existed; **G1 matter type stays the service type** — do not add
-  Summary administration or Guardianship to the catalogue casually, the service type IS the price.
+- **TWO gates, not four.** `gate706` and `gateDispute`. The SOP lists seven; date of death and
+  attorney of record already existed, matter type **stays the service type** (do not add Summary
+  administration or Guardianship to the catalogue casually — the service type IS the price), and
+  the separate-writing and exempt-claim questions were **built and then removed the same hour**.
+  Anthony: *"we have probate and contested probate as job types, so is some of that needed?"* He
+  was right. Both had **zero readers** — two more questions on an already-long intake form that
+  changed nothing. **Do not re-add them until something consumes them**; the per-item `flagBequest`
+  and `flagExempt` already do the real work, and the §732.402 cap check reads the latter.
+- **`gateDispute` is largely redundant with Contested Probate and is kept anyway, for one case.**
+  `gateDispute()` returns true for `contested_probate` without the box being ticked, so on that
+  service type the field does nothing. It earns its slot on the job that turns contested
+  **mid-engagement**: changing the service type would re-price a signed job, so this tightens
+  documentation without touching the price. The field hint says exactly that.
 - **`docLevelFloor(job)` is what the gates impose; `resolveDocLevel` applies escalate-only.**
   The manual dropdown may raise the level above the floor and can NEVER lower it — you are always
   allowed to be stricter and never looser, the same logic that makes an unknown 706 count as a yes.
