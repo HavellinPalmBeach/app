@@ -250,6 +250,17 @@ Off the Contents Valuation SOP §1. Anthony's call: **only escalate.** App-only,
 - **The service field is `i-svc`, not `i-service`.** The first draft guessed and would have left
   `draft.svc` empty, so `isDecedentJob` returned false and G2 never fired — a silently disabled
   gate. A test now asserts the readout reads the real field.
+- **Two layout fixes on the same block, reported off a screenshot.** `.fb` is doing two
+  unrelated jobs — it is the Win/Loss filter **button** class (13 of them, all with text) and it
+  is also borrowed by `#i-deadline-fb` as a feedback line. The button styling carries a border and
+  padding, so with no feedback to show it drew an **empty bordered box** under the §733.604
+  deadline field. `.fb:empty{display:none}` — safe because every filter button has text.
+- **And the two gate controls did not line up.** `.row>*>select` carries `margin-top:auto`, which
+  pushes the control to the BOTTOM of its cell — so with a hint div *after* the select, the
+  select's position depends on how many lines that hint runs to. A two-line label beside a
+  one-line label, with hints of different lengths, put the two selects at different heights. New
+  `.gate-cell` reserves two lines for the label and drops the auto margin. **Reach for this on any
+  future two-column row that carries hints under its controls.**
 - **155 committed checks.**
 
 ## A permanent sync error retried forever and never said why (BUILT 2026-08-24)

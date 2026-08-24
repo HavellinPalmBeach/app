@@ -110,6 +110,11 @@ textarea{height:70px;resize:vertical;}
    intrinsic size for its native picker, so without this the date box ignores
    width:100% and spills out past the card's right edge. */
 .row>*>input,.row>*>select,.row>*>textarea{margin-top:auto;min-width:0;max-width:100%;}
+/* Cells whose label may wrap to two lines and which carry a hint UNDER the control.
+   Reserve two lines for the label and stop pushing the control to the bottom, so the
+   controls align across the row whatever length the hints run to. */
+.gate-cell>label{min-height:2.7em;display:block;}
+.gate-cell>select{margin-top:0;}
 .btn-p{background:var(--gray-dk);color:var(--cream);border:none;padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:background .15s;}
 .btn-p:hover{background:var(--bronze);}
 .btn-s{background:none;color:var(--gray);border:1px solid var(--border-md);padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:all .15s;}
@@ -218,6 +223,11 @@ input:checked+.slider:before{transform:translateX(18px);}
 .avatar{width:26px;height:26px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--gray);border:1px solid var(--border-md);}
 .filter-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;}
 .fb{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:5px 12px;border:1px solid var(--border-md);border-radius:4px;background:none;cursor:pointer;color:var(--gray);font-family:'Raleway',sans-serif;}
+/* `.fb` is doing two unrelated jobs: it is the Win/Loss filter BUTTON (13 of them, all
+   with text) and it is also borrowed by #i-deadline-fb as a feedback line. The button
+   styling gives it a border and padding, so while there is no feedback to show it drew
+   an empty bordered box under the §733.604 deadline field. Reported 2026-08-24. */
+.fb:empty{display:none;}
 .fb:hover{background:var(--tan);}.fb.active{background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);}
 .divider{height:1px;background:var(--border);margin:1rem 0;}
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--gray);font-size:12px;}
@@ -714,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:12pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:16pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -898,7 +908,7 @@ body.no-smf .smf-col{display:none;}
           The strictness they produce <strong>cannot be lowered</strong> later.
         </div>
         <div class="row">
-          <div><label>Federal estate tax return (Form 706) being filed?</label>
+          <div class="gate-cell"><label>Federal estate tax return (Form 706) being filed?</label>
             <select id="i-gate-706" onchange="onDocGateChange()">
               <option value="">Unknown &mdash; treated as yes</option>
               <option value="yes">Yes</option>
@@ -906,7 +916,7 @@ body.no-smf .smf-col{display:none;}
             </select>
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Unknown counts as yes. Do not downgrade this on a verbal &ldquo;probably not&rdquo; &mdash; it needs an answer from the attorney or PR.</div>
           </div>
-          <div><label>Known dispute, contest, or elective share?</label>
+          <div class="gate-cell"><label>Known dispute, contest, or elective share?</label>
             <select id="i-gate-dispute" onchange="onDocGateChange()">
               <option value="">No / not known</option>
               <option value="yes">Yes &mdash; contested or likely to be</option>
