@@ -89,6 +89,23 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## Two things found in a real client workbook (BUILT 2026-08-24)
+Anthony redeployed and sent a screenshot of the synced Inventory sheet. The columns landed
+correctly — which is the evidence the header-lookup fix works — and two defects were visible
+in the data itself.
+- **`2025 2025 Mercedes E63`.** `materializeVehicle` did `[veh.year, veh.desc].join(' ')`, and
+  people fill in the year field AND type the whole thing into the description. Now
+  `_vehicleLineName(veh)`, extracted so it is testable on its own. **The year is matched at the
+  START of the description only** — a `1965 Mustang, restored 2019` must not lose its model year
+  because the description mentions another one.
+- **A quantity beside a value, with nothing saying which the value is.** `Coin Collection`,
+  qty `10000`, FMV `$500,000`. Every accumulator in the app reads **fmv as the LINE TOTAL** and
+  never multiplies by qty — that is consistent and correct — but the Court Inventory printed
+  `(qty 10000)` next to `$500,000` and a reader can take it either way. **The two readings differ
+  by four orders of magnitude on a court filing.** The row now reads `(10,000 items, valued as a
+  lot)` and the column header is `FMV (total)`.
+- **249 committed checks.**
+
 ## MAIV — the $3,000 that is an AGGREGATE, not a per-item test (BUILT 2026-08-24)
 **⚠ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs` changed, and the change fixes a bug
 that is live right now (see the last bullet). Treas. Reg. §20.2031-6(b), the SOP's number one.

@@ -16,7 +16,7 @@ const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'isDecedentJob',
   'invMAIVDefaultCat', 'invIsMAIV', 'invMAIVCategory', 'maivAggregate',
   'maivFilingApplies', 'maivStatement', 'maivStatement_', '_maivWorklistBlock',
-  '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull',
+  '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName',
 ];
 const VARS = [
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -201,5 +201,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(keys.indexOf('maivCat') >= 0, 'so is the regulation class');
     const flag = ctx.INVENTORY_COLUMNS.find((c) => c.key === 'flagMAIV');
     eq(flag.edit, 'maivSelect', 'the flag is tri-state, not a checkbox — auto is a real third state');
+  }
+
+  group('a vehicle imported from the estimate is named once');
+  {
+    // Reported off a real client workbook: "2025 2025 Mercedes E63". The year field and
+    // the description box were both filled, and the join stacked them.
+    eq(ctx._vehicleLineName({ year: '2025', desc: '2025 Mercedes E63' }), '2025 Mercedes E63',
+       'a description that already opens with the year is left alone');
+    eq(ctx._vehicleLineName({ year: '2026', desc: 'Bentley SUV' }), '2026 Bentley SUV',
+       'and one that does not still gets it');
+    eq(ctx._vehicleLineName({ year: '1965', desc: 'Mustang, restored 2019' }), '1965 Mustang, restored 2019',
+       'the match is at the START only — a year mentioned mid-description is not the model year');
+    eq(ctx._vehicleLineName({ year: '', desc: 'Boston Whaler 210' }), 'Boston Whaler 210', 'no year, no prefix');
+    eq(ctx._vehicleLineName({ year: '2025', desc: '' }), '2025 Vehicle', 'a bare year still reads as something');
+    eq(ctx._vehicleLineName({}), 'Vehicle', 'and an empty record does not produce an empty name');
+  }
+
+  group('a quantity beside a value says which the value is');
+  {
+    // "Coin Collection (qty 10,000)" next to "$500,000" reads either way, and the two
+    // readings differ by four orders of magnitude on a court filing. FMV is the LINE
+    // TOTAL everywhere in the app; the document now says so.
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    const f = src.slice(src.indexOf('function printCourtInventory('));
+    const body = f.slice(0, f.indexOf('\nfunction printDispositionLedger'));
+    has(body, 'items, valued as a lot', 'the row says the value covers the whole lot');
+    has(body, 'FMV (total)', 'and the column header says total');
+    lacks(body, "'(qty '", 'the bare qty label is gone');
   }
 };

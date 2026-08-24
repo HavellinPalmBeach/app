@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:49pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:02pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12010,12 +12010,17 @@ function printCourtInventory(jobId) {
     Object.keys(byCat).sort().forEach(function(cat){
       var sub = 0;
       var rows = byCat[cat].map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) sub += n;
-        return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (parseInt(r.qty,10) > 1 ? ' <span style="color:#888;">(qty ' + esc(r.qty) + ')</span>' : '') + '</td>'
+        // FMV IS THE LINE TOTAL, NOT A UNIT PRICE — that is how every accumulator in the
+        // app reads it. On a document a reader can take "Coin Collection (qty 10,000)"
+        // beside "$500,000" either way, and the two readings differ by four orders of
+        // magnitude on a court filing. Say which it is on the row and in the header.
+        var _q = parseInt(r.qty, 10);
+        return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (_q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' items, valued as a lot)</span>' : '') + '</td>'
           + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
           + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
       total += sub;
       h += '<div style="font-size:11px;font-weight:700;color:#555;margin:7px 0 1px;">' + esc(cat) + '</div>'
-        + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;text-align:right;">FMV (total)</th></tr></thead><tbody>' + rows + '</tbody>'
         + '<tfoot><tr><td colspan="2" style="padding:2px 6px;text-align:right;font-weight:600;">' + esc(cat) + ' subtotal</td><td style="padding:2px 6px;text-align:right;font-weight:600;">' + _invMoney(sub) + '</td></tr></tfoot></table>';
     });
     return { html: h, total: total };
@@ -12335,12 +12340,24 @@ function materializeCollection(jobId, collId) {
   _scheduleInventorySync(jobId);
 }
 
+// Don't prepend a year the description already carries. People type the whole thing into
+// the description box ("2025 Mercedes E63") AND fill the year field, and the naive join
+// printed "2025 2025 Mercedes E63" onto the client's workbook and the court inventory.
+// Compared at the START of the string only: a 1965 Mustang restored in 2019 must not lose
+// its year because the description happens to mention another one.
+function _vehicleLineName(veh) {
+  var desc = String((veh && veh.desc) || '').trim();
+  var year = String((veh && veh.year) || '').trim();
+  if (!desc) return year ? year + ' Vehicle' : 'Vehicle';
+  return (year && desc.indexOf(year) !== 0) ? (year + ' ' + desc) : desc;
+}
+
 function materializeVehicle(jobId, vehId) {
   var rec = estimateStore[jobId];
   var est = rec && rec.estimate;
   var veh = est && (est.vehicles || []).find(function(v){ return v.id === vehId; });
   if (!veh) return;
-  var name = [veh.year, veh.desc].filter(Boolean).join(' ') || 'Vehicle';
+  var name = _vehicleLineName(veh);
   var ts = Date.now();
   _pushInvLine(jobId, { stableId: jobId + '_veh' + vehId + '_' + ts,
     objectName: name, category: 'Vehicles & Watercraft', disposition: '', qty: '1',
