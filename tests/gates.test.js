@@ -15,6 +15,7 @@ const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
   'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'invListingThreshold',
   'isDecedentJob', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
+  'docStandardEffect',
 ];
 const VARS = [
   'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -110,6 +111,49 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'a dispute names the new threshold');
     eq(ctx.docLevelFloorReason(est({ gate706: 'no' })), '',
        'no floor, no reason');
+  }
+
+  group('the readout says what the level COSTS, not just what it is called');
+  {
+    // "Strict Mode" asserted on its own is a label. Both numbers it moves have to be on
+    // the screen, or the concierge cannot tell what changed — which is what "I'm
+    // confused" was about.
+    const strict = ctx.docStandardEffect(est({ gate706: '' }));
+    has(strict, '$100',   'Strict Mode names the $100 individual-listing threshold');
+    has(strict, '$3,000', 'and the specialist threshold that still applies');
+
+    const disputed = ctx.docStandardEffect(est({ gate706: 'no', gateDispute: 'yes' }));
+    has(disputed, '$100', 'a dispute is Strict too, so listing is still $100');
+    has(disputed, '$500', 'and the specialist threshold drops');
+
+    const standard = ctx.docStandardEffect(est({ gate706: 'no' }));
+    has(standard, '$1,000', 'Standard lists individually above $1,000');
+    has(standard, '$3,000', 'and routes to a specialist at $3,000');
+    lacks(standard, '$100,', 'and never quotes the Strict figure');
+  }
+
+  group('a normal starting state is not painted as an error');
+  {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8');
+    const f = src.slice(src.indexOf('function onDocGateChange()'));
+    const body = f.slice(0, f.indexOf('\nfunction resolveDocLevel'));
+    // 706 defaults to Unknown, so EVERY new estate job opens in Strict Mode. Amber on all
+    // of them reads as something being wrong. Amber is reserved for the one case with an
+    // outstanding question to chase.
+    has(body, "var open = !gateDispute(draft) && !String(draft.gate706 || '')",
+        'amber is scoped to the unanswered 706');
+    has(body, "(open ? 'a-warn' : 'a-info')",
+        'a settled 706, a recorded dispute and contested probate read as information');
+    has(body, 'esc(effect)', 'and every branch states the numbers');
+  }
+
+  group('the hint does not describe a state the answer has not selected');
+  {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8');
+    has(src, 'Ticking it drops the specialist-appraisal threshold',
+        'the dispute hint reads as a consequence of ticking, not as the current threshold');
+    lacks(src, '. Drops the specialist-appraisal threshold',
+          'the bare "Drops ..." wording is gone — it read as a claim about the current state');
   }
 
   group('the dropdown cannot pretend to lower it');

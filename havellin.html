@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:16pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 6:21pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -921,7 +921,7 @@ body.no-smf .smf-col{display:none;}
               <option value="">No / not known</option>
               <option value="yes">Yes &mdash; contested or likely to be</option>
             </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Contested Probate already counts as disputed &mdash; leave this alone there. Tick it when an <em>ordinary</em> probate turns contested mid-job, so documentation tightens without changing the service type and re-pricing the engagement. Drops the specialist-appraisal threshold to $500 per item.</div>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Contested Probate already counts as disputed &mdash; leave this alone there. Tick it when an <em>ordinary</em> probate turns contested mid-job, so documentation tightens without changing the service type and re-pricing the engagement. Ticking it drops the specialist-appraisal threshold to $500 per item.</div>
           </div>
         </div>
         <div id="i-gate-readout" style="margin-bottom:6px;"></div>
@@ -17483,18 +17483,26 @@ function onDocGateChange() {
     }
   }
   if (!out) return;
-  var lvl = resolveDocLevel(draft);
+  var lvl    = resolveDocLevel(draft);
+  var effect = docStandardEffect(draft);
   if (floor === 'formal') {
-    out.innerHTML = '<div class="alert a-warn" style="font-size:11.5px;line-height:1.5;">'
-      + '&#9878; <strong>Strict Mode &mdash; formal documentation.</strong> ' + esc(reason)
-      + ' It cannot be lowered here; change the answer above if it is wrong.</div>';
+    // AMBER ONLY WHERE SOMETHING IS OUTSTANDING. A filed 706, a recorded dispute and
+    // contested probate are all correct, settled states — not problems. The 706 question
+    // defaults to Unknown, so an amber box was appearing on every new estate job at the
+    // moment it was opened and reading as an error. The one case that genuinely wants
+    // chasing is the unanswered 706, and that is the only one left amber.
+    var open = !gateDispute(draft) && !String(draft.gate706 || '');
+    out.innerHTML = '<div class="alert ' + (open ? 'a-warn' : 'a-info') + '" style="font-size:11.5px;line-height:1.5;">'
+      + '&#9878; <strong>Formal documentation (Strict Mode).</strong> ' + esc(reason) + ' '
+      + esc(effect) + ' It cannot be lowered here; change the answer above if it is wrong.</div>';
   } else if (lvl === 'formal') {
     out.innerHTML = '<div class="alert a-info" style="font-size:11.5px;line-height:1.5;">'
-      + 'Formal documentation, set by hand. The gates do not require it &mdash; you can still return this to Standard.</div>';
+      + '&#9878; <strong>Formal documentation, set by hand.</strong> ' + esc(effect)
+      + ' The gates do not require it &mdash; you can still return this to Standard.</div>';
   } else {
     out.innerHTML = '<div style="font-size:11px;color:var(--gray);line-height:1.5;">'
-      + 'Standard documentation. Specialist appraisal at $' + INV_APPRAISAL_THRESHOLD.toLocaleString()
-      + ' per item. You may raise this to Formal above; the gates never lower it.</div>';
+      + '<strong>Standard documentation.</strong> ' + esc(effect)
+      + ' You may raise this to Formal above; the gates never lower it.</div>';
   }
 }
 
@@ -17526,6 +17534,15 @@ var INV_LISTING_THRESHOLD_STRICT = 100;
 var INV_LISTING_THRESHOLD_STANDARD = 1000;
 function invListingThreshold(job) {
   return isFormalDoc(job) ? INV_LISTING_THRESHOLD_STRICT : INV_LISTING_THRESHOLD_STANDARD;
+}
+
+// What the level actually DOES, in the only two numbers it moves. Said in every branch of
+// the readout, because "Strict Mode" asserted without its consequences is a label rather
+// than an explanation — which is how the first build read, and it drew "I'm confused".
+function docStandardEffect(job) {
+  return 'Items are listed individually above $' + invListingThreshold(job).toLocaleString()
+    + ', and anything at $' + invAppraisalThreshold(job).toLocaleString()
+    + ' or above is routed to a specialist.';
 }
 
 function renderJobPlan(jobId, job, est) {
