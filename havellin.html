@@ -724,7 +724,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:32pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11450,6 +11450,22 @@ function _invAssignItemNos(jobId) {
   refs.forEach(function(r){
     if (!(parseInt(r.itemNo, 10) > 0)) { r.itemNo = ++max; _invTouch(r); dirty = true; }
   });
+  // COLLISIONS, which the backfill above cannot see because both rows already carry a
+  // number. Numbers are issued per device off a LOCAL high-water mark, so two sessions
+  // working the same estate each issue 1, 2, 3 and the per-item merge unions them — six
+  // rows numbered 1,2,1,2,3,1. A duplicate number is worse than a reassigned one: the
+  // whole point is that a receipt citing "item 2" identifies one object.
+  // The EARLIEST-CREATED row keeps the number, ties broken on stableId so every device
+  // resolves a collision the same way and they converge instead of fighting.
+  var seen = {};
+  refs.slice().sort(function(a, b){
+    return (a.ts || 0) - (b.ts || 0) || String(a.stableId).localeCompare(String(b.stableId));
+  }).forEach(function(r){
+    var n = parseInt(r.itemNo, 10);
+    if (!(n > 0)) return;
+    if (!seen[n]) { seen[n] = true; return; }
+    r.itemNo = ++max; _invTouch(r); dirty = true;
+  });
   if (dirty) savePhotoRefs(jobId);   // backfill persists, so it happens once per job
   return refs;
 }
@@ -12342,13 +12358,36 @@ function _numOrBlank(v) {
 }
 
 // Ids already pulled into the manifest, so we never import the same source twice.
+// LIVE rows only. Reading _photoRefs directly counted tombstones, so deleting every copy
+// of an import left it permanently un-re-importable — the panel would never offer it again
+// and there was nothing in the manifest either.
 function _importedSourceSet(jobId) {
   var s = { coll: {}, veh: {} };
-  (_photoRefs[jobId] || []).forEach(function(r) {
+  _jobInvRefs(jobId).forEach(function(r) {
     if (r.sourceCollId != null) s.coll[r.sourceCollId] = true;
     if (r.sourceVehId != null) s.veh[r.sourceVehId] = true;
   });
   return s;
+}
+
+// Rows that came from the same estimate line twice. The import PANEL already filters what
+// it offers, but it filters on the manifest — so while the manifest was failing to load,
+// it re-offered everything and a second copy of each was created with a fresh stableId.
+// The merge cannot tell those apart from genuinely different objects, so they have to be
+// surfaced for a human to remove rather than guessed at.
+//   vehicles    — one estimate vehicle is always exactly one row.
+//   collections — an ITEMIZED import is legitimately many rows off one collection, so a
+//                 duplicate is only a duplicate when the object NAME repeats as well.
+function _invDuplicateImports(jobId) {
+  var byKey = {};
+  _jobInvRefs(jobId).forEach(function(r) {
+    var key = null;
+    if (r.sourceVehId != null) key = 'v' + r.sourceVehId;
+    else if (r.sourceCollId != null) key = 'c' + r.sourceCollId + '|' + (r.objectName || '');
+    if (!key) return;
+    (byKey[key] = byKey[key] || []).push(r);
+  });
+  return Object.keys(byKey).map(function(k){ return byKey[k]; }).filter(function(g){ return g.length > 1; });
 }
 
 function _importableFromEstimate(jobId) {
@@ -12377,6 +12416,10 @@ function materializeCollection(jobId, collId) {
   var est = rec && rec.estimate;
   var coll = est && (est.collections || []).find(function(c){ return c.id === collId; });
   if (!coll) return;
+  if (_importedSourceSet(jobId).coll[collId]) {
+    alert('That collection is already in this manifest. Remove the existing line(s) first if you meant to re-import it.');
+    return;
+  }
   var cat  = (document.getElementById('imp-cat-'  + collId) || {}).value || _guessCategory(coll.name, coll.disp);
   var mode = (document.getElementById('imp-mode-' + collId) || {}).value || 'lot';
   var qty  = Math.max(1, parseInt((document.getElementById('imp-qty-' + collId) || {}).value, 10) || 1);
@@ -12415,6 +12458,12 @@ function materializeVehicle(jobId, vehId) {
   var est = rec && rec.estimate;
   var veh = est && (est.vehicles || []).find(function(v){ return v.id === vehId; });
   if (!veh) return;
+  // Belt and braces behind the panel's own filter: the panel reads the manifest, so while
+  // the manifest was failing to load it offered everything a second time.
+  if (_importedSourceSet(jobId).veh[vehId]) {
+    alert('That vehicle is already in this manifest. Remove the existing line first if you meant to re-import it.');
+    return;
+  }
   var name = _vehicleLineName(veh);
   var ts = Date.now();
   _pushInvLine(jobId, { stableId: jobId + '_veh' + vehId + '_' + ts,
@@ -12742,6 +12791,25 @@ function _invRefreshFromCloud() {
   });
 }
 
+// Name the rows that came from one estimate line twice, rather than quietly merging or
+// deleting them. The app cannot know which copy carries the edits somebody made, so the
+// choice is the user's — but leaving two identical lines on a court schedule unremarked is
+// not an option either.
+function _renderDuplicateImportNotice(jobId) {
+  var groups = _invDuplicateImports(jobId);
+  if (!groups.length) return '';
+  var lines = groups.map(function(g){
+    var nums = g.map(function(r){ return '#' + _invItemNo(r); }).join(', ');
+    return '<li style="margin-bottom:2px;"><strong>' + esc(g[0].objectName || '(unnamed)') + '</strong> &mdash; '
+      + g.length + ' copies, items ' + esc(nums) + '</li>';
+  }).join('');
+  return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;margin-bottom:10px;">'
+    + '&#9888; <strong>Duplicate imports.</strong> These lines came from the same estimate entry more than once. '
+    + 'Delete the extras with the &#10005; beside the item number &mdash; keep whichever copy already carries '
+    + 'valuations or a linked appraiser.'
+    + '<ul style="margin:6px 0 0 16px;padding:0;">' + lines + '</ul></div>';
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -12788,6 +12856,7 @@ function renderInventoryTab() {
     + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
     + '</div>'
     + '</div>'
+    + _renderDuplicateImportNotice(jobId)
     + inner
     + '</div>';
   cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>' + _renderInventorySnapshots(job) + table;

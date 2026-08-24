@@ -383,4 +383,76 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'not "Room undefined" on a document handed to an appraiser');
     eq(r._invRoomName(1, undefined), 'Unassigned / estate-wide', 'same for undefined');
   }
+
+  group('item numbers survive a merge between two devices');
+  {
+    // Numbers are issued off a LOCAL high-water mark, so two sessions working the same
+    // estate each issue 1, 2, 3 and the per-item merge unions them — the real screenshot
+    // was six rows numbered 1,2,1,2,3,1. A duplicate number defeats the entire point of
+    // having one: a receipt citing "item 2" has to identify a single object.
+    const c = sandbox({ fns: ['_invAssignItemNos', '_jobInvRefs', '_invTouch', '_invItemNo',
+                              'savePhotoRefs', '_warnPhotoStoreFull'] });
+    const row = (id, no, ts) => ({ stableId: id, label: 'inventory', collId: null, itemNo: no, ts });
+    c._photoRefs[1] = [
+      row('a', 1, 100), row('b', 2, 200), row('c', 3, 300),   // device one
+      row('d', 1, 400), row('e', 2, 500), row('f', 1, 600),   // device two, merged in
+    ];
+    const out = c._invAssignItemNos(1);
+    const nos = out.map((r) => r.itemNo).sort((x, y) => x - y);
+    eq(nos.length, 6, 'every row still has a number');
+    eq(new Set(nos).size, 6, 'and no two rows share one');
+
+    const byId = Object.fromEntries(out.map((r) => [r.stableId, r.itemNo]));
+    eq(byId.a, 1, 'the earliest-created row KEEPS the number it was issued');
+    eq(byId.b, 2, 'and so does the next');
+    eq(byId.c, 3, 'and the next');
+    ok(byId.d > 3 && byId.e > 3 && byId.f > 3, 'the later copies are reissued above the high-water mark');
+
+    // Deterministic: a second pass must not keep churning numbers.
+    const again = c._invAssignItemNos(1).map((r) => r.itemNo);
+    eq(again, out.map((r) => r.itemNo), 'a second pass is a no-op — the resolution converges');
+  }
+
+  group('a duplicated import is named, not silently merged');
+  {
+    const d = sandbox({ fns: ['_invDuplicateImports', '_jobInvRefs'] });
+    d._photoRefs[2] = [
+      { stableId: 'v1', label: 'inventory', collId: null, sourceVehId: 9, objectName: '2026 Bentley SUV' },
+      { stableId: 'v2', label: 'inventory', collId: null, sourceVehId: 9, objectName: '2026 Bentley SUV' },
+      { stableId: 'k1', label: 'inventory', collId: null, sourceCollId: 4, objectName: 'Silver #1' },
+      { stableId: 'k2', label: 'inventory', collId: null, sourceCollId: 4, objectName: 'Silver #2' },
+      { stableId: 'm1', label: 'inventory', collId: null, objectName: 'Cash on hand' },
+    ];
+    const groups = d._invDuplicateImports(2);
+    eq(groups.length, 1, 'one duplicate group');
+    eq(groups[0].map((r) => r.stableId), ['v1', 'v2'], 'the two copies of the same vehicle');
+
+    // An ITEMISED collection is legitimately many rows off one estimate line and must
+    // never be reported as duplicated.
+    ok(!groups.some((gr) => gr.some((r) => r.sourceCollId === 4)),
+       'an itemised collection is not a duplicate — its rows carry different names');
+
+    // A tombstoned copy is gone and does not count.
+    d._photoRefs[2][1].deletedAt = Date.now();
+    eq(d._invDuplicateImports(2).length, 0, 'deleting the extra clears the notice');
+  }
+
+  group('an import cannot be taken twice, and a deleted one can be retaken');
+  {
+    const i = sandbox({ fns: ['_importedSourceSet', '_jobInvRefs'] });
+    i._photoRefs[3] = [{ stableId: 'v', label: 'inventory', collId: null, sourceVehId: 7 }];
+    ok(i._importedSourceSet(3).veh[7], 'a live row marks its estimate line as imported');
+
+    i._photoRefs[3][0].deletedAt = Date.now();
+    ok(!i._importedSourceSet(3).veh[7],
+       'a TOMBSTONED row does not — deleting every copy makes the line importable again, '
+       + 'where reading _photoRefs directly locked it out forever');
+
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    ['materializeVehicle', 'materializeCollection'].forEach((name) => {
+      const at = src.indexOf('function ' + name + '(');
+      const body = src.slice(at, src.indexOf('\nfunction ', at + 10));
+      has(body, '_importedSourceSet(jobId)', name + ' refuses a second import of the same line');
+    });
+  }
 };

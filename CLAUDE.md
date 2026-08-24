@@ -89,6 +89,29 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## Item numbers collided across a merge (BUILT 2026-08-24)
+The load fix worked and pulled the server's copy back — onto a device that had re-imported
+the same estimate lines while the manifest looked empty. Six rows numbered **1,2,1,2,3,1**.
+- **`_invAssignItemNos` only ever assigned to rows WITHOUT a number.** It could not see a
+  collision between two rows that each already had one. Numbers are issued off a **local**
+  high-water mark, so two sessions on one estate both issue 1, 2, 3 and the per-item merge
+  unions them. **A duplicate number defeats the entire point of having one** — a receipt
+  citing "item 2" has to identify a single object.
+  - The **earliest-created row keeps its number**; later copies are reissued above the
+    high-water mark. Ties break on `stableId` so **every device resolves a collision
+    identically and they converge instead of fighting**. A second pass is a no-op; tested.
+  - This does not weaken *a number, once issued, is spent forever* — the reissued row is
+    the one that was never legitimately entitled to that number.
+- **The duplicate ROWS are surfaced, never auto-merged.** The app cannot know which copy
+  carries the edits somebody made. `_invDuplicateImports` groups vehicles by
+  `sourceVehId` and collections by `sourceCollId` **plus object name** — an ITEMISED
+  collection is legitimately many rows off one estimate line and must not be reported.
+- **`materializeVehicle` / `materializeCollection` now refuse a second import.** The panel
+  already filtered, but it filters on the manifest — which is exactly what was empty.
+- **`_importedSourceSet` reads live rows only.** It walked `_photoRefs` directly, counting
+  tombstones, so deleting every copy of an import locked that estimate line out forever.
+- **301 committed checks.**
+
 ## The Inventory tab never loaded the manifest it was drawing (BUILT 2026-08-24)
 Reported as *"all of the items i added from the estimate walkthrough are now back in the
 'from the estimate walkthrough' section … it doesn't seem to be saving."* **Nothing was
