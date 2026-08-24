@@ -674,6 +674,16 @@ Items flagged for appraisal that aren't yet linked to an appraiser surface a pan
 
 > All inventory valuations are documentation support, not a legal or appraisal opinion — the estate attorney and a credentialed appraiser remain the authority on any estate.
 
+### Where the inventory manifest actually lives
+
+Until 2026-08-24 it lived **only in one browser's localStorage**. The workbook write was one-way and nothing read back, so two devices held two different manifests of the same estate and the last sync overwrote the other wholesale; clearing site data destroyed the record. It now persists to a **MediaStore** blob in the main spreadsheet, beside jobs and estimates, via `saveMedia` / `loadMedia`.
+
+> **It is deliberately NOT in the job's Drive folder.** *Share w/ Counsel* grants read-only access to the whole Estate Inventory folder, and the manifest carries custody logs, appraisal-waiver reasons and upload state — none of which counsel has any business reading. The *workbook* still goes to Drive: it is the 26 display columns and no internals. A test asserts `saveMediaStore` never touches `DriveApp`.
+
+> **The merge is per ITEM, not per job, and must stay that way.** `_mergeStoreByKey` — the helper the other stores use — keeps whichever whole entry is newer. For an inventory that means two people editing *different items on the same job* still clobber each other. Every mutation stamps `updatedAt` and the merge resolves item by item against it. Removal writes a `deletedAt` tombstone rather than deleting the row, because absence is indistinguishable from "this device has not seen it yet" and a union merge would resurrect every deletion.
+
+> Consequence worth knowing: a tombstoned item still holds its **item number**, and the number is never reissued. A gap in the numbering is the visible record that something was removed.
+
 ### Firearms — the authority gate, and the NFA flag
 
 A firearm is the one category where the app deliberately refuses to produce a document. **Nothing reaches the Appraisal Worklist until the personal representative has authorised the transfer to a named licensed dealer, in writing.** Before 2026-08-24 it did not: flagged firearms were grouped under a Firearms Specialist (FFL) and a handover packet printed on day one, which is a printed instruction to release a firearm nobody had authorised releasing.

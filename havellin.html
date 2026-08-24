@@ -714,7 +714,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:09pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 5:18pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10168,7 +10168,7 @@ function showPanel(id, btn) {
   }
   if (id==='invoice') { populateLogAndInvSelects(); loadInvoice(); }
   if (id==='agreement') { populateAgrSelect(); }
-  if (id==='inventory') { populateInventorySelect(); renderInventoryTab(); }
+  if (id==='inventory') { populateInventorySelect(); renderInventoryTab(); _invRefreshFromCloud(); }
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -10761,6 +10761,23 @@ function _warnPhotoRetryUnsaved(e) {
 
 function _cleanName(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); }
 
+// Pull one job's manifest from the server and merge it in, then re-render whatever
+// asked. Used when a job is opened, so a device that did not take the photos still
+// sees the valuations somebody else entered.
+function refreshPhotoRefs(jobId, cb) {
+  if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
+  fetch(SHEETS_SYNC_URL + '?action=loadMedia&jobId=' + encodeURIComponent(jobId))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var remote = d && d.ok && d.media && d.media[String(jobId)] && d.media[String(jobId)].items;
+      if (!remote || !remote.length) { if (cb) cb(false); return; }
+      _photoRefs[jobId] = mergeMediaItems(_photoRefs[jobId] || [], remote);
+      savePhotoRefs(jobId);
+      if (cb) cb(true);
+    })
+    .catch(function(){ if (cb) cb(false); });
+}
+
 function loadPhotoRefs(jobId) {
   try {
     var raw = localStorage.getItem('hav_media_' + jobId);
@@ -10818,7 +10835,8 @@ function savePhotoRefs(jobId) {
                dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
                apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason, assetTrack:r.assetTrack, custodyLog:r.custodyLog,
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
-               filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts };
+               filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts,
+               updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
   } catch(e) { _warnPhotoStoreFull(e); }
@@ -11177,8 +11195,41 @@ var INVENTORY_COLUMNS = [
 
 function _jobInvRefs(jobId) {
   return (_photoRefs[jobId] || [])
-    .filter(function(r){ return r.label === 'inventory' && !r.collId; })
+    .filter(function(r){ return r.label === 'inventory' && !r.collId && !r.deletedAt; })
     .sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
+}
+
+// ── The manifest lives off this device now ────────────────────────────────────
+// Until 2026-08-24 every valuation, disposition, custody event and flag lived only in
+// this browser's localStorage. The workbook write was one-way and nothing ever read
+// back, so two people on two devices held two different manifests of the same estate
+// and whichever synced last overwrote the other wholesale. Clearing site data destroyed
+// the record: the photographs survived in Drive, the account of what they are did not.
+//
+// The fix is a per-ITEM merge, not a per-job one. `_mergeStoreByKey` on the server keeps
+// the newer whole entry, which for an inventory means two people editing DIFFERENT items
+// on the same job still clobber each other. So every mutation stamps `updatedAt` and the
+// merge resolves item by item.
+function _invTouch(ref) { if (ref) ref.updatedAt = Date.now(); return ref; }
+
+// Union by stableId; per item the newer updatedAt wins. Absence is NOT deletion — an
+// item missing from one side is simply one that side has not seen, which is why removal
+// writes a `deletedAt` tombstone instead of splicing the row out. Without that, a union
+// merge resurrects everything anyone has ever deleted on the next sync.
+function mergeMediaItems(existing, incoming) {
+  var byId = {}, order = [];
+  var take = function(list) {
+    (list || []).forEach(function(it) {
+      if (!it || !it.stableId) return;
+      var cur = byId[it.stableId];
+      if (!cur) { order.push(it.stableId); byId[it.stableId] = it; return; }
+      var a = Number(it.updatedAt || it.ts || 0);
+      var b = Number(cur.updatedAt || cur.ts || 0);
+      if (a >= b) byId[it.stableId] = it;
+    });
+  };
+  take(existing); take(incoming);
+  return order.map(function(id){ return byId[id]; });
 }
 
 // ── Item numbers are PERMANENT ────────────────────────────────────────────────
@@ -11192,10 +11243,15 @@ function _jobInvRefs(jobId) {
 // which is exactly what a reader should be able to see.
 function _invAssignItemNos(jobId) {
   var refs = _jobInvRefs(jobId);
+  // The high-water mark is taken over EVERY inventory row including tombstoned ones.
+  // _jobInvRefs hides tombstones, so reading the max from it handed a deleted item's
+  // number straight to the next one — and a receipt citing "item 2" would then point at
+  // a different object. A number, once issued, is spent forever.
+  var all = (_photoRefs[jobId] || []).filter(function(r){ return r.label === 'inventory' && !r.collId; });
   var max = 0, dirty = false;
-  refs.forEach(function(r){ var n = parseInt(r.itemNo, 10); if (n > max) max = n; });
+  all.forEach(function(r){ var n = parseInt(r.itemNo, 10); if (n > max) max = n; });
   refs.forEach(function(r){
-    if (!(parseInt(r.itemNo, 10) > 0)) { r.itemNo = ++max; dirty = true; }
+    if (!(parseInt(r.itemNo, 10) > 0)) { r.itemNo = ++max; _invTouch(r); dirty = true; }
   });
   if (dirty) savePhotoRefs(jobId);   // backfill persists, so it happens once per job
   return refs;
@@ -11449,7 +11505,7 @@ function _invEdit(jobId, stableId, key, el) {
   } else {
     ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
   }
-  _setPhotoRef(jobId, ref);
+  _setPhotoRef(jobId, _invTouch(ref));
   savePhotoRefs(jobId);
   if (key === 'gross' || key === 'fees') {
     var netEl = document.getElementById('inv-net-' + stableId);
@@ -11486,7 +11542,12 @@ function addInventoryManualItem(jobId) {
 
 function removeInventoryManualItem(jobId, stableId) {
   if (!window.confirm('Remove this manual line item?')) return;
-  _photoRefs[jobId] = (_photoRefs[jobId] || []).filter(function(r){ return r.stableId !== stableId; });
+  // Tombstone rather than splice. Splicing made the row simply absent, and absence is
+  // indistinguishable from "the other device has not seen it yet" — so the next merge
+  // put it straight back. The item number is never reused either way; a gap in the
+  // numbering is the visible record that something was removed.
+  var ref = _getPhotoRef(jobId, stableId);
+  if (ref) { ref.deletedAt = Date.now(); _invTouch(ref); _setPhotoRef(jobId, ref); }
   savePhotoRefs(jobId);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
@@ -11660,7 +11721,7 @@ function addCustodyEvent() {
   if (!party) { alert('Enter the party (to / from whom).'); return; }
   if (!ref.custodyLog) ref.custodyLog = [];
   ref.custodyLog.push({ action: (document.getElementById('cust-action')||{}).value || 'Released', party: party, date: g('cust-date'), method: g('cust-method'), receipt: g('cust-receipt') });
-  _setPhotoRef(_custodyCtx.jobId, ref); savePhotoRefs(_custodyCtx.jobId);
+  _setPhotoRef(_custodyCtx.jobId, _invTouch(ref)); savePhotoRefs(_custodyCtx.jobId);
   ['cust-party','cust-date','cust-method','cust-receipt'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
   _renderCustodyList();
   renderInventoryTab();                 // refresh the per-item custody count badge
@@ -11670,7 +11731,7 @@ function removeCustodyEvent(idx) {
   var ref = _getPhotoRef(_custodyCtx.jobId, _custodyCtx.stableId);
   if (!ref || !ref.custodyLog) return;
   ref.custodyLog.splice(idx, 1);
-  _setPhotoRef(_custodyCtx.jobId, ref); savePhotoRefs(_custodyCtx.jobId);
+  _setPhotoRef(_custodyCtx.jobId, _invTouch(ref)); savePhotoRefs(_custodyCtx.jobId);
   _renderCustodyList(); renderInventoryTab(); _scheduleInventorySync(_custodyCtx.jobId);
 }
 
@@ -12111,7 +12172,7 @@ function waiveAppraisal(jobId, stableId) {
   if (!reason) return;
   var ref = _getPhotoRef(jobId, stableId); if (!ref) return;
   ref.apprWaived = true; ref.apprWaiveReason = reason;
-  _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
+  _setPhotoRef(jobId, _invTouch(ref)); savePhotoRefs(jobId);
   _invRefreshGuardrail(jobId); _invRefreshSummary(jobId); _scheduleInventorySync(jobId);
 }
 function _invRefreshGuardrail(jobId) {
@@ -12169,6 +12230,20 @@ function unshareInventory(jobId) {
       .then(function(r){ return r.json(); })
       .then(function(d){ alert((d && d.ok) ? ('Removed Estate Inventory access for ' + email + '.') : ('Failed: ' + ((d && d.error) || 'unknown error'))); })
       .catch(function(){ alert('Failed — check your connection.'); });
+  });
+}
+
+// Fetch the selected job's manifest and redraw if the merge actually changed something.
+// Silent by design: this runs on every tab open and a badge each time would be noise.
+function _invRefreshFromCloud() {
+  var sel = document.getElementById('inv-job');
+  var jobId = sel ? parseInt(sel.value) || 0 : 0;
+  if (!jobId) return;
+  var before = JSON.stringify((_photoRefs[jobId] || []).map(function(r){ return [r.stableId, r.updatedAt || r.ts, r.deletedAt || 0]; }));
+  refreshPhotoRefs(jobId, function(changed) {
+    if (!changed) return;
+    var after = JSON.stringify((_photoRefs[jobId] || []).map(function(r){ return [r.stableId, r.updatedAt || r.ts, r.deletedAt || 0]; }));
+    if (after !== before) renderInventoryTab();
   });
 }
 
@@ -12262,6 +12337,13 @@ function buildInventoryPayload(jobId) {
     deadline: job.probateDeadline || '',
     preparedBy: 'Havellin Palm Beach, LLC',
     valBasis: resolveValBasis(job),
+    // Sent so the workbook's Summary rollups cannot drift from the app again. The
+    // Apps Script used to hold its own hardcoded copies — 6 categories against 13 and
+    // 5 dispositions against 7 — so the client's "FMV by Category" silently dropped
+    // Antiques, Silver, Rugs, Firearms, Wine, Instruments and Vehicles, and the rows
+    // did not sum to the total printed above them.
+    categories: INV_CATEGORIES,
+    dispositions: INV_DISPOSITIONS,
     driveFolder: job.driveFolder || '',
     lastUpdated: new Date().toISOString(),
     columns: columns,
@@ -12275,13 +12357,53 @@ function buildInventoryPayload(jobId) {
 var _invSyncTimer = {};
 function _scheduleInventorySync(jobId) {
   if (!SHEETS_SYNC_URL) return;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || !job.driveFolder) return;
   clearTimeout(_invSyncTimer[jobId]);
   _invSyncTimer[jobId] = setTimeout(function(){
-    postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
-                  'Inventory workbook synced ✓', 'Inventory sync failed');
+    // TWO writes, and they are not the same thing.
+    //   saveMedia     — the durable manifest. Every field, merged per item, kept in the
+    //                   MAIN sheet next to jobs and estimates. This is the record.
+    //   saveInventory — the client's Drive workbook: 26 display columns, no internals.
+    // The manifest goes first and is unconditional, because the workbook write needs a
+    // Drive folder and the record must not depend on one existing.
+    postSyncBadge({ type: 'saveMedia', payload: buildMediaPayload(jobId) },
+                  'Inventory saved \u2713', 'Inventory not saved \u2014 still on this device only');
+    var job = jobs.find(function(j){ return j.id === jobId; });
+    if (job && job.driveFolder) {
+      postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
+                    'Inventory workbook synced \u2713', 'Inventory sync failed');
+    }
   }, 2500);
+}
+
+// The full manifest for one job — every field savePhotoRefs persists, tombstones and
+// all. Deliberately NOT the workbook shape: the workbook is what counsel sees and
+// carries no custody log, no waiver reasons, no upload status.
+function buildMediaPayload(jobId) {
+  return { jobId: String(jobId), savedAt: Date.now(), items: (_photoRefs[jobId] || []) };
+}
+
+// Pull every job's manifest back and merge it into what this device holds. Runs at
+// startup beside the other stores. A device that has been offline contributes its own
+// items on the next write rather than losing them, because the merge is a union.
+function loadMediaStore(cb) {
+  if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
+  fetch(SHEETS_SYNC_URL + '?action=loadMedia')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok || !d.media) { if (cb) cb(false); return; }
+      var merged = 0;
+      Object.keys(d.media).forEach(function(jobId) {
+        var remote = (d.media[jobId] && d.media[jobId].items) || [];
+        if (!remote.length) return;
+        var local = _photoRefs[jobId] || [];
+        var out = mergeMediaItems(local, remote);
+        _photoRefs[jobId] = out;
+        savePhotoRefs(jobId);
+        merged++;
+      });
+      if (cb) cb(true, merged);
+    })
+    .catch(function(){ if (cb) cb(false); });
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
@@ -14479,6 +14601,9 @@ function loadJobPlanTab() {
   // and hid every failed-upload flag — photos correctly filed in Drive read on screen
   // as photos that never happened, which is exactly the report this fixes.
   loadPhotoRefs(jobId);
+  // ...and pull anything another device captured, redrawing once it lands. The local
+  // copy renders immediately either way, so this never blocks the plan appearing.
+  refreshPhotoRefs(jobId, function(changed){ if (changed) loadJobPlanTab(); });
 
   // Home Prep for Sale gets a stripped-down plan: no hours log, PS crew, room phases, or
   // end-of-job logistics — just vendor sourcing, budget, and a coordination checklist.

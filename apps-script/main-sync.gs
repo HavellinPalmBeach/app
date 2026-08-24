@@ -33,6 +33,9 @@ function doGet(e) {
     if (action === 'loadChangeOrders') { return jsonOut({ ok: true, success: true, changeOrders: getChangeOrderStore() }); }
     if (action === 'loadLogs')         { return jsonOut({ ok: true, success: true, logs: getLogStore() }); }
     if (action === 'loadContractors')  { return jsonOut({ ok: true, success: true, contractors: getContractorStore() }); }
+    // The inventory manifest — the durable copy of the item record. `jobId` scopes it
+    // to one estate; without it the whole store comes back, which grows forever.
+    if (action === 'loadMedia')        { return jsonOut({ ok: true, success: true, media: getMediaForJob(e.parameter.jobId) }); }
 
     if (action === 'createFolder') {
       var hvlId = e.parameter.hvlId || '';
@@ -74,6 +77,7 @@ function doPost(e) {
     else if (type === 'deleteContractor')    { deleteContractorFromStore(payload.id); }
     else if (type === 'deleteJob')           { deleteJobFromSheet(payload.id); }
     else if (type === 'saveInventory')       { return jsonOut(saveInventory(payload)); }
+    else if (type === 'saveMedia')           { return jsonOut(saveMediaStore(payload)); }
     else if (type === 'log')                 { /* redundant single-entry log; saveAllLogs is authoritative — ignore */ }
     else { return jsonOut({ ok: false, success: false, error: 'Unknown type: ' + type }); }
 

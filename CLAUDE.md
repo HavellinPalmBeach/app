@@ -163,6 +163,53 @@ wanted for a month.
 - **48 committed checks** (`node tests/run.js` / `npm test`). See the harness section at the top.
 
 
+## The manifest lives off the device + workbook rollups un-stale (BUILT 2026-08-24)
+Second commit off the audit. **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — both `main-sync.gs` and
+`saveInventory.gs` changed; they are one project and one deployment.
+
+- **The inventory manifest was in one browser and nothing ever read it back.** `savePhotoRefs`
+  wrote `hav_media_<jobId>` to localStorage, `loadPhotoRefs` read only localStorage, and the one
+  outbound path regenerated the client's Drive workbook from whatever that device held. Two
+  people on two devices held two different manifests of the same estate and the last sync
+  overwrote the other wholesale; clearing site data destroyed the record (photos survive in
+  Drive, the account of what they are did not).
+  - **New `MediaStore` blob in the MAIN sheet**, beside jobs and estimates — `saveMedia` /
+    `loadMedia`, reusing `_readStoreBlob` / `_writeStoreBlob`.
+  - **NOT in the job's Drive folder, and this is the reason:** `shareInventoryWithCounsel` grants
+    read-only access to the whole Estate Inventory folder, and the manifest carries custody logs,
+    appraisal-waiver reasons and upload state. A test asserts `saveMediaStore` never touches
+    `DriveApp`. The workbook still goes to Drive; it is 26 display columns and no internals.
+  - **The merge is PER ITEM, not per job. Do not "simplify" it to `_mergeStoreByKey`.** That
+    helper keeps the newer whole entry, so two people editing *different items on the same job*
+    still clobber each other. Every mutation stamps `updatedAt` (`_invTouch`) and the merge
+    resolves item by item. There is a test that fails on exactly that scenario.
+  - **Removal writes a `deletedAt` tombstone instead of splicing.** Absence is indistinguishable
+    from "the other device hasn't seen it yet", so a union merge resurrected everything anyone
+    had ever deleted. `_jobInvRefs` hides tombstones; the row stays in `_photoRefs`.
+  - **The tombstone broke item numbering and a test caught it.** `_invAssignItemNos` took its
+    high-water mark from `_jobInvRefs`, which now hides tombstones — so a deleted item's number
+    was handed to the next one and a receipt citing "item 2" pointed at a different object. The
+    max is now taken over every inventory row including tombstoned ones. **A number, once
+    issued, is spent forever.**
+  - `mergeMediaItems` (app) and `_mergeMediaItems` (`.gs`) are the same rule twice. A test drives
+    **both off their real source** and asserts identical output on six cases — two copies of a
+    merge rule that drift is how the rollups below got six categories against thirteen.
+- **The client workbook's Summary dropped the seven categories estate value sits in.**
+  `saveInventory.gs` held hardcoded copies of the app's lists — **6 categories against 13, 5
+  dispositions against 7** — under a comment asserting they matched. Antiques, Silver & Precious
+  Metal, Rugs & Carpets, Firearms, Wine & Spirits, Musical Instruments and Vehicles & Watercraft
+  were all absent from *FMV by Category*, and the rows silently failed to sum to the Total FMV
+  printed directly above them, on the document that goes to the attorney.
+  - **The app now SENDS `categories` and `dispositions` in the payload.** They cannot drift again.
+    The literals survive only as `*_FALLBACK` for a payload from a pre-2026-08-24 app build.
+  - **Summary formulas resolve columns by HEADER NAME** (`_invColLetter`), not hardcoded letters.
+    This was live risk the moment `flagNFA` was inserted into `INVENTORY_COLUMNS`.
+  - **Both blocks are laid out sequentially.** They started at fixed rows 3 and 12, which was only
+    safe while the category list was six long; at thirteen the categories ran through the
+    disposition heading. A *Total (should equal B14)* row was added under the categories so a
+    reader can see the breakdown reconcile.
+- **89 committed checks.**
+
 ## LIVING client vs DECEASED client — the SERVICE TYPE decides, always (2026-08-03)
 **Anthony: "there should be a rule about the language for projects when the client is alive
 versus when the client is deceased… applied to estimates and engagement agreements

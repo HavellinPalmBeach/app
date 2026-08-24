@@ -348,6 +348,12 @@ On estate and probate jobs, the manifest assembles from three places: items you 
 
 > Everything in the inventory is documentation support, not a legal or appraisal opinion. The estate attorney and a credentialed appraiser remain the authority.
 
+> **⚠** **Your inventory is no longer only on your own phone (2026-08-24).** Until this change, every valuation, disposition, custody entry and flag lived in one browser and nothing ever read it back — so you and Ashley could each hold a different inventory for the same estate, and whichever saved last quietly overwrote the other. Clearing your browser data destroyed the record outright: the photographs were safe in Drive, but what they were, what they were worth and where they went was gone. It now saves to the shared sheet and merges item by item, so two people working the same job keep both sets of edits.
+
+**What that means in practice.** Open a job on any device and it pulls whatever anyone else has entered. You do not have to be the person who took the photos to see the valuations. If you remove a manual line item it stays removed everywhere — and its item number is never handed to anything else, so a gap in the numbering is the record that something was taken out.
+
+> If the badge says *Inventory not saved — still on this device only*, you have no connection or the sync URL is unset in Settings. Your work is safe locally and will go up on the next save; but until it does, nobody else can see it and clearing your browser would lose it. Don't clear site data while that badge is showing.
+
 ### f. Firearms — and what NFA actually means
 
 Firearms come up more often than people expect on Palm Beach estates, and the rule is short: **nobody on a Havellin crew touches one. Ever.** Not to move it out of the way, not to make a room safe to work in, not to put it somewhere sensible. If a firearm is in the way, the room waits.

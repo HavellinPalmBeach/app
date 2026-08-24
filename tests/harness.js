@@ -186,7 +186,16 @@ function sandbox({ fns = [], vars = [], stubs = {} } = {}) {
   Object.assign(ctx, stubs);
   vm.createContext(ctx);
 
-  const code = [...vars.map(decl), ...fns.map(fn)].join('\n\n');
+  // Emit declarations in SOURCE order, not the order the caller listed them. Several
+  // top-level vars are derived from earlier ones (INV_CATEGORIES maps over INV_TAXONOMY),
+  // so a caller listing them the other way round got a bare TypeError with no hint that
+  // ordering was the problem. The file already has them in dependency order; use it.
+  const src = source();
+  const ordered = vars
+    .map((name) => ({ name, at: src.search(new RegExp('(^|\\n)var\\s+' + name + '\\s*=')) }))
+    .sort((a, b) => a.at - b.at)
+    .map((v) => v.name);
+  const code = [...ordered.map(decl), ...fns.map(fn)].join('\n\n');
   vm.runInContext(code, ctx, { filename: 'havellin.html (extracted)' });
   return ctx;
 }

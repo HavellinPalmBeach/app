@@ -13,7 +13,7 @@ const { sandbox } = require('./harness');
 const INV_FNS = [
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
-  '_jobInvRefs', '_invAssignItemNos', '_invItemNo',
+  '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
   '_apprGroups', '_apprWithheld', '_apprNFA',
   '_invTrack', '_invIsProbateAsset',
   'savePhotoRefs', '_warnPhotoStoreFull',
@@ -172,6 +172,41 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const parsed = JSON.parse(raw || '[]');
     eq(parsed[0] && parsed[0].itemNo, 1,
        'itemNo survives savePhotoRefs — without it the number is re-derived and the point is lost');
+  }
+
+  group('tombstones: a removed item stays removed');
+  {
+    const a = item({ objectName: 'A', ts: 100 });
+    const b = item({ objectName: 'B', ts: 200 });
+    const ctx = ctxWith([a, b]);
+    ctx._invAssignItemNos(1);
+
+    // Removal marks rather than splices, so the row is still in _photoRefs...
+    b.deletedAt = Date.now(); ctx._invTouch(b);
+    eq(ctx._jobInvRefs(1).map((r) => r.objectName), ['A'],
+       '...but a tombstoned item is invisible to every reader');
+    eq(ctx._photoRefs[1].length, 2,
+       'the row itself survives, because absence would read as "not seen yet" on the merge');
+
+    // ...and its number is not handed to the next item.
+    const c = item({ objectName: 'C', ts: 300 });
+    ctx._photoRefs[1].push(c);
+    ctx._invAssignItemNos(1);
+    eq(c.itemNo, 3, 'a removed item does not free its number for reuse');
+  }
+
+  group('updatedAt: every mutation stamps');
+  {
+    const a = item({ objectName: 'A', ts: 100 });
+    const ctx = ctxWith([a]);
+    eq(a.updatedAt, undefined, 'unstamped to begin with');
+    ctx._invAssignItemNos(1);
+    ok(a.updatedAt > 0, 'assigning an item number is a real write and stamps it');
+    // Without the stamp the merge cannot tell this device has newer data, and the
+    // backfilled numbers would lose to any other device on the next sync.
+    const older = Object.assign({}, a, { itemNo: 99, updatedAt: a.updatedAt - 1000 });
+    eq(ctx.mergeMediaItems([a], [older])[0].itemNo, 1,
+       'and the stamp is what makes the newer copy win');
   }
 
   // ── 3. Court inventory: exempt subtotal, cap, and the track/exempt overlap ──
