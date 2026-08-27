@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/code-audit-document-review-jilk87`
-  (was `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/box-formatting-alignment-c3z6h7`
+  (was `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/code-audit-document-review-jilk87:main`
+  `git push origin claude/box-formatting-alignment-c3z6h7:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -88,6 +88,53 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## Two off the Add Vendor form: a dropped control and a duplicated row (BUILT 2026-08-27)
+*"slight formatting error here with the boxes way below where they should be"* and, minutes
+later, *"when i saved a new vendor the card never cleared (it said 'saving' and never appeared
+to save), so i hit save again and two versions of the same vendor were saved."*
+
+- **A five-line note under one input dropped its two neighbours' selects 101px below their own
+  labels.** Measured, not eyeballed: COI on file and Reciprocity had a 101px label→control gap
+  before, 18px after (the 18 is correct — it is the one extra line the two-line Category label
+  runs to, which is what `margin-top:auto` exists to absorb). Every cell in a `.vform` row
+  stretches to the tallest one and `.vform .fld` pushes its control to the BOTTOM of that
+  height, so anything a cell carries UNDER its control drags the whole row's controls down with
+  it. **The Last contacted cell was already made `.fld-wide` to escape this exact trap** and the
+  comment on it says so — the same trap was simply reintroduced one cell over.
+  - **THE RULE: guidance that runs to more than a few words goes in its own full-width
+    `.vform .fld-note` row, never inside the cell.** Short hints ride on the label
+    (`.lbl-hint`); a caption that must sit between label and control is `.eg`. A test parses the
+    real markup and asserts **no `.fld` cell carries rendered content after its control**, so
+    the next one is caught rather than reported off a screenshot. (`<datalist>` is exempt — it
+    is `display:none` and cannot stretch anything.)
+  - The note also stopped repeating `separate several with ;`, which the label already says.
+- **⚠ NOTHING DOWNSTREAM CATCHES A SECOND PRESS OF SAVE, AND THAT IS DELIBERATE.** `addVendor`
+  is excluded from `IDEMPOTENT_DIR_WRITES` on purpose — an append cannot be re-sent, because a
+  failed POST never reveals whether it reached Google — so it is not queued and not retried.
+  The consequence nobody had drawn: **the button was the only guard, and there wasn't one.**
+  Apps Script can take several seconds on a cold start, the button sat there enabled and
+  unchanged, and a second press appended the row again. Verified in a headless browser against
+  a 3-second endpoint: **two `addVendor` POSTs before, one after.**
+  - `_vendorSaveBusy` + `_setVendorSaveBusy` disable the button and repaint it to *Saving…* —
+    the button is where the eyes are after a press, not the status line beside it (the same
+    lesson as the Save-to-Drive repaint).
+  - **`_vendorByName` refuses an ADD of a name already in the directory**, and this is a
+    correctness rule rather than tidiness: `resolveJobVendor` identifies a vendor **by name**
+    because the row index is not stable, so two rows under one name make every later lookup pick
+    between them at random. Normalised on case and whitespace — the second entry is typed, not
+    pasted. The guard is inside `if (!editId)`; an edit legitimately keeps its name.
+  - **A 45-second watchdog re-enables the button rather than leaving the form stuck** (a `fetch`
+    has no timeout), and when it fires it says the row may already have been written and reloads
+    the directory — so the name check above has the truth to test against before anyone presses
+    again. **Never re-enable silently: that is the exact moment a second press duplicates.**
+  - **A failed append now says what is actually unknown** — "the row may still have reached the
+    sheet — reload and check before pressing Save again" — instead of just *Failed*, which is
+    what invited the duplicating press in the first place.
+  - A test asserts `addVendor`/`addPartner` are still NOT in `IDEMPOTENT_DIR_WRITES`. "Fixing" a
+    failed save by queuing it would duplicate rows automatically, with no person to blame it on.
+- **364 committed checks.** `manual.html` §13 and the playbook's symptom table (two new rows)
+  carry the one-press-one-row rule; the four doc files were hand-edited and tag-balance checked.
 
 ## Four things reported off one screenshot (BUILT 2026-08-24)
 *"there are an insane number of columns here and scrolling right is not ideal … if Marie

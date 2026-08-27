@@ -530,6 +530,8 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Final invoice won't print, and no PIN is offered | No hours are logged. Go and log them. |
 | A change order isn't on the final invoice | It was never marked accepted. Get Acceptance. |
 | A vendor isn't in the Job Plan picker | They aren't set to *Active* in the Vendor Directory. |
+| Saving a new vendor sits on *Saving…* and the form never closes | The write is still in flight — the sheet's web app can take several seconds to wake up. **Do not press Save again.** The button is disabled while it works, and an add is never retried automatically, so a second press is what writes the vendor twice. If nothing has happened after 45 seconds the app re-enables the button, reloads the directory and tells you to check whether the vendor is already there. |
+| The form says the vendor is already in the directory | It is, under that name, and one firm is **one row** — two rows under one name break every later lookup, because the name is what identifies a vendor. Close the form and press **Edit** on the existing card. Genuinely a different firm with the same name? Put something in the name that tells them apart. |
 | A crew member isn't in the staffing dropdown | They aren't *Active* on the Contractors tab. |
 | Fixed-price toggle is disabled | It's a probate or contested probate job. Those bill on logged hours. |
 | The estimate won't save | No rooms are scored. Score at least one — and read the coverage badge before you settle for one. |

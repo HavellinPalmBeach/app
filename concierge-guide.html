@@ -525,6 +525,8 @@
     <tr><td>Final invoice won't print, and no PIN is offered</td><td>No hours are logged. Go and log them.</td></tr>
     <tr><td>A change order isn't on the final invoice</td><td>It was never marked accepted. Get Acceptance.</td></tr>
     <tr><td>A vendor isn't in the Job Plan picker</td><td>They aren't set to <em>Active</em> in the Vendor Directory.</td></tr>
+    <tr><td>Saving a new vendor sits on <em>Saving…</em> and the form never closes</td><td>The write is still in flight — the sheet's web app can take several seconds to wake up. <strong>Do not press Save again.</strong> The button is disabled while it works, and an add is never retried automatically, so a second press is what writes the vendor twice. If nothing has happened after 45 seconds the app re-enables the button, reloads the directory and tells you to check whether the vendor is already there.</td></tr>
+    <tr><td>The form says the vendor is already in the directory</td><td>It is, under that name, and one firm is <strong>one row</strong> — two rows under one name break every later lookup, because the name is what identifies a vendor. Close the form and press <strong>Edit</strong> on the existing card. Genuinely a different firm with the same name? Put something in the name that tells them apart.</td></tr>
     <tr><td>A crew member isn't in the staffing dropdown</td><td>They aren't <em>Active</em> on the Contractors tab.</td></tr>
     <tr><td>Fixed-price toggle is disabled</td><td>It's a probate or contested probate job. Those bill on logged hours.</td></tr>
     <tr><td>The estimate won't save</td><td>No rooms are scored. Score at least one — and read the coverage badge before you settle for one.</td></tr>

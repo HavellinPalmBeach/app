@@ -66,6 +66,15 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .vform .fld > input,.vform .fld > select,.vform .fld > textarea{margin-top:auto;}
 .vform .fld label{margin-top:0;}
 .vform .fld-wide{grid-column:1/-1;}
+/* Guidance that belongs to a field but runs to several lines. It goes in its own
+   full-width row UNDER the row it explains — never inside the cell. Every cell in a
+   grid row stretches to the tallest one and .fld pushes its control to the bottom of
+   that height, so a five-line note tucked under one input drops its neighbours' inputs
+   an inch below their own labels. That is what happened to COI on file / Reciprocity,
+   reported 2026-08-27, and it is the same trap the Last contacted cell was made
+   full-width to escape. There is a test asserting no .fld cell carries content after
+   its control. */
+.vform .fld-note{grid-column:1/-1;font-size:10.5px;color:var(--gray);line-height:1.45;margin:-2px 0 2px;}
 .vform .hint{font-size:10px;color:var(--gray);margin-top:3px;line-height:1.4;}
 /* Guidance caption sitting in the white space between a label and its input. Reserved
    for behaviour the field can't convey on its own — e.g. that a value is set elsewhere.
@@ -724,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.24 · 7:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.27 · 6:24pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2127,7 +2136,6 @@ body.no-smf .smf-col{display:none;}
         <label>Category <span class="lbl-hint">— or type to create; separate several with ;</span></label>
         <input type="text" id="v-category" list="v-cat-list" placeholder="Art Appraiser; Antiques &amp; Furniture Appraiser">
         <datalist id="v-cat-list"></datalist>
-        <div style="font-size:10.5px;color:var(--gray);margin-top:2px;">A firm that does two things is <strong>one</strong> vendor — list both trades here rather than adding a second row, so it keeps one rating, one status and one contact history.</div>
       </div>
       <div class="fld">
         <label>COI on file</label>
@@ -2146,6 +2154,7 @@ body.no-smf .smf-col{display:none;}
           <option>No</option>
         </select>
       </div>
+      <div class="fld-note"><strong>Category:</strong> a firm that does two things is <strong>one</strong> vendor — list both trades in the box above rather than adding a second row, so it keeps one rating, one status and one contact history.</div>
       <div class="fld">
         <label>Contact first name</label>
         <input type="text" id="v-contact-first">
@@ -2226,7 +2235,7 @@ body.no-smf .smf-col{display:none;}
     <div class="divider"></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <button class="btn-s" onclick="closeVendorForm()">Cancel</button>
-      <button class="btn-p" onclick="saveVendor()">Save Vendor</button>
+      <button class="btn-p" id="v-save-btn" onclick="saveVendor()">Save Vendor</button>
       <span id="v-save-status" style="font-size:11px;color:var(--gray);"></span>
     </div>
     <div id="v-delete-zone" style="display:none;margin-top:10px;padding-top:8px;border-top:1px dashed var(--border-md);">
@@ -15484,6 +15493,19 @@ function lookupVendorById(id) {
   }
   return null;
 }
+// The NAME is a vendor's real identity (resolveJobVendor above matches on it, because
+// the row index is not stable), so two rows carrying one name are not a tidiness
+// problem — every later lookup then picks between them at random. Whitespace and case
+// are normalised because the second entry of a name is usually typed, not pasted.
+function _vendorNameKey(s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toLowerCase(); }
+function _vendorByName(name) {
+  var k = _vendorNameKey(name);
+  if (!k) return null;
+  for (var i = 0; i < vendorDirectory.length; i++) {
+    if (_vendorNameKey(vendorDirectory[i].vendor_name) === k) return vendorDirectory[i];
+  }
+  return null;
+}
 // Maps a Job Plan sourcing slot to the vendor-directory categories that fill it,
 // so the picker shows only the relevant vendors (a painter slot → painters), not
 // the whole 150-vendor list. Keyed by the estimate vendor-type / logistics label /
@@ -17081,7 +17103,47 @@ function postVendorWrite(type, payload, cb, onLanded) {
   queuedDirectoryWrite('vendor', { type: type, payload: payload }, cb, onLanded);
 }
 
+// ONE APPEND PER PRESS, and this flag is the only thing standing behind it. An
+// addVendor is deliberately never queued and never auto-retried, because a re-send
+// could append the same row twice (see queuedDirectoryWrite) — so nothing downstream
+// catches a second press. Apps Script can take several seconds on a cold start and the
+// Save button sat there enabled and unchanged the whole time. Reported 2026-08-27:
+// "when i saved a new vendor the card never cleared (it said saving and never appeared
+// to save), so i hit save again and two versions of the same vendor were saved."
+var _vendorSaveBusy = false;
+var _vendorSaveWatchdog = null;
+var VENDOR_SAVE_TIMEOUT_MS = 45000;
+function _setVendorSaveBusy(on) {
+  _vendorSaveBusy = !!on;
+  if (_vendorSaveWatchdog) { clearTimeout(_vendorSaveWatchdog); _vendorSaveWatchdog = null; }
+  var b = document.getElementById('v-save-btn');
+  if (!b) return;
+  b.disabled = !!on;
+  // Repaint the button itself, not just the status line beside it — the status line is
+  // where "Saving…" already was, and it is not where the eyes are after a press.
+  b.textContent = on ? 'Saving…' : 'Save Vendor';
+  b.style.opacity = on ? '.5' : '';
+  b.style.cursor = on ? 'default' : '';
+}
+// A fetch has no timeout, so a request that never settles would leave the button
+// disabled for good. Re-enable it — but say plainly that the write may have landed,
+// and reload the directory so the duplicate-name check below has the truth to test
+// against. Never silently re-enable: that is exactly the moment a second press
+// duplicates the row.
+function _armVendorSaveWatchdog() {
+  _vendorSaveWatchdog = setTimeout(function(){
+    _vendorSaveWatchdog = null;
+    if (!_vendorSaveBusy) return;
+    _setVendorSaveBusy(false);
+    var st = document.getElementById('v-save-status');
+    if (st) { st.textContent = 'No answer yet'; st.style.color = 'var(--warn-tx)'; }
+    showFB('v-fb','warn','No answer from the vendor sheet after 45 seconds. The row may still have been written — the directory is reloading now, so check whether the vendor is already listed before pressing Save again.');
+    if (typeof loadVendorDirectory === 'function') loadVendorDirectory();
+  }, VENDOR_SAVE_TIMEOUT_MS);
+}
+
 function saveVendor() {
+  if (_vendorSaveBusy) return;   // belt and braces — the button is disabled too
   var name = _getV('v-name');
   if (!name) { showFB('v-fb','warn','Vendor name is required.'); return; }
   if (!_getV('v-group')) { showFB('v-fb','warn','Category group is required — it decides which job menu (and fee) this vendor feeds.'); return; }
@@ -17091,12 +17153,28 @@ function saveVendor() {
   // primary_contact is retired — the app no longer writes it (contact now lives in the
   // split contact_first / contact_last fields), so the legacy column can be deleted.
   var editId = document.getElementById('v-edit-row').value;
+  // Adding a name the directory already holds is almost always the second half of a
+  // save that landed. Refuse it here rather than appending the twin — a vendor that
+  // does two things is ONE row (categories are semicolon-separated), and two rows under
+  // one name break every later lookup, since the name is what resolves them.
+  if (!editId) {
+    var dupe = _vendorByName(name);
+    if (dupe) {
+      showFB('v-fb','warn','<strong>' + esc(name) + '</strong> is already in the directory'
+        + (dupe.category ? ' (' + esc(String(dupe.category)) + ')' : '')
+        + '. Close this form and press <strong>Edit</strong> on that card instead — one vendor keeps one rating, one status and one contact history. If this really is a different firm, put something in the name that tells them apart.');
+      return;
+    }
+  }
   var st = document.getElementById('v-save-status');
   if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--gray)'; }
+  _setVendorSaveBusy(true);
+  _armVendorSaveWatchdog();
 
   if (editId) {
     var existing = lookupVendorById(editId) || {};
     postVendorWrite('updateVendor', { _row: existing._row, vendor_name: existing.vendor_name || name, fields: fields }, function(ok, d, queued){
+      _setVendorSaveBusy(false);
       // `queued` means the write didn't land but is in the durable retry queue, so the
       // edit is not lost. Apply it locally and close the form exactly as on success —
       // the pending-writes chip is what tells the user it hasn't reached the sheet yet.
@@ -17113,7 +17191,17 @@ function saveVendor() {
     });
   } else {
     postVendorWrite('addVendor', { fields: fields }, function(ok, d){
-      if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
+      _setVendorSaveBusy(false);
+      if (!ok) {
+        // A failed POST never says whether the row reached Google, and an append is not
+        // retried for exactly that reason. Reporting only "failed" is what invites the
+        // press that duplicates it, so say what is actually unknown.
+        if (st){ st.textContent = 'Not saved'; st.style.color = 'var(--err-tx)'; }
+        showFB('v-fb','err','Save failed: ' + esc((d && d.error) || 'write error')
+          + '. The row may still have reached the sheet — reload the directory (↻) and check for <strong>' + esc(name)
+          + '</strong> before pressing Save again.');
+        return;
+      }
       var rec = {};
       Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; });
       if (d._row != null) rec._row = d._row;
