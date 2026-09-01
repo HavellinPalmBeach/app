@@ -89,6 +89,85 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## The Inventory tab became the concierge's review desk (BUILT 2026-09-01)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` gains `getThumbnails`.
+
+Anthony: *"after working on a job all day and using the job plan tab in each room … the
+transition concierge will be at home or in the office, and they will transition from the job
+plan, which is what they use in the field, to reviewing the inventory tab … maybe it should be
+grouped by disposition channel. And then within that, by room."* Plus, on the column-group
+buttons: *"I don't really understand what happens at the bottom with all these squares or
+rectangles you tick."* Full spec: `INVENTORY_WORKSPACE_SPEC.md`.
+
+- **THE TWO TABS ARE TWO SURFACES AND THE SPLIT IS THE WHOLE DESIGN.** Job Plan is the FIELD
+  (a phone, in the room, one item at a time); Inventory is the DESK (that evening, the day's
+  captures worked over). Inventory is not a `data-field` tab and must not become one.
+- **The 29-column table is deleted, and so is the switcher above it.** `INV_VIEWS` / `_invView`
+  / `setInvView` / `_invVisibleCols` are gone. **A control that exists only to work around the
+  width of the thing below it is a symptom, not a feature.** The column `group` metadata
+  SURVIVES as the item panel's four sections (`_invPanelSection`), so there is still one
+  definition of what a column is — and the old test that no visible column lacks a group still
+  earns its keep, now against the panel. The export never changed: workbook and CSV carry all 30.
+- **Grouping is Disposition → Room, and `INV_GROUP_ORDER` is not alphabetical on purpose.**
+  Not yet decided · Keep · Auction · Consign · Sell · Donate · Junk · Hold — the order decisions
+  are made in. **The empty bucket sorts FIRST because it is the worklist**; the field chip is
+  optional, so most items arrive with no disposition. Rooms inside run in walkthrough order
+  (the estimate's `idx`), so the review retraces the day. A disposition not on the list still
+  renders — dropping it would hide real property from the person reviewing the estate.
+- **⚠ REVIEW GATES NOTHING AND LOCKS NOTHING. DO NOT ADD A GATE HERE LATER.** Anthony, deciding
+  it: *"we may want to show in-progress work to clients during an engagement so this should not
+  be locked until complete."* An approval checkpoint that withholds the document is precisely
+  what stops a client being shown honest work-in-progress, and this business does that on
+  purpose. `_invProgressStamp` stamps **IN PROGRESS — N of M items reviewed** on every client
+  document instead. There is a test asserting no document function consults `_invReviewStats`
+  to decide whether to run.
+- **THE WEBSITE IS A SPEC.** The published deliverables page commits to documents the app could
+  not produce. Read it before building anything client-facing.
+  - **`printEstateInventoryReport`** — §02's field set exactly: description · location · qty ·
+    condition · date-of-death FMV · **the valuation source stated**, a thumbnail and reference
+    number per line, homestead/exempt/non-probate **carved out** into their own schedule. A line
+    with a value and no source prints **not stated** in red rather than a blank — that promise
+    is the reason `valNote` (Valuation Basis / Comps) exists as a column at all.
+  - **`printApprovalRequest`** — §03: *"written approval requests, itemized item by item, before
+    anything of value leaves the property. Verbal approval is never accepted."* The app recorded
+    the RESULT of an approval (`authBy`/`approvalDate`) and had nothing that produced the
+    REQUEST. **`INV_RELEASE_DISPOSITIONS` excludes Keep and Hold by definition** — nothing is
+    leaving, so there is nothing to ask for. `invRecordApproval` writes the signature across
+    every selected item in ONE action; typing it row by row is how a signed approval ends up
+    recorded against three items out of twenty.
+  - **Appraiser `dueDate`** — §02 promises "expected turnaround" and nothing recorded it.
+- **`exportInventoryCSV` is built off `buildInventoryPayload`**, the same rows the Drive workbook
+  is written from, so the file emailed to an attorney cannot disagree with the workbook shared
+  with counsel. **The BOM is not decoration** — without it Excel reads UTF-8 as Windows-1252 and
+  every § and é in a category arrives mangled on the attorney's screen.
+- **⚠ PHOTOS DO NOT COME FROM `drive.google.com`, AND MUST NOT.** The first draft of this claimed
+  a thumbnail could only exist on the device that took the shot; Anthony pushed back —
+  *"everything that is photographed in the job plan tab gets pushed to Google Drive, so I don't
+  know why you couldn't pull thumbnails back"* — and he was right that they can. But not directly:
+  `shareFolder` grants access with `addViewer(email)`, named viewers only, never "anyone with the
+  link", so Drive demands an authenticated session; the app is served from GitHub Pages, making
+  that cross-site; **Safari blocks third-party cookies by default**. It would render on desktop
+  Chrome and fail on the iPad — failing on one device only is worse than failing on all of them.
+  The Apps Script runs AS the Havellin account, so `getDriveThumbnails` hands the bytes back.
+  A test asserts no such URL survives in code (as a comment, yes; in code, never).
+  - **Every upload has ALWAYS returned `fileId` and the app discarded it** (`onDone(d.ok,
+    d.fileUrl)`). Kept now; `_invFileId` regexes it back out of `driveFileUrl` for the backlog.
+  - **`_invThumbHTML` renders the PLACEHOLDER ONLY** and `_invPaintThumbs` fills images in after.
+    Inlining base64 per row would put megabytes of data URI into the HTML on every re-render, and
+    this tab re-renders on every disposition change and every review tick. The PRINT path inlines,
+    because there is no second pass there.
+  - Thumbnails cache under their own `hav_media_thumb_<jobId>` key — same reason `_photoRetryData`
+    is separate: image bytes must never crowd the manifest write out of the quota.
+- **The `savePhotoRefs` whitelist is still the thing that bites.** `reviewed` / `reviewedAt` /
+  `reviewedBy` / `valNote` / `driveFileId` all had to be added or they are dropped on the next
+  save, silently.
+- **Also fixed: the test harness's brace scanner.** It read a regex literal after `return` as the
+  start of a string (`return /[",\n\r]/` — the char before `/` is `n`, which looks like the end
+  of an identifier) and ran off the end of the function. `REGEX_OK_AFTER` now tracks the preceding
+  *word*, and whitespace does not clear it. That bug had been latent since the harness was written.
+- **437 committed checks**, and the tab was driven end to end in a real headless browser
+  (grouping, panel, bulk edits, CSV quoting, both new documents) — not just asserted on source text.
+
 ## "Apps Script needs redeploying" on a deployment nobody had touched (BUILT 2026-09-01)
 *"got this error when saving a new vendor. we haven't changed the apps script for a re-deploy
 i dont think."* He was right to doubt it — the chip was overstating what it knew.
@@ -1343,7 +1422,17 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-08-03 (eleventh pass, same day)** — both documents, against
+- Last reconciled against the app: **2026-09-01 (twelfth pass)** — both documents, against the
+  Inventory tab rebuild. Manual **§10a** gained *What this tab is for* (the field/desk split, the
+  grouping, the worklist strip, the bulk bar, and the note that the column buttons are gone and
+  why), *Release approval*, *Photographs on the manifest* (with the do-not-use-drive.google.com
+  reasoning and the redeploy warning), the `Due back` field, the `Valuation Basis / Comps` field
+  with the not-stated rule, and three new exports. **§10** now says captured items land in
+  *Not yet decided*. Playbook **Step 10e** rewritten as a numbered how-to-work-it, with a red
+  `.stop` on the approval request (verbal approval is never accepted, Keep/Hold are left off,
+  never type approvals row by row) and **seven new symptom→cause rows**. Both `.md` files
+  hand-edited to match and parity-checked claim by claim; tag balance verified on both HTML files.
+- Prior pass **2026-08-03 (eleventh pass, same day)** — both documents, against
   the estate-playbook stage rewrite and the living/deceased rule. **This pass is also where the rule
   got corrected**, which is the argument for doing them properly: writing up "a date of death or a
   representative also settles it" sent me to check where those fields are entered, they were hidden

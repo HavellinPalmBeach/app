@@ -335,9 +335,25 @@ Then two buttons appear on it:
 
 ### e. Estate Inventory — Inventory tab
 
-On estate and probate jobs, the manifest assembles from three places: items you captured on room cards, **+ Add line item** for an asset with no photo (cash, an account, a vehicle), and a **From the Estimate Walkthrough** panel that pulls in the collections and vehicles you flagged at estimate time — as a lot or itemised. Nothing can be imported twice.
+**This is your end-of-day tab.** The Job Plan is what you use in the house; the Inventory tab is what you open that evening at home or in the office to work through what you shot. Rebuilt 2026-09-01 around exactly that.
 
-- **Appraisers** — build the roster per estate: name, firm, credential (ISA / ASA / AAA / USPAP / GIA), independence, and the effective and report dates. An item valued by appraisal links to a roster appraiser instead of free text.
+The manifest assembles from three places: items you captured on room cards, **+ Add line item** for an asset with no photo (cash, an account, a vehicle), and a **From the Estimate Walkthrough** panel that pulls in the collections and vehicles you flagged at estimate time — as a lot or itemised. Nothing can be imported twice.
+
+#### How to work it
+
+1. It opens on **Today** if you shot anything today. The five **Needs you** counts across the top are also filters — *Not yet decided · No value yet · Needs appraiser · Firearms held · Disputed / Hold*.
+2. Start at the top. **Not yet decided** is everything you photographed without chipping a disposition onto it in the field, and it is your worklist. Rooms inside each group run in walkthrough order, so you are retracing your own day.
+3. Put the value in on the row and pick the disposition on the row. When you change a disposition the item **moves** to that group — that is working, not a glitch.
+4. Anything you need the rest of the record for — condition, flags, custody, appraiser, proceeds — press the **▾** and the item opens.
+5. For the repetitive stuff, **tick the boxes down the left** and a bar comes up from the bottom: set disposition, room or valuation source across the whole selection at once. Forty household items to Junk is one action, not forty.
+6. Tick **Reviewed** on each line as you finish it. The bar at the top tracks you.
+
+> **Reviewing does not lock anything and does not unlock anything.** You can print the client's schedule at any point in a job — we show clients work in progress on purpose. Until every line is ticked the document prints with an **IN PROGRESS — 18 of 42 items reviewed** stamp and a line saying unreviewed values may still change. Don't apologise for it; that stamp is the honest thing on the page.
+
+> **Where the columns went.** This tab used to be a 29-column spreadsheet with four buttons above it that swapped which columns you could see. Both are gone. Every one of those fields is still there — in the item panel, in the CSV and in the client's workbook.
+
+- **Value it against something.** Put the number in the row, then set **Valuation Source** and write what you used in **Valuation Basis / Comps** in the item panel — which app, which comparables, what the range was. A line with a value and no source prints **not stated** in red on the client's schedule, because we promise on our own website that the source is stated.
+- **Appraisers** — build the roster per estate: name, firm, credential (ISA / ASA / AAA / USPAP / GIA), independence, the effective and report dates, and **Due back** — the turnaround we promise to tell the client. An item valued by appraisal links to a roster appraiser instead of free text.
 - **The $3,000 guardrail** — flagged items with no appraiser attached raise an amber nudge on a Standard job and a **red block on a Formal one**. Per-item **Waive** logs a reason. On a Formal job the Court Inventory prints *DRAFT* until every flagged item is appraised or waived.
 - **MAIV §20.2031-6** and **MAIV Class** — whether an article counts toward the estate's *marked artistic or intrinsic value* total. It fires by itself on art, antiques, jewellery, silver, rugs, collectibles, firearms, wine and instruments; leave it on *Auto* unless you have a reason. Set it to **No** for something that is plainly ordinary in a fancy category — a $40 mass-produced print in Art & Décor. Set it to **Yes** for a **fur coat** or a **rare book library**, which the regulation names and the app has no category for, then pick the class.
 - **Valuation basis and date** — Fair Market Value by default, valued as of the date of death. If the estate is taxable and counsel elects the §2032 alternate date (six months after death), toggle it and the schedule follows.
@@ -345,7 +361,15 @@ On estate and probate jobs, the manifest assembles from three places: items you 
 - **🔗 Custody log** per item — released / received / transferred / returned, with party, date, method and receipt. Mandatory on Formal and on any probate job.
 - **Snapshot** — a labelled point-in-time copy of the manifest. This is your amended-inventory trail; print any snapshot as an as-of schedule.
 
-**Exports:** *Court Inventory* (the §733.604-style schedule counsel files — Havellin does not file it), *Disposition Ledger* (gross / fees / net to the estate — our own service fee never appears on it), *Appraisal Worklist* (a per-specialist packet to hand each appraiser), and **Share w/ Counsel**, which grants the attorney or trust officer read-only access to the whole Estate Inventory folder by name — never a public link. **Revoke** takes it back. Financial folders stay private either way.
+**What you hand out.** Three buttons sit on the header; everything else is under **More ▾**.
+
+- **Estate Inventory PDF** — the client and attorney document. A photo, description, room, quantity, condition, date-of-death value and the valuation source on every line, grouped by disposition. Homestead, exempt and non-probate property print in their own schedule at the end, plus the appraisal flag list showing who is engaged on what and when it is due back.
+- **CSV** — every column as a spreadsheet file, for attaching to an email to an executor or attorney.
+- **Approval Request** — see the red block below. This is the one that matters.
+
+Under **More**: *Court Inventory* (the §733.604-style schedule counsel files — Havellin does not file it), *Disposition Ledger* (gross / fees / net to the estate — our own service fee never appears on it), *Appraisal Worklist* (a per-specialist packet to hand each appraiser), *Snapshot*, and **Share w/ Counsel**, which grants the attorney or trust officer read-only access to the whole Estate Inventory folder by name — never a public link. **Revoke** takes it back. Financial folders stay private either way. *Show summary & rollups* opens the totals panel at the bottom of the tab.
+
+> **⚠** **Nothing of value leaves the property without a signed approval request. Verbal approval is never accepted — not from the executor, not from a beneficiary, not on the phone.** Press **Approval Request** and the app builds the itemised list: photo, reference number, room, value, proposed disposition, and a box for them to initial each line. Keep and Hold are left off it — nothing is leaving. Send it, get it back signed, then select those items and press **Record approval**, which stamps who signed and when across all of them at once. Do not type approvals in row by row; that is how a signed approval ends up recorded against three items out of twenty.
 
 > Everything in the inventory is documentation support, not a legal or appraisal opinion. The estate attorney and a credentialed appraiser remain the authority.
 
@@ -358,6 +382,8 @@ On estate and probate jobs, the manifest assembles from three places: items you 
 > **⚠** **Your inventory is no longer only on your own phone (2026-08-24).** Until this change, every valuation, disposition, custody entry and flag lived in one browser and nothing ever read it back — so you and Ashley could each hold a different inventory for the same estate, and whichever saved last quietly overwrote the other. Clearing your browser data destroyed the record outright: the photographs were safe in Drive, but what they were, what they were worth and where they went was gone. It now saves to the shared sheet and merges item by item, so two people working the same job keep both sets of edits.
 
 **What that means in practice.** Open a job on any device and it pulls whatever anyone else has entered. You do not have to be the person who took the photos to see the valuations. If you remove a manual line item it stays removed everywhere — and its item number is never handed to anything else, so a gap in the numbering is the record that something was taken out.
+
+> **Photos on the inventory rows.** Every line shows a thumbnail of the item, pulled back from Drive. If you see a little category symbol instead — a box, a ring, a chair — that photo has not come down to this device yet. It is not lost: it is in the estate's Drive folder, and the client document tells you how many are missing rather than printing empty squares. If *every* photo is a symbol, the app will say why at the top of the tab — usually the Apps Script needs redeploying, which is Anthony's job, not yours.
 
 > If the badge says *Inventory not saved — still on this device only*, you have no connection or the sync URL is unset in Settings. Your work is safe locally and will go up on the next save; but until it does, nobody else can see it and clearing your browser would lose it. Don't clear site data while that badge is showing.
 
@@ -560,6 +586,13 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | A prep cost you typed into the card reads $0 in the totals | Fixed 2026-08-03. It was a parsing bug — the formatted "$8,000" was read as zero on every keystroke while the field kept showing it. If you're still seeing it, you're on a cached build; hard-refresh. |
 | You disagree with the hours a vendor books | Say so — that is what the touch count is for. Work out how many separate things you actually have to do with that trade; the number is half of that. Anthony changes one integer and every future estimate follows. |
 | Not sure whether to fill in *Coord hrs* on the Job Plan | Optional, always. It bills nothing and blocks nothing — your logged hours already cover that time. Enter it when it's obvious, skip it when it isn't. |
+| The Inventory tab looks completely different | Rebuilt 2026-09-01. It is grouped by disposition now, with *Not yet decided* at the top as your worklist. The 29-column table and the four column buttons above it are gone; every one of those fields lives in the item panel behind the **▾** on each row. |
+| An item jumped to a different section when you set its disposition | Working as intended. The list is grouped by disposition, so changing one moves the item. Find it under its new heading. |
+| The Inventory tab looks half empty | It opens on **Today** when you have shot anything today. Press **All**, or **Clear filters**. |
+| Photos show as little symbols instead of thumbnails | Those photos have not been pulled down to this device yet — they are safe in Drive. If every one is a symbol, the tab says why at the top; tell Anthony, the Apps Script needs redeploying. |
+| The client schedule prints *IN PROGRESS* | Correct, and leave it. Not every line is ticked *Reviewed* yet. We give clients work in progress on purpose; the stamp is what makes that honest. Finish the review and it prints *REVIEWED*. |
+| An item you want approval for is not on the Approval Request | It is set to **Keep** or **Hold** (nothing is leaving, so there is nothing to approve), it has no disposition at all yet, or it already carries an approval date. Set the disposition first. |
+| A value shows *not stated* in red on the client schedule | That line has a value with no **Valuation Source**. Open the item and set one, and put what you used in *Valuation Basis / Comps*. We promise the source on our own website. |
 | A red chip bottom-left: *N change(s) not saved* | Tap it. It opens and names which write is stuck, which sheet it was going to, and what the server said back. **Try again** resends. Nothing is lost while it sits there — the work is queued, not dropped. |
 | The chip says *Apps Script needs redeploying* | The sheet script answered "unknown action" — it is genuinely older than the app. Anthony redeploys it (Extensions → Apps Script → Deploy → Manage deployments → New version), then you press **Try again**. |
 | The chip says *the Apps Script returned an error* | The script crashed on that one write. It is held rather than retried, because the same request would fail the same way. Tap the chip, screenshot the error line and send it on — **do not go redeploying anything on the strength of this**. Until 2026-09-01 the app called this a redeploy, and it was wrong to. |

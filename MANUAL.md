@@ -634,11 +634,27 @@ Photo naming: `HVL-YYMM-XXXX_RoomName_001.jpg`
 
 ### Item Inventory Capture (room cards)
 
-On each Job Plan room card, use **Capture item** to photograph individual objects for the estate inventory. Type the object name, pick a **category**, and set a disposition before the shot; each photo is saved with a self-identifying filename. Items in an "intrinsic" category (art, jewelry, silver, antiques, rugs, coins, firearms, wine, instruments) that carry real value show a **⚑ needs-a-specialist** flag. Captured items flow straight into the Estate Inventory manifest.
+On each Job Plan room card, use **Capture item** to photograph individual objects for the estate inventory. Type the object name, pick a **category**, and set a disposition before the shot; each photo is saved with a self-identifying filename. Items in an "intrinsic" category (art, jewelry, silver, antiques, rugs, coins, firearms, wine, instruments) that carry real value show a **⚑ needs-a-specialist** flag. Captured items flow straight into the Estate Inventory manifest, where they are grouped by disposition for the evening review — anything you did not chip a disposition onto in the field lands in *Not yet decided* at the top of that tab (§10a).
 
 ## 10a. Estate Inventory (Tab)
 
 **Tab: Inventory** → select a client. A per-client tangible-personal-property manifest and the estate documentation workspace. It assembles from three sources: items captured on Job Plan room cards, **+ Add line item** (an asset with no photo — cash, account, a vehicle), and **import from the estimate** (below).
+
+### What this tab is for — rebuilt 2026-09-01
+
+The Job Plan is the **field** surface: room by room, on a phone, standing in the room. The Inventory tab is the **desk** surface — that evening, the concierge opens the day's captures and works them: puts values on things, decides where each goes, ticks each line off, then produces the client's schedule. It is not a field tab (it is hidden in field mode) and that is deliberate.
+
+- **Grouped by disposition, then by room.** *Not yet decided* sorts first, because it is the worklist; the rest run Keep · Auction · Consign · Sell · Donate · Junk · Hold — the order the decisions get made in, not alphabetical. Inside each group the rooms run in **walkthrough order**, so the evening review retraces the day.
+- **Needs you** — five counts across the top: *Not yet decided · No value yet · Needs appraiser · Firearms held · Disputed / Hold*. Each is also a filter. These are the reasons to open the tab.
+- **Today / Last 7 days / All**, plus a room picker and a search box. It opens on **Today** when anything was captured today and on **All** otherwise, so a job picked up a week later is not an empty screen.
+- **Value and disposition edit on the row.** The ▾ opens the item panel — the photo, and every other field in four sections (Item · Valuation · Disposition · Flags & Track).
+- **Select rows and a bulk bar rises from the foot:** set disposition, room or valuation source across the whole selection, mark them reviewed, or raise an approval request. The evening pass is mostly the same decision repeated forty times; doing it one dropdown at a time is what makes people stop doing it.
+- **Reviewed** is a tick per line with an *N of M* read-out on the tab and on each group.
+- The Summary and its rollups moved to the **bottom** and start closed — *More → Show summary & rollups*. It is a read-out, not a workspace, and it was sitting on top of the work.
+
+> **The column-group buttons are gone, and so is the table they existed for.** Until 2026-09-01 this tab drew all 29 manifest columns and put a row of buttons above them (Valuation · Disposition · Flags & Track · Everything) to swap which slice was on screen. A control that exists only to work around the width of the thing beneath it is a symptom, not a feature. The column *groups* survive — they are now the item panel's four sections, so there is still exactly one definition of what a column is and where it belongs. The **export is unchanged**: the workbook and the CSV carry every column.
+
+> **Reviewing gates nothing and locks nothing, on purpose.** Havellin shows clients work in progress during an engagement, so a checkpoint that withholds the document is exactly the wrong mechanism. An unfinished review instead **stamps every client document** — *IN PROGRESS — 18 of 42 items reviewed*, with a line saying unreviewed values may still change. A finished one reads *REVIEWED*. Do not turn this into a gate later; the honesty comes from the stamp.
 
 ### Categories & appraiser routing
 
@@ -650,7 +666,9 @@ When flagged collections or vehicles exist on the estimate, a **From the Estimat
 
 ### Appraisers (per estate)
 
-Add a roster of named appraisers — name, firm, **credential** (ISA / ASA / AAA / USPAP / GIA), **independence**, and effective (value) / report dates. An item whose valuation source is *Appraisal* is linked to a roster appraiser from the manifest's *Appraisal Doc* cell, replacing free-text with a defensible record.
+Add a roster of named appraisers — name, firm, **credential** (ISA / ASA / AAA / USPAP / GIA), **independence**, effective (value) / report dates, and **Due back**. An item whose valuation source is *Appraisal* is linked to a roster appraiser from the *Appraisal Doc* field in its item panel, or from the row the guardrail panel offers — replacing free-text with a defensible record.
+
+> **Due back is the "expected turnaround" the deliverables page promises** ("which appraiser is engaged for each, and expected turnaround"). Nothing in the app recorded it until 2026-09-01. It prints on the Appraisal Flag List at the foot of the Estate Inventory Report; with no due date set, the report falls back to the report date and then to a dash.
 
 ### The $3,000 appraisal guardrail
 
@@ -687,6 +705,9 @@ Two manifest columns: **MAIV §20.2031-6** (Auto / Yes / No) and **MAIV Class**.
 - **Valuation Basis** — the level of value the whole schedule is stated on (defaults to Fair Market Value, as estate/probate requires).
 - **Value as of** — normally the date of death. Toggle the **§2032 alternate valuation date** (six months after death, for taxable estates) and item value-dates and the Court Inventory follow it.
 - **Asset Track** — Probate / Trust / Non-probate / Homestead / Exempt (default Probate). Only Probate-track items appear on the Court Inventory, so the probate schedule doesn't overstate the estate.
+- **Valuation Basis / Comps** (new 2026-09-01) — free text beside the value: which valuation app you used, which comparables, what the range was. The concierge reads a value off an external app that returns recent auction results; this is where that answer is written down.
+
+> **A value with no stated source is what the published promise exists to prevent.** The deliverables page commits to "date-of-death fair market value, *and the valuation source stated*". The Estate Inventory Report prints **not stated** in red against any line whose Valuation Source is blank, rather than leaving a gap the reader has to notice for themselves.
 
 ### Chain of custody & snapshots
 
@@ -695,6 +716,11 @@ Two manifest columns: **MAIV §20.2031-6** (Auto / Yes / No) and **MAIV Class**.
 
 ### Exports (work product)
 
+Three sit on the working header; the rest moved under **More ▾** to get them out of the way of the work.
+
+- **Estate Inventory PDF** (new 2026-09-01) — *the client / attorney deliverable*, and the document the website's §02 promises. A photo thumbnail, description, location, quantity, condition, date-of-death FMV and the valuation source on every line, grouped by disposition and then by room. **Homestead, exempt and non-probate property are carved out** into their own schedule rather than omitted, so a reader can see both that it exists and that it sits outside the probate estate. An **Appraisal Flag List** closes the document, naming the specialist required, the appraiser engaged and when the report is due back.
+- **CSV** (new 2026-09-01) — every column, as a file to attach to an email. Built from the *same payload the Drive workbook is written from*, so the spreadsheet a concierge sends an attorney cannot disagree with the workbook shared with counsel. Written with a byte-order mark, or Excel reads it as Windows-1252 and every § and é arrives mangled.
+- **Approval Request** (new 2026-09-01) — see *Release approval* below.
 - **Court Inventory** — a §733.604-style schedule grouped by category with date-of-death FMV, exempt property (§732.402) separated, a valuation-basis header and attestation line, and *no* internal figures. Stamps DRAFT / FINAL per the guardrail. Feeds counsel's filing (Havellin does not file it).
 - **Disposition Ledger** — the fiduciary accounting: gross / fees / net to the estate / receipts. Havellin's own service fee never appears here.
 - **Appraisal Worklist** — a per-specialist packet of every flagged item (photo, room, condition) to hand each appraiser.
@@ -711,6 +737,26 @@ Until 2026-08-24 it lived **only in one browser's localStorage**. The workbook w
 > **The merge is per ITEM, not per job, and must stay that way.** `_mergeStoreByKey` — the helper the other stores use — keeps whichever whole entry is newer. For an inventory that means two people editing *different items on the same job* still clobber each other. Every mutation stamps `updatedAt` and the merge resolves item by item against it. Removal writes a `deletedAt` tombstone rather than deleting the row, because absence is indistinguishable from "this device has not seen it yet" and a union merge would resurrect every deletion.
 
 > Consequence worth knowing: a tombstoned item still holds its **item number**, and the number is never reissued. A gap in the numbering is the visible record that something was removed.
+
+### Release approval — written, itemised, before anything leaves
+
+The deliverables page commits to *"written approval requests, itemized item by item, before anything of value leaves the property. Verbal approval is never accepted."* Until 2026-09-01 the app recorded the **result** of an approval — *Authorized By* and *Approval Date* on the item — and had nothing that produced the **request**. It does now.
+
+- **Approval Request** on the working header lists everything awaiting approval; the same button on the bulk bar lists just what you have selected.
+- Each line carries its photo, reference number, room, quantity, estimated value, proposed disposition and channel, with an **Initial** box, and the document states plainly that nothing on it will be moved, sold, donated or disposed of until the request is returned signed.
+- **Keep and Hold are excluded by definition** — nothing is leaving, so there is nothing to ask permission for. So is anything that already carries an approval date. An item with no disposition yet is not a request either.
+- A firearm on the list prints its own note: collected from the property by a licensed dealer only, on the representative's authority, and Havellin does not transport it.
+- When the signed copy comes back, select those items and press **Record approval**. It writes the signer and the date across every one of them in a single action. Typing a name into twenty rows by hand is how a signed approval ends up recorded against three of them.
+
+### Photographs on the manifest
+
+Every row shows a thumbnail of its item photo, and the Estate Inventory Report and the Approval Request print them. They are fetched **through the Apps Script**, which runs as the Havellin Google account and already holds Drive access, and cached per job on the device.
+
+> **They are deliberately NOT loaded from `drive.google.com` directly, and must not be.** *Share w/ Counsel* grants access with named viewers only — never "anyone with the link" — so Drive demands an authenticated session, and the app is served from GitHub Pages, which makes that a cross-site request. Safari blocks third-party cookies by default. A direct image link would render on desktop Chrome and fail on the iPad, and failing on one device only is worse than failing on all of them: it reads as missing photos on exactly the machine the work is done on. There is a test asserting no such URL survives in code.
+
+> Every upload has always returned a Drive **file id** and the app discarded it until 2026-09-01. It is stored now, and for photos taken before then it is recovered out of the URL that *was* stored — so nothing in the existing backlog is stranded. A photo that still cannot be resolved renders a **category glyph**, never a broken image; the report says how many are missing rather than printing empty boxes at a client.
+
+> **⚠ Requires an Apps Script redeploy.** `main-sync.gs` gained a `getThumbnails` action on 2026-09-01. Until it is redeployed the tab works normally but every photo shows a glyph — and says why, rather than leaving grey squares unexplained.
 
 ### Firearms — the authority gate, and the NFA flag
 
