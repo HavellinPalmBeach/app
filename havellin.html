@@ -733,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.01 · 5:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.01 · 6:12pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1495,7 +1495,7 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:13px;font-weight:600;">Estate Inventory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Per-client tangible personal property manifest. Items captured on the Job Plan appear here. Valuation, disposition and custody are edited in the shaded columns; collections and vehicles flagged on the estimate are brought in below.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Where the day&rsquo;s walkthrough gets worked. Everything captured on the Job Plan lands here, grouped by disposition &mdash; put values on it, decide where it goes, tick each line off, then produce the client&rsquo;s schedule.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
@@ -10923,7 +10923,9 @@ function savePhotoRefs(jobId) {
                dispDate:r.dispDate, receiptDoc:r.receiptDoc, needsAppr:r.needsAppr, apprId:r.apprId,
                apprWaived:r.apprWaived, apprWaiveReason:r.apprWaiveReason, assetTrack:r.assetTrack, custodyLog:r.custodyLog,
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
-               filename:r.filename, driveFileUrl:r.driveFileUrl, status:r.status, ts:r.ts,
+               filename:r.filename, driveFileUrl:r.driveFileUrl, driveFileId:r.driveFileId,
+               reviewed:r.reviewed, reviewedAt:r.reviewedAt, reviewedBy:r.reviewedBy, valNote:r.valNote,
+               status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
@@ -11303,6 +11305,9 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
       _updateRoomInventoryEl(jobId, roomIdx);
       _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
         _updateRoomInventoryEl(jobId, roomIdx);
+        // The Inventory tab will pull this back from Drive on any device; caching the
+        // copy already in hand just means it is there instantly on THIS one.
+        _invCacheLocalThumb(jobId, stableId, dataUrl);
         _scheduleInventorySync(jobId);
       });
     });
@@ -11382,6 +11387,7 @@ var INVENTORY_COLUMNS = [
   {key:'fmv',          header:'Estimated FMV',       kind:'manage',  edit:'currency',  group:'val'},
   {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date',      group:'val'},
   {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select',    group:'val'},
+  {key:'valNote',      header:'Valuation Basis / Comps', kind:'manage', edit:'text',   group:'val'},
   {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage',  edit:'text',      group:'val'},
   {key:'flagMAIV',     header:'MAIV §20.2031-6',     kind:'manage',  edit:'maivSelect',    group:'flags'},
   {key:'maivCat',      header:'MAIV Class',          kind:'manage',  edit:'maivCatSelect', group:'flags'},
@@ -11400,23 +11406,172 @@ var INVENTORY_COLUMNS = [
   {key:'dispDate',     header:'Date of Disposition', kind:'manage',  edit:'date',      group:'disp'},
   {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text',      group:'disp'}
 ];
-// Which slice of the manifest is on screen. Valuation first — it is what you do first.
-var INV_VIEWS = [
-  {key:'val',   label:'Valuation'},
-  {key:'disp',  label:'Disposition'},
-  {key:'flags', label:'Flags & Track'},
-  {key:'all',   label:'Everything'}
-];
-var _invView = 'val';
-function setInvView(v) { _invView = v; renderInventoryTab(); }
-function _invVisibleCols() {
+// The `group` metadata OUTLIVES the table it was written for. It used to drive a row of
+// buttons that swapped which slice of a 29-column spreadsheet was on screen — a control
+// that existed only to work around the width of the thing below it. The table is gone;
+// the groups are now the item panel's sections (see _invPanelSection).
+function _invPanelCols() {
   return INVENTORY_COLUMNS.filter(function(c) {
     if (c.hideInTab) return false;
-    return c.pin || _invView === 'all' || c.group === _invView;
+    // seq is the row's identity, fmv and disposition are edited on the row itself. Two
+    // inputs bound to one value is how a panel and a row silently disagree.
+    return c.key !== 'seq' && c.key !== 'fmv' && c.key !== 'disposition';
   });
 }
+function _invPanelSection(col) {
+  if (['objectName','category','room','qty','condition'].indexOf(col.key) >= 0) return 'item';
+  return col.group || 'val';
+}
+var INV_PANEL_SECTIONS = [
+  {key:'item',  label:'Item'},
+  {key:'val',   label:'Valuation'},
+  {key:'disp',  label:'Disposition'},
+  {key:'flags', label:'Flags &amp; Track'}
+];
 
 function _invJob(jobId) { return jobs.find(function(j){ return j.id === jobId; }) || null; }
+
+// ── Photo thumbnails on the Inventory tab ─────────────────────────────────────
+// THE ONE THING NOT TO "SIMPLIFY" HERE: do not point an <img> at
+// https://drive.google.com/thumbnail?id=… . shareInventoryWithCounsel grants access with
+// addViewer(email) — named viewers only, never "anyone with the link" — so Drive requires
+// an authenticated session, and this app is served from GitHub Pages, which makes that a
+// cross-site request. Safari blocks third-party cookies by default, so it renders on
+// desktop Chrome and fails on the iPad. Failing on one device only is worse than failing
+// on all of them: it reads as missing photos on the machine the work is done on.
+//
+// The Apps Script runs AS the Havellin account and already holds Drive access, so it hands
+// the bytes back instead (getDriveThumbnails in main-sync.gs). Nothing about sharing changes.
+var _invThumbs      = {};   // jobId -> { fileId: dataUri }
+var _invThumbTried  = {};   // fileId -> 1, so a photo Drive cannot serve is asked for once
+var _invThumbBusy   = {};   // jobId -> true while a batch is in flight
+var _invThumbFailed = {};   // jobId -> reason, surfaced once rather than as silent gaps
+var INV_THUMB_BATCH = 60;
+
+function _invThumbKey(jobId) { return 'hav_media_thumb_' + jobId; }
+// Its OWN localStorage key, deliberately. Image bytes must never be able to crowd the
+// manifest write out of the quota — the same reason _photoRetryData is kept separate.
+// Losing this cache costs a refetch; losing the manifest costs the record.
+function _invThumbCache(jobId) {
+  if (_invThumbs[jobId]) return _invThumbs[jobId];
+  var out = {};
+  try { var raw = localStorage.getItem(_invThumbKey(jobId)); if (raw) out = JSON.parse(raw) || {}; } catch (e) {}
+  _invThumbs[jobId] = out;
+  return out;
+}
+function _invSaveThumbCache(jobId) {
+  try { localStorage.setItem(_invThumbKey(jobId), JSON.stringify(_invThumbs[jobId] || {})); }
+  catch (e) { /* disposable by design — a full quota drops thumbnails, never the manifest */ }
+}
+// Every upload has always returned a Drive file id and the app discarded it until
+// 2026-09-01, so rows captured before then carry only the URL:
+// https://drive.google.com/file/d/<id>/view
+function _invFileId(ref) {
+  if (!ref) return '';
+  if (ref.driveFileId) return String(ref.driveFileId);
+  var m = /\/d\/([A-Za-z0-9_-]{10,})/.exec(String(ref.driveFileUrl || ''));
+  return m ? m[1] : '';
+}
+function _invThumbFor(jobId, ref) {
+  var id = _invFileId(ref);
+  return id ? (_invThumbCache(jobId)[id] || '') : '';
+}
+// Cache the shot we already hold in memory, at capture time, so an item photographed a
+// moment ago draws instantly instead of waiting on a round trip. An optimisation only —
+// Drive is the source of truth, and this is a no-op until the upload returns an id.
+function _invCacheLocalThumb(jobId, stableId, dataUrl) {
+  var ref = _getPhotoRef(jobId, stableId);
+  var id = _invFileId(ref);
+  if (!id || !dataUrl) return;
+  compressImage(dataUrl, 160, 0.6, function(small) {
+    _invThumbCache(jobId)[id] = small;
+    _invSaveThumbCache(jobId);
+  });
+}
+// Which photos this device still has no thumbnail for. Asked once per file id per session:
+// a deleted or unreadable photo must not be re-requested on every render.
+function _invMissingThumbIds(jobId) {
+  var cache = _invThumbCache(jobId), out = [];
+  _jobInvRefs(jobId).forEach(function(r) {
+    var id = _invFileId(r);
+    if (!id || cache[id] || _invThumbTried[id]) return;
+    if (out.indexOf(id) < 0) out.push(id);
+  });
+  return out;
+}
+function _invEnsureThumbs(jobId) {
+  if (!SHEETS_SYNC_URL || _invThumbBusy[jobId]) return;
+  var ids = _invMissingThumbIds(jobId).slice(0, INV_THUMB_BATCH);
+  if (!ids.length) return;
+  _invThumbBusy[jobId] = true;
+  // Marked tried BEFORE the request, not after: a batch that fails must not be re-fired
+  // by the next render, which would hammer the endpoint for as long as the tab is open.
+  ids.forEach(function(id){ _invThumbTried[id] = 1; });
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST', mode: 'cors', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'getThumbnails', fileIds: ids })
+  })
+    .then(_readAppsScriptJson)
+    .then(function(d) {
+      _invThumbBusy[jobId] = false;
+      if (!d || !d.ok) {
+        // Named, not silent. An old deployment answers "Unknown action" here, and the
+        // symptom without this is simply a page of grey squares.
+        _invThumbFailed[jobId] = (d && d.error) || 'the photo service did not answer';
+        _invPaintThumbs(jobId);
+        return;
+      }
+      var cache = _invThumbCache(jobId), got = 0;
+      Object.keys(d.thumbs || {}).forEach(function(id){ cache[id] = d.thumbs[id]; got++; });
+      _invSaveThumbCache(jobId);
+      delete _invThumbFailed[jobId];
+      if (got) _invPaintThumbs(jobId);
+      // More than one batch's worth on a big estate — keep going.
+      if (_invMissingThumbIds(jobId).length) _invEnsureThumbs(jobId);
+    })
+    .catch(function(e) {
+      _invThumbBusy[jobId] = false;
+      _invThumbFailed[jobId] = (e && e.message) || 'the photo service could not be reached';
+      _invPaintThumbs(jobId);
+    });
+}
+// Paint into the existing DOM rather than re-rendering the tab: a re-render mid-review
+// would drop focus out of whatever value was being typed.
+function _invPaintThumbs(jobId) {
+  var cache = _invThumbCache(jobId);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-thumb-id]'), function(el) {
+    var id = el.getAttribute('data-thumb-id');
+    if (!id || !cache[id]) return;
+    el.style.backgroundImage = 'url("' + cache[id] + '")';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    el.textContent = '';
+  });
+}
+// A thumbnail that cannot be resolved renders a category glyph. NEVER an <img> with an
+// empty src and never a broken-image icon — this surface is shown to clients.
+var INV_CAT_GLYPH = {
+  'Art & Décor':'\u{1F5BC}', 'Antiques':'\u{1F3FA}', 'Jewelry & Watches':'\u{1F48D}',
+  'Silver & Precious Metal':'\u{1F37D}', 'Rugs & Carpets':'\u{1F9F6}', 'Collectibles':'\u{1F5DD}',
+  'Firearms':'\u{1F6E1}', 'Wine & Spirits':'\u{1F377}', 'Musical Instruments':'\u{1F3BB}',
+  'Vehicles & Watercraft':'\u{1F697}', 'Furniture':'\u{1FA91}', 'Electronics & Appliances':'\u{1F50C}',
+  'General/Household':'\u{1F4E6}'
+};
+// Deliberately renders the PLACEHOLDER ONLY and lets _invPaintThumbs fill the image in
+// from the cache afterwards. Inlining a base64 thumbnail per row would put megabytes of
+// data URI into the HTML string on every re-render — and this tab re-renders on every
+// disposition change and every review tick.
+function _invThumbHTML(jobId, ref, px) {
+  px = px || 46;
+  var id = _invFileId(ref);
+  var glyph = INV_CAT_GLYPH[ref.category] || '\u{1F4E6}';
+  var style = 'width:' + px + 'px;height:' + px + 'px;flex:0 0 auto;border-radius:4px;'
+    + 'border:1px solid var(--border);background:var(--cream);display:flex;align-items:center;'
+    + 'justify-content:center;font-size:' + Math.round(px * 0.42) + 'px;overflow:hidden;';
+  return '<div' + (id ? ' data-thumb-id="' + esc(id) + '"' : '') + ' style="' + style + '"'
+    + ' title="' + esc(ref.objectName || '') + '">' + glyph + '</div>';
+}
 
 function _jobInvRefs(jobId) {
   return (_photoRefs[jobId] || [])
@@ -11830,14 +11985,18 @@ function _invEdit(jobId, stableId, key, el) {
   if (key === 'fmv' || key === 'category') _invRefreshGuardrail(jobId);
   // Forcing MAIV on or off changes whether the class beside it is editable at all, so
   // that row has to be redrawn rather than left showing a control that no longer applies.
-  if (key === 'flagMAIV' && typeof renderInventoryTab === 'function') renderInventoryTab();
+  // Changing the disposition moves the item into a different section, and changing the
+  // room moves it within one. Leaving it drawn where it was is how the list stops
+  // describing the estate.
+  if (['flagMAIV','disposition','roomIdx'].indexOf(key) >= 0 && typeof renderInventoryTab === 'function') renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
 
 function _invRefreshSummary(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-summary');
-  if (job && el) el.innerHTML = _renderInventorySummary(job, _jobInvRefs(jobId));
+  // The rollups start closed now. Refreshing must not re-open them under the reader.
+  if (job && el && _invShowRoll) el.innerHTML = _renderInventorySummary(job, _jobInvRefs(jobId));
 }
 
 function addInventoryManualItem(jobId) {
@@ -12088,6 +12247,292 @@ function _printDocument(html) {
 }
 
 function _invMoney(v) { var n = parseFloat(v); return isNaN(n) ? '—' : '$' + Math.round(n).toLocaleString(); }
+
+// ══════════════ CLIENT DELIVERABLES ══════════════════════════════════════════════
+// The published deliverables page commits Havellin to specific documents. These are them.
+
+// NOTHING IS WITHHELD FOR BEING INCOMPLETE. Anthony: "we may want to show in-progress
+// work to clients during an engagement." A document that refuses to print until the
+// review is finished is precisely what stops that. So an unfinished review is STAMPED,
+// never gated — the reader is told what they are holding and can act on it either way.
+function _invProgressStamp(items) {
+  var st = _invReviewStats(items);
+  if (st.complete) {
+    return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#357a50;'
+      + 'border-radius:3px;padding:1px 8px;margin-bottom:12px;">REVIEWED &mdash; all ' + st.total + ' items</div>';
+  }
+  return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#8a6d3b;'
+    + 'border-radius:3px;padding:1px 8px;margin-bottom:12px;">IN PROGRESS &mdash; ' + st.done + ' of ' + st.total
+    + ' items reviewed</div>'
+    + '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin:-8px 0 12px;">This is a working copy issued during the engagement. '
+    + 'Values and dispositions on unreviewed lines may still change.</div>';
+}
+
+function _invDocHead(job, title, extra) {
+  var basis = resolveValBasis(job);
+  var vdate = estateValueDate(job);
+  return '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">' + title + '</h2>'
+    + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>'
+    + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + (job.probateCase ? ' &middot; Case ' + esc(job.probateCase) : '') + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:10px;">' + (extra || ('Basis: <strong>' + esc(basis) + '</strong> as of '
+      + (job.avd ? 'the alternate valuation date' : 'date of death') + ' (' + (vdate ? esc(fmtDate2(vdate)) : '—') + ')'))
+    + ' &middot; Prepared by Havellin Palm Beach, LLC &middot; '
+    + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>';
+}
+
+// Printed documents DO inline the image — there is no second pass to paint them in, and
+// a print target with empty boxes is the failure this whole path exists to avoid.
+function _invPrintThumb(jobId, ref, px) {
+  var id = _invFileId(ref);
+  var src = id ? (_invThumbCache(jobId)[id] || '') : '';
+  var box = 'width:' + px + 'px;height:' + px + 'px;border:1px solid #ddd;border-radius:3px;'
+    + 'object-fit:cover;background:#f6f3ec;';
+  if (!src) {
+    return '<div style="' + box + 'display:inline-flex;align-items:center;justify-content:center;font-size:' + Math.round(px*0.4) + 'px;">'
+      + (INV_CAT_GLYPH[ref.category] || '\u{1F4E6}') + '</div>';
+  }
+  return '<img src="' + src + '" style="' + box + '" alt="">';
+}
+
+// ── 02 · After Inventory ──────────────────────────────────────────────────────
+// "A categorized asset schedule with description, location, quantity, condition,
+// date-of-death fair market value, and the valuation source stated. The full photography
+// set, reference-numbered and linked to the corresponding line. An appraisal flag list
+// showing which categories are flagged for formal valuation, which appraiser is engaged
+// for each, and expected turnaround. Homestead, exempt, and non-probate property
+// identified and carved out."  — havellinpalmbeach.com. Every clause is a requirement.
+function printEstateInventoryReport(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var all = _invAssignItemNos(jobId);
+  if (!all.length) { alert('There is nothing in the inventory to report yet.'); return; }
+
+  // Carved out, not omitted: exempt, homestead and non-probate property is reported in
+  // its own schedule so a reader can see both that it exists and that it sits outside
+  // the probate estate.
+  var carved = all.filter(function(r){ return r.flagExempt || !_invIsProbateAsset(r); });
+  var main   = all.filter(function(r){ return carved.indexOf(r) < 0; });
+
+  function itemRow(r) {
+    var q = parseInt(r.qty, 10);
+    var src = r.valSource || '';
+    var note = r.valNote || '';
+    return '<tr>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:34px;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
+        + '<strong>' + esc(r.objectName || '—') + '</strong>'
+        + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + '</div>'
+        + (note ? '<div style="color:#888;font-size:10px;font-style:italic;">' + esc(note) + '</div>' : '')
+      + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.condition || '—') + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>'
+      // A value with no stated source is exactly what the deliverables page promises never
+      // to hand over, so the blank is called out rather than left looking like a gap.
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-size:10px;">'
+        + (src ? esc(src) : '<span style="color:#A32D2D;">not stated</span>') + '</td>'
+      + '</tr>';
+  }
+  function table(rows) {
+    return '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+      + '<thead><tr style="color:#888;text-align:left;">'
+      + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Ref</th>'
+      + '<th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Location</th>'
+      + '<th style="padding:2px 6px;text-align:right;">Qty</th><th style="padding:2px 6px;">Condition</th>'
+      + '<th style="padding:2px 6px;text-align:right;">FMV (total)</th><th style="padding:2px 6px;">Valuation source</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+  function block(list, heading) {
+    if (!list.length) return '';
+    var groups = _invGroupItems(job, list);
+    var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:16px;color:#3c3228;border-bottom:1px solid #bbb;margin:18px 0 6px;">' + heading + '</div>';
+    groups.forEach(function(g) {
+      h += '<div style="font-size:12px;font-weight:700;color:#3c3228;margin:12px 0 2px;">' + esc(g.label)
+        + ' <span style="font-weight:400;color:#888;">' + g.items.length + ' item' + (g.items.length > 1 ? 's' : '')
+        + (g.fmv ? ' &middot; ' + _invMoney(g.fmv) : '') + '</span></div>';
+      g.rooms.forEach(function(rm) {
+        h += '<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin:6px 0 1px;">' + esc(rm.name) + '</div>'
+          + table(rm.items.map(itemRow).join(''));
+      });
+    });
+    return h;
+  }
+
+  // The appraisal flag list, with the appraiser engaged and the expected turnaround —
+  // `dueDate` exists on the appraiser record for this line of the deliverables page and
+  // for nothing else.
+  var flagged = all.filter(function(r){ return invNeedsAppraisal(r, job); });
+  var apprBlock = '';
+  if (flagged.length) {
+    var rows = flagged.map(function(r) {
+      var a = (_jobAppraisers(jobId) || []).filter(function(x){ return String(x.id) === String(r.apprId); })[0];
+      var who = a ? (a.name + (a.firm ? ' · ' + a.firm : '') + (a.credential ? ' (' + a.credential + ')' : ''))
+                  : (r.apprWaived ? 'Waived — ' + (r.apprWaiveReason || 'reason logged') : 'Not yet engaged');
+      var due = a && a.dueDate ? fmtDate2(a.dueDate) : (a && a.reportDate ? 'report ' + fmtDate2(a.reportDate) : '—');
+      return '<tr><td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invItemNo(r)) + '</td>'
+        + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + '</td>'
+        + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.category || '—') + '</td>'
+        + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(invAppraiserFor(r.category) || 'Specialist') + '</td>'
+        + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(who) + '</td>'
+        + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(due) + '</td></tr>';
+    }).join('');
+    apprBlock = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:16px;color:#3c3228;border-bottom:1px solid #bbb;margin:18px 0 6px;">Appraisal Flag List</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+      + '<th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Item</th><th style="padding:2px 6px;">Category</th>'
+      + '<th style="padding:2px 6px;">Specialist required</th><th style="padding:2px 6px;">Appraiser engaged</th>'
+      + '<th style="padding:2px 6px;">Expected back</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  var noPhoto = all.filter(function(r){ return !r.manual && !_invThumbFor(jobId, r); }).length;
+  var totalFMV = all.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
+
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, 'Estate Inventory &mdash; Asset Schedule')
+    + _invProgressStamp(all)
+    + block(main, 'Asset Schedule')
+    + block(carved, 'Homestead, Exempt &amp; Non-Probate Property &mdash; carved out of the probate estate')
+    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:12px;border-top:2px solid #333;padding-top:6px;">'
+      + 'Total estimated ' + esc(resolveValBasis(job).toLowerCase()) + ': &nbsp;' + _invMoney(totalFMV) + '</div>'
+    + apprBlock
+    + (noPhoto ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
+        + noPhoto + ' item' + (noPhoto > 1 ? 's have' : ' has') + ' no photograph available on this device. '
+        + 'The photographs are filed in the estate&rsquo;s Drive folder; re-open this tab with a connection to include them.</div>' : '')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
+      + 'Tangible personal property only. Real property, financial accounts, securities and business interests are reported '
+      + 'separately in the personal representative&rsquo;s filing, prepared with counsel. Photographs are reference-numbered '
+      + 'to the line items above and retained for seven years.</div>'
+    + '</div>';
+  _printDocument(html);
+}
+
+// ── CSV ───────────────────────────────────────────────────────────────────────
+// Built off buildInventoryPayload — the SAME rows the Drive workbook is written from, so
+// the spreadsheet a concierge emails an attorney and the workbook shared with counsel
+// cannot say different things about the same estate.
+function _csvCell(v) {
+  var s = (v === null || v === undefined) ? '' : String(v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function buildInventoryCSV(jobId) {
+  var p = buildInventoryPayload(jobId);
+  return [p.columns].concat(p.rows).map(function(row){
+    return row.map(_csvCell).join(',');
+  }).join('\r\n');
+}
+function exportInventoryCSV(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  if (!_jobInvRefs(jobId).length) { alert('There is nothing in the inventory to export yet.'); return; }
+  var csv = buildInventoryCSV(jobId);
+  var name = (job.hvlId || 'Havellin') + '_Inventory_' + new Date().toISOString().slice(0,10) + '.csv';
+  try {
+    // The BOM is not decoration: without it Excel opens a UTF-8 CSV as Windows-1252 and
+    // every § and é in a category or a note arrives mangled on the attorney's screen.
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    showSyncBadge('Exported ' + name + ' ✓');
+  } catch (e) {
+    showSyncBadge('Could not build the CSV — ' + ((e && e.message) || 'unknown error'), true);
+  }
+}
+
+// ── 03 · During Disposition ───────────────────────────────────────────────────
+// "Written approval requests, itemized item by item, before anything of value leaves the
+// property. Verbal approval is never accepted."  The app recorded the RESULT of an
+// approval (Authorized By + Approval Date) and had nothing that produced the REQUEST.
+// Keep and Hold are excluded by definition: nothing is leaving.
+var INV_RELEASE_DISPOSITIONS = ['Auction','Consign','Sell','Donate','Junk'];
+function _invAwaitingApproval(jobId) {
+  return _jobInvRefs(jobId).filter(function(r){
+    return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !r.approvalDate;
+  });
+}
+function printApprovalRequest(jobId, selectedOnly) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var items = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
+  if (!items.length) {
+    alert(selectedOnly
+      ? 'Select the items you want approval for first.'
+      : 'Nothing is waiting on approval. An item needs a disposition of '
+        + INV_RELEASE_DISPOSITIONS.join(', ') + ' and no approval date yet.');
+    return;
+  }
+  // Re-resolve through _invAssignItemNos so every line prints its permanent item number.
+  var wanted = {};
+  items.forEach(function(r){ wanted[r.stableId] = 1; });
+  items = _invAssignItemNos(jobId).filter(function(r){ return wanted[r.stableId]; });
+  var rows = items.map(function(r) {
+    var q = parseInt(r.qty, 10);
+    return '<tr>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;"><strong>' + esc(r.objectName || '—') + '</strong>'
+        + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + ' &middot; ' + esc(_invRoomName(jobId, r.roomIdx)) + '</div></td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition || '—')
+        + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '') + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">&nbsp;</td>'
+      + '</tr>';
+  }).join('');
+  var total = items.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
+  var who = job.executor || 'Personal Representative';
+  var firearms = items.filter(invIsFirearm).length;
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, 'Release Approval Request')
+    + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
+      + 'To <strong>' + esc(who) + '</strong>: the items listed below are ready to be released from the property. '
+      + 'Please initial each line you approve, then sign and date at the foot. '
+      + '<strong>Nothing on this list will be moved, sold, donated or disposed of until this request is returned signed. '
+      + 'Verbal approval is not accepted.</strong></div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+      + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Item</th>'
+      + '<th style="padding:2px 6px;text-align:right;">Qty</th><th style="padding:2px 6px;text-align:right;">Est. value</th>'
+      + '<th style="padding:2px 6px;">Proposed disposition</th><th style="padding:2px 6px;">Initial</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div style="display:flex;justify-content:flex-end;font-size:12px;font-weight:700;margin-top:8px;border-top:2px solid #333;padding-top:6px;">'
+      + items.length + ' item' + (items.length > 1 ? 's' : '') + ' &middot; estimated value ' + _invMoney(total) + '</div>'
+    + (firearms ? '<div style="font-size:10.5px;color:#A32D2D;font-style:italic;margin-top:8px;">'
+        + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Firearms are collected from the property by a '
+        + 'licensed dealer only, on the authority of the personal representative acting on counsel&rsquo;s advice. Havellin does not transport them.</div>' : '')
+    + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
+      + 'Approved by: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
+      + '<span style="color:#888;">' + esc(who) + ' / authorized fiduciary</span></div>'
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
+      + 'Values are Havellin&rsquo;s estimates as of the date shown and are not appraisals unless an appraisal is noted against the line. '
+      + 'Return the signed copy to your Transition Concierge; it is filed with the estate record and retained for seven years.</div>'
+    + '</div>';
+  _printDocument(html);
+}
+// The other half of the same transaction: the signed request comes back, and the approval
+// is written onto every item it covered in ONE action. Typing a name into twenty rows by
+// hand is how a signed approval ends up recorded against three of them.
+function invRecordApproval(jobId) {
+  var picked = _invPicked(jobId);
+  if (!picked.length) { alert('Select the items the signed approval covers.'); return; }
+  var job = _invJob(jobId);
+  var who = (window.prompt('Who signed the approval? (name as signed)', (job && job.executor) || '') || '').trim();
+  if (!who) return;
+  var when = (window.prompt('Date of the signed approval (YYYY-MM-DD):', new Date().toISOString().slice(0,10)) || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(when)) { alert('Enter the date as YYYY-MM-DD.'); return; }
+  picked.forEach(function(ref){
+    ref.authBy = who; ref.approvalDate = when;
+    _setPhotoRef(jobId, _invTouch(ref));
+  });
+  savePhotoRefs(jobId);
+  _scheduleInventorySync(jobId);
+  showSyncBadge('Approval recorded on ' + picked.length + ' item' + (picked.length > 1 ? 's' : '') + ' ✓');
+  _invPick = {};
+  renderInventoryTab();
+}
 
 function printCourtInventory(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -12562,7 +13007,7 @@ function addAppraiser(jobId) {
     id: Date.now(), name: name, firm: g('appr-firm'),
     credential: (document.getElementById('appr-cred')||{}).value || '',
     independent: !!(document.getElementById('appr-indep')||{}).checked,
-    effectiveDate: g('appr-effdate'), reportDate: g('appr-rptdate')
+    effectiveDate: g('appr-effdate'), reportDate: g('appr-rptdate'), dueDate: g('appr-duedate')
   });
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
@@ -12681,13 +13126,14 @@ function _renderAppraiserRoster(job) {
       + '<td style="font-size:11px;">' + (a.independent ? '<span style="color:var(--ok-tx);font-weight:600;">Independent</span>' : '<span style="color:#c0392b;">Not independent</span>') + '</td>'
       + '<td style="font-size:11px;">' + (a.effectiveDate ? esc(fmtDate2(a.effectiveDate)) : '—') + '</td>'
       + '<td style="font-size:11px;">' + (a.reportDate ? esc(fmtDate2(a.reportDate)) : '—') + '</td>'
+      + '<td style="font-size:11px;">' + (a.dueDate ? esc(fmtDate2(a.dueDate)) : '<span style="color:var(--gray);">not set</span>') + '</td>'
       + '<td><button class="icon-btn del" onclick="removeAppraiser(' + job.id + ',' + a.id + ')">Remove</button></td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:8px;">No appraisers yet — add one to link Appraisal-sourced items to a named, credentialed record.</td></tr>';
+  }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:8px;">No appraisers yet — add one to link Appraisal-sourced items to a named, credentialed record.</td></tr>';
   return '<div class="card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link to Appraisal items)</span></div>'
     + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date.</div>'
-    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th></th></tr></thead>'
+    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th>Due back</th><th></th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr>'
     + '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><div id="appr-firm-wrap"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></div></td>'
@@ -12695,6 +13141,7 @@ function _renderAppraiserRoster(job) {
     + '<td style="font-size:11px;"><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
     + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
+    + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
     + '<td><button class="icon-btn" onclick="addAppraiser(' + job.id + ')">+ Add</button></td>'
     + '</tr></tfoot></table></div>';
 }
@@ -12892,6 +13339,385 @@ function _renderDuplicateImportNotice(jobId) {
     + '<ul style="margin:6px 0 0 16px;padding:0;">' + lines + '</ul></div>';
 }
 
+// ══════════════ THE REVIEW WORKSPACE ═════════════════════════════════════════════
+// The Job Plan is the FIELD surface — room by room, one item at a time, on a phone,
+// standing in the room. This tab is the DESK surface: that evening the concierge opens
+// the day's captures and works them. So it is organised around the two questions that
+// actually get asked at a desk — "what still has no decision?" and "what is going to the
+// auction house?" — not around the shape of the underlying sheet.
+//
+// It replaces a 29-column table with a column-group switcher above it. That switcher
+// existed only because nobody can read 29 columns, which made it a symptom rather than a
+// feature; Anthony, on it: "I don't really understand what happens at the bottom with all
+// these squares or rectangles you tick."
+
+// Not yet decided sorts FIRST because it is the worklist. The rest run in the order the
+// decisions actually get made, not alphabetically like INV_DISPOSITIONS.
+var INV_GROUP_ORDER = ['', 'Keep', 'Auction', 'Consign', 'Sell', 'Donate', 'Junk', 'Hold'];
+var INV_UNDECIDED = 'Not yet decided';
+var _invFilter    = { when: 'all', room: '', q: '', flag: '' };
+var _invOpen      = {};   // stableId -> panel expanded
+var _invFold      = {};   // disposition key -> section collapsed
+var _invPick      = {};   // stableId -> selected for a bulk action
+var _invShowRoll  = false;
+
+function _invDispLabel(d) { return d || INV_UNDECIDED; }
+function _invDayStart(offsetDays) {
+  var d = new Date(); d.setHours(0,0,0,0);
+  return d.getTime() - (offsetDays || 0) * 86400000;
+}
+function _invCapturedToday(items) {
+  var t = _invDayStart(0);
+  return items.some(function(r){ return (r.ts || 0) >= t; });
+}
+
+// The five reasons to open this tab. Each is a count AND a filter — a number you cannot
+// act on is decoration.
+function _invNeedsValue(r) { var n = parseFloat(r.fmv); return isNaN(n); }
+var INV_WORK_FLAGS = [
+  {key:'undecided', label:'Not yet decided', test:function(r){ return !r.disposition; }},
+  {key:'noval',     label:'No value yet',    test:function(r){ return _invNeedsValue(r); }},
+  {key:'appr',      label:'Needs appraiser',  test:function(r, job){ return invNeedsAppraisal(r, job); }},
+  {key:'firearm',   label:'Firearms held',    test:function(r){ return invIsFirearm(r) && invReleaseBlocked(r); }},
+  {key:'hold',      label:'Disputed / Hold',  test:function(r){ return !!r.flagDisputed || r.disposition === 'Hold'; }}
+];
+
+function _invMatchesFilter(r, job) {
+  var f = _invFilter;
+  if (f.when === 'today' && (r.ts || 0) < _invDayStart(0)) return false;
+  if (f.when === 'week'  && (r.ts || 0) < _invDayStart(6)) return false;
+  if (f.room !== '' && String(r.roomIdx == null ? '' : r.roomIdx) !== String(f.room)) return false;
+  if (f.flag) {
+    var fl = INV_WORK_FLAGS.filter(function(x){ return x.key === f.flag; })[0];
+    if (fl && !fl.test(r, job)) return false;
+  }
+  if (f.q) {
+    var blob = [r.objectName, r.category, r.disposition, r.channel, r.valNote,
+                _invRoomName(job.id, r.roomIdx), _invItemNo(r)].filter(Boolean).join(' ').toLowerCase();
+    if (blob.indexOf(f.q.toLowerCase()) < 0) return false;
+  }
+  return true;
+}
+
+// Disposition → Room. Rooms run in WALKTHROUGH order (the estimate's own room index), the
+// same order the Job Plan cards were worked in, so the evening review retraces the day.
+function _invGroupItems(job, items) {
+  var byDisp = {};
+  items.forEach(function(r){
+    var k = r.disposition || '';
+    (byDisp[k] = byDisp[k] || []).push(r);
+  });
+  var keys = INV_GROUP_ORDER.filter(function(k){ return byDisp[k] && byDisp[k].length; });
+  // A disposition someone typed into the sheet that is not in our list still has to show.
+  Object.keys(byDisp).forEach(function(k){ if (keys.indexOf(k) < 0) keys.push(k); });
+  return keys.map(function(k){
+    var rows = byDisp[k];
+    var roomKeys = [];
+    var byRoom = {};
+    rows.forEach(function(r){
+      var rk = (r.roomIdx == null) ? '~' : String(r.roomIdx);
+      if (!byRoom[rk]) { byRoom[rk] = []; roomKeys.push(rk); }
+      byRoom[rk].push(r);
+    });
+    roomKeys.sort(function(a, b){
+      if (a === '~') return 1;            // Unassigned / estate-wide last
+      if (b === '~') return -1;
+      return parseInt(a, 10) - parseInt(b, 10);
+    });
+    var fmv = 0, done = 0;
+    rows.forEach(function(r){
+      var n = parseFloat(r.fmv); if (!isNaN(n)) fmv += n;
+      if (r.reviewed) done++;
+    });
+    return {
+      key: k, label: _invDispLabel(k), items: rows, fmv: fmv, reviewed: done,
+      rooms: roomKeys.map(function(rk){
+        return { key: rk, name: _invRoomName(job.id, rk === '~' ? null : parseInt(rk, 10)), items: byRoom[rk] };
+      })
+    };
+  });
+}
+
+// ── Review state ──────────────────────────────────────────────────────────────
+// NOTHING IS GATED AND NOTHING LOCKS. Anthony, deciding this: "we may want to show
+// in-progress work to clients during an engagement so this should not be locked until
+// complete." An approval checkpoint that withholds the document is exactly what stops a
+// client being shown honest work-in-progress. The honesty comes from the IN PROGRESS
+// stamp on the document instead — see _invProgressStamp. Do not add a gate here later.
+function _invReviewStats(items) {
+  var done = items.filter(function(r){ return !!r.reviewed; }).length;
+  return { done: done, total: items.length, complete: items.length > 0 && done === items.length };
+}
+function _invSetReviewed(jobId, stableId, on) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref) return;
+  var job = _invJob(jobId);
+  ref.reviewed = !!on;
+  ref.reviewedAt = on ? Date.now() : null;
+  ref.reviewedBy = on ? ((job && job.tc) || '') : '';
+  _setPhotoRef(jobId, _invTouch(ref));
+  savePhotoRefs(jobId);
+  _scheduleInventorySync(jobId);
+  renderInventoryTab();
+}
+
+// ── Selection + bulk edits ────────────────────────────────────────────────────
+// The evening pass is mostly the same decision repeated: forty household items to Junk,
+// a bedroom to Keep. Doing that one dropdown at a time is what makes people stop doing it.
+function _invPicked(jobId) {
+  return _jobInvRefs(jobId).filter(function(r){ return _invPick[r.stableId]; });
+}
+function _invTogglePick(stableId, el) {
+  if (el && el.checked) _invPick[stableId] = 1; else delete _invPick[stableId];
+  renderInventoryTab();
+}
+function _invPickGroup(jobId, key, on) {
+  var job = _invJob(jobId);
+  _invAssignItemNos(jobId).forEach(function(r){
+    if ((r.disposition || '') !== key) return;
+    if (!_invMatchesFilter(r, job)) return;
+    if (on) _invPick[r.stableId] = 1; else delete _invPick[r.stableId];
+  });
+  renderInventoryTab();
+}
+function _invClearPicks() { _invPick = {}; renderInventoryTab(); }
+function _invBulkApply(jobId, key, value) {
+  var picked = _invPicked(jobId);
+  if (!picked.length) return;
+  var job = _invJob(jobId);
+  picked.forEach(function(ref){
+    if (key === 'reviewed') {
+      ref.reviewed = true; ref.reviewedAt = Date.now(); ref.reviewedBy = (job && job.tc) || '';
+    } else if (key === 'roomIdx') {
+      ref.roomIdx = (value === '') ? null : parseInt(value, 10);
+    } else {
+      ref[key] = value;
+    }
+    _setPhotoRef(jobId, _invTouch(ref));
+  });
+  savePhotoRefs(jobId);
+  _scheduleInventorySync(jobId);
+  showSyncBadge(picked.length + ' item' + (picked.length > 1 ? 's' : '') + ' updated ✓');
+  renderInventoryTab();
+}
+
+// ── Filter / fold plumbing ────────────────────────────────────────────────────
+function setInvWhen(v)  { _invFilter.when = v; renderInventoryTab(); }
+function setInvRoom(v)  { _invFilter.room = v; renderInventoryTab(); }
+function setInvQuery(v) { _invFilter.q = String(v || '').trim(); renderInventoryTab(); }
+function setInvFlag(v)  { _invFilter.flag = (_invFilter.flag === v) ? '' : v; renderInventoryTab(); }
+function invClearFilters() { _invFilter = { when:'all', room:'', q:'', flag:'' }; renderInventoryTab(); }
+function _invToggleFold(k) { if (_invFold[k]) delete _invFold[k]; else _invFold[k] = 1; renderInventoryTab(); }
+function _invToggleOpen(id) { if (_invOpen[id]) delete _invOpen[id]; else _invOpen[id] = 1; renderInventoryTab(); }
+function invToggleRollups() { _invShowRoll = !_invShowRoll; renderInventoryTab(); }
+
+function _invProgressBar(st, width) {
+  var pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
+  return '<div style="display:flex;align-items:center;gap:8px;">'
+    + '<div style="width:' + (width || 120) + 'px;height:6px;border-radius:3px;background:var(--border);overflow:hidden;flex:0 0 auto;">'
+    + '<div style="width:' + pct + '%;height:100%;background:' + (st.complete ? 'var(--ok-tx)' : 'var(--bronze)') + ';"></div></div>'
+    + '<span style="font-size:11px;color:' + (st.complete ? 'var(--ok-tx)' : 'var(--gray)') + ';white-space:nowrap;">'
+    + st.done + ' of ' + st.total + ' reviewed</span></div>';
+}
+
+function _renderInvWorkbar(job, all) {
+  var st = _invReviewStats(all);
+  var jid = job.id;
+  var btn = function(fn, label, title, primary) {
+    return '<button class="btn-s" onclick="' + fn + '" title="' + esc(title) + '" style="'
+      + (primary ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '') + '">' + label + '</button>';
+  };
+  return '<div class="card" style="margin-bottom:1rem;">'
+    + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">'
+      + '<div style="min-width:0;">'
+        + '<div class="sec" style="margin:0;border-bottom:none;padding-bottom:0;">Inventory Review</div>'
+        + '<div style="font-size:11px;color:var(--gray);">' + esc(job.name || '—')
+        + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '')
+        + (job.addr ? ' &middot; ' + esc(job.addr) : '') + '</div>'
+      + '</div>'
+      + _invProgressBar(st, 150)
+    + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+      + btn('printEstateInventoryReport(' + jid + ')', 'Estate Inventory PDF', 'The client / attorney asset schedule — photo, description, location, quantity, condition, date-of-death FMV and the valuation source stated', true)
+      + btn('exportInventoryCSV(' + jid + ')', 'CSV', 'Every column, as a spreadsheet file to attach to an email')
+      + btn('printApprovalRequest(' + jid + ')', 'Approval Request', 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.')
+      + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', 'Add an asset with no photo (cash, vehicle, account)')
+      + '<details style="position:relative;"><summary class="btn-s" style="list-style:none;cursor:pointer;display:inline-block;">More &#9662;</summary>'
+        + '<div style="position:absolute;z-index:50;right:0;margin-top:4px;background:var(--paper,#fff);border:1px solid var(--border-md);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px;">'
+        + btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory')
+        + btn('printDispositionLedger(' + jid + ')', 'Disposition Ledger', 'Proceeds, fees, net to estate, receipts')
+        + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', 'Per-specialist packet of every item flagged for appraisal')
+        + btn('takeInventorySnapshot(' + jid + ')', 'Snapshot', 'Point-in-time copy of the inventory')
+        + btn('shareInventoryWithCounsel(' + jid + ')', 'Share w/ Counsel', 'Read-only access to the Estate Inventory Drive folder')
+        + btn('unshareInventory(' + jid + ')', 'Revoke', "Revoke an email's access")
+        + btn('invToggleRollups()', (_invShowRoll ? 'Hide' : 'Show') + ' summary &amp; rollups', 'Totals, FMV by category, MAIV aggregate')
+        + '</div></details>'
+    + '</div>'
+    + (st.total && !st.complete
+        ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;">Client documents print with an <strong>IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.</div>'
+        : '')
+    + '</div>';
+}
+
+function _renderInvFlagStrip(job, all) {
+  var chips = INV_WORK_FLAGS.map(function(f){
+    var n = all.filter(function(r){ return f.test(r, job); }).length;
+    var on = _invFilter.flag === f.key;
+    var dim = (n === 0 && !on);
+    return '<button class="btn-s" onclick="setInvFlag(\'' + f.key + '\')" style="font-size:10.5px;'
+      + (on ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : (dim ? 'opacity:.45;' : ''))
+      + '">' + esc(f.label) + ' <strong>' + n + '</strong></button>';
+  }).join('');
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
+    + '<span style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;">Needs you</span>'
+    + chips + '</div>';
+}
+
+function _renderInvFilterRow(job, all) {
+  var whens = [{k:'today',l:'Today'},{k:'week',l:'Last 7 days'},{k:'all',l:'All'}];
+  var wb = whens.map(function(w){
+    var on = _invFilter.when === w.k;
+    return '<button class="btn-s" onclick="setInvWhen(\'' + w.k + '\')" style="font-size:10.5px;'
+      + (on ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '') + '">' + w.l + '</button>';
+  }).join('');
+  var seen = [], names = {};
+  all.forEach(function(r){
+    var k = (r.roomIdx == null) ? '' : String(r.roomIdx);
+    if (seen.indexOf(k) < 0) { seen.push(k); names[k] = _invRoomName(job.id, r.roomIdx); }
+  });
+  seen.sort(function(a,b){ if (a === '') return 1; if (b === '') return -1; return parseInt(a,10) - parseInt(b,10); });
+  var roomOpts = '<option value="">All rooms</option>' + seen.map(function(k){
+    return '<option value="' + esc(k) + '"' + (String(_invFilter.room) === k ? ' selected' : '') + '>' + esc(names[k]) + '</option>';
+  }).join('');
+  var active = _invFilter.when !== 'all' || _invFilter.room !== '' || _invFilter.q || _invFilter.flag;
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">'
+    + wb
+    + '<select onchange="setInvRoom(this.value)" style="font-size:11px;padding:3px 5px;max-width:200px;">' + roomOpts + '</select>'
+    + '<input type="search" placeholder="Search items…" value="' + esc(_invFilter.q) + '" '
+      + 'oninput="clearTimeout(window._invQT);window._invQT=setTimeout(function(){setInvQuery(document.getElementById(\'inv-q\').value);},250)" '
+      + 'id="inv-q" style="font-size:11px;padding:3px 6px;flex:1;min-width:140px;max-width:260px;">'
+    + (active ? '<button class="btn-s" onclick="invClearFilters()" style="font-size:10.5px;">Clear filters</button>' : '')
+    + '</div>';
+}
+
+function _renderInvRow(job, ref) {
+  var jid = job.id;
+  var sid = ref.stableId;
+  var open = !!_invOpen[sid];
+  var picked = !!_invPick[sid];
+  var fmvCol  = INVENTORY_COLUMNS.filter(function(c){ return c.key === 'fmv'; })[0];
+  var dispCol = INVENTORY_COLUMNS.filter(function(c){ return c.key === 'disposition'; })[0];
+  var warn = [];
+  if (invIsFirearm(ref) && invReleaseBlocked(ref)) warn.push('<span title="A firearm moves on written authority only" style="color:#c0392b;font-weight:700;">&#9888; held</span>');
+  if (invNeedsAppraisal(ref, job) && !_invHasAppraisal(jid, ref) && !ref.apprWaived) warn.push('<span title="Flagged for a specialist appraisal" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
+  if (ref.flagBequest) warn.push('<span title="Named in a specific bequest" style="color:var(--bronze);">bequest</span>');
+  if (ref.flagDisputed) warn.push('<span title="Recorded dispute" style="color:#c0392b;">disputed</span>');
+  var sub = [esc(ref.category || '—'), esc(_invRoomName(jid, ref.roomIdx))].join(' &middot; ');
+  return '<div style="border-bottom:1px solid var(--border);background:' + (picked ? 'var(--cream)' : 'transparent') + ';">'
+    + '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;">'
+      + '<input type="checkbox"' + (picked ? ' checked' : '') + ' onchange="_invTogglePick(\'' + sid + '\',this)" '
+        + 'style="width:14px;height:14px;flex:0 0 auto;cursor:pointer;accent-color:var(--gray-dk);" title="Select for a bulk change">'
+      + _invThumbHTML(jid, ref, 40)
+      + '<span style="font-size:10px;color:var(--gray);font-weight:700;width:26px;flex:0 0 auto;">' + esc(_invItemNo(ref)) + '</span>'
+      + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(ref.objectName || '(unnamed)')
+        + (ref.manual ? ' <span style="font-size:8px;color:var(--bronze);" title="Manual line item (no photo)">M</span>' : '') + '</div>'
+        + '<div style="font-size:10px;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sub
+        + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
+      + '</div>'
+      + '<div style="width:104px;flex:0 0 auto;">' + _invInput(jid, ref, fmvCol, job) + '</div>'
+      + '<div style="width:110px;flex:0 0 auto;">' + _invInput(jid, ref, dispCol, job) + '</div>'
+      + '<label style="flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;font-size:10px;color:' + (ref.reviewed ? 'var(--ok-tx)' : 'var(--gray)') + ';cursor:pointer;white-space:nowrap;" '
+        + 'title="' + (ref.reviewed && ref.reviewedBy ? 'Reviewed by ' + esc(ref.reviewedBy) : 'Tick when this line has been checked') + '">'
+        + '<input type="checkbox"' + (ref.reviewed ? ' checked' : '') + ' onchange="_invSetReviewed(' + jid + ',\'' + sid + '\',this.checked)" '
+        + 'style="width:14px;height:14px;cursor:pointer;accent-color:var(--ok-tx);">Reviewed</label>'
+      + '<button class="icon-btn" onclick="_invToggleOpen(\'' + sid + '\')" title="Open the full record" style="flex:0 0 auto;">' + (open ? '&#9652;' : '&#9662;') + '</button>'
+    + '</div>'
+    + (open ? _renderInvPanel(job, ref) : '')
+    + '</div>';
+}
+
+// Every remaining field, sectioned by the `group` metadata that used to drive the deleted
+// column switcher. One definition of a column, two surfaces.
+function _renderInvPanel(job, ref) {
+  var jid = job.id;
+  var cols = _invPanelCols();
+  var secs = INV_PANEL_SECTIONS.map(function(sec){
+    var mine = cols.filter(function(c){ return _invPanelSection(c) === sec.key; });
+    if (!mine.length) return '';
+    var fields = mine.map(function(c){
+      // A column that is not editable on this row (NFA on a sofa, MAIV class on a
+      // non-MAIV article) renders as a read-only value rather than vanishing — absent is
+      // indistinguishable from empty, and these carry legal meaning.
+      return '<div style="min-width:0;">'
+        + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">' + c.header + '</div>'
+        + '<div style="font-size:11px;">' + _invCell(jid, ref, c, job, 0) + '</div></div>';
+    }).join('');
+    return '<div style="margin-bottom:10px;">'
+      + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">' + sec.label + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px 10px;">' + fields + '</div></div>';
+  }).join('');
+  var nC = (ref.custodyLog || []).length;
+  return '<div style="padding:10px 4px 12px 52px;background:#fcfaf5;border-top:1px dashed var(--border-md);">'
+    + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;">'
+      + _invThumbHTML(jid, ref, 96)
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+        + (ref.driveFileUrl ? '<a class="btn-s" href="' + esc(ref.driveFileUrl) + '" target="_blank" style="text-decoration:none;">Open photo in Drive</a>' : '')
+        + '<button class="btn-s" onclick="openCustodyModal(' + jid + ',\'' + ref.stableId + '\')">Chain of custody' + (nC ? ' (' + nC + ')' : '') + '</button>'
+        + (ref.manual ? '<button class="btn-s" onclick="removeInventoryManualItem(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;">Remove line item</button>' : '')
+      + '</div>'
+    + '</div>'
+    + secs + '</div>';
+}
+
+function _renderInvGroup(job, g) {
+  var folded = !!_invFold[g.key];
+  var st = { done: g.reviewed, total: g.items.length, complete: g.reviewed === g.items.length };
+  var undecided = (g.key === '');
+  var body = folded ? '' : g.rooms.map(function(rm){
+    return '<div style="margin-top:2px;">'
+      + '<div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;padding:6px 4px 2px;">'
+        + esc(rm.name) + ' <span style="font-weight:400;">&middot; ' + rm.items.length + '</span></div>'
+      + rm.items.map(function(r){ return _renderInvRow(job, r); }).join('')
+      + '</div>';
+  }).join('');
+  return '<div class="card" style="margin-bottom:10px;' + (undecided ? 'border-left:3px solid var(--bronze);' : '') + '">'
+    + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">'
+      + '<button class="icon-btn" onclick="_invToggleFold(\'' + esc(g.key) + '\')" title="Collapse">' + (folded ? '&#9656;' : '&#9662;') + '</button>'
+      + '<div class="sec" style="margin:0;border-bottom:none;padding-bottom:0;flex:1;min-width:0;">' + esc(g.label)
+        + ' <span style="font-weight:400;color:var(--gray);font-size:11px;text-transform:none;letter-spacing:0;">'
+        + g.items.length + ' item' + (g.items.length > 1 ? 's' : '')
+        + (g.fmv ? ' &middot; ' + _money(g.fmv) : '') + '</span></div>'
+      + _invProgressBar(st, 90)
+      + '<button class="btn-s" onclick="_invPickGroup(' + job.id + ',\'' + esc(g.key) + '\',true)" style="font-size:10px;">Select all</button>'
+    + '</div>'
+    + (undecided ? '<div style="font-size:10.5px;color:var(--gray);margin:0 0 6px 4px;">No disposition chosen yet in the field. This is the list to work down.</div>' : '')
+    + body + '</div>';
+}
+
+function _renderInvBulk(job) {
+  var picked = _invPicked(job.id);
+  if (!picked.length) return '';
+  var jid = job.id;
+  var dispOpts = '<option value="">Set disposition…</option>'
+    + INV_DISPOSITIONS.map(function(d){ return '<option>' + esc(d) + '</option>'; }).join('');
+  var srcOpts = '<option value="">Set valuation source…</option>'
+    + INV_VAL_SOURCES.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
+  return '<div style="position:sticky;bottom:0;z-index:40;background:var(--gray-dk);color:var(--cream);'
+    + 'border-radius:6px;padding:8px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;'
+    + 'box-shadow:0 -2px 14px rgba(0,0,0,.15);">'
+    + '<strong style="font-size:12px;">' + picked.length + ' selected</strong>'
+    + '<select onchange="if(this.value)_invBulkApply(' + jid + ',\'disposition\',this.value)" style="font-size:11px;padding:3px 5px;">' + dispOpts + '</select>'
+    + '<select onchange="if(this.value)_invBulkApply(' + jid + ',\'valSource\',this.value)" style="font-size:11px;padding:3px 5px;">' + srcOpts + '</select>'
+    + '<select onchange="_invBulkApply(' + jid + ',\'roomIdx\',this.value)" style="font-size:11px;padding:3px 5px;">'
+      + '<option value="">Move to room…</option>' + _invRoomOptions(jid, undefined) + '</select>'
+    + '<button class="btn-s" onclick="_invBulkApply(' + jid + ',\'reviewed\',1)" style="font-size:11px;">Mark reviewed</button>'
+    + '<button class="btn-s" onclick="printApprovalRequest(' + jid + ',true)" style="font-size:11px;">Approval request</button>'
+    + '<button class="btn-s" onclick="invRecordApproval(' + jid + ')" style="font-size:11px;" title="Record a signed approval against every selected item">Record approval</button>'
+    + '<button class="btn-s" onclick="_invClearPicks()" style="font-size:11px;">Clear</button>'
+    + '</div>';
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -12901,57 +13727,48 @@ function renderInventoryTab() {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) { cont.innerHTML = '<div class="empty-state">Job not found.</div>'; return; }
   _invEnsureLoaded(jobId);
-  var items = _invAssignItemNos(jobId);
-  var summary = _renderInventorySummary(job, items);
-  // Captured At / Photo Filename are hidden on screen to save room; they remain in
-  // the data model and the workbook export. Photo Link still gives one-click access.
-  var cols = _invVisibleCols();
-  var inner;
-  if (!items.length) {
-    // No table when empty — a full-width table would push the message off-screen.
-    inner = '<div style="padding:16px 2px;color:var(--gray);font-size:12px;">No items yet. Capture items on the Job Plan room cards, or use <strong>+ Add line item</strong> for an asset with no photo.</div>';
+  var all = _invAssignItemNos(jobId);
+  // Default to the day's work when there IS a day's work — that is what the tab is opened
+  // for — and to everything otherwise, so a job resumed a week later is not an empty screen.
+  if (_invFilter.when === 'all' && !_invFilter.q && !_invFilter.flag && _invCapturedToday(all)) _invFilter.when = 'today';
+  var items = all.filter(function(r){ return _invMatchesFilter(r, job); });
+
+  var body;
+  if (!all.length) {
+    body = '<div class="card"><div style="padding:16px 2px;color:var(--gray);font-size:12px;">'
+      + 'No items yet. Capture them on the <strong>Job Plan</strong> room cards during the walkthrough, '
+      + 'or use <strong>+ Add line item</strong> for an asset with no photo.</div></div>';
+  } else if (!items.length) {
+    body = '<div class="card"><div style="padding:16px 2px;color:var(--gray);font-size:12px;">'
+      + 'Nothing matches these filters. <a href="#" onclick="invClearFilters();return false;" style="color:var(--bronze);">Clear them</a> '
+      + 'to see all ' + all.length + ' items.</div></div>';
   } else {
-    var head = cols.map(function(c){
-      return '<th style="white-space:nowrap;">' + esc(c.header) + '</th>';
-    }).join('');
-    var body = items.map(function(ref, i){
-      var cells = cols.map(function(c){
-        var manageStyle = (c.kind !== 'capture') ? 'background:#fcfaf5;' : '';
-        return '<td style="white-space:nowrap;vertical-align:middle;' + manageStyle + '">' + _invCell(jobId, ref, c, job, i + 1) + '</td>';
-      }).join('');
-      return '<tr>' + cells + '</tr>';
-    }).join('');
-    inner = '<div style="overflow-x:auto;"><table class="vtbl" style="min-width:100%;font-size:11px;">'
-      + '<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>'
-      + '<div style="font-size:10px;color:var(--gray);margin-top:8px;">Shaded columns are entered here; they save and sync to the client’s Drive workbook automatically. Net to Estate is computed (Gross − Fees). Blank Valuation Date defaults to the date of death.</div>';
+    body = _invGroupItems(job, items).map(function(g){ return _renderInvGroup(job, g); }).join('');
   }
-  var table = '<div class="card">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
-    + '<div class="sec" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">Inventory — Tangible Personal Property</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-    + '<button class="btn-s" onclick="printCourtInventory(' + jobId + ')" title="§733.604-style court / attorney inventory — date-of-death FMV, exempt property separated, no internal figures">Court Inventory</button>'
-    + '<button class="btn-s" onclick="printDispositionLedger(' + jobId + ')" title="Disposition &amp; accounting ledger — proceeds, fees, net to estate, receipts">Disposition Ledger</button>'
-    + '<button class="btn-s" onclick="printAppraisalWorklist(' + jobId + ')" title="Print a per-specialist packet of every item flagged for appraisal">Appraisal Worklist</button>'
-    + '<button class="btn-s" onclick="takeInventorySnapshot(' + jobId + ')" title="Capture a point-in-time copy of the inventory">Snapshot</button>'
-    + '<button class="btn-s" onclick="shareInventoryWithCounsel(' + jobId + ')" title="Give the attorney / trust officer read-only access to the Estate Inventory Drive folder">Share w/ Counsel</button>'
-    + '<button class="btn-s" onclick="unshareInventory(' + jobId + ')" title="Revoke an emails access to the Estate Inventory folder">Revoke</button>'
-    + '<button class="btn-s" onclick="addInventoryManualItem(' + jobId + ')" title="Add an asset with no photo (cash, vehicle, account)">+ Add line item</button>'
-    + '</div>'
-    + '</div>'
-    + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
-    + '<span style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;">Columns</span>'
-    + INV_VIEWS.map(function(v){
-        var on = (_invView === v.key);
-        return '<button class="btn-s" onclick="setInvView(\'' + v.key + '\')" style="font-size:10.5px;'
-          + (on ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '')
-          + '">' + esc(v.label) + '</button>';
-      }).join('')
-    + '<span style="font-size:10px;color:var(--gray);">Item #, Object Name and Category stay put.</span>'
-    + '</div>'
+
+  var thumbNote = _invThumbFailed[jobId]
+    ? '<div class="alert a-warn" style="font-size:11px;">&#9888; Photos could not be loaded from Drive &mdash; '
+      + esc(_invThumbFailed[jobId]) + '. The records are all here; only the thumbnails are missing.</div>'
+    : '';
+
+  cont.innerHTML = _renderInvWorkbar(job, all)
+    + (all.length ? _renderInvFlagStrip(job, all) + _renderInvFilterRow(job, all) : '')
+    + thumbNote
     + _renderDuplicateImportNotice(jobId)
-    + inner
-    + '</div>';
-  cont.innerHTML = '<div id="inv-summary">' + summary + '</div>' + _renderInventoryImportPanel(jobId) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>' + _renderRemovedRows(jobId) + _renderInventorySnapshots(job) + table;
+    + body
+    + _renderInvBulk(job)
+    + _renderInventoryImportPanel(jobId)
+    + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>'
+    + _renderAppraiserRoster(job)
+    + _renderRemovedRows(jobId)
+    + _renderInventorySnapshots(job)
+    // A read-out, not a workspace — so it sits at the bottom and starts closed. It was
+    // occupying the top of the tab, above the work.
+    + '<div id="inv-summary">' + (_invShowRoll ? _renderInventorySummary(job, all) : '') + '</div>';
+
+  // Images are painted in AFTER the markup, never inlined into it — see _invThumbHTML.
+  _invPaintThumbs(jobId);
+  _invEnsureThumbs(jobId);
 }
 
 // ── Build 3: push the manifest to the per-client Google workbook ───────────────
@@ -13201,11 +14018,15 @@ function attachJobPlanCollectionPhoto(input, jobId, collId) {
 
 function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpdate) {
   var job = jobs.find(function(j){ return j.id === jobId; });
-  function _finish(status, fileUrl) {
+  function _finish(status, fileUrl, fileId) {
     var ref = _getPhotoRef(jobId, stableId);
     if (ref) {
       ref.status = status;
-      if (status === 'uploaded') { ref.driveFileUrl = fileUrl || null; delete _photoRetryData[stableId]; }
+      if (status === 'uploaded') {
+        ref.driveFileUrl = fileUrl || null;
+        if (fileId) ref.driveFileId = fileId;
+        delete _photoRetryData[stableId];
+      }
       _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
     }
     _savePendingPhotoData(jobId);
@@ -13222,8 +14043,8 @@ function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpd
   // It also missed the { name: "id" } stored shape that _subfolderId handles.
   resolveSubfolderId(job, subfolderName, function(folderId) {
     if (!folderId) { _finish('failed'); return; }
-    uploadToDrive(folderId, filename, dataUrl, function(ok, fileUrl) {
-      _finish(ok ? 'uploaded' : 'failed', fileUrl);
+    uploadToDrive(folderId, filename, dataUrl, function(ok, fileUrl, fileId) {
+      _finish(ok ? 'uploaded' : 'failed', fileUrl, fileId);
     });
   });
 }
@@ -18792,7 +19613,10 @@ function uploadToDrive(folderId, filename, dataUrl, onDone) {
     body: JSON.stringify({action:'uploadFile', folderId:folderId, filename:filename, dataUrl:dataUrl})
   })
   .then(function(r){ return r.json(); })
-  .then(function(d){ if (onDone) onDone(d.ok, d.fileUrl); })
+  // fileId has ALWAYS been in this response and was always discarded. The Inventory
+  // tab needs it to pull the photo back (see _invThumb), and without it every existing
+  // row has to have its id regex'd back out of the URL.
+  .then(function(d){ if (onDone) onDone(d.ok, d.fileUrl, d.fileId); })
   .catch(function(){ if (onDone) onDone(false); });
 }
 

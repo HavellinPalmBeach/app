@@ -60,6 +60,7 @@ function doPost(e) {
     if (data.action === 'uploadFile')    { return jsonOut(uploadFileToDrive(data.folderId, data.filename, data.dataUrl)); }
     if (data.action === 'uploadHtml')    { return jsonOut(uploadHtmlToDrive(data.folderId, data.filename, data.html)); }
     if (data.action === 'getSubfolders') { return handleGetSubfolders(data); }
+    if (data.action === 'getThumbnails')  { return jsonOut(getDriveThumbnails(data.fileIds)); }
     if (data.action === 'shareFolder')   { return jsonOut(shareFolder(data.folderId, data.email)); }
     if (data.action === 'unshareFolder') { return jsonOut(unshareFolder(data.folderId, data.email)); }
 
@@ -87,6 +88,54 @@ function doPost(e) {
     Logger.log('doPost error: ' + error.toString());
     return jsonOut({ ok: false, success: false, error: error.toString() });
   }
+}
+
+// ══ DRIVE THUMBNAILS ═════════════════════════════════════════════════════════════
+// The Inventory tab shows a photo beside every line. It cannot fetch those photos from
+// Drive directly and MUST NOT TRY: shareFolder grants access with folder.addViewer(email)
+// — named viewers only, never "anyone with the link" — so drive.google.com demands an
+// authenticated session, and the app is served from GitHub Pages, which makes that a
+// cross-site request. Safari blocks third-party cookies by default, so an <img> pointed
+// at drive.google.com/thumbnail renders on desktop Chrome and fails on the iPad. Failing
+// on one device only is worse than failing on all of them: it looks like missing photos
+// on exactly the machine the work is done on.
+//
+// This script runs AS the Havellin account and already holds full Drive access, so it can
+// simply hand the bytes back. Nothing about how the folder is shared changes.
+//
+// Returns { ok, thumbs: { fileId: dataUri }, missing: [fileId] }. A file that cannot be
+// read is reported in `missing` rather than failing the batch — one deleted photo must
+// not blank out the other forty.
+var THUMB_MAX_IDS   = 60;        // one tab-load's worth; the app pages beyond this
+var THUMB_MAX_BYTES = 220000;    // per image, before base64. Drive's own thumbnail is far
+                                 // smaller; this only bounds the full-blob fallback.
+
+function getDriveThumbnails(fileIds) {
+  if (!fileIds || !fileIds.length) return { ok: true, thumbs: {}, missing: [] };
+  var ids = fileIds.slice(0, THUMB_MAX_IDS);
+  var thumbs = {}, missing = [];
+  for (var i = 0; i < ids.length; i++) {
+    var id = String(ids[i] || '').trim();
+    if (!id) continue;
+    try {
+      var file = DriveApp.getFileById(id);
+      var blob = null;
+      // getThumbnail() is null until Drive has generated one — which for a freshly
+      // uploaded photo can be several seconds. Fall back to the file itself; the app
+      // already compresses to 900px before upload, so these are ~60-120KB.
+      try { blob = file.getThumbnail(); } catch (e) { blob = null; }
+      if (!blob) {
+        var full = file.getBlob();
+        if (full.getBytes().length <= THUMB_MAX_BYTES) blob = full;
+      }
+      if (!blob) { missing.push(id); continue; }
+      var type = blob.getContentType() || 'image/jpeg';
+      thumbs[id] = 'data:' + type + ';base64,' + Utilities.base64Encode(blob.getBytes());
+    } catch (err) {
+      missing.push(id);
+    }
+  }
+  return { ok: true, success: true, thumbs: thumbs, missing: missing };
 }
 
 // ══ STORE HELPERS ════════════════════════════════════════════════════════════════

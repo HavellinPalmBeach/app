@@ -123,17 +123,50 @@ resolves by header name), but it widens the sheet, so re-check the letter helper
    guardrail, removed items, snapshots. **Summary card moves below and starts collapsed** —
    it is a read-out, not a workspace, and it was occupying the top of the tab.
 
-### 3. Thumbnails
+### 3. Thumbnails — served by the Apps Script, not by the capturing device
 
-`driveFileUrl` points into a Drive folder shared only with counsel, so an `<img>` against it
-will not render for the general case. A **160px thumbnail is captured locally at compress
-time** and stored under its own key (`hav_media_thumb_<jobId>`), separate from the manifest
-for the same reason `_photoRetryData` is separate: image bytes must never be able to crowd
-the manifest write out of the localStorage quota.
+**Corrected 2026-09-01 after Anthony pushed back on the first draft, which claimed a
+thumbnail could only exist on the device that took the shot. That was wrong.**
 
-Cross-device the thumbnail will be absent — that is expected and must degrade honestly to a
-category glyph, never to a broken image. The client PDF prints whatever thumbnails the
-device holds and says so when some are missing.
+Three facts, verified in the source:
+
+1. **The upload already returns a Drive file id and the app throws it away.**
+   `uploadFileToDrive` in `main-sync.gs` returns `{ ok, fileUrl, fileId }`; the client's
+   `uploadToDrive` callback is `onDone(d.ok, d.fileUrl)`. So no inventory row holds a file
+   id today. The id is embedded in the URL that *was* stored, so the existing backlog is
+   recoverable by regex — no photo is stranded.
+2. **A direct `<img src="https://drive.google.com/thumbnail?id=…">` is the WRONG path and
+   must not be used.** `shareFolder` grants access with `folder.addViewer(email)` — named
+   viewers only, never "anyone with the link" — so Drive requires an authenticated session.
+   The app is served from GitHub Pages, making that a cross-site request, and Safari blocks
+   third-party cookies by default. It would render on desktop Chrome and fail on the iPad,
+   which is worse than failing everywhere: the failure would look like missing photos on
+   exactly the device the work is done on.
+3. **The Apps Script runs as the Havellin Google account and already has full Drive access.**
+   That is the way in, and it needs no change to how anything is shared.
+
+So: new `getThumbnails` action on `main-sync.gs`, taking a list of file ids and returning
+base64 thumbnails (`DriveApp.getFileById(id).getThumbnail()`, falling back to the file blob
+when Drive has not generated one). Every device sees every photo, signed in or not.
+
+⚠️ **This requires an Apps Script redeploy.** `main-sync.gs` changes.
+
+Client side:
+- `uploadToDrive` keeps `fileId`; `_doPhotoUpload` stores `ref.driveFileId`; the field joins
+  the `savePhotoRefs` whitelist or it is dropped on the next save.
+- `_invFileId(ref)` reads `driveFileId`, falling back to a regex over `driveFileUrl`
+  (`/file/d/<id>/`) so photos taken before this build resolve too.
+- Fetched thumbnails are cached in `hav_media_thumb_<jobId>` keyed by file id — its **own**
+  localStorage key, separate from the manifest, for the same reason `_photoRetryData` is
+  separate: image bytes must never be able to crowd the manifest write out of the quota.
+  A quota failure drops the cache, never the record.
+- The capture path also writes a 160px thumbnail straight into that cache, so an item shot
+  moments ago renders instantly instead of waiting on a round trip. That is an
+  optimisation, not the source of truth.
+- One batched fetch per job on tab open for whatever the cache is missing, never one
+  request per photo.
+- A thumbnail that cannot be resolved renders a category glyph — never an `<img>` with an
+  empty `src`, and never a broken-image icon in front of a client.
 
 ### 4. Documents
 

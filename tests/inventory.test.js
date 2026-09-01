@@ -456,45 +456,36 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
   }
 
-  group('29 columns is not a table — the manifest shows one slice at a time');
+  group('the column switcher is gone — the groups are the item panel now');
   {
-    const v = sandbox({ fns: ['_invVisibleCols', 'setInvView'],
-                        vars: ['INVENTORY_COLUMNS', 'INV_VIEWS', '_invView'],
-                        stubs: { renderInventoryTab() {} } });
-    const keys = () => v._invVisibleCols().map((c) => c.key);
+    const v = sandbox({ fns: ['_invPanelCols', '_invPanelSection'],
+                        vars: ['INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS'] });
+    const panel = v._invPanelCols().map((c) => c.key);
 
-    // Identity columns are always on screen — a row you cannot identify is useless.
-    ['val', 'disp', 'flags', 'all'].forEach((view) => {
-      v.setInvView(view);
-      ['seq', 'objectName', 'category'].forEach((k) =>
-        ok(keys().indexOf(k) >= 0, `${k} is pinned in the ${view} view`));
-    });
+    // The row already carries these three. Two inputs bound to one value is how a panel
+    // and a row silently disagree about what an item is worth.
+    ok(panel.indexOf('seq') < 0, 'the item number is the row identity, not a panel field');
+    ok(panel.indexOf('fmv') < 0, 'FMV is edited on the row');
+    ok(panel.indexOf('disposition') < 0, 'and so is the disposition');
+    ok(panel.indexOf('valNote') >= 0, 'the valuation basis / comps note is in the panel');
+    ok(panel.indexOf('gross') >= 0, 'the proceeds are');
+    ok(panel.indexOf('flagMAIV') >= 0, 'and the flags');
 
-    v.setInvView('val');
-    ok(keys().indexOf('fmv') >= 0, 'Valuation shows FMV');
-    ok(keys().indexOf('gross') < 0, 'and hides the disposition money');
-    ok(keys().indexOf('flagNFA') < 0, 'and the flags');
+    // EVERY panel field must land in a section that is actually rendered, or it exists
+    // in the data and nowhere on screen — the same unreachability the old view test guarded.
+    const sections = v.INV_PANEL_SECTIONS.map((s) => s.key);
+    const orphan = v._invPanelCols().filter((c) => sections.indexOf(v._invPanelSection(c)) < 0);
+    eq(orphan.map((c) => c.key), [], 'no panel field falls outside a rendered section');
 
-    v.setInvView('disp');
-    ok(keys().indexOf('gross') >= 0, 'Disposition shows the proceeds');
-    ok(keys().indexOf('fmv') < 0, 'and hides the valuation');
-
-    v.setInvView('flags');
-    ok(keys().indexOf('flagMAIV') >= 0, 'Flags shows MAIV');
-    ok(keys().indexOf('assetTrack') >= 0, 'and the asset track');
-
-    v.setInvView('all');
-    const all = keys().length;
-    v.setInvView('val');
-    ok(keys().length < all, 'a slice really is smaller than everything');
-    ok(keys().length <= 12, 'and small enough to read without scrolling sideways forever');
-
-    // Every column must belong somewhere, or it becomes unreachable in the UI.
-    const orphan = v.INVENTORY_COLUMNS.filter((c) => !c.hideInTab && !c.pin && !c.group);
-    eq(orphan.map((c) => c.key), [], 'no visible column is missing a view');
+    eq(v._invPanelSection({ key: 'objectName' }), 'item', 'identity fields head the panel');
+    eq(v._invPanelSection({ key: 'room', group: 'val' }), 'item', 'room is an identity field, not a valuation one');
+    eq(v._invPanelSection({ key: 'gross', group: 'disp' }), 'disp', 'otherwise the column group decides');
 
     // The EXPORT is unaffected — the workbook always carries every column.
-    eq(v.INVENTORY_COLUMNS.length, 29, 'the manifest is still 29 columns wide on export');
+    eq(v.INVENTORY_COLUMNS.length, 30, 'the manifest is 30 columns wide on export');
+
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    lacks(src, 'function setInvView', 'the column-group switcher is deleted, not hidden');
   }
 
   group('a removed item can be brought back');

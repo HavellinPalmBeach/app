@@ -30,10 +30,21 @@ function source() {
 // anything where a brace does not mean a brace: strings, template literals,
 // comments, and regex literals. The app source is mostly HTML built in quoted
 // strings, so a naive depth counter goes wrong almost immediately.
+// A `/` after a value is division; after an operator or one of these keywords it starts a
+// REGEX. Tracking only the previous non-space CHARACTER gets `return /[",\n\r]/` wrong —
+// the char before the slash is `n`, which looks like the end of an identifier — and the
+// scanner then reads the `"` inside the character class as the start of a string and runs
+// off the end of the function. That is what "unbalanced body for _csvCell" was.
+const REGEX_OK_AFTER = new Set([
+  'return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void',
+  'case', 'do', 'else', 'yield', 'await', 'throw',
+]);
+
 function matchBrace(s, open) {
   let depth = 0;
   let i = open;
   let prevSignificant = '';
+  let word = '';
   while (i < s.length) {
     const c = s[i];
 
@@ -59,9 +70,10 @@ function matchBrace(s, open) {
       prevSignificant = quote;
       continue;
     }
-    // A `/` starts a regex only where a value cannot already have ended.
-    if (c === '/' && !')]}'.includes(prevSignificant) &&
-        !/[A-Za-z0-9_$]/.test(prevSignificant)) {
+    // A `/` starts a regex only where a value cannot already have ended — or right after
+    // one of the keywords above, which cannot be divided.
+    if (c === '/' && (REGEX_OK_AFTER.has(word) ||
+        (!')]}'.includes(prevSignificant) && !/[A-Za-z0-9_$]/.test(prevSignificant)))) {
       let j = i + 1;
       let inClass = false;
       let closed = false;
@@ -79,6 +91,9 @@ function matchBrace(s, open) {
     if (c === '{') depth++;
     else if (c === '}') { depth--; if (depth === 0) return i; }
 
+    // Whitespace must NOT clear it — `return /re/` has a space between the two.
+    if (/[A-Za-z0-9_$]/.test(c)) word += c;
+    else if (!/\s/.test(c)) word = '';
     if (!/\s/.test(c)) prevSignificant = c;
     i++;
   }
@@ -110,6 +125,7 @@ function decl(name) {
   // Walk to the terminating semicolon at depth 0, using the same skip rules.
   let depth = 0;
   let prevSignificant = '';
+  let word = '';
   while (i < s.length) {
     const c = s[i];
     if (c === '/' && s[i + 1] === '/') { i = s.indexOf('\n', i); continue; }
@@ -124,7 +140,8 @@ function decl(name) {
       prevSignificant = q;
       continue;
     }
-    if (c === '/' && !')]}'.includes(prevSignificant) && !/[A-Za-z0-9_$]/.test(prevSignificant)) {
+    if (c === '/' && (REGEX_OK_AFTER.has(word) ||
+        (!')]}'.includes(prevSignificant) && !/[A-Za-z0-9_$]/.test(prevSignificant)))) {
       let j = i + 1, inClass = false, closed = false;
       while (j < s.length) {
         if (s[j] === '\\') { j += 2; continue; }
@@ -139,6 +156,9 @@ function decl(name) {
     if ('([{'.includes(c)) depth++;
     else if (')]}'.includes(c)) depth--;
     else if (c === ';' && depth === 0) return s.slice(start, i + 1);
+    // Whitespace must NOT clear it — `return /re/` has a space between the two.
+    if (/[A-Za-z0-9_$]/.test(c)) word += c;
+    else if (!/\s/.test(c)) word = '';
     if (!/\s/.test(c)) prevSignificant = c;
     i++;
   }
