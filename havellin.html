@@ -733,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.08.27 · 6:24pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.01 · 2:48pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13427,49 +13427,103 @@ function _writeKey(body, target) {
 
 function _pendingCount() { return Object.keys(_pendingWrites).length; }
 
-// Persistent bottom-left chip; visible only while writes are outstanding. Tapping
-// it forces an immediate retry.
+// Persistent bottom-left chip; visible only while writes are outstanding.
+//
+// The reason used to live in the `title` tooltip, which a phone cannot show at all —
+// so on the device this app is actually used on, the one piece of information that
+// identifies the problem was still unreadable. Tapping now OPENS the detail (which
+// write, to which backend, in the server's own words) and retrying is a deliberate
+// button press rather than a side effect of trying to read the chip.
+var _pendingExpanded = false;
+function togglePendingDetail() { _pendingExpanded = !_pendingExpanded; updatePendingIndicator(); }
+function retryPendingWrites() {
+  // Clear the blocked flag on a deliberate retry — the user is telling us they have
+  // fixed the deployment. If it is still broken the next answer re-blocks it.
+  Object.keys(_pendingWrites).forEach(function(k){ _pendingWrites[k].blocked = false; });
+  _retryStep = 0; flushPendingWrites();
+}
+// What each write is waiting on, in one line, for the detail panel.
+function _pendingWriteLabel(w, key) {
+  var type = (w.body && w.body.type) || key;
+  var where = w.target === 'vendor' ? 'vendor directory'
+            : w.target === 'referral' ? 'referral partners'
+            : 'main sheet';
+  return type + ' \u2192 ' + where;
+}
+// What the chip says, derived from the queue alone — no DOM, so it is testable and the
+// wording cannot drift from the classification that produced it.
+function _pendingChipCopy() {
+  var keys = Object.keys(_pendingWrites);
+  var n = keys.length;
+  var anyStale = keys.some(function(k){ return _pendingWrites[k].kind === 'stale'; });
+  var anyCrash = keys.some(function(k){ return _pendingWrites[k].kind === 'crash'; });
+  var changes = n + ' change' + (n > 1 ? 's' : '');
+  if (anyStale) {
+    // The server said it does not know the action. That is proof, so name the fix.
+    return {
+      head: '\u26a0 ' + changes + ' not saved \u2014 Apps Script needs redeploying',
+      note: 'The deployed Apps Script is older than this app. Re-deploy it (Extensions \u2192 Apps Script \u2192 Deploy \u2192 Manage deployments \u2192 New version), then press Try again.'
+    };
+  }
+  if (anyCrash) {
+    // The server threw. It MAY be a half-applied paste and it may equally be a live bug
+    // on a current deployment, so report what happened and prescribe nothing.
+    return {
+      head: '\u26a0 ' + changes + ' not saved \u2014 the Apps Script returned an error',
+      note: 'This is an error inside the Apps Script, not a network problem \u2014 the same request will fail the same way, so it is held rather than retried. If a new version was pasted in recently the paste may be half-applied; otherwise send this line on. Nothing is lost either way.'
+    };
+  }
+  return {
+    head: '\u26a0 ' + n + ' unsaved change' + (n > 1 ? 's' : '') + ' \u2014 retrying\u2026',
+    note: 'Not synced yet \u2014 retrying on its own. Press Try again to send now.'
+  };
+}
 function updatePendingIndicator() {
   var el = document.getElementById('sync-pending');
   if (!el) {
     el = document.createElement('div');
     el.id = 'sync-pending';
     el.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;display:none;'
-      + 'padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;'
-      + 'background:var(--err-bg);color:var(--err-tx);box-shadow:0 2px 10px rgba(0,0,0,0.18);';
-    el.title = 'Unsaved changes not yet synced — tap to retry now';
-    el.onclick = function(){
-      // Clear the blocked flag on a manual tap — the user is telling us they fixed it.
-      Object.keys(_pendingWrites).forEach(function(k){ _pendingWrites[k].blocked = false; });
-      _retryStep = 0; flushPendingWrites();
-    };
+      + 'max-width:min(420px,calc(100vw - 32px));padding:6px 12px;border-radius:6px;font-size:12px;'
+      + 'font-weight:600;background:var(--err-bg);color:var(--err-tx);box-shadow:0 2px 10px rgba(0,0,0,0.18);';
+    el.innerHTML = '<div id="sync-pending-label" style="cursor:pointer;"></div>'
+      + '<div id="sync-pending-detail" style="display:none;"></div>';
     document.body.appendChild(el);
+    var lbl = document.getElementById('sync-pending-label');
+    if (lbl) lbl.onclick = togglePendingDetail;
   }
   var n = _pendingCount();
-  if (n > 0) {
-    var blocked = [], reasons = [];
-    Object.keys(_pendingWrites).forEach(function(k){
-      var w = _pendingWrites[k];
-      if (w.blocked) blocked.push((w.body && w.body.type) || k);
-      if (w.lastError && reasons.indexOf(w.lastError) < 0) reasons.push(w.lastError);
-    });
-    if (blocked.length) {
-      // Name the action and say the one thing that fixes it. "Retrying" would be a lie.
-      el.textContent = '⚠ ' + n + ' change' + (n > 1 ? 's' : '') + ' not saved — Apps Script needs redeploying';
-      el.title = 'The server rejected: ' + blocked.join(', ')
-        + '\n\n' + reasons.join('\n')
-        + '\n\nThe deployed Apps Script is older than this app. Re-deploy it '
-        + '(Extensions → Apps Script → Deploy → Manage deployments → New version), '
-        + 'then tap here to send these again. Nothing is lost in the meantime.';
-    } else {
-      el.textContent = '⚠ ' + n + ' unsaved change' + (n > 1 ? 's' : '') + ' — retrying…';
-      el.title = (reasons.length ? reasons.join('\n') + '\n\n' : '')
-        + 'Unsaved changes not yet synced — tap to retry now';
-    }
-    el.style.display = 'inline-block';
-  } else {
-    el.style.display = 'none';
-  }
+  if (n <= 0) { el.style.display = 'none'; _pendingExpanded = false; return; }
+
+  var keys = Object.keys(_pendingWrites);
+  var copy = _pendingChipCopy();
+  var head = copy.head, note = copy.note;
+
+  var rows = keys.map(function(k){
+    var w = _pendingWrites[k];
+    return '<div style="margin-bottom:6px;">'
+      + '<div style="font-weight:600;">' + esc(_pendingWriteLabel(w, k)) + '</div>'
+      + (w.lastError ? '<div style="font-weight:400;opacity:.85;">' + esc(w.lastError) + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  document.getElementById('sync-pending-label').innerHTML =
+    esc(head) + ' <span style="opacity:.7;">' + (_pendingExpanded ? '\u25be' : '\u25b8') + '</span>';
+  var det = document.getElementById('sync-pending-detail');
+  det.style.display = _pendingExpanded ? 'block' : 'none';
+  det.innerHTML = _pendingExpanded
+    ? '<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(0,0,0,.15);font-size:11px;">'
+      + rows
+      + '<div style="font-weight:400;opacity:.85;margin-bottom:6px;">' + note + '</div>'
+      + '<button onclick="retryPendingWrites()" style="font-size:11px;padding:3px 9px;">Try again</button>'
+      + '</div>'
+    : '';
+  // Desktop still gets the whole story on hover.
+  el.title = head + '\n\n' + keys.map(function(k){
+    var w = _pendingWrites[k];
+    return _pendingWriteLabel(w, k) + (w.lastError ? ': ' + w.lastError : '');
+  }).join('\n') + '\n\n' + note;
+  el.style.display = 'block';
 }
 
 function _scheduleRetry() {
@@ -13496,15 +13550,31 @@ function flushPendingWrites() {
           if (typeof w.onLanded === 'function') { try { w.onLanded(res); } catch(e) {} }
           return true;
         }
+        // Re-read the verdict on every attempt. Before this the flag and the message
+        // were whatever the FIRST failure said, so a write that only became blocked on
+        // a later attempt was retried forever, and one whose error had changed still
+        // showed the old reason.
+        w.lastError = (res && res.error) || w.lastError || '';
+        w.kind = _backendErrorKind(res && res.error, true);
+        w.blocked = w.kind !== '';
         return false;
       })
-      .catch(function(){ return false; });
+      .catch(function(e){
+        w.lastError = (e && e.message) || w.lastError || '';
+        w.kind = '';           // ours or the network's — always worth another attempt
+        w.blocked = false;
+        return false;
+      });
   });
   Promise.all(attempts).then(function(){
     _flushing = false;
     updatePendingIndicator();
-    if (_pendingCount() === 0) { _retryStep = 0; showSyncBadge('All changes saved ✓'); }
-    else { _retryStep++; _scheduleRetry(); }
+    if (_pendingCount() === 0) { _retryStep = 0; showSyncBadge('All changes saved ✓'); return; }
+    // Nothing left but blocked writes — held, not hammered. They stay queued and go out
+    // on the next deliberate retry (the chip's Try again), reconnect, or tab refocus.
+    var live = Object.keys(_pendingWrites).some(function(key){ return !_pendingWrites[key].blocked; });
+    if (!live) return;
+    _retryStep++; _scheduleRetry();
   });
 }
 
@@ -13552,9 +13622,12 @@ function _flushOutbox() {
     postSyncTo(w.target, w.body)
       .then(function(res){
         if (res && res.ok) { if (w.okMsg) showSyncBadge(w.okMsg); }
-        else _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, res && res.error);
+        // A well-formed { ok:false, error } is the SERVER talking — that text may
+        // diagnose the deployment.
+        else _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, res && res.error, null, true);
       })
-      .catch(function(e){ _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, e && e.message); })
+      // A thrown error is ours or the network's, never the server's verdict on itself.
+      .catch(function(e){ _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, e && e.message, null, false); })
       .then(next, next);
   })();
 }
@@ -13578,15 +13651,36 @@ function queuedPostSync(body, okMsg, failMsg) {
 // chip said "1 unsaved change — retrying…" and the actual reason flashed past in a
 // four-second toast, so the one piece of information that identifies the problem was the
 // one piece nobody could read. Reported 2026-08-24 after a redeploy that half-landed.
-function _isBackendStaleError(errText) {
-  return /unknown (type|action)|is not defined|not a function/i.test(String(errText || ''));
+// Three outcomes, and only ONE of them is evidence that the deployed script is older
+// than the app:
+//   'stale' — the server answered "Unknown type/action". That IS proof: the dispatch
+//             line for this write is not in the deployment, so a redeploy is the fix.
+//   'crash' — the server threw (ReferenceError / TypeError). A half-applied paste looks
+//             like this, but so does a live bug on a perfectly current deployment, so
+//             this must NOT assert a redeploy. Print what the server said instead.
+//   ''      — retryable: a network drop, the Apps Script login/HTML interstitial, a
+//             lock timeout, a cell-size failure. Keep retrying those.
+//
+// `fromServer` is the half this got wrong. Only text the server sent back inside
+// { ok:false, error } can diagnose the server. A message out of our own catch block is
+// a fetch failure or a bug in this file — and reading "is not a function" out of one
+// sent the user off to redeploy an Apps Script that was never the problem. Reported
+// 2026-09-01: "got this error when saving a new vendor. we haven't changed the apps
+// script for a re-deploy i dont think."
+function _backendErrorKind(errText, fromServer) {
+  if (!fromServer) return '';
+  var s = String(errText || '');
+  if (/unknown (type|action)/i.test(s)) return 'stale';
+  if (/is not defined|not a function/i.test(s)) return 'crash';
+  return '';
 }
 
-function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded) {
-  var stale = _isBackendStaleError(errText);
+function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded, fromServer) {
+  var kind = _backendErrorKind(errText, fromServer);
+  var stale = kind !== '';
   _pendingWrites[_writeKey(body, target)] = {
     target: target || 'main', body: body, okMsg: okMsg, failMsg: failMsg, onLanded: onLanded,
-    lastError: errText || '', blocked: stale
+    lastError: errText || '', blocked: stale, kind: kind
   };
   showSyncBadge((failMsg || 'Sync failed') + (errText ? ' — ' + errText : '') + (stale ? '' : ' — will retry'), true);
   updatePendingIndicator();
@@ -13625,7 +13719,7 @@ function queuedDirectoryWrite(target, body, cb, onLanded) {
   _appsScriptPost(url, body, function(ok, d){
     if (ok) { cb(true, d, false); return; }
     if (!idempotent) { cb(false, d, false); return; }
-    _enqueueWrite(target, body, null, 'Directory sync failed', d && d.error, onLanded);
+    _enqueueWrite(target, body, null, 'Directory sync failed', d && d.error, onLanded, !(d && d.clientError));
     cb(false, d, true);
   }, idempotent);
 }
@@ -17091,7 +17185,9 @@ function _appsScriptPost(url, bodyObj, cb, allowRetry) {
       .then(function(d){ cb(!!(d && d.ok), d || {}); })
       .catch(function(e){
         if (triesLeft > 0 && _isTransientPostError(e)) { setTimeout(function(){ attempt(triesLeft - 1); }, 700); return; }
-        cb(false, { error: (e && e.message) || String(e) });
+        // clientError marks this as a fetch/parse failure rather than something the
+        // server said about itself — see _backendErrorKind.
+        cb(false, { error: (e && e.message) || String(e), clientError: true });
       });
   }
   attempt(allowRetry ? 1 : 0);

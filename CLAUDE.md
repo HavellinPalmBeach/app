@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/box-formatting-alignment-c3z6h7`
-  (was `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/vendor-save-error-pa0kib`
+  (was `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/box-formatting-alignment-c3z6h7:main`
+  `git push origin claude/vendor-save-error-pa0kib:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -88,6 +88,48 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## "Apps Script needs redeploying" on a deployment nobody had touched (BUILT 2026-09-01)
+*"got this error when saving a new vendor. we haven't changed the apps script for a re-deploy
+i dont think."* He was right to doubt it — the chip was overstating what it knew.
+
+- **`_isBackendStaleError` was reading OUR errors as a verdict on the SERVER.** It matched
+  `unknown type|unknown action|is not defined|not a function` against whatever text reached
+  `_enqueueWrite`, and two of the three call sites hand it a **client-side** message: the
+  `.catch` in `_flushOutbox` (a fetch failure, or any TypeError thrown in our own promise
+  chain) and `queuedDirectoryWrite`, whose callback cannot distinguish a parsed
+  `{ok:false,error}` from `_appsScriptPost`'s catch. So a TypeError in `havellin.html` was
+  announced as a stale Apps Script — a diagnosis pointing at the one component that was fine.
+  - Now `_backendErrorKind(errText, fromServer)`, and **provenance is required**: only text
+    the server sent back inside `{ok:false, error}` may diagnose the server. Every call site
+    passes `fromServer` explicitly and `_appsScriptPost` tags its catch path `clientError:true`.
+    A test asserts no bare call survives — the default is falsy, so it fails safe, but a bare
+    one is how the misdiagnosis creeps back.
+- **AND "is not defined" IS NOT PROOF OF STALENESS.** A half-applied paste throws it; so does
+  a live bug on a perfectly current deployment, and the two are indistinguishable from here.
+  Three outcomes now, not two: **`stale`** (`Unknown type/action` — the server saying it has
+  no dispatch line for this write, which *is* proof) keeps *"Apps Script needs redeploying"*;
+  **`crash`** reads *"the Apps Script returned an error"*, still held rather than hammered,
+  but prescribing nothing; **`''`** retries as before. **Don't fold `crash` back into `stale`
+  to simplify the wording** — sending someone to redeploy a script they never changed costs
+  more than saying "it errored, here is the error".
+- **The reason was still unreadable, on the device it happens on.** The 2026-08-24 build moved
+  the server's error out of a 4-second toast and into the chip's `title` — **a phone has no
+  hover**, and tapping the chip cleared the blocked flag and re-flushed, so on a phone the one
+  identifying detail could never be read at all. Tapping now **opens** a panel naming each
+  write, which backend it was bound for, and the server's own words, with **Try again** as a
+  deliberate button. `_pendingChipCopy()` derives the wording from the queue with no DOM, so
+  it is driven end to end in the tests rather than grepped for.
+- **`flushPendingWrites` never re-read its verdict.** `blocked`/`lastError` were whatever the
+  FIRST failure said, so a write that only became blocked on a later attempt was retried
+  forever and one whose error had changed still showed the old reason. Each attempt now
+  reclassifies, and a queue holding nothing but blocked writes stops scheduling retries —
+  before, "held, not hammered" quietly stopped applying the moment you pressed the chip.
+- **What it was NOT: `addVendor` is still never queued** and never reached this chip.
+  It is excluded from `IDEMPOTENT_DIR_WRITES` on purpose (an append cannot be re-sent), so the
+  stuck write was something else in the session — which is exactly what the chip could not say
+  and now can.
+- **391 committed checks.**
 
 ## Two off the Add Vendor form: a dropped control and a duplicated row (BUILT 2026-08-27)
 *"slight formatting error here with the boxes way below where they should be"* and, minutes

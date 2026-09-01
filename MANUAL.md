@@ -49,6 +49,8 @@ Two further groups in Settings are **pricing policy**, not device setup — they
 
 > Each directory (Vendors, Referral Partners) is its own Google Sheet with its own deployed Apps Script, kept walled off from job/estimate data. When you deploy or re-deploy a script, use **Who has access: Anyone** and paste the fresh `/exec` URL. If a save shows a login/HTML-page error, that access setting or a stale URL is the cause.
 
+> **The unsaved-changes chip, and what it is allowed to claim.** A write that fails is queued, not lost, and a red chip sits bottom-left until it lands. **Tap it** — it opens and names the write, the sheet it was bound for, and the server's own error, with a **Try again** button. Only one wording is a claim about the deployment: *Apps Script needs redeploying* appears when the server answered `Unknown type/action`, which is proof the deployed script predates the app. A crash inside the script reads *the Apps Script returned an error* instead — held rather than retried, but no redeploy is prescribed, because a live bug on a current deployment throws exactly the same shape. Before 2026-09-01 both said "needs redeploying", which sent people to redeploy scripts nobody had touched.
+
 ## 2a. Quick Links
 
 > **Internal — do not print or forward outside the team.** These open the underlying Google files; access is still gated by your Google sign-in, so a link alone grants nothing to someone without permission.

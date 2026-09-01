@@ -560,6 +560,9 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | A prep cost you typed into the card reads $0 in the totals | Fixed 2026-08-03. It was a parsing bug — the formatted "$8,000" was read as zero on every keystroke while the field kept showing it. If you're still seeing it, you're on a cached build; hard-refresh. |
 | You disagree with the hours a vendor books | Say so — that is what the touch count is for. Work out how many separate things you actually have to do with that trade; the number is half of that. Anthony changes one integer and every future estimate follows. |
 | Not sure whether to fill in *Coord hrs* on the Job Plan | Optional, always. It bills nothing and blocks nothing — your logged hours already cover that time. Enter it when it's obvious, skip it when it isn't. |
+| A red chip bottom-left: *N change(s) not saved* | Tap it. It opens and names which write is stuck, which sheet it was going to, and what the server said back. **Try again** resends. Nothing is lost while it sits there — the work is queued, not dropped. |
+| The chip says *Apps Script needs redeploying* | The sheet script answered "unknown action" — it is genuinely older than the app. Anthony redeploys it (Extensions → Apps Script → Deploy → Manage deployments → New version), then you press **Try again**. |
+| The chip says *the Apps Script returned an error* | The script crashed on that one write. It is held rather than retried, because the same request would fail the same way. Tap the chip, screenshot the error line and send it on — **do not go redeploying anything on the strength of this**. Until 2026-09-01 the app called this a redeploy, and it was wrong to. |
 | "No payment link was created" after Generate Payment Link | The Stripe service didn't answer or rejected it. Nothing was sent. Send the deposit invoice and record the payment by hand. |
 
 ---
