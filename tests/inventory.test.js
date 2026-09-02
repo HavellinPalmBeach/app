@@ -413,6 +413,65 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(again, out.map((r) => r.itemNo), 'a second pass is a no-op — the resolution converges');
   }
 
+  group('item numbers: a tombstone can collide too, and restore must not reintroduce one');
+  {
+    // Reported 2026-09-02 off a screenshot of the Removed items panel: two removed rows
+    // both reading "#1", with a live row also on #1. The collision pass ran over
+    // _jobInvRefs, which HIDES tombstones — so duplicates among removed rows were never
+    // resolved, and a tombstone could sit on a live row's number indefinitely. Press
+    // Restore and you have two live items numbered the same, which is the one thing the
+    // numbering exists to prevent, because a receipt cites it.
+    const c = sandbox({ fns: ['_invAssignItemNos', '_jobInvRefs', '_invTouch', '_invItemNo',
+                              'savePhotoRefs', '_warnPhotoStoreFull'] });
+    const row = (id, no, ts, del) => ({ stableId: id, label: 'inventory', collId: null,
+                                        itemNo: no, ts, deletedAt: del });
+    c._photoRefs[1] = [
+      row('live', 1, 100),          // on the list, its number possibly already on a receipt
+      row('t1', 1, 200, 900),
+      row('t2', 1, 300, 950),
+      row('t3', 2, 400, 960),
+    ];
+    c._invAssignItemNos(1);
+    const all = c._photoRefs[1];
+    const nos = all.map((r) => r.itemNo);
+    eq(new Set(nos).size, 4, 'no two rows share a number, tombstones included');
+
+    // A LIVE row is never displaced by a dead one. Its number may be printed already;
+    // a removed row's is in nobody's hands.
+    eq(all.find((r) => r.stableId === 'live').itemNo, 1,
+       'the live row keeps its number — a tombstone never bumps one off');
+    ok(all.find((r) => r.stableId === 't1').itemNo > 2, 'the removed copies are reissued');
+    ok(all.find((r) => r.stableId === 't2').itemNo > 2, 'both of them');
+    eq(all.find((r) => r.stableId === 't3').itemNo, 2, 'a tombstone with no clash is left alone');
+
+    const again = c._invAssignItemNos(1) && c._photoRefs[1].map((r) => r.itemNo);
+    eq(again, nos, 'a second pass is a no-op — it converges instead of churning');
+  }
+
+  group('restore issues a fresh number when the old one has been taken');
+  {
+    const r = sandbox({ fns: ['restoreInventoryItem', '_getPhotoRef', '_setPhotoRef',
+                              'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch',
+                              '_jobInvRefs', '_invAssignItemNos', '_invItemNo'],
+                        stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
+                                 showSyncBadge(m) { r.__said = m; } } });
+    r._photoRefs[1] = [
+      { stableId: 'live', label: 'inventory', collId: null, itemNo: 4, ts: 100, objectName: 'Sideboard' },
+      { stableId: 'gone', label: 'inventory', collId: null, itemNo: 4, ts: 50,
+        objectName: 'Coin Collection', fmv: 500000, deletedAt: 900 },
+    ];
+    r.restoreInventoryItem(1, 'gone');
+    const back = r._photoRefs[1].find((x) => x.stableId === 'gone');
+    eq(r._jobInvRefs(1).length, 2, 'it comes back onto the list');
+    eq(r._photoRefs[1].find((x) => x.stableId === 'live').itemNo, 4,
+       'the item already holding #4 keeps it');
+    ok(back.itemNo !== 4, 'and the restored row takes the next free number instead');
+    eq(back.fmv, 500000, 'everything else on the row survives');
+    // Silently renumbering would be worse than the collision — the person restoring is the
+    // one who might have that number written down.
+    ok(String(r.__said || '').includes('had been taken'), 'and it says so rather than renumbering quietly');
+  }
+
   group('a duplicated import is named, not silently merged');
   {
     const d = sandbox({ fns: ['_invDuplicateImports', '_jobInvRefs'] });
@@ -505,7 +564,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     r.restoreInventoryItem(1, 'c');
     eq(r._jobInvRefs(1).length, 1, 'restoring returns it to the manifest');
-    eq(r._photoRefs[1][0].itemNo, 3, 'with its ORIGINAL item number — receipts still point at it');
+    eq(r._photoRefs[1][0].itemNo, 3, 'with its ORIGINAL item number, that number being free — receipts still point at it');
     eq(r._photoRefs[1][0].fmv, 500000, 'and its valuation');
     eq(r._photoRefs[1][0].apprDoc, 'Marie Wayland', 'and its linked appraiser');
     ok(r._photoRefs[1][0].updatedAt > 900,

@@ -733,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 11:46am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 11:55am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11640,14 +11640,27 @@ function _invAssignItemNos(jobId) {
   // whole point is that a receipt citing "item 2" identifies one object.
   // The EARLIEST-CREATED row keeps the number, ties broken on stableId so every device
   // resolves a collision the same way and they converge instead of fighting.
-  var seen = {};
-  refs.slice().sort(function(a, b){
+  // THE PASS RUNS OVER TOMBSTONES TOO, and it did not until 2026-09-02. `refs` hides
+  // deleted rows, so two removed items could sit on the same number forever — and, worse, a
+  // tombstone could share a number with a LIVE row. Restore then hands back an item whose
+  // number is already on the list, which is exactly the duplicate the numbering exists to
+  // prevent. Reported off a screenshot showing three rows numbered #1, one live and two
+  // removed.
+  //
+  // LIVE ROWS ARE RESOLVED FIRST AND A TOMBSTONE NEVER DISPLACES ONE. A live item's number
+  // may already be printed on a receipt or an approval request; a removed one's is not in
+  // anybody's hands. Within each pass the earliest-created row keeps the number, ties broken
+  // on stableId, so every device resolves a collision identically and they converge.
+  var byAge = function(a, b){
     return (a.ts || 0) - (b.ts || 0) || String(a.stableId).localeCompare(String(b.stableId));
-  }).forEach(function(r){
+  };
+  var seen = {};
+  var dead = all.filter(function(r){ return !!r.deletedAt; });
+  refs.slice().sort(byAge).concat(dead.sort(byAge)).forEach(function(r){
     var n = parseInt(r.itemNo, 10);
     if (!(n > 0)) return;
     if (!seen[n]) { seen[n] = true; return; }
-    r.itemNo = ++max; _invTouch(r); dirty = true;
+    r.itemNo = ++max; seen[max] = true; _invTouch(r); dirty = true;
   });
   if (dirty) savePhotoRefs(jobId);   // backfill persists, so it happens once per job
   return refs;
@@ -13301,9 +13314,22 @@ function _invRemovedRows(jobId) {
 function restoreInventoryItem(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
+  // "Restore keeps the original item number" holds only while that number is still free.
+  // A number reached by another device's merge can be live on a different object by now,
+  // and handing this row back under it would put two live items on one number — which is
+  // the one thing the numbering exists to prevent, because a receipt cites it.
+  var want = parseInt(ref.itemNo, 10);
+  var taken = want > 0 && _jobInvRefs(jobId).some(function(r){
+    return r.stableId !== ref.stableId && parseInt(r.itemNo, 10) === want;
+  });
   delete ref.deletedAt;
   _invTouch(ref);            // newer than the tombstone, so the undelete wins the merge
   _setPhotoRef(jobId, ref);
+  if (taken) {
+    ref.itemNo = null;       // _invAssignItemNos issues the next free one
+    _invAssignItemNos(jobId);
+    showSyncBadge('Restored as item #' + _invItemNo(ref) + ' — #' + want + ' had been taken by another item', true);
+  }
   savePhotoRefs(jobId);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
@@ -13311,16 +13337,29 @@ function restoreInventoryItem(jobId, stableId) {
 function _renderRemovedRows(jobId) {
   var gone = _invRemovedRows(jobId);
   if (!gone.length) return '';
+  // A removed row and a live row can carry the same object name — delete an import, bring it
+  // in again, and both are true at once. Saying which is which on the row is the difference
+  // between a history panel and an apparent double count.
+  var liveNames = {};
+  _jobInvRefs(jobId).forEach(function(r){ liveNames[String(r.objectName || '').trim().toLowerCase()] = 1; });
   var rows = gone.slice(0, 12).map(function(r){
     var val = (r.fmv !== '' && r.fmv != null) ? ' · ' + _invMoney(r.fmv) : '';
+    var backAgain = liveNames[String(r.objectName || '').trim().toLowerCase()];
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
       + '<span>#' + esc(_invItemNo(r)) + ' &middot; ' + esc(r.objectName || '(unnamed)') + '<span style="color:var(--gray);">' + esc(val)
-      + (r.apprDoc ? ' · ' + esc(r.apprDoc) : '') + '</span></span>'
+      + (r.apprDoc ? ' · ' + esc(r.apprDoc) : '')
+      + (r.deletedAt ? ' · removed ' + esc(fmtDate2(new Date(r.deletedAt).toISOString().slice(0,10))) : '')
+      + '</span>'
+      + (backAgain ? ' <span style="color:var(--bronze);" title="An item with this name is on the list again — this is the older copy you removed, not a second one.">&middot; already back on the list</span>' : '')
+      + '</span>'
       + '<button class="btn-s" onclick="restoreInventoryItem(' + jobId + ',\'' + r.stableId + '\')">Restore</button></div>';
   }).join('');
   return '<div class="card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Removed items <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">('
-    + gone.length + ' &mdash; nothing is thrown away; restore keeps the original item number)</span></div>'
+    + gone.length + ' &mdash; nothing is thrown away)</span></div>'
+    + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:6px;">This is the undo buffer, not a second inventory. '
+    + 'Nothing here is counted, valued or printed anywhere. Restore returns the row under its original item number, '
+    + 'or the next free one if that number has since been taken.</div>'
     + rows + '</div>';
 }
 

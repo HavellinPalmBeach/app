@@ -89,6 +89,36 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## Three rows numbered #1, and a panel that could not explain itself (BUILT 2026-09-02)
+*"seems like double counting here, multiple times. and how can both be true?"* — off a
+screenshot of the Removed items panel showing two tombstones both reading **#1** beside a live
+row also on #1.
+
+- **The live list was NOT double counting.** Each object appeared once; the same names appear
+  again in *Removed items*, which is the undo buffer. Delete an import, bring it in again, and
+  both are true at once — the panel simply never said so. It now stamps the removal date and
+  marks a row whose object is on the list again: *"already back on the list"*. Its header says
+  plainly that nothing in it is counted, valued or printed anywhere.
+- **⚠ THE REAL DEFECT: the collision pass ran over `_jobInvRefs`, which HIDES tombstones.**
+  So duplicate numbers among removed rows were never resolved, and a tombstone could sit on a
+  LIVE row's number indefinitely. Press Restore and you have two live items numbered the same
+  — the exact failure the numbering exists to prevent, since a receipt, an approval request
+  and a court inventory all cite that number. Reproduced before fixing: three rows on #1.
+  - It now runs over **every** inventory row, live and tombstoned.
+  - **LIVE ROWS RESOLVE FIRST AND A TOMBSTONE NEVER DISPLACES ONE.** A live item's number may
+    already be printed and in somebody's hands; a removed one's is not. Within each pass the
+    earliest-created row keeps the number, ties on `stableId`, so devices converge. Tested for
+    idempotence — a second pass must not churn.
+- **`restoreInventoryItem` checks before it promises.** *"Restore keeps the original item
+  number"* holds only while that number is free; a merge from another device can have put it
+  on a different object. It now issues the next free number in that case **and says so** —
+  renumbering silently is worse than the collision, because the person restoring is the one
+  who might have the old number written down.
+- **"2025 2025 Mercedes E63" in the panel is pre-2026-08-24 history**, from before
+  `_vehicleLineName` fixed the year+description join. New rows read correctly; the tombstones
+  are left as they were, because rewriting history in an undo buffer is not a fix.
+- **462 committed checks.**
+
 ## The Inventory tab became the concierge's review desk (BUILT 2026-09-01)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` gains `getThumbnails`.
 
