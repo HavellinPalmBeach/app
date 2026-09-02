@@ -87,7 +87,10 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .vform .eg b{font-weight:600;color:var(--gray-dk);}
 /* Short guidance folded into the label itself, so the field stays one line tall and its
    input keeps the row's baseline. Preferred over .eg when the hint fits in a few words. */
-.vform .fld label .lbl-hint{text-transform:none;font-weight:400;letter-spacing:0;}
+/* Scoped to .vform until 2026-09-02, so the class documented above as general did
+   nothing anywhere else — it inherited the label's uppercase and read as one run-on
+   heading. General now, which is what the note at the top of this block promises. */
+label .lbl-hint{text-transform:none;font-weight:400;letter-spacing:0;}
 @media (max-width:820px){.vform{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:560px){.vform{grid-template-columns:1fr;}}
 .card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.3rem;}
@@ -733,7 +736,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:29pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:43pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1162,6 +1165,21 @@ body.no-smf .smf-col{display:none;}
           </div>
         </div>
         <div id="e-tc2-hint" style="font-size:11px;color:var(--gray);margin-top:4px;"></div>
+        <!-- Concierge production rate. It lived in Settings until 2026-09-02, where its own
+             help text told you to "dial it down on trophy estates; up on straightforward
+             downsizings" — a per-property judgement on a firm-wide control. Following that
+             meant editing Settings, building the estimate and changing it back, which works
+             until the day you forget and misprice the next job. Anthony: "these look like
+             per job settings, don't you think?" Settings still holds the DEFAULT. -->
+        <label style="margin-top:10px;">Concierge hands-on share</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" id="e-alpha" min="0" max="100" step="5" style="width:90px;"
+                 oninput="setEstimateAlpha(this.value)" onchange="setEstimateAlpha(this.value)">
+          <span style="font-size:12px;color:var(--gray);">%</span>
+          <button class="btn-s" style="padding:4px 10px;font-size:10px;" onclick="resetEstimateAlpha()"
+                  title="Back to the firm default set in Settings">Default</button>
+        </div>
+        <div id="e-alpha-hint" style="font-size:11px;color:var(--gray);margin-top:3px;"></div>
         <div id="ps-crew-badge" style="margin-top:6px;"></div>
         <!-- Projected completion, immediately under the crew that determines it. -->
         <div id="timeline-badge" style="margin-top:6px;"></div>
@@ -1939,10 +1957,13 @@ body.no-smf .smf-col{display:none;}
     <input type="number" id="set-tc-alpha" min="0" max="100" step="5" placeholder="50" style="width:110px;">
     <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">
       The Transition Concierge is on site for every crew hour. This is the share of those hours they spend
-      packing, photographing, and handling rather than directing — work that comes out of the same pool the
-      specialists draw from, so it is billed once, on the concierge line. Higher = fewer specialist hours and
-      a shorter job. <strong>50%</strong> is the default. Dial it down on trophy estates where the concierge is
-      mostly directing; up on straightforward downsizings where they work the whole day.
+      packing, photographing, and handling rather than directing &mdash; work that comes out of the same pool
+      the specialists draw from, so it is billed once, on the concierge line. Higher = fewer specialist hours
+      and a shorter job.
+      <br><br><strong>This is only the value a fresh estimate starts at.</strong> The rate itself is set per
+      estimate, on Build Estimate under the crew counts, because it is a judgement about the property &mdash;
+      low on a trophy estate where the concierge is mostly directing, high on a straightforward downsizing
+      where they work the whole day. A saved estimate keeps the rate it was priced under.
     </div>
 
     <div class="sec" style="margin-top:14px;">Labour Cost Rates — what we pay</div>
@@ -1970,8 +1991,10 @@ body.no-smf .smf-col{display:none;}
       </div>
     </div>
     <div style="font-size:11px;color:var(--gray);margin-top:6px;margin-bottom:8px;">
-      Raising a cost rate lowers margin and raises the walk-away floor on every <em>fresh</em> estimate. Saved
-      estimates keep the crew cost they were priced with.
+      Raising a cost rate lowers margin and raises the walk-away floor on every <em>fresh</em> estimate. A saved
+      estimate keeps the crew cost it was priced with, so changing these never restates a quote you have already
+      given. <strong>Estimates saved before 2026-09-02</strong> predate that stamp and are still costed at
+      whatever these say today.
     </div>
 
     <div class="sec" style="margin-top:14px;">Walkthrough Notes</div>
@@ -4045,6 +4068,45 @@ function resolvePin(pin) {
 // null = no estimate pinned, price at the current Settings value.
 var _estimateAlphaPin = null;
 function activeAlpha() { return _estimateAlphaPin != null ? _estimateAlphaPin : TC_ONSITE_ALPHA; }
+
+// The four labour cost rates the estimate was PRICED under. Settings said "Saved estimates
+// keep the crew cost they were priced with" and nothing did that — getPSCostRate and
+// getTCCostRate read the live globals every time a margin panel drew, so raising a rate
+// silently restated the margin, the walk-away floor and the deposit-coverage warning on
+// every estimate ever saved. The screen was making a promise the code did not keep.
+//
+// A NAMED contractor still beats this, from the Contractors directory, exactly as before:
+// these four only cover the founders and the unnamed placeholder slots.
+var _estimateCostPin = null;
+function activeCostRates() { return _estimateCostPin || COST_RATES; }
+
+// The estimate is the unit of pricing, so the production rate is set on it. Blank or the
+// firm default clears the pin, so an untouched estimate keeps tracking Settings until it
+// is saved (at which point tcAlpha stamps it, as it always has).
+function setEstimateAlpha(v) {
+  var n = parseFloat(v);
+  _estimateAlphaPin = (isFinite(n) && n >= 0 && n <= 100) ? (n / 100) : null;
+  calcAll();
+}
+function resetEstimateAlpha() {
+  // Only the production rate. The cost pin records what the crew cost when this estimate
+  // was quoted and has nothing to do with the alpha the user is resetting.
+  _estimateAlphaPin = null;
+  var el = document.getElementById('e-alpha');
+  if (el) el.value = Math.round(TC_ONSITE_ALPHA * 100);
+  calcAll();
+}
+function paintEstimateAlpha() {
+  var el = document.getElementById('e-alpha');
+  if (el && document.activeElement !== el) el.value = Math.round(activeAlpha() * 100);
+  var hint = document.getElementById('e-alpha-hint');
+  if (!hint) return;
+  var dflt = Math.round(TC_ONSITE_ALPHA * 100);
+  var cur = Math.round(activeAlpha() * 100);
+  hint.innerHTML = (cur === dflt)
+    ? 'Firm default (' + dflt + '%). Lower it on a trophy estate where the concierge is mostly directing; raise it on a straightforward downsizing where they work the whole day.'
+    : '<strong>' + cur + '%</strong> on this estimate &mdash; the firm default is ' + dflt + '%. Higher means fewer specialist hours and a shorter job.';
+}
 var TC_DAY_CAP = 10;              // concierge hrs/day above which a 2nd TC is recommended
 // Off-site coordination doesn't compress into the crew days — a two-day condo
 // downsizing still carries weeks of attorney, vendor and disposition contact around
@@ -5283,6 +5345,7 @@ function calcAll() {
   } else if (crewBadge) {
     crewBadge.innerHTML = '';
   }
+  paintEstimateAlpha();
 
   // store snapshot
   var prevJobId = currentEstimate ? currentEstimate.jobId : null;
@@ -5304,6 +5367,10 @@ function calcAll() {
     // told apart from one priced under the old volume-ratio model, and so the
     // concierge split can be shown without re-deriving it.
     hoursModel:'v4-working-supervisor', tcAlpha:_sup.alpha,
+    // The cost side of the same promise. Without this the margin panel on a reopened
+    // estimate is priced against today's Settings, not the day it was quoted.
+    costRates:{ founderTC:COST_RATES.founderTC, contractorTC:COST_RATES.contractorTC,
+                psStandard:COST_RATES.psStandard, psSenior:COST_RATES.psSenior },
     // What the hours are made of, already scaled to the billed totals. Stored rather than
     // re-derived so the Drive working paper and a reopened estimate say exactly what the
     // Estimate Summary said at the time — the step coefficients can move between builds.
@@ -6131,7 +6198,7 @@ function neutralizeEstimateView() {
   // Drop any pinned α from the previously-loaded estimate. If the job being opened
   // has a saved estimate, restoreEstimateToUI re-pins it from that record; if it
   // doesn't, this is a fresh build and should price at the current Settings value.
-  _estimateAlphaPin = null;
+  _estimateAlphaPin = null; _estimateCostPin = null;
   clearAllRooms();
   resetEstimateExtras();
   window._suppressEstimateAutoSave = false;
@@ -6270,7 +6337,7 @@ function applyOpenedEstimate(jobId, job, status) {
   // No saved estimate — clear all rooms AND the non-room extras (package, third-
   // party vendors, home prep) so this new client starts clean instead of inheriting
   // the last estimate's selections.
-  _estimateAlphaPin = null;   // fresh build — price at the current Settings α
+  _estimateAlphaPin = null; _estimateCostPin = null;   // fresh build — price at the current Settings α
   window._suppressEstimateAutoSave = true;
   clearAllRooms();
   resetEstimateExtras();
@@ -6375,7 +6442,7 @@ function clearEstimateTab() {
   vehiclesData = [];
   renderVehicles();
   resetEstimateExtras();   // package + third-party vendors + home prep
-  _estimateAlphaPin = null;   // nothing loaded — back to the current Settings α
+  _estimateAlphaPin = null; _estimateCostPin = null;   // nothing loaded — back to the current Settings α
   var _tp = document.getElementById('tp-target'); if (_tp) _tp.value = '';
   // Recompute once against the now-empty inputs so every derived readout — the summary,
   // the crew badge, the timeline, the planner — goes to zero rather than keeping the last
@@ -8467,6 +8534,16 @@ function restoreEstimateToUI(est) {
   _estimateAlphaPin = (typeof est.tcAlpha === 'number' && isFinite(est.tcAlpha) && est.tcAlpha >= 0)
     ? est.tcAlpha
     : (est.hoursModel === 'v4-working-supervisor' ? TC_ONSITE_ALPHA_DEFAULT : null);
+
+  // Same treatment for what the crew COST. An estimate saved before 2026-09-02 carries no
+  // costRates, and there is nothing honest to invent for it — those fall back to the live
+  // Settings values, which is the old behaviour, and the margin panel says so rather than
+  // implying the figure is historical.
+  _estimateCostPin = (est.costRates && typeof est.costRates === 'object'
+    && isFinite(est.costRates.founderTC) && est.costRates.founderTC > 0)
+    ? { founderTC: est.costRates.founderTC, contractorTC: est.costRates.contractorTC,
+        psStandard: est.costRates.psStandard, psSenior: est.costRates.psSenior }
+    : null;
 
   // Set service type (read-only display)
   var svcEl = document.getElementById('e-svc');
@@ -21352,13 +21429,14 @@ function saveNotesModal() {
 // ─── PS SLOT HELPERS ─────────────────────────────────────────────────────────
 function getPSCostRate(name) {
   // Handle placeholder keys
-  if (name === 'contractor_standard') return COST_RATES.psStandard;
-  if (name === 'contractor_senior') return COST_RATES.psSenior;
+  var _cr = activeCostRates();
+  if (name === 'contractor_standard') return _cr.psStandard;
+  if (name === 'contractor_senior') return _cr.psSenior;
   // Look up actual rate from contractor directory by name
   var allPS = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS'; })
     .concat(contractors.filter(function(c){ return c.role==='PS'; }));
   var match = allPS.find(function(c){ return c.name === name; });
-  return match ? (match.rate || COST_RATES.psStandard) : COST_RATES.psStandard;
+  return match ? (match.rate || _cr.psStandard) : _cr.psStandard;
 }
 
 // Concierge cost, mirroring getPSCostRate. Resolution order: the unnamed-contractor
@@ -21371,11 +21449,12 @@ function getPSCostRate(name) {
 // actually costs, which is how you discount into a loss. Costing a contractor at $100
 // only makes you look less profitable than you are. Overstate the cost.
 function getTCCostRate(name) {
-  if (name === CONTRACTOR_TC_NAME) return COST_RATES.contractorTC;
+  var _cr = activeCostRates();
+  if (name === CONTRACTOR_TC_NAME) return _cr.contractorTC;
   var allTC = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
     .concat(contractors.filter(function(c){ return c.role==='TC'; }));
   var match = allTC.find(function(c){ return c.name === name; });
-  return (match && match.rate) ? match.rate : COST_RATES.founderTC;
+  return (match && match.rate) ? match.rate : _cr.founderTC;
 }
 
 // Whether getTCCostRate found a real rate or fell back. The margin panel says so out

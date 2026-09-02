@@ -89,6 +89,44 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## The production rate moved onto the estimate; the cost card was never pinned (BUILT 2026-09-02)
+*"why are these now in app setting? … if they are set across the app, they will apply to all
+jobs and that is not correct. these look like 'per job' settings, don't you think?"* Half
+right, and the half that was wrong is what found the worse bug.
+
+- **The production rate (α) is a judgement about the PROPERTY, and its own help text proved
+  it** — *"Dial it down on trophy estates where the concierge is mostly directing; up on
+  straightforward downsizings"*. A per-job instruction attached to a firm-wide control. To
+  follow it you edited Settings, built the estimate and changed it back, which works until
+  the day you forget. It is a field on **Build Estimate under the crew counts** now
+  (`setEstimateAlpha` / `resetEstimateAlpha`), with Settings holding the DEFAULT a fresh
+  estimate starts at. The pinning machinery already existed — `est.tcAlpha` and the readout
+  when Settings has moved since — so only the control relocated.
+- **⚠ THE FOUR COST RATES STAY FIRM-WIDE, and do not "fix" this later.** A **named**
+  contractor is already paid their own rate from the Contractors directory; these four only
+  ever covered the founders and the unnamed placeholder slots. What you pay someone does not
+  change because the house is bigger, and a per-job cost override is an invitation to fudge
+  margin job by job — which is the one thing the walk-away floor exists to stop.
+- **⚠ BUT SETTINGS WAS LYING: *"Saved estimates keep the crew cost they were priced with"*
+  was FALSE.** α was pinned; the cost card was not. `getPSCostRate` / `getTCCostRate` read
+  the `COST_RATES` globals on every render, so raising contractor PS from $30 to $35
+  retroactively moved the margin, the walk-away floor and the deposit-coverage warning on
+  **every estimate ever saved**. The screen made a promise the code did not keep, and it took
+  a question about where a control lives to surface it.
+  - `costRates` is stamped on the snapshot beside `tcAlpha`; `_estimateCostPin` /
+    `activeCostRates()` mirror `_estimateAlphaPin` / `activeAlpha()` exactly.
+  - **A named contractor still wins over the pin** — tested, because that is the rule the
+    whole cost model rests on.
+  - **An estimate saved before 2026-09-02 has no `costRates` and falls back to live.** There
+    is nothing honest to invent for it, and Settings now names that exception rather than
+    implying the figure is historical.
+  - `resetEstimateAlpha` deliberately does NOT clear the cost pin — resetting the production
+    rate says nothing about what the crew cost. A blanket edit clipped that and a test caught it.
+- **`.lbl-hint` was scoped to `.vform .fld label`** while the comment above it offered it as
+  general, so the first use elsewhere inherited the label's uppercase and read as one run-on
+  heading. General now.
+- **534 committed checks.**
+
 ## Clearing the practice data (BUILT 2026-09-02)
 *"how do i delete all of my dummy clients and their inventories, estimates, etc"* — asked
 before the first real jobs. `previewReset()` / `resetAllJobDataConfirm()` /
