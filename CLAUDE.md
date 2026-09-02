@@ -165,7 +165,28 @@ rectangles you tick."* Full spec: `INVENTORY_WORKSPACE_SPEC.md`.
   start of a string (`return /[",\n\r]/` — the char before `/` is `n`, which looks like the end
   of an identifier) and ran off the end of the function. `REGEX_OK_AFTER` now tracks the preceding
   *word*, and whitespace does not clear it. That bug had been latent since the harness was written.
-- **437 committed checks**, and the tab was driven end to end in a real headless browser
+- **The bulk bar looked broken and was two-thirds right (FIXED same day).** *"these dropdowns
+  don't seem to work or hold values."* Disposition and valuation source were writing correctly;
+  what was missing was any evidence of it. Applying a disposition **moves the item into another
+  section**, the select reset itself to a placeholder, and the only confirmation was a toast in
+  the opposite corner of the screen — indistinguishable from a control that does nothing.
+  - **The selects now show the value the selection SHARES** (`_invBulkCommon`), and the
+    placeholder only when the picked items disagree. A bulk control showing one item's answer
+    while three others hold another is worse than showing nothing.
+  - **The room menu was displaying a lie.** `_invRoomOptions(jid, undefined)` marks
+    *Unassigned / estate-wide* `selected` for a blank value, so the control read as though a
+    room were already set. It builds its own options now, and **`__none` is an explicit,
+    selectable destination** — "estate-wide" and "nothing picked" are different answers and
+    only one of them is a move.
+  - **Selecting the placeholder is now a no-op.** Before, `value === ''` on `roomIdx` would
+    have unassigned every selected item.
+  - The bar says what it did, in the bar — *"Auction set on 2 items — they are now under the
+    Auction section"* — and, when the change pushes items out of the active filter, that they
+    have gone from the screen and how to get them back.
+  - **`.btn-s` is `background:none` with grey text**, so on the dark bar the buttons rendered
+    as disabled-looking ghosts; they are painted explicitly now. And the global
+    `input,select,textarea{width:100%}` rule was stacking the three selects one per row.
+- **451 committed checks**, and the tab was driven end to end in a real headless browser
   (grouping, panel, bulk edits, CSV quoting, both new documents) — not just asserted on source text.
 
 ## "Apps Script needs redeploying" on a deployment nobody had touched (BUILT 2026-09-01)

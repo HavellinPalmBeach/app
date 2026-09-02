@@ -152,6 +152,54 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body, "charset=utf-8", 'and declares its charset');
   }
 
+  group('the bulk bar holds its values and says what it did');
+  {
+    // Reported 2026-09-01: "these dropdowns don't seem to work or hold values." Two of the
+    // three were writing correctly — but the select reset to a placeholder, the item MOVED
+    // to another section, and the only confirmation was a toast in the far corner. From the
+    // seat that is indistinguishable from a control that does nothing.
+    const ctx = sandbox({ fns: ['_invBulkCommon', '_invBulkRoomCommon'] });
+
+    eq(ctx._invBulkCommon([{ disposition: 'Auction' }, { disposition: 'Auction' }], 'disposition'),
+       'Auction', 'a value every selected item shares is shown back');
+    eq(ctx._invBulkCommon([{ disposition: 'Auction' }, { disposition: 'Junk' }], 'disposition'),
+       '', 'a disagreeing selection shows the placeholder, not one item\'s answer');
+    eq(ctx._invBulkCommon([{ disposition: '' }, { disposition: '' }], 'disposition'),
+       '', 'and "not yet decided" is not a value to show back');
+    eq(ctx._invBulkCommon([], 'disposition'), '', 'an empty selection has no common value');
+
+    // roomIdx has to tell "estate-wide" apart from "nothing picked" — they are different
+    // answers and only one of them is a destination.
+    eq(ctx._invBulkRoomCommon([{ roomIdx: 9 }, { roomIdx: 9 }]), '9', 'a shared room is shown back');
+    eq(ctx._invBulkRoomCommon([{ roomIdx: null }, { roomIdx: null }]), '__none',
+       'estate-wide is a real, selectable destination with its own value');
+    eq(ctx._invBulkRoomCommon([{ roomIdx: 9 }, { roomIdx: 4 }]), '', 'a mixed selection shows the placeholder');
+
+    const src = APP();
+    const at = src.indexOf('function _invBulkApply(');
+    const body = src.slice(at, src.indexOf('\n}\n', at));
+    // Selecting the placeholder must never blank the field across the whole selection.
+    has(body, "if (key !== 'reviewed' && (value === '' || value == null)) return;",
+        'the placeholder is not a value and cannot wipe forty items');
+    has(body, "(value === '__none') ? null : parseInt(value, 10)",
+        'estate-wide is applied deliberately, not as a fallback for an empty string');
+    has(body, '_invBulkLast = { msg: what, hidden: hidden };', 'the bar records what it just did');
+    has(body, '!_invMatchesFilter(r, job)',
+        'and notices when the change filtered the items off the screen');
+
+    const bar = src.slice(src.indexOf('function _renderInvBulk('));
+    const barBody = bar.slice(0, bar.indexOf('\n}\n'));
+    // .btn-s is background:none / grey text — on a dark bar it renders as a disabled-looking
+    // ghost, which is how it read in the report.
+    lacks(barBody, 'class="btn-s"', 'the buttons are painted for a dark bar, not left as .btn-s');
+    has(barBody, 'width:auto;max-width:220px',
+        'the selects escape the global input{width:100%} rule that stacked them');
+
+    const tog = src.slice(src.indexOf('function _invTogglePick('));
+    has(tog.slice(0, tog.indexOf('\n}\n')), '_invBulkLast = null',
+        'changing the selection clears a confirmation that described a different one');
+  }
+
   group('a Drive file id is recoverable for photos taken before it was stored');
   {
     const ctx = sandbox({ fns: ['_invFileId'] });

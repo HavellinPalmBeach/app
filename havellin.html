@@ -733,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.01 · 6:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 11:46am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13469,6 +13469,7 @@ function _invPicked(jobId) {
 }
 function _invTogglePick(stableId, el) {
   if (el && el.checked) _invPick[stableId] = 1; else delete _invPick[stableId];
+  _invBulkLast = null;   // the confirmation described a different selection
   renderInventoryTab();
 }
 function _invPickGroup(jobId, key, on) {
@@ -13484,12 +13485,17 @@ function _invClearPicks() { _invPick = {}; renderInventoryTab(); }
 function _invBulkApply(jobId, key, value) {
   var picked = _invPicked(jobId);
   if (!picked.length) return;
+  // The placeholder is not a value. Selecting it must not blank the field on forty items.
+  if (key !== 'reviewed' && (value === '' || value == null)) return;
   var job = _invJob(jobId);
+  var what = '';
   picked.forEach(function(ref){
     if (key === 'reviewed') {
       ref.reviewed = true; ref.reviewedAt = Date.now(); ref.reviewedBy = (job && job.tc) || '';
     } else if (key === 'roomIdx') {
-      ref.roomIdx = (value === '') ? null : parseInt(value, 10);
+      // '__none' is the explicit "estate-wide" choice, which is a real destination and has
+      // to stay distinguishable from "nothing picked".
+      ref.roomIdx = (value === '__none') ? null : parseInt(value, 10);
     } else {
       ref[key] = value;
     }
@@ -13497,7 +13503,18 @@ function _invBulkApply(jobId, key, value) {
   });
   savePhotoRefs(jobId);
   _scheduleInventorySync(jobId);
-  showSyncBadge(picked.length + ' item' + (picked.length > 1 ? 's' : '') + ' updated ✓');
+  var n = picked.length;
+  var items = n + ' item' + (n > 1 ? 's' : '');
+  if (key === 'reviewed')          what = items + ' marked reviewed.';
+  else if (key === 'disposition')  what = value + ' set on ' + items + ' \u2014 they are now under the ' + value + ' section.';
+  else if (key === 'roomIdx')      what = items + ' moved to ' + _invRoomName(jobId, picked[0].roomIdx) + '.';
+  else if (key === 'valSource')    what = 'Valuation source set to ' + value + ' on ' + items + '.';
+  else                             what = items + ' updated.';
+  // An item that no longer matches the filters on screen has just vanished from the list.
+  // Saying so is the difference between "it worked" and "nothing happened".
+  var hidden = picked.some(function(r){ return !_invMatchesFilter(r, job); });
+  _invBulkLast = { msg: what, hidden: hidden };
+  showSyncBadge(what);
   renderInventoryTab();
 }
 
@@ -13695,26 +13712,85 @@ function _renderInvGroup(job, g) {
     + body + '</div>';
 }
 
+// The bar reports what it just did, and the selects show the state of the selection
+// rather than snapping back to a placeholder. Reported 2026-09-01: "these dropdowns don't
+// seem to work or hold values." Two of the three were writing correctly — but applying a
+// disposition MOVES the item into another section, the select reset itself, and the only
+// confirmation was a toast in the far corner. From the seat, that is indistinguishable
+// from a control that does nothing.
+var _invBulkLast = null;
+
+// The value shared by every selected item, or '' when they disagree. A bulk control that
+// shows one item's value while three others hold another is worse than showing nothing.
+function _invBulkCommon(picked, key) {
+  if (!picked.length) return '';
+  var first = picked[0][key];
+  if (first === undefined || first === null || first === '') return '';
+  for (var i = 1; i < picked.length; i++) if (picked[i][key] !== first) return '';
+  return String(first);
+}
+function _invBulkRoomCommon(picked) {
+  if (!picked.length) return '';
+  var first = picked[0].roomIdx;
+  for (var i = 1; i < picked.length; i++) if (picked[i].roomIdx !== first) return '';
+  return (first == null) ? '__none' : String(first);
+}
+
 function _renderInvBulk(job) {
   var picked = _invPicked(job.id);
-  if (!picked.length) return '';
+  if (!picked.length) { _invBulkLast = null; return ''; }
   var jid = job.id;
-  var dispOpts = '<option value="">Set disposition…</option>'
-    + INV_DISPOSITIONS.map(function(d){ return '<option>' + esc(d) + '</option>'; }).join('');
-  var srcOpts = '<option value="">Set valuation source…</option>'
-    + INV_VAL_SOURCES.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
+  var n = picked.length;
+  // The global `input,select,textarea{width:100%}` rule makes an unstyled select take the
+  // whole row, which is why these three stacked instead of sitting on one line. The phone
+  // block re-asserts 100% with !important, so this stays desktop-only, which is right.
+  var selStyle = 'font-size:11px;padding:4px 6px;border-radius:4px;border:1px solid #6b6257;'
+    + 'background:var(--cream);color:var(--gray-dk);font-family:inherit;'
+    + 'width:auto;max-width:220px;flex:0 1 auto;';
+  // .btn-s is background:none / grey text — on a dark bar that renders as a disabled-looking
+  // ghost, which is exactly how it read in the report. Paint them explicitly.
+  var btnStyle = 'font-size:11px;padding:5px 12px;border-radius:4px;border:1px solid var(--cream);'
+    + 'background:var(--cream);color:var(--gray-dk);font-weight:600;letter-spacing:.04em;'
+    + 'text-transform:uppercase;cursor:pointer;font-family:Raleway,sans-serif;';
+
+  function menu(key, placeholder, values, current) {
+    return '<select onchange="_invBulkApply(' + jid + ',\'' + key + '\',this.value)" style="' + selStyle + '">'
+      + '<option value=""' + (current ? '' : ' selected') + '>' + placeholder + '</option>'
+      + values.map(function(v){
+          var val = v.value !== undefined ? v.value : v;
+          var lab = v.label !== undefined ? v.label : v;
+          return '<option value="' + esc(val) + '"' + (String(current) === String(val) ? ' selected' : '') + '>' + esc(lab) + '</option>';
+        }).join('')
+      + '</select>';
+  }
+  var estRec = estimateStore[jid];
+  var rooms = (estRec && estRec.estimate && estRec.estimate.rooms) ? estRec.estimate.rooms : [];
+  // "Unassigned / estate-wide" is a real destination, so it stays choosable — but it is NOT
+  // the placeholder. _invRoomOptions marks it `selected` for a blank value, which made the
+  // control read as though a room were already set.
+  var roomVals = [{ value: '__none', label: 'Unassigned / estate-wide' }]
+    .concat(rooms.map(function(r){ return { value: String(r.idx), label: r.name }; }));
+
+  var result = '';
+  if (_invBulkLast) {
+    result = '<div style="width:100%;font-size:11px;font-weight:400;color:var(--cream);opacity:.9;">'
+      + '&#10003; ' + esc(_invBulkLast.msg)
+      + (_invBulkLast.hidden ? ' <span style="opacity:.8;">They no longer match the filters on screen &mdash; press <strong>Clear filters</strong> to see them.</span>' : '')
+      + '</div>';
+  }
+
   return '<div style="position:sticky;bottom:0;z-index:40;background:var(--gray-dk);color:var(--cream);'
-    + 'border-radius:6px;padding:8px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;'
+    + 'border-radius:6px;padding:9px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;'
     + 'box-shadow:0 -2px 14px rgba(0,0,0,.15);">'
-    + '<strong style="font-size:12px;">' + picked.length + ' selected</strong>'
-    + '<select onchange="if(this.value)_invBulkApply(' + jid + ',\'disposition\',this.value)" style="font-size:11px;padding:3px 5px;">' + dispOpts + '</select>'
-    + '<select onchange="if(this.value)_invBulkApply(' + jid + ',\'valSource\',this.value)" style="font-size:11px;padding:3px 5px;">' + srcOpts + '</select>'
-    + '<select onchange="_invBulkApply(' + jid + ',\'roomIdx\',this.value)" style="font-size:11px;padding:3px 5px;">'
-      + '<option value="">Move to room…</option>' + _invRoomOptions(jid, undefined) + '</select>'
-    + '<button class="btn-s" onclick="_invBulkApply(' + jid + ',\'reviewed\',1)" style="font-size:11px;">Mark reviewed</button>'
-    + '<button class="btn-s" onclick="printApprovalRequest(' + jid + ',true)" style="font-size:11px;">Approval request</button>'
-    + '<button class="btn-s" onclick="invRecordApproval(' + jid + ')" style="font-size:11px;" title="Record a signed approval against every selected item">Record approval</button>'
-    + '<button class="btn-s" onclick="_invClearPicks()" style="font-size:11px;">Clear</button>'
+    + '<strong style="font-size:12px;">' + n + ' selected</strong>'
+    + menu('disposition', 'Set disposition…', INV_DISPOSITIONS, _invBulkCommon(picked, 'disposition'))
+    + menu('valSource',   'Set valuation source…', INV_VAL_SOURCES, _invBulkCommon(picked, 'valSource'))
+    + menu('roomIdx',     'Move to room…', roomVals, _invBulkRoomCommon(picked))
+    + '<button onclick="_invBulkApply(' + jid + ',\'reviewed\',1)" style="' + btnStyle + '">Mark reviewed</button>'
+    + '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
+    + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
+    + '<button onclick="_invClearPicks()" style="' + btnStyle + 'background:none;color:var(--cream);">Clear</button>'
+    + result
     + '</div>';
 }
 
