@@ -188,17 +188,23 @@ rectangles you tick."* Full spec: `INVENTORY_WORKSPACE_SPEC.md`.
     because there is no second pass there.
   - Thumbnails cache under their own `hav_media_thumb_<jobId>` key — same reason `_photoRetryData`
     is separate: image bytes must never crowd the manifest write out of the quota.
-  - **⚠ `getThumbnail()` COMES BACK NULL far more often than the docs suggest**, and the first
-    build fell straight through to `file.getBlob()` — the whole photograph. Anthony's own
-    verification run caught it: *177,379 chars of base64* for one couch, i.e. 133KB. The app
-    compresses to 900px before upload, so that IS the archival image. At 300 items an estate
-    that is 40MB — past the Apps Script response limit, past localStorage, and far too much to
-    repaint. `_thumbBlobFor` now tries `getThumbnail()`, then the Drive API's **`thumbnailLink`
-    at `=s240`** (needs the advanced Drive service + one UrlFetchApp authorisation), and only
-    then the raw file, capped at 60KB. `THUMB_BUDGET` stops a batch mid-way rather than
-    failing it whole; the app re-asks for the remainder. `testDriveThumbnails` prints the KB
-    and the source and **warns above 40KB** — a green log line that ships a full photo is a
-    false pass, which is exactly what the first version produced.
+  - **⚠ `DriveApp.File.getThumbnail()` IS NOT A THUMBNAIL AND MUST NOT BE TRUSTED BY NAME.**
+    On a real Havellin photo it returned `null` on one run and the **whole 130KB image** on
+    the next. The first build put it first in the chain and fell through to `file.getBlob()`
+    when it was null, so both paths shipped the archival photograph. Anthony's own
+    verification run is what caught it — *"OK — thumbnail returned, 177379 chars of base64"*,
+    then *"OK - 130 KB, via getThumbnail"*. The app compresses to 900px before upload, so
+    ~130KB IS the archival image; at 300 items that is 40MB, past the Apps Script response
+    limit, past localStorage, and far too much to repaint on every review tick.
+  - **THE RULE: trust the measurement, not the method name.** Every candidate goes through
+    `_thumbAccept` and is rejected above `THUMB_MAX_BYTES` (60KB) whatever produced it. The
+    Drive API's **`thumbnailLink` at `=s240`** is FIRST because it is the only source whose
+    dimensions we control (needs the advanced Drive service + one UrlFetchApp authorisation);
+    `getThumbnail()` and the raw file follow, both size-checked. `THUMB_BUDGET` stops a batch
+    mid-way rather than failing it whole; the app re-asks for the remainder.
+  - **`testDriveThumbnails` probes all three sources and prints the size of each.** *Which
+    source, and how big* is the only useful question when this path misbehaves, and a single
+    cheerful OK line let 130KB through twice.
 - **The `savePhotoRefs` whitelist is still the thing that bites.** `reviewed` / `reviewedAt` /
   `reviewedBy` / `valNote` / `driveFileId` all had to be added or they are dropped on the next
   save, silently.
