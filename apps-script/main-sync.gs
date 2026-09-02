@@ -138,6 +138,33 @@ function getDriveThumbnails(fileIds) {
   return { ok: true, success: true, thumbs: thumbs, missing: missing };
 }
 
+// Run this from the Apps Script editor (Run menu) after pasting a new version, BEFORE
+// relying on the app. It takes no arguments, because the Run menu cannot pass any — the
+// same reason pruneQuoStale works the way it does. It finds the newest image anywhere
+// under the Havellin root folder and thumbnails it, so a green log line here proves the
+// whole path: the function is deployed, Drive is reachable, and thumbnails come back.
+function testDriveThumbnails() {
+  var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  var found = null;
+  var stack = [root], guard = 0;
+  while (stack.length && !found && guard++ < 400) {
+    var f = stack.pop();
+    var files = f.getFilesByType('image/jpeg');
+    if (files.hasNext()) { found = files.next(); break; }
+    var subs = f.getFolders();
+    while (subs.hasNext()) stack.push(subs.next());
+  }
+  if (!found) {
+    Logger.log('No JPEG found under the root folder yet — take a photo on the Job Plan first.');
+    return;
+  }
+  var res = getDriveThumbnails([found.getId()]);
+  var uri = res.thumbs[found.getId()];
+  Logger.log('File: ' + found.getName());
+  Logger.log(uri ? ('OK — thumbnail returned, ' + uri.length + ' chars of base64')
+                 : ('FAILED — Drive would not return a thumbnail. missing=' + JSON.stringify(res.missing)));
+}
+
 // ══ STORE HELPERS ════════════════════════════════════════════════════════════════
 
 // A Google Sheets cell holds at most 50,000 characters. Every store here is one JSON
