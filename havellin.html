@@ -733,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:17pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:34pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1980,6 +1980,18 @@ body.no-smf .smf-col{display:none;}
       <span>Require a walkthrough note on every room &amp; collection before submitting for approval</span>
     </label>
     <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Off by default: missing notes show a one-click-override warning. On: missing notes block submit until added.</div>
+
+    <div class="sec" style="margin-top:14px;">This Device</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:6px;">
+      Clears the jobs, estimates, job plans, change orders, hours and photo manifests held in
+      <strong>this browser</strong>, then reloads from the sheet. Your Apps Script URLs, rates and
+      the cached vendor / partner directories are kept, so there is nothing to re-type.
+      <br><br>
+      <strong>Use this after wiping the Google Sheet.</strong> The stores merge rather than replace, so
+      a device still holding the old clients pushes them straight back up on its next save &mdash;
+      which undoes the wipe without saying so.
+    </div>
+    <button class="btn-s" style="width:100%;" onclick="clearLocalJobData()">Clear this device &amp; reload from the sheet</button>
 
     <div style="display:flex;gap:8px;margin-top:1.25rem;">
       <button class="btn-s" style="flex:1;" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
@@ -20224,6 +20236,44 @@ var COST_RATE_FIELDS = [
   { el:'set-cost-ps-standard',   key:'psStandard',   ls:'hav_cost_ps_standard' },
   { el:'set-cost-ps-senior',     key:'psSenior',     ls:'hav_cost_ps_senior' }
 ];
+
+// ── Clearing this device ──────────────────────────────────────────────────────
+// Wiping the Google Sheet is only half the job, and the missing half is silent: every
+// store MERGES by record id and unions, so a browser still holding the old clients pushes
+// them back up on its next save and the sheet repopulates with exactly what was deleted.
+// This is the other half, and it has to be reachable on a phone — a console one-liner is
+// not an instruction you can follow on an iPad.
+//
+// SETTINGS ARE KEPT ON PURPOSE. Clearing site data in Safari works too, but then the first
+// thing after a reset is re-typing three Apps Script URLs on a phone keyboard, which is how
+// a URL ends up wrong and the app looks broken for a week.
+var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v$|havellin_est_scratch$|hav_media_)/;
+function clearLocalJobData() {
+  var keys = [];
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && LOCAL_JOB_DATA_KEYS.test(k)) keys.push(k);
+    }
+  } catch (e) {
+    alert('This browser is not letting the app read its own storage, so nothing was cleared.');
+    return;
+  }
+  if (!keys.length) {
+    alert('Nothing to clear — this device is already holding no job data.');
+    return;
+  }
+  // Naming the count matters: it is the difference between "it did nothing" and "there was
+  // nothing here", and those look identical otherwise.
+  if (!confirm('Clear ' + keys.length + ' stored item' + (keys.length > 1 ? 's' : '')
+    + ' from THIS device (jobs, estimates, job plans, change orders, hours, photo manifests)?'
+    + '\n\nSettings, rates and the vendor / partner directories are kept.'
+    + '\n\nAnything on this device that has not reached the sheet will be lost.')) return;
+  keys.forEach(function(k){ try { localStorage.removeItem(k); } catch (e) {} });
+  // Reload rather than re-render: half the app's state is in module-level variables that
+  // were populated at boot, and leaving those live is how the cleared jobs get saved back.
+  location.reload();
+}
 
 function saveSettings() {
   STRIPE_PK          = document.getElementById('set-stripe-pk').value.trim();

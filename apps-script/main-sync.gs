@@ -264,6 +264,12 @@ function testDriveThumbnails() {
 //     resetAllJobDataConfirm to include it.
 //   - Drive. Job folders and their photos are left alone — see trashJobFoldersConfirm.
 var RESET_JOB_STORES = ['EstimateStore', 'JobPlanStore', 'ChangeOrderStore', 'LogStore', 'MediaStore'];
+// ⚠ 'Estimates' and 'Hours' are DEAD TABS and this is worth knowing before you go looking
+// for data in them. The app never posts type:'estimate' or type:'hours' — those handlers
+// exist and nothing calls them. The real estimate data is the EstimateStore blob, the real
+// hours are LogStore, and both look like unreadable JSON rather than a friendly table.
+// Someone clearing the practice data by hand will empty 'Estimates', see it was already
+// empty, and conclude the estimates are gone. They are not.
 var RESET_JOB_SHEETS = ['Jobs', 'Estimates', 'Hours'];
 
 function previewReset() {

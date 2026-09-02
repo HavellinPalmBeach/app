@@ -98,6 +98,14 @@ before the first real jobs. `previewReset()` / `resetAllJobDataConfirm()` /
   names every row and folder that would go, and a differently-named function is the only
   thing that removes anything. **None of them is in `doGet` or `doPost`**, so no HTTP
   request can reach them — a destructive action must not be one malformed URL away.
+- **⚠ THE `Estimates` AND `Hours` TABS ARE DEAD, and that misleads anyone clearing by hand.**
+  The app posts `type:'job'` and the six `saveAll*` blobs and **nothing else** — it has never
+  posted `type:'estimate'` or `type:'hours'`, though both handlers exist. So the friendly
+  `Estimates` tab is permanently empty, the real estimates are the **`EstimateStore`** blob and
+  the real hours are **`LogStore`**, and both look like unreadable JSON rather than a table.
+  Anthony hit this within minutes: *"i looked in the estimate tab of that sheet and there was
+  no information in it."* Emptying `Estimates` deletes nothing, because there was never
+  anything in it.
 - **What it clears:** `Jobs` / `Estimates` / `Hours` sheets (headers kept — the app writes
   against those column names) and the `EstimateStore` · `JobPlanStore` · `ChangeOrderStore` ·
   `LogStore` · `MediaStore` blobs.
@@ -110,8 +118,9 @@ before the first real jobs. `previewReset()` / `resetAllJobDataConfirm()` /
   itself.** The stores merge by record id and union, so a browser still holding the old jobs
   pushes them straight back up on its next save and the sheet repopulates with what you just
   deleted. Per device, keeping Settings and the cached directories:
-  `Object.keys(localStorage).filter(k => /^(havellin_(jobs|est|jobplan|co|logs)_v|havellin_est_scratch|hav_media_)/.test(k)).forEach(k => localStorage.removeItem(k))`
-  then reload. `hav_sheets_url` / `hav_vendor_url` / `hav_referral_url` / `hav_tc_alpha` /
+  **Settings → This Device → “Clear this device & reload from the sheet”** (`clearLocalJobData`).
+  It has to be a button rather than a console snippet because the devices are an iPad and a
+  phone, where there is no console to paste into. `hav_sheets_url` / `hav_vendor_url` / `hav_referral_url` / `hav_tc_alpha` /
   `havellin_defaults_v` and the two `_dir` caches are left alone on purpose — otherwise the
   first thing after a reset is re-typing three Apps Script URLs on a phone.
 
