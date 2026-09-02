@@ -238,6 +238,45 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(thBody, '<img', 'never an <img> that could render broken in front of a client');
   }
 
+  group('clearing a device: every stored key is accounted for');
+  {
+    // THE BUG THIS EXISTS FOR: the first version of LOCAL_JOB_DATA_KEYS anchored on `_v$`
+    // and matched nothing, because the real keys carry a version — havellin_jobs_v3,
+    // havellin_est_v4, havellin_jobplan_v1. The button reported "nothing to clear" on a
+    // device holding every dummy client. A false all-clear is worse than no button.
+    const ctx = sandbox({ vars: ['LOCAL_JOB_DATA_KEYS', 'LOCAL_KEEP_KEYS'] });
+    const clear = ctx.LOCAL_JOB_DATA_KEYS;
+    const keep = ctx.LOCAL_KEEP_KEYS;
+
+    ['havellin_jobs_v3', 'havellin_est_v4', 'havellin_est_v3', 'havellin_jobplan_v1',
+     'havellin_logs_v3', 'havellin_co_v1', 'havellin_est_scratch',
+     'hav_media_101', 'hav_media_pending_101', 'hav_media_thumb_101'].forEach((k) => {
+      ok(clear.test(k), k + ' is cleared');
+      ok(!keep.test(k), k + ' is not also on the keep list');
+    });
+
+    // Re-typing three Apps Script URLs on a phone after a reset is how one ends up wrong.
+    ['hav_sheets_url', 'hav_vendor_url', 'hav_referral_url', 'hav_drive_id', 'hav_tc_alpha',
+     'havellin_defaults_v3', 'havellin_contractors_v3', 'hav_vendor_dir'].forEach((k) => {
+      ok(keep.test(k), k + ' survives a device clear');
+      ok(!clear.test(k), k + ' is not cleared');
+    });
+
+    // Contractors are the crew, not practice clients.
+    ok(!clear.test('havellin_contractors_v3'), 'the contractor roster is never cleared here');
+
+    // THE COMPLETENESS CHECK — this is the one that would have caught the original bug.
+    // Every literal key the app writes must be either cleared or deliberately kept.
+    const src = APP();
+    const keys = new Set();
+    const re = /localStorage\.setItem\('([A-Za-z0-9_]+)'/g;
+    let m;
+    while ((m = re.exec(src))) keys.add(m[1]);
+    ok(keys.size >= 12, 'found the app\'s storage keys to check (' + keys.size + ')');
+    const unclassified = [...keys].filter((k) => !clear.test(k) && !keep.test(k));
+    eq(unclassified, [], 'every stored key is either cleared or deliberately kept');
+  }
+
   group('the thumbnail cache never starves the manifest');
   {
     const ctx = sandbox({ fns: ['_invThumbKey', '_invThumbCache', '_invSaveThumbCache'],

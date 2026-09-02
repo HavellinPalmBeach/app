@@ -98,14 +98,21 @@ before the first real jobs. `previewReset()` / `resetAllJobDataConfirm()` /
   names every row and folder that would go, and a differently-named function is the only
   thing that removes anything. **None of them is in `doGet` or `doPost`**, so no HTTP
   request can reach them — a destructive action must not be one malformed URL away.
-- **⚠ THE `Estimates` AND `Hours` TABS ARE DEAD, and that misleads anyone clearing by hand.**
-  The app posts `type:'job'` and the six `saveAll*` blobs and **nothing else** — it has never
-  posted `type:'estimate'` or `type:'hours'`, though both handlers exist. So the friendly
-  `Estimates` tab is permanently empty, the real estimates are the **`EstimateStore`** blob and
-  the real hours are **`LogStore`**, and both look like unreadable JSON rather than a table.
-  Anthony hit this within minutes: *"i looked in the estimate tab of that sheet and there was
-  no information in it."* Emptying `Estimates` deletes nothing, because there was never
-  anything in it.
+- **⚠ `Estimates` AND `Hours` ARE FOSSIL TABS, and they mislead anyone clearing by hand.**
+  The app posts `type:'job'` plus the `saveAll*` blobs and **nothing else**. `type:'estimate'`
+  → `saveEstimateToSheet` and `type:'hours'` → `saveHoursToSheet` still exist server-side with
+  no caller. `Estimates` was written by an OLDER build and the comment in `saveEstimateState`
+  records the decision to stop: one authoritative write, not *"a second, differently-shaped
+  'estimate' write that could diverge"*. `Hours` usually does not exist at all, because
+  nothing ever called the function that creates it — **so do not read a missing `Hours` tab as
+  data loss.**
+  - **The real estimates are the `EstimateStore` blob; the real hours are `LogStore`.** Both are
+    one JSON string in **column B**, chunked across rows — column A carries only a timestamp on
+    row 2, so a glance at the left of the sheet looks empty either way.
+  - Anthony hit both halves within minutes: *"i looked in the estimate tab of that sheet and
+    there was no information in it"*, then *"there is an EstimateStore tab and nothing writes to
+    it."* The second is not true — `saveEstimateState()` posts `saveAllEstimates` on every
+    estimate save — but the sheet gives a reader no way to tell.
 - **What it clears:** `Jobs` / `Estimates` / `Hours` sheets (headers kept — the app writes
   against those column names) and the `EstimateStore` · `JobPlanStore` · `ChangeOrderStore` ·
   `LogStore` · `MediaStore` blobs.
@@ -119,6 +126,16 @@ before the first real jobs. `previewReset()` / `resetAllJobDataConfirm()` /
   pushes them straight back up on its next save and the sheet repopulates with what you just
   deleted. Per device, keeping Settings and the cached directories:
   **Settings → This Device → “Clear this device & reload from the sheet”** (`clearLocalJobData`).
+  **⚠ The version suffix is part of every key** — `havellin_jobs_v3`, `havellin_est_v4`,
+  `havellin_jobplan_v1`. The first `LOCAL_JOB_DATA_KEYS` anchored on `_v$` and matched
+  **nothing**, so the button announced "nothing to clear" on a device holding every dummy
+  client. A false all-clear is worse than no button. A test now walks every
+  `localStorage.setItem` key in the file and fails on one that is neither cleared nor
+  deliberately kept, so a new store cannot be added and quietly missed.
+  - Worth knowing about the re-push risk: **jobs, job plans, logs and change orders are
+    overwritten wholesale from the cloud on load**, so those self-heal. **Estimates merge per
+    key** (a local record for a job the sheet does not know survives) and the **inventory
+    unions per item**, so those two really do come back from a stale device.
   It has to be a button rather than a console snippet because the devices are an iPad and a
   phone, where there is no console to paste into. `hav_sheets_url` / `hav_vendor_url` / `hav_referral_url` / `hav_tc_alpha` /
   `havellin_defaults_v` and the two `_dir` caches are left alone on purpose — otherwise the

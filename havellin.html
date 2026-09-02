@@ -733,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:34pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:29pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -20247,7 +20247,16 @@ var COST_RATE_FIELDS = [
 // SETTINGS ARE KEPT ON PURPOSE. Clearing site data in Safari works too, but then the first
 // thing after a reset is re-typing three Apps Script URLs on a phone keyboard, which is how
 // a URL ends up wrong and the app looks broken for a week.
-var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v$|havellin_est_scratch$|hav_media_)/;
+// ⚠ THE VERSION SUFFIX IS PART OF THE KEY. The first version of this anchored on `_v$`
+// and matched NOTHING — havellin_jobs_v3, havellin_est_v4, havellin_jobplan_v1. The button
+// reported "nothing to clear" on a device holding every dummy client, which is a false
+// all-clear: worse than no button, because it is believed. There is a test that walks every
+// localStorage key in this file and fails on one that is neither cleared nor deliberately
+// kept, so a new store cannot be added and quietly missed here.
+var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
+// Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
+// contractor roster (your crew, not practice data), and the two directory caches.
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_stripe_pk|hav_stripe_script|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
