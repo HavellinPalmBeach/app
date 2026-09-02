@@ -126,27 +126,51 @@ function _thumbAccept(blob, via) {
   return { blob: blob, via: via };
 }
 
-// The Drive API's thumbnailLink, requested at our own size. FIRST in the chain because it
-// is the only source whose dimensions we control. Needs the advanced Drive service
-// (Services -> Drive) and one UrlFetchApp authorisation.
+// The Drive API's thumbnailLink, requested at our own size. Official route, and the only
+// one where we choose the dimensions.
+//
+// `supportsAllDrives` is not optional decoration: without it drive.files.get answers
+// "File not found" for a file DriveApp opens perfectly well, because the folder lives in a
+// Shared Drive. That is exactly the error this hit on the real Havellin folder.
 function _thumbViaLink(file) {
   var meta = null;
-  try { meta = Drive.Files.get(file.getId(), { fields: 'thumbnailLink' }); }   // v3
-  catch (eV3) { meta = Drive.Files.get(file.getId()); }                        // v2
+  var args = { fields: 'thumbnailLink', supportsAllDrives: true };
+  try { meta = Drive.Files.get(file.getId(), args); }              // v3
+  catch (eV3) { meta = Drive.Files.get(file.getId(), { supportsAllDrives: true }); }  // v2
   var link = meta && meta.thumbnailLink;
   if (!link) return null;
-  link = link.replace(/=s\d+(-c)?$/, '') + '=s' + THUMB_PX;
-  var r = UrlFetchApp.fetch(link, {
+  return _fetchThumbUrl(link.replace(/=s\d+(-c)?$/, '') + '=s' + THUMB_PX);
+}
+
+// Drive's own thumbnail endpoint, sized. This needs NO advanced service — just the script's
+// OAuth token — so it is the fallback when the Drive API is unavailable or refuses the id.
+//
+// NOTE the asymmetry with the browser: the app must never point an <img> at this URL,
+// because a browser sends cookies rather than a token and Safari blocks them cross-site
+// (see _invThumbHTML in havellin.html). Server-side, with a Bearer token, it is fine.
+function _thumbViaEndpoint(file) {
+  return _fetchThumbUrl('https://drive.google.com/thumbnail?id=' + encodeURIComponent(file.getId())
+    + '&sz=w' + THUMB_PX);
+}
+
+function _fetchThumbUrl(url) {
+  var r = UrlFetchApp.fetch(url, {
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-    muteHttpExceptions: true
+    muteHttpExceptions: true,
+    followRedirects: true
   });
   if (r.getResponseCode() !== 200) return null;
-  return r.getBlob();
+  var blob = r.getBlob();
+  // An auth wall comes back as 200 with an HTML body. A thumbnail is an image.
+  var type = String(blob.getContentType() || '');
+  if (type.indexOf('image/') !== 0) return null;
+  return blob;
 }
 
 function _thumbBlobFor(file) {
   var got = null;
   try { got = _thumbAccept(_thumbViaLink(file), 'thumbnailLink'); if (got) return got; } catch (e) {}
+  try { got = _thumbAccept(_thumbViaEndpoint(file), 'thumbnailEndpoint'); if (got) return got; } catch (e) {}
   try { got = _thumbAccept(file.getThumbnail(), 'getThumbnail'); if (got) return got; } catch (e) {}
   // The file itself, and only when it is genuinely small - a manual line item's snapshot,
   // say. Never ship a full photograph to fill a 40px box.
@@ -205,18 +229,21 @@ function testDriveThumbnails() {
   var kb = function(blob) {
     try { return Math.round(blob.getBytes().length / 1024) + ' KB'; } catch (e) { return 'unreadable'; }
   };
-  var link = null, thumb = null, full = null;
+  var link = null, endp = null, thumb = null, full = null;
   try { link  = _thumbViaLink(found); } catch (e) { Logger.log('thumbnailLink threw: ' + e); }
+  try { endp  = _thumbViaEndpoint(found); } catch (e) { Logger.log('thumbnailEndpoint threw: ' + e); }
   try { thumb = found.getThumbnail(); } catch (e) {}
   try { full  = found.getBlob(); } catch (e) {}
-  Logger.log('  thumbnailLink : ' + (link  ? kb(link)  : 'nothing returned'));
-  Logger.log('  getThumbnail  : ' + (thumb ? kb(thumb) : 'nothing returned'));
-  Logger.log('  full file     : ' + (full  ? kb(full)  : 'nothing returned'));
+  Logger.log('  thumbnailLink     : ' + (link  ? kb(link)  : 'nothing returned'));
+  Logger.log('  thumbnailEndpoint : ' + (endp  ? kb(endp)  : 'nothing returned'));
+  Logger.log('  getThumbnail      : ' + (thumb ? kb(thumb) : 'nothing returned'));
+  Logger.log('  full file         : ' + (full  ? kb(full)  : 'nothing returned'));
 
   var got = _thumbBlobFor(found);
   if (!got) {
     Logger.log('FAILED - nothing came back under the ' + Math.round(THUMB_MAX_BYTES / 1024)
-      + ' KB cap. Enable the advanced Drive service (Services -> Drive) so thumbnailLink can be used.');
+      + ' KB cap. Send the four lines above on; the app will show category glyphs meanwhile, '
+      + 'and every record still works.');
     return;
   }
   Logger.log('USING: ' + got.via + ' at ' + kb(got.blob) + ' - good.');

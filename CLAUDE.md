@@ -196,6 +196,17 @@ rectangles you tick."* Full spec: `INVENTORY_WORKSPACE_SPEC.md`.
     then *"OK - 130 KB, via getThumbnail"*. The app compresses to 900px before upload, so
     ~130KB IS the archival image; at 300 items that is 40MB, past the Apps Script response
     limit, past localStorage, and far too much to repaint on every review tick.
+  - **`drive.files.get` answered *File not found* for a file `DriveApp` opens fine** — because
+    the estate folders live in a **Shared Drive**, and the Drive API needs
+    `supportsAllDrives: true` to see one. Passed on both the v3 and v2 call shapes now.
+    A "not found" from that API against an id that plainly exists means this, essentially
+    every time; do not go looking for a bad id.
+  - **`_thumbViaEndpoint` is the fallback that needs no advanced service at all** —
+    `drive.google.com/thumbnail?id=…&sz=w240` fetched by `UrlFetchApp` with the script's OAuth
+    token. **Note the asymmetry, it is the whole point:** the BROWSER must never point an
+    `<img>` at that URL (cookies, cross-site, Safari — see `_invThumbHTML`), but the SERVER
+    holding a Bearer token can. `_fetchThumbUrl` rejects a non-`image/*` content type, because
+    an auth wall comes back as a 200 with an HTML body and would otherwise cache as a photo.
   - **THE RULE: trust the measurement, not the method name.** Every candidate goes through
     `_thumbAccept` and is rejected above `THUMB_MAX_BYTES` (60KB) whatever produced it. The
     Drive API's **`thumbnailLink` at `=s240`** is FIRST because it is the only source whose
