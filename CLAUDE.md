@@ -188,6 +188,17 @@ rectangles you tick."* Full spec: `INVENTORY_WORKSPACE_SPEC.md`.
     because there is no second pass there.
   - Thumbnails cache under their own `hav_media_thumb_<jobId>` key — same reason `_photoRetryData`
     is separate: image bytes must never crowd the manifest write out of the quota.
+  - **⚠ `getThumbnail()` COMES BACK NULL far more often than the docs suggest**, and the first
+    build fell straight through to `file.getBlob()` — the whole photograph. Anthony's own
+    verification run caught it: *177,379 chars of base64* for one couch, i.e. 133KB. The app
+    compresses to 900px before upload, so that IS the archival image. At 300 items an estate
+    that is 40MB — past the Apps Script response limit, past localStorage, and far too much to
+    repaint. `_thumbBlobFor` now tries `getThumbnail()`, then the Drive API's **`thumbnailLink`
+    at `=s240`** (needs the advanced Drive service + one UrlFetchApp authorisation), and only
+    then the raw file, capped at 60KB. `THUMB_BUDGET` stops a batch mid-way rather than
+    failing it whole; the app re-asks for the remainder. `testDriveThumbnails` prints the KB
+    and the source and **warns above 40KB** — a green log line that ships a full photo is a
+    false pass, which is exactly what the first version produced.
 - **The `savePhotoRefs` whitelist is still the thing that bites.** `reviewed` / `reviewedAt` /
   `reviewedBy` / `valNote` / `driveFileId` all had to be added or they are dropped on the next
   save, silently.

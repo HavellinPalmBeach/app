@@ -106,31 +106,64 @@ function doPost(e) {
 // Returns { ok, thumbs: { fileId: dataUri }, missing: [fileId] }. A file that cannot be
 // read is reported in `missing` rather than failing the batch — one deleted photo must
 // not blank out the other forty.
-var THUMB_MAX_IDS   = 60;        // one tab-load's worth; the app pages beyond this
-var THUMB_MAX_BYTES = 220000;    // per image, before base64. Drive's own thumbnail is far
-                                 // smaller; this only bounds the full-blob fallback.
+var THUMB_MAX_IDS    = 60;      // one tab-load's worth; the app pages beyond this
+var THUMB_PX         = 240;     // long edge of the thumbnail we ask Drive for
+var THUMB_MAX_BYTES  = 60000;   // per image, before base64 - a real thumbnail is ~10KB
+var THUMB_BUDGET     = 1200000; // total per response, so one batch cannot blow the limit
+
+// A REAL thumbnail, not the whole photograph. This matters more than it looks: the app
+// compresses to 900px before upload, so a full item photo is ~130KB, and 300 of those is
+// 40MB - past the Apps Script response limit, past the browser's localStorage quota, and
+// far too much to paint on every re-render. Three sources, cheapest first.
+function _thumbBlobFor(file) {
+  // 1. Drive's own thumbnail. A few KB when it exists - but it comes back null more often
+  //    than the documentation suggests, which is why the rest of this chain exists.
+  try { var t = file.getThumbnail(); if (t) return { blob: t, via: 'getThumbnail' }; } catch (e) {}
+
+  // 2. The Drive API's thumbnailLink, asked for at our own size. Needs the advanced Drive
+  //    service (Services -> Drive in the editor) plus one extra authorisation for
+  //    UrlFetchApp. v3 wants an explicit fields list; v2 returns the link by default.
+  try {
+    var meta = null;
+    try { meta = Drive.Files.get(file.getId(), { fields: 'thumbnailLink' }); }
+    catch (eV3) { meta = Drive.Files.get(file.getId()); }
+    var link = meta && meta.thumbnailLink;
+    if (link) {
+      link = link.replace(/=s\d+(-c)?$/, '') + '=s' + THUMB_PX;
+      var r = UrlFetchApp.fetch(link, {
+        headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        muteHttpExceptions: true
+      });
+      if (r.getResponseCode() === 200) return { blob: r.getBlob(), via: 'thumbnailLink' };
+    }
+  } catch (e) {}
+
+  // 3. The file itself, and ONLY if it is genuinely small. Never ship a full photograph
+  //    just to fill a 40px box.
+  try {
+    var full = file.getBlob();
+    if (full.getBytes().length <= THUMB_MAX_BYTES) return { blob: full, via: 'fullBlob' };
+  } catch (e) {}
+  return null;
+}
 
 function getDriveThumbnails(fileIds) {
   if (!fileIds || !fileIds.length) return { ok: true, thumbs: {}, missing: [] };
   var ids = fileIds.slice(0, THUMB_MAX_IDS);
-  var thumbs = {}, missing = [];
+  var thumbs = {}, missing = [], spent = 0;
   for (var i = 0; i < ids.length; i++) {
     var id = String(ids[i] || '').trim();
     if (!id) continue;
     try {
-      var file = DriveApp.getFileById(id);
-      var blob = null;
-      // getThumbnail() is null until Drive has generated one — which for a freshly
-      // uploaded photo can be several seconds. Fall back to the file itself; the app
-      // already compresses to 900px before upload, so these are ~60-120KB.
-      try { blob = file.getThumbnail(); } catch (e) { blob = null; }
-      if (!blob) {
-        var full = file.getBlob();
-        if (full.getBytes().length <= THUMB_MAX_BYTES) blob = full;
-      }
-      if (!blob) { missing.push(id); continue; }
-      var type = blob.getContentType() || 'image/jpeg';
-      thumbs[id] = 'data:' + type + ';base64,' + Utilities.base64Encode(blob.getBytes());
+      var got = _thumbBlobFor(DriveApp.getFileById(id));
+      if (!got) { missing.push(id); continue; }
+      var type = got.blob.getContentType() || 'image/jpeg';
+      var uri = 'data:' + type + ';base64,' + Utilities.base64Encode(got.blob.getBytes());
+      // Stop before the response gets too large rather than failing the whole batch. The
+      // app asks again for whatever it still does not have.
+      if (spent + uri.length > THUMB_BUDGET) break;
+      spent += uri.length;
+      thumbs[id] = uri;
     } catch (err) {
       missing.push(id);
     }
@@ -158,11 +191,21 @@ function testDriveThumbnails() {
     Logger.log('No JPEG found under the root folder yet — take a photo on the Job Plan first.');
     return;
   }
+  var got = _thumbBlobFor(found);
   var res = getDriveThumbnails([found.getId()]);
   var uri = res.thumbs[found.getId()];
   Logger.log('File: ' + found.getName());
-  Logger.log(uri ? ('OK — thumbnail returned, ' + uri.length + ' chars of base64')
-                 : ('FAILED — Drive would not return a thumbnail. missing=' + JSON.stringify(res.missing)));
+  if (!uri) {
+    Logger.log('FAILED - Drive would not return a thumbnail. missing=' + JSON.stringify(res.missing));
+    return;
+  }
+  var kb = Math.round(uri.length * 0.75 / 1024);
+  Logger.log('OK - ' + kb + ' KB, via ' + (got ? got.via : '?'));
+  // A real thumbnail is ~10KB. Anything near 100KB means the whole photograph is being
+  // shipped, which does not survive 300 items on one estate.
+  Logger.log(kb > 40
+    ? 'WARNING: that is a full-size photo, not a thumbnail. Check that the advanced Drive service is enabled (Services -> Drive) and re-run.'
+    : 'Size looks right for a thumbnail.');
 }
 
 // ══ STORE HELPERS ════════════════════════════════════════════════════════════════
