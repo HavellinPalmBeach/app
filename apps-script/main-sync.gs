@@ -282,6 +282,10 @@ function previewReset() {
     Logger.log('  ' + name + ' sheet: ' + rows + ' data row' + (rows === 1 ? '' : 's') + ' would be cleared');
   });
   RESET_JOB_STORES.forEach(function(name) {
+    // A store tab only exists once something has been written to it — a job with no hours
+    // logged never creates LogStore. Say "not present" rather than "0 records": they mean
+    // different things and only one of them is a reason to go looking for missing data.
+    if (!ss.getSheetByName(name)) { Logger.log('  ' + name + ': not present — nothing was ever written'); return; }
     var obj = {};
     try { obj = _readStoreBlob(name) || {}; } catch (e) {}
     var n = Object.keys(obj).length;
@@ -314,10 +318,13 @@ function resetAllJobDataConfirm(alsoContractors) {
       Logger.log('Cleared ' + name);
     });
     RESET_JOB_STORES.forEach(function(name) {
+      // Never CREATE a tab just to empty it — _writeStoreBlob inserts a missing sheet, so
+      // an unconditional call leaves behind empty stores the estate never had.
+      if (!ss.getSheetByName(name)) { Logger.log('Skipped ' + name + ' — not present'); return; }
       _writeStoreBlob(name, {});
       Logger.log('Cleared ' + name);
     });
-    if (alsoContractors === true) {
+    if (alsoContractors === true && ss.getSheetByName('ContractorStore')) {
       _writeStoreBlob('ContractorStore', {});
       Logger.log('Cleared ContractorStore (you asked for it explicitly)');
     } else {
