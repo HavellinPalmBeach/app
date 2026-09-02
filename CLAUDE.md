@@ -89,6 +89,32 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## Clearing the practice data (BUILT 2026-09-02)
+*"how do i delete all of my dummy clients and their inventories, estimates, etc"* — asked
+before the first real jobs. `previewReset()` / `resetAllJobDataConfirm()` /
+`trashJobFoldersConfirm()` in `main-sync.gs`.
+
+- **Two steps, the same shape as `pruneQuoStale` / `pruneQuoStaleConfirm`**: the preview
+  names every row and folder that would go, and a differently-named function is the only
+  thing that removes anything. **None of them is in `doGet` or `doPost`**, so no HTTP
+  request can reach them — a destructive action must not be one malformed URL away.
+- **What it clears:** `Jobs` / `Estimates` / `Hours` sheets (headers kept — the app writes
+  against those column names) and the `EstimateStore` · `JobPlanStore` · `ChangeOrderStore` ·
+  `LogStore` · `MediaStore` blobs.
+- **What it deliberately does NOT touch.** The Vendor Directory and Referral Partners are
+  **separate spreadsheets** with 150+ rows of real work — nothing here opens them.
+  `ContractorStore` is the crew, not practice clients, so it survives unless you pass `true`.
+  Drive is a separate function again, and it **trashes rather than deletes** — the photographs
+  are the one thing that cannot be re-typed, so they get Drive's 30-day undo.
+- **⚠ THE ORDERING IS THE PART THAT BITES: clear every DEVICE too, or the wipe undoes
+  itself.** The stores merge by record id and union, so a browser still holding the old jobs
+  pushes them straight back up on its next save and the sheet repopulates with what you just
+  deleted. Per device, keeping Settings and the cached directories:
+  `Object.keys(localStorage).filter(k => /^(havellin_(jobs|est|jobplan|co|logs)_v|havellin_est_scratch|hav_media_)/.test(k)).forEach(k => localStorage.removeItem(k))`
+  then reload. `hav_sheets_url` / `hav_vendor_url` / `hav_referral_url` / `hav_tc_alpha` /
+  `havellin_defaults_v` and the two `_dir` caches are left alone on purpose — otherwise the
+  first thing after a reset is re-typing three Apps Script URLs on a phone.
+
 ## Three rows numbered #1, and a panel that could not explain itself (BUILT 2026-09-02)
 *"seems like double counting here, multiple times. and how can both be true?"* — off a
 screenshot of the Removed items panel showing two tombstones both reading **#1** beside a live

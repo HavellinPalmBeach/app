@@ -249,6 +249,107 @@ function testDriveThumbnails() {
   Logger.log('USING: ' + got.via + ' at ' + kb(got.blob) + ' - good.');
 }
 
+// ══ RESETTING THE DUMMY DATA ═════════════════════════════════════════════════════
+// Written 2026-09-02 to clear the practice clients before real jobs start.
+//
+// TWO STEPS ON PURPOSE, the same shape as pruneQuoStale / pruneQuoStaleConfirm: the
+// preview tells you exactly what will go, and a separately-named function is the only
+// thing that actually removes it. Nothing here is reachable over HTTP — it is not in
+// doGet or doPost — so a stray request can never trigger it.
+//
+// WHAT IT DOES NOT TOUCH, deliberately:
+//   - the Vendor Directory and Referral Partners sheets. Different spreadsheets, real
+//     data, 150+ rows you spent real time on.
+//   - ContractorStore. Contractors are your crew, not practice clients. Pass true to
+//     resetAllJobDataConfirm to include it.
+//   - Drive. Job folders and their photos are left alone — see trashJobFoldersConfirm.
+var RESET_JOB_STORES = ['EstimateStore', 'JobPlanStore', 'ChangeOrderStore', 'LogStore', 'MediaStore'];
+var RESET_JOB_SHEETS = ['Jobs', 'Estimates', 'Hours'];
+
+function previewReset() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  Logger.log('This is a PREVIEW. Nothing has been deleted.');
+  Logger.log('Spreadsheet: ' + ss.getName());
+  RESET_JOB_SHEETS.forEach(function(name) {
+    var sh = ss.getSheetByName(name);
+    var rows = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
+    Logger.log('  ' + name + ' sheet: ' + rows + ' data row' + (rows === 1 ? '' : 's') + ' would be cleared');
+  });
+  RESET_JOB_STORES.forEach(function(name) {
+    var obj = {};
+    try { obj = _readStoreBlob(name) || {}; } catch (e) {}
+    var n = Object.keys(obj).length;
+    Logger.log('  ' + name + ': ' + n + ' record' + (n === 1 ? '' : 's') + ' would be cleared');
+  });
+  var cont = {};
+  try { cont = _readStoreBlob('ContractorStore') || {}; } catch (e) {}
+  Logger.log('  ContractorStore: ' + Object.keys(cont).length + ' KEPT (your crew, not clients)');
+  Logger.log('');
+  Logger.log('Job folders in Drive that trashJobFoldersConfirm() would move to Trash:');
+  var folders = _jobFolders();
+  if (!folders.length) Logger.log('  (none found under the Havellin root folder)');
+  folders.forEach(function(f){ Logger.log('  ' + f.getName()); });
+  Logger.log('');
+  Logger.log('To go ahead: run resetAllJobDataConfirm(). Drive is separate and stays until');
+  Logger.log('you run trashJobFoldersConfirm().');
+}
+
+function resetAllJobDataConfirm(alsoContractors) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    RESET_JOB_SHEETS.forEach(function(name) {
+      var sh = ss.getSheetByName(name);
+      if (!sh) return;
+      var last = sh.getLastRow();
+      // Row 1 is the header and stays — the app writes against those column names.
+      if (last > 1) sh.deleteRows(2, last - 1);
+      Logger.log('Cleared ' + name);
+    });
+    RESET_JOB_STORES.forEach(function(name) {
+      _writeStoreBlob(name, {});
+      Logger.log('Cleared ' + name);
+    });
+    if (alsoContractors === true) {
+      _writeStoreBlob('ContractorStore', {});
+      Logger.log('Cleared ContractorStore (you asked for it explicitly)');
+    } else {
+      Logger.log('KEPT ContractorStore — pass true if you really want the crew gone too');
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  Logger.log('');
+  Logger.log('Done on the sheet. NOW CLEAR EACH DEVICE that has used the app, or the next');
+  Logger.log('save from a stale browser will push the old clients straight back up.');
+}
+
+// Job folders sit directly under the Havellin root and are named "Client - HVL-....".
+// Matching on that suffix means an unrelated folder someone filed there is left alone.
+function _jobFolders() {
+  var out = [];
+  var it = DriveApp.getFolderById(ROOT_FOLDER_ID).getFolders();
+  while (it.hasNext()) {
+    var f = it.next();
+    if (/ - HVL-/i.test(f.getName())) out.push(f);
+  }
+  return out;
+}
+
+// Separate from the sheet wipe, and separate on purpose: this is the photography. It goes
+// to Drive's Trash, not shredded, so there are ~30 days to change your mind.
+function trashJobFoldersConfirm() {
+  var folders = _jobFolders();
+  if (!folders.length) { Logger.log('No job folders found.'); return; }
+  folders.forEach(function(f) {
+    f.setTrashed(true);
+    Logger.log('Moved to Trash: ' + f.getName());
+  });
+  Logger.log('');
+  Logger.log(folders.length + ' folder(s) moved to Drive Trash — recoverable for about 30 days.');
+}
+
 // ══ STORE HELPERS ════════════════════════════════════════════════════════════════
 
 // A Google Sheets cell holds at most 50,000 characters. Every store here is one JSON
