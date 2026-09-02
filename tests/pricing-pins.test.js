@@ -128,4 +128,46 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(cBlurb, 'keeps the crew cost it was priced with', 'the promise is still made');
     has(cBlurb, 'before 2026-09-02', 'and the estimates it cannot keep it for are named');
   }
+
+  group('the five tabs answer "nothing selected yet" the same way');
+  {
+    const src = APP();
+    // Four tabs had four answers to one moment: two printed bare grey text on the cream
+    // background, one a narrow centred sheet, one a full-width white band. Anthony:
+    // "let's standardize the look of these three screens to match Client Estimate."
+    const olds = src.split('\n').filter((l) =>
+      l.includes('text-align:center;padding:3rem;') && l.includes('color:var(--gray)'));
+    eq(olds, [], 'no hand-rolled empty state survives');
+
+    ['Select a client to view their estate inventory', 'Select a job to load its plan',
+     'Select a job and stage to generate an invoice', 'Select a saved estimate from the dropdown',
+     'Select a job with an approved estimate'].forEach((msg) => {
+      const at = src.indexOf(msg);
+      ok(at > 0, 'the ' + msg.slice(0, 24) + '… message is still there');
+      // The class has to be on the element that carries the message.
+      ok(src.slice(Math.max(0, at - 120), at).includes('tab-empty'), msg.slice(0, 24) + '… uses the shared card');
+    });
+
+    // The document tabs frame a 780px sheet on a white band. With nothing in it that
+    // rendered as a bordered box inside a white box, so both stand down when empty.
+    has(src, '.ce-page:has(> .tab-empty)', 'the document sheet stands down when it holds only the message');
+    has(src, '#client-estimate-preview:has(.tab-empty)', 'and so does the band behind it');
+    // An inline width beats the stylesheet, so the stand-down could never win.
+    lacks(src, 'id="inv-page-content" style=', 'the invoice page width lives in CSS, not on the element');
+    has(src, '#inv-page-content{max-width:780px', 'where the stand-down rule can override it');
+  }
+
+  group('Settings says what the four rates actually are');
+  {
+    const src = APP();
+    const at = src.indexOf('Assumed Crew Cost');
+    ok(at > 0, 'the block is named for what it does, not "what we pay"');
+    const blurb = src.slice(at, src.indexOf('</div>', src.indexOf('</div>', at) + 6));
+    // The old heading implied a parallel rate card competing with the directory. It is
+    // not: it is the assumption made before a name exists.
+    has(blurb, 'A named person always beats these', 'and says the directory wins');
+    has(blurb, 'before', 'framing them as a pre-naming assumption');
+    lacks(src, 'Founder concierge — $/hr',
+          'the founder label is gone — both founders carry their own rate in the directory');
+  }
 };

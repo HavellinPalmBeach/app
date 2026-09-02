@@ -125,7 +125,30 @@ right, and the half that was wrong is what found the worse bug.
 - **`.lbl-hint` was scoped to `.vform .fld label`** while the comment above it offered it as
   general, so the first use elsewhere inherited the label's uppercase and read as one run-on
   heading. General now.
-- **534 committed checks.**
+- **The four cost rates are relabelled to say what they are.** *"we have all contractor
+  pricing pinned to individual contractors, including the founders. what is going on with
+  that? that seems the most accurate way to price jobs."* It IS, and it already happens:
+  Anthony $100, Ashley $100, Anthony Jr $60 all sit in `DEFAULT_CONTRACTORS` with their own
+  rate, and a named person always wins. **The four only fire before a name exists — which at
+  ESTIMATE time is normally the whole specialist crew**, because Build Estimate takes a
+  headcount and naming is Job Plan work once Won. So they price the margin on an estimate and
+  the real rates take over as the crew is staffed. *Founder concierge* → **Concierge not yet
+  assigned**, *Contractor PS Standard/Senior* → **Specialist slot**, and the heading
+  *Labour Cost Rates — what we pay* → **Assumed Crew Cost — before anyone is named**. Nothing
+  behavioural changed; the labels were describing a parallel rate card that does not exist.
+- **One empty state for the five job-selecting tabs (`.tab-empty`).** *"let's standardize the
+  look of these three screens to match Client Estimate."* Four tabs had four answers to the
+  same moment — Inventory and Job Plan printed bare grey text on cream, Invoices a 780px
+  centred sheet, Client Estimate a full-width white band. Two traps found doing it:
+  - **The Inventory picker was not misplaced; the blurb was too long.** The header is
+    `flex-wrap:wrap`, so a long left-hand block pushes the select onto its own row. Shortening
+    the copy fixed the layout — reach for that before touching the flex rules.
+  - **The document tabs frame a 780px sheet on a white band**, so a bordered card inside that
+    rendered as a box inside a box. `:has(> .tab-empty)` stands both down when the page holds
+    nothing but the message, and a loaded document is untouched (verified: still 780px, still
+    on its band). **`#inv-page-content` had its width INLINE**, which beats the stylesheet, so
+    the stand-down could never win there — moved into CSS.
+- **553 committed checks.**
 
 ## Clearing the practice data (BUILT 2026-09-02)
 *"how do i delete all of my dummy clients and their inventories, estimates, etc"* — asked

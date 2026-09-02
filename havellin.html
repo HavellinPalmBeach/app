@@ -243,6 +243,26 @@ input:checked+.slider:before{transform:translateX(18px);}
 .fb:hover{background:var(--tan);}.fb.active{background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);}
 .divider{height:1px;background:var(--border);margin:1rem 0;}
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--gray);font-size:12px;}
+/* The "nothing selected yet" panel, shared by Client Estimate, Inventory, Job Plan and
+   Invoices. Four tabs had four different answers to the same moment — two printed bare
+   grey text on the cream background, one a narrow centred page, one a full-width white
+   band — so the app looked assembled rather than designed before a job was even picked. */
+.tab-empty{background:var(--white);border:1px solid var(--border);border-radius:8px;
+  text-align:center;padding:3rem 1rem;color:var(--gray);font-size:12px;}
+/* On the three DOCUMENT tabs the empty message lives inside the page element, which is a
+   780px white sheet sitting on a full-width white band — so the card rendered as a box
+   inside a box. When the page holds nothing but this message there is no document to
+   frame, so the sheet and the band both stand down and all five tabs show the same card.
+   :has() is doing real work here; without it this needs a class toggle in three render
+   paths, and a browser too old for :has() simply gets the previous look. */
+/* Moved off the element's style attribute: an inline width beats the stylesheet, so the
+   stand-down rule below could never win and the invoice kept its 780px sheet. */
+#inv-page-content{max-width:780px;margin:0 auto;padding:2.5rem;}
+.ce-page:has(> .tab-empty),
+#inv-page-content:has(> .tab-empty){max-width:none;padding:0;background:none;}
+#client-estimate-preview:has(.tab-empty),
+#invoice-preview:has(.tab-empty),
+#agreement-preview:has(.tab-empty){background:none;}
 input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 
 /* PIN MODAL */
@@ -254,7 +274,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .pin-input:focus{border-color:var(--bronze);}
 
 /* ═══════════════ CLIENT ESTIMATE PRINT STYLES ═══════════════ */
-#client-estimate-preview{background:var(--white);}
+#client-estimate-preview,#invoice-preview,#agreement-preview{background:var(--white);}
 .ce-page{max-width:780px;margin:0 auto;padding:2.5rem;background:var(--white);}
 .ce-logo-wrap{text-align:center;margin-bottom:1.5rem;}
 .ce-logo-svg{display:inline-block;}
@@ -736,7 +756,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:43pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:52pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1513,7 +1533,7 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:13px;font-weight:600;">Estate Inventory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Where the day&rsquo;s walkthrough gets worked. Everything captured on the Job Plan lands here, grouped by disposition &mdash; put values on it, decide where it goes, tick each line off, then produce the client&rsquo;s schedule.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Work the day&rsquo;s walkthrough: value each item, decide where it goes, then produce the client&rsquo;s schedule.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
@@ -1554,7 +1574,7 @@ body.no-smf .smf-col{display:none;}
 
   <div id="client-estimate-preview">
     <div class="ce-page" id="ce-page-content">
-      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>
+      <div class="tab-empty">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>
     </div>
   </div>
 </div>
@@ -1614,8 +1634,9 @@ body.no-smf .smf-col{display:none;}
         <div style="font-size:13px;font-weight:600;">Job Plan</div>
         <div style="font-size:11px;color:var(--gray);margin-top:2px;">Live working plan auto-generated from the approved estimate. Internal use only.</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <select id="plan-job" onchange="loadJobPlanTab()" style="min-width:320px;max-width:520px;width:auto;"><option value="">Select job</option></select>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
+        <select id="plan-job" onchange="loadJobPlanTab()" style="width:340px;font-size:12px;"><option value="">Select job</option></select>
         <button class="btn-bronze" id="btn-plan-pdf" onclick="printJobPlan()" style="display:none;">Print Job Plan</button>
       </div>
     </div>
@@ -1689,7 +1710,7 @@ body.no-smf .smf-col{display:none;}
   </div>
 
   <div id="job-plan-content">
-    <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job to load its plan.</div>
+    <div class="tab-empty">Select a job to load its plan.</div>
   </div>
 </div>
 
@@ -1723,8 +1744,8 @@ body.no-smf .smf-col{display:none;}
   <div id="inv-banner-wrap"></div>
 
   <div id="invoice-preview">
-    <div id="inv-page-content" style="max-width:780px;margin:0 auto;background:white;padding:2.5rem;">
-      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job and stage to generate an invoice.</div>
+    <div id="inv-page-content">
+      <div class="tab-empty">Select a job and stage to generate an invoice.</div>
     </div>
   </div>
 </div>
@@ -1831,7 +1852,7 @@ body.no-smf .smf-col{display:none;}
 
   <div id="agreement-preview">
     <div id="agr-page-content" class="ce-page">
-      <div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job with an approved estimate to generate the agreement.</div>
+      <div class="tab-empty">Select a job with an approved estimate to generate the agreement.</div>
     </div>
   </div>
 </div>
@@ -1966,27 +1987,31 @@ body.no-smf .smf-col{display:none;}
       where they work the whole day. A saved estimate keeps the rate it was priced under.
     </div>
 
-    <div class="sec" style="margin-top:14px;">Labour Cost Rates — what we pay</div>
+    <div class="sec" style="margin-top:14px;">Assumed Crew Cost — before anyone is named</div>
     <div style="font-size:11px;color:var(--gray);margin-bottom:10px;">
-      Internal only. These drive the margin panel and the walk-away floor — they are <strong>never</strong> shown to a
-      client and never billed. A named person in the Contractors directory is paid their own rate on their own record;
-      these four cover the founders and the unnamed placeholder slots used before a specific contractor is assigned.
+      Internal only. These drive the margin panel and the walk-away floor &mdash; they are <strong>never</strong> shown to a
+      client and never billed.
+      <br><br><strong>A named person always beats these.</strong> Anthony, Ashley and every contractor carry their own rate
+      on their own record in the Contractors directory, and that rate is what gets used the moment they are on the job.
+      These four are only the assumption made <em>before</em> a name exists &mdash; which at estimate time is normally the
+      whole specialist crew, since you pick a headcount there and name people on the Job Plan once the job is Won.
+      So these price the margin on an estimate; the real rates take over as the crew is staffed.
     </div>
     <div class="grid2" style="gap:10px;">
       <div>
-        <label style="margin-top:0;">Founder concierge — $/hr</label>
+        <label style="margin-top:0;">Concierge not yet assigned — $/hr</label>
         <input type="number" id="set-cost-founder-tc" min="0" step="5" placeholder="100" style="width:110px;">
       </div>
       <div>
-        <label style="margin-top:0;">Contractor concierge — $/hr</label>
+        <label style="margin-top:0;">Outside concierge slot — $/hr</label>
         <input type="number" id="set-cost-contractor-tc" min="0" step="5" placeholder="60" style="width:110px;">
       </div>
       <div>
-        <label style="margin-top:0;">Contractor PS, Standard — $/hr</label>
+        <label style="margin-top:0;">Specialist slot, standard — $/hr</label>
         <input type="number" id="set-cost-ps-standard" min="0" step="5" placeholder="30" style="width:110px;">
       </div>
       <div>
-        <label style="margin-top:0;">Contractor PS, Senior — $/hr</label>
+        <label style="margin-top:0;">Specialist slot, senior — $/hr</label>
         <input type="number" id="set-cost-ps-senior" min="0" step="5" placeholder="35" style="width:110px;">
       </div>
     </div>
@@ -7199,7 +7224,7 @@ function buildPrepEstimateBody(e, job) {
 function renderClientEstimate() {
   var _ceJob = currentEstimate && (currentEstimate.job || jobs.find(function(j){ return j.id===currentEstimate.jobId; }));
   if (!currentEstimate || !_ceJob) {
-    document.getElementById('ce-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>';
+    document.getElementById('ce-page-content').innerHTML = '<div class="tab-empty">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>';
     updateApprovalUI();
     return;
   }
@@ -13948,9 +13973,9 @@ function renderInventoryTab() {
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
   var cont = document.getElementById('inventory-content');
   if (!cont) return;
-  if (!jobId) { cont.innerHTML = '<div class="empty-state">Select a client to view their estate inventory.</div>'; return; }
+  if (!jobId) { cont.innerHTML = '<div class="tab-empty">Select a client to view their estate inventory.</div>'; return; }
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) { cont.innerHTML = '<div class="empty-state">Job not found.</div>'; return; }
+  if (!job) { cont.innerHTML = '<div class="tab-empty">Job not found.</div>'; return; }
   _invEnsureLoaded(jobId);
   var all = _invAssignItemNos(jobId);
   // Default to the day's work when there IS a day's work — that is what the tab is opened
@@ -15635,7 +15660,7 @@ function renderInvoice() {
   var banner = document.getElementById('inv-banner-wrap');
 
   if (!job) {
-    content.innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job and stage to generate an invoice.</div>';
+    content.innerHTML = '<div class="tab-empty">Select a job and stage to generate an invoice.</div>';
     btnApprove.style.display = 'none'; btnPdf.style.display = 'none';
     badge.innerHTML = ''; banner.innerHTML = '';
     return;
@@ -16404,7 +16429,7 @@ function loadJobPlanTab() {
   var content = document.getElementById('job-plan-content');
   var printBtn = document.getElementById('btn-plan-pdf');
   var empty = function(msg) {
-    content.innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">' + msg + '</div>';
+    content.innerHTML = '<div class="tab-empty">' + msg + '</div>';
     var hdrEl = document.getElementById('job-plan-header'); if (hdrEl) hdrEl.innerHTML = '';
     if (printBtn) printBtn.style.display = 'none';
   };
@@ -20440,7 +20465,7 @@ function loadAgreement() {
   agrApprovedBy = job ? (job.agrApprovedBy || '') : '';
   agrApprovedAt = job ? (job.agrApprovedAt || '') : '';
   if (!job) {
-    document.getElementById('agr-page-content').innerHTML = '<div style="font-size:12px;color:var(--gray);text-align:center;padding:3rem;">Select a job with an approved estimate to generate the agreement.</div>';
+    document.getElementById('agr-page-content').innerHTML = '<div class="tab-empty">Select a job with an approved estimate to generate the agreement.</div>';
     document.getElementById('agr-payment-card').style.display = 'none';
     updateAgrUI();
     return;
