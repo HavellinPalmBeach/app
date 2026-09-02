@@ -238,6 +238,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(thBody, '<img', 'never an <img> that could render broken in front of a client');
   }
 
+  group('the thumbnail cache never starves the manifest');
+  {
+    const ctx = sandbox({ fns: ['_invThumbKey', '_invThumbCache', '_invSaveThumbCache'],
+                          vars: ['INV_THUMB_CACHE_MAX'] });
+    ctx._invThumbs = { 7: {} };
+    // ~21KB of base64 per thumbnail, which is what a 16KB JPEG comes to. 300 of them is
+    // 6MB against a ~5MB origin quota that the MANIFEST also lives in.
+    const blob = 'x'.repeat(21000);
+    for (let i = 0; i < 200; i++) ctx._invThumbs[7]['id' + String(i).padStart(4, '0')] = blob;
+    ctx._invSaveThumbCache(7);
+
+    const stored = ctx.__store['hav_media_thumb_7'];
+    ok(stored.length <= ctx.INV_THUMB_CACHE_MAX, 'the persisted cache is held under the budget');
+    const kept = Object.keys(JSON.parse(stored));
+    ok(kept.length > 0 && kept.length < 200, 'some are kept and some are evicted');
+    // Oldest-first: the survivors are the most recent fetches.
+    eq(kept[kept.length - 1], 'id0199', 'the newest thumbnail survives');
+    ok(kept.indexOf('id0000') < 0, 'and the oldest is the one dropped');
+
+    const src = APP();
+    const at = src.indexOf('function _invSaveThumbCache(');
+    const body = src.slice(at, src.indexOf('\n}\n', at));
+    has(body, 'removeItem', 'a cache that still will not fit is dropped, not left half-written');
+  }
+
   group('the new fields survive a save');
   {
     const src = APP();

@@ -187,7 +187,14 @@ rectangles you tick."* Full spec: `INVENTORY_WORKSPACE_SPEC.md`.
     this tab re-renders on every disposition change and every review tick. The PRINT path inlines,
     because there is no second pass there.
   - Thumbnails cache under their own `hav_media_thumb_<jobId>` key — same reason `_photoRetryData`
-    is separate: image bytes must never crowd the manifest write out of the quota.
+    is separate: image bytes must never crowd the manifest write out of the quota. **That was a
+    comment and not a rule until `INV_THUMB_CACHE_MAX` (2MB) enforced it.** localStorage is ~5MB
+    for the whole origin and the MANIFEST shares it; a 300-item estate at ~21KB of base64 a
+    thumbnail is 6MB, so an uncapped photo cache does not just fail to save itself, it starves
+    the one write that must never fail. Oldest-first eviction, and a cache that still will not
+    fit is removed outright rather than left half-written. Thumbnails are refetchable; the
+    record is not.
+  - **Measured on the real Havellin folder: 16KB via `thumbnailLink` against a 130KB photo.**
   - **⚠ `DriveApp.File.getThumbnail()` IS NOT A THUMBNAIL AND MUST NOT BE TRUSTED BY NAME.**
     On a real Havellin photo it returned `null` on one run and the **whole 130KB image** on
     the next. The first build put it first in the chain and fell through to `file.getBlob()`

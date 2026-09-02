@@ -733,7 +733,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 11:55am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:17pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11459,9 +11459,30 @@ function _invThumbCache(jobId) {
   _invThumbs[jobId] = out;
   return out;
 }
+// ⚠ THE BUDGET IS THE POINT, not a nicety. localStorage is ~5MB for the whole origin and
+// the MANIFEST shares it — the manifest being the record of what the estate owns, what it
+// is worth and where it went. A 300-item estate at ~21KB of base64 a thumbnail is 6MB, so
+// an uncapped photo cache does not merely fail to save itself, it starves the one write
+// that must never fail. Evict oldest-first until it fits; thumbnails are refetchable and
+// the record is not.
+var INV_THUMB_CACHE_MAX = 2000000;
 function _invSaveThumbCache(jobId) {
-  try { localStorage.setItem(_invThumbKey(jobId), JSON.stringify(_invThumbs[jobId] || {})); }
-  catch (e) { /* disposable by design — a full quota drops thumbnails, never the manifest */ }
+  var cache = _invThumbs[jobId] || {};
+  var json = JSON.stringify(cache);
+  if (json.length > INV_THUMB_CACHE_MAX) {
+    // String keys keep insertion order, so the front of this list is the oldest fetch.
+    var keys = Object.keys(cache);
+    while (keys.length && json.length > INV_THUMB_CACHE_MAX) {
+      delete cache[keys.shift()];
+      json = JSON.stringify(cache);
+    }
+  }
+  try { localStorage.setItem(_invThumbKey(jobId), json); }
+  catch (e) {
+    // Still no room. Drop the persisted copy outright rather than leaving a stale half of
+    // one behind — this session keeps its in-memory cache and the next refetches.
+    try { localStorage.removeItem(_invThumbKey(jobId)); } catch (e2) {}
+  }
 }
 // Every upload has always returned a Drive file id and the app discarded it until
 // 2026-09-01, so rows captured before then carry only the URL:
