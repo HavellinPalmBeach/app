@@ -756,7 +756,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.04 · 1:02pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.04 · 1:32pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -957,6 +957,21 @@ body.no-smf .smf-col{display:none;}
           </div>
         </div>
         <div id="i-gate-readout" style="margin-bottom:6px;"></div>
+        <!-- Who builds the inventory. Asked here because this is where the attorney
+             conversation happens; it SEEDS the estimate's Documentation scope and the
+             estimate's own dropdown remains the thing that prices (see DOC_SCOPES).
+             Changing this later re-seeds nothing already priced. -->
+        <div class="row" style="margin-top:4px;">
+          <div class="gate-cell"><label>Who builds the inventory?</label>
+            <select id="i-docscope">
+              <option value="full">Havellin &mdash; inventory &amp; estimated value</option>
+              <option value="capture">Havellin photographs &amp; lists; counsel values</option>
+              <option value="none">Counsel&rsquo;s office &mdash; Havellin sorts &amp; stages</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal?</em> This seeds the estimate&rsquo;s Documentation scope, which prices it; the walkthrough can still override it there. Default to the first until they say otherwise.</div>
+          </div>
+          <div></div>
+        </div>
         <div class="divider"></div>
       </div>
       <label>Notes</label>
@@ -3378,11 +3393,26 @@ function estimateDocScope(e) {
   if (!svcHasDocStep(svc)) return 'none';
   return (e && docScopeDef(e.docScope)) ? e.docScope : 'full';
 }
+// The scope a FRESH estimate opens at: the answer recorded at intake, else full. Same
+// shape as the production rate — Settings holds α's default, the job holds this one — and
+// with the same rule: it seeds a new build and never moves an estimate already priced.
+function seedDocScopeFromJob(job) {
+  return (job && docScopeDef(job.docScope)) ? job.docScope : 'full';
+}
+// When the estimate is priced at a different scope than intake recorded, say so under the
+// dropdown. Not a warning — overriding on the walkthrough is legitimate — but the two
+// answers must never silently disagree, because the attorney was told one of them.
+function _docScopeIntakeNote(job, active) {
+  if (!job || !docScopeDef(job.docScope)) return '';
+  if (job.docScope === active) return '';
+  var i = docScopeDef(job.docScope), a = docScopeDef(active);
+  return 'Intake recorded ' + i.label.split(' \u2014 ')[0] + '; this estimate is priced at ' + a.label.split(' \u2014 ')[0] + '.';
+}
 function setEstimateDocScope(key) {
   _estimateDocScope = docScopeDef(key) ? key : 'full';
   calcAll();
 }
-function paintEstimateDocScope(svc) {
+function paintEstimateDocScope(svc, job) {
   var wrap = document.getElementById('e-docscope-wrap');
   if (!wrap) return;
   var show = svcHasDocStep(svc);
@@ -3392,7 +3422,10 @@ function paintEstimateDocScope(svc) {
   if (sel && document.activeElement !== sel) sel.value = activeDocScope();
   var hint = document.getElementById('e-docscope-hint');
   var d = docScopeDef(activeDocScope());
-  if (hint && d) hint.textContent = d.hint;
+  if (hint && d) {
+    var note = _docScopeIntakeNote(job, activeDocScope());
+    hint.innerHTML = esc(d.hint) + (note ? ' <strong>' + esc(note) + '</strong>' : '');
+  }
 }
 
 // Years-in-home tenure nudge — the longer someone has lived in a home, the more
@@ -4672,7 +4705,7 @@ function calcAll() {
   var _ejob = jobs.find(function(j){ return j.id === _ejId; });
   var yearsInHomeVal = _ejob ? _ejob.yearsInHome : '';
   var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal, activeDocScope());
-  paintEstimateDocScope(svcKey);
+  paintEstimateDocScope(svcKey, _ejob);
   if (isPrep) eng = {totTC:0, totPS:0, roomTC:0, roomPS:0, load:0, days:0, perRoom:[], volFactor:1, cpxFactor:1};
   // Under the working-supervisor model these two are NOT the billed TC/PS figures.
   // baseTCHrs = off-site coordination; basePSHrs = the hands-on work pool (W).
@@ -6238,6 +6271,7 @@ function saveIntake() {
     docLevel:(document.getElementById('i-doclevel')||{}).value||'',
     gate706:            (document.getElementById('i-gate-706')||{}).value||'',
     gateDispute:        (document.getElementById('i-gate-dispute')||{}).value||'',
+    docScope:           (document.getElementById('i-docscope')||{}).value||'full',   // seeds the estimate's Documentation scope
     status:'new',
     havellinEst:null, totalEst:null, inRange:null, approved:false,
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
@@ -6285,7 +6319,7 @@ function saveIntake() {
 // text. The Clear button's list was missing a different five.
 //
 // Add new intake fields HERE and both paths stay correct.
-var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no' };
+var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no', 'i-docscope': 'full' };
 var INTAKE_FIELDS = [
   'i-svc', 'i-fname', 'i-lname', 'i-phone', 'i-email', 'i-addr', 'i-city', 'i-zip',
   'i-src', 'i-referredby', 'i-refpartner',
@@ -6297,7 +6331,7 @@ var INTAKE_FIELDS = [
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
-  'i-gate-706', 'i-gate-dispute',
+  'i-gate-706', 'i-gate-dispute', 'i-docscope',
   'i-dest-addr', 'i-dest-city', 'i-dest-zip', 'i-dest-sqft', 'i-dest-beds', 'i-dest-baths'
 ];
 
@@ -6472,7 +6506,8 @@ function applyOpenedEstimate(jobId, job, status) {
   // No saved estimate — clear all rooms AND the non-room extras (package, third-
   // party vendors, home prep) so this new client starts clean instead of inheriting
   // the last estimate's selections.
-  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';   // fresh build — price at the current Settings α, full documentation
+  _estimateAlphaPin = null; _estimateCostPin = null;
+  _estimateDocScope = seedDocScopeFromJob(job);   // fresh build — price at the current Settings α and the scope intake recorded
   window._suppressEstimateAutoSave = true;
   clearAllRooms();
   resetEstimateExtras();
@@ -22219,6 +22254,11 @@ function showEditClient(jobId) {
 
   // Authorized Representative — shown for Estate Settlement + Probate
   html += '<div id="ec-estate-auth-fields" style="display:'+(isEstate?'block':'none')+';">';
+  html += '<div class="sec" style="margin-top:14px;">Inventory</div>';
+  html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('Who builds the inventory?', '<select id="ec-docscope" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'full',l:'Havellin — inventory & estimated value'},{v:'capture',l:'Havellin photographs & lists; counsel values'},{v:'none',l:'Counsel\'s office — Havellin sorts & stages'}], (typeof docScopeDef === 'function' && docScopeDef(job.docScope)) ? job.docScope : 'full')+'</select>', false);
+  html += '</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Seeds a new estimate\'s Documentation scope. An estimate already priced keeps its own setting.</div>';
   html += '<div class="sec" style="margin-top:14px;">Authorized Representative</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('First Name', txt('exec-fname', job.executorFname || (job.executor ? job.executor.split(' ')[0] : ''), 'First name'), true);
@@ -22304,6 +22344,12 @@ function saveClientEdit(jobId) {
   if (!_locked) job.premium = document.getElementById('ec-premium').value === 'yes';
 
   var isEstateEdit = (svc === 'probate' || svc === 'contested_probate' || svc === 'cleanout' || svc === 'estate');
+  // Who builds the inventory — every estate service, not only probate. Seeds the next
+  // fresh estimate; an estimate already priced keeps its own pin.
+  if (isEstateEdit) {
+    var _ecDs = document.getElementById('ec-docscope');
+    if (_ecDs && typeof docScopeDef === 'function' && docScopeDef(_ecDs.value)) job.docScope = _ecDs.value;
+  }
   // Probate-only fields (attorney + case info)
   if (svc === 'probate' || svc === 'contested_probate') {
     var attyFname = (document.getElementById('ec-atty-fname').value||'').trim();

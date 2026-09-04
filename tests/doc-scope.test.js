@@ -113,7 +113,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, "docScope: activeDocScope()", 'the snapshot stamps the scope it was priced under');
     has(src, "_estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';", 'restoreEstimateToUI pins the saved scope back');
     const resets = (src.match(/_estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';/g) || []).length;
-    eq(resets, 3, 'every site that clears the α pin clears the scope pin too — a stale scope on a fresh build misprices the next job');
+    eq(resets, 2, 'the two no-job reset sites clear the scope pin with the α pin');
+    has(src, "_estimateDocScope = seedDocScopeFromJob(job);   // fresh build", 'the fresh-build site seeds from the job instead — a stale scope on a fresh build misprices the next job');
     has(src, "_volPreset = 'normal'; paintVolPreset();\n  _estimateDocScope = 'full';", 'resetEstimate clears it with the preset');
   }
 
@@ -219,6 +220,41 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, "documentation priced OUT — counsel handles the inventory", 'the badge names a priced-out step');
     has(src, "'Photograph & list (counsel values)' : (STEP_LABELS[L] || L)", 'the breakdown relabels the halved step');
     has(src, 'id="e-docscope"', 'the control exists on Build Estimate');
-    has(src, 'paintEstimateDocScope(svcKey);', 'and is painted from calcAll, so it hides on services with no document step');
+    has(src, 'paintEstimateDocScope(svcKey, _ejob);', 'and is painted from calcAll with the job, so it hides on services with no document step and can compare against intake');
+  }
+
+  group('intake asks who builds the inventory, and SEEDS the estimate rather than pricing it');
+  {
+    const ctx = sandbox({
+      fns: ['seedDocScopeFromJob', '_docScopeIntakeNote', 'docScopeDef'],
+      vars: ['DOC_SCOPES'],
+    });
+    eq(ctx.seedDocScopeFromJob({ docScope: 'none' }), 'none', 'a fresh estimate opens at the intake answer');
+    eq(ctx.seedDocScopeFromJob({ docScope: 'capture' }), 'capture', 'capture too');
+    eq(ctx.seedDocScopeFromJob({}), 'full', 'a job from before the question was asked opens at full');
+    eq(ctx.seedDocScopeFromJob({ docScope: 'bogus' }), 'full', 'garbage on the job opens at full');
+    eq(ctx.seedDocScopeFromJob(null), 'full', 'no job at all opens at full');
+
+    eq(ctx._docScopeIntakeNote({ docScope: 'capture' }, 'capture'), '', 'no note when the estimate agrees with intake');
+    eq(ctx._docScopeIntakeNote({}, 'none'), '', 'no note when intake never answered — there is nothing to disagree with');
+    has(ctx._docScopeIntakeNote({ docScope: 'capture' }, 'full'), 'Intake recorded Capture only; this estimate is priced at Full', 'the two answers never silently disagree');
+    has(ctx._docScopeIntakeNote({ docScope: 'none' }, 'capture'), 'Intake recorded None; this estimate is priced at Capture only', 'in either direction');
+
+    const src = source();
+    // The question lives INSIDE the estate block, so a downsizing intake never shows it.
+    const estateOpen = src.indexOf('id="estate-auth-fields"');
+    const q = src.indexOf('id="i-docscope"');
+    const readout = src.indexOf('id="i-gate-readout"');
+    ok(estateOpen > 0 && q > estateOpen && q > readout, 'the intake question sits in the estate block, after the documentation gates');
+    has(src, "docScope:           (document.getElementById('i-docscope')||{}).value||'full',", 'intake saves the answer on the job');
+    has(src, "'i-gate-706', 'i-gate-dispute', 'i-docscope',", 'and clears it with the other intake fields');
+    has(src, "'i-docscope': 'full'", 'a cleared form resets to full, not to a blank select');
+    // Edit-client carries it for EVERY estate service, not only probate.
+    ok(src.indexOf("if (isEstateEdit) {\n    var _ecDs = document.getElementById('ec-docscope');") > 0, 'the edit-client save runs for Estate Settlement as well as probate');
+    has(src, "id=\"ec-docscope\"", 'the edit-client modal offers it');
+    // The intake answer never restates a priced estimate: the restore path reads the
+    // snapshot's own pin, and only the fresh-build path reads the job.
+    has(src, "_estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';", 'a saved estimate restores its OWN scope, never intake\'s');
+    eq((src.match(/seedDocScopeFromJob\(/g) || []).length, 2, 'the seed is read in exactly one place besides its definition — the fresh-build site');
   }
 };

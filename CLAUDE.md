@@ -150,8 +150,22 @@ the estimate tab and pricing."* He was right on both.
   probate, the Estimate Summary relabels the halved step *Photograph & list (counsel values)*,
   and both the rendered client estimate and the rendered agreement change their stage title,
   midpoint trigger and appraisal row with the pin.
-- **690 committed checks** (`tests/doc-scope.test.js`, 137 new). Manual §5c/§7/§8 and playbook
-  Step 2/3/6 plus three symptom→cause rows, both `.md` copies hand-edited to match.
+- **Intake asks the question and SEEDS the estimate; it does not price (same day).** *"Should we
+  build that drop down into the client intake tab as well?"* Yes, as a seed, not a second dial —
+  two controls both claiming to decide it is the two-copies-drift bug this file records twice.
+  `i-docscope` (*Who builds the inventory?*) sits in the estate block after the documentation
+  gates, saves as `job.docScope`, and Edit Client offers it on every estate service (the first
+  draft saved it inside the probate-only branch, so an Estate Settlement edit dropped it — a
+  test now asserts the `isEstateEdit` placement). `seedDocScopeFromJob(job)` is read at the
+  fresh-build site ONLY; `restoreEstimateToUI` reads the snapshot's own pin, so changing the
+  intake answer never restates an estimate already priced. `_docScopeIntakeNote` prints
+  *"Intake recorded None; this estimate is priced at Full"* under the dropdown when they differ
+  — not a warning, overriding on the walkthrough is legitimate, but the attorney was told one
+  of the two and they must never silently disagree. Verified in Chromium: hidden on a
+  downsizing intake, resets to Full, a fresh estimate opens at the job's answer, the note
+  appears on override. Manual §4 and playbook Step 1 plus one symptom row.
+- **708 committed checks** (`tests/doc-scope.test.js`, 155 new). Manual §4/§5c/§7/§8 and playbook
+  Step 1/2/3/6 plus four symptom→cause rows, both `.md` copies hand-edited to match.
 
 ## The production rate moved onto the estimate; the cost card was never pinned (BUILT 2026-09-02)
 *"why are these now in app setting? … if they are set across the app, they will apply to all
@@ -1686,11 +1700,13 @@ teaching people to ignore it.
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
 - Last reconciled against the app: **2026-09-04 (thirteenth pass)** — both documents, against the
-  documentation-scope control. Manual **§5c** gained the control with the three settings and the
+  documentation-scope control. Manual **§4** gained the intake question and the seed-not-price
+  rule, **§5c** the control with the three settings and the
   numbers, **§7** a note that the stages promise what the estimate priced, **§8** a note on the
   three agreement clauses that follow it and the instruction to regenerate an agreement approved
   before the scope was set. Playbook **Step 2** gained the table row (with the intake question to
-  ask the attorney), **Step 3** and **Step 6** a `.stop` each, and **three new symptom→cause rows**.
+  ask the attorney), **Step 1** the intake question, **Step 3** and **Step 6** a `.stop` each, and
+  **four new symptom→cause rows**.
   Both `.md` files hand-edited to match; tag balance verified on both HTML files.
 - Prior pass **2026-09-01 (twelfth pass)** — both documents, against the
   Inventory tab rebuild. Manual **§10a** gained *What this tab is for* (the field/desk split, the
