@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/vendor-save-error-pa0kib`
-  (was `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/estate-settlement-pricing-3wmldo`
+  (was `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/vendor-save-error-pa0kib:main`
+  `git push origin claude/estate-settlement-pricing-3wmldo:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -88,6 +88,70 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## Pricing an estate job WITH or WITHOUT the paperwork (BUILT 2026-09-04)
+*"we don't quite know yet if when we get an estate settlement job, the attorneys are going to
+want us to do all that work to support their workflow or if they're just going to delegate to a
+junior associate or paralegal … I want to be flexible in the ability to price with and without
+paperwork."* Then: *"i guess the agreement language needs to be updated as well then. not just
+the estimate tab and pricing."* He was right on both.
+
+- **The `document` step was hard-wired to the service type and is a third to two-fifths of the
+  ticket.** Measured with the real engine on a 3,500 sqft home at Normal, 2 specialists:
+  Estate Settlement $18,650 → $12,300 without it (34%), Probate $21,850 → $13,250 (39%),
+  Contested $31,350 → $18,550 (41%). A Home Cleanout on the same house is $12,600 — **an estate
+  job with the paperwork stripped is a home cleanout in price**, with the estate voice, the
+  written-authority gate and the heavier disposition coefficients kept. That is the honest
+  floor if counsel keeps the inventory in-house.
+- **`DOC_SCOPES` — `full` / `capture` / `none`, a PER-ESTIMATE control on Build Estimate under
+  the concierge hands-on share, pinned on the snapshot as `est.docScope` exactly the way
+  `tcAlpha` is** (`_estimateDocScope` / `activeDocScope()` / `setEstimateDocScope`; restored in
+  `restoreEstimateToUI`, cleared at the three α-reset sites and in `resetEstimate`). **NOT a
+  service type** — three shadow services would triple the reference bands and the agreement
+  routing for one dial, and `isDecedentJob` still decides who we write to. **NOT a Settings
+  value** — whether the attorney's office keeps the inventory is decided job by job.
+  - `effectiveJobSteps(svc, scope)` is the only thing that touches the coefficients and it
+    returns a COPY; `JOB_STEPS` is never mutated, so every reader asking "does this SERVICE
+    price documentation" (`svcHasDocStep`) keeps reading the catalogue. `computeEngineV3` takes
+    the scope as a sixth argument that defaults to `full`, so every pre-existing caller prices
+    exactly as before; `calcAll` passes the pin.
+  - **`capture` is half the document pool and NONE of its coordination** (`DOC_CAPTURE_POOL_SHARE`
+    = 0.5). The coordination column pays for appraiser scheduling, and on a capture-only job
+    that moves to counsel. **The 50% is a starting coefficient Anthony agreed to tune on the
+    first real job** — it is not measured. Capture is the tier I expect attorneys to actually
+    ask for: a paralegal can build a schedule from our photographed list but cannot walk the house.
+  - Services with no document step ignore the scope and hide the control; `estimateDocScope(e)`
+    answers `none` for them whatever the field says, and `full` for a snapshot saved before
+    2026-09-04 (no field), because that is what it was priced at.
+- **⚠ THE CLIENT ESTIMATE AND THE AGREEMENT READ THE PIN, NOT THE CATALOGUE.** `_cePhases`'
+  `hasDoc` now comes from `estimateDocScope(e)`. The `isDeceased && !hasDoc` arm deleted on
+  2026-08-03 as unreachable **is reachable again and is back** — three decedent arms now:
+  *Sorting, Documentation & Inventory* / *Sorting, Photography & Listing* / *Sorting &
+  Set-Aside*. The records list drops the valued inventory and the appraisals on the reduced
+  scopes; the court-grade records survive only on `full`; the close-out §733.604 sentence
+  branches. **The standing rule against explaining an absence yields here, once, in the stage**:
+  *"Valuation is not part of this engagement"* / *"The inventory and valuation of the estate are
+  being handled by counsel"*. This absence shifts a responsibility, and a reader who skipped the
+  line would assume Havellin carries it. A test asserts each carve-out appears exactly once.
+- **The estate agreement had three places selling the inventory** — the Scope of Services
+  paragraph, the §5.2 compliance list (*"Havellin will prepare a documented asset inventory…"*,
+  *"Havellin will coordinate professional appraisals…"*) and the midpoint-payment trigger
+  (*"Phase 5 (Asset Inventory)"*, on a job that may have no such phase). Pulled into
+  `_agrScopeServices` / `_agrProbateCompliance` / `_agrMidpointTrigger` so the tests drive
+  them without a DOM; the §5.3 appraisal row becomes *Admit an appraiser engaged by counsel*.
+  `renderProbateAgreement` reads the scope off the estimate it attaches, and the blank
+  template (no estimate yet) reads as the full form it always was.
+- **Found in passing, not fixed: `svc-mult-badge` does not exist in the DOM.** `calcAll` writes
+  the service badge into it behind a null guard, so the *"Estate Settlement: adds full item
+  documentation"* wording has been dead for some time. The wording now follows the scope
+  anyway, so it is correct if the element is ever put back.
+- **Verified in headless Chromium, not just asserted on source**: the control shows on an estate
+  job and hides on a downsizing, the total moves $19,900 → $15,950 → $13,150 on a five-room
+  probate, the Estimate Summary relabels the halved step *Photograph & list (counsel values)*,
+  and both the rendered client estimate and the rendered agreement change their stage title,
+  midpoint trigger and appraisal row with the pin.
+- **690 committed checks** (`tests/doc-scope.test.js`, 137 new). Manual §5c/§7/§8 and playbook
+  Step 2/3/6 plus three symptom→cause rows, both `.md` copies hand-edited to match.
 
 ## The production rate moved onto the estimate; the cost card was never pinned (BUILT 2026-09-02)
 *"why are these now in app setting? … if they are set across the app, they will apply to all
@@ -1621,7 +1685,14 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-01 (twelfth pass)** — both documents, against the
+- Last reconciled against the app: **2026-09-04 (thirteenth pass)** — both documents, against the
+  documentation-scope control. Manual **§5c** gained the control with the three settings and the
+  numbers, **§7** a note that the stages promise what the estimate priced, **§8** a note on the
+  three agreement clauses that follow it and the instruction to regenerate an agreement approved
+  before the scope was set. Playbook **Step 2** gained the table row (with the intake question to
+  ask the attorney), **Step 3** and **Step 6** a `.stop` each, and **three new symptom→cause rows**.
+  Both `.md` files hand-edited to match; tag balance verified on both HTML files.
+- Prior pass **2026-09-01 (twelfth pass)** — both documents, against the
   Inventory tab rebuild. Manual **§10a** gained *What this tab is for* (the field/desk split, the
   grouping, the worklist strip, the bulk bar, and the note that the column buttons are gone and
   why), *Release approval*, *Photographs on the manifest* (with the do-not-use-drive.google.com

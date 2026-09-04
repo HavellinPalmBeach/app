@@ -756,7 +756,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.02 · 12:52pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.04 · 1:02pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1200,6 +1200,18 @@ body.no-smf .smf-col{display:none;}
                   title="Back to the firm default set in Settings">Default</button>
         </div>
         <div id="e-alpha-hint" style="font-size:11px;color:var(--gray);margin-top:3px;"></div>
+        <!-- Documentation scope. Per estimate, like the production rate above it, because
+             whether the attorney's office keeps the inventory in-house is decided job by job
+             (see DOC_SCOPES). Hidden on services that price no documentation step. -->
+        <div id="e-docscope-wrap" style="display:none;">
+          <label style="margin-top:10px;">Documentation scope</label>
+          <select id="e-docscope" onchange="setEstimateDocScope(this.value)">
+            <option value="full">Full — inventory &amp; estimated value</option>
+            <option value="capture">Capture only — photograph &amp; list; counsel values</option>
+            <option value="none">None — counsel handles the inventory</option>
+          </select>
+          <div id="e-docscope-hint" style="font-size:11px;color:var(--gray);margin-top:3px;"></div>
+        </div>
         <div id="ps-crew-badge" style="margin-top:6px;"></div>
         <!-- Projected completion, immediately under the crew that determines it. -->
         <div id="timeline-badge" style="margin-top:6px;"></div>
@@ -3300,6 +3312,89 @@ var ENGINE_ROOMLEVEL = {pack:1};
 var PERROOM_REF = 18;
 var ENGINE_FLOOR = {downsizing:2, downsizing_move:3, home_cleanout:3, cleanout:3, probate:3, contested_probate:4, prep:3};
 
+// ─── DOCUMENTATION SCOPE — with or without the paperwork ─────────────────────
+// The `document` step is a third to two-fifths of an estate ticket (34% Estate Settlement,
+// 39% Probate, 41% Contested on a 3,500 sqft home at Normal), and until 2026-09-04 it was
+// hard-wired to the service type. Anthony: "we don't quite know yet if the attorneys are
+// going to want us to do all that work to support their workflow or if they're just going
+// to delegate to a junior associate or paralegal … I want to be flexible in the ability to
+// price with and without paperwork."
+//
+// So it is a PER-ESTIMATE judgement, like the production rate: pinned on the snapshot as
+// est.docScope, restored with it, never restated by anything firm-wide. NOT a service type —
+// three shadow services would triple the reference bands and the agreement routing for one
+// dial, and the service type still decides who we write to (isDecedentJob) and what the
+// disposition rules are. Stripping the paperwork off an Estate Settlement prices it within
+// a few hundred dollars of a Home Cleanout on the same house; the voice, the written-authority
+// gate and the heavier disposition coefficients all stay.
+//
+//   full     Havellin catalogues AND states an estimated value on every item of consequence,
+//            and coordinates the appraisers. Today's behaviour; the default.
+//   capture  Havellin photographs, describes and locates each item and hands the LIST to
+//            counsel; counsel's own people value it and arrange any appraisal. Half the
+//            document pool (a starting coefficient, to be tuned on the first real job —
+//            DOC_CAPTURE_POOL_SHARE) and NONE of its coordination, because the appraiser
+//            scheduling that column pays for has moved to counsel.
+//   none     Counsel's team does the whole inventory. The step is removed from the engine.
+//
+// Services that price no `document` step (downsizing, home cleanout, prep) ignore the
+// scope entirely — there is nothing to scale — and the control is hidden on them.
+var DOC_SCOPES = [
+  {key:'full',    label:'Full — inventory & estimated value',
+   hint:'Havellin catalogues every item of consequence with an estimated value and coordinates the appraisers. The default.'},
+  {key:'capture', label:'Capture only — photograph & list; counsel values',
+   hint:'Havellin photographs, describes and locates each item and hands the list to counsel. Counsel’s team values it and arranges any appraisal. Prices half the documentation work and none of the appraiser coordination.'},
+  {key:'none',    label:'None — counsel handles the inventory',
+   hint:'The attorney’s own staff inventory and value the estate. Documentation is priced out entirely; the estate voice, the written-authority gate and the disposition rules stay.'}
+];
+var DOC_CAPTURE_POOL_SHARE = 0.5;   // starting figure — see the note above; tune on real jobs
+var _estimateDocScope = 'full';
+function docScopeDef(key) {
+  for (var i = 0; i < DOC_SCOPES.length; i++) if (DOC_SCOPES[i].key === key) return DOC_SCOPES[i];
+  return null;
+}
+function activeDocScope() { return docScopeDef(_estimateDocScope) ? _estimateDocScope : 'full'; }
+function svcHasDocStep(svc) { return !!(JOB_STEPS[svc] && JOB_STEPS[svc].document); }
+// The step set the engine actually prices: the catalogue entry with `document` scaled or
+// removed. Always a COPY — JOB_STEPS itself is never mutated, so the client-document code
+// asking "does this service price documentation" keeps reading the catalogue.
+function effectiveJobSteps(svc, scope) {
+  var base = JOB_STEPS[svc] || JOB_STEPS.cleanout;
+  scope = docScopeDef(scope) ? scope : 'full';
+  if (!base.document || scope === 'full') return base;
+  var out = {};
+  for (var k in base) {
+    if (k !== 'document') { out[k] = base[k]; continue; }
+    if (scope === 'capture') out.document = [0, base.document[1] * DOC_CAPTURE_POOL_SHARE];
+    // 'none' — the step is simply absent, exactly as on a service that never priced it.
+  }
+  return out;
+}
+// The scope a SAVED estimate was priced under. A snapshot from before 2026-09-04 carries no
+// docScope and means 'full' — that is what it was priced at. A service with no document
+// step answers 'none' whatever the field says, so a downsizing never reads as "capture".
+function estimateDocScope(e) {
+  var svc = e && e.svc;
+  if (!svcHasDocStep(svc)) return 'none';
+  return (e && docScopeDef(e.docScope)) ? e.docScope : 'full';
+}
+function setEstimateDocScope(key) {
+  _estimateDocScope = docScopeDef(key) ? key : 'full';
+  calcAll();
+}
+function paintEstimateDocScope(svc) {
+  var wrap = document.getElementById('e-docscope-wrap');
+  if (!wrap) return;
+  var show = svcHasDocStep(svc);
+  wrap.style.display = show ? '' : 'none';
+  if (!show) return;
+  var sel = document.getElementById('e-docscope');
+  if (sel && document.activeElement !== sel) sel.value = activeDocScope();
+  var hint = document.getElementById('e-docscope-hint');
+  var d = docScopeDef(activeDocScope());
+  if (hint && d) hint.textContent = d.hint;
+}
+
 // Years-in-home tenure nudge — the longer someone has lived in a home, the more
 // contents accumulate. Applies to the interior (under-air) load only, never to
 // exterior add-ons. Blank / missing / non-positive value = neutral 1.00.
@@ -3313,10 +3408,12 @@ function tenureMultiplier(years){
 }
 
 // rooms: [{name, vol, cplx}]. Returns hours, load, calendar days, and per-room split.
-function computeEngineV3(sqft, rooms, svc, crew, years){
+function computeEngineV3(sqft, rooms, svc, crew, years, docScope){
   crew = crew || 2;
   sqft = parseFloat(sqft) || 0;
-  var steps = JOB_STEPS[svc] || JOB_STEPS.cleanout;
+  // docScope defaults to 'full', which is the catalogue entry unchanged — so every caller
+  // that predates the scope control prices exactly as before. calcAll passes the pin.
+  var steps = effectiveJobSteps(svc, docScope);
   var iW=0, iVolW=0, allW=0, allCpxW=0, extLoad=0;
   var rb = [];   // per-room bookkeeping
   rooms.forEach(function(rm){
@@ -4574,7 +4671,8 @@ function calcAll() {
   var _ejId = parseInt(document.getElementById('e-job').value);
   var _ejob = jobs.find(function(j){ return j.id === _ejId; });
   var yearsInHomeVal = _ejob ? _ejob.yearsInHome : '';
-  var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal);
+  var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal, activeDocScope());
+  paintEstimateDocScope(svcKey);
   if (isPrep) eng = {totTC:0, totPS:0, roomTC:0, roomPS:0, load:0, days:0, perRoom:[], volFactor:1, cpxFactor:1};
   // Under the working-supervisor model these two are NOT the billed TC/PS figures.
   // baseTCHrs = off-site coordination; basePSHrs = the hands-on work pool (W).
@@ -4608,9 +4706,16 @@ function calcAll() {
   var svcBadgeEl = document.getElementById('svc-mult-badge');
   if (svcBadgeEl) {
     var svcBadgeTxt = '';
-    if (svcKey === 'cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Estate Settlement: adds full item documentation for the §733.604 inventory.</div>';
-    else if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate: documentation + legal / chain-of-custody work.</div>';
-    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: heavier documentation, legal, and disposition load for multiple heirs/attorneys is built into the rates — no separate heir uplift.</div>';
+    // The documentation sentence follows the scope pin — a badge promising "full item
+    // documentation" over an estimate that priced none of it is the estimate lying to the
+    // person building it.
+    var _dsc = activeDocScope();
+    var _docTxt = _dsc === 'none' ? 'documentation priced OUT — counsel handles the inventory'
+                : _dsc === 'capture' ? 'capture-only documentation — photograph &amp; list, counsel values'
+                : 'full item documentation';
+    if (svcKey === 'cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Estate Settlement: ' + _docTxt + (_dsc === 'full' ? ' for the §733.604 inventory' : '') + '.</div>';
+    else if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate: ' + _docTxt + ' + legal / chain-of-custody work.</div>';
+    else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: ' + _docTxt + '; heavier legal and disposition load for multiple heirs/attorneys is built into the rates — no separate heir uplift.</div>';
     else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: TC move-day + PS new-home unpacking, scaled to the destination sq ft.</div>';
     else if (svcKey === 'home_cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Home Cleanout: full disposition of all contents (haul / donate / sell / shred).</div>';
     svcBadgeEl.innerHTML = svcBadgeTxt;
@@ -5036,7 +5141,8 @@ function calcAll() {
   var _tcOffParts = [];
   if (!isPrep && eng.byStep) {
     Object.keys(eng.byStep).forEach(function(L){
-      if (eng.byStep[L].ps > 0) _psParts.push({label:STEP_LABELS[L] || L, hrs:eng.byStep[L].ps});
+      var _stepLbl = (L === 'document' && activeDocScope() === 'capture') ? 'Photograph & list (counsel values)' : (STEP_LABELS[L] || L);
+      if (eng.byStep[L].ps > 0) _psParts.push({label:_stepLbl, hrs:eng.byStep[L].ps});
       if (eng.byStep[L].tc > 0) _tcOffParts.push({label:STEP_LABELS_COORD[L] || L, hrs:eng.byStep[L].tc});
     });
   }
@@ -5460,7 +5566,11 @@ function calcAll() {
     // Which fullness preset the walkthrough started from. Observational — the room
     // volumes are the real record and are already on the snapshot. This just lets a
     // reopened estimate light the right chip instead of always reading "Normal".
-    volPreset: _volPreset
+    volPreset: _volPreset,
+    // What documentation this estimate PRICED — full, capture-only, or none. Pinned here for
+    // the same reason as tcAlpha: the client estimate and the agreement read it back, and a
+    // reopened quote must reproduce its own figures. See DOC_SCOPES.
+    docScope: activeDocScope()
   };
 
   // Re-attach the immutable lock snapshot. Prefer the in-session value (same
@@ -6223,7 +6333,7 @@ function neutralizeEstimateView() {
   // Drop any pinned α from the previously-loaded estimate. If the job being opened
   // has a saved estimate, restoreEstimateToUI re-pins it from that record; if it
   // doesn't, this is a fresh build and should price at the current Settings value.
-  _estimateAlphaPin = null; _estimateCostPin = null;
+  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';
   clearAllRooms();
   resetEstimateExtras();
   window._suppressEstimateAutoSave = false;
@@ -6362,7 +6472,7 @@ function applyOpenedEstimate(jobId, job, status) {
   // No saved estimate — clear all rooms AND the non-room extras (package, third-
   // party vendors, home prep) so this new client starts clean instead of inheriting
   // the last estimate's selections.
-  _estimateAlphaPin = null; _estimateCostPin = null;   // fresh build — price at the current Settings α
+  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';   // fresh build — price at the current Settings α, full documentation
   window._suppressEstimateAutoSave = true;
   clearAllRooms();
   resetEstimateExtras();
@@ -6467,7 +6577,7 @@ function clearEstimateTab() {
   vehiclesData = [];
   renderVehicles();
   resetEstimateExtras();   // package + third-party vendors + home prep
-  _estimateAlphaPin = null; _estimateCostPin = null;   // nothing loaded — back to the current Settings α
+  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';   // nothing loaded — back to the current Settings α, full documentation
   var _tp = document.getElementById('tp-target'); if (_tp) _tp.value = '';
   // Recompute once against the now-empty inputs so every derived readout — the summary,
   // the crew badge, the timeline, the planner — goes to zero rather than keeping the last
@@ -6630,6 +6740,7 @@ function resetEstimate() {
   var ri = 0;
   ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; setRoomState(id, 'off'); ri++; }); });
   _volPreset = 'normal'; paintVolPreset();
+  _estimateDocScope = 'full';
   document.getElementById('e-prem').checked = false;
   var _fxR = document.getElementById('e-fixed'); if (_fxR) _fxR.checked = false;
   var _fxAR = document.getElementById('e-fixed-amount'); if (_fxAR) _fxAR.value = '';
@@ -6763,10 +6874,16 @@ function _cePhases(e, job) {
   var isPrep       = svc === 'prep';
   var isProbate    = svc === 'probate' || svc === 'contested_probate';
   var isContested  = svc === 'contested_probate';
-  var hasDoc       = !!steps.document;                       // documentation is PRICED (stage exists)
-  // VOICE, not pricing — see isDecedentJob. Today these two select the same three
-  // services, but they answer different questions and stay separate variables: hasDoc
-  // is what the client is CHARGED for, isDeceased is who we are WRITING to.
+  // Documentation is what this ESTIMATE priced, not what the catalogue offers. Since
+  // 2026-09-04 an estate job can be quoted with the paperwork left to counsel (see
+  // DOC_SCOPES), so the stage copy has to follow the pin or the document promises an
+  // itemised inventory nobody is paying for.
+  var docScope     = (typeof estimateDocScope === 'function') ? estimateDocScope(e) : (steps.document ? 'full' : 'none');
+  var hasDoc       = docScope !== 'none';                    // documentation is PRICED (stage exists)
+  var captureOnly  = docScope === 'capture';                 // we photograph and list; counsel values
+  // VOICE, not pricing — see isDecedentJob. hasDoc is what the client is CHARGED for,
+  // isDeceased is who we are WRITING to. They used to coincide exactly; the scope pin is
+  // what separates them, and the `isDeceased && !hasDoc` arm below is reachable again.
   var isDeceased   = (typeof isDecedentJob === 'function') ? isDecedentJob(job, svc) : !!steps.document;
   var hasLegal     = !!steps.legal;                          // court/legal work is priced
   var hasDisp      = !!steps.disposition;                    // outbound disposition streams
@@ -6868,22 +6985,39 @@ function _cePhases(e, job) {
   // not preference. Nothing is sold or removed at this stage at all: we catalogue,
   // and the inventory goes to the representative and counsel. Writing the
   // downsizing ask onto an estate document described a job that is not happening.
-  // Two arms, not three: a middle `isDeceased && !hasDoc` case ("Sorting & Inventory")
-  // was here for a decedent job that prices no documentation step, and no such job
-  // exists — the three deceased services are exactly the three carrying a `document`
-  // step. An unreachable arm implies a job type the catalogue does not have.
-  var sortTitle = hasDoc ? 'Sorting, Documentation &amp; Inventory' : 'Sorting &amp; Decisions';
+  // Three decedent arms now, keyed on the documentation scope the estimate priced:
+  //   full     — we catalogue and value (the original estate copy)
+  //   capture  — we photograph and list; counsel values
+  //   none     — counsel's team inventories; we sort, set aside and stage
+  // The `isDeceased && !hasDoc` arm was deleted on 2026-08-03 as unreachable, when the
+  // three deceased services were exactly the three carrying a `document` step. The scope
+  // pin makes it reachable, so it is back. On the two reduced scopes the document says
+  // ONCE, in the stage, that valuation is counsel's — the standing rule against explaining
+  // an absence yields here because this absence shifts a responsibility, and a reader who
+  // skipped the line would assume Havellin carries it.
+  var sortTitle = !isDeceased ? (hasDoc ? 'Sorting, Documentation &amp; Inventory' : 'Sorting &amp; Decisions')
+                : docScope === 'full' ? 'Sorting, Documentation &amp; Inventory'
+                : captureOnly ? 'Sorting, Photography &amp; Listing'
+                : 'Sorting &amp; Set-Aside';
   var sortBody, sortNeed, sortDone;
   if (isDownsizing) {
     sortBody = 'We work alongside you, one room at a time, in the same order the estimate lists them. Every item is sorted into keep, sell, donate, or dispose — and nothing is decided for you. Property Specialists do the handling and the lifting so you are making decisions rather than moving furniture, and your Transition Concierge keeps the plan moving room to room.';
     sortNeed = 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.';
     sortDone = 'A room is complete when every item in it has been routed and the keep list is confirmed with you in writing.';
-  } else if (isDeceased) {
+  } else if (isDeceased && docScope === 'full') {
     sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, property that may be claimed as exempt is flagged for your attention, and anything that may carry real value is held for the appropriate specialist before it moves. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
     sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The inventory comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = deep
       ? 'A room is complete when every item in it is catalogued and photographed, specific bequests and exempt property are set aside and recorded, and the room\'s inventory has been delivered to the representative and counsel.'
       : 'A room is complete when every item in it is catalogued and photographed, specific bequests are set aside, and the room\'s inventory has been delivered to the representative.';
+  } else if (isDeceased && captureOnly) {
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location and condition. <strong>Valuation is not part of this engagement</strong> — the photographed list goes to you and to counsel, whose office states the values and arranges any appraisal. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+    sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The list comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
+    sortDone = 'A room is complete when every item in it is photographed and listed, specific bequests are set aside, and the room\'s list has been delivered to the representative and counsel.';
+  } else if (isDeceased) {
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting and staging contents. <strong>The inventory and valuation of the estate are being handled by counsel</strong>, and we work from their schedule rather than producing one. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+    sortNeed = 'Counsel\'s inventory or schedule of the contents, the list of any items designated to a named person, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
+    sortDone = 'A room is complete when every item in it is sorted and staged and specific bequests are set aside, checked against counsel\'s schedule.';
   } else {
     sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting contents and routing each item to where it is going. Anything that looks like it carries value is pulled aside and reviewed with you before the room is cleared, so nothing of consequence leaves the house by accident.';
     sortNeed = 'A decision on anything you want kept, and a contact who can answer a question the same day. You do not need to be here for the rest — anything of consequence is set aside and reviewed with you before the room is cleared.';
@@ -6952,21 +7086,31 @@ function _cePhases(e, job) {
   if (e.svc !== 'prep' && e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
     closeBody += ' The market-preparation work itemised below runs from here — we source each trade, hold the schedule, and inspect the work against the scope you approved.';
   }
-  if (hasLegal) {
+  if (hasLegal && docScope === 'full') {
     closeBody += ' The verified inventory is prepared with date-of-death fair market value for every asset, appraisals attached as supporting documentation, non-probate assets excluded, and the whole package served on interested parties and filed within the statutory deadline.';
+  } else if (hasLegal && captureOnly) {
+    closeBody += ' The photographed, room-by-room list is delivered to counsel in a form their office can value and file within the statutory deadline.';
   }
   // What the client is left holding. This used to be a separate section after the
   // stages; it belongs here, because this is the stage at which they receive it.
   var records = ['Photographs of every room, before and after'];
-  if (hasDoc) records.push('An itemised inventory of the contents of consequence — description, location, condition, and estimated value');
+  if (docScope === 'full') records.push('An itemised inventory of the contents of consequence — description, location, condition, and estimated value');
+  else if (captureOnly) records.push('A photographed, room-by-room list of the contents of consequence — description, location and condition, for counsel to value');
   if (hasColl) records.push('A disposition record for every collection: where it went, through whom, and for what');
   records.push('Every third-party vendor invoice, collected and reconciled');
   if (hasDisp) records.push('Donation receipts, for your tax records');
   records.push('A final invoice built from the actual logged hours, reconciled line by line against this estimate');
-  if (deep) {
+  // The court-grade records exist only where Havellin produced the inventory. On a
+  // capture-only job the custody log still exists (we handled every listed item) but the
+  // valued inventory and the appraisals are counsel's; on a no-documentation job none of it
+  // is ours to promise.
+  if (deep && docScope === 'full') {
     records.push('A verified inventory to the standard the court requires, carrying date-of-death fair market value for every asset');
     records.push('A chain-of-custody log for each documented item — who handled it, when, and where it went');
     records.push('Independent appraisals attached as supporting documentation');
+    records.push('The complete record retained for seven years');
+  } else if (deep && captureOnly) {
+    records.push('A chain-of-custody log for each listed item — who handled it, when, and where it went');
     records.push('The complete record retained for seven years');
   }
   P.push({
@@ -8801,6 +8945,10 @@ function restoreEstimateToUI(est) {
   if (moveStylingR) moveStylingR.checked = est.moveStyling || false;
   _volPreset = est.volPreset || 'normal';
   paintVolPreset();
+  // The documentation scope this estimate was priced under. A record from before the
+  // control existed has no docScope and was priced FULL — restore it as such rather than
+  // letting a stale control on screen restate the quote.
+  _estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';
 
   window._suppressEstimateAutoSave = false;
   calcAll(); // one clean save with fully-restored state
@@ -20491,6 +20639,46 @@ function updateAgrPayTrack() {
   document.getElementById('agr-stripe-wrap').style.display = track === 'card' ? 'block' : 'none';
 }
 
+// ─── Estate agreement copy that follows the documentation scope ──────────────
+// Three pieces of the estate-form agreement describe the inventory as a Havellin
+// deliverable — the scope paragraph, the §5.2 compliance list and the midpoint-payment
+// trigger. Each now reads the scope the ESTIMATE priced (est.docScope, see DOC_SCOPES),
+// because an agreement promising a §733.604 inventory over an estimate that priced none is
+// a contract for work nobody is being paid for. Pulled out of renderProbateAgreement so the
+// tests can read them without a DOM.
+function _agrScopeServices(docScope) {
+  if (docScope === 'none') {
+    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by the estate attorney\'s office; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney; Havellin works from the schedule they provide. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+  }
+  if (docScope === 'capture') {
+    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: room-by-room photography and listing of property contents (description, location and condition, without valuation); sorting and staging; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+  }
+  return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; appraisal coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+}
+function _agrProbateCompliance(docScope) {
+  var first = docScope === 'none'
+    ? 'The inventory required under Florida Statute §733.604 is prepared by the estate attorney\'s office. Havellin does not prepare, value or file it, and works from the schedule counsel provides.'
+    : docScope === 'capture'
+    ? 'Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the estate attorney for use in preparing the inventory required under Florida Statute §733.604. Valuation and the court filing are the responsibility of the estate attorney.'
+    : 'Havellin will prepare a documented asset inventory suitable for use in the court-required filing under Florida Statute §733.604. The estate attorney is responsible for the actual court filing.';
+  var out = [first];
+  if (docScope === 'full') {
+    out.push('Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory deadline from Letters of Administration issuance.');
+  } else {
+    out.push('Professional appraisals are arranged by the estate attorney. Havellin will give the appraiser access to the property and be present for the visit on request.');
+  }
+  out.push('All asset sales will require written Personal Representative approval. Sales of real property require court approval unless the PR holds full authority under Florida Statute §733.613.');
+  out.push('Havellin will maintain complete documentation of all asset dispositions for inclusion in the estate\'s final accounting.');
+  out.push('All project files will be retained for a minimum of 7 years from project close date.');
+  return out;
+}
+// The midpoint payment used to be triggered by the completion of the asset-inventory phase on
+// every estate agreement. On a job that prices no inventory there is no such phase to complete.
+function _agrMidpointTrigger(docScope) {
+  var phase = docScope === 'none' ? 'Sorting &amp; Set-Aside' : docScope === 'capture' ? 'Photography &amp; Listing' : 'Asset Inventory';
+  return 'Due upon completion of the ' + phase + ' stage or at project midpoint, whichever comes first';
+}
+
 function renderProbateAgreement() {
   var jobId = currentAgrJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -20499,6 +20687,9 @@ function renderProbateAgreement() {
   if (!est) { var rec = estimateStore[jobId]; if (rec && rec.estimate) est = rec.estimate; }
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
   var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of T&M
+  // What documentation this engagement priced. No estimate yet = the blank template, which
+  // reads as the full-scope form it always was.
+  var docScope = est ? estimateDocScope(est) : (svcHasDocStep(job.svc || job.serviceType) ? 'full' : 'none');
   var _split = paymentSplit(havTotal);
   var dep = _split.deposit, mid = _split.midpoint, fin = _split.final;
   var _blank = '_______________________________________________';
@@ -20600,7 +20791,7 @@ function renderProbateAgreement() {
   content += '</table>';
   // SECTION 2: SCOPE
   content += secHdr(2,'Scope of Services');
-  content += pp('Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; appraisal coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. Where applicable, property preparation for sale is included as reflected in Exhibit A.');
+  content += pp(_agrScopeServices(docScope));
   content += pp('All disposition decisions — including sale, auction, donation, or disposal of any item — require written authorization from the Personal Representative or authorized signatory prior to execution. The specific scope, estimated hours, and projected costs are detailed in Exhibit A (attached estimate), which is incorporated into this Agreement by reference.');
   content += subHdr('2.1 Explicit Exclusions');
   content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney); tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
@@ -20632,11 +20823,11 @@ function renderProbateAgreement() {
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Payment</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Amount</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Timing &amp; Trigger</th></tr></thead><tbody>';
   var payRows = isFixedAgr ? [
     ['Deposit', havTotal>0?'$'+dep.toLocaleString()+' (50% of fixed price)':'50% of fixed price', 'Due upon signing this Agreement — before any work begins'],
-    ['Midpoint Payment', havTotal>0?'$'+mid.toLocaleString()+' (25% of fixed price)':'25% of fixed price', 'Due upon completion of Phase 5 (Asset Inventory) or at project midpoint, whichever comes first'],
+    ['Midpoint Payment', havTotal>0?'$'+mid.toLocaleString()+' (25% of fixed price)':'25% of fixed price', _agrMidpointTrigger(docScope)],
     ['Final Payment', havTotal>0?'$'+fin.toLocaleString()+' (25% of fixed price)':'25% of fixed price', 'Due within 7 days of final invoice delivery — completes the fixed price (plus any approved Change Orders)']
   ] : [
     ['Deposit', havTotal>0?'$'+dep.toLocaleString()+' (50% of estimate)':'50% of estimate', 'Due upon signing this Agreement — before any work begins'],
-    ['Midpoint Payment', havTotal>0?'$'+mid.toLocaleString()+' (25% of estimate)':'25% of estimate', 'Due upon completion of Phase 5 (Asset Inventory) or at project midpoint, whichever comes first'],
+    ['Midpoint Payment', havTotal>0?'$'+mid.toLocaleString()+' (25% of estimate)':'25% of estimate', _agrMidpointTrigger(docScope)],
     ['Final Invoice', havTotal>0?'$'+fin.toLocaleString()+' + actual variance':'25% of estimate + actual variance', 'Due within 7 days of final invoice delivery — reflects actual hours and materials vs. estimate']
   ];
   payRows.forEach(function(r){
@@ -20688,13 +20879,7 @@ function renderProbateAgreement() {
   content += '</ol>';
   content += subHdr('5.2 Florida Probate Compliance');
   content += pp('For probate engagements, Havellin will support — but not replace — the estate attorney in meeting Florida probate requirements. Specifically:');
-  var comp = [
-    'Havellin will prepare a documented asset inventory suitable for use in the court-required filing under Florida Statute §733.604. The estate attorney is responsible for the actual court filing.',
-    'Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory deadline from Letters of Administration issuance.',
-    'All asset sales will require written Personal Representative approval. Sales of real property require court approval unless the PR holds full authority under Florida Statute §733.613.',
-    'Havellin will maintain complete documentation of all asset dispositions for inclusion in the estate\'s final accounting.',
-    'All project files will be retained for a minimum of 7 years from project close date.'
-  ];
+  var comp = _agrProbateCompliance(docScope);
   content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
   comp.forEach(function(c){ content += '<li style="margin-bottom:.3rem;">'+c+'</li>'; });
   content += '</ol>';
@@ -20708,7 +20893,9 @@ function renderProbateAgreement() {
     ['Donate to qualifying 501(c)(3) organizations','Written PR approval','All donations'],
     ['Arrange sale through third-party channel','Written PR approval','Any item over $500'],
     ['Dispose / remove to dumpster','Written PR approval','Any item over $500'],
-    ['Arrange professional appraisal','Written PR approval','Any item with uncertain FMV'],
+    docScope === 'full'
+      ? ['Arrange professional appraisal','Written PR approval','Any item with uncertain FMV']
+      : ['Admit an appraiser engaged by counsel','Counsel\'s instruction','As scheduled by the estate attorney'],
     ['Move or deliver items to beneficiaries','Written PR approval + signed receipt from recipient','All items']
   ];
   authRows.forEach(function(r){
