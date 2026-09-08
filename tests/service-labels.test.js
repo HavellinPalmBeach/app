@@ -66,7 +66,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(agr, "downsizing:'Home Editing'", 'the agreement header map, editing');
     has(agr, "downsizing_move:'Home Transition'", 'the agreement header map, transition');
     has(agr, 'home editing, home transition and move-management, property preparation', '§1.1 Services lists the renamed work');
-    has(agr, 'for Estate Settlement, Home Editing and Home Transition engagements', '§3.5 names the engagements the 15% applies to');
+    has(agr, 'for Estate Settlement, Home Editing and Home Transition engagements', '§3.5 names the renamed engagements on the SMF arm');
     lacks(agr, 'Downsizing', 'and the old word is gone from the agreement');
   }
 };

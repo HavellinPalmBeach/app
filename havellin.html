@@ -756,7 +756,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 1:17pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 1:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7621,7 +7621,7 @@ function renderClientEstimate() {
       (hasMaterialsSection ?
         '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
         (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
-        (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (15%)</td><td>—</td><td>15% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
+        (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (' + Math.round(SMF_PCT*100) + '%)</td><td>—</td><td>' + Math.round(SMF_PCT*100) + '% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
         (prepGcFee > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)</td><td>—</td><td>30% of prep vendors</td><td class="r">' + fmt(prepGcFee) + '</td></tr>' : '')
       : '') +
       // DELETED: "Includes N TC hrs for home prep vendor coordination — factored into
@@ -20851,7 +20851,11 @@ function renderProbateAgreement() {
     ['Transition Concierge (TC)','$150 / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'],
     ['Property Specialist (PS)','$100 / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
     ['Specialty Materials','Cost + 25%','Boxes, packing materials, protective supplies — itemized separately on invoice. Receipts available on request.'],
-    ['Vendor Management Fee','15% of vendor invoice','Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
+    // Follows SMF_PCT — see the §3.5 comment in renderAgreement. On a court-reviewed matter a
+    // percentage markup on a third-party invoice is exactly the line counsel questions.
+    (SMF_PCT > 0
+      ? ['Vendor Management Fee', Math.round(SMF_PCT*100)+'% of vendor invoice', 'Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
+      : ['Third-Party Vendors', 'At cost — no fee', 'Vendors bill the estate directly at cost. Havellin adds no markup; the concierge time spent coordinating them is billed at the TC rate above.'])
   ];
   feeRows.forEach(function(r){
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
@@ -20861,7 +20865,7 @@ function renderProbateAgreement() {
     content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of $'+havTotal.toLocaleString())+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.');
   }
   content += subHdr('3.2 Project Estimate');
-  content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and vendor fees based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
+  content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and third-party vendor costs based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
   content += pp(isFixedAgr
     ? bb('IMPORTANT:')+'  This engagement is billed at the fixed price stated above, not on actual hours. Any work beyond the scope described in Exhibit A requires a signed Change Order before Havellin proceeds; the fixed price does not otherwise change.'
     : bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. If actual hours are projected to exceed the estimate by more than 15%, Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
@@ -21228,7 +21232,16 @@ function renderAgreement() {
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+havTotal.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.')
       : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
-    p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement, Home Editing and Home Transition engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
+    // §3.5 follows SMF_PCT. The 15% Service Management Fee came off on 2026-08-02 — the
+    // estimate, the invoice and the Terms all stopped charging it that day — and this clause
+    // went on promising it in every agreement for five weeks. A contract clause that charges a
+    // fee the invoice never bills is worse than either alone. Standalone Home Prep keeps its
+    // 30% (that engagement bills no hours, so the fee is its whole revenue — see prepFeeRate).
+    (SMF_PCT > 0
+      ? p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) '+Math.round(SMF_PCT*100)+'% of vendor invoices for Estate Settlement, Home Editing and Home Transition engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')
+      : isPrepAgr
+        ? p(b('3.5 Management Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2, equal to thirty percent (30%) of the total third-party vendor costs managed under this Agreement. No other fee or markup is applied to vendor invoices.')
+        : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is billed as Transition Concierge time under Section 3.3.'))+
     p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     (isFixedAgr

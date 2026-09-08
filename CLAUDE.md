@@ -89,6 +89,35 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## The agreements promised a fee the invoice stopped billing five weeks earlier (FIXED 2026-09-08)
+*"the one i see in gdrive still has 15% fee on vendors, which we have stricken in the app."*
+He was reading a hand-maintained Google Doc template, not an app copy — but the app's own
+agreements had the same defect.
+
+- **`SMF_PCT` went to 0 on 2026-08-02 and the estimate, the invoice and the Terms all stopped
+  charging it that day. Neither agreement did.** The standard form's **§3.5** stated *"15% of
+  vendor invoices for Estate Settlement and Downsizing engagements"* outright, and the probate
+  form's fee table carried a *Vendor Management Fee — 15% of vendor invoice* row. Every
+  agreement generated between 2026-08-02 and 2026-09-08 promised a fee the invoice never bills.
+  A contract clause and an invoice that disagree is worse than either alone.
+- **Both read `SMF_PCT` now, the way the estimate footnote always did.** Standard §3.5 is
+  *Vendor Coordination* — no fee or markup on vendor invoices; the concierge time is billed
+  under §3.3 (hourly, or inside the fixed fee — §3.3 is both, so one sentence covers both). The
+  estate fee table names third-party vendors *At cost — no fee*. **Standalone Home Prep keeps
+  its 30% under its own §3.5 arm** (that engagement bills no hours; `prepFeeRate`). If the fee
+  is ever switched back on, both print `Math.round(SMF_PCT*100)+'%'` rather than a literal.
+- The client estimate's SMF row was already gated on the amount but printed a literal `15%`;
+  it prints the constant now. A test asserts **no `15% of vendor` literal survives** in the file.
+- **Where the app's agreements actually live:** `exportAgreementToDrive` files
+  `<HVL-ID>_Agreement.html` into the job folder's `Agreement` subfolder on the Havellin Drive
+  (`main-sync.gs` `createJobFolder`). The Drive connector in this session is on the personal
+  account and cannot see those; the `Client Agreement Templates` folder it can see holds the
+  older Google Doc templates, which are NOT what the app generates and still say 15%.
+- Manual **§8** carries the note (and the instruction to re-generate anything issued in the
+  window; a signed one is governed by the invoice, which charges less); playbook gained **one
+  symptom→cause row**. Both `.md` copies hand-edited.
+- **749 committed checks** (`tests/agreement-fees.test.js`, 14 new).
+
 ## Downsizing → HOME EDITING · Downsizing & Move Management → HOME TRANSITION (RENAMED 2026-09-08)
 *"we have changed downsizing & move management to 'home transition' … also, i think 'downsizing'
 on its own should be 'Home Editing'. all we are really doing in a downsizing with no move
@@ -1744,7 +1773,9 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-08 (fourteenth pass)** — both documents, against the
+- Last reconciled against the app: **2026-09-08 (fifteenth pass, same day)** — manual **§8** gained the
+  vendor-fee-clause note; playbook one symptom→cause row. Both `.md` copies hand-edited.
+- Prior pass **2026-09-08 (fourteenth pass)** — both documents, against the
   service rename. Manual **§4** gained the rename note; playbook **one symptom→cause row**; every
   service-list and prose mention of *Downsizing* in both documents now reads *Home Editing* /
   *Home Transition*. Both `.md` files hand-edited to match; tag balance verified on both HTML files.
