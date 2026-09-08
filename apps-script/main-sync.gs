@@ -21,13 +21,27 @@ function jsonOut(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// A successful write that refused some job ids says which. `dropped` is only present when
+// non-empty, so every other write's response is byte-identical to what it always was.
+function _okWithDrops(r) {
+  var out = { ok: true, success: true };
+  if (r && r.dropped && r.dropped.length) out.dropped = r.dropped;
+  return out;
+}
+
 // ══ ROUTERS ════════════════════════════════════════════════════════════════════
 
 function doGet(e) {
   try {
     var action = e.parameter.action;
 
-    if (action === 'loadJobs')         { return jsonOut({ ok: true, success: true, jobs: getJobsFromSheet() }); }
+    if (action === 'loadJobs') {
+      // `deletedJobs` is every id the sheet has seen and no longer holds (see JOB LEDGER), so a
+      // device can drop the estimates, plans and logs it still carries for a job that is gone.
+      var jobsNow = getJobsFromSheet();
+      return jsonOut({ ok: true, success: true, jobs: jobsNow,
+                       deletedJobs: _deletedJobIds(_presentJobIds(jobsNow), getJobLedger()) });
+    }
     if (action === 'loadEstimates')    { return jsonOut({ ok: true, success: true, estimates: getEstimateStore() }); }
     if (action === 'loadJobPlans')     { return jsonOut({ ok: true, success: true, jobPlans: getJobPlanStore() }); }
     if (action === 'loadChangeOrders') { return jsonOut({ ok: true, success: true, changeOrders: getChangeOrderStore() }); }
@@ -66,14 +80,17 @@ function doPost(e) {
 
     var type = data.type;
     var payload = data.payload;
-    if      (type === 'job')                 { saveJobToSheet(payload); }
+    // The job and job-keyed writes answer with `dropped`: ids the sheet REFUSED because it
+    // has seen them before and no longer holds them (see JOB LEDGER). The app removes those
+    // from the device that sent them, which is how a stale browser stops resurrecting them.
+    if      (type === 'job')                 { return jsonOut(_okWithDrops(saveJobToSheet(payload))); }
     else if (type === 'estimate')            { saveEstimateToSheet(payload); }
     else if (type === 'hours')               { saveHoursToSheet(payload); }
-    else if (type === 'saveAllEstimates')    { saveEstimateStore(payload); }
-    else if (type === 'saveAllJobs')         { saveAllJobsToSheet(payload); }
-    else if (type === 'saveAllJobPlans')     { saveJobPlanStore(payload); }
-    else if (type === 'saveAllChangeOrders') { saveChangeOrderStore(payload); }
-    else if (type === 'saveAllLogs')         { saveLogStore(payload); }
+    else if (type === 'saveAllEstimates')    { return jsonOut(_okWithDrops(saveEstimateStore(payload))); }
+    else if (type === 'saveAllJobs')         { return jsonOut(_okWithDrops(saveAllJobsToSheet(payload))); }
+    else if (type === 'saveAllJobPlans')     { return jsonOut(_okWithDrops(saveJobPlanStore(payload))); }
+    else if (type === 'saveAllChangeOrders') { return jsonOut(_okWithDrops(saveChangeOrderStore(payload))); }
+    else if (type === 'saveAllLogs')         { return jsonOut(_okWithDrops(saveLogStore(payload))); }
     else if (type === 'saveAllContractors')  { saveContractorStore(payload); }
     else if (type === 'deleteContractor')    { deleteContractorFromStore(payload.id); }
     else if (type === 'deleteJob')           { deleteJobFromSheet(payload.id); }
@@ -294,6 +311,9 @@ function previewReset() {
   var cont = {};
   try { cont = _readStoreBlob('ContractorStore') || {}; } catch (e) {}
   Logger.log('  ContractorStore: ' + Object.keys(cont).length + ' KEPT (your crew, not clients)');
+  var led = _readStoreBlob(JOB_LEDGER_STORE, null);
+  Logger.log('  JobLedger: ' + (led && led.seen ? Object.keys(led.seen).length : 0)
+    + ' job id(s) remembered — KEPT, and every id cleared below is added to it');
   Logger.log('');
   Logger.log('Job folders in Drive that trashJobFoldersConfirm() would move to Trash:');
   var folders = _jobFolders();
@@ -309,6 +329,19 @@ function resetAllJobDataConfirm(alsoContractors) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    // FIRST, before anything is cleared: make sure the ledger has seen every job that is
+    // about to go, so a device still holding one is refused when it next saves rather than
+    // merged straight back in. Ids come from the Jobs sheet AND the keyed stores — an
+    // estimate can outlive its job row, and a stale device pushes both.
+    var ledger = getJobLedger();
+    var going = getJobsFromSheet().map(function(j) { return j && j.id; });
+    ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+      try { going = going.concat(Object.keys(_readStoreBlob(name, {}) || {})); } catch (e) {}
+    });
+    try { (_readStoreBlob('ChangeOrderStore', []) || []).forEach(function(co) { if (co && co.jobId != null) going.push(co.jobId); }); } catch (e) {}
+    _ledgerMarkSeen(ledger, going);
+    Logger.log('Ledger now remembers ' + Object.keys(ledger.seen).length + ' job id(s) as deleted-if-absent');
+
     RESET_JOB_SHEETS.forEach(function(name) {
       var sh = ss.getSheetByName(name);
       if (!sh) return;
@@ -334,8 +367,10 @@ function resetAllJobDataConfirm(alsoContractors) {
     lock.releaseLock();
   }
   Logger.log('');
-  Logger.log('Done on the sheet. NOW CLEAR EACH DEVICE that has used the app, or the next');
-  Logger.log('save from a stale browser will push the old clients straight back up.');
+  Logger.log('Done on the sheet. A device that still has the app open will SHOW the old clients');
+  Logger.log('until it reloads or saves — but its next save is refused for those ids and it drops');
+  Logger.log('them itself, so nothing comes back. Settings → This Device → Clear still works to');
+  Logger.log('tidy a device straight away.');
 }
 
 // Job folders sit directly under the Havellin root and are named "Client - HVL-....".
@@ -428,13 +463,140 @@ function _mergeStoreByKey(existing, incoming) {
   return out;
 }
 
+// ══ JOB LEDGER — the sheet's memory of every job it has ever held ════════════════
+// Reported 2026-09-08. Anthony cleared every row of the Jobs sheet by hand to start over.
+// Ashley's laptop still had the app open from before, holding the old clients in memory.
+// She added one new client; saveAllJobs sent the whole array; and the merge below — which
+// unions by id and never drops a job missing from the payload — took the three deleted
+// clients straight back. That union is the right rule for two devices that each hold a
+// client the other has not seen. It is the wrong rule for a device holding a client the
+// sheet DELIBERATELY no longer has, and the merge could not tell the two cases apart.
+//
+// Now it can. JobLedger is { since: ms, seen: { "<id>": firstSeenMs }, restore: {...} } —
+// every job id the sheet has ever written. A job the ledger has seen and the Jobs sheet no
+// longer holds was DELETED — by the deleteJob action, by resetAllJobDataConfirm, or by
+// somebody deleting the row in the spreadsheet — and an incoming copy is refused, not
+// merged. A job the ledger has never seen is new and goes in.
+//
+// Why a LEDGER of what was seen, rather than tombstones written by deleteJob: nothing runs
+// when a row is deleted in the spreadsheet, so a tombstone written by the delete action
+// would not exist for exactly the case that was reported.
+//
+// `since` closes the bootstrap gap. The ledger is seeded from the Jobs sheet the first time
+// it is needed, so a job deleted BEFORE this deployment is in neither the sheet nor the
+// ledger and would otherwise be taken as new. A job id is its creation time (id: Date.now()
+// in the app), so a never-seen job created before the ledger existed, that the sheet does
+// not hold, is refused too. That loses nothing: the sheet overwrites a device's job list
+// wholesale on every reload, so such a job was already gone from every device that had
+// reloaded since.
+//
+// ⚠ The ledger is NOT in RESET_JOB_STORES and must never be: it is the memory of the reset.
+// To let a device put a job back on purpose, see allowJobRestoreConfirm.
+var JOB_LEDGER_STORE = 'JobLedger';
+
+function getJobLedger() {
+  var led = _readStoreBlob(JOB_LEDGER_STORE, null);
+  if (led && led.seen && led.since) { if (!led.restore) led.restore = {}; return led; }
+  // First use: everything the sheet holds right now has been seen, as of now.
+  led = { since: Date.now(), seen: {}, restore: {} };
+  getJobsFromSheet().forEach(function(j) { if (j && j.id != null) led.seen[String(j.id)] = led.since; });
+  _writeStoreBlob(JOB_LEDGER_STORE, led);
+  return led;
+}
+
+// Record ids the Jobs sheet now holds. `seen` only ever grows; an id written after being
+// allowed back (restore) is spent from that list, so the permission is single-use.
+function _ledgerMarkSeen(ledger, ids) {
+  var now = Date.now(), changed = false;
+  (ids || []).forEach(function(id) {
+    if (id == null || id === '') return;
+    var k = String(id);
+    if (!ledger.seen[k]) { ledger.seen[k] = now; changed = true; }
+    if (ledger.restore && ledger.restore[k]) { delete ledger.restore[k]; changed = true; }
+  });
+  if (changed) _writeStoreBlob(JOB_LEDGER_STORE, ledger);
+}
+
+// '' to accept an incoming job (or a store record keyed by its id), else why it is refused:
+//   'deleted'  — the ledger has seen this id and the Jobs sheet no longer holds it.
+//   'predates' — never seen, not held, and created before the ledger existed.
+// `present` is the { "<id>": true } map of what the Jobs sheet holds right now.
+function _jobRefusal(id, created, present, ledger) {
+  if (id == null || id === '') return '';
+  var k = String(id);
+  if (present[k]) return '';
+  if (ledger.restore && ledger.restore[k]) return '';
+  if (ledger.seen[k]) return 'deleted';
+  var born = Number(id);
+  if (!isFinite(born) || born < 1e12) born = Date.parse(created || '') || 0;
+  if (born && born < ledger.since) return 'predates';
+  return '';
+}
+
+function _presentJobIds(jobsArr) {
+  var m = {};
+  (jobsArr || []).forEach(function(j) { if (j && j.id != null) m[String(j.id)] = true; });
+  return m;
+}
+
+// Every id the ledger has seen that the Jobs sheet no longer holds.
+function _deletedJobIds(present, ledger) {
+  return Object.keys(ledger.seen).filter(function(k) { return !present[k]; });
+}
+
+// Strip records for refused jobs out of a { jobId: ... } payload, returning the ids dropped.
+// The keyed stores are what a stale device pushes right behind its job list, and each of
+// their merges unions — so a refused job would come back as a headless estimate, plan or
+// hours log if these were left alone.
+function _stripRefusedJobKeys(obj) {
+  if (!obj || typeof obj !== 'object') return [];
+  var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger(), dropped = [];
+  Object.keys(obj).forEach(function(k) {
+    if (_jobRefusal(k, null, present, ledger)) { delete obj[k]; dropped.push(k); }
+  });
+  if (dropped.length) Logger.log('Refused records for deleted job(s): ' + dropped.join(', '));
+  return dropped;
+}
+
+// Run from the editor. Lists the ids the ledger will refuse — i.e. what a stale device
+// would be prevented from putting back — with the client name where the estimate store
+// still knows it.
+function previewDeletedJobs() {
+  var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger();
+  var gone = _deletedJobIds(present, ledger);
+  Logger.log(gone.length + ' deleted job id(s) the sheet will refuse to take back:');
+  var est = _readStoreBlob('EstimateStore', {}) || {};
+  gone.forEach(function(k) {
+    var name = est[k] && est[k].estimate && est[k].estimate.clientName ? ' — ' + est[k].estimate.clientName : '';
+    Logger.log('  ' + k + name + '  (first seen ' + new Date(ledger.seen[k]).toISOString() + ')');
+  });
+  Logger.log("To let a device restore one on purpose, edit the call and run allowJobRestoreConfirm(['<id>']).");
+}
+
+// The escape hatch for a row deleted by mistake. Before the ledger a stale device would
+// have put it back by accident; now nothing can, unless you say so here. Single-use: the
+// permission is spent the moment a device writes the job. Takes the ids as an argument, so
+// it cannot be run from the Run menu by accident — you edit the call.
+function allowJobRestoreConfirm(ids) {
+  if (!ids || !ids.length) { Logger.log("Pass the job id(s) to allow back, e.g. allowJobRestoreConfirm(['1757000000000'])"); return; }
+  var ledger = getJobLedger();
+  if (!ledger.restore) ledger.restore = {};
+  ids.forEach(function(id) { ledger.restore[String(id)] = Date.now(); });
+  _writeStoreBlob(JOB_LEDGER_STORE, ledger);
+  Logger.log('The next device that saves ' + ids.join(', ') + ' will be allowed to put it back.');
+}
+
 // ══ ESTIMATE STORE (merge by jobId) ══════════════════════════════════════════════
 
 function saveEstimateStore(incoming) {
-  if (!incoming) return;
+  if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
-  try { _writeStoreBlob('EstimateStore', _mergeStoreByKey(getEstimateStore(), incoming)); }
+  try {
+    var dropped = _stripRefusedJobKeys(incoming);
+    _writeStoreBlob('EstimateStore', _mergeStoreByKey(getEstimateStore(), incoming));
+    return { dropped: dropped };
+  }
   finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
@@ -445,10 +607,14 @@ function getEstimateStore() {
 // ══ JOB PLAN STORE (merge by jobId) ══════════════════════════════════════════════
 
 function saveJobPlanStore(incoming) {
-  if (!incoming) return;
+  if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
-  try { _writeStoreBlob('JobPlanStore', _mergeStoreByKey(getJobPlanStore(), incoming)); }
+  try {
+    var dropped = _stripRefusedJobKeys(incoming);
+    _writeStoreBlob('JobPlanStore', _mergeStoreByKey(getJobPlanStore(), incoming));
+    return { dropped: dropped };
+  }
   finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
@@ -461,10 +627,18 @@ function getJobPlanStore() {
 // wins (id is the creation timestamp, a safe fallback). Never drops a change order.
 
 function saveChangeOrderStore(incoming) {
-  if (!incoming) return;
+  if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
   try {
+    // Change orders are keyed by their own id but belong to a job; refuse the ones whose job
+    // the sheet has seen and no longer holds, the same way the job-keyed stores do.
+    var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger(), dropped = [];
+    incoming = (incoming || []).filter(function(co) {
+      if (!co || co.jobId == null || !_jobRefusal(co.jobId, null, present, ledger)) return true;
+      if (dropped.indexOf(co.jobId) < 0) dropped.push(co.jobId);
+      return false;
+    });
     var byId = {}, order = [];
     getChangeOrderStore().forEach(function(co) {
       if (co && co.id != null) { if (!(co.id in byId)) order.push(co.id); byId[co.id] = co; }
@@ -478,6 +652,7 @@ function saveChangeOrderStore(incoming) {
       if (!cur || inT >= curT) byId[co.id] = co;
     });
     _writeStoreBlob('ChangeOrderStore', order.map(function(id) { return byId[id]; }));
+    return { dropped: dropped };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
@@ -490,10 +665,11 @@ function getChangeOrderStore() {
 // lines added on two devices for the same job are both kept.
 
 function saveLogStore(incoming) {
-  if (!incoming) return;
+  if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
   try {
+    var dropped = _stripRefusedJobKeys(incoming);
     var out = getLogStore();
     Object.keys(incoming).forEach(function(jid) {
       var inArr = incoming[jid] || [];
@@ -504,6 +680,7 @@ function saveLogStore(incoming) {
       out[jid] = cur;
     });
     _writeStoreBlob('LogStore', out);
+    return { dropped: dropped };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
@@ -595,9 +772,12 @@ function getJobsFromSheet() {
 
 // Merge the incoming jobs into the Jobs sheet by id (newer updatedAt wins). Never
 // deletes a job missing from the payload — that absence-means-delete behavior is what
-// let a second device wipe another device's client. Real deletions go through deleteJob.
+// let a second device wipe another device's client. Real deletions go through deleteJob,
+// and a job the sheet has seen and no longer holds is REFUSED rather than merged back (see
+// JOB LEDGER). Returns { dropped: [ids refused] } so the sender can drop them too.
 function saveAllJobsToSheet(jobsArr) {
-  if (!jobsArr || !jobsArr.length) return;
+  var result = { dropped: [] };
+  if (!jobsArr || !jobsArr.length) return result;
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
   try {
@@ -609,14 +789,19 @@ function saveAllJobsToSheet(jobsArr) {
     }
 
     // Start from what's already stored, keyed by id (preserves jobs this device never had).
+    var stored = getJobsFromSheet();
+    var present = _presentJobIds(stored), ledger = getJobLedger();
     var byId = {}, order = [];
-    getJobsFromSheet().forEach(function(j) {
+    stored.forEach(function(j) {
       if (j && j.id != null) { if (!(j.id in byId)) order.push(j.id); byId[j.id] = j; }
     });
 
     // Upsert each incoming job; newer updatedAt wins (missing timestamp counts as oldest).
     jobsArr.forEach(function(j) {
       if (!j || j.id == null) return;
+      // A job the sheet has seen before and no longer holds was deleted while this device
+      // still had it. Refuse it: merging it is how a cleared sheet refilled itself.
+      if (_jobRefusal(j.id, j.created, present, ledger)) { result.dropped.push(j.id); return; }
       var cur = byId[j.id];
       var inT = Number(j.updatedAt || 0), curT = cur ? Number(cur.updatedAt || 0) : -1;
       if (!cur) order.push(j.id);
@@ -633,9 +818,12 @@ function saveAllJobsToSheet(jobsArr) {
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
     if (rows.length) sheet.getRange(2, 1, rows.length, 12).setValues(rows);
+    _ledgerMarkSeen(ledger, order);
   } finally {
     try { lock.releaseLock(); } catch (e) {}
   }
+  if (result.dropped.length) Logger.log('saveAllJobs refused ' + result.dropped.length + ' deleted job(s): ' + result.dropped.join(', '));
+  return result;
 }
 
 // Single-job upsert. Takes the SAME script lock and applies the SAME newest-wins
@@ -643,7 +831,8 @@ function saveAllJobsToSheet(jobsArr) {
 // can no longer race the bulk write and clobber a job row. Two devices editing two
 // different jobs are always safe; two editing the SAME job resolve by updatedAt.
 function saveJobToSheet(job) {
-  if (!job || job.id == null) return;
+  var result = { dropped: [] };
+  if (!job || job.id == null) return result;
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
   try {
@@ -657,6 +846,14 @@ function saveJobToSheet(job) {
     var rowIndex = -1;
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][0]) === String(job.id)) { rowIndex = i + 1; break; }
+    }
+    // Same refusal as the bulk path: ~20 edit sites fire this per record, and an edit made
+    // on a stale device to a job the sheet has deleted must not re-create the row.
+    var ledger = getJobLedger();
+    if (rowIndex < 0 && _jobRefusal(job.id, job.created, {}, ledger)) {
+      result.dropped.push(job.id);
+      Logger.log('saveJob refused deleted job ' + job.id);
+      return result;
     }
     // Newest-wins guard: if the stored row is newer than this write, leave it alone
     // rather than overwriting fresher data with a stale edit from another device.
@@ -676,10 +873,12 @@ function saveJobToSheet(job) {
       sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
     } else {
       sheet.appendRow(rowData);
+      _ledgerMarkSeen(ledger, [job.id]);
     }
   } finally {
     try { lock.releaseLock(); } catch (e) {}
   }
+  return result;
 }
 
 function deleteJobFromSheet(id) {
@@ -693,6 +892,9 @@ function deleteJobFromSheet(id) {
   for (var r = data.length - 1; r >= 1; r--) {
     if (String(data[r][idCol]) === String(id)) { sheet.deleteRow(r + 1); break; }
   }
+  // Remember it. Normally already seen; this covers a row somebody typed into the sheet by
+  // hand, which no write ever recorded. Absent from the sheet + seen = refused from now on.
+  try { _ledgerMarkSeen(getJobLedger(), [id]); } catch (e) { Logger.log('ledger on delete ' + id + ': ' + e); }
   // Purge the job's records from the keyed stores too. Deleting a job used to remove only
   // the Jobs row, so its estimate, job plan and logs stayed behind forever — invisible in
   // the app, but still serialized into every subsequent write. That is how the sheet ends

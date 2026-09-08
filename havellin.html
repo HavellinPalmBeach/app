@@ -762,7 +762,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 2:38pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 6:03pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10452,18 +10452,64 @@ function checkDeletePin() {
   closeoutJobId = 0;
 }
 
+// Drop every per-job record this device holds for the given job ids — estimate, job
+// plan, hours log, change orders, photo manifest and its caches — in memory AND in
+// localStorage. Shared by the deliberate delete below and by the two paths that learn of a
+// deletion from the sheet. Touches nothing that would push to the sheet.
+function _purgeLocalJobRecords(ids) {
+  var list = Array.isArray(ids) ? ids : [ids];
+  if (!list.length) return;
+  list.forEach(function(id){
+    if (id == null) return;
+    try { if (typeof estimateStore === 'object' && estimateStore) delete estimateStore[id]; } catch(e) {}
+    try { if (typeof jobLogs === 'object' && jobLogs) delete jobLogs[id]; } catch(e) {}
+    try { if (typeof jobPlanStore === 'object' && jobPlanStore) delete jobPlanStore[id]; } catch(e) {}
+    try { if (Array.isArray(changeOrders)) changeOrders = changeOrders.filter(function(co){ return !co || String(co.jobId) !== String(id); }); } catch(e) {}
+    try { localStorage.removeItem('hav_media_' + id); localStorage.removeItem('hav_media_pending_' + id); localStorage.removeItem('hav_media_thumb_' + id); } catch(e) {}
+  });
+  try { if (typeof estimateStore === 'object' && estimateStore) localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+  try { if (typeof jobLogs === 'object' && jobLogs) localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
+  try { if (typeof jobPlanStore === 'object' && jobPlanStore) localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
+  try { if (Array.isArray(changeOrders)) localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } catch(e) {}
+}
+
+// The sheet REFUSED these job ids on a save (see JOB LEDGER in main-sync.gs): it has seen
+// them before and no longer holds them, so they were deleted — on another device, by the
+// reset script, or by clearing rows in the spreadsheet — while this device still had them.
+// Reported 2026-09-08: Ashley's laptop, open since before Anthony cleared the sheet, added
+// one client and the whole-array save put three deleted clients back. The sheet now says
+// no; this is the device agreeing. Drop them here WITHOUT calling saveJobs() — that would
+// post the list straight back, and the point is that this device stops asserting them.
+// Returns the number of jobs removed from the list.
+function _applyDroppedJobs(ids) {
+  if (!Array.isArray(ids) || !ids.length) return 0;
+  var set = {};
+  ids.forEach(function(id){ if (id != null) set[String(id)] = true; });
+  var before = jobs.length;
+  jobs = jobs.filter(function(j){ return !(j && set[String(j.id)]); });
+  var removed = before - jobs.length;
+  try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
+  _purgeLocalJobRecords(ids);
+  if (removed) {
+    var ct = document.getElementById('jct'); if (ct) ct.textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
+    if (typeof rebuildDropdowns === 'function') { try { rebuildDropdowns(); } catch(e) {} }
+    if (typeof renderJobs === 'function') { try { renderJobs(); } catch(e) {} }
+    // Say so. A client vanishing from the list with no explanation reads as data loss;
+    // this is the opposite — the list is catching up with a deletion made elsewhere.
+    showSyncBadge(removed + ' client' + (removed > 1 ? 's' : '') + ' deleted elsewhere — removed from this device too', true);
+  }
+  return removed;
+}
+
 function hardDeleteJob(id) {
   jobs = jobs.filter(function(j){ return j.id!==id; });
   // Clean up all related per-job data so it doesn't orphan or get re-pushed to Sheets
-  try { delete estimateStore[id]; localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
-  try { if (typeof jobLogs === 'object' && jobLogs) { delete jobLogs[id]; localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } } catch(e) {}
-  try { if (typeof jobPlanStore === 'object' && jobPlanStore) { delete jobPlanStore[id]; localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } } catch(e) {}
-  try { if (Array.isArray(changeOrders)) { changeOrders = changeOrders.filter(function(co){ return co.jobId !== id; }); localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } } catch(e) {}
-  try { localStorage.removeItem('hav_media_' + id); } catch(e) {}
+  _purgeLocalJobRecords([id]);
   saveJobs();
   // Sheets is the source of truth and overwrites local on load, so the row must
   // also be removed there or it will reappear on next sync. Requires a matching
-  // 'deleteJob' handler in the Apps Script backend.
+  // 'deleteJob' handler in the Apps Script backend, which also records the id in the
+  // job ledger so no other device can merge it back.
   if (SHEETS_SYNC_URL) postSyncBadge({ type: 'deleteJob', payload: { id: id } }, 'Deleted from cloud ✓', 'Removed locally — also delete the row in the spreadsheet');
   renderJobs();
 }
@@ -10584,9 +10630,12 @@ function saveJobs() {
   for (var _i = 0; _i < jobs.length; _i++) { if (jobs[_i] && !jobs[_i].updatedAt) jobs[_i].updatedAt = _now; }
   try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
   document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
-  // Push to Sheets for cross-device sync. The Sheet now merges this payload by job id
-  // and never drops a job missing from it, so a second device can no longer overwrite a
-  // client created on another device. Deletions go through the explicit deleteJob action.
+  // Push to Sheets for cross-device sync. The Sheet merges this payload by job id and
+  // never drops a job missing from it, so a second device can no longer overwrite a
+  // client created on another device. Deletions go through the explicit deleteJob action —
+  // and the sheet REFUSES a job it has seen before and no longer holds (its job ledger), so
+  // a device still carrying a deleted client cannot merge it back. When that happens the
+  // response names the refused ids and _applyDroppedJobs removes them here too.
   postSyncBadge({ type: 'saveAllJobs', payload: jobs }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
 }
 
@@ -10608,6 +10657,9 @@ function loadJobs() {
           // Sheets is the source of truth \u2014 always overwrite local (handles deletions)
           jobs = data.jobs;
           try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
+          // ...and drop the estimates, plans and logs this device still holds for jobs the
+          // sheet has deleted, or the next store save pushes them up as headless records.
+          if (Array.isArray(data.deletedJobs)) _purgeLocalJobRecords(data.deletedJobs);
           document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
           rebuildDropdowns();
           renderJobs();
@@ -10680,6 +10732,7 @@ function refreshJobsFromCloud(cb) {
       if (data && Array.isArray(data.jobs) && !data.error) {
         jobs = data.jobs;
         try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
+        if (Array.isArray(data.deletedJobs)) _purgeLocalJobRecords(data.deletedJobs);
       }
     })
     .catch(function(){})
@@ -14832,6 +14885,7 @@ function flushPendingWrites() {
       .then(function(res){
         if (res && res.ok) {
           delete _pendingWrites[k];
+          if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped);
           if (typeof w.onLanded === 'function') { try { w.onLanded(res); } catch(e) {} }
           return true;
         }
@@ -14906,7 +14960,12 @@ function _flushOutbox() {
     var w = batch[i++];
     postSyncTo(w.target, w.body)
       .then(function(res){
-        if (res && res.ok) { if (w.okMsg) showSyncBadge(w.okMsg); }
+        if (res && res.ok) {
+          if (w.okMsg) showSyncBadge(w.okMsg);
+          // The sheet took the write but refused some job ids: it has seen them before and
+          // no longer holds them, so they were deleted while this device still had them.
+          if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped);
+        }
         // A well-formed { ok:false, error } is the SERVER talking — that text may
         // diagnose the deployment.
         else _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, res && res.error, null, true);

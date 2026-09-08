@@ -288,8 +288,14 @@ function saveMediaStore(payload) {
     var lock = LockService.getScriptLock();
     try { lock.waitLock(20000); } catch (e) {}
     try {
-      var store = getMediaStore();
       var key = String(payload.jobId);
+      // A manifest for a job the sheet has seen and no longer holds (see JOB LEDGER in
+      // main-sync.gs) is refused, not merged — the same rule as every other job-keyed store.
+      if (_jobRefusal(key, null, _presentJobIds(getJobsFromSheet()), getJobLedger())) {
+        Logger.log('saveMedia refused deleted job ' + key);
+        return { ok: true, success: true, jobId: key, count: 0, dropped: [key] };
+      }
+      var store = getMediaStore();
       var cur = store[key] && store[key].items ? store[key].items : [];
       store[key] = {
         savedAt: Number(payload.savedAt) || new Date().getTime(),

@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/home-transition-terminology-elllih`
-  (was `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/kind-hawking-j7iugr`
+  (was `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/home-transition-terminology-elllih:main`
+  `git push origin claude/kind-hawking-j7iugr:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -88,6 +88,62 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## Deleted clients came back from a stale laptop — the sheet now keeps a job ledger (BUILT 2026-09-08)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` and `saveInventory.gs` both changed.
+*"if a computer has clients stored in its local memory, that pushes those locally stored clients
+back … into the job sync sheet even if I've gone in and deleted all of the jobs in the sheet
+itself … when she added a new client, it pushed the new client plus three old clients back."*
+
+- **What happened, exactly.** `saveJobs()` posts the WHOLE `jobs` array on every save, and
+  `saveAllJobsToSheet` unions by id and never drops a job missing from the payload — the fix
+  for the 2026-07 disappearing-client bug, and correct for two devices that each hold a client
+  the other has not seen. Anthony cleared the Jobs sheet **by hand**. Ashley's laptop still had
+  the app **open from before** — `loadJobs` overwrites the local list from the sheet on every
+  page load, so a reload would have cleared it, but a tab that never reloaded still held the
+  three old clients in memory. She added one; the save carried four; the merge took all four.
+  The merge could not tell "a client this device added" from "a client the sheet deliberately no
+  longer has". Estimates, plans, logs and manifests would have come back the same way — each
+  store merges per key.
+- **`JobLedger` — a store of every job id the sheet has ever written** (`{ since, seen: {id:
+  firstSeen}, restore }`). The rule is one function, `_jobRefusal`: an id the ledger has **seen**
+  and the Jobs sheet **no longer holds** was deleted — by `deleteJob`, by
+  `resetAllJobDataConfirm`, **or by deleting the row in the spreadsheet** — and is refused, not
+  merged. An id never seen is new and goes in. **A ledger of what was seen, not tombstones
+  written by `deleteJob`, because nothing runs when a row is deleted by hand** — a tombstone
+  would not exist for exactly the case that was reported.
+  - **`since` closes the bootstrap gap.** The ledger seeds itself from the Jobs sheet on first
+    use, so a job deleted BEFORE the redeploy is in neither the sheet nor `seen`. Job ids are
+    creation timestamps (`id: Date.now()`), so a never-seen job created before the ledger
+    existed that the sheet does not hold is refused too. That loses nothing: the sheet
+    overwrites the device's list on every reload, so such a job was already gone from every
+    device that had reloaded.
+  - **Every job-keyed write refuses the same way** — `saveAllJobs`, the per-record `job`,
+    `saveAllEstimates`, `saveAllJobPlans`, `saveAllLogs`, `saveAllChangeOrders` (by `co.jobId`)
+    and `saveMedia`. A new job's estimate can land BEFORE its job row (the outbox sends one
+    write at a time), so "not present yet" is never by itself a reason to refuse; only
+    seen-and-absent or predates-the-ledger is. Tested.
+  - **The response carries `dropped: [ids]`** (`_okWithDrops`; absent when empty, so every other
+    response is byte-identical to before). The app's `_applyDroppedJobs` removes them from
+    `jobs` and every local store **without calling `saveJobs()`** — that would post them
+    straight back — redraws, and says *"N clients deleted elsewhere — removed from this device
+    too"*. `loadJobs` also returns `deletedJobs` so a reload purges the local estimates/plans/
+    logs for jobs that are gone (`_purgeLocalJobRecords`, now shared with `hardDeleteJob`).
+  - **`resetAllJobDataConfirm` marks every id it is about to clear as seen FIRST**, from the Jobs
+    sheet and all five stores. `JobLedger` is deliberately NOT in `RESET_JOB_STORES` — it is the
+    memory of the reset. The reset's closing advice no longer orders a device sweep as the only
+    defence; *Settings → This Device → Clear* still tidies a device straight away.
+  - **The escape hatch: `allowJobRestoreConfirm(['<id>'])`**, run from the editor with the id
+    pasted in (argument-taking on purpose — the Run menu passes none, so it cannot fire by
+    accident). Single-use: spent the moment a device writes the job. `previewDeletedJobs()`
+    lists what the ledger will refuse. Before the ledger a mistaken row deletion was silently
+    undone by whichever stale device saved next; now it needs a decision, which is the point.
+- **What this does NOT change:** the merge still never drops a job merely absent from a
+  payload — two devices adding different clients is still safe. Nothing on the client refreshes
+  before saving; the server is the right layer, since a refresh-then-save still races.
+- Manual **§2** note; playbook **two symptom→cause rows**. Both `.md` copies hand-edited.
+- **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
+  functions against a fake spreadsheet, and the app's receiving side out of the real source).
 
 ## The signing packet — the agreement with its Exhibit A actually attached (BUILT 2026-09-08)
 *"so there are basically two versions of the agreement? then the specifics are all in the
@@ -385,10 +441,12 @@ before the first real jobs. `previewReset()` / `resetAllJobDataConfirm()` /
   `ContractorStore` is the crew, not practice clients, so it survives unless you pass `true`.
   Drive is a separate function again, and it **trashes rather than deletes** — the photographs
   are the one thing that cannot be re-typed, so they get Drive's 30-day undo.
-- **⚠ THE ORDERING IS THE PART THAT BITES: clear every DEVICE too, or the wipe undoes
-  itself.** The stores merge by record id and union, so a browser still holding the old jobs
-  pushes them straight back up on its next save and the sheet repopulates with what you just
-  deleted. Per device, keeping Settings and the cached directories:
+- **⚠ THE ORDERING USED TO BITE: clear every DEVICE too, or the wipe undid itself.** The stores
+  merge by record id and union, so a browser still holding the old jobs pushed them straight
+  back up on its next save and the sheet repopulated with what you just deleted. **This
+  happened for real on 2026-09-08 and the sheet now refuses it — see the job-ledger section
+  above.** Clearing a device is still the way to make it stop SHOWING the old clients before
+  its next save or reload. Per device, keeping Settings and the cached directories:
   **Settings → This Device → “Clear this device & reload from the sheet”** (`clearLocalJobData`).
   **⚠ The version suffix is part of every key** — `havellin_jobs_v3`, `havellin_est_v4`,
   `havellin_jobplan_v1`. The first `LOCAL_JOB_DATA_KEYS` anchored on `_v$` and matched
@@ -1824,7 +1882,9 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-08 (sixteenth pass, same day)** — manual **§8** gained the
+- Last reconciled against the app: **2026-09-08 (seventeenth pass, same day)** — manual **§2** gained
+  the job-ledger note; playbook two symptom→cause rows. Both `.md` copies hand-edited.
+- Prior pass **2026-09-08 (sixteenth pass, same day)** — manual **§8** gained the
   signing-packet note; playbook a Step 6 row and one symptom→cause row. Both `.md` copies hand-edited.
 - Prior pass **2026-09-08 (fifteenth pass, same day)** — manual **§8** gained the
   vendor-fee-clause note; playbook one symptom→cause row. Both `.md` copies hand-edited.
