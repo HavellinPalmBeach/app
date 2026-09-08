@@ -235,12 +235,14 @@ Open the job card and hit **✓ Client Accepted — Mark Won**. Acceptance is in
 
 1. Select the job — the agreement populates from the approved estimate.
 2. A manager enters their PIN to approve it for sending. The approved agreement files itself to the Drive **Agreement** folder at this moment.
-3. **Print / Save PDF** or **Email to Client**.
+3. **✉ Email to Client** — builds the signing packet as a draft in your own Gmail, CC'd to agreements@, and opens it. Read it, add a line, send. (Or **Print Signing Packet** if you are handing it over in person.)
 4. Hit **✉ Mark Agreement Sent**.
 
 > **⚠** **There are two agreement forms and you do not choose between them.** The app picks on the **service type**, the same way the estimate does (step 3): Estate Settlement and both probates get the **estate form**, written to a representative signing in a fiduciary capacity; Home Editing, Home Transition, Home Cleanout and Home Prep get the standard form, written to an owner contracting for their own property. **Read the first paragraph before you send it.** If it addresses the wrong kind of client the service type is wrong — fix it at intake and re-generate. Never edit the agreement text by hand.
 
 > **⚠** **The estate agreement rewrites its inventory clauses from the estimate's Documentation scope (new 2026-09-04).** Scope of Services, the §5.2 probate-compliance list, the appraisal row in §5.3 and the midpoint-payment trigger all follow it. At *None* the agreement says the inventory and valuation are counsel's; at *Capture only* it sells the photographed list without valuation. If you approved the agreement and then changed the scope on the estimate, the filed copy is wrong: regenerate and re-approve. Read §2 and §5.2 before it goes out — that is where it would contradict what the attorney told you.
+
+> **The agreement's Email to Client is new as of 2026-09-08 — the old one never worked.** The button was there but did nothing, so **agreements@ has never had a copy of an agreement sent to a client.** It does now, automatically, on both the Gmail draft and the plain-text fallback. It attaches the **signing packet**, so you are never sending an agreement whose Exhibit A is missing.
 
 Three buttons then appear one at a time, each in its own turn, each recording who did it and when. None of them will run out of order — you cannot mark a signature on an agreement that was never sent.
 
@@ -542,6 +544,8 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| agreements@ never got a copy of an agreement you sent | Before 2026-09-08 there was no working agreement email at all — the button was in the app and did nothing. Nothing was lost on your side; the copy simply never went. From now on both the Gmail draft and the plain email CC it automatically. |
+| The worksheet in a Home Prep client's Estimate folder is blank | Fixed 2026-09-08. A prep job has no rooms and no hours, so the old worksheet rendered an empty table. Re-approve the estimate and it re-files with the vendor lines and the fee on it. (And check the folder holds the client estimate too — see the row above about a table of rooms and hours.) |
 | **Email to Client** opened a plain-text email instead of the formatted one | The app fell back, and it will have said why in the message bar. Either Gmail is not set up on this device (⚙ Settings needs the *Google OAuth Client ID* — ask Anthony for it), or the Google sign-in window was closed before it finished. The plain email works; you just have to attach the PDF yourself. |
 | The Gmail draft was created but the PDF is not attached | The PDF conversion failed and the app told you so rather than dropping the email. The body still carries the summary. Hit **Print / Save PDF**, attach it to the draft by hand, and send. |
 | The Gmail draft opened in the wrong Google account | Gmail opens the first account signed in on that browser. Switch account in Gmail and the draft is there — it was created in whichever account you picked in the Google window, and that is the one it will send from. |

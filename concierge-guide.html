@@ -254,11 +254,13 @@
   <ol>
     <li>Select the job — the agreement populates from the approved estimate.</li>
     <li>A manager enters their PIN to approve it for sending. The approved agreement files itself to the Drive <strong>Agreement</strong> folder at this moment.</li>
-    <li><strong>Print / Save PDF</strong> or <strong>Email to Client</strong>.</li>
+    <li><strong>&#9993; Email to Client</strong> &mdash; builds the signing packet as a draft in your own Gmail, CC&rsquo;d to agreements@, and opens it. Read it, add a line, send. (Or <strong>Print Signing Packet</strong> if you are handing it over in person.)</li>
     <li>Hit <strong>✉ Mark Agreement Sent</strong>.</li>
   </ol>
   <div class="stop"><strong>There are two agreement forms and you do not choose between them.</strong> The app picks on the <strong>service type</strong>, the same way the estimate does (step 3): Estate Settlement and both probates get the <strong>estate form</strong>, written to a representative signing in a fiduciary capacity; Home Editing, Home Transition, Home Cleanout and Home Prep get the standard form, written to an owner contracting for their own property. <strong>Read the first paragraph before you send it.</strong> If it addresses the wrong kind of client the service type is wrong — fix it at intake and re-generate. Never edit the agreement text by hand.</div>
   <div class="stop"><strong>The estate agreement rewrites its inventory clauses from the estimate's Documentation scope (new 2026-09-04).</strong> Scope of Services, the §5.2 probate-compliance list, the appraisal row in §5.3 and the midpoint-payment trigger all follow it. At <em>None</em> the agreement says the inventory and valuation are counsel's; at <em>Capture only</em> it sells the photographed list without valuation. If you approved the agreement and then changed the scope on the estimate, the filed copy is wrong: regenerate and re-approve. Read §2 and §5.2 before it goes out — that is where it would contradict what the attorney told you.</div>
+  <div class="note"><strong>The agreement&rsquo;s Email to Client is new as of 2026-09-08 &mdash; the old one never worked.</strong> The button was there but did nothing, so <strong>agreements@ has never had a copy of an agreement sent to a client.</strong> It does now, automatically, on both the Gmail draft and the plain-text fallback. It attaches the <strong>signing packet</strong>, so you are never sending an agreement whose Exhibit A is missing.</div>
+
   <p>Three buttons then appear one at a time, each in its own turn, each recording who did it and when. None of them will run out of order — you cannot mark a signature on an agreement that was never sent.</p>
   <table>
     <tr><th>Button</th><th>Press it when</th></tr>
@@ -527,6 +529,8 @@
   <h3>If something won't let you proceed</h3>
   <table>
     <tr><th>Symptom</th><th>What's missing</th></tr>
+    <tr><td>agreements@ never got a copy of an agreement you sent</td><td>Before 2026-09-08 there was no working agreement email at all &mdash; the button was in the app and did nothing. Nothing was lost on your side; the copy simply never went. From now on both the Gmail draft and the plain email CC it automatically.</td></tr>
+    <tr><td>The worksheet in a Home Prep client&rsquo;s Estimate folder is blank</td><td>Fixed 2026-09-08. A prep job has no rooms and no hours, so the old worksheet rendered an empty table. Re-approve the estimate and it re-files with the vendor lines and the fee on it. (And check the folder holds the client estimate too &mdash; see the row above about a table of rooms and hours.)</td></tr>
     <tr><td><strong>Email to Client</strong> opened a plain-text email instead of the formatted one</td><td>The app fell back, and it will have said why in the message bar. Either Gmail is not set up on this device (&#9881; Settings needs the <em>Google OAuth Client ID</em> &mdash; ask Anthony for it), or the Google sign-in window was closed before it finished. The plain email works; you just have to attach the PDF yourself.</td></tr>
     <tr><td>The Gmail draft was created but the PDF is not attached</td><td>The PDF conversion failed and the app told you so rather than dropping the email. The body still carries the summary. Hit <strong>Print / Save PDF</strong>, attach it to the draft by hand, and send.</td></tr>
     <tr><td>The Gmail draft opened in the wrong Google account</td><td>Gmail opens the first account signed in on that browser. Switch account in Gmail and the draft is there &mdash; it was created in whichever account you picked in the Google window, and that is the one it will send from.</td></tr>

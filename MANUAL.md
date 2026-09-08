@@ -441,6 +441,8 @@ The client estimate reads vendors-first: the itemized prep vendor estimates (bil
 >
 > **The invoice already knew this and the estimate did not** — `renderInvoice` has exempted prep from every hours gate since it was written. One test, `estimateIsFeeOnly`, now answers for both, and it fires on the prep service *or* on any saved estimate that priced no hours at all.
 
+> **Its internal worksheet lists the vendors, not an empty room table (fixed 2026-09-08).** The Drive worksheet renders rooms, volume, complexity and hours — a fee-only job has none of those, so it came out as a single *Job-level work · 0.0 TC / 0.0 PS* row above a total. Anthony sent one: a $4,560 Home Prep worksheet that said nothing, sitting in the client's Estimate folder because the two files still shared a filename. On a fee-only estimate it now lists each prep vendor line with its scope note and cost, and the footer states the vendor spend and the fee rate. Room-based jobs are untouched.
+
 ### 6c. Job Plan (streamlined)
 
 A Home Prep job opens a stripped-down Job Plan — no hours log, no PS crew, no room phases, no end-of-job logistics. It shows only:
@@ -556,6 +558,12 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 > **The draft still renders the moment you pick a job**, so you can read the contract you are about to talk through. Reading it is free; approving it is what commits.
 
 > **Editing the estimate withdraws the agreement's approval (new 2026-09-08).** Both forms attach the estimate as Exhibit A and the estate form says the agreement is not valid without it — so an agreement approved against a version now being edited is approved against nothing. Until now, editing an approved estimate un-approved the *estimate*, cleared the job's approved flag and even cleared the estimate's Drive stamp, and left the agreement reading *Approved for Sending* with the PDF button live and a stale Exhibit A already filed in Drive. The tab now says the approval was withdrawn and why. **Re-approving after the edit re-files the agreement and the signing packet automatically** — previously a second approval in the same browser session was suppressed by a once-per-session guard, which is exactly the approval carrying the correction.
+
+> **⚠ THE AGREEMENT'S "EMAIL TO CLIENT" BUTTON HAD NEVER WORKED, so agreements@ had never been copied on anything (fixed 2026-09-08).** Anthony: *"do we cc estimates and agreements @havellin like before? that's important."* The estimate always has and still does; the agreement never did. Its button existed in the markup carrying `display:none` and **nothing anywhere set its address or showed it** — the same dead-control shape as the deposit button before 2026-07-30. Both this manual and the playbook documented it, which is why it read as working.
+>
+> It is real now and behaves like the estimate's: a formatted HTML email as a **draft in your own Gmail**, **CC'd to agreements@havellinpalmbeach.com**, falling back to a plain-text email (also CC'd) when Gmail is not configured. The body carries the payment schedule off the approved estimate; a job with no approved estimate prints no schedule rather than one full of zeroes.
+>
+> **It attaches the SIGNING PACKET, not the agreement alone** — the agreement by itself refers to an Exhibit A the client does not have. The button appears in exactly the states *Print / Save PDF* appears in, so it cannot be a way past the approval gates; a test asserts the two counts match.
 
 ### Generate & Send
 

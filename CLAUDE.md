@@ -196,6 +196,31 @@ falls back to the old `mailto:` and says so.
     the correction was suppressed and Drive kept the stale copy.** Both key on
     `_agrExportKey(job)` (approval stamp + approver) now: a new approval re-files, a redraw
     does not.
+- **⚠ THE AGREEMENT'S "EMAIL TO CLIENT" BUTTON HAD NEVER WORKED, AND agreements@ HAD NEVER
+  BEEN COPIED ON ANYTHING (fixed same day).** *"do we cc estimates and agreements @havellin
+  like before? that's important."* The estimate always has (`cc: DEPT_EMAILS.estimates`, on the
+  Gmail draft AND the mailto) and invoices CC `billing@`. The agreement never did: `btn-mailto-agr`
+  appeared **exactly once in the whole file** — the markup, `display:none` — and nothing set its
+  href or showed it. Same dead-control shape as `markDepositReceived` before 2026-07-30, and
+  both the manual and the playbook documented it as working.
+  - `emailAgreementToClient` mirrors the estimate's: Gmail draft, **CC `DEPT_EMAILS.agreements`**,
+    `_agreementEmailFallback` to a mailto that carries the same CC.
+  - **IT ATTACHES THE SIGNING PACKET, NOT THE AGREEMENT ALONE.** Both forms incorporate the
+    Estimate as Exhibit A and the estate form says the agreement is not valid without it —
+    emailing the bare agreement would reopen exactly what the packet was built to close.
+  - **The button follows `btnPdf` in every branch of `updateAgrUI`**, so it cannot become a way
+    past the approval gates. A test counts the show sites and the hide sites and asserts both
+    match `btnPdf` exactly — that is the assertion to keep if a branch is ever added.
+  - The body carries the payment schedule off `approvedEstimateFor`; **no approved estimate
+    prints no schedule**, rather than a schedule of zeroes.
+- **⚠ AND THE INTERNAL WORKSHEET WAS BLANK ON A FEE-ONLY JOB.** Anthony sent the document:
+  *"what is this file? it was in the client folder, estimates"* — a Home Prep worksheet whose
+  room table was one `Job-level work · 0.0 TC / 0.0 PS` row above a $4,560 total. **It is the
+  live proof of the filename race above**: the worksheet had won and was sitting in the client's
+  Estimate folder. Splitting the names stops it reaching the client; `_feeOnlyWs` stops it being
+  useless to us — a fee-only estimate's working paper is the **prep vendor lines with their scope
+  notes and costs**, footed with the vendor spend and `prepFeeRate` (read, never a literal 30).
+  Room-based jobs are untouched.
 - **The HTML estimate email — a Gmail DRAFT in the signed-in user's own mailbox.**
   *"right now it generates an email from the person who is logged into the havellin email, so
   we want to keep that. if ashley generates, the email comes from ashley … i want to see it,
@@ -232,12 +257,12 @@ falls back to the old `mailto:` and says so.
     variant mentions neither hours nor 15%, and a fixed-price one drops the hourly threshold.
     *Note for next time: Playwright's option is `viewport`, not `viewportSize` — the wrong one
     silently leaves the page at the 1280px default and every width measurement is a lie.*
-- **1004 committed checks** (`tests/estimate-delivery.test.js`, 143 new). The harness gained
+- **1044 committed checks** (`tests/estimate-delivery.test.js`, 183 new). The harness gained
   `btoa`/`atob`/`unescape`/`escape` — real browser globals the app uses, whose absence read as
   a bug in the code under test.
-- Manual **§2** (the Cloud setup steps), **§6b** (prep terms), **§7** (naming, the two Drive
-  files, the email) and **§8** (both gates); playbook **Step 3/4/6** and **eight** new
-  symptom→cause rows. Both `.md` copies hand-edited and parity-checked claim by claim.
+- Manual **§2** (the Cloud setup steps), **§6b** (prep terms + the fee-only worksheet), **§7**
+  (naming, the two Drive files, the email) and **§8** (both gates + the agreement email);
+  playbook **Step 3/4/6** and **ten** new symptom→cause rows. Both `.md` copies hand-edited and parity-checked claim by claim.
 
 ## The signing packet — the agreement with its Exhibit A actually attached (BUILT 2026-09-08)
 *"so there are basically two versions of the agreement? then the specifics are all in the

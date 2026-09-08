@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 7:37pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 7:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1842,7 +1842,7 @@ body.no-smf .smf-col{display:none;}
         <button class="btn-s" id="btn-agr-stripe" onclick="generateStripeLink()" style="display:none;">Generate Payment Link</button>
         <button class="btn-bronze" id="btn-agr-pdf" onclick="printAgreement()" style="display:none;">Print / Save PDF</button>
         <button class="btn-bronze" id="btn-agr-packet" onclick="printSigningPacket()" style="display:none;" title="The agreement with the approved estimate attached as Exhibit A — one document to sign">Print Signing Packet</button>
-        <a class="btn-bronze" id="btn-mailto-agr" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
+        <button class="btn-bronze" id="btn-agr-email" onclick="emailAgreementToClient()" style="display:none;" title="Signing packet, as a draft in your own Gmail — CC agreements@">&#9993; Email to Client</button>
         <button class="btn-s" id="btn-agr-sent" onclick="markAgreementSent()" style="display:none;">&#9993; Mark Agreement Sent</button>
         <button class="btn-s" id="btn-agr-signed" onclick="markAgreementSigned()" style="display:none;background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-tx);">&#10003; Mark Agreement Signed</button>
         <button class="btn-s" id="btn-deposit-received" onclick="openDepositModal()" style="display:none;background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-tx);">&#10003; Record Deposit</button>
@@ -11168,6 +11168,188 @@ function assignedTCContact(job) {
   };
 }
 function firstName(name) { return name ? name.split(' ')[0] : 'there'; }
+
+// ─── THE AGREEMENT EMAIL ──────────────────────────────────────────────────────
+// ⚠ THE AGREEMENT TAB HAD AN "EMAIL TO CLIENT" BUTTON THAT HAD NEVER WORKED.
+// `btn-mailto-agr` appeared exactly ONCE in the whole file — the markup, carrying
+// `display:none` — and nothing anywhere set its href or showed it. Same dead-button shape
+// as `markDepositReceived` before 2026-07-30. It mattered more than it looks: Anthony,
+// 2026-09-08, "do we cc estimates and agreements @havellin like before? that's
+// important." The ESTIMATE has CC'd estimates@ since it was built and still does, but
+// there was no agreement email at all, so agreements@ had never received a copy of
+// anything sent to a client. Both the manual and the playbook documented the button.
+//
+// **IT SENDS THE SIGNING PACKET, NOT THE AGREEMENT ALONE.** Both forms incorporate the
+// Estimate as Exhibit A and the estate form says the agreement is not valid without it —
+// a client sent the agreement by itself is signing against an exhibit they do not have.
+// That is the whole reason the packet exists; emailing the bare agreement would reopen it.
+function buildAgreementEmailHtml(job) {
+  var B = EMAIL_BRAND;
+  var tc = assignedTCContact(job);
+  var est = approvedEstimateFor(job.id);
+  var total = est ? (est.havellinTotal || 0) : (job.havellinEst || 0);
+  var split = paymentSplit(total);
+  var street = String(job.addr || '').split(',')[0].trim();
+  var td = 'padding:9px 0;font-size:15px;color:' + B.ink + ';border-bottom:1px solid ' + B.line + ';';
+  var tdR = td + 'text-align:right;white-space:nowrap;';
+
+  return '' +
+  '<div style="margin:0;padding:0;background:#f4f1ea;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
+  '<tr><td align="center" style="padding:24px 12px;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ' + B.line + ';">' +
+
+  '<tr><td style="background:' + B.ink + ';padding:26px 22px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:23px;letter-spacing:.16em;color:#ffffff;text-transform:uppercase;">Havellin</div>' +
+    '<div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:' + B.bronzeLt + ';margin-top:5px;">Palm Beach</div>' +
+  '</td></tr>' +
+
+  '<tr><td style="padding:28px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
+    '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Service Agreement</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
+      _emHtml(street || job.name || 'Your property') + '</div>' +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(svcLabelOf(job)) +
+      (job.hvlId ? ' &nbsp;&middot;&nbsp; Reference ' + _emHtml(job.hvlId) : '') + '</div>' +
+
+    '<div style="height:1px;background:' + B.line + ';margin:22px 0;"></div>' +
+
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Dear ' + _emHtml(bestClientGreetingName(job)) + ',</p>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Thank you for entrusting this work to us. The service agreement is attached, with the approved estimate included as <strong>Exhibit A</strong> so everything we discussed is in one document.</p>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 22px;">Please review it at your convenience. When you are ready, sign and return it and we will confirm the schedule.</p>' +
+
+    (total > 0
+      ? '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';margin-bottom:8px;">Payment schedule</div>' +
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' +
+        '<tr><td style="' + td + '">50% on acceptance</td><td style="' + tdR + '">' + _emMoney(split.deposit) + '</td></tr>' +
+        '<tr><td style="' + td + '">25% at the midpoint</td><td style="' + tdR + '">' + _emMoney(split.midpoint) + '</td></tr>' +
+        '<tr><td style="' + td + '">25% on completion</td><td style="' + tdR + '">' + _emMoney(split.final) + '</td></tr>' +
+        '</table>' +
+        '<div style="margin-top:10px;font-size:13px;line-height:1.6;color:' + B.gray + ';">Against Havellin&rsquo;s services. Third-party vendors invoice you directly at cost.</div>'
+      : '') +
+
+    '<div style="height:1px;background:' + B.line + ';margin:26px 0 20px;"></div>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">If any part of it raises a question, call me &mdash; I would far rather talk it through than have you wonder.</p>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
+    '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
+      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emHtml(tc.phone) + '<br>' +
+      '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a></span></p>' +
+  '</td></tr>' +
+
+  '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
+    '<div style="font-size:10px;line-height:1.9;letter-spacing:.06em;text-transform:uppercase;color:' + B.gray + ';text-align:center;">' +
+      'Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>' +
+      '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401<br>' +
+      'Insured &amp; Bonded' +
+    '</div>' +
+  '</td></tr>' +
+
+  '</table></td></tr></table></div>';
+}
+
+function agreementEmailSubject(job) {
+  var street = String(job && job.addr || '').split(',')[0].trim();
+  return 'Havellin Palm Beach — Service Agreement for ' + (street || (job && job.name) || 'your property');
+}
+
+function buildAgreementEmailText(job) {
+  var tc = assignedTCContact(job);
+  var est = approvedEstimateFor(job.id);
+  var split = paymentSplit(est ? (est.havellinTotal || 0) : (job.havellinEst || 0));
+  var L = ['Dear ' + bestClientGreetingName(job) + ',', '',
+    'Thank you for entrusting this work to us. The service agreement is attached, with the approved estimate included as Exhibit A.', '',
+    'Please review it at your convenience. When you are ready, sign and return it and we will confirm the schedule.', ''];
+  if (split.total > 0) {
+    L.push('Payment schedule (Havellin services):');
+    L.push('  50% on acceptance: ' + _emMoney(split.deposit));
+    L.push('  25% at the midpoint: ' + _emMoney(split.midpoint));
+    L.push('  25% on completion: ' + _emMoney(split.final));
+    L.push('');
+  }
+  L.push('If any part of it raises a question, call me.', '',
+         'Warm regards,', tc.name, 'Havellin Palm Beach', tc.phone, tc.email);
+  return L.join('\n');
+}
+
+// The plain-text fallback, CC'd to agreements@ exactly as the estimate's is CC'd to
+// estimates@. It says to attach the packet, the way the estimate's mailto always has —
+// mailto: cannot carry one.
+function buildAgreementMailto(job) {
+  if (!job) return '#';
+  var body = buildAgreementEmailText(job).split('\n');
+  body.splice(4, 0, '** Attach the signing packet before sending — use "Print Signing Packet" in the app. **', '');
+  return 'mailto:' + encodeURIComponent(bestClientEmail(job))
+    + '?cc=' + encodeURIComponent(DEPT_EMAILS.agreements)
+    + '&subject=' + encodeURIComponent(agreementEmailSubject(job))
+    + '&body=' + mailtoBody(body);
+}
+
+// The packet as a PDF, through the same server-side conversion as everything else.
+function signingPacketPdfBase64(jobId, cb) {
+  var body = signingPacketHtml(jobId);
+  if (!body) { cb(null, 'The packet needs an approved estimate for this job.'); return; }
+  if (!SHEETS_SYNC_URL) { cb(null, 'No Apps Script URL configured — add it in ⚙ Settings.'); return; }
+  var job = jobs.find(function(j){ return j.id === jobId; }) || {};
+  var html = _exportDoc('Signing Packet – ' + (job.hvlId || ''), body,
+    '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}');
+  _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: html }, function(ok, d) {
+    if (ok && d && d.base64) cb(d.base64);
+    else cb(null, (d && d.error) || 'The PDF conversion failed.');
+  }, true);
+}
+
+var _agrEmailBusy = false;
+function _setAgrEmailBusy(on, label) {
+  _agrEmailBusy = on;
+  var b = document.getElementById('btn-agr-email');
+  if (!b) return;
+  b.disabled = on;
+  b.innerHTML = on ? (label || '↻ Building…') : '&#9993; Email to Client';
+  b.style.opacity = on ? '0.75' : '';
+}
+
+function emailAgreementToClient() {
+  if (_agrEmailBusy) return;
+  if (!agrApproved) { showFB('agr-fb', 'warn', 'Approve the agreement before sending it.'); return; }
+  var job = jobs.find(function(j){ return j.id === currentAgrJobId; });
+  if (!job) { showFB('agr-fb', 'warn', 'Job not found.'); return; }
+  var to = bestClientEmail(job);
+  if (!to) { showFB('agr-fb', 'warn', 'No client email on this job — add one in Client Intake first.'); return; }
+  if (!gmailConfigured()) { _agreementEmailFallback(job, 'Gmail is not connected yet (⚙ Settings). Opening a plain-text email instead.'); return; }
+
+  _setAgrEmailBusy(true, '↻ Building packet…');
+  showFB('agr-fb', 'info', 'Building the signing packet PDF…');
+
+  signingPacketPdfBase64(currentAgrJobId, function(pdf, pdfErr) {
+    if (!pdf) showFB('agr-fb', 'warn', 'Could not build the packet PDF (' + (pdfErr || 'unknown') + '). Creating the draft without it — attach a printed copy before sending.');
+    else showFB('agr-fb', 'info', 'Creating the draft in your Gmail…');
+    _setAgrEmailBusy(true, '↻ Creating draft…');
+
+    var mime = buildMimeMessage({
+      to: to,
+      cc: DEPT_EMAILS.agreements,
+      subject: agreementEmailSubject(job),
+      text: buildAgreementEmailText(job),
+      html: buildAgreementEmailHtml(job),
+      pdfBase64: pdf || '',
+      pdfName: ((job.name || 'Client').split(' ').pop()) + ' - Havellin Signing Packet.pdf'
+    });
+
+    gmailCreateDraft(mime, function(ok, d) {
+      _setAgrEmailBusy(false);
+      if (!ok) { _agreementEmailFallback(job, 'Gmail draft failed — ' + (d.error || 'unknown') + '. Opening a plain-text email instead.'); return; }
+      window.open(gmailDraftUrl(d.messageId || d.draftId), '_blank');
+      showFB('agr-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the signing packet attached' : '') + '. Review it, send, then click ✉ Mark Agreement Sent here.');
+      showSyncBadge('Gmail draft created ✓');
+    });
+  });
+}
+
+function _agreementEmailFallback(job, why) {
+  _setAgrEmailBusy(false);
+  if (why) showFB('agr-fb', 'warn', why);
+  var href = buildAgreementMailto(job);
+  if (href && href !== '#') window.location.href = href;
+}
 
 // ─── GMAIL DRAFT PLUMBING ─────────────────────────────────────────────────────
 // Creates the draft in the SIGNED-IN USER'S OWN mailbox, so Ashley's draft is Ashley's and
@@ -20751,6 +20933,8 @@ function exportEstimateToDrive(jobId, estSnapshot) {
     if (!folderId) return;
     var ts = new Date().toISOString().slice(0,10);
     var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
+    // Rooms and hours vs vendor spend and fee — see the note on the table below.
+    var _feeOnlyWs = estimateIsFeeOnly(est, job);
     var rows = (est.rooms||[]).map(function(r){
       return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+r.name+'</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+r.vol+'</td>'
@@ -20793,9 +20977,26 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       +'<div style="font-size:11px;font-weight:700;color:#b03030;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Internal worksheet — not a client document</div>'
       +'<h2>Estimate Worksheet — '+(job.name||'')+'</h2>'
       +'<div style="font-size:13px;color:#888;margin-bottom:16px;">'+(job.hvlId||'')+' · '+ts+'</div>'
-      +'<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours (hands-on)</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+_coordRow+'</tbody></table>'
+      // ⚠ A FEE-ONLY ESTIMATE HAS NO ROOMS AND NO HOURS, so the room table renders as one
+      // empty "Job-level work 0.0 TC / 0.0 PS" row and the whole worksheet says nothing.
+      // Anthony sent exactly that document on 2026-09-08 — a Home Prep job whose worksheet
+      // was a blank table over a $4,560 total, sitting in the client's Estimate folder
+      // because the two files shared a filename (see estimateDocNames). Splitting the
+      // names stops it reaching the client; this stops it being useless to US. A fee-only
+      // job's working paper is the vendor list the fee is computed on.
+      +(_feeOnlyWs
+        ? '<table><thead><tr><th>Prep vendor line</th><th>Scope note</th><th>Estimated cost</th></tr></thead><tbody>'
+          + ((est.prepItems||[]).map(function(pi){
+              return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+esc(pi.type||'')+'</td>'
+                +'<td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666;">'+esc((pi.note||'').trim())+'</td>'
+                +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+fmt(pi.cost)+'</td></tr>';
+            }).join('') || '<tr><td colspan="3" style="padding:6px 8px;color:#888;font-style:italic;">No prep vendor lines on this estimate</td></tr>')
+          + '</tbody></table>'
+        : '<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours (hands-on)</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+_coordRow+'</tbody></table>')
       +'<div style="margin-top:20px;font-size:14px;">'
-      +'<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; '
+      +(_feeOnlyWs
+        ? '<strong>Vendor spend:</strong> '+fmt(est.prepCost)+' &nbsp;|&nbsp; <strong>Fee rate:</strong> '+Math.round(prepFeeRate(est.svc)*100)+'% &nbsp;|&nbsp; '
+        : '<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; ')
       +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
       +'</div></body></html>';
     uploadHtmlToDrive(folderId, estimateDocNames(job).driveInternal, html, function(ok){
@@ -22086,12 +22287,13 @@ function updateAgrUI() {
   var btnStripe = document.getElementById('btn-agr-stripe');
   var btnPdf = document.getElementById('btn-agr-pdf');
   var btnPacket = document.getElementById('btn-agr-packet');   // follows btnPdf exactly
+  var btnEmail = document.getElementById('btn-agr-email');    // follows btnPdf exactly
   var banner = document.getElementById('agr-banner-wrap');
 
   if (!currentAgrJobId) {
     badge.innerHTML = ''; btnApprove.style.display='none';
     btnStripe.style.display='none';
-    btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; banner.innerHTML='';
+    btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; if (btnEmail) btnEmail.style.display='none'; banner.innerHTML='';
     ['btn-agr-sent','btn-agr-signed','btn-deposit-received'].forEach(function(id){
       var b = document.getElementById(id); if (b) b.style.display = 'none';
     });
@@ -22117,6 +22319,10 @@ function updateAgrUI() {
 
   if (agrApproved) {
     btnApprove.style.display='none'; btnStripe.style.display='inline-block'; btnPdf.style.display='inline-block'; if (btnPacket) btnPacket.style.display='inline-block';
+    // The client email, beside the two print buttons. It was `btn-mailto-agr` in the markup
+    // and NOTHING ever showed it or set its href — so agreements@ never received a copy of
+    // anything a client was sent. See emailAgreementToClient.
+    if (btnEmail) { btnEmail.style.display='inline-block'; _setAgrEmailBusy(false); }
     badge.innerHTML = '<span class="badge b-approved">✓ Approved</span>';
     // Progress line: where this job is in sent → signed → funded, with who and when.
     var _prog;
@@ -22161,7 +22367,7 @@ function updateAgrUI() {
     // things done about them.
     var _b = agrApprovalBlocker(currentAgrJobId);
     var _rev = _agrJ && _agrJ.agrRevokedBy === 'estimate-edited' && !_agrJ.agrApproved;
-    btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none';
+    btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; if (btnEmail) btnEmail.style.display='none';
     if (_b === 'estimate') {
       badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';
       banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>'
@@ -22175,7 +22381,7 @@ function updateAgrUI() {
       banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>The client has not accepted the estimate yet.</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Send the estimate, and when they say yes record it with <strong>Mark Won</strong> on the Client Dashboard. Approving here is what files the agreement and the signing packet into their Drive folder, so it waits for the yes.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">The draft below is a preview and has not been filed anywhere.</div></div>';
     }
   } else {
-    btnApprove.style.display='inline-block'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none';
+    btnApprove.style.display='inline-block'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; if (btnEmail) btnEmail.style.display='none';
     badge.innerHTML = '<span class="badge b-pending">Pending Approval</span>';
     banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Review the agreement below</strong>, then enter manager PIN to approve and unlock sending options.</div></div>';
   }

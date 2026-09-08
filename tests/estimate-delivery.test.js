@@ -365,6 +365,112 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body, 'Utilities.base64Encode', 'handing the bytes back base64');
   }
 
+  // ── 6. THE AGREEMENT EMAIL, AND THE CC THAT NEVER EXISTED ──────────────────
+  group('the agreement now has a working client email, CC\'d to agreements@');
+  {
+    // The dead button: `btn-mailto-agr` appeared once in the whole file — the markup,
+    // display:none — and nothing set its href or showed it. So agreements@ had never
+    // received a copy of anything sent to a client, while estimates@ always had.
+    eq((src.match(/id="btn-mailto-agr"/g) || []).length, 0, 'the dead anchor is gone from the markup');
+    ok(/btn-mailto-agr/.test(src), 'though the comments still name it, so the next reader knows what it was');
+    has(src, 'id="btn-agr-email"', 'a real button replaces it');
+    has(src, 'onclick="emailAgreementToClient()"', 'wired to the sender');
+
+    const ui = fn('updateAgrUI');
+    has(ui, "getElementById('btn-agr-email')", 'updateAgrUI resolves it');
+    // It must follow the PDF button exactly — shown only on an approved agreement, and
+    // hidden in every refusal state, or it becomes a way past the gates.
+    const pdfShow = (ui.match(/btnPdf\.style\.display='inline-block'/g) || []).length;
+    const emailShow = (ui.match(/btnEmail\.style\.display='inline-block'/g) || []).length;
+    const pdfHide = (ui.match(/btnPdf\.style\.display='none'/g) || []).length;
+    const emailHide = (ui.match(/btnEmail\.style\.display='none'/g) || []).length;
+    eq(emailShow, pdfShow, 'shown in exactly the states the PDF button is shown in');
+    eq(emailHide, pdfHide, 'and hidden in exactly the states it is hidden in');
+
+    const send = fn('emailAgreementToClient');
+    has(send, 'cc: DEPT_EMAILS.agreements', "CC'd to agreements@ — the thing that was missing");
+    has(send, 'if (!agrApproved)', 'refuses an unapproved agreement');
+    has(send, 'No client email on this job', 'and a job with no client email');
+    has(send, 'if (_agrEmailBusy) return;', 'a second press while working is a no-op');
+    has(send, '_agreementEmailFallback', 'and it falls back like the estimate does');
+
+    // It must send the PACKET. Both forms incorporate the estimate as Exhibit A and the
+    // estate form says the agreement is not valid without it.
+    has(send, 'signingPacketPdfBase64', 'the attachment is the signing packet, not the bare agreement');
+    has(fn('signingPacketPdfBase64'), 'signingPacketHtml(jobId)', 'built from the real packet renderer');
+    has(fn('signingPacketPdfBase64'), "action: 'htmlToPdf'", 'through the same conversion as everything else');
+
+    // The fallback carries the CC too — that is the whole point of this group.
+    const fb = fn('buildAgreementMailto');
+    has(fb, 'DEPT_EMAILS.agreements', "the plain-text fallback CC's agreements@ as well");
+    has(fb, 'Attach the signing packet before sending', 'and says to attach the packet, since mailto: cannot');
+
+    // Estimates and invoices must not have lost theirs.
+    has(fn('emailEstimateToClient'), 'cc: DEPT_EMAILS.estimates', "the estimate still CC's estimates@");
+    has(fn('buildEstimateMailto'), 'DEPT_EMAILS.estimates', 'on the fallback too');
+    has(fn('buildInvoiceMailto'), 'DEPT_EMAILS.billing', "and invoices still CC billing@");
+  }
+
+  group('the agreement email states the schedule and reads as a covering note');
+  {
+    const ctx = sandbox({
+      fns: ['buildAgreementEmailHtml', 'buildAgreementEmailText', 'agreementEmailSubject',
+            'paymentSplit', '_emHtml', '_emMoney'],
+      vars: ['EMAIL_BRAND'],
+      stubs: {
+        assignedTCContact: () => ({ name: 'Anthony Graziano', phone: '(561) 370-4700', email: 'anthony@havellinpalmbeach.com' }),
+        bestClientGreetingName: () => 'Margaret',
+        svcLabelOf: () => 'Estate Settlement',
+        approvedEstimateFor: () => ({ havellinTotal: 18650 }),
+      },
+    });
+    const job = { id: 1, name: 'Margaret Ellsworth', addr: '1234 Ocean Blvd, Palm Beach, FL', hvlId: 'HVL-0007' };
+    const html = ctx.buildAgreementEmailHtml(job);
+    has(html, 'Exhibit A', 'it names the exhibit, so the client knows what is attached');
+    has(html, '$9,325', 'the 50% deposit');
+    has(html, '$4,663', 'and a 25% instalment');
+    has(html, 'HVL-0007', 'the reference');
+    has(html, 'Anthony Graziano', 'signed by the concierge on the job');
+    lacks(html, 'var(--', 'no CSS variables, which no mail client resolves');
+    lacks(html, 'class="ce-', 'and no app stylesheet classes');
+    has(html, 'max-width:600px', 'fluid up to 600px, like the estimate email');
+
+    eq(ctx.agreementEmailSubject(job), 'Havellin Palm Beach — Service Agreement for 1234 Ocean Blvd', 'the subject names the property');
+    const text = ctx.buildAgreementEmailText(job);
+    has(text, '$9,325', 'the text part carries the schedule');
+    lacks(text, '<', 'and is genuinely plain');
+
+    // A job with no approved estimate must not print a $0 schedule.
+    const ctx2 = sandbox({
+      fns: ['buildAgreementEmailHtml', 'paymentSplit', '_emHtml', '_emMoney'],
+      vars: ['EMAIL_BRAND'],
+      stubs: {
+        assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
+        bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',
+        approvedEstimateFor: () => null,
+      },
+    });
+    const bare = ctx2.buildAgreementEmailHtml({ id: 2, name: 'N', addr: 'A' });
+    lacks(bare, 'Payment schedule', 'no schedule at all rather than a schedule of zeroes');
+  }
+
+  // ── 7. THE WORKSHEET ON A FEE-ONLY JOB ─────────────────────────────────────
+  group('the internal worksheet says something on a job with no rooms and no hours');
+  {
+    // Anthony sent this document on 2026-09-08: a Home Prep worksheet whose room table was
+    // a single "Job-level work 0.0 TC / 0.0 PS" row over a $4,560 total.
+    const ws = fn('exportEstimateToDrive');
+    has(ws, 'var _feeOnlyWs = estimateIsFeeOnly(est, job);', 'it asks the shared predicate');
+    has(ws, 'Prep vendor line', 'and renders the vendor lines the fee is computed on');
+    has(ws, 'Scope note', 'with their scope notes');
+    has(ws, '<strong>Vendor spend:</strong>', 'the footer states the spend');
+    has(ws, 'Math.round(prepFeeRate(est.svc)*100)', 'and the rate from the real function, not a literal');
+    lacks(ws, "Fee rate:</strong> 30%", 'no hardcoded 30 beside it');
+    has(ws, 'No prep vendor lines on this estimate', 'an empty one says so rather than rendering a bare table');
+    // The room path is untouched for every other job.
+    has(ws, '<th>Room</th><th>Vol</th><th>Cplx</th>', 'a room-based job still gets the room table');
+  }
+
   group('the button is wired, and the Gmail client ID is a setting that survives a device clear');
   {
     has(src, 'id="btn-html-email-est"', 'the button exists');
