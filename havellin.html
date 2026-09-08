@@ -756,7 +756,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.04 · 1:32pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 1:17pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -801,8 +801,8 @@ body.no-smf .smf-col{display:none;}
       <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
       <select id="i-svc" onchange="toggleIntakeFields()">
         <option value="">Select service type</option>
-        <option value="downsizing">Downsizing</option>
-        <option value="downsizing_move">Downsizing &amp; Move Management</option>
+        <option value="downsizing">Home Editing</option>
+        <option value="downsizing_move">Home Transition</option>
         <option value="home_cleanout">Home Cleanout</option>
         <option value="cleanout">Estate Settlement</option>
         <option value="probate">Probate Estate Settlement</option>
@@ -1081,7 +1081,7 @@ body.no-smf .smf-col{display:none;}
 
       <div id="downsizing-dest-fields" style="display:none;">
         <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Move Destination <span style="font-size:10px;font-weight:400;color:var(--gray);">(New home details — required for Downsizing &amp; Move Management)</span></div>
+        <div class="sec" style="margin-bottom:6px;">Move Destination <span style="font-size:10px;font-weight:400;color:var(--gray);">(New home details — required for Home Transition)</span></div>
         <label>New home address</label>
         <input type="text" id="i-dest-addr" placeholder="123 New Address Blvd">
         <div class="row">
@@ -1399,9 +1399,9 @@ body.no-smf .smf-col{display:none;}
           <option value="500">Estate Basic — $500</option>
           <option value="750">Estate Standard — $750</option>
           <option value="1500">Estate Premium — $1,500</option>
-          <option value="200">Downsizing Basic — $200</option>
-          <option value="350">Downsizing Standard — $350</option>
-          <option value="550">Downsizing Premium — $550</option>
+          <option value="200">Home Editing / Transition Basic — $200</option>
+          <option value="350">Home Editing / Transition Standard — $350</option>
+          <option value="550">Home Editing / Transition Premium — $550</option>
         </select>
       </div>
     </div>
@@ -1624,7 +1624,7 @@ body.no-smf .smf-col{display:none;}
         <button class="fb" onclick="setFilter('active',this)">Active</button>
         <button class="fb" onclick="setFilter('closed',this)">Closed</button>
         <button class="fb" onclick="setFilter('lost',this)">Lost</button>
-        <button class="fb" onclick="setFilter('downsizing',this)">Downsizing</button>
+        <button class="fb" onclick="setFilter('downsizing',this)">Home Editing / Transition</button>
         <button class="fb" onclick="setFilter('home_cleanout',this)">Home Cleanout</button>
         <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
         <button class="fb" onclick="setFilter('probate',this)">Probate</button>
@@ -2010,7 +2010,7 @@ body.no-smf .smf-col{display:none;}
       and a shorter job.
       <br><br><strong>This is only the value a fresh estimate starts at.</strong> The rate itself is set per
       estimate, on Build Estimate under the crew counts, because it is a judgement about the property &mdash;
-      low on a trophy estate where the concierge is mostly directing, high on a straightforward downsizing
+      low on a trophy estate where the concierge is mostly directing, high on a straightforward home editing job
       where they work the whole day. A saved estimate keeps the rate it was priced under.
     </div>
 
@@ -3061,13 +3061,13 @@ var ROOMS = [
 ];
 
 var PRICING_REF = {
-  downsizing:{label:'Downsizing',sizes:[
+  downsizing:{label:'Home Editing',sizes:[
     {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
     {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
     {l:'Estate (4,000–6,000 sqft) ',min:14000,max:25000,days:'8–14 days'},
     {l:'Trophy estate (6,000+ sqft) ',min:22000,max:45000,days:'12–22 days'}
   ]},
-  downsizing_move:{label:'Downsizing & Move Management',sizes:[
+  downsizing_move:{label:'Home Transition',sizes:[
     {l:'Condo / apartment (<2,000 sqft)',min:7000,max:13000,days:'4–7 days'},
     {l:'Home (2,000–4,000 sqft)',min:12000,max:22000,days:'6–11 days'},
     {l:'Estate (4,000–6,000 sqft)',min:18000,max:35000,days:'9–17 days'},
@@ -3123,9 +3123,13 @@ var PRICING_REF = {
 // that renders a service name (Build Estimate, Client Estimate doc, dashboard, Win/Loss,
 // job header, invoices). Add or rename a service type HERE only, so labels can never
 // drift between tabs again.
+// RENAMED 2026-09-08 (Anthony): `downsizing` is HOME EDITING — with no move to manage,
+// the job is editing what a couple takes to the next home — and `downsizing_move` is
+// HOME TRANSITION. The KEYS are unchanged on purpose: they are stored on every saved job,
+// estimate and snapshot, and JOB_STEPS / PRICING_REF / isDecedentJob all key on them.
 var SVC_LABELS = {
-  downsizing:        'Downsizing',
-  downsizing_move:   'Downsizing & Move Management',
+  downsizing:        'Home Editing',
+  downsizing_move:   'Home Transition',
   home_cleanout:     'Home Cleanout',
   cleanout:          'Estate Settlement',
   probate:           'Probate Estate Settlement',
@@ -3133,6 +3137,14 @@ var SVC_LABELS = {
   estate:            'Estate Settlement',
   prep:              'Home Prep for Sale'
 };
+// A job stores `svcLabel` at intake, so a job saved before a rename carries the OLD name
+// on the dashboard, the invoice header and the approval email forever. Readers of the
+// stored label go through this: the catalogue wins whenever the key is known, and the
+// stored text survives only for a key the catalogue no longer has.
+function svcLabelOf(job) {
+  if (!job) return '—';
+  return SVC_LABELS[job.svc] || job.svcLabel || job.svc || '—';
+}
 
 var ENGINE_K = 0.0123;                                   // content-load units per under-air sqft
 var ENGINE_VOLF = {1:0.55, 2:0.78, 3:1.0, 4:1.35, 5:1.70}; // volume slider -> load scale (widened: a packed room bites harder, a sparse one drops further; 3 = neutral anchor)
@@ -4259,7 +4271,7 @@ function paintEstimateAlpha() {
   var dflt = Math.round(TC_ONSITE_ALPHA * 100);
   var cur = Math.round(activeAlpha() * 100);
   hint.innerHTML = (cur === dflt)
-    ? 'Firm default (' + dflt + '%). Lower it on a trophy estate where the concierge is mostly directing; raise it on a straightforward downsizing where they work the whole day.'
+    ? 'Firm default (' + dflt + '%). Lower it on a trophy estate where the concierge is mostly directing; raise it on a straightforward home editing job where they work the whole day.'
     : '<strong>' + cur + '%</strong> on this estimate &mdash; the firm default is ' + dflt + '%. Higher means fewer specialist hours and a shorter job.';
 }
 var TC_DAY_CAP = 10;              // concierge hrs/day above which a 2nd TC is recommended
@@ -4749,7 +4761,7 @@ function calcAll() {
     if (svcKey === 'cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Estate Settlement: ' + _docTxt + (_dsc === 'full' ? ' for the §733.604 inventory' : '') + '.</div>';
     else if (svcKey === 'probate') svcBadgeTxt = '<div class="alert a-warn" style="margin-top:2px;font-size:11px;">Probate: ' + _docTxt + ' + legal / chain-of-custody work.</div>';
     else if (svcKey === 'contested_probate') svcBadgeTxt = '<div class="alert a-err" style="margin-top:2px;font-size:11px;">Contested probate: ' + _docTxt + '; heavier legal and disposition load for multiple heirs/attorneys is built into the rates — no separate heir uplift.</div>';
-    else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Move Management: TC move-day + PS new-home unpacking, scaled to the destination sq ft.</div>';
+    else if (svcKey === 'downsizing_move') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Home Transition: TC move-day + PS new-home unpacking, scaled to the destination sq ft.</div>';
     else if (svcKey === 'home_cleanout') svcBadgeTxt = '<div class="alert a-info" style="margin-top:2px;font-size:11px;">Home Cleanout: full disposition of all contents (haul / donate / sell / shred).</div>';
     svcBadgeEl.innerHTML = svcBadgeTxt;
   }
@@ -6690,7 +6702,7 @@ function saveEstimateAndPreview() {
       return;
     }
     if (currentEstimate.svc === 'downsizing_move' && !(parseFloat(job.destSqft) > 0)) {
-      showFB('e-fb','warn','Enter the New home sq ft in Client Intake for this client — Move Management pricing needs it.');
+      showFB('e-fb','warn','Enter the New home sq ft in Client Intake for this client — Home Transition pricing needs it.');
       return;
     }
   }
@@ -7198,7 +7210,7 @@ function _ceGroupedSpaces(rooms) {
 
 function proposedPlanRow(e) {
   var narratives = {
-    downsizing: 'We work alongside you room by room — sorting every item into keep, sell, donate, and dispose, then packing and organizing what stays. Your Transition Concierge directs the plan and manages every vendor while Property Specialists handle the hands-on sorting, packing, and heavy lifting; the hours below reflect that careful, decision-by-decision pace.',
+    downsizing: 'We work alongside you room by room, editing what comes with you to the next home — sorting every item into keep, sell, donate, and dispose, then packing and organizing what stays. Your Transition Concierge directs the plan and manages every vendor while Property Specialists handle the hands-on sorting, packing, and heavy lifting; the hours below reflect that careful, decision-by-decision pace.',
     downsizing_move: 'We work alongside you room by room — sorting into keep, sell, donate, and dispose, then packing what stays for the move. On move day your Transition Concierge supervises the crew at both the current and new home and directs placement room by room, so you arrive to an organized home rather than a wall of boxes.',
     home_cleanout: 'We clear the home in an orderly sequence, sorting contents room by room and routing everything to the right destination — haul-away, donation, consignment or sale, and secure shredding. Anything of value is set aside and reviewed with you before the home is emptied, and your Transition Concierge coordinates every vendor and pickup along the way.',
     cleanout: 'We settle the estate room by room — inventorying contents, documenting and setting aside items of value, and routing the remainder to sale, donation, or disposal. High-value items are photographed and tracked under chain of custody, and your Transition Concierge keeps the representative and any other heirs informed throughout.',
@@ -7549,8 +7561,8 @@ function renderClientEstimate() {
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
 
   var _svcSubHdr = {
-    downsizing: 'Onsite Downsizing Services',
-    downsizing_move: 'Onsite Downsizing Services',
+    downsizing: 'Onsite Home Editing Services',
+    downsizing_move: 'Onsite Home Transition Services',
     home_cleanout: 'Onsite Home Cleanout Services',
     estate: 'Onsite Estate Settlement Services',
     cleanout: 'Onsite Estate Settlement Services',
@@ -8100,7 +8112,7 @@ function notifyManagerForApproval(est, disc) {
     '',
     'Client: ' + (job.name||'—'),
     'Property: ' + (job.addr||'—'),
-    'Service: ' + (job.svcLabel||'—')
+    'Service: ' + svcLabelOf(job)
   ];
   if (isDisc) {
     lines.push('Original Havellin total: $' + Math.round(disc.original).toLocaleString());
@@ -8579,7 +8591,7 @@ function renderJobs() {
 
     html += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">';
     html += '<td><div style="font-weight:600;">' + j.name + prio + (j.premium?'<span class="badge b-bronze" style="margin-left:4px">Premium</span>':'') + '</div><div style="font-size:10px;color:var(--gray);margin-top:1px;">' + (j.addr?j.addr.split(',')[0]:(j.zip||'')) + '</div></td>';
-    html += '<td>' + j.svcLabel + '</td>';
+    html += '<td>' + svcLabelOf(j) + '</td>';
     html += '<td><div style="display:flex;align-items:center;gap:6px;"><div class="avatar">' + init.toUpperCase() + '</div><div style="font-size:10px;color:var(--gray);">' + (j.tc?j.tc.split(' ')[0]:'<span style="color:var(--warn-tx)">None</span>') + '</div></div></td>';
     html += '<td>' + havCell + '</td>';
     html += '<td style="color:var(--bronze);font-weight:500;">' + totCell + '</td>';
@@ -16210,7 +16222,7 @@ function renderInvoice() {
     '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—') + '</div></div>' +
     '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(job.svcLabel||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(svcLabelOf(job)) + '</div></div>' +
     '</div>' +
     '<div class="ce-divider"></div>' +
     contactLine +
@@ -16302,7 +16314,7 @@ function checkInvPin() {
           '',
           'Client: ' + (invJob.name||'—'),
           'Property: ' + (invJob.addr||'—'),
-          'Service: ' + (invJob.svcLabel||'—'),
+          'Service: ' + svcLabelOf(invJob),
           'Approved by: ' + invApprovedBy + ' on ' + invApprovedAt,
           '',
           'Open the Havellin app, go to the Final Invoice tab, and use Print / Save PDF or Email to Client to send it.',
@@ -19590,7 +19602,7 @@ function renderJobPlan(jobId, job, est) {
   // assigned/locked in the Log Hours rows below, not pinned here.
   var _hdrBits = [
     ['Client', esc(job.name||'—')],
-    ['Service', esc(job.svcLabel||est.svc||'—')],
+    ['Service', esc(SVC_LABELS[job.svc] || job.svcLabel || est.svc || '—')],
     ['Property', esc([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—')],
     ['Target Start', fmtDate2(job.start)],
     ['Projected', (job.start && (est.days || est.totTC) ? fmtDate2(addWorkingDays(job.start, est.days > 0 ? est.days : Math.ceil(est.totTC / 7))) : '—')]
@@ -21099,8 +21111,8 @@ function renderAgreement() {
   var startFmt    = job.start ? new Date(job.start+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '[START DATE]';
   var svcMap = {
     cleanout:'Estate Settlement', probate:'Probate Estate Settlement',
-    downsizing:'Downsizing',
-    downsizing_move:'Downsizing & Move Management',
+    downsizing:'Home Editing',
+    downsizing_move:'Home Transition',
     estate:'Estate Settlement',
     prep:'Home Prep for Sale'
   };
@@ -21185,7 +21197,7 @@ function renderAgreement() {
     (isPrepAgr
       ? p(b('1.1 Services.')+'  Contractor will provide home sale preparation project-management services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference. The Services consist of sourcing, coordinating, and overseeing the third-party vendors and tradespeople engaged to prepare the Property for sale.')+
         p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and a written preparation plan; sourcing and scheduling of vendors and tradespeople (including painting, repairs, cleaning, landscaping, pressure washing, handyman work, and staging); on-site oversight, quality control, and coordination of that work through completion; and management of vendor scheduling and Property access. Third-party vendors are engaged for and invoiced to Client at cost; Contractor\'s fee for the Services is a management fee equal to thirty percent (30%) of the total third-party vendor costs managed under this Agreement. Contractor does not provide real estate brokerage, listing, or transactional representation.')
-      : p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, downsizing, move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference.')+
+      : p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, home editing, home transition and move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference.')+
         p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and project planning; sorting, organizing, and packing of personal property and household goods; coordination of appraisers, auction houses, estate sale providers, movers, junk removal, art/antique handlers, and other third-party vendors; move-management, scheduling, and oversight; limited assistance identifying items that may have value for referral to qualified third parties; and basic home preparation and staging in anticipation of sale (excluding real estate brokerage services unless covered under a separate written brokerage agreement).')
     )+
     p(b('1.3 Exclusions.')+'  Unless expressly stated in the Estimate and agreed in writing, Services do not include: real estate brokerage, listing, or transactional representation; legal, tax, accounting, or financial advice; structural work, construction, or trade work requiring licensure; hazardous materials assessment, remediation, or abatement (including mold, asbestos, fuel tanks, medical waste); or heavy mechanical work beyond ordinary coordination with licensed professionals.')+
@@ -21216,7 +21228,7 @@ function renderAgreement() {
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+havTotal.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.')
       : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
-    p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement and Downsizing engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
+    p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) 15% of vendor invoices for Estate Settlement, Home Editing and Home Transition engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')+
     p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     (isFixedAgr
@@ -21495,7 +21507,7 @@ function checkAgrPin() {
           '',
           'Client: ' + (job.name||'—'),
           'Property: ' + (job.addr||'—'),
-          'Service: ' + (job.svcLabel||'—'),
+          'Service: ' + svcLabelOf(job),
           'Approved by: ' + agrApprovedBy + ' on ' + agrApprovedAt,
           '',
           'Open the Havellin app, go to the Agreement tab, and use Print / Save PDF to send it for signature.',
@@ -22223,7 +22235,7 @@ function showEditClient(jobId) {
   // Job Details
   html += '<div class="sec" style="margin-top:14px;">Job Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:'Downsizing'},{v:'downsizing_move',l:'Downsizing & Move Management'},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'},{v:'contested_probate',l:'Contested Probate Estate Settlement'},{v:'prep',l:'Home Prep for Sale'}], job.svc)+'</select>', true);
+  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:SVC_LABELS.downsizing},{v:'downsizing_move',l:SVC_LABELS.downsizing_move},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'},{v:'contested_probate',l:'Contested Probate Estate Settlement'},{v:'prep',l:'Home Prep for Sale'}], job.svc)+'</select>', true);
   html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano Sr',l:'Anthony Graziano Sr'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
   html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Apartment',l:'Apartment'},{v:'Town Home',l:'Town Home'},{v:'Patio Home',l:'Patio Home'},{v:'Single Family Home',l:'Single Family Home'},{v:'Estate',l:'Estate'}], job.ptype)+'</select>', true);

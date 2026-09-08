@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/estate-settlement-pricing-3wmldo`
-  (was `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/home-transition-terminology-elllih`
+  (was `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/estate-settlement-pricing-3wmldo:main`
+  `git push origin claude/home-transition-terminology-elllih:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -88,6 +88,51 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## Downsizing → HOME EDITING · Downsizing & Move Management → HOME TRANSITION (RENAMED 2026-09-08)
+*"we have changed downsizing & move management to 'home transition' … also, i think 'downsizing'
+on its own should be 'Home Editing'. all we are really doing in a downsizing with no move
+management, is editing what a couple will take to their new home."*
+
+- **The KEYS did not move: `downsizing` and `downsizing_move` are still the keys.** They are
+  stored on every job, estimate and snapshot, and `JOB_STEPS`, `PRICING_REF`, `isDecedentJob`,
+  the Win/Loss filter and the stage-copy branches all key on them. Renaming a key would strand
+  every saved record and re-route nothing usefully. So the variable names (`isDownsizing`,
+  `downsizingPSReduct`, `downsizing-dest-fields`) and the code comments still say downsizing,
+  and that is fine — they are not read by anyone outside the file. **The names live in
+  `SVC_LABELS` and every label site reads it.** `PRICING_REF` and the agreement's `svcMap`
+  carry their own copies, and a test asserts they agree.
+- **⚠ THE EDIT CLIENT MODAL HAD ITS OWN HARDCODED SERVICE LIST**, `sel([{v:'downsizing',
+  l:'Downsizing'},…])` at the `ec-svc` field, and the first pass missed it — the new test's
+  *no `'Downsizing'` literal survives* check is what found it. It reads `SVC_LABELS` now. The
+  comment above `SVC_LABELS` has said *"the single source of truth for every place that
+  renders a service name"* since it was written, and this was the second copy anyway.
+- **`job.svcLabel` is stored at intake, so a job saved before the rename carried
+  *Downsizing* on the dashboard, the invoice header, the approval email and the agreement
+  email forever.** Six readers of the stored label are routed through `svcLabelOf(job)` —
+  catalogue first, stored text only for a key the catalogue no longer has. A test asserts no
+  bare `(job.svcLabel||…)` reader survives, so the next rename cannot leave a stale one.
+- **What was renamed:** intake and Edit Client dropdowns · the Move Destination hint · the
+  reference bands · the Build Estimate service badge and its missing-sqft warning · the
+  client estimate's fee-table sub-header (*Onsite Home Editing Services* / *Onsite Home
+  Transition Services*) and the home-editing narrative · the Win/Loss filter button (one
+  button, both keys, now *Home Editing / Transition*) · the materials tiers (*Downsizing
+  Basic/Standard/Premium* → *Home Editing / Transition Basic/Standard/Premium*, because
+  `pkgLabel` prints on the client estimate and the invoice) · the standard agreement's §1.1
+  Services list and §3.5 SMF clause and its header map · the α hint copy in Settings and on
+  Build Estimate.
+- **What deliberately kept its name:** the **Move Management** card on Build Estimate and the
+  *Move Management — Destination Setup* fee-table band. Those describe the move-day WORK
+  inside a Home Transition, not the service, and "Home Transition — Destination Setup" would
+  say less. The probate agreement's map never listed either service (decedent-only) and is
+  untouched.
+- **Nothing behavioural moved** — pricing, stage copy, agreement routing and `isDecedentJob`
+  are all keyed and all unchanged; the doc-scope tests that price `'downsizing'` still pass.
+- **Not touched:** `PRICING_SCHEMA.md` and the other spec files, which are historical.
+- Manual **§4** carries the rename note (what changed, what kept its name, old jobs show the
+  new name); playbook gained **one symptom→cause row** for someone hunting *Downsizing* in the
+  dropdown. Both `.md` copies hand-edited to match.
+- **735 committed checks** (`tests/service-labels.test.js`, 27 new).
 
 ## Pricing an estate job WITH or WITHOUT the paperwork (BUILT 2026-09-04)
 *"we don't quite know yet if when we get an estate settlement job, the attorneys are going to
@@ -985,7 +1030,7 @@ client, whereas an estate settlement is for a deceased client."** It is one pred
 
 | LIVING | DECEASED |
 |---|---|
-| Downsizing · Downsizing & Move Management · **Home Cleanout** · Home Prep for Sale | **Estate Settlement** (`cleanout`) · Probate (`probate`) · Contested Probate (`contested_probate`) |
+| Home Editing (`downsizing`) · Home Transition (`downsizing_move`) · **Home Cleanout** · Home Prep for Sale | **Estate Settlement** (`cleanout`) · Probate (`probate`) · Contested Probate (`contested_probate`) |
 
 | | LIVING owner | DECEASED owner |
 |---|---|---|
@@ -1699,7 +1744,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-04 (thirteenth pass)** — both documents, against the
+- Last reconciled against the app: **2026-09-08 (fourteenth pass)** — both documents, against the
+  service rename. Manual **§4** gained the rename note; playbook **one symptom→cause row**; every
+  service-list and prose mention of *Downsizing* in both documents now reads *Home Editing* /
+  *Home Transition*. Both `.md` files hand-edited to match; tag balance verified on both HTML files.
+- Prior pass **2026-09-04 (thirteenth pass)** — both documents, against the
   documentation-scope control. Manual **§4** gained the intake question and the seed-not-price
   rule, **§5c** the control with the three settings and the
   numbers, **§7** a note that the stages promise what the estimate priced, **§8** a note on the
