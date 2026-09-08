@@ -89,6 +89,46 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## The signing packet — the agreement with its Exhibit A actually attached (BUILT 2026-09-08)
+*"so there are basically two versions of the agreement? then the specifics are all in the
+estimate, which is attached?"* Two forms, yes; attached, no — until now.
+
+- **Both forms incorporate the Estimate as Exhibit A and the estate form says the agreement
+  is not valid without it, but the app filed them as two documents in two subfolders and
+  nothing stapled them together.** A client sent the agreement alone was signing against an
+  exhibit they did not have. `buildSigningPacketHtml(agrHtml, estHtml, job)` is the packet:
+  the agreement page, then the **approved** client estimate under an *Exhibit A* band on a
+  new page (`.packet-exhibit{break-before:page}`, in the print block AND on screen so the
+  exported HTML carries it too). **It re-renders nothing in a second way** — the two existing
+  renderers are reused verbatim, so the packet cannot disagree with either document.
+- **`_approvedEstimateHtml(jobId)` borrows the Client Estimate tab and gives it back.**
+  `renderClientEstimate` reads three globals and writes one element, so they are swapped in
+  and restored in a `finally`, including the tab's HTML and `updateApprovalUI()`. Do not
+  "simplify" this into a call that leaves the tab showing another job's estimate.
+- **Print Signing Packet** sits beside *Print / Save PDF*, toggles with it in `updateAgrUI`
+  (a test asserts no bare `btnPdf` toggle survives), gates on `agrApproved` like
+  `printAgreement`, and goes through `_printDocument` — the ONE print path. Named
+  `<Last>-<HVL>-Signing-Packet` the way the estimate PDF is named.
+- **Filed on approval**, 900ms after the agreement, as `<HVL-ID>_Signing_Packet.html` in the
+  same `Agreement` subfolder (`exportSigningPacketToDrive`, same once-per-job guard shape as
+  `_agrExported`).
+- **⚠ FOUND AND FIXED ON THE WAY: both agreements read `currentEstimate`, not the approved
+  estimate.** `var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate
+  : null` — so an agreement opened after building a *different* client's estimate fell back to
+  `job.havellinEst`, which carries **no rates, no fixed-price flag and no documentation
+  scope**: default rates printed against a total that had come from somewhere else. New
+  `approvedEstimateFor(jobId)` reads the store record's snapshot while it is approved, and
+  both forms read it first. `checkPin` already refuses to approve an agreement whose estimate
+  is not approved, so the fallback is now genuinely the blank-template case only.
+- §1.1 on both standard-form arms now says the Estimate is *"attached as Exhibit A and
+  incorporated by reference"* — true now, and the estate form already said it.
+- Manual **§8** note; playbook **Step 6** row (*send the packet, not the agreement alone*)
+  and one symptom→cause row (*the client asks where Exhibit A is*). Both `.md` copies
+  hand-edited.
+- **Verified in headless Chromium**: the packet renders both pages for a Home Transition job
+  and a probate job, the exhibit band carries the job id, and the Client Estimate tab is
+  byte-identical before and after the borrow.
+
 ## The agreements promised a fee the invoice stopped billing five weeks earlier (FIXED 2026-09-08)
 *"the one i see in gdrive still has 15% fee on vendors, which we have stricken in the app."*
 He was reading a hand-maintained Google Doc template, not an app copy — but the app's own
@@ -1773,7 +1813,9 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-08 (fifteenth pass, same day)** — manual **§8** gained the
+- Last reconciled against the app: **2026-09-08 (sixteenth pass, same day)** — manual **§8** gained the
+  signing-packet note; playbook a Step 6 row and one symptom→cause row. Both `.md` copies hand-edited.
+- Prior pass **2026-09-08 (fifteenth pass, same day)** — manual **§8** gained the
   vendor-fee-clause note; playbook one symptom→cause row. Both `.md` copies hand-edited.
 - Prior pass **2026-09-08 (fourteenth pass)** — both documents, against the
   service rename. Manual **§4** gained the rename note; playbook **one symptom→cause row**; every

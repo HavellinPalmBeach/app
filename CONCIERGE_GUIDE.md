@@ -232,6 +232,7 @@ Three buttons then appear one at a time, each in its own turn, each recording wh
 
 | Button | Press it when |
 | --- | --- |
+| **Print Signing Packet** | One PDF: the agreement, then the approved estimate as Exhibit A on a new page. **This is what you send for signature** — the agreement alone refers to an exhibit the client does not have. It is also filed to Drive beside the agreement when you approve. |
 | **✉ Mark Agreement Sent** | You've emailed it or handed it over. |
 | **✓ Mark Agreement Signed** | The signed copy has come back. Signing does *not* mean paid — the app keeps those separate on purpose. |
 | **✓ Record Deposit** | The money is in your hand. This is what lets work begin. |
@@ -551,6 +552,7 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Intake will not take a client phone or email on an estate job | Correct — the client is deceased, so those fields are disabled and the **Authorized Representative** block below is where the contact goes. That is who every document is addressed to and where the estimate is sent. |
 | The agreement is the wrong one of the two forms | Same cause, same fix — it reads the service type, exactly like the estimate. Correct the service type at intake and re-generate. The routing changed on 2026-08-03; anything issued before then is worth re-reading. |
 | The agreement says 15% of vendor invoices, but the estimate charges no vendor fee | Fixed 2026-09-08. The fee came off on 2026-08-02 and the agreement clause was not updated with it, so every agreement generated in between promised a fee the invoice never bills. Re-generate it — §3.5 now reads *Vendor Coordination*, no fee, on the standard form, and the estate form's fee table says *at cost — no fee*. If a client has already signed one, the invoice governs and charges less, not more. |
+| The client asks where Exhibit A is | You sent the agreement on its own. Use **Print Signing Packet** on the Agreement tab — one PDF with the approved estimate attached as Exhibit A — and send that. New 2026-09-08. |
 | The estate document reads nothing like the home editing one | Correct as of 2026-08-03. Estate and probate stages are written for the representative — catalogue first, nothing removed until authorised in writing, releases receipted. Home Editing keeps the decision-paced language because there the client really is standing in the house deciding. |
 | A vendor you entered is not named anywhere in the job plan stages | It is filed under a category the stage bucketer does not recognise. Check its Category in the Vendor Directory — valuers land in the sorting stage, removal and sale in disposition, cleaning and finishing trades in close-out, everything else in disposition. |
 | A client asks why the estimate has no dates | Deliberate, and the document does not explain it either. Answer from the overall working-day estimate and say the pace depends on how quickly they make decisions. Do not write dates onto the document. |

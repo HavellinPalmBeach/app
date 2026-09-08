@@ -315,6 +315,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
    a vendor list. Don't put the dark band back on a scope section. */
 .ce-section-hdr{background:var(--gray-dk);color:var(--cream);padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;margin-bottom:0;}
 .ce-band{background:#f7f4ee;color:var(--bronze);padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;margin-bottom:0;border-bottom:1px solid var(--border);}
+/* Signing packet: the agreement, then the approved estimate as Exhibit A on a new page.
+   The band is the only thing the packet adds to either document. */
+.packet-exhibit{break-before:page;page-break-before:always;}
+.packet-exhibit-hdr{border-top:2px solid var(--bronze);border-bottom:1px solid var(--border);padding:8px 0 6px;margin-bottom:1rem;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--bronze);}
+.packet-exhibit-hdr span{display:block;margin-top:2px;font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--gray);}
 .ce-tbl{width:100%;border-collapse:collapse;margin-bottom:0;}
 .ce-tbl th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:8px 14px;border-bottom:1px solid var(--border);background:var(--tan);text-align:left;}
 .ce-tbl th.r{text-align:right;}
@@ -670,6 +675,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
   /* Light page padding only — the @page margin above supplies the real edge gap,
      so the page-1 header rides up a little rather than sitting an inch down. */
   .ce-page{padding:.1in .15in;max-width:100%;font-size:10px;line-height:1.4;}
+  .packet-exhibit{break-before:page;page-break-before:always;}
   /* Force background colors to print */
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
   .ce-brand{font-size:30px;}
@@ -756,7 +762,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 1:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 2:38pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1829,6 +1835,7 @@ body.no-smf .smf-col{display:none;}
         <button class="btn-s" id="btn-agr-approve" onclick="openAgrPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-s" id="btn-agr-stripe" onclick="generateStripeLink()" style="display:none;">Generate Payment Link</button>
         <button class="btn-bronze" id="btn-agr-pdf" onclick="printAgreement()" style="display:none;">Print / Save PDF</button>
+        <button class="btn-bronze" id="btn-agr-packet" onclick="printSigningPacket()" style="display:none;" title="The agreement with the approved estimate attached as Exhibit A — one document to sign">Print Signing Packet</button>
         <a class="btn-bronze" id="btn-mailto-agr" href="#" style="display:none;text-decoration:none;" title="Opens pre-filled email in your mail app">&#9993; Email to Client</a>
         <button class="btn-s" id="btn-agr-sent" onclick="markAgreementSent()" style="display:none;">&#9993; Mark Agreement Sent</button>
         <button class="btn-s" id="btn-agr-signed" onclick="markAgreementSigned()" style="display:none;background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-tx);">&#10003; Mark Agreement Signed</button>
@@ -10840,6 +10847,18 @@ function _estStoreLanded() {
   if (jp && jp.classList.contains('active') && typeof loadJobPlanTab === 'function') loadJobPlanTab();
   var iv = document.getElementById('panel-inventory');
   if (iv && iv.classList.contains('active') && typeof renderInventoryTab === 'function') renderInventoryTab();
+}
+
+// The APPROVED estimate for a job, as the client documents attach it — the snapshot inside
+// the store record, and only while that record is approved. Both agreement forms read this
+// first: an agreement that cannot be approved until the estimate is (checkPin refuses)
+// should never fall back to `job.havellinEst`, which carries no rates, no fixed-price flag
+// and no documentation scope. Before 2026-09-08 they read `currentEstimate` only when it
+// happened to be this job's, so an agreement opened after building a different estimate
+// printed default rates against a total that had come from somewhere else.
+function approvedEstimateFor(jobId) {
+  var rec = estimateStore[jobId];
+  return (rec && rec.approved && rec.estimate) ? rec.estimate : null;
 }
 
 function loadEstimateForJob(jobId) {
@@ -20345,6 +20364,84 @@ function exportAgreementToDrive(jobId) {
   });
 }
 
+// ─── Signing packet: the agreement and the estimate it incorporates, as ONE document ────
+// Both agreement forms say the Estimate is attached as Exhibit A, and the estate form says
+// the agreement is not valid without it — but the app filed them as two documents in two
+// subfolders and nothing stapled them together. Anthony, 2026-09-08: "build the combined
+// signing packet." The agreement is page one; the APPROVED client estimate follows on a new
+// page under an Exhibit A band. The packet re-renders nothing in a second way — it reuses
+// the two renderers verbatim, so it cannot disagree with either document on its own.
+function buildSigningPacketHtml(agrHtml, estHtml, job) {
+  var hvl = (job && job.hvlId) ? esc(job.hvlId) : '';
+  return '<div class="ce-page">' + agrHtml + '</div>' +
+    '<div class="ce-page packet-exhibit">' +
+      '<div class="packet-exhibit-hdr">Exhibit A &mdash; Service Estimate' + (hvl ? ' &middot; ' + hvl : '') +
+        '<span>Incorporated by reference into the Agreement as Exhibit A</span></div>' +
+      estHtml +
+    '</div>';
+}
+
+// The approved estimate rendered for `jobId` WITHOUT disturbing what the Client Estimate tab
+// is showing: renderClientEstimate reads three globals and writes one element, so they are
+// swapped in, the page is read back, and all four are restored — the tab's approval UI too.
+function _approvedEstimateHtml(jobId) {
+  var snap = approvedEstimateFor(jobId);
+  var el = document.getElementById('ce-page-content');
+  if (!snap || !el) return '';
+  var keep = { est: currentEstimate, appr: estimateApproved, sub: estimateSubmitted, html: el.innerHTML };
+  var out = '';
+  try {
+    currentEstimate = snap; estimateApproved = true; estimateSubmitted = true;
+    renderClientEstimate();
+    out = el.innerHTML;
+  } finally {
+    currentEstimate = keep.est; estimateApproved = keep.appr; estimateSubmitted = keep.sub;
+    el.innerHTML = keep.html;
+    updateApprovalUI();
+  }
+  return out;
+}
+
+function signingPacketHtml(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var agrEl = document.getElementById('agr-page-content');
+  if (!job || !agrEl || !agrEl.innerHTML.trim()) return '';
+  var estHtml = _approvedEstimateHtml(jobId);
+  if (!estHtml) return '';
+  return buildSigningPacketHtml(agrEl.innerHTML, estHtml, job);
+}
+
+// Same gate as printAgreement, same single print path. The PDF filename carries the
+// packet's name the way printClientEstimate names the estimate's.
+function printSigningPacket() {
+  if (!agrApproved) { alert('Agreement must be approved before printing.'); return; }
+  var html = signingPacketHtml(currentAgrJobId);
+  if (!html) { alert('The signing packet needs an approved estimate for this job.'); return; }
+  var job = jobs.find(function(j){ return j.id === currentAgrJobId; }) || {};
+  var originalTitle = document.title;
+  document.title = ((job.name || 'Client').split(' ').pop()) + '-' + (job.hvlId || 'Unknown') + '-Signing-Packet';
+  _printDocument(html);
+  setTimeout(function(){ document.title = originalTitle; }, 1200);
+}
+
+// Filed beside the agreement on approval, into the same Agreement subfolder.
+var _packetExported = {};
+function exportSigningPacketToDrive(jobId) {
+  if (_packetExported[jobId]) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var body = signingPacketHtml(jobId);
+  if (!body) return;
+  var html = _exportDoc('Signing Packet – ' + (job.hvlId || ''), body, '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}');
+  resolveSubfolderId(job, 'Agreement', function(folderId) {
+    if (!folderId) return;
+    _packetExported[jobId] = true;
+    uploadHtmlToDrive(folderId, (job.hvlId || 'AGR') + '_Signing_Packet.html', html, function(ok) {
+      if (ok) showSyncBadge('Signing packet saved to Drive ✓');
+    });
+  });
+}
+
 // ─── VOICE TRANSCRIPTION ─────────────────────────────────────────────────────
 var _activeRecognitions = {};
 
@@ -20730,7 +20827,7 @@ function renderProbateAgreement() {
   var jobId = currentAgrJobId;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
+  var est = approvedEstimateFor(jobId) || ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
   if (!est) { var rec = estimateStore[jobId]; if (rec && rec.estimate) est = rec.estimate; }
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
   var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of T&M
@@ -21099,7 +21196,7 @@ function renderAgreement() {
   // the one that addresses a representative.
   if (isDecedentJob(job)) { renderProbateAgreement(); return; }
 
-  var est = (currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null;
+  var est = approvedEstimateFor(jobId) || ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
   var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of hourly billing
   var tcRate    = est ? est.tcRate  : (job.premium ? 185 : 150);
@@ -21199,9 +21296,9 @@ function renderAgreement() {
   // ── SECTION 1 ─────────────────────────────────────────────────────────────
   content += agrSection('1. Scope of Services',
     (isPrepAgr
-      ? p(b('1.1 Services.')+'  Contractor will provide home sale preparation project-management services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference. The Services consist of sourcing, coordinating, and overseeing the third-party vendors and tradespeople engaged to prepare the Property for sale.')+
+      ? p(b('1.1 Services.')+'  Contractor will provide home sale preparation project-management services (the "Services") as described in the written estimate or work order (the "Estimate"), which is attached as Exhibit A and incorporated by reference. The Services consist of sourcing, coordinating, and overseeing the third-party vendors and tradespeople engaged to prepare the Property for sale.')+
         p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and a written preparation plan; sourcing and scheduling of vendors and tradespeople (including painting, repairs, cleaning, landscaping, pressure washing, handyman work, and staging); on-site oversight, quality control, and coordination of that work through completion; and management of vendor scheduling and Property access. Third-party vendors are engaged for and invoiced to Client at cost; Contractor\'s fee for the Services is a management fee equal to thirty percent (30%) of the total third-party vendor costs managed under this Agreement. Contractor does not provide real estate brokerage, listing, or transactional representation.')
-      : p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, home editing, home transition and move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is incorporated by reference.')+
+      : p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, home editing, home transition and move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is attached as Exhibit A and incorporated by reference.')+
         p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and project planning; sorting, organizing, and packing of personal property and household goods; coordination of appraisers, auction houses, estate sale providers, movers, junk removal, art/antique handlers, and other third-party vendors; move-management, scheduling, and oversight; limited assistance identifying items that may have value for referral to qualified third parties; and basic home preparation and staging in anticipation of sale (excluding real estate brokerage services unless covered under a separate written brokerage agreement).')
     )+
     p(b('1.3 Exclusions.')+'  Unless expressly stated in the Estimate and agreed in writing, Services do not include: real estate brokerage, listing, or transactional representation; legal, tax, accounting, or financial advice; structural work, construction, or trade work requiring licensure; hazardous materials assessment, remediation, or abatement (including mold, asbestos, fuel tanks, medical waste); or heavy mechanical work beyond ordinary coordination with licensed professionals.')+
@@ -21396,12 +21493,13 @@ function updateAgrUI() {
   var btnApprove = document.getElementById('btn-agr-approve');
   var btnStripe = document.getElementById('btn-agr-stripe');
   var btnPdf = document.getElementById('btn-agr-pdf');
+  var btnPacket = document.getElementById('btn-agr-packet');   // follows btnPdf exactly
   var banner = document.getElementById('agr-banner-wrap');
 
   if (!currentAgrJobId) {
     badge.innerHTML = ''; btnApprove.style.display='none';
     btnStripe.style.display='none';
-    btnPdf.style.display='none'; banner.innerHTML='';
+    btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; banner.innerHTML='';
     ['btn-agr-sent','btn-agr-signed','btn-deposit-received'].forEach(function(id){
       var b = document.getElementById(id); if (b) b.style.display = 'none';
     });
@@ -21427,7 +21525,7 @@ function updateAgrUI() {
   if (bDep)    bDep.style.display    = (agrApproved && _signed && !_paid)  ? 'inline-block' : 'none';
 
   if (agrApproved) {
-    btnApprove.style.display='none'; btnStripe.style.display='inline-block'; btnPdf.style.display='inline-block';
+    btnApprove.style.display='none'; btnStripe.style.display='inline-block'; btnPdf.style.display='inline-block'; if (btnPacket) btnPacket.style.display='inline-block';
     badge.innerHTML = '<span class="badge b-approved">✓ Approved</span>';
     // Progress line: where this job is in sent → signed → funded, with who and when.
     var _prog;
@@ -21467,11 +21565,11 @@ function updateAgrUI() {
     banner.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div>' + _prog + '</div></div>';
   } else if (!estApproved) {
     // Block agreement approval until the underlying estimate is approved
-    btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none';
+    btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none';
     badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';
     banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>The estimate for this job must be approved first.</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Approve the estimate on the Client Estimate tab before approving and sending the agreement.</div></div>';
   } else {
-    btnApprove.style.display='inline-block'; btnStripe.style.display='none'; btnPdf.style.display='none';
+    btnApprove.style.display='inline-block'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none';
     badge.innerHTML = '<span class="badge b-pending">Pending Approval</span>';
     banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Review the agreement below</strong>, then enter manager PIN to approve and unlock sending options.</div></div>';
   }
@@ -21510,6 +21608,8 @@ function checkAgrPin() {
     // on the version that was actually signed off. renderAgreement() has just rewritten
     // the page, so the delay lets that settle before the DOM is read.
     setTimeout(function(){ exportAgreementToDrive(currentAgrJobId); }, 400);
+    // And the signing packet — the same agreement with the approved estimate attached.
+    setTimeout(function(){ exportSigningPacketToDrive(currentAgrJobId); }, 900);
     // Notify the agreements group that a signature-ready agreement exists.
     if (job) {
       var agrTc = assignedTCContact(job);
