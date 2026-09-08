@@ -68,6 +68,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((ui.match(/btnPdf\.style\.display='(none|inline-block)'(?!; if \(btnPacket\))/g) || []).length, 0, 'no bare toggle survives');
   }
 
+  group('no bracketed instruction survives on a signing document');
+  {
+    const agr = fn('renderAgreement');
+    lacks(agr, '[Attach the approved Service Estimate', 'the Exhibit A block is a statement, not a note-to-self');
+    has(agr, 'is attached to this Agreement as Exhibit A. Its date, line-item breakdown, payment schedule, and total fees are incorporated', 'and it says the estimate is attached, which the packet makes true');
+  }
+
   group('print CSS');
   {
     has(src, '.packet-exhibit{break-before:page;page-break-before:always;}', 'the exhibit starts a new page');

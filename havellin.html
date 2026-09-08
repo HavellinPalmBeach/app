@@ -21466,7 +21466,10 @@ function renderAgreement() {
   // ── EXHIBIT A ─────────────────────────────────────────────────────────────
   content += '<div class="ce-divider" style="margin-top:1.5rem;"></div>';
   content += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:.5rem;">Exhibit A — Service Estimate</div>';
-  content += p('[Attach the approved Service Estimate generated from the Havellin estimator app. The Estimate reference number <strong>'+hvlId+'</strong>, date, line-item breakdown, payment schedule, and total fees are incorporated into this Agreement by reference.]');
+  // Was a bracketed "attach the estimate" instruction, which read as a note-to-self on a
+  // signing document, and sat directly above the estimate itself once the
+  // signing packet attached it. A statement now, true standalone and true in the packet.
+  content += p('The approved Service Estimate, reference <strong>'+hvlId+'</strong>, is attached to this Agreement as Exhibit A. Its date, line-item breakdown, payment schedule, and total fees are incorporated into this Agreement by reference.');
 
   content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
   content += 'Havellin Palm Beach, LLC  &middot;  FL LLC L26000216712  &middot;  (561) 370-4700  &middot;  agreements@havellinpalmbeach.com  &middot;  havellinpalmbeach.com<br>';
