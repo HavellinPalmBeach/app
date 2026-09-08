@@ -157,6 +157,17 @@ agreements had the same defect.
   window; a signed one is governed by the invoice, which charges less); playbook gained **one
   symptom→cause row**. Both `.md` copies hand-edited.
 - **749 committed checks** (`tests/agreement-fees.test.js`, 14 new).
+- **The Google Doc templates are retired IN PLACE (2026-09-08, after the Drive connector was
+  reconnected on the Havellin account).** `08_Clients` was confirmed empty — no app-generated
+  agreement exists on Drive yet. In `02_Legal / Client Agreement Templates`:
+  *Havellin_Client_Agreement_Estate Transition & Downsizing* is renamed **RETIRED …** and
+  *Havellin_Probate_Professional_Services_Package* is renamed **NEEDS REWRITE …** — the latter
+  is a cover letter + 13-phase overview + attorney-facing fee schedule + agreement, and only
+  the agreement part is superseded; the rest still says 15% VMF, *"licensed"*, the old tagline
+  and a *Phase 5* midpoint trigger. A `READ ME` text file in the folder says agreements come
+  from the app and to send the signing packet. **Moving either doc to `10_Havellin Legacy
+  Documents` was refused** (*The caller does not have permission* — the connector can rename
+  but not re-parent on the Shared Drive), so they stay in the folder under the retired names.
 
 ## Downsizing → HOME EDITING · Downsizing & Move Management → HOME TRANSITION (RENAMED 2026-09-08)
 *"we have changed downsizing & move management to 'home transition' … also, i think 'downsizing'
