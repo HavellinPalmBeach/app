@@ -193,13 +193,23 @@ The tagline on every client document is **"Havellin handles the work no family s
 
 **Save to Drive** confirms itself now: the button turns green and reads *✓ Saved to Drive*, and the green approval banner gains a *📁 Filed to Drive · &lt;when&gt; · Open* line that is still there tomorrow. **If the button stays white, it did not save.** Pressing it again re-files and overwrites the old copy, which is what you want after an edit — and if you do edit, the *Filed to Drive* line disappears until it is re-approved, because the copy sitting in Drive is no longer the one on your screen.
 
+> **The PDF is named for the client now (new 2026-09-08).** Print / Save PDF gives you *Havellin Service Estimate - 1234 Ocean Blvd - Sep 8 2026.pdf* instead of *Ellsworth-HVL-0007.pdf*. The email attachment uses the same name.
+
+> **⚠** **If you estimated a client before 2026-09-08, look in their Drive *Estimate* folder.** Two different documents used to be saved under one filename — the client estimate, and our internal worksheet with the room scores, the hours and your walkthrough notes on it — and whichever finished uploading last is the one that stayed. **If the file in there is a table of rooms and hours, it is the internal one.** Open the estimate and press *Save to Drive* to put the client version back. They are two separate files from now on, and the internal one says *Internal worksheet — not a client document* across the top.
+
 No client signature is wanted on the estimate. It's informational.
 
 ## Step 4 · Send it — Client Estimate tab
 
-**Email Estimate** opens a pre-drafted, warmly-worded email that ties back to the walkthrough. Attach the estimate and send.
+**✉ Email to Client** builds a proper formatted email — Havellin masthead, the property, the cost summary, the stages — with the estimate PDF attached, and leaves it as a **draft in your own Gmail**. It opens the draft for you. Read it, add a line of your own, and send it yourself.
+
+Google will ask which account the first time you use it on a device, and stay quiet after that. **The draft is yours**: it sends from your address, lands in your Sent folder, and the client's reply comes back to you. The app can create the draft and cannot send it — that is deliberate, and it is why you always get to read it first.
+
+Then come back and hit **✓ Mark as Sent** so the app records the delivery.
 
 > **⚠** An unapproved estimate **cannot be emailed**, from this tab or from the dashboard shortcut. If the button refuses, go back to step 3.
+
+> **✉ Plain email** sits beside it as the backup, and the app drops to it on its own if Gmail is not set up on this device or the sign-in is cancelled — it will tell you which. That one is the old plain-text email in your normal mail app, and **you have to attach the PDF yourself** (Print / Save PDF first). Use it if you are in a hurry on a device that has never been signed in.
 
 Then wait. Do not send an agreement, do not book anybody.
 
@@ -217,7 +227,11 @@ Open the job card and hit **✓ Client Accepted — Mark Won**. Acceptance is in
 
 ## Step 6 · Agreement — Agreement tab
 
-> **⚠** **Never send an agreement before the job is marked Won.** Record the acceptance on the dashboard first.
+> **⚠** **The app will not let you approve an agreement until the job is marked Won (enforced 2026-09-08).** It used to be a rule you had to remember; now the tab reads *Awaiting Client Acceptance* and withholds Approve, Print / Save PDF and the signing packet until the acceptance is on the dashboard (step 5). A manager PIN will not get past it either.
+>
+> **The reason is where the agreement goes.** Approving it is what files the agreement *and* the signing packet into the client's Drive folder. Before this, an agreement could be sitting in the folder of somebody who had never said yes. You can still read the draft on screen the whole time — reading it costs nothing, approving it is what commits.
+
+> **⚠** **If you edit the estimate, this agreement's approval is withdrawn.** The agreement attaches the estimate as Exhibit A, so it cannot stay approved against a version you are changing. The tab tells you it happened. **Re-approve after the estimate is settled** and both the agreement and the signing packet in Drive are replaced automatically — you do not need to delete anything.
 
 1. Select the job — the agreement populates from the approved estimate.
 2. A manager enters their PIN to approve it for sending. The approved agreement files itself to the Drive **Agreement** folder at this moment.
@@ -528,6 +542,14 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| **Email to Client** opened a plain-text email instead of the formatted one | The app fell back, and it will have said why in the message bar. Either Gmail is not set up on this device (⚙ Settings needs the *Google OAuth Client ID* — ask Anthony for it), or the Google sign-in window was closed before it finished. The plain email works; you just have to attach the PDF yourself. |
+| The Gmail draft was created but the PDF is not attached | The PDF conversion failed and the app told you so rather than dropping the email. The body still carries the summary. Hit **Print / Save PDF**, attach it to the draft by hand, and send. |
+| The Gmail draft opened in the wrong Google account | Gmail opens the first account signed in on that browser. Switch account in Gmail and the draft is there — it was created in whichever account you picked in the Google window, and that is the one it will send from. |
+| Google says the Gmail API is not enabled | A one-time setup step on the Google Cloud project, not something on this device. Send it to Anthony — it is in §2 of the manual. Use **✉ Plain email** until it is done. |
+| The Agreement tab says *Awaiting Client Acceptance* and Approve is missing | The client has not been recorded as accepting. Go to the Client Dashboard and hit **✓ Client Accepted — Mark Won** (step 5). Approving is what files the agreement into their Drive folder, so it waits for the yes. The draft on screen is a preview and has not been filed anywhere. |
+| The agreement was approved and now says the approval was withdrawn | Somebody edited the estimate. The agreement attaches it as Exhibit A, so it cannot stay approved against a version that is changing. Settle the estimate, re-approve it, then re-approve the agreement — Drive is refreshed for you. |
+| The estimate PDF in a client's Drive folder is a table of rooms and hours | That is our internal worksheet, and before 2026-09-08 it shared a filename with the client estimate so it sometimes won. Open the estimate and press **Save to Drive** to put the client version back. They are separate files now. |
+| A Home Prep estimate talked about hours, or a 15% overrun | Fixed 2026-09-08. Home Prep bills no hours at all — the fee is 30% of what the vendors actually invoice. If you are holding a prep estimate issued before that date, re-open it and re-approve so the client gets the corrected terms. |
 | The Appraisal Worklist says nothing is flagged — is the estate clear? | Not necessarily, and this is the trap. That line answers the *per-item* test only. Read the **§20.2031-6(b)** box underneath it: art, jewellery, silver, antiques, rugs and collections are added together, and over $3,000 in total the estate owes an expert appraisal under oath with its federal return — even when no single piece was ever flagged. |
 | The aggregate box says "cannot be tested yet" | Some MAIV articles still have no value in them. The total you can see is a floor, not a total, so the app will not give you a verdict. Get values against them; that is the whole job at that point. |
 | You found a fur coat / a wall of old books and there is no category for them | There isn't one, deliberately. Leave the category as General/Household, set **MAIV** to *Yes*, and pick *Furs* or *Books & manuscripts* as the class. The regulation names both by name. |

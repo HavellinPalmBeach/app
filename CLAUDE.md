@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/kind-hawking-j7iugr`
-  (was `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/eager-euler-u5lt65`
+  (was `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/kind-hawking-j7iugr:main`
+  `git push origin claude/eager-euler-u5lt65:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -144,6 +144,100 @@ itself … when she added a new client, it pushed the new client plus three old 
 - Manual **§2** note; playbook **two symptom→cause rows**. Both `.md` copies hand-edited.
 - **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
   functions against a fake spreadsheet, and the app's receiving side out of the real source).
+
+## The estimate's save / file / email path — four reports off one dummy client (BUILT 2026-09-08)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` gains `htmlToPdf`.
+**⚠️ NEEDS A GOOGLE CLOUD OAUTH CLIENT** before the HTML email works; until then the button
+falls back to the old `mailto:` and says so.
+
+- **THE SAVE BUTTON ALREADY PUSHED A PDF AND ALREADY FIRED AUTOMATICALLY — the answer to
+  Anthony's first question was "it does".** `uploadHtmlToDrive` in `main-sync.gs` renames
+  `.html` → `.pdf` and runs `htmlBlob.getAs('application/pdf')`, so *everything* the app
+  files is a PDF whatever the app-side function names say; and `checkPin` has fired
+  `saveFolderEstimate(true)` on approval since 2026-08-03. **Do not "add" either again.**
+- **⚠ WHAT WAS ACTUALLY WRONG: TWO DOCUMENTS, ONE FILENAME, AND A RACE DECIDED WHICH ONE THE
+  CLIENT GOT.** `exportEstimateToDrive` (the internal worksheet — room scores, TC/PS hours,
+  per-room dollars, walkthrough notes) and `saveFolderEstimate` (the client document) both
+  wrote `<hvlId>_Estimate.html` into the same `Estimate` subfolder, and on approval both fire
+  400ms apart. The Apps Script trashes by name then creates, and a cold Apps Script start is
+  seconds — so the landing order was not the send order and roughly half the time the client's
+  folder held our cost breakdown. `estimateDocNames(job)` is now the ONE namer for all three
+  surfaces (Drive, printed PDF, email attachment); the worksheet is `… - Estimate Worksheet
+  (INTERNAL)` and carries a red *not a client document* line on its face. **Keep the names
+  distinct.** The Drive names carry **no date** on purpose — overwrite-by-filename is what
+  makes a re-file replace rather than accumulate; only the client-facing name is dated.
+- **Naming: `Havellin Service Estimate - 1234 Ocean Blvd - Sep 8 2026.pdf`.** Was
+  `Ellsworth-HVL-0007.pdf`, which is a database key on a document going to a client.
+- **⚠ HOME PREP BILLS NO HOURS AND THE TERMS PROMISED THEM ANYWAY.** *"the terms and conditions
+  for a home prep job need to change in the estimate because there are no hours. So we can't
+  have a change order for being fifteen percent over hours or the rectifying the final bill
+  based on final hours because that doesn't exist."* Correct on all three. The prep branch
+  replaces only the fee table, so the shared Terms printed *"Final charges reflect actual hours
+  worked"*, *"if actual hours exceed the estimate by more than 15%…"* and a *25% materials
+  handling fee* — on an engagement where `computeEngineV3` zeroes `baseTCHrs`/`basePSHrs`/
+  `coordTC` and `loadJobPlanTab` hides the hours log outright. **The INVOICE already knew
+  (`_feeOnly`); the estimate had no equivalent.** New `estimateIsFeeOnly(e, job)` is the same
+  test — the service key OR a saved estimate with both hour totals at zero — and both surfaces
+  read it. Payment schedule gets prep's real milestones (acceptance · vendor schedule booked ·
+  show-ready handover) instead of a "project midpoint" that does not exist.
+- **⚠ THE AGREEMENT'S TRIGGER IS THE CLIENT'S YES, and it had no such gate.** *"it looks like
+  an agreement gets pushed into Google Drive before an estimate is even approved."* Two holes:
+  - `checkAgrPin` required only that the ESTIMATE was approved — an internal event that says
+    nothing about the client. Approving is what **files the agreement and the signing packet
+    into the client's Drive folder**. New `agrApprovalBlocker(jobId)` returns
+    `nojob`/`estimate`/`notwon`/`''`, and `updateAgrUI` and `checkAgrPin` both read it rather
+    than keeping their own copies. **The draft still RENDERS at all times** — reading the
+    contract you are about to talk through is free; approving is what commits.
+  - `editEstimateFromCE` cleared `estimateApproved`, `job.approved` and even the estimate's
+    Drive stamp, and **never touched `job.agrApproved`** — so the tab still read *Approved for
+    Sending* with the PDF button live over an Exhibit A that no longer existed in approved
+    form. It now revokes, records `agrRevokedBy:'estimate-edited'`, syncs, and says so.
+  - **`_agrExported`/`_packetExported` were bare session booleans, so the re-approval carrying
+    the correction was suppressed and Drive kept the stale copy.** Both key on
+    `_agrExportKey(job)` (approval stamp + approver) now: a new approval re-files, a redraw
+    does not.
+- **The HTML estimate email — a Gmail DRAFT in the signed-in user's own mailbox.**
+  *"right now it generates an email from the person who is logged into the havellin email, so
+  we want to keep that. if ashley generates, the email comes from ashley … i want to see it,
+  potentially edit it, and send it myself, not automatically."*
+  - **⚠ `mailto:` CANNOT DO THIS AND NO AMOUNT OF WORK ON `buildEstimateMailto` WILL FIX IT.**
+    RFC 6068 carries a plain-text body and nothing else: no HTML, no attachment. That is why
+    the old email ended by instructing the *sender* to attach the PDF by hand. Gmail's own
+    `?view=cm` compose URL has the same two limits.
+  - **⚠ AND IT IS NOT SENT SERVER-SIDE.** Apps Script could `MailApp.sendEmail` an HTML body
+    with an attachment in one call, but always as the deploying account — the exact opposite
+    of the requirement. So: Google Identity Services in the browser, scope
+    **`gmail.compose`** (create a draft; it deliberately CANNOT send), `users/me/drafts`, then
+    deep-link to the draft. **Never add `gmail.send`** — a person pressing send is the feature.
+  - **The token is memory-only** (`_gmailToken`, never localStorage): a bearer token on a
+    mailbox, on a public origin, on a shared iPad. `GMAIL_CLIENT_ID` is a Settings value like
+    the Apps Script URLs, in `LOCAL_KEEP_KEYS` so a device clear does not force a retype.
+  - **⚠ THE BODY IS A COVER NOTE, NOT THE WHOLE ESTIMATE, AND THAT IS THE DESIGN.** Mail
+    clients strip `<style>` and do not support CSS custom properties at all, so
+    `ce-page-content` renders as unstyled text in Gmail — email HTML has to be tables and
+    inline literals (`EMAIL_BRAND`). And rebuilding all eight sections a second way would be
+    the second-renderer drift this file records over and over. So the body carries the summary
+    and the **complete document is the attached PDF**, produced by the SAME server-side
+    conversion that writes the Drive copy — only one thing renders the estimate. The stage
+    list reads `_cePhases`, so the email cannot promise a stage the estimate did not price.
+  - **New `htmlToPdf` Apps Script action returns the PDF bytes and writes nothing to Drive.**
+    Reading the filed copy back instead would need a Drive scope and a signed-in user who can
+    see that Shared Drive; this runs as the Havellin account and needs neither. A test asserts
+    the function never touches `DriveApp`.
+  - **The `mailto:` path SURVIVES as `_estimateEmailFallback` and must not be deleted** —
+    unconfigured client id, cancelled popup, failed draft. A plain compose window that opens
+    beats a button that reports an error. A failed PDF still produces the draft, and says so.
+  - **Verified in headless Chromium**, not just asserted: the email renders at 390/600/900px
+    with no overflow (`width:100%` + `max-width:600px`; a fixed 600 does not shrink), the prep
+    variant mentions neither hours nor 15%, and a fixed-price one drops the hourly threshold.
+    *Note for next time: Playwright's option is `viewport`, not `viewportSize` — the wrong one
+    silently leaves the page at the 1280px default and every width measurement is a lie.*
+- **1004 committed checks** (`tests/estimate-delivery.test.js`, 143 new). The harness gained
+  `btoa`/`atob`/`unescape`/`escape` — real browser globals the app uses, whose absence read as
+  a bug in the code under test.
+- Manual **§2** (the Cloud setup steps), **§6b** (prep terms), **§7** (naming, the two Drive
+  files, the email) and **§8** (both gates); playbook **Step 3/4/6** and **eight** new
+  symptom→cause rows. Both `.md` copies hand-edited and parity-checked claim by claim.
 
 ## The signing packet — the agreement with its Exhibit A actually attached (BUILT 2026-09-08)
 *"so there are basically two versions of the agreement? then the specifics are all in the
@@ -1882,7 +1976,12 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-08 (seventeenth pass, same day)** — manual **§2** gained
+- Last reconciled against the app: **2026-09-08 (eighteenth pass, same day)** — manual **§2/§6b/§7/§8**
+  against the estimate delivery path; playbook **Step 3/4/6** and eight symptom→cause rows. Both
+  `.md` copies hand-edited and parity-checked. *Note: `manual.html` has an unbalanced `<code>`
+  count, and it is a FALSE POSITIVE — the extra one is prose inside a CSS comment in the phone
+  block. Do not "fix" it.*
+- Prior pass **2026-09-08 (seventeenth pass, same day)** — manual **§2** gained
   the job-ledger note; playbook two symptom→cause rows. Both `.md` copies hand-edited.
 - Prior pass **2026-09-08 (sixteenth pass, same day)** — manual **§8** gained the
   signing-packet note; playbook a Step 6 row and one symptom→cause row. Both `.md` copies hand-edited.

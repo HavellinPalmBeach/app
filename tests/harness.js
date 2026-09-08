@@ -191,6 +191,15 @@ function sandbox({ fns = [], vars = [], stubs = {} } = {}) {
       removeItem(k) { delete store[k]; },
     },
     alert() {},
+    // Browser globals the app uses for real: btoa for the Drive data: URIs and for every
+    // base64 part of the Gmail MIME message, unescape as the second half of the
+    // unescape(encodeURIComponent(s)) idiom that makes btoa safe for non-Latin-1 text.
+    // node has no window, so without these an extracted function throws ReferenceError and
+    // the failure reads as a bug in the code under test rather than a missing stub.
+    btoa: (s) => Buffer.from(String(s), 'binary').toString('base64'),
+    atob: (s) => Buffer.from(String(s), 'base64').toString('binary'),
+    unescape: global.unescape,
+    escape: global.escape,
     // The real _printDocument defers the dialog and clears the target afterwards (see the
     // comment on it in havellin.html — clearing on the same tick is what produced a blank
     // printout). Deferral is untestable in a vm with no timers and no layout, so the

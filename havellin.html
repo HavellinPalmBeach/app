@@ -7,6 +7,11 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Havellin Palm Beach — Job Manager</title>
+<!-- Google Identity Services, for the Gmail draft the Client Estimate tab creates. `async`
+     and `defer` so a slow or blocked load can never hold up first paint — gmailAuth checks
+     for window.google and reports it plainly if the library is not there, and the estimate
+     email falls back to a plain mailto: link. Nothing else in the app depends on it. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Icons, inlined as data URIs — this is a single-file app with no build step and
      no other assets, and a favicon.ico sitting beside it would be the only one.
      Two artworks on purpose: the FULL mark (house + node diamond) at 180px for the
@@ -762,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 6:03pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 7:37pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1594,7 +1599,8 @@ body.no-smf .smf-col{display:none;}
         <button class="btn-s" id="btn-approve" onclick="openPinModal()" style="display:none;">Manager Approval</button>
         <button class="btn-s" id="btn-deny-est" onclick="openDenyModal()" style="display:none;color:var(--err-tx);border-color:var(--err-tx);">Deny</button>
         <button class="btn-bronze" id="btn-pdf" onclick="printClientEstimate()" style="display:none;">Print / Save PDF</button>
-        <a class="btn-bronze" id="btn-mailto-est" href="#" style="display:none;text-decoration:none;">&#9993; Email to Client</a>
+        <button class="btn-bronze" id="btn-html-email-est" onclick="emailEstimateToClient()" style="display:none;">&#9993; Email to Client</button>
+        <a class="btn-s" id="btn-mailto-est" href="#" style="display:none;text-decoration:none;" title="Plain-text email in your own mail app, no attachment">&#9993; Plain email</a>
         <button class="btn-s" id="btn-drive-est" onclick="saveFolderEstimate()" style="display:none;">&#128193; Save to Drive</button>
         <button class="btn-s" id="btn-mark-sent" onclick="markEstimateSent()" style="display:none;">&#10003; Mark as Sent</button>
         <button class="btn-s" id="btn-offer-discount" onclick="openDiscountModal()" style="display:none;">Offer Discount</button>
@@ -1997,6 +2003,12 @@ body.no-smf .smf-col{display:none;}
       <span id="referral-dir-status" style="font-size:11px;color:var(--gray);"></span>
     </div>
     <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Separate web app bound to the Referral Partners sheet only — the network of attorneys, realtors, and trust officers who refer business. Kept apart from job data, same as the Vendor Directory.</div>
+
+    <div class="sec" style="margin-top:14px;">Gmail — HTML Estimate Emails</div>
+
+    <label>Google OAuth Client ID</label>
+    <input type="text" id="set-gmail-client-id" placeholder="1234567890-abc123.apps.googleusercontent.com">
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Lets <strong>Email to Client</strong> build the estimate as a formatted HTML email with the PDF attached, as a <strong>draft in your own Gmail</strong> — so it sends from whoever is signed in on this device and lands in their Sent folder. Create a Web application OAuth client in Google Cloud, enable the Gmail API, and add this app&rsquo;s address as an authorized JavaScript origin. Leave blank and the button falls back to a plain-text email.</div>
 
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
 
@@ -6069,6 +6081,25 @@ function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost;
 // be the same double charge that took SMF_PCT to zero. Any service other than 'prep' is a
 // bundled add-on.
 function prepFeeRate(svc) { return svc === 'prep' ? 0.30 : SMF_PCT; }
+
+// Does this estimate bill any HOURS at all? A fee-only engagement does not, and every
+// client document that talks about hours has to branch on it.
+//
+// Standalone Home Prep is the case: the 30% management fee on vendor spend is the entire
+// revenue, computeEngineV3 zeroes baseTCHrs / basePSHrs / coordTC on svc === 'prep', and
+// the Job Plan hides the hours log, so no hours exist to bill, exceed or true up against.
+//
+// This is deliberately the SAME TEST the invoice already uses (_feeOnly in renderInvoice):
+// the service key, OR a saved estimate whose hour totals are both zero. The second arm
+// catches an estimate whose service is something else but which priced no hours anyway,
+// and it is why this takes the estimate rather than just the key. Keep the two in step —
+// they were out of step until 2026-09-08 and the estimate was the one telling the client
+// something untrue.
+function estimateIsFeeOnly(e, job) {
+  var svc = (e && e.svc) || (job && job.svc);
+  if (svc === 'prep') return true;
+  return !!e && ((e.totTC || 0) + (e.totPS || 0)) === 0;
+}
 function currentSvc() { var el = document.getElementById('e-svc'); return el ? el.value : 'cleanout'; }
 function getPrepFee(svc)  { return Math.round(getPrepCost() * prepFeeRate(svc || currentSvc())); }
 
@@ -7577,6 +7608,9 @@ function renderClientEstimate() {
     contested_probate: 'Onsite Contested Probate Estate Services'
   };
   var onsiteLabel = _svcSubHdr[e.svc] || 'Onsite Services';
+  // Fee-only (standalone Home Prep): no hours are billed, so the payment schedule and the
+  // Terms take their own arms. See estimateIsFeeOnly.
+  var _isFeeOnlyEst = estimateIsFeeOnly(e, job);
   var _subHdrStyle = 'padding:6px 10px;font-size:11px;font-weight:600;color:var(--bronze);text-transform:uppercase;letter-spacing:.05em;';
   var vendorSMF = e.smf || 0;
   var prepGcFee = e.prepFee || 0;
@@ -7793,27 +7827,51 @@ function renderClientEstimate() {
 
   html +=
     '<div style="margin-top:1.5rem;"><div class="ce-section-hdr">Payment Schedule</div>' +
-    '<table class="pay-tbl">' +
-    '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
-    '<tr><td><strong>25% Midpoint</strong> — Due at project midpoint</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
-    '<tr><td><strong>25% Final</strong> — Due upon completion</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
-    '</table></div>' +
+    // Standalone Home Prep has no project midpoint to bill against: it is a fee on vendor
+    // spend, the vendors invoice the client directly, and there are no phases to sit
+    // between. Its milestones are the ones that actually exist on that engagement — the
+    // schedule is agreed, the work runs, the house is handed over show-ready.
+    (_isFeeOnlyEst
+      ? '<table class="pay-tbl">' +
+        '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Management fee only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
+        '<tr><td><strong>25%</strong> — Due once the vendor schedule is booked</td><td style="font-style:italic;color:var(--gray);">Management fee only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
+        '<tr><td><strong>25% Final</strong> — Due at show-ready handover</td><td style="font-style:italic;color:var(--gray);">Management fee only</td><td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
+        '</table>'
+      : '<table class="pay-tbl">' +
+        '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
+        '<tr><td><strong>25% Midpoint</strong> — Due at project midpoint</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
+        '<tr><td><strong>25% Final</strong> — Due upon completion</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
+        '</table>') + '</div>' +
 
     '<div class="ce-terms" style="margin-top:1.5rem;"><div class="ce-terms-title">Terms &amp; Conditions</div>' +
     '<ul>' +
-    (e.fixedPrice
+    // ⚠ A FEE-ONLY ENGAGEMENT BILLS NO HOURS, SO THE HOURLY TERMS ARE FALSE ON IT.
+    // Standalone Home Prep gets its whole revenue from the 30% fee on managed vendor
+    // spend: computeEngineV3 zeroes baseTCHrs, basePSHrs and coordTC on svc === 'prep',
+    // and loadJobPlanTab hides the hours log outright, so no hours can be logged even in
+    // principle. Until 2026-09-08 a prep client nonetheless read "Final charges reflect
+    // actual hours worked", "if actual hours exceed the estimate by more than 15% we will
+    // notify you" and a 25% moving-materials handling fee — three promises about
+    // quantities that do not exist on the engagement, one of them a change-order trigger
+    // that could never fire. The INVOICE already knew this (see _feeOnly in
+    // renderInvoice, which exempts prep from every hours gate); the estimate had no
+    // equivalent, so one surface was right and the other was not. Same test, same shape.
+    (_isFeeOnlyEst
+      ? '<li>Havellin\'s fee for this project is a <strong>30% management fee on actual vendor spend</strong> — sourcing, scheduling, on-site oversight and quality control. It is not billed hourly.</li>' +
+        '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins. The fee trues up to what the vendors actually invoice.</li>' +
+        '<li>Third-party vendors invoice you directly at cost. Havellin adds no markup to their work.</li>' +
+        '<li>Adding or removing work changes the vendor scope, so it is re-quoted and agreed with you in writing before that work proceeds.</li>'
+      : (e.fixedPrice
       ? '<li>This is a <strong>fixed-price</strong> proposal. The Havellin Services fee is firm for the scope of work described and does not change based on the actual hours worked.</li>' +
         '<li>Any change to the agreed scope will be documented in a written change order, with any price adjustment agreed in writing before the additional work proceeds.</li>' +
         '<li>Third-party vendor costs are estimated and billed separately at cost via direct vendor invoices; Havellin\'s coordination of those vendors is included in the fixed fee.</li>'
       : '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
         '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
         '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
-        (e.svc === 'prep'
-          ? '<li>Havellin\'s fee for this project is a 30% GC / Site Management Fee on managed vendor spend; third-party vendors are billed to you directly at cost.</li>'
-          : (SMF_PCT > 0
+        (SMF_PCT > 0
               ? '<li>A ' + Math.round(SMF_PCT*100) + '% Service Management Fee applies to all third-party vendors coordinated by Havellin, including any home-prep vendors managed as part of this engagement.</li>'
-              : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>')) +
-        '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>') +
+              : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>') +
+        '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>')) +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     '<li>Havellin Palm Beach is insured and bonded.</li>' +
     '</ul></div>' +
@@ -7843,6 +7901,8 @@ function updateApprovalUI() {
   [btnApprove, btnPdf, btnEdit, btnSubmit, btnDeny].forEach(function(b){ if(b) b.style.display='none'; });
   var mailtoEl = document.getElementById('btn-mailto-est');
   if (mailtoEl) mailtoEl.style.display = 'none';
+  var htmlEmailEl0 = document.getElementById('btn-html-email-est');
+  if (htmlEmailEl0) htmlEmailEl0.style.display = 'none';
   var btnDriveEst = document.getElementById('btn-drive-est');
   if (btnDriveEst) btnDriveEst.style.display = 'none';
   var btnMarkSent = document.getElementById('btn-mark-sent');
@@ -7873,6 +7933,10 @@ function updateApprovalUI() {
     if (btnPdf) btnPdf.style.display = 'inline-block';
     if (btnDriveEst) btnDriveEst.style.display = 'inline-block';
     if (mailtoEl) { mailtoEl.style.display = 'inline-block'; mailtoEl.href = buildEstimateMailto(); }
+    // The HTML-email button is the primary send path; the mailto anchor stays beside it as
+    // the escape hatch (see _estimateEmailFallback).
+    var htmlEmailEl = document.getElementById('btn-html-email-est');
+    if (htmlEmailEl) { htmlEmailEl.style.display = 'inline-block'; _setEstEmailBusy(false); }
     var lockNote = contractSigned ? ' Locked by the signed agreement — revise via a Change Order.' : '';
     // A filing record that outlives the toast. Answers "is this estimate in Drive?"
     // on reopening the tab tomorrow, and links straight to the filed copy.
@@ -8271,6 +8335,24 @@ function editEstimateFromCE() {
     // stops applying. Re-approval re-files automatically and re-stamps it.
     if (edJob && edJob.estimateDriveAt) { delete edJob.estimateDriveAt; delete edJob.estimateDriveUrl; saveJobs(); }
     if (edJob && (edJob.status === 'pending' || edJob.approved)) { edJob.status = 'new'; edJob.approved = false; saveJobs(); syncJobToSheets(edJob); }
+    // ⚠ AND THE AGREEMENT'S APPROVAL GOES WITH IT. Both forms incorporate this estimate as
+    // Exhibit A, and the estate form says the agreement is not valid without it — so an
+    // agreement approved against a version now being edited is approved against nothing.
+    // Until 2026-09-08 this function cleared the estimate's approval, the job's approved
+    // flag and even the estimate's Drive stamp, and left job.agrApproved alone: the
+    // Agreement tab went on reading "Approved for Sending" with Print/Save PDF live, and
+    // the agreement plus signing packet already filed to Drive kept a stale Exhibit A.
+    // Re-approving after the edit re-files both (see _agrExportKey).
+    if (edJob && edJob.agrApproved) {
+      edJob.agrApproved = false;
+      edJob.agrApprovedBy = ''; edJob.agrApprovedAt = '';
+      edJob.agrRevokedBy = 'estimate-edited';
+      edJob.agrRevokedAt = new Date().toISOString();
+      saveJobs(); syncJobToSheets(edJob);
+      // The tab may be showing this job right now.
+      if (currentAgrJobId === edJob.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
+      showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
+    }
   }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -11086,6 +11168,406 @@ function assignedTCContact(job) {
   };
 }
 function firstName(name) { return name ? name.split(' ')[0] : 'there'; }
+
+// ─── GMAIL DRAFT PLUMBING ─────────────────────────────────────────────────────
+// Creates the draft in the SIGNED-IN USER'S OWN mailbox, so Ashley's draft is Ashley's and
+// sends from her address. Google Identity Services issues the token in the browser; the
+// Gmail API takes an RFC 2822 message. Scope is gmail.compose — create and update drafts.
+// It does NOT include gmail.send, so nothing here can put mail on the wire: the person
+// reads the draft and presses send. That is the requirement, and it is also why the
+// narrower scope is the right one to ask Google for.
+var GMAIL_CLIENT_ID = '';
+var GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
+// In memory only, and deliberately never in localStorage. It is a bearer token on the
+// user's mailbox, it expires in about an hour, and this file is served from a public
+// origin — persisting it would leave mailbox access sitting in site data on a shared iPad.
+var _gmailToken = null;
+var _gmailTokenExp = 0;
+var _gmailTokenClient = null;
+
+function gmailConfigured() { return !!GMAIL_CLIENT_ID; }
+
+// cb(token) on success, cb(null, errText) on failure. Reuses a live token; otherwise asks
+// Google, which shows the account chooser the first time and is silent after that.
+function gmailAuth(cb) {
+  if (!gmailConfigured()) { cb(null, 'No Gmail client ID configured — add it in ⚙ Settings.'); return; }
+  if (_gmailToken && Date.now() < _gmailTokenExp - 60000) { cb(_gmailToken); return; }
+  if (!window.google || !google.accounts || !google.accounts.oauth2) {
+    cb(null, 'Google sign-in library did not load. Check the connection and reload.');
+    return;
+  }
+  try {
+    // Rebuilt each time: the callback closes over THIS cb, and a token client reused across
+    // calls would fire the previous one.
+    _gmailTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GMAIL_CLIENT_ID,
+      scope: GMAIL_SCOPE,
+      callback: function(resp) {
+        if (resp && resp.access_token) {
+          _gmailToken = resp.access_token;
+          _gmailTokenExp = Date.now() + ((resp.expires_in || 3600) * 1000);
+          cb(_gmailToken);
+        } else {
+          cb(null, (resp && (resp.error_description || resp.error)) || 'Google did not return an access token.');
+        }
+      },
+      error_callback: function(err) {
+        // A closed popup lands here, and it is the common case — say so plainly rather
+        // than reporting it as a failure of the integration.
+        cb(null, (err && err.type === 'popup_closed')
+          ? 'Google sign-in was closed before it finished.'
+          : ((err && (err.message || err.type)) || 'Google sign-in failed.'));
+      }
+    });
+    _gmailTokenClient.requestAccessToken();
+  } catch (e) {
+    cb(null, (e && e.message) || String(e));
+  }
+}
+
+// base64url, which is what the Gmail API wants for `raw` — standard base64 with +/ swapped
+// for -_ and the padding stripped. btoa cannot take characters above U+00FF, so the string
+// is UTF-8 encoded first; without that an accented client name throws.
+function _b64url(str) {
+  var b64 = btoa(unescape(encodeURIComponent(str)));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+// RFC 2047 for the Subject, so an em dash or an accent is not mangled in the header.
+function _mimeHeader(v) { return '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(String(v)))) + '?='; }
+
+// multipart/mixed( multipart/alternative(text, html), application/pdf )
+// The alternative part is what makes the plain-text fallback work; nesting it inside mixed
+// is what keeps the attachment from replacing the body in older clients.
+function buildMimeMessage(o) {
+  var alt = 'ALT-' + Date.now().toString(36);
+  var mix = 'MIX-' + Date.now().toString(36);
+  var L = [];
+  L.push('To: ' + o.to);
+  if (o.cc) L.push('Cc: ' + o.cc);
+  L.push('Subject: ' + _mimeHeader(o.subject));
+  L.push('MIME-Version: 1.0');
+  L.push('Content-Type: multipart/mixed; boundary="' + mix + '"');
+  L.push('');
+  L.push('--' + mix);
+  L.push('Content-Type: multipart/alternative; boundary="' + alt + '"');
+  L.push('');
+  L.push('--' + alt);
+  L.push('Content-Type: text/plain; charset="UTF-8"');
+  L.push('Content-Transfer-Encoding: base64');
+  L.push('');
+  L.push(btoa(unescape(encodeURIComponent(o.text || ''))).replace(/(.{76})/g, '$1\n'));
+  L.push('--' + alt);
+  L.push('Content-Type: text/html; charset="UTF-8"');
+  L.push('Content-Transfer-Encoding: base64');
+  L.push('');
+  L.push(btoa(unescape(encodeURIComponent(o.html || ''))).replace(/(.{76})/g, '$1\n'));
+  L.push('--' + alt + '--');
+  if (o.pdfBase64) {
+    L.push('--' + mix);
+    L.push('Content-Type: application/pdf; name="' + o.pdfName + '"');
+    L.push('Content-Disposition: attachment; filename="' + o.pdfName + '"');
+    L.push('Content-Transfer-Encoding: base64');
+    L.push('');
+    // Apps Script hands back unwrapped base64; MIME wants lines of at most 76 chars.
+    L.push(String(o.pdfBase64).replace(/\s+/g, '').replace(/(.{76})/g, '$1\n'));
+  }
+  L.push('--' + mix + '--');
+  return L.join('\r\n');
+}
+
+// cb(ok, data). data.draftId / data.messageId on success, data.error otherwise.
+function gmailCreateDraft(mime, cb) {
+  gmailAuth(function(token, err) {
+    if (!token) { cb(false, { error: err }); return; }
+    fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: { raw: _b64url(mime) } })
+    })
+      .then(function(r){ return r.json().then(function(d){ return { status: r.status, d: d }; }); })
+      .then(function(res){
+        if (res.status >= 200 && res.status < 300 && res.d && res.d.id) {
+          cb(true, { draftId: res.d.id, messageId: (res.d.message && res.d.message.id) || '' });
+        } else {
+          var m = res.d && res.d.error && res.d.error.message;
+          // 403 here is nearly always the Gmail API not being enabled on the Cloud project,
+          // which is a one-time fix in a completely different place from anything in this
+          // app — so name it rather than reporting a bare permission error.
+          if (res.status === 403 && /not been used|disabled/i.test(m || '')) {
+            m = 'The Gmail API is not enabled on the Google Cloud project for this client ID. Enable it once in the Cloud console, then try again.';
+          }
+          cb(false, { error: m || ('Gmail API returned HTTP ' + res.status) });
+        }
+      })
+      .catch(function(e){ cb(false, { error: (e && e.message) || String(e) }); });
+  });
+}
+
+// Deep link straight to the draft in Gmail. /mail/u/0/ is the first signed-in account in
+// that browser; Gmail redirects to the right one when the draft is not in account 0.
+function gmailDraftUrl(messageId) {
+  return 'https://mail.google.com/mail/u/0/#drafts?compose=' + encodeURIComponent(messageId || '');
+}
+
+// ─── THE HTML ESTIMATE EMAIL ──────────────────────────────────────────────────
+// Anthony, 2026-09-08: "is there a way to create an HTML version of the estimate that we
+// can email the client so that when we hit the email client button, it launches a fully
+// populated HTML version, which is way prettier than the text we currently have with an
+// attached PDF."
+//
+// ⚠ WHY THIS COULD NOT BE DONE WITH THE mailto: LINK, AND WHY THAT IS NOT A SHORTCUT.
+// mailto: (RFC 6068) carries a plain-text body and nothing else. It cannot carry an HTML
+// body and it cannot carry an attachment — which is why buildEstimateMailto ends with an
+// instruction to the SENDER to attach the PDF by hand. No amount of work on that function
+// fixes it. Gmail's own ?view=cm compose URL has the same two limits.
+//
+// ⚠ AND WHY IT IS NOT SENT SERVER-SIDE EITHER. Apps Script could MailApp.sendEmail an HTML
+// body with an attachment in one call, but it would always send as the account the script
+// is deployed under. Anthony's requirement is the opposite: "if ashley generates, the email
+// comes from ashley. same for me or Jr. i want to see it, potentially edit it, and send it
+// myself, not automatically." So the draft is created in the SIGNED-IN USER'S OWN mailbox
+// through the Gmail API, and they send it. Whoever is at the keyboard is the sender, the
+// message lands in their Sent folder, and replies come back to them.
+//
+// ⚠ THE BODY IS A COVER NOTE, NOT THE WHOLE DOCUMENT, AND THAT IS DELIBERATE.
+// Two reasons. (1) Mail clients strip <style> blocks and do not support CSS custom
+// properties at all — the estimate is built almost entirely from classes and var(--bronze)
+// style tokens, so pasting ce-page-content into an email renders as unstyled text in
+// Gmail and worse in Outlook. Email HTML has to be tables and inline styles. (2) Rebuilding
+// all eight sections of the estimate a second way would be a second renderer that drifts
+// from the real document — the failure this codebase has hit repeatedly (two vendor-hours
+// tables, two vehicle-name joins, two service-label lists). So the body carries the
+// summary the client needs to read on their phone and the COMPLETE document is the attached
+// PDF, produced by the same Apps Script conversion that writes the copy filed to Drive.
+// The two cannot disagree because only one of them renders the estimate.
+
+// Email-safe money/escape helpers. Kept local so this block has no dependency on the
+// document renderers.
+function _emHtml(x) { return esc(String(x == null ? '' : x)); }
+function _emMoney(n) { return '$' + Math.round(n || 0).toLocaleString(); }
+
+// Brand tokens, resolved to literals. var(--bronze) does not survive an email client.
+var EMAIL_BRAND = { bronze:'#A67C45', bronzeLt:'#C9A06A', bronzeDk:'#7a5a2e', cream:'#FEF5E7',
+                    tan:'#EAE2D0', ink:'#2e2e33', gray:'#6B6B72', line:'#ddd5c0' };
+
+function buildEstimateEmailHtml(e, job) {
+  var B = EMAIL_BRAND;
+  var tc = assignedTCContact(job);
+  var feeOnly = estimateIsFeeOnly(e, job);
+  var street = String(job.addr || '').split(',')[0].trim();
+  var greeting = bestClientGreetingName(job);
+  var td = 'padding:9px 0;font-size:15px;color:' + B.ink + ';border-bottom:1px solid ' + B.line + ';';
+  var tdR = td + 'text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;';
+
+  // The cost rows, read from the same fields the document's Total Estimated Project Cost
+  // table reads, so the email and the PDF state the same numbers.
+  var rows = '';
+  rows += '<tr><td style="' + td + '">' + (e.fixedPrice ? 'Fixed Project Fee' : (feeOnly ? 'Havellin Management Fee' : 'Havellin Services')) +
+          '</td><td style="' + tdR + '">' + _emMoney(e.havellinTotal) + '</td></tr>';
+  if ((e.vendorCost || 0) > 0) {
+    rows += '<tr><td style="' + td + '">Third-Party Vendors <span style="color:' + B.gray + ';font-size:13px;">(billed at cost)</span></td>' +
+            '<td style="' + tdR + '">' + _emMoney(e.vendorCost) + '</td></tr>';
+  }
+  if (e.prepEnabled && (e.prepCost || 0) > 0) {
+    rows += '<tr><td style="' + td + '">Home Prep Vendors <span style="color:' + B.gray + ';font-size:13px;">(billed at cost)</span></td>' +
+            '<td style="' + tdR + '">' + _emMoney(e.prepCost) + '</td></tr>';
+  }
+  var grand = e.grandTotal || e.havellinTotal || 0;
+
+  // The stages, by NAME only. _cePhases derives them from JOB_STEPS — the same table that
+  // priced the job — so this list cannot promise a phase the estimate did not price. Titles
+  // and no prose: the prose is in the PDF, and repeating it here is the drift risk above.
+  var phaseHtml = '';
+  try {
+    var phases = (typeof _cePhases === 'function') ? _cePhases(e, job) : [];
+    if (phases && phases.length) {
+      phaseHtml = '<div style="margin:26px 0 0;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">How the work runs</div>' +
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:10px;">' +
+        phases.map(function(ph, i) {
+          return '<tr><td width="26" valign="top" style="padding:5px 0;font-size:14px;color:' + B.bronze + ';font-weight:700;">' + (i + 1) + '.</td>' +
+                 '<td style="padding:5px 0;font-size:14px;color:' + B.ink + ';">' + _emHtml(ph.title || '') + '</td></tr>';
+        }).join('') + '</table>' +
+        '<div style="margin-top:8px;font-size:13px;color:' + B.gray + ';">Each stage has a written completion standard, set out in full in the attached estimate.</div>';
+    }
+  } catch (err) { phaseHtml = ''; }
+
+  // Spaces the client told us they are handling themselves. Stated because its absence
+  // from the price is otherwise invisible.
+  var exclNames = (e.rooms || []).filter(function(r){ return r.excluded; }).map(function(r){ return r.name; });
+  var exclHtml = exclNames.length
+    ? '<div style="margin-top:22px;padding:14px 16px;background:' + B.cream + ';border-left:3px solid ' + B.bronze + ';font-size:14px;color:' + B.ink + ';">' +
+      'As you asked, ' + (exclNames.length === 1 ? 'this space is' : 'these spaces are') + ' excluded and no work in ' +
+      (exclNames.length === 1 ? 'it' : 'them') + ' is priced: <strong>' + _emHtml(exclNames.join(', ')) + '</strong>.</div>'
+    : '';
+
+  var basis = feeOnly
+    ? 'Our fee is 30% of what the vendors actually invoice. Every quote is reviewed with you before anyone is booked.'
+    : (e.fixedPrice
+        ? 'The Havellin fee above is firm for the scope described. It does not move with the hours worked.'
+        : 'Final charges reflect the hours actually worked and logged. If they look like exceeding this estimate by more than 15%, we will tell you before continuing.');
+
+  return '' +
+  '<div style="margin:0;padding:0;background:#f4f1ea;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
+  '<tr><td align="center" style="padding:24px 12px;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ' + B.line + ';">' +
+
+  // Masthead
+  '<tr><td style="background:' + B.ink + ';padding:26px 22px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:23px;letter-spacing:.16em;color:#ffffff;text-transform:uppercase;">Havellin</div>' +
+    '<div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:' + B.bronzeLt + ';margin-top:5px;">Palm Beach</div>' +
+  '</td></tr>' +
+
+  '<tr><td style="padding:28px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
+    '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Service Estimate</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
+      _emHtml(street || job.name || 'Your property') + '</div>' +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(svcLabelOf(job)) +
+      (job.hvlId ? ' &nbsp;&middot;&nbsp; Reference ' + _emHtml(job.hvlId) : '') + '</div>' +
+
+    '<div style="height:1px;background:' + B.line + ';margin:22px 0;"></div>' +
+
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Dear ' + _emHtml(greeting) + ',</p>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">It was a genuine pleasure meeting you and walking through the property together. Thank you for taking the time to share your plans with us, and for trusting Havellin with this next chapter.</p>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 22px;">With your priorities in mind, we have prepared the estimate below. The complete document, with the room-by-room scope and our full terms, is attached as a PDF.</p>' +
+
+    // Cost summary
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' + rows +
+      '<tr><td style="padding:14px 0 0;font-size:16px;font-weight:700;color:' + B.ink + ';">Total Estimated Project Cost</td>' +
+      '<td style="padding:14px 0 0;text-align:right;font-size:19px;font-weight:700;color:' + B.bronzeDk + ';white-space:nowrap;">' + _emMoney(grand) + '</td></tr>' +
+    '</table>' +
+
+    '<div style="margin-top:16px;font-size:13px;line-height:1.6;color:' + B.gray + ';">' + _emHtml(basis) + '</div>' +
+    ((e.vendorCost || 0) > 0 || (e.prepEnabled && (e.prepCost || 0) > 0)
+      ? '<div style="margin-top:8px;font-size:13px;line-height:1.6;color:' + B.gray + ';">Third-party vendors invoice you directly at cost. Havellin adds no markup to their work.</div>'
+      : '') +
+
+    exclHtml + phaseHtml +
+
+    '<div style="height:1px;background:' + B.line + ';margin:26px 0 20px;"></div>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Please take your time with it, and never hesitate to reach out — I am always glad to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send the service agreement over for signature.</p>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
+    '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
+      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emHtml(tc.phone) + '<br>' +
+      '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a></span></p>' +
+  '</td></tr>' +
+
+  '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
+    '<div style="font-size:10px;line-height:1.9;letter-spacing:.06em;text-transform:uppercase;color:' + B.gray + ';text-align:center;">' +
+      'Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>' +
+      '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401<br>' +
+      'Insured &amp; Bonded' +
+    '</div>' +
+  '</td></tr>' +
+
+  '</table></td></tr></table></div>';
+}
+
+// The estimate email's subject and the plain-text alternative every HTML email must carry
+// (a text/plain part is what a text-only client and most spam filters read).
+function estimateEmailSubject(job) {
+  var street = String(job && job.addr || '').split(',')[0].trim();
+  return 'Havellin Palm Beach — Service Estimate for ' + (street || (job && job.name) || 'your property');
+}
+function buildEstimateEmailText(e, job) {
+  var tc = assignedTCContact(job);
+  var feeOnly = estimateIsFeeOnly(e, job);
+  var L = ['Dear ' + bestClientGreetingName(job) + ',', '',
+    'It was a genuine pleasure meeting you and walking through the property together.', '',
+    'With your priorities in mind, we have prepared the estimate below. The complete document is attached as a PDF.', ''];
+  L.push((e.fixedPrice ? 'Fixed Project Fee: ' : (feeOnly ? 'Havellin Management Fee: ' : 'Havellin Services: ')) + _emMoney(e.havellinTotal));
+  if ((e.vendorCost || 0) > 0) L.push('Third-Party Vendors (at cost): ' + _emMoney(e.vendorCost));
+  if (e.prepEnabled && (e.prepCost || 0) > 0) L.push('Home Prep Vendors (at cost): ' + _emMoney(e.prepCost));
+  L.push('Total Estimated Project Cost: ' + _emMoney(e.grandTotal || e.havellinTotal || 0));
+  L.push('', 'Please take your time with it, and reach out any time.', '',
+         'Warm regards,', tc.name, 'Havellin Palm Beach', tc.phone, tc.email);
+  return L.join('\n');
+}
+
+// Ask the Apps Script to render the CLIENT ESTIMATE DOCUMENT as a PDF and hand the bytes
+// back. Same _exportDoc input and same server-side conversion as the copy filed to Drive,
+// so the attachment is that document rather than a second rendering of it.
+// cb(base64|null, errText).
+function estimatePdfBase64(job, cb) {
+  var el = document.getElementById('ce-page-content');
+  if (!el || !el.innerHTML.trim()) { cb(null, 'The estimate is not on screen to convert.'); return; }
+  if (!SHEETS_SYNC_URL) { cb(null, 'No Apps Script URL configured — add it in ⚙ Settings.'); return; }
+  var html = _exportDoc('Estimate – ' + (job.hvlId || ''), el.innerHTML, '');
+  _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: html }, function(ok, d) {
+    if (ok && d && d.base64) cb(d.base64);
+    else cb(null, (d && d.error) || 'The PDF conversion failed.');
+  }, true);
+}
+
+// ─── THE BUTTON ───────────────────────────────────────────────────────────────
+// Build the HTML estimate email as a Gmail draft in the signed-in user's own mailbox, then
+// open it so they can add a line and send it themselves.
+//
+// The old mailto: path SURVIVES as the fallback and must not be deleted. Gmail drafts need
+// a client ID configured, network, and a popup that is not blocked; on a locked-down device
+// or with no Cloud project set up yet, a plain-text compose window that definitely opens
+// beats a button that reports an error. _estimateEmailFallback is that path.
+var _estEmailBusy = false;
+function _setEstEmailBusy(on, label) {
+  _estEmailBusy = on;
+  var b = document.getElementById('btn-html-email-est');
+  if (!b) return;
+  b.disabled = on;
+  b.innerHTML = on ? (label || '↻ Building…') : '&#9993; Email to Client';
+  b.style.opacity = on ? '0.75' : '';
+}
+
+function emailEstimateToClient() {
+  if (_estEmailBusy) return;
+  if (!currentEstimate || !currentEstimate.jobId) { showFB('ce-fb', 'warn', 'No estimate loaded.'); return; }
+  if (!estimateApproved) { showFB('ce-fb', 'warn', 'Approve the estimate before sending it to the client.'); return; }
+  var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  if (!job) { showFB('ce-fb', 'warn', 'Job not found.'); return; }
+  var to = bestClientEmail(job);
+  if (!to) { showFB('ce-fb', 'warn', 'No client email on this job — add one in Client Intake first.'); return; }
+
+  if (!gmailConfigured()) { _estimateEmailFallback('Gmail is not connected yet (⚙ Settings → Gmail). Opening a plain-text email instead.'); return; }
+
+  var e = currentEstimate;
+  var names = estimateDocNames(job);
+  _setEstEmailBusy(true, '↻ Building PDF…');
+  showFB('ce-fb', 'info', 'Building the estimate PDF…');
+
+  estimatePdfBase64(job, function(pdf, pdfErr) {
+    // A missing PDF is not a reason to abandon the email — the body carries the summary and
+    // the person can attach a printed copy. Say what happened and carry on.
+    if (!pdf) showFB('ce-fb', 'warn', 'Could not build the PDF (' + (pdfErr || 'unknown') + '). Creating the draft without it — attach a printed copy before sending.');
+    else showFB('ce-fb', 'info', 'Creating the draft in your Gmail…');
+    _setEstEmailBusy(true, '↻ Creating draft…');
+
+    var mime = buildMimeMessage({
+      to: to,
+      cc: DEPT_EMAILS.estimates,
+      subject: estimateEmailSubject(job),
+      text: buildEstimateEmailText(e, job),
+      html: buildEstimateEmailHtml(e, job),
+      pdfBase64: pdf || '',
+      pdfName: names.attachment
+    });
+
+    gmailCreateDraft(mime, function(ok, d) {
+      _setEstEmailBusy(false);
+      if (!ok) { _estimateEmailFallback('Gmail draft failed — ' + (d.error || 'unknown') + '. Opening a plain-text email instead.'); return; }
+      window.open(gmailDraftUrl(d.messageId || d.draftId), '_blank');
+      showFB('ce-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the estimate PDF attached' : '') + '. Review it, add anything personal, and send — then click Mark as Sent here.');
+      showSyncBadge('Gmail draft created ✓');
+    });
+  });
+}
+
+// The pre-existing mailto: behaviour, unchanged, reached when Gmail cannot be used. Says
+// why it fell back rather than silently doing something different from what was pressed.
+function _estimateEmailFallback(why) {
+  _setEstEmailBusy(false);
+  if (why) showFB('ce-fb', 'warn', why);
+  var href = buildEstimateMailto();
+  if (href && href !== '#') window.location.href = href;
+}
 
 function buildEstimateMailto() {
   if (!currentEstimate) return '#';
@@ -20156,6 +20638,43 @@ function uploadHtmlToDrive(folderId, filename, html, onDone) {
 }
 
 // ─── ESTIMATE / AGREEMENT EXPORT ─────────────────────────────────────────────
+// ONE place that names the client's estimate, so the Drive copy, the printed PDF and the
+// email attachment cannot disagree — and so the INTERNAL worksheet can never again be
+// mistaken for the client document.
+//
+// ⚠ THE TWO ESTIMATE FILES USED TO SHARE A FILENAME, AND IT WAS A REAL LEAK.
+// exportEstimateToDrive writes the internal working paper (room-by-room volume and
+// complexity scores, TC/PS hours, per-room dollars, the walkthrough notes) and
+// saveFolderEstimate writes the client-facing document. Both wrote
+// "<hvlId>_Estimate.html" into the same Estimate subfolder, and on approval both fire
+// 400ms apart. The Apps Script trashes by name and then creates, so whichever request
+// landed last won — a cold Apps Script start is seconds, so the order was not the order
+// they were sent in. The file sitting in the client folder was therefore whichever of the
+// two documents happened to finish second, and half the time that was our cost breakdown.
+// Keep the names distinct. Do not "tidy" them back together.
+//
+// The DRIVE names carry no date: the Apps Script overwrites by filename, so a dated name
+// would leave a new file behind on every re-file instead of replacing the current one.
+// The CLIENT name is dated, because that copy is a point-in-time document they keep.
+function estimateDocNames(job) {
+  job = job || {};
+  var hvl = job.hvlId || 'HVL';
+  var street = String(job.addr || '').split(',')[0].trim();
+  var d = new Date();
+  var stamp = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
+  // Client-facing: says what it is, for which property, as of when. The old name was the
+  // surname and the job id ("Ellsworth-HVL-0007"), which reads as a database key.
+  var client = 'Havellin Service Estimate' + (street ? ' - ' + street : '') + ' - ' + stamp;
+  return {
+    // Printed PDF / email attachment — what the client sees.
+    client: client,
+    attachment: client + '.pdf',
+    // Drive, stable so a re-file replaces rather than accumulates.
+    driveClient: hvl + ' - Havellin Service Estimate.html',
+    driveInternal: hvl + ' - Estimate Worksheet (INTERNAL).html'
+  };
+}
+
 // Drive-safe filename fragment: alphanumerics/_/- only, trimmed and capped.
 function _sanitizeFilePart(s) {
   return String(s == null ? '' : s).replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50) || 'unnamed';
@@ -20271,15 +20790,16 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       +'<title>Estimate – '+(job.hvlId||'')+'</title>'
       +'<style>body{font-family:Arial,sans-serif;padding:24px;color:#333;}h2{margin-bottom:4px;}table{width:100%;border-collapse:collapse;}th{background:#f5f0e8;padding:6px 8px;text-align:left;font-size:12px;}</style>'
       +'</head><body>'
-      +'<h2>Estimate — '+(job.name||'')+'</h2>'
+      +'<div style="font-size:11px;font-weight:700;color:#b03030;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Internal worksheet — not a client document</div>'
+      +'<h2>Estimate Worksheet — '+(job.name||'')+'</h2>'
       +'<div style="font-size:13px;color:#888;margin-bottom:16px;">'+(job.hvlId||'')+' · '+ts+'</div>'
       +'<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours (hands-on)</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+_coordRow+'</tbody></table>'
       +'<div style="margin-top:20px;font-size:14px;">'
       +'<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; '
       +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
       +'</div></body></html>';
-    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate.html', html, function(ok){
-      if (ok) showSyncBadge('Estimate backed up to Drive ✓');
+    uploadHtmlToDrive(folderId, estimateDocNames(job).driveInternal, html, function(ok){
+      if (ok) showSyncBadge('Estimate worksheet backed up to Drive ✓');
       else showSyncBadge('Drive backup failed — check Settings', true);
     });
   }
@@ -20326,7 +20846,7 @@ function saveFolderEstimate(auto) {
     var el = document.getElementById('ce-page-content');
     if (!el) { _reset(); return; }
     var html = _exportDoc('Estimate – '+(job.hvlId||''), el.innerHTML, '');
-    uploadHtmlToDrive(folderId, (job.hvlId||'EST')+'_Estimate.html', html, function(ok, fileUrl) {
+    uploadHtmlToDrive(folderId, estimateDocNames(job).driveClient, html, function(ok, fileUrl) {
       // Record the filing on the JOB, the way markEstimateSent records delivery.
       // The 4-second toast was the only acknowledgement this had, and a toast in the
       // corner of a long scrolled page is missed by anyone watching the button they
@@ -20406,17 +20926,23 @@ function _jobRootFolderId(job) {
   return m ? m[1] : null;
 }
 
+// Keyed on the approval STAMP, not a bare "already done this session". The old guard was
+// `if (_agrExported[jobId]) return`, which meant that revoking approval, correcting the
+// estimate and re-approving inside one browser session left Drive holding the stale
+// agreement — the whole point of re-approving. Re-filing the same approval is still
+// suppressed, so a redraw cannot spam Drive.
 var _agrExported = {};
+function _agrExportKey(job) { return String(job.agrApprovedAt || '') + '|' + String(job.agrApprovedBy || ''); }
 function exportAgreementToDrive(jobId) {
-  if (_agrExported[jobId]) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  if (_agrExported[jobId] === _agrExportKey(job)) return;
   var el = document.getElementById('agr-page-content');
   if (!el || !el.innerHTML.trim()) return;
   var html = _exportDoc('Agreement – '+(job.hvlId||''), el.innerHTML, '.ce-page{max-width:800px;margin:0 auto;}');
   resolveSubfolderId(job, 'Agreement', function(folderId) {
     if (!folderId) return;
-    _agrExported[jobId] = true;
+    _agrExported[jobId] = _agrExportKey(job);
     uploadHtmlToDrive(folderId, (job.hvlId||'AGR')+'_Agreement.html', html, function(ok) {
       if (ok) showSyncBadge('Agreement saved to Drive ✓');
     });
@@ -20486,15 +21012,15 @@ function printSigningPacket() {
 // Filed beside the agreement on approval, into the same Agreement subfolder.
 var _packetExported = {};
 function exportSigningPacketToDrive(jobId) {
-  if (_packetExported[jobId]) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  if (_packetExported[jobId] === _agrExportKey(job)) return;
   var body = signingPacketHtml(jobId);
   if (!body) return;
   var html = _exportDoc('Signing Packet – ' + (job.hvlId || ''), body, '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}');
   resolveSubfolderId(job, 'Agreement', function(folderId) {
     if (!folderId) return;
-    _packetExported[jobId] = true;
+    _packetExported[jobId] = _agrExportKey(job);
     uploadHtmlToDrive(folderId, (job.hvlId || 'AGR') + '_Signing_Packet.html', html, function(ok) {
       if (ok) showSyncBadge('Signing packet saved to Drive ✓');
     });
@@ -20668,6 +21194,7 @@ function openSettings() {
   document.getElementById('set-sheets-url').value    = SHEETS_SYNC_URL;
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
   var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
+  var gcEl = document.getElementById('set-gmail-client-id'); if (gcEl) gcEl.value = GMAIL_CLIENT_ID;
   setVendorDirStatus(VENDOR_SYNC_URL ? (vendorDirectory.length ? ('✓ ' + vendorDirectory.length + ' vendors loaded') : 'URL set — click Reload directory to load') : 'No URL set yet', false);
   var rUrlEl = document.getElementById('set-referral-url'); if (rUrlEl) rUrlEl.value = REFERRAL_SYNC_URL;
   setReferralDirStatus(REFERRAL_SYNC_URL ? (referralDirectory.length ? ('✓ ' + referralDirectory.length + ' partners loaded') : 'URL set — click Reload partners to load') : 'No URL set yet', false);
@@ -20709,7 +21236,7 @@ var COST_RATE_FIELDS = [
 var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
 // contractor roster (your crew, not practice data), and the two directory caches.
-var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_stripe_pk|hav_stripe_script|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_stripe_pk|hav_stripe_script|hav_gmail_client_id|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
@@ -20743,6 +21270,7 @@ function saveSettings() {
   SHEETS_SYNC_URL    = document.getElementById('set-sheets-url').value.trim();
   DRIVE_FOLDER_ID    = document.getElementById('set-drive-id').value.trim();
   var vUrlEl2 = document.getElementById('set-vendor-url'); if (vUrlEl2) VENDOR_SYNC_URL = vUrlEl2.value.trim();
+  var gcEl2 = document.getElementById('set-gmail-client-id'); if (gcEl2) GMAIL_CLIENT_ID = gcEl2.value.trim();
   var rUrlEl2 = document.getElementById('set-referral-url'); if (rUrlEl2) REFERRAL_SYNC_URL = rUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
@@ -20767,6 +21295,7 @@ function saveSettings() {
     localStorage.setItem('hav_sheets_url',    SHEETS_SYNC_URL);
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
     localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
+    localStorage.setItem('hav_gmail_client_id', GMAIL_CLIENT_ID);
     localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
     localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));
@@ -20789,6 +21318,7 @@ function loadSettings() {
     SHEETS_SYNC_URL   = localStorage.getItem('hav_sheets_url')    || localStorage.getItem('havellin_sheets_url') || '';
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
     VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
+    GMAIL_CLIENT_ID   = localStorage.getItem('hav_gmail_client_id') || '';
     REFERRAL_SYNC_URL = localStorage.getItem('hav_referral_url')  || '';
     try { var _rd = localStorage.getItem('hav_referral_dir'); if (_rd) referralDirectory = JSON.parse(_rd); } catch(e) {}
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';
@@ -21568,7 +22098,6 @@ function updateAgrUI() {
     return;
   }
 
-  var estApproved = !!(estimateStore[currentAgrJobId] && estimateStore[currentAgrJobId].approved);
 
   // The three post-approval steps. Each button appears only at its own step, so the tab
   // reads as a sequence rather than a row of options — and none of them was reachable at
@@ -21625,16 +22154,59 @@ function updateAgrUI() {
         + '<div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Print/Save PDF or email to the client, then mark it sent.</div>';
     }
     banner.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div>' + _prog + '</div></div>';
-  } else if (!estApproved) {
-    // Block agreement approval until the underlying estimate is approved
+  } else if (agrApprovalBlocker(currentAgrJobId)) {
+    // The draft below still renders — reading the contract you are about to talk through is
+    // legitimate. What is withheld is APPROVAL, which is what files it to the client's Drive
+    // folder and unlocks sending. Two reasons, named separately, because they need different
+    // things done about them.
+    var _b = agrApprovalBlocker(currentAgrJobId);
+    var _rev = _agrJ && _agrJ.agrRevokedBy === 'estimate-edited' && !_agrJ.agrApproved;
     btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none';
-    badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';
-    banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>The estimate for this job must be approved first.</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Approve the estimate on the Client Estimate tab before approving and sending the agreement.</div></div>';
+    if (_b === 'estimate') {
+      badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';
+      banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>'
+        + (_rev ? 'The estimate is being revised, so this agreement\'s approval was withdrawn.' : 'The estimate for this job must be approved first.')
+        + '</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">'
+        + (_rev ? 'The agreement attaches the estimate as Exhibit A, so it cannot stay approved against a version that is changing. Re-approve the estimate, then re-approve here — Drive is refreshed automatically.'
+                : 'Approve the estimate on the Client Estimate tab before approving and sending the agreement.')
+        + '</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">The draft below is a preview and has not been filed anywhere.</div></div>';
+    } else {
+      badge.innerHTML = '<span class="badge b-pending">Awaiting Client Acceptance</span>';
+      banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>The client has not accepted the estimate yet.</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Send the estimate, and when they say yes record it with <strong>Mark Won</strong> on the Client Dashboard. Approving here is what files the agreement and the signing packet into their Drive folder, so it waits for the yes.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">The draft below is a preview and has not been filed anywhere.</div></div>';
+    }
   } else {
     btnApprove.style.display='inline-block'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none';
     badge.innerHTML = '<span class="badge b-pending">Pending Approval</span>';
     banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Review the agreement below</strong>, then enter manager PIN to approve and unlock sending options.</div></div>';
   }
+}
+
+// ⚠ WHAT MAY BE APPROVED, AND WHY THE CLIENT'S YES IS PART OF IT (2026-09-08).
+// Anthony, off a dummy client: "it looks like an agreement gets pushed into Google Drive
+// before an estimate is even approved … I see that there was an agreement in the client
+// file before we even solidified the estimate." Two real holes behind that, and the answer
+// to "what should trigger the agreement" is the CLIENT'S ACCEPTANCE, not our own approval.
+//
+//   1. checkAgrPin required only that the ESTIMATE was approved. Approving an estimate is
+//      an internal event — the same reason it sets status 'approved' rather than 'active'.
+//      So an agreement, and since 2026-09-08 a signing packet with the estimate attached,
+//      were filed into a client's Drive folder for someone who had never said yes.
+//   2. editEstimateFromCE un-approved the estimate, cleared job.approved and even cleared
+//      the estimate's Drive stamp — and never touched job.agrApproved. Approve estimate →
+//      approve agreement (files to Drive) → edit the estimate, and the Agreement tab still
+//      read "Approved for Sending" with Print/Save PDF live, over an Exhibit A that no
+//      longer existed in approved form.
+//
+// The agreement still RENDERS as a draft whenever a job is picked — previewing the contract
+// you are about to talk through is legitimate. What is gated is APPROVAL, which is what
+// files it and what unlocks sending. Sequence: estimate approved → sent → client accepts →
+// Mark Won → agreement approvable.
+function agrApprovalBlocker(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return 'nojob';
+  if (!(estimateStore[jobId] && estimateStore[jobId].approved)) return 'estimate';
+  if (!isJobWon(job)) return 'notwon';
+  return '';
 }
 
 function openAgrPinModal() {
@@ -21648,12 +22220,18 @@ function checkAgrPin() {
   var pin = document.getElementById('agr-pin-input').value;
   var _agrApprover = resolvePin(pin);
   if (_agrApprover) {
-    // Defense in depth: never approve an agreement whose estimate isn't approved
-    var estApproved = !!(estimateStore[currentAgrJobId] && estimateStore[currentAgrJobId].approved);
-    if (!estApproved) {
+    // Defense in depth: the same gate the buttons enforce. A correct PIN is not authority
+    // to approve an agreement the client has not accepted.
+    var _blk = agrApprovalBlocker(currentAgrJobId);
+    if (_blk === 'estimate') {
       document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">Approve the estimate for this job first.</div>';
       return;
     }
+    if (_blk === 'notwon') {
+      document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">Record the client\'s acceptance first — mark this job Won on the Client Dashboard. Until they have said yes there is nothing to put under contract.</div>';
+      return;
+    }
+    if (_blk) { document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">This job could not be found.</div>'; return; }
     agrApproved = true;
     agrApprovedBy = _agrApprover;
     agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
@@ -21774,12 +22352,12 @@ function printAgreement() {
 function printClientEstimate() {
   if (!estimateApproved) { alert('Estimate must be approved before printing.'); return; }
   
-  // Get job data to build filename
+  // The PDF filename is what the client sees in their downloads and their inbox, so it
+  // names the document rather than keying it: "Havellin Service Estimate - 1234 Ocean Blvd
+  // - Sep 8 2026" rather than "Ellsworth-HVL-0007". Shared with the Drive copy and the
+  // email attachment through estimateDocNames so the three cannot drift apart.
   var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; }) || {};
-  var clientName = job.name || 'Client';
-  var lastName = clientName.split(' ').pop(); // Get last word as last name
-  var jobNumber = job.hvlId || 'Unknown';
-  var filename = lastName + '-' + jobNumber;
+  var filename = estimateDocNames(job).client;
   
   // Save original title and set new one for PDF filename
   var originalTitle = document.title;

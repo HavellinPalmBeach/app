@@ -73,6 +73,7 @@ function doPost(e) {
     if (data.action === 'createFolder')  { return jsonOut(createJobFolder(data.hvlId, data.clientName, data.svc, data.subfolders, data.parentFolderId)); }
     if (data.action === 'uploadFile')    { return jsonOut(uploadFileToDrive(data.folderId, data.filename, data.dataUrl)); }
     if (data.action === 'uploadHtml')    { return jsonOut(uploadHtmlToDrive(data.folderId, data.filename, data.html)); }
+    if (data.action === 'htmlToPdf')     { return jsonOut(htmlToPdfBase64(data.html)); }
     if (data.action === 'getSubfolders') { return handleGetSubfolders(data); }
     if (data.action === 'getThumbnails')  { return jsonOut(getDriveThumbnails(data.fileIds)); }
     if (data.action === 'shareFolder')   { return jsonOut(shareFolder(data.folderId, data.email)); }
@@ -1024,6 +1025,28 @@ function uploadHtmlToDrive(folderId, filename, html) {
     return { ok: true, fileUrl: file.getUrl(), fileId: file.getId() };
   } catch (error) {
     Logger.log('uploadHtmlToDrive error: ' + error.toString());
+    return { ok: false, error: error.toString() };
+  }
+}
+
+// Convert HTML to a PDF and hand the BYTES back, without writing anything to Drive.
+//
+// This exists so the app can attach the client estimate to a Gmail draft. The alternative
+// was to read back the copy already filed to Drive, which needs a Drive scope on top of
+// the Gmail one and only works for a signed-in user who can see that Shared Drive — the
+// browser is not necessarily the Havellin account. This runs AS the Havellin account,
+// needs no extra scope, and reuses the SAME conversion that produces the filed copy, so
+// the attachment and the document in the client's folder cannot be different renderings.
+//
+// Deliberately no folderId: nothing is stored. The response is base64, so it inflates by
+// ~33% — Apps Script caps a response around 50MB and these documents run well under 1MB.
+function htmlToPdfBase64(html) {
+  try {
+    if (!html) return { ok: false, error: 'No html supplied' };
+    var pdf = Utilities.newBlob(html, 'text/html', 'estimate.pdf').getAs('application/pdf');
+    return { ok: true, base64: Utilities.base64Encode(pdf.getBytes()), bytes: pdf.getBytes().length };
+  } catch (error) {
+    Logger.log('htmlToPdfBase64 error: ' + error.toString());
     return { ok: false, error: error.toString() };
   }
 }
