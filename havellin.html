@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 10:45am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 10:50am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11180,8 +11180,16 @@ function assignedTCContact(job) {
   if (!tc) return fallback;
   return {
     name: tc.name,
-    phone: tc.phone || fallback.phone,
-    email: tc.email || fallback.email
+    // ⚠ A RESOLVED PERSON'S MISSING FIELD IS ABSENT, NEVER SOMEBODY ELSE'S.
+    // These used to fall back to the managing partner's own values, which was survivable
+    // while `fallback.phone` was the OFFICE line — and stopped being survivable on
+    // 2026-09-09 when contractor `phone` became a personal mobile. A concierge with no
+    // mobile recorded would have had Anthony's personal number printed under THEIR name,
+    // on a client document, as the direct line to the person running that estate.
+    // conciergePhones already renders an office-only block for a blank mobile, which is
+    // the honest answer; the fallback identity is for a job with NO concierge at all.
+    phone: tc.phone || '',
+    email: tc.email || ''
   };
 }
 function firstName(name) { return name ? name.split(' ')[0] : 'there'; }
@@ -11284,7 +11292,7 @@ function buildAgreementEmailHtml(job) {
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
     '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
       '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emPhoneLines(tc) +
-      '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a></span></p>' +
+      (tc.email ? '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a>' : '') + '</span></p>' +
   '</td></tr>' +
 
   '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
@@ -11730,7 +11738,7 @@ function buildEstimateEmailHtml(e, job) {
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
     '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
       '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emPhoneLines(tc) +
-      '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a></span></p>' +
+      (tc.email ? '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a>' : '') + '</span></p>' +
   '</td></tr>' +
 
   '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +

@@ -331,6 +331,25 @@ should be included depending on who is sending the email."*
   running their estate. Matched on **digits**, so `561-370-4700` and `5613704700` are caught
   too. **Keep a retired firm number on that list rather than deleting it**; that is the whole
   point of it.
+- **⚠ AND THE CHANGE MADE AN OLD FALLBACK DANGEROUS — fixed the same day.** `assignedTCContact`
+  ended `phone: tc.phone || fallback.phone` / `email: tc.email || fallback.email`, so a
+  RESOLVED concierge with a blank field inherited the managing partner's. That was survivable
+  while `fallback.phone` was the OFFICE line and stopped being survivable the moment contractor
+  `phone` meant a personal mobile: a concierge with none recorded would have had **Anthony's
+  personal number printed under their own name**, on a client document, as the direct line to
+  the person running that estate. Both are `|| ''` now — `conciergePhones` renders office-only
+  for a blank mobile, which is the honest answer, and both signatures guard the `mailto:`
+  against a blank address. **The fallback identity is for a job with NO concierge assigned**;
+  it is not a source of spare parts for one who is.
+  *A raised severity on an existing line is the thing to look for after any change like this —
+  the fallback was not touched, its blast radius was.*
+- **Editing a founder's row persists correctly and needs no code change.** `saveContractor`
+  mutates `DEFAULT_CONTRACTORS` in place for a built-in, `saveContractors` writes it to
+  `havellin_defaults_v3` AND pushes it to the sheet as `defaults`, and `loadContractors`
+  restores newest-wins on `updatedAt`. `assignedTCContact` reads `DEFAULT_CONTRACTORS` first,
+  so an edited row wins. The hardcoded numbers in source are only the seed for a fresh device.
+  **The one thing that silently breaks it: the match is `c.name === job.tc`**, so renaming a
+  concierge on their Contractors row orphans every job that names the old spelling.
 - Six signature sites read it (two HTML emails, two text parts, two mailto bodies) plus the
   estimate and invoice contact lines; `prepPhone` is deleted. A test asserts **no bare
   single-number signature survives** and that the retired literal appears **exactly once** in

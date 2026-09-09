@@ -444,6 +444,38 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
   }
 
+  group('a concierge never inherits another concierge\'s contact details');
+  {
+    // ⚠ THIS BECAME SEVERE ON 2026-09-09. assignedTCContact fell back to the managing
+    // partner's own phone and email whenever the resolved person had none — survivable
+    // while that fallback was the OFFICE line, and not survivable once contractor `phone`
+    // meant a personal mobile: a concierge with none recorded would have had Anthony's
+    // personal number printed under THEIR name, as the direct line on their client's
+    // estate. A blank field is now blank, and conciergePhones renders office-only.
+    const a = fn('assignedTCContact');
+    has(a, 'phone: tc.phone || \'\'', 'a resolved person with no mobile has no mobile');
+    has(a, 'email: tc.email || \'\'', 'and no email rather than somebody else\'s');
+    lacks(a, 'tc.phone || fallback.phone', 'the leaking fallback is gone');
+    lacks(a, 'tc.email || fallback.email', 'both of them');
+
+    const ctx = sandbox({ fns: ['assignedTCContact', 'conciergePhones', 'conciergePhonesText'],
+                          vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS'] });
+    ctx.contractors = [{ id: 'c1', name: 'New Concierge', role: 'TC', phone: '', email: 'new@havellinpalmbeach.com' }];
+    const bare = ctx.assignedTCContact({ tc: 'New Concierge' });
+    eq(bare.phone, '', 'a concierge with no mobile resolves to an empty one');
+    eq(ctx.conciergePhonesText(bare), 'Office (561) 652-5522', 'and their client sees the office alone');
+
+    // A job with NO concierge assigned still speaks for the firm — that is what the
+    // fallback identity is for, and it keeps its own real details.
+    const none = ctx.assignedTCContact({});
+    has(ctx.conciergePhonesText(none), 'Mobile (617) 650-6588', 'an unassigned job falls back to the managing partner in full');
+
+    // A blank email must not render an empty mailto link either. Assert the GUARD, not the
+    // link: a pattern matching inside the guard counts the same with or without it.
+    eq((src.match(/\(tc\.email \? '<a href="mailto:'/g) || []).length, 2,
+       'both signatures guard the mailto against a blank address');
+  }
+
   group('every client-facing signature carries both numbers');
   {
     // Six sites read the concierge phone: two HTML emails, two text parts, two mailto bodies.
