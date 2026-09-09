@@ -963,7 +963,7 @@ The sixth estimate card, *End-of-Job Logistics*, is not a Category Group — it 
 
 **Tab: Referral Partners.** A CRM for the network of attorneys, realtors, trust officers, and Douglas Elliman agents who refer business. Mirrors the Vendor Directory: its own Google Sheet + Apps Script, kept apart from job data.
 
-- **Add / Edit a partner** — first & last name, type, firm, primary contact, phone, email, website, owner, and notes. Type, phone, and email are required. Owner is one of Anthony Graziano Sr · Ashley Jerome · Anthony Graziano Jr.
+- **Add / Edit a partner** — first & last name, type, firm, primary contact, phone, email, website, owner, and notes. Type, phone, and email are required. Owner is one of Anthony Graziano · Ashley Jerome · Anthony Graziano Jr.
 - **Search · tap-to-contact · Quick edit** — the same field pattern as the Vendor Directory: free-text search across name, firm, title, phone and city (multi-word AND-ed, numeric queries match the phone), tap-to-call/text/email on the card, and a **Quick edit** for contact details with **Full edit →** as the escape hatch.
 - **Status** runs the outreach lifecycle *Identified → Contacted → Intro Meeting → Active Partner* (with *Dormant* and *Do Not Use*). It's set with the **color-coded dropdown on the card** (under the partner's type, beside the priority badge) — the same pattern as the Vendor Directory. Partners are retired by status rather than deleted.
 - **Log outreach** — stamps last-contacted to today, and auto-advances a still-*Identified* partner to *Contacted* (never downgrades one further along). The last-contacted date shows in a highlighted bar right above the button.
@@ -1019,7 +1019,7 @@ The discount comes off first, so the premium is never charged on money already d
 
 | Role | Cost | Applies to |
 | --- | --- | --- |
-| Founder concierge | $100/hr | Anthony Sr, Ashley |
+| Founder concierge | $100/hr | Anthony, Ashley |
 | Contractor concierge | $60/hr | An outside concierge — the *Contractor — TC* placeholder slot |
 | Contractor PS — Standard | $30/hr | The *Contractor — Standard* placeholder slot |
 | Contractor PS — Senior | $35/hr | The *Contractor — Senior* placeholder slot |

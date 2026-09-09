@@ -145,6 +145,62 @@ itself … when she added a new client, it pushed the new client plus three old 
 - **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
   functions against a fake spreadsheet, and the app's receiving side out of the real source).
 
+## "Sr" removed — and a NAME is this app's only person key (BUILT 2026-09-09)
+*"lets remove 'Sr' everywhere. i do not want that anywhere."* One sentence, and a data
+migration rather than a relabelling.
+
+- **THERE IS NO PERSON ID ANYWHERE IN THIS APP. The name IS the key.** `job.tc`,
+  `approvedBy`, `preparedBy`, `agrApprovedBy`, `lockedBy`, `wonBy`, `deliveredBy`, the
+  staffing rosters and every hour-log `members[].name` all store the string, and **eight
+  lookups compared it with `===`**. Rename the source and every record written before
+  today points at a person who no longer exists — and every one of those failures is
+  **silent**: an estimate prints no preparer block, an approval loses its approver, and
+  `getTCCostRate` falls through to the **founder rate**, which is close enough to look
+  right on a margin panel and wrong on every job that person is actually staffed on.
+- **⚠ AND THE RENAME UNDOES ITSELF WITHOUT A MIGRATION — `loadContractors` is why.** It
+  restores the built-in team from `havellin_defaults_v3` **and** from the ContractorStore
+  **by id**, with `Object.assign`. A stored old name is therefore copied straight back
+  over the renamed source **on every page load**. Reading the source would show the new
+  name and the screen would show the old one, with nothing to explain the difference.
+  That is the single most important line in this section.
+- **Two halves, and both are needed.** `canonPersonName` / `samePerson` are **read-time**,
+  so a comparison between a stored old name and a live new one still matches; every
+  `c.name === <stored name>` site goes through `samePerson` now. `migrateRetiredNames` is
+  a **deep walk** applied to each store as it lands, so what is DISPLAYED is current
+  whatever the record holds.
+  - **A deep walk, deliberately, not a list of fields.** The name is stored under at least
+    seven keys plus inside roster and hour-log arrays; enumerating them is how one gets
+    missed. Cycle-guarded and depth-capped — an estimate snapshot pinned onto a job can
+    point back, and an unguarded walk hangs the page on load.
+  - **⚠ `Anthony Graziano Jr` MUST NOT ALIAS.** He is a different person with his own cost
+    rate ($60 against $100) and his own mailbox. An alias that swallowed him would reprice
+    every job he is staffed on and send his mail to his father. Tested explicitly.
+- **NOTHING IS WRITTEN BACK, on purpose.** A store is normalised on read and re-saved only
+  when the user changes something. A load-time rewrite that also saved would push one
+  device's opinion of everybody's records up as a side effect of opening the app — the
+  same shape as the stale-laptop bug the job ledger exists to stop. A test asserts no
+  `postSyncBadge` in the load paths.
+- **Wired into both arms of every load path** — localStorage for the instant render and
+  the cloud copy that overwrites it: `loadJobs`, `loadEstimateState`, `loadLogData`,
+  `loadJobPlanData`, `loadContractors` (three sites). Migrating only one arm leaves the
+  name flickering back on sync.
+- **⚠ A TEST THAT COULD NOT FAIL, caught by reverting the fix rather than by reading it.**
+  The end-to-end `assignedTCContact` check asserted the name and mailbox that come back
+  for a pre-rename job — but that function's own **fallback IS the managing partner**, so
+  it passed whether the lookup resolved or fell through. It stayed green with `samePerson`
+  reverted. The roster in that test now carries a phone the fallback does not, so only a
+  real match can produce it. **Revert the fix and watch the test fail** is the only way to
+  know a test is doing anything; three of them do now.
+- Also renamed: the escalation copy on two pricing-reference rows (*Escalate to Anthony*),
+  the `COST_RATES_DEFAULT` comment, the standard agreement's Primary Contact and incident
+  report clause, both agreement signature blocks, the intake and referral-owner dropdowns,
+  `MANAGER_PINS`, `DEFAULT_CONTRACTORS`, and `manual.html` / `MANUAL.md`.
+- **1177 committed checks** (`tests/person-names.test.js`, 83 new). **Verified in headless
+  Chromium** against a localStorage seeded with pre-rename jobs, logs and a stored roster:
+  the restored roster reads the new name, the job and the log member migrate, Junior on
+  the row beside him does not, `assignedTCContact` resolves off the roster, and the
+  rendered DOM contains no `Graziano Sr` — with no page errors.
+
 ## The estimate's save / file / email path — four reports off one dummy client (BUILT 2026-09-08)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` gains `htmlToPdf`.
 **⚠️ NEEDS A GOOGLE CLOUD OAUTH CLIENT** before the HTML email works; until then the button

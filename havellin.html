@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 10:50am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 11:04am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1006,7 +1006,7 @@ body.no-smf .smf-col{display:none;}
           <label>Assigned Transition Concierge <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— optional, can be staffed later on the Job Plan</span></label>
           <select id="i-tc">
             <option value="">Unassigned</option>
-            <option>Anthony Graziano Sr</option><option>Ashley Jerome</option>
+            <option>Anthony Graziano</option><option>Ashley Jerome</option>
             <option>Anthony Graziano Jr</option>
             <option>Contractor — TC 1</option><option>Contractor — TC 2</option><option>Contractor — TC 3</option>
           </select>
@@ -2587,7 +2587,7 @@ body.no-smf .smf-col{display:none;}
         <label>Relationship owner</label>
         <select id="r-owner">
           <option value="">&mdash; select &mdash;</option>
-          <option>Anthony Graziano Sr</option>
+          <option>Anthony Graziano</option>
           <option>Ashley Jerome</option>
           <option>Anthony Graziano Jr</option>
         </select>
@@ -2751,7 +2751,7 @@ body.no-smf .smf-col{display:none;}
       </tr>
       <tr>
         <td style="padding:8px 10px;font-size:14px;font-weight:700;color:var(--err-tx);text-align:center;">5</td>
-        <td style="padding:8px 10px;font-size:12px;"><strong>Extreme</strong> — Floor-to-ceiling accumulation. Obstructed pathways (ICD Level 3+). Hoarder-level density. Requires escalation to Anthony Sr before estimating. Do not use default hours — price separately.</td>
+        <td style="padding:8px 10px;font-size:12px;"><strong>Extreme</strong> — Floor-to-ceiling accumulation. Obstructed pathways (ICD Level 3+). Hoarder-level density. Requires escalation to Anthony before estimating. Do not use default hours — price separately.</td>
       </tr>
     </table>
 
@@ -2779,7 +2779,7 @@ body.no-smf .smf-col{display:none;}
       </tr>
       <tr>
         <td style="padding:8px 10px;font-size:14px;font-weight:700;color:var(--err-tx);text-align:center;">5</td>
-        <td style="padding:8px 10px;font-size:12px;"><strong>Specialist</strong> — Firearms, cryptocurrency, active business interests, contested probate, biohazard, or multiple high-value categories requiring licensed specialist coordination. Escalate to Anthony Sr immediately.</td>
+        <td style="padding:8px 10px;font-size:12px;"><strong>Specialist</strong> — Firearms, cryptocurrency, active business interests, contested probate, biohazard, or multiple high-value categories requiring licensed specialist coordination. Escalate to Anthony immediately.</td>
       </tr>
     </table>
 
@@ -4200,7 +4200,7 @@ var TC_ONSITE_ALPHA = TC_ONSITE_ALPHA_DEFAULT;   // settings-backed; see loadSet
 // placeholder slots used before a specific person is assigned.
 // Settings-backed — see loadSettings() / saveSettings().
 var COST_RATES_DEFAULT = {
-  founderTC:    100,   // Anthony Sr, Ashley — also the conservative fallback, see getTCCostRate
+  founderTC:    100,   // Anthony, Ashley — also the conservative fallback, see getTCCostRate
   contractorTC:  60,   // an outside concierge
   psStandard:    30,   // "Contractor — Standard"
   psSenior:      35    // "Contractor — Senior"
@@ -4216,12 +4216,81 @@ var COST_RATES = {
 // invoice team table) without every one of those places needing a lookup.
 var CONTRACTOR_TC_NAME = 'Contractor — TC';
 
+// ─── PERSON NAMES ─────────────────────────────────────────────────────────────
+// A person's NAME is this app's identity key for a person. It is what `job.tc`,
+// `approvedBy`, `preparedBy`, `agrApprovedBy`, `lockedBy`, the staffing rosters and
+// every hour-log member row actually store — there is no person id anywhere. So a
+// rename is a data migration, not a relabelling: change the string in the source and
+// every record written before the change points at a person who no longer exists.
+//
+// ⚠ THE RENAME IS NOT ENOUGH ON ITS OWN, and loadContractors is why. It restores the
+// built-in team from `havellin_defaults_v3` and from the ContractorStore BY ID, with
+// Object.assign — so a stored old name overwrites the renamed source on every single
+// page load. The rename would silently undo itself and look like it never happened.
+//
+// Two halves, and both are needed:
+//   canonPersonName / samePerson  — read-time, so a comparison between a stored old
+//     name and a live new one still matches. Every `c.name === <stored name>` lookup
+//     goes through samePerson; a miss there silently drops a contact off a document or
+//     falls back to the founder cost rate on a job that does not carry it.
+//   migrateRetiredNames — a deep walk applied to each store as it lands, so what is
+//     DISPLAYED is the current name whatever the record holds.
+//
+// Nothing is written back. A store is normalised on read and re-saved only when the
+// user changes something, so a device holding old records cannot push a rewrite of
+// somebody else's data up to the sheet as a side effect of opening the app.
+var PERSON_NAME_ALIASES = {
+  'anthony graziano sr': 'Anthony Graziano',
+  'anthony graziano sr.': 'Anthony Graziano',
+  'anthony sr': 'Anthony Graziano',
+  'anthony sr.': 'Anthony Graziano'
+};
+
+// The current spelling of a name, or the name unchanged. Never returns '' for a
+// non-empty input — an unknown name is somebody real we simply do not alias.
+function canonPersonName(n) {
+  if (n == null) return n;
+  var k = String(n).trim().toLowerCase().replace(/\s+/g, ' ');
+  return PERSON_NAME_ALIASES[k] || n;
+}
+
+// Do these two strings name the same person? Used in place of === wherever one side
+// may have been written before a rename.
+function samePerson(a, b) {
+  if (a == null || b == null) return a === b;
+  return String(canonPersonName(a)).trim().toLowerCase()
+      === String(canonPersonName(b)).trim().toLowerCase();
+}
+
+// Rewrite every retired name in place, anywhere in an object graph. Deliberately a
+// deep walk rather than a list of fields: the name is stored under at least eight
+// different keys plus inside roster and hour-log arrays, and enumerating them is how
+// one gets missed. Cycle-guarded, and depth-capped so a pathological record cannot
+// hang the load.
+function migrateRetiredNames(node, _seen, _depth) {
+  if (!node || typeof node !== 'object') return node;
+  _seen = _seen || [];
+  _depth = _depth || 0;
+  if (_depth > 12 || _seen.indexOf(node) >= 0) return node;
+  _seen.push(node);
+  Object.keys(node).forEach(function(k){
+    var v = node[k];
+    if (typeof v === 'string') {
+      var c = canonPersonName(v);
+      if (c !== v) node[k] = c;
+    } else if (v && typeof v === 'object') {
+      migrateRetiredNames(v, _seen, _depth + 1);
+    }
+  });
+  return node;
+}
+
 // ─── APPROVAL IDENTITY ────────────────────────────────────────────────────────
 // Per-person PINs, so an approval records WHO approved it.
 //
 // Previously the literal '3010' appeared in six places and the approver was stored
-// as the fixed string 'Anthony Graziano Sr' (and once, inconsistently, as 'Anthony
-// Graziano'). An estimate Ashley approved was therefore filed under Anthony's name.
+// as one fixed founder name (and once, inconsistently, spelled differently). An
+// estimate Ashley approved was therefore filed under Anthony's name.
 // That is worse than recording nothing, because it reads as evidence.
 //
 // This is ATTRIBUTION, not security. havellin.html is a public static file served
@@ -4231,7 +4300,7 @@ var CONTRACTOR_TC_NAME = 'Contractor — TC';
 //
 // To change a PIN or add a person, edit this list. Nothing else needs touching.
 var MANAGER_PINS = [
-  { pin: '3010', name: 'Anthony Graziano Sr' },
+  { pin: '3010', name: 'Anthony Graziano' },
   { pin: '4020', name: 'Ashley Jerome' }
 ];
 
@@ -7477,7 +7546,7 @@ function renderClientEstimate() {
 
   // Preparer contact info from contractor directory
   var allContractors = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
-  var preparer = allContractors.find(function(c){ return c.name === (e.preparedBy || job.tc); });
+  var preparer = allContractors.find(function(c){ return samePerson(c.name, e.preparedBy || job.tc); });
   var prepName = preparer ? preparer.name : (e.preparedBy || job.tc || '—');
   var prepEmail = preparer ? (preparer.email || '—') : '—';
 
@@ -10740,7 +10809,7 @@ function saveJobs() {
 
 function loadJobs() {
   // Always load localStorage first for instant render
-  try { var s=localStorage.getItem('havellin_jobs_v3'); if(s) jobs=JSON.parse(s); } catch(e) {}
+  try { var s=localStorage.getItem('havellin_jobs_v3'); if(s) jobs=migrateRetiredNames(JSON.parse(s)); } catch(e) {}
   try {
     var u = localStorage.getItem('hav_sheets_url') || localStorage.getItem('havellin_sheets_url') || '';
     if (u) SHEETS_SYNC_URL = u;
@@ -10754,7 +10823,7 @@ function loadJobs() {
       .then(function(data){
         if (data.jobs && Array.isArray(data.jobs) && !data.error) {
           // Sheets is the source of truth \u2014 always overwrite local (handles deletions)
-          jobs = data.jobs;
+          jobs = migrateRetiredNames(data.jobs);
           try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
           // ...and drop the estimates, plans and logs this device still holds for jobs the
           // sheet has deleted, or the next store save pushes them up as headless records.
@@ -10934,7 +11003,7 @@ function loadEstimateState() {
   try {
     var s = localStorage.getItem('havellin_est_v4');
     if (s) {
-      estimateStore = JSON.parse(s);
+      estimateStore = migrateRetiredNames(JSON.parse(s));
       Object.keys(estimateStore).forEach(function(k) { normalizeLegacyRoomKeys(estimateStore[k]); });
     }
     // Also migrate any old single estimate, then remove the legacy key so it
@@ -10962,7 +11031,7 @@ function loadEstimateState() {
           Object.keys(data.estimates).forEach(function(key){
             var sheetsRec = data.estimates[key];
             normalizeLegacyRoomKeys(sheetsRec);
-            estimateStore[key] = sheetsRec;   // cloud wins
+            estimateStore[key] = migrateRetiredNames(sheetsRec);   // cloud wins
           });
           try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
           rebuildDropdowns();
@@ -11172,11 +11241,11 @@ function bestClientGreetingName(job) {
 // Falls back to the firm's managing partner if the job has no TC assigned or
 // the assigned name has no matching contractor record.
 function assignedTCContact(job) {
-  var fallback = { name:'Anthony Graziano Sr', phone:'(617) 650-6588', email:'anthony@havellinpalmbeach.com' };
+  var fallback = { name:'Anthony Graziano', phone:'(617) 650-6588', email:'anthony@havellinpalmbeach.com' };
   if (!job || !job.tc) return fallback;
   var all = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : [])
     .concat(typeof contractors !== 'undefined' ? contractors : []);
-  var tc = all.find(function(c){ return c.name === job.tc; });
+  var tc = all.find(function(c){ return samePerson(c.name, job.tc); });
   if (!tc) return fallback;
   return {
     name: tc.name,
@@ -16100,7 +16169,7 @@ function crewMemberHasHours(jobId, name) {
   if (!name) return false;
   var entries = (typeof jobLogs !== 'undefined' && jobLogs[jobId]) ? jobLogs[jobId] : [];
   return entries.some(function(e){
-    return (e.members || []).some(function(m){ return m.name === name && (m.hours || 0) > 0; });
+    return (e.members || []).some(function(m){ return samePerson(m.name, name) && (m.hours || 0) > 0; });
   });
 }
 
@@ -16732,7 +16801,7 @@ function renderInvoice() {
 
   // Preparer (Transition Concierge) contact — used by the signature/bio footer.
   var _allInvC = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
-  var preparer = _allInvC.find(function(c){ return c.name === ((est && est.preparedBy) || job.tc); });
+  var preparer = _allInvC.find(function(c){ return samePerson(c.name, (est && est.preparedBy) || job.tc); });
   var prepName = preparer ? preparer.name : ((est && est.preparedBy) || job.tc || '—');
   var prepEmail = preparer ? (preparer.email || '—') : '—';
   var pkgCost = est ? (est.pkgCost||0) : 0;
@@ -17218,7 +17287,7 @@ function saveLogData() {
   postSyncBadge({ type: 'saveAllLogs', payload: jobLogs }, 'Log synced ✓', 'Log sync failed — saved locally');
 }
 function loadLogData() {
-  try { var s=localStorage.getItem('havellin_logs_v3'); if(s) jobLogs=JSON.parse(s); } catch(e) {}
+  try { var s=localStorage.getItem('havellin_logs_v3'); if(s) jobLogs=migrateRetiredNames(JSON.parse(s)); } catch(e) {}
   // Cloud is the source of truth across devices. Guarded on data.logs so the app is
   // safe before the Apps Script handler exists — an unsupported action leaves local
   // data untouched.
@@ -17227,7 +17296,7 @@ function loadLogData() {
       .then(function(r){ return r.json(); })
       .then(function(data){
         if (data && data.logs && typeof data.logs === 'object' && !data.error) {
-          jobLogs = data.logs;   // cloud wins
+          jobLogs = migrateRetiredNames(data.logs);   // cloud wins
           try { localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
         }
       })
@@ -17261,7 +17330,7 @@ function getPlanNote(jobId, key) {
 }
 function loadJobPlanData() {
   // localStorage first for instant render…
-  try { var s = localStorage.getItem('havellin_jobplan_v1'); if(s) jobPlanStore = JSON.parse(s); } catch(e) {}
+  try { var s = localStorage.getItem('havellin_jobplan_v1'); if(s) jobPlanStore = migrateRetiredNames(JSON.parse(s)); } catch(e) {}
   // …then pull the latest from Sheets (Sheets is source of truth across devices).
   // Guarded on data.jobPlans so the app is safe before the Apps Script handler is
   // added — an unsupported action just leaves local data untouched.
@@ -17270,7 +17339,7 @@ function loadJobPlanData() {
       .then(function(r){ return r.json(); })
       .then(function(data){
         if (data && data.jobPlans && typeof data.jobPlans === 'object' && !data.error) {
-          jobPlanStore = data.jobPlans;
+          jobPlanStore = migrateRetiredNames(data.jobPlans);
           try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
         }
       })
@@ -17576,7 +17645,7 @@ function loadJobPlanTab() {
   var tcSel = document.getElementById('log-m0-name');
   if (job.tc && tcSel) {
     for (var i = 0; i < tcSel.options.length; i++) {
-      if (tcSel.options[i].text === job.tc) { tcSel.selectedIndex = i; break; }
+      if (samePerson(tcSel.options[i].text, job.tc)) { tcSel.selectedIndex = i; break; }
     }
   }
 
@@ -21795,7 +21864,7 @@ function renderProbateAgreement() {
   content += subHdr('1.1 Service Provider');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += dRow('Company', bb('Havellin Palm Beach, LLC'));
-  content += dRow('Primary Contact','Anthony Graziano Sr / Ashley Jerome');
+  content += dRow('Primary Contact','Anthony Graziano / Ashley Jerome');
   content += dRow('Email','info@havellinpalmbeach.com');
   content += dRow('Phone', HAVELLIN_OFFICE_PHONE);
   content += dRow('Address','515 N Flagler Drive, Suite 350 &middot; West Palm Beach, FL 33401');
@@ -21971,7 +22040,7 @@ function renderProbateAgreement() {
     'Havellin team member discovers or causes damage — document immediately with photographs and written description',
     'Notify Client / Personal Representative within 24 hours of discovery',
     'Preserve damaged item in place — do not move, repair, or dispose of without Client authorization',
-    'Submit written incident report to Anthony Graziano Sr within 24 hours',
+    'Submit written incident report to Anthony Graziano within 24 hours',
     'Engage insurance carrier if damage exceeds $500',
     'Provide Client with insurance carrier contact and claim process within 48 hours'
   ];
@@ -22058,7 +22127,7 @@ function renderProbateAgreement() {
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:12px;">Havellin Palm Beach, LLC</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;">';
-  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Anthony Graziano Sr</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(617) 650-6588 &middot; anthony@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
+  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Anthony Graziano</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(617) 650-6588 &middot; anthony@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
   content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Ashley Jerome</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(978) 857-5374 &middot; ashley@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
   content += '</div></div>';
   // Office use
@@ -22762,7 +22831,7 @@ function getPSCostRate(name) {
   // Look up actual rate from contractor directory by name
   var allPS = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS'; })
     .concat(contractors.filter(function(c){ return c.role==='PS'; }));
-  var match = allPS.find(function(c){ return c.name === name; });
+  var match = allPS.find(function(c){ return samePerson(c.name, name); });
   return match ? (match.rate || _cr.psStandard) : _cr.psStandard;
 }
 
@@ -22780,7 +22849,7 @@ function getTCCostRate(name) {
   if (name === CONTRACTOR_TC_NAME) return _cr.contractorTC;
   var allTC = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
     .concat(contractors.filter(function(c){ return c.role==='TC'; }));
-  var match = allTC.find(function(c){ return c.name === name; });
+  var match = allTC.find(function(c){ return samePerson(c.name, name); });
   return (match && match.rate) ? match.rate : _cr.founderTC;
 }
 
@@ -22791,7 +22860,7 @@ function isTCCostResolved(name) {
   if (name === CONTRACTOR_TC_NAME) return true;
   var allTC = DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
     .concat(contractors.filter(function(c){ return c.role==='TC'; }));
-  return !!allTC.find(function(c){ return c.name === name && c.rate; });
+  return !!allTC.find(function(c){ return samePerson(c.name, name) && c.rate; });
 }
 
 // Display label for a cost-rate key — the placeholder keys are machine values.
@@ -22842,7 +22911,7 @@ var contractors = [];
 
 // Built-in defaults — always available
 var DEFAULT_CONTRACTORS = [
-  {id:'default-1', name:'Anthony Graziano Sr', role:'TC', phone:'(617) 650-6588', email:'anthony@havellinpalmbeach.com', rate:100, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
+  {id:'default-1', name:'Anthony Graziano', role:'TC', phone:'(617) 650-6588', email:'anthony@havellinpalmbeach.com', rate:100, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
   {id:'default-2', name:'Ashley Jerome', role:'TC', phone:'(978) 857-5374', email:'ashley@havellinpalmbeach.com', rate:100, status:'active', notes:'Partner, Client Relations', bio:'Ashley Jerome has spent 25 years as a trusted presence in the Palm Beach community — as a Pilates instructor at Squeeze in Royal Poinciana Plaza and as a parent at Palm Beach Day Academy. A licensed Douglas Elliman agent, Ashley brings warmth, discretion, and an intimate knowledge of Palm Beach families to every client relationship she manages.'},
   {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:60, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
 ];
@@ -23179,11 +23248,13 @@ function saveContractors() {
 function loadContractors() {
   try {
     var s = localStorage.getItem('havellin_contractors_v3');
-    if (s) contractors = JSON.parse(s);
+    if (s) contractors = migrateRetiredNames(JSON.parse(s));
     // Restore any edits to default contractors
     var d = localStorage.getItem('havellin_defaults_v3');
     if (d) {
-      var saved = JSON.parse(d);
+      // migrate BEFORE the assign — this Object.assign is what would otherwise copy a
+      // retired name straight back over the renamed source on every page load.
+      var saved = migrateRetiredNames(JSON.parse(d));
       saved.forEach(function(sc){
         var idx = DEFAULT_CONTRACTORS.findIndex(function(dc){ return dc.id === sc.id; });
         if (idx >= 0) Object.assign(DEFAULT_CONTRACTORS[idx], sc);
@@ -23206,8 +23277,8 @@ function loadContractors() {
     .then(function(data){
       if (!data || data.error || !data.contractors) return;  // keep local on any error
       var remote = data.contractors;
-      var remoteAdded    = Array.isArray(remote.added)    ? remote.added    : [];
-      var remoteDefaults = Array.isArray(remote.defaults) ? remote.defaults : [];
+      var remoteAdded    = migrateRetiredNames(Array.isArray(remote.added)    ? remote.added    : []);
+      var remoteDefaults = migrateRetiredNames(Array.isArray(remote.defaults) ? remote.defaults : []);
 
       // First-run guard: an empty ContractorStore must NOT wipe contractors that exist
       // only in this device's localStorage (they predate this sync). Seed the Sheet from
@@ -23304,7 +23375,7 @@ function showEditClient(jobId) {
   html += '<div class="sec" style="margin-top:14px;">Job Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:SVC_LABELS.downsizing},{v:'downsizing_move',l:SVC_LABELS.downsizing_move},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'},{v:'contested_probate',l:'Contested Probate Estate Settlement'},{v:'prep',l:'Home Prep for Sale'}], job.svc)+'</select>', true);
-  html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano Sr',l:'Anthony Graziano Sr'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
+  html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano',l:'Anthony Graziano'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
   html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Apartment',l:'Apartment'},{v:'Town Home',l:'Town Home'},{v:'Patio Home',l:'Patio Home'},{v:'Single Family Home',l:'Single Family Home'},{v:'Estate',l:'Estate'}], job.ptype)+'</select>', true);
   html += fld('Priority', '<select id="ec-priority" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'normal',l:'Normal'},{v:'high',l:'High — probate deadline'},{v:'urgent',l:'Urgent — health / emergency'}], job.priority)+'</select>', false);

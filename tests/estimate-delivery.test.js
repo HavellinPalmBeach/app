@@ -458,8 +458,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(a, 'tc.phone || fallback.phone', 'the leaking fallback is gone');
     lacks(a, 'tc.email || fallback.email', 'both of them');
 
-    const ctx = sandbox({ fns: ['assignedTCContact', 'conciergePhones', 'conciergePhonesText'],
-                          vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS'] });
+    const ctx = sandbox({ fns: ['assignedTCContact', 'conciergePhones', 'conciergePhonesText', 'canonPersonName', 'samePerson'],
+                          vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES'] });
     ctx.contractors = [{ id: 'c1', name: 'New Concierge', role: 'TC', phone: '', email: 'new@havellinpalmbeach.com' }];
     const bare = ctx.assignedTCContact({ tc: 'New Concierge' });
     eq(bare.phone, '', 'a concierge with no mobile resolves to an empty one');

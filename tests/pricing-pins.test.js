@@ -48,8 +48,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('cost rates are pinned to what the estimate was quoted under');
   {
     const ctx = sandbox({
-      fns: ['activeCostRates', 'getPSCostRate', 'getTCCostRate'],
-      vars: ['_estimateCostPin'],
+      fns: ['activeCostRates', 'getPSCostRate', 'getTCCostRate', 'canonPersonName', 'samePerson'],
+      vars: ['_estimateCostPin', 'PERSON_NAME_ALIASES'],
       stubs: {
         COST_RATES: { founderTC: 100, contractorTC: 60, psStandard: 30, psSenior: 35 },
         CONTRACTOR_TC_NAME: 'Contractor Concierge',
