@@ -116,7 +116,8 @@ function server(opts = {}) {
   vm.createContext(ctx);
   const names = ['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', 'deleteJobFromSheet',
     'getJobLedger', '_ledgerMarkSeen', '_jobRefusal', '_presentJobIds', '_deletedJobIds',
-    '_stripRefusedJobKeys', '_okWithDrops', '_mergeStoreByKey', 'saveEstimateStore', 'getEstimateStore',
+    '_stripRefusedJobKeys', '_jobRefusalCtx', '_sweepDeletedJobKeys', '_purgeJobFromStores',
+    '_okWithDrops', '_mergeStoreByKey', 'saveEstimateStore', 'getEstimateStore',
     'saveJobPlanStore', 'getJobPlanStore', 'saveLogStore', 'getLogStore', 'saveChangeOrderStore',
     'getChangeOrderStore', 'resetAllJobDataConfirm', 'allowJobRestoreConfirm', 'previewDeletedJobs'];
   const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),

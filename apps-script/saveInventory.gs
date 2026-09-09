@@ -291,7 +291,8 @@ function saveMediaStore(payload) {
       var key = String(payload.jobId);
       // A manifest for a job the sheet has seen and no longer holds (see JOB LEDGER in
       // main-sync.gs) is refused, not merged — the same rule as every other job-keyed store.
-      if (_jobRefusal(key, null, _presentJobIds(getJobsFromSheet()), getJobLedger())) {
+      var ctx = _jobRefusalCtx();
+      if (_jobRefusal(key, null, ctx.present, ctx.ledger)) {
         Logger.log('saveMedia refused deleted job ' + key);
         return { ok: true, success: true, jobId: key, count: 0, dropped: [key] };
       }
@@ -301,6 +302,10 @@ function saveMediaStore(payload) {
         savedAt: Number(payload.savedAt) || new Date().getTime(),
         items: _mergeMediaItems(cur, payload.items || [])
       };
+      // And the same standing sweep the other stores got on 2026-09-09: a manifest left
+      // behind when its job row was deleted by hand had nothing to remove it. Carries the
+      // whole photo list, so an orphan here is the largest of the five by a distance.
+      _sweepDeletedJobKeys(store, ctx.present, ctx.ledger);
       _writeStoreBlob('MediaStore', store);
       return { ok: true, success: true, jobId: key, count: store[key].items.length };
     } finally {

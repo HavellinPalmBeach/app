@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-09';
+var BACKEND_VERSION = '2026-09-09b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder'
@@ -589,14 +589,89 @@ function _deletedJobIds(present, ledger) {
 // The keyed stores are what a stale device pushes right behind its job list, and each of
 // their merges unions — so a refused job would come back as a headless estimate, plan or
 // hours log if these were left alone.
-function _stripRefusedJobKeys(obj) {
+function _stripRefusedJobKeys(obj, ctx) {
   if (!obj || typeof obj !== 'object') return [];
-  var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger(), dropped = [];
+  ctx = ctx || _jobRefusalCtx();
+  var present = ctx.present, ledger = ctx.ledger, dropped = [];
   Object.keys(obj).forEach(function(k) {
     if (_jobRefusal(k, null, present, ledger)) { delete obj[k]; dropped.push(k); }
   });
   if (dropped.length) Logger.log('Refused records for deleted job(s): ' + dropped.join(', '));
   return dropped;
+}
+
+// One read of the Jobs sheet and the ledger, shared by the strip and the sweep below.
+// They ask the same two questions on every save; reading twice doubles the slowest part
+// of the write for no benefit.
+function _jobRefusalCtx() {
+  return { present: _presentJobIds(getJobsFromSheet()), ledger: getJobLedger() };
+}
+
+// THE STANDING CLEANUP. Drop records already IN a store whose job the ledger has seen and
+// the Jobs sheet no longer holds. _stripRefusedJobKeys refuses a deleted job's record on
+// the way IN; nothing removed one that was already sitting in the store when its row was
+// deleted, so orphans accumulated forever — invisible in the app (no job row means the
+// estimate never renders), invisible in the sheet (they are inside a 45,000-character JSON
+// cell), and serialized into every subsequent write, pushing the blob toward the per-cell
+// character cap for no benefit at all.
+//
+// ⚠ ONLY the 'deleted' verdict, NEVER 'predates'. 'deleted' rests on a positive record:
+// the ledger watched that id go into the sheet and the sheet no longer has it. 'predates'
+// is an INFERENCE from absence, and an inference is not a thing to act on automatically on
+// every save — one bad read of the Jobs sheet would take the whole store with it. Pre-ledger
+// orphans are cleared by pruneOrphanRecordsConfirm, where a person decides.
+//
+// ⚠ AND IT REFUSES TO RUN AGAINST AN EMPTY JOBS SHEET, for the same reason: no jobs present
+// makes every seen id look deleted. A genuinely empty sheet is what resetAllJobDataConfirm
+// is for. Returns the keys removed; mutates the store in place.
+function _sweepDeletedJobKeys(store, present, ledger) {
+  var gone = [];
+  if (!store || !present || !Object.keys(present).length) return gone;
+  Object.keys(store).forEach(function(k) {
+    if (_jobRefusal(k, null, present, ledger) === 'deleted') { delete store[k]; gone.push(k); }
+  });
+  if (gone.length) Logger.log('Swept records for deleted job(s): ' + gone.join(', '));
+  return gone;
+}
+
+// Remove every keyed record belonging to these job ids, across ALL FIVE stores. ONE
+// definition, shared by deleteJobFromSheet and pruneOrphanRecordsConfirm — two copies of
+// "which stores hold job-keyed records" is precisely how MediaStore and ChangeOrderStore
+// came to be missed by the delete path while the other three were purged correctly.
+// Returns { StoreName: [ids removed] } so a caller can report what it really did.
+function _purgeJobFromStores(ids) {
+  var keys = {}, removed = {};
+  (ids || []).forEach(function(id) { if (id != null && id !== '') keys[String(id)] = true; });
+  if (!Object.keys(keys).length) return removed;
+  // Four of the five are objects keyed by job id. _readStoreBlob answers null for a tab
+  // that does not exist, which is left alone — never CREATE a store just to empty it.
+  ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+    try {
+      var store = _readStoreBlob(name, null);
+      if (!store) return;
+      var hit = Object.keys(store).filter(function(k) { return keys[k]; });
+      if (!hit.length) return;
+      hit.forEach(function(k) { delete store[k]; });
+      _writeStoreBlob(name, store);
+      removed[name] = hit;
+    } catch (e) { Logger.log('purge ' + name + ': ' + e); }
+  });
+  // ChangeOrderStore is an ARRAY, filed under co.jobId rather than under its own key.
+  try {
+    var cos = _readStoreBlob('ChangeOrderStore', null);
+    if (cos && cos.length) {
+      var gone = [];
+      var keep = cos.filter(function(co) {
+        if (co && co.jobId != null && keys[String(co.jobId)]) {
+          if (gone.indexOf(String(co.jobId)) < 0) gone.push(String(co.jobId));
+          return false;
+        }
+        return true;
+      });
+      if (gone.length) { _writeStoreBlob('ChangeOrderStore', keep); removed.ChangeOrderStore = gone; }
+    }
+  } catch (e) { Logger.log('purge ChangeOrderStore: ' + e); }
+  return removed;
 }
 
 // Run from the editor. Lists the ids the ledger will refuse — i.e. what a stale device
@@ -627,6 +702,93 @@ function allowJobRestoreConfirm(ids) {
   Logger.log('The next device that saves ' + ids.join(', ') + ' will be allowed to put it back.');
 }
 
+// ORPHANED RECORDS — an estimate, plan, log or manifest whose job row is gone ══════
+// Reported 2026-09-09: "why do they ever stay there? these are all dummy jobs." The sheet
+// held FIVE estimates against ONE job — four practice clients cleared out of the Jobs tab
+// by hand in July and August, whose estimates nobody ever removed. Invisible in the app (no
+// job row, so the estimate never renders) and invisible in the sheet (they live inside a
+// 45,000-character JSON cell), which is exactly why they went unnoticed for six weeks.
+//
+// From 2026-09-09 the save path sweeps this class automatically — see _sweepDeletedJobKeys.
+// These two are for the records that predate the ledger, where the only evidence is absence
+// and a person should look before anything is deleted. Same preview/confirm split as
+// pruneQuoStale and resetAllJobDataConfirm, and deliberately NOT in doGet or doPost, so no
+// HTTP request can reach them.
+
+// Every job-keyed record the Jobs sheet has no row for, with the reason.
+function _orphanJobRecords() {
+  var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger(), found = {};
+  function note(k, name, why) {
+    if (!found[k]) found[k] = { why: why, stores: [] };
+    if (found[k].stores.indexOf(name) < 0) found[k].stores.push(name);
+  }
+  ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+    var store = _readStoreBlob(name, null);
+    if (!store) return;
+    Object.keys(store).forEach(function(k) {
+      var why = _jobRefusal(k, null, present, ledger);
+      if (why) note(k, name, why);
+    });
+  });
+  (_readStoreBlob('ChangeOrderStore', null) || []).forEach(function(co) {
+    if (!co || co.jobId == null) return;
+    var why = _jobRefusal(co.jobId, null, present, ledger);
+    if (why) note(String(co.jobId), 'ChangeOrderStore', why);
+  });
+  return { present: present, orphans: found };
+}
+
+function previewOrphanRecords() {
+  var r = _orphanJobRecords(), ids = Object.keys(r.orphans);
+  var est = _readStoreBlob('EstimateStore', {}) || {};
+  Logger.log('This is a PREVIEW. Nothing has been deleted.');
+  Logger.log('Jobs sheet holds ' + Object.keys(r.present).length + ' job(s).');
+  if (!ids.length) { Logger.log('No orphaned records — every stored record has a job row.'); return; }
+  Logger.log(ids.length + ' job id(s) with records but no row in Jobs:');
+  ids.forEach(function(k) {
+    var o = r.orphans[k], e = est[k] && est[k].estimate ? est[k].estimate : null;
+    // The client NAME lived on the Jobs row and went with it; the estimate snapshot carries
+    // only the service and the money. Print those so a person can still recognise the job.
+    var what = e ? ('  ' + (e.svc || '?') + ' $' + (e.havellinTotal || 0)) : '';
+    Logger.log('  ' + k + '  (' + (o.why === 'deleted' ? 'deleted' : 'predates the ledger')
+      + ')  in ' + o.stores.join(', ') + what
+      + '  created ' + new Date(Number(k)).toISOString().slice(0, 10));
+  });
+  Logger.log('');
+  Logger.log('To clear them: run pruneOrphanRecordsConfirm().');
+}
+
+// Removes them. Contractors, vendors, referral partners and Drive are untouched — this
+// only ever deletes records filed under a job id the Jobs sheet does not have.
+function pruneOrphanRecordsConfirm(force) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var r = _orphanJobRecords(), ids = Object.keys(r.orphans);
+    if (!ids.length) { Logger.log('Nothing to do — no orphaned records.'); return; }
+    // ⚠ An empty Jobs sheet makes EVERY stored record look orphaned. That is either a bad
+    // read or a sheet somebody just cleared by hand, and neither is a reason to delete every
+    // estimate the business has. resetAllJobDataConfirm is the deliberate way to clear
+    // everything; pass true here only if you really mean this one.
+    if (!Object.keys(r.present).length && force !== true) {
+      Logger.log('REFUSED: the Jobs sheet has no jobs, so all ' + ids.length
+        + ' stored record(s) look orphaned.');
+      Logger.log('Use resetAllJobDataConfirm() to clear everything, or');
+      Logger.log('pruneOrphanRecordsConfirm(true) if you really mean to delete these.');
+      return;
+    }
+    // Remember them before they go, so a stale device cannot push them back afterwards.
+    _ledgerMarkSeen(getJobLedger(), ids);
+    var removed = _purgeJobFromStores(ids);
+    Object.keys(removed).forEach(function(name) {
+      Logger.log('Cleared ' + removed[name].length + ' record(s) from ' + name);
+    });
+    Logger.log('Done — ' + ids.length + ' orphaned job id(s) cleared: ' + ids.join(', '));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // ══ ESTIMATE STORE (merge by jobId) ══════════════════════════════════════════════
 
 function saveEstimateStore(incoming) {
@@ -634,8 +796,11 @@ function saveEstimateStore(incoming) {
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
   try {
-    var dropped = _stripRefusedJobKeys(incoming);
-    _writeStoreBlob('EstimateStore', _mergeStoreByKey(getEstimateStore(), incoming));
+    var ctx = _jobRefusalCtx();
+    var dropped = _stripRefusedJobKeys(incoming, ctx);
+    var merged = _mergeStoreByKey(getEstimateStore(), incoming);
+    _sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);
+    _writeStoreBlob('EstimateStore', merged);
     return { dropped: dropped };
   }
   finally { try { lock.releaseLock(); } catch (e) {} }
@@ -652,8 +817,11 @@ function saveJobPlanStore(incoming) {
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
   try {
-    var dropped = _stripRefusedJobKeys(incoming);
-    _writeStoreBlob('JobPlanStore', _mergeStoreByKey(getJobPlanStore(), incoming));
+    var ctx = _jobRefusalCtx();
+    var dropped = _stripRefusedJobKeys(incoming, ctx);
+    var merged = _mergeStoreByKey(getJobPlanStore(), incoming);
+    _sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);
+    _writeStoreBlob('JobPlanStore', merged);
     return { dropped: dropped };
   }
   finally { try { lock.releaseLock(); } catch (e) {} }
@@ -674,7 +842,8 @@ function saveChangeOrderStore(incoming) {
   try {
     // Change orders are keyed by their own id but belong to a job; refuse the ones whose job
     // the sheet has seen and no longer holds, the same way the job-keyed stores do.
-    var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger(), dropped = [];
+    var ctx = _jobRefusalCtx();
+    var present = ctx.present, ledger = ctx.ledger, dropped = [];
     incoming = (incoming || []).filter(function(co) {
       if (!co || co.jobId == null || !_jobRefusal(co.jobId, null, present, ledger)) return true;
       if (dropped.indexOf(co.jobId) < 0) dropped.push(co.jobId);
@@ -692,7 +861,21 @@ function saveChangeOrderStore(incoming) {
       if (!cur) order.push(co.id);
       if (!cur || inT >= curT) byId[co.id] = co;
     });
-    _writeStoreBlob('ChangeOrderStore', order.map(function(id) { return byId[id]; }));
+    // The array equivalent of _sweepDeletedJobKeys: same 'deleted'-only rule, same refusal
+    // to act on an empty Jobs read, applied to the merged result rather than to a key set.
+    var out = order.map(function(id) { return byId[id]; });
+    if (Object.keys(present).length) {
+      var swept = [];
+      out = out.filter(function(co) {
+        if (co && co.jobId != null && _jobRefusal(co.jobId, null, present, ledger) === 'deleted') {
+          if (swept.indexOf(String(co.jobId)) < 0) swept.push(String(co.jobId));
+          return false;
+        }
+        return true;
+      });
+      if (swept.length) Logger.log('Swept change orders for deleted job(s): ' + swept.join(', '));
+    }
+    _writeStoreBlob('ChangeOrderStore', out);
     return { dropped: dropped };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
@@ -710,7 +893,8 @@ function saveLogStore(incoming) {
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {}
   try {
-    var dropped = _stripRefusedJobKeys(incoming);
+    var ctx = _jobRefusalCtx();
+    var dropped = _stripRefusedJobKeys(incoming, ctx);
     var out = getLogStore();
     Object.keys(incoming).forEach(function(jid) {
       var inArr = incoming[jid] || [];
@@ -720,6 +904,7 @@ function saveLogStore(incoming) {
       inArr.forEach(function(en) { if (en && en.id != null && !seen[en.id]) { cur.push(en); seen[en.id] = true; } });
       out[jid] = cur;
     });
+    _sweepDeletedJobKeys(out, ctx.present, ctx.ledger);
     _writeStoreBlob('LogStore', out);
     return { dropped: dropped };
   } finally { try { lock.releaseLock(); } catch (e) {} }
@@ -944,17 +1129,12 @@ function deleteJobFromSheet(id) {
   //
   // Deliberately keyed on the same id the app uses, and silent about a miss: a job with no
   // estimate is normal, not an error.
-  var key = String(id);
-  [['EstimateStore', getEstimateStore], ['JobPlanStore', getJobPlanStore], ['LogStore', getLogStore]]
-    .forEach(function(pair) {
-      try {
-        var store = pair[1]();
-        if (store && Object.prototype.hasOwnProperty.call(store, key)) {
-          delete store[key];
-          _writeStoreBlob(pair[0], store);
-        }
-      } catch (e) { Logger.log('purge ' + pair[0] + ' for ' + key + ': ' + e); }
-    });
+  // ⚠ THIS USED TO PURGE ONLY THREE OF THE FIVE STORES — MediaStore and ChangeOrderStore
+  // were missed, so deleting a client through the app left their whole inventory manifest
+  // (photo refs, custody log, appraisal waivers) and every change order in the sheet
+  // forever. _purgeJobFromStores is the one list; add a store there, not here.
+  var removed = _purgeJobFromStores([id]);
+  Object.keys(removed).forEach(function(name) { Logger.log('Purged ' + name + ' for ' + id); });
 }
 
 // ══ ESTIMATES (one row per job — most current version) ═══════════════════════════

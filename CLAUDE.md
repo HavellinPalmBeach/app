@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/eager-euler-u5lt65`
-  (was `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/ecstatic-feynman-b3j90u`
+  (was `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/eager-euler-u5lt65:main`
+  `git push origin claude/ecstatic-feynman-b3j90u:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -144,6 +144,67 @@ itself … when she added a new client, it pushed the new client plus three old 
 - Manual **§2** note; playbook **two symptom→cause rows**. Both `.md` copies hand-edited.
 - **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
   functions against a fake spreadsheet, and the app's receiving side out of the real source).
+
+## Orphaned records: five estimates against one job, and nothing ever swept them (FIXED 2026-09-09)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` and `saveInventory.gs` both changed.
+Off an export of the sync sheet: *"does the app write to all of the tabs in here? i feel like some
+are missing info always"*, then *"why do they ever stay there? these are all dummy jobs. shouldn't
+we just fix this for now and forever?"*
+
+- **What the export actually showed.** Seven tabs. `Jobs` held **one** client; `EstimateStore` held
+  **five** estimates ($32,950 · $14,650 · $83,250 · $22,850 plus the live one). Four July/August
+  practice clients had been cleared out of the Jobs tab **by hand**; their estimates stayed.
+  `MediaStore` and `JobPlanStore` were headers-only, `LogStore` and `ChangeOrderStore` did not exist
+  at all (a store tab is created by its first write, so absent ≠ lost), and `Estimates` / `Hours`
+  are the fossil tabs this file already documents.
+- **⚠ THE ORPHANS ARE INVISIBLE FROM BOTH ENDS, WHICH IS WHY THEY RAN SIX WEEKS.** In the sheet they
+  live inside a **45,000-character JSON cell** (`EstimateStore!B2`, spilling into B3), so Sheets
+  shows a truncated preview and no amount of looking reveals the keys — Anthony's *"i don't see
+  that"* was the correct reading of what is on screen. In the app they render nowhere: `loadJobs`
+  rebuilds the client list from the Jobs tab, and an estimate with no job row has nothing to hang
+  off. **When a store looks fuller than the client list, diff the keys; do not look at the tab.**
+- **THREE HOLES, and the first is the one that surprised me.** `_stripRefusedJobKeys` refuses a
+  deleted job's record on the way **IN** — that shipped with the ledger on 2026-09-08 and works.
+  Nothing removed a record **already sitting in a store** when its row went.
+  - **`deleteJobFromSheet` purged three of the five stores.** `MediaStore` and `ChangeOrderStore`
+    were missed, so deleting a client through the app kept their **entire photo manifest** — refs,
+    custody log, appraisal-waiver reasons — and every change order, forever. Its own comment
+    described the symptom (*"that is how the sheet ends up holding more estimates than the app has
+    jobs"*) while the function under it was two stores short. **`_purgeJobFromStores` is now the ONE
+    list of job-keyed stores**; a test asserts `deleteJobFromSheet` keeps no private copy and that
+    the list agrees with `RESET_JOB_STORES`. Add a store there, not in five places.
+  - **A row deleted BY HAND ran nothing at all** — the same gap the ledger exists for.
+    `_sweepDeletedJobKeys` now runs on every job-keyed save, over the **merged result**, sharing the
+    one Jobs read via `_jobRefusalCtx()` so the slowest part of the write does not double.
+  - **The pre-ledger leftovers get `previewOrphanRecords()` / `pruneOrphanRecordsConfirm()`** —
+    preview + confirm, out of `doGet`/`doPost` like every other destructive action. One-off: from
+    2026-09-09 the ledger has seen everything, so the automatic sweep covers it from here.
+- **⚠ THE SWEEP ACTS ON THE `deleted` VERDICT ONLY, NEVER `predates`. Do not "simplify" that away.**
+  `deleted` rests on a **positive record** — the ledger watched that id go into the sheet and the
+  sheet no longer has it. `predates` is an **inference from absence**, and an inference is not
+  something to act on automatically on every save. **And the sweep stands down entirely against an
+  empty Jobs sheet**, because with no jobs present every seen id looks deleted: one bad read would
+  take the whole store with it. `pruneOrphanRecordsConfirm` refuses the same case and names
+  `resetAllJobDataConfirm()` as the deliberate way to clear everything (`true` overrides).
+  A blast radius worth stating plainly: an incoming-strip can at worst refuse one write; a sweep can
+  empty every estimate the business has. That asymmetry is why the guards are there.
+- **The ordering rule from the ledger build still holds and is tested**: a new job's estimate can
+  land BEFORE its job row, so *not present yet* is never by itself a reason to remove anything.
+- **The client NAME is not recoverable.** It lived on the Jobs row; the estimate snapshot carries
+  only `svc` and the money, so `previewOrphanRecords` prints those. `previewDeletedJobs()` does
+  **not** list these four — it reads `ledger.seen`, and the ledger's `since` (2026-09-09 15:12 ET)
+  postdates them. Two different rules, two different listings.
+- **1374 committed checks** (`tests/orphan-records.test.js`, 63 new — drives the real `.gs`
+  functions against a fake spreadsheet seeded from the real export). **Every fix revert-verified
+  individually against the real file**: drop the sweep and the hand-deleted job keeps its estimate;
+  drop MediaStore from the purge and the manifest survives the delete; drop the empty-Jobs guard and
+  one bad read wipes every estimate. The ledger-mark inside the prune is **belt-and-braces, not
+  load-bearing** (a `deleted` orphan is already seen; a `predates` one is refused either way) and
+  the test says so rather than pretending otherwise — this file records three separate times a test
+  here could not fail.
+- Manual **§2** two notes (which tabs the app writes, which are dead, and the new cleanup);
+  playbook **two symptom→cause rows**. Both `.md` copies hand-edited; tag balance checked (the
+  `<code>` delta in `manual.html` is unchanged at 1, the documented false positive).
 
 ## A vendor in two categories already worked — what did NOT was the appraiser who buys (2026-09-09)
 *"we want to be able to put vendors into two or more categories. some vendors do jewelry
