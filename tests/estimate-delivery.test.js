@@ -216,8 +216,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
-            'estimateIsFeeOnly', '_emHtml', '_emMoney'],
-      vars: ['EMAIL_BRAND'],
+            'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
+      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(561) 370-4700', email: 'ashley@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -274,8 +274,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A phase list that throws must not take the email down with it.
     const ctx2 = sandbox({
-      fns: ['buildEstimateEmailHtml', 'estimateIsFeeOnly', '_emHtml', '_emMoney'],
-      vars: ['EMAIL_BRAND'],
+      fns: ['buildEstimateEmailHtml', 'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
+      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',
@@ -413,6 +413,52 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body, 'Utilities.base64Encode', 'handing the bytes back base64');
   }
 
+  // ── THE TWO PHONE NUMBERS ──────────────────────────────────────────────────
+  group('the office line is the firm\'s and a mobile is the person\'s');
+  {
+    // The office number used to be a literal in five client documents AND Anthony's `phone`
+    // in the roster, so one person's record was carrying the firm's line while Ashley and
+    // Anthony Jr had no number at all.
+    eq((src.match(/\(561\) 370-4700/g) || []).length, 1,
+       'the retired number survives ONLY in the non-mobile guard list');
+    has(decl('HAVELLIN_OFFICE_PHONE'), '(561) 652-5522', 'the current office line is one constant');
+    const contractors = decl('DEFAULT_CONTRACTORS');
+    has(contractors, "phone:'(617) 650-6588'", "Anthony's mobile is on his own record");
+    has(contractors, "phone:'(978) 857-5374'", "and Ashley's on hers");
+
+    const ctx = sandbox({ fns: ['conciergePhones', 'conciergePhonesText'],
+                          vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'] });
+    const both = ctx.conciergePhonesText({ phone: '(978) 857-5374' });
+    has(both, 'Office (561) 652-5522', 'the office line always shows');
+    has(both, 'Mobile (978) 857-5374', 'with the mobile beside it');
+    ok(both.indexOf('Office') < both.indexOf('Mobile'), 'office first — it is the one answered when the concierge is on a job');
+
+    // A concierge with no mobile yet gets one line, not an empty label.
+    eq(ctx.conciergePhones({ phone: '' }).length, 1, 'no mobile means office only');
+    eq(ctx.conciergePhones(null).length, 1, 'and an unresolvable concierge still gets the office');
+
+    // ⚠ A firm line in a person's record is never a mobile — the retired one included,
+    // whatever format it is written in. That would put a dead number on a client document.
+    ['(561) 370-4700', '561-370-4700', '5613704700', '(561) 652-5522'].forEach(function (n) {
+      eq(ctx.conciergePhones({ phone: n }).length, 1, n + ' is not offered as a mobile');
+    });
+  }
+
+  group('every client-facing signature carries both numbers');
+  {
+    // Six sites read the concierge phone: two HTML emails, two text parts, two mailto bodies.
+    eq((src.match(/_emPhoneLines\(tc\)/g) || []).length, 2, 'both HTML emails render the block');
+    eq((src.match(/conciergePhonesText\(tc\)/g) || []).length, 4, 'both text parts and both mailto bodies');
+    eq((src.match(/\+ _emHtml\(tc\.phone\) \+/g) || []).length, 0, 'no bare single-number signature survives');
+    has(fn('_emPhoneLines'), 'href="tel:', 'the email numbers are dialable');
+    has(fn('_emPhoneLines'), "replace(/[^0-9+]/g, '')", 'with punctuation stripped from the tel: target');
+
+    // The estimate and invoice "Questions about this?" line takes the same block, and no
+    // longer hides the number when the roster has none — the office is always reachable.
+    eq((src.match(/conciergePhonesText\(preparer/g) || []).length, 2, 'the estimate and the invoice both use it');
+    eq((src.match(/var prepPhone =/g) || []).length, 0, 'the single-number variable is gone');
+  }
+
   // ── 6. THE AGREEMENT EMAIL, AND THE CC THAT NEVER EXISTED ──────────────────
   group('the agreement now has a working client email, CC\'d to agreements@');
   {
@@ -463,8 +509,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['buildAgreementEmailHtml', 'buildAgreementEmailText', 'agreementEmailSubject',
-            'paymentSplit', '_emHtml', '_emMoney'],
-      vars: ['EMAIL_BRAND'],
+            'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
+      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'Anthony Graziano', phone: '(561) 370-4700', email: 'anthony@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -490,8 +536,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A job with no approved estimate must not print a $0 schedule.
     const ctx2 = sandbox({
-      fns: ['buildAgreementEmailHtml', 'paymentSplit', '_emHtml', '_emMoney'],
-      vars: ['EMAIL_BRAND'],
+      fns: ['buildAgreementEmailHtml', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
+      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',

@@ -537,6 +537,12 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 > **There is one email button, not two.** The plain-text path is still there and the app drops to it by itself — Gmail unconfigured, sign-in cancelled, draft failed — saying which. It is no longer offered as a choice beside the real one: the plain email carries no attachment, and two buttons side by side is an invitation to send the wrong one.
 
+> **Client documents carry the office line AND the concierge's mobile (new 2026-09-09).** The office is **(561) 652-5522** and it is one constant, `HAVELLIN_OFFICE_PHONE`, read by every footer and every signature — it used to be typed out in five separate documents. The mobile comes from the concierge's own row in **Contractors** (§12a): Anthony (617) 650-6588, Ashley (978) 857-5374. Anthony Jr has none recorded and his documents correctly show the office alone rather than an empty label.
+>
+> **The office number used to sit in Anthony's contractor record as his `phone`**, so the firm's line was being presented as one person's number while the other two had none at all. **A contractor's `phone` is now that person's mobile**, and the firm's line is never in a person's row. `NON_MOBILE_NUMBERS` holds the current office line and the retired *(561) 370-4700*, so a record copied from an old one cannot put a dead number on a client document labelled as a mobile — matched on digits, so any formatting of it is caught.
+>
+> **To give a new concierge a mobile**, put it in the phone field on their Contractors row. It reaches the estimate, the invoice, both emails and the plain-text fallback with no other change.
+
 ### Naming, and the two files in the Estimate folder
 
 > **The client-facing name says what the document is (new 2026-09-08).** The printed PDF and the email attachment are now *Havellin Service Estimate - 1234 Ocean Blvd - Sep 8 2026.pdf*. It used to be the surname and the job id — *Ellsworth-HVL-0007.pdf* — which reads as a database key on a document going to a client. `estimateDocNames(job)` is the single source, so the printed PDF, the email attachment and the Drive copy cannot drift apart. *The Drive names deliberately carry no date*: the Apps Script overwrites by filename, so a dated name would leave a new file behind on every re-file instead of replacing the current one.

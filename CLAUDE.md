@@ -309,6 +309,36 @@ falls back to the old `mailto:` and says so.
   (naming, the two Drive files, the email) and **§8** (both gates + the agreement email);
   playbook **Step 3/4/6** and **ten** new symptom→cause rows. Both `.md` copies hand-edited and parity-checked claim by claim.
 
+## Office line vs personal mobile — both on every client document (BUILT 2026-09-09)
+*"our office number is (561) 652-5522 and we should include both office and mobile … these
+should be included depending on who is sending the email."*
+
+- **⚠ THE OFFICE NUMBER WAS SITTING IN ANTHONY'S CONTRACTOR RECORD AS HIS `phone`**, and
+  written out as a literal in five client documents. So the firm's line was presented as one
+  person's number, **Ashley and Anthony Jr had no number at all**, and changing it meant five
+  edits. The old number `(561) 370-4700` was also wrong.
+- **THE SPLIT, and keep it: the office line belongs to the FIRM, `phone` on a contractor row
+  is that PERSON'S MOBILE.** `HAVELLIN_OFFICE_PHONE` is the one constant every footer and
+  signature reads. Anthony (617) 650-6588 and Ashley (978) 857-5374 are on their own rows;
+  Anthony Jr has none and correctly renders office-only rather than an empty label.
+- **`conciergePhones(c)` is the single renderer** — office first (it is the line answered when
+  the concierge is inside somebody's house with their hands full), mobile second when present.
+  `conciergePhonesText` for the plain-text parts and the estimate's *Questions about this
+  estimate?* line, `_emPhoneLines` for the HTML emails with `tel:` links.
+- **⚠ `NON_MOBILE_NUMBERS` holds the current office line AND the retired one.** A contractor
+  row copied from Anthony's old record would otherwise print `(561) 370-4700` on a client
+  document **labelled as a mobile** — a dead number, presented as the direct line to the person
+  running their estate. Matched on **digits**, so `561-370-4700` and `5613704700` are caught
+  too. **Keep a retired firm number on that list rather than deleting it**; that is the whole
+  point of it.
+- Six signature sites read it (two HTML emails, two text parts, two mailto bodies) plus the
+  estimate and invoice contact lines; `prepPhone` is deleted. A test asserts **no bare
+  single-number signature survives** and that the retired literal appears **exactly once** in
+  the file — inside the guard list.
+- **1086 committed checks.** Manual §7 note; playbook two symptom→cause rows (*your mobile is
+  not on the estimate* → add it on your Contractors row; *a number that rings nowhere* →
+  a document generated before today, regenerate it). Both `.md` copies hand-edited.
+
 ## The signing packet — the agreement with its Exhibit A actually attached (BUILT 2026-09-08)
 *"so there are basically two versions of the agreement? then the specifics are all in the
 estimate, which is attached?"* Two forms, yes; attached, no — until now.

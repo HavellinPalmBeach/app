@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 10:39am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 10:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7479,7 +7479,6 @@ function renderClientEstimate() {
   var allContractors = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
   var preparer = allContractors.find(function(c){ return c.name === (e.preparedBy || job.tc); });
   var prepName = preparer ? preparer.name : (e.preparedBy || job.tc || '—');
-  var prepPhone = preparer ? (preparer.phone || '—') : '—';
   var prepEmail = preparer ? (preparer.email || '—') : '—';
 
   // Property address: street + city, FL
@@ -7558,7 +7557,7 @@ function renderClientEstimate() {
 
     '<div class="ce-hdr-row ce-hdr-row-3">' +
     '<div style="font-size:12px;color:var(--gray);">Questions about this estimate? Contact <strong style="color:var(--gray-dk);">' + prepName + '</strong>' +
-    (prepPhone !== '—' ? ' &nbsp;·&nbsp; ' + prepPhone : '') +
+    ' &nbsp;·&nbsp; ' + conciergePhonesText(preparer, ' &nbsp;·&nbsp; ') +
     (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + prepEmail + '" style="color:var(--bronze);text-decoration:none;">' + prepEmail + '</a>' : '') +
     '</div>' +
     '</div>' +
@@ -7884,7 +7883,7 @@ function renderClientEstimate() {
     (preparer && preparer.bio ? '' : '') +
     '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">' +
     'Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>' +
-    '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; (561) 370-4700<br>' +
+    '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; ' + HAVELLIN_OFFICE_PHONE + '<br>' +
     'Insured &amp; Bonded' +
     '</div>';
 
@@ -8158,6 +8157,19 @@ function submitForApproval() {
 //   estimates  — estimate submissions & discount re-approvals
 //   agreements — agreement approvals / signature workflow
 //   billing    — invoices, deposits, payment links, anything money-related
+// The firm's main line. It was written out as a literal in five client documents and, worse,
+// sat in Anthony's CONTRACTOR RECORD as his `phone` — so the office number was being
+// presented as one person's number, and Ashley and Anthony Jr had no number at all.
+//
+// THE SPLIT: the office line belongs to the FIRM and is a constant; `phone` on a contractor
+// record is that PERSON'S MOBILE. A client document shows both — the office reaches whoever
+// is at a desk, the mobile reaches the concierge actually running their job.
+var HAVELLIN_OFFICE_PHONE = '(561) 652-5522';
+// Numbers that are the FIRM's, never a person's. The second is the line retired on
+// 2026-09-09; it is kept here rather than deleted precisely so a stale roster record cannot
+// present it as somebody's mobile. Add any future firm line here when it changes.
+var NON_MOBILE_NUMBERS = [HAVELLIN_OFFICE_PHONE, '(561) 370-4700'];
+
 var DEPT_EMAILS = {
   estimates:  'estimates@havellinpalmbeach.com',
   agreements: 'agreements@havellinpalmbeach.com',
@@ -11160,7 +11172,7 @@ function bestClientGreetingName(job) {
 // Falls back to the firm's managing partner if the job has no TC assigned or
 // the assigned name has no matching contractor record.
 function assignedTCContact(job) {
-  var fallback = { name:'Anthony Graziano', phone:'(561) 370-4700', email:'anthony@havellinpalmbeach.com' };
+  var fallback = { name:'Anthony Graziano Sr', phone:'(617) 650-6588', email:'anthony@havellinpalmbeach.com' };
   if (!job || !job.tc) return fallback;
   var all = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : [])
     .concat(typeof contractors !== 'undefined' ? contractors : []);
@@ -11173,6 +11185,41 @@ function assignedTCContact(job) {
   };
 }
 function firstName(name) { return name ? name.split(' ')[0] : 'there'; }
+
+// The concierge's contact block as a client should see it: the office line ALWAYS, their
+// mobile when the roster has one. Anthony (617) 650-6588 and Ashley (978) 857-5374 each
+// carry their own; Anthony Jr has none yet and correctly shows office only, so a missing
+// mobile degrades to one line rather than printing an empty label.
+//
+// The office is deliberately first — it is the number answered when the concierge on the job
+// is inside somebody's house with their hands full.
+function conciergePhones(c) {
+  var out = [{ label: 'Office', num: HAVELLIN_OFFICE_PHONE }];
+  var m = String((c && c.phone) || '').trim();
+  // ⚠ A FIRM LINE IN A PERSON'S RECORD IS NEVER A MOBILE. The current office number would
+  // otherwise print twice, and the RETIRED one — which sat in Anthony's record until
+  // 2026-09-09 and may have been copied into a contractor added from it — would go onto a
+  // client document as a mobile that rings nowhere. Compared on digits, so a record written
+  // as 561-370-4700 or 5613704700 is caught the same as the formatted one.
+  var digits = m.replace(/\D/g, '');
+  var notMobile = NON_MOBILE_NUMBERS.some(function(n){ return n.replace(/\D/g, '') === digits; });
+  if (m && !notMobile) out.push({ label: 'Mobile', num: m });
+  return out;
+}
+// Plain text, for a mailto body, the text/plain part of an HTML email, and the estimate's
+// "Questions about this estimate?" line.
+// The same two numbers as email-safe HTML, each a tel: link — the client is reading this on
+// a phone as often as not. Kept beside conciergePhones so the two renderings cannot drift.
+function _emPhoneLines(c) {
+  return conciergePhones(c).map(function(p){
+    return p.label + ' <a href="tel:' + _emHtml(p.num.replace(/[^0-9+]/g, '')) + '" style="color:inherit;text-decoration:none;">'
+      + _emHtml(p.num) + '</a>';
+  }).join('<br>') + '<br>';
+}
+
+function conciergePhonesText(c, sep) {
+  return conciergePhones(c).map(function(p){ return p.label + ' ' + p.num; }).join(sep || '  \u00b7  ');
+}
 
 // ─── THE AGREEMENT EMAIL ──────────────────────────────────────────────────────
 // ⚠ THE AGREEMENT TAB HAD AN "EMAIL TO CLIENT" BUTTON THAT HAD NEVER WORKED.
@@ -11236,7 +11283,7 @@ function buildAgreementEmailHtml(job) {
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">If any part of it raises a question, call me &mdash; I would far rather talk it through than have you wonder.</p>' +
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
     '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
-      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emHtml(tc.phone) + '<br>' +
+      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emPhoneLines(tc) +
       '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a></span></p>' +
   '</td></tr>' +
 
@@ -11271,7 +11318,7 @@ function buildAgreementEmailText(job) {
     L.push('');
   }
   L.push('If any part of it raises a question, call me.', '',
-         'Warm regards,', tc.name, 'Havellin Palm Beach', tc.phone, tc.email);
+         'Warm regards,', tc.name, 'Havellin Palm Beach', conciergePhonesText(tc), tc.email);
   return L.join('\n');
 }
 
@@ -11682,7 +11729,7 @@ function buildEstimateEmailHtml(e, job) {
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Please take your time with it, and never hesitate to reach out — I am always glad to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send the service agreement over for signature.</p>' +
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
     '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
-      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emHtml(tc.phone) + '<br>' +
+      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emPhoneLines(tc) +
       '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a></span></p>' +
   '</td></tr>' +
 
@@ -11714,7 +11761,7 @@ function buildEstimateEmailText(e, job) {
   if (e.prepEnabled && (e.prepCost || 0) > 0) L.push('Home Prep Vendors (at cost): ' + _emMoney(e.prepCost));
   L.push('Total Estimated Project Cost: ' + _emMoney(e.grandTotal || e.havellinTotal || 0));
   L.push('', 'Please take your time with it, and reach out any time.', '',
-         'Warm regards,', tc.name, 'Havellin Palm Beach', tc.phone, tc.email);
+         'Warm regards,', tc.name, 'Havellin Palm Beach', conciergePhonesText(tc), tc.email);
   return L.join('\n');
 }
 
@@ -11843,7 +11890,7 @@ function buildEstimateMailto() {
     'Warm regards,',
     tc.name,
     'Havellin Palm Beach',
-    tc.phone,
+    conciergePhonesText(tc),
     tc.email
   ]));
   // CC the central department inbox so every outbound client email is captured.
@@ -11873,7 +11920,7 @@ function buildInvoiceMailto(job, balance, stage) {
     'Warm regards,',
     tc.name,
     'Havellin Palm Beach',
-    tc.phone,
+    conciergePhonesText(tc),
     tc.email
   ]);
   var cc = encodeURIComponent(DEPT_EMAILS.billing);
@@ -16679,7 +16726,6 @@ function renderInvoice() {
   var _allInvC = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
   var preparer = _allInvC.find(function(c){ return c.name === ((est && est.preparedBy) || job.tc); });
   var prepName = preparer ? preparer.name : ((est && est.preparedBy) || job.tc || '—');
-  var prepPhone = preparer ? (preparer.phone || '—') : '—';
   var prepEmail = preparer ? (preparer.email || '—') : '—';
   var pkgCost = est ? (est.pkgCost||0) : 0;
   var pkgLabel = est ? (est.pkgLabel||'None') : 'None';
@@ -16986,7 +17032,7 @@ function renderInvoice() {
   // Service Estimate) so every Havellin document leads with the same branding.
   var contactLine =
     '<div style="font-size:12px;color:var(--gray);text-align:center;">Questions about this invoice? Contact <strong style="color:var(--gray-dk);">' + prepName + '</strong>' +
-    (prepPhone !== '—' ? ' &nbsp;·&nbsp; ' + prepPhone : '') +
+    ' &nbsp;·&nbsp; ' + conciergePhonesText(preparer, ' &nbsp;·&nbsp; ') +
     (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + prepEmail + '" style="color:var(--bronze);text-decoration:none;">' + prepEmail + '</a>' : '') +
     '</div>';
   var bioBlock = (preparer && preparer.bio ?
@@ -17025,7 +17071,7 @@ function renderInvoice() {
 
     bodyHtml +
 
-    '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; (561) 370-4700<br>Insured &amp; Bonded</div>';
+    '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; ' + HAVELLIN_OFFICE_PHONE + '<br>Insured &amp; Bonded</div>';
 
   content.innerHTML = html;
 
@@ -21743,7 +21789,7 @@ function renderProbateAgreement() {
   content += dRow('Company', bb('Havellin Palm Beach, LLC'));
   content += dRow('Primary Contact','Anthony Graziano Sr / Ashley Jerome');
   content += dRow('Email','info@havellinpalmbeach.com');
-  content += dRow('Phone','(561) 370-4700');
+  content += dRow('Phone', HAVELLIN_OFFICE_PHONE);
   content += dRow('Address','515 N Flagler Drive, Suite 350 &middot; West Palm Beach, FL 33401');
   content += dRow('License / Registration','FL LLC L26000216712');
   content += '</table>';
@@ -22017,7 +22063,7 @@ function renderProbateAgreement() {
   content += '</div></div>';
   // Footer
   content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
-  content += 'Havellin Palm Beach, LLC &nbsp;&middot;&nbsp; FL LLC L26000216712 &nbsp;&middot;&nbsp; (561) 370-4700 &nbsp;&middot;&nbsp; agreements@havellinpalmbeach.com &nbsp;&middot;&nbsp; havellinpalmbeach.com<br>';
+  content += 'Havellin Palm Beach, LLC &nbsp;&middot;&nbsp; FL LLC L26000216712 &nbsp;&middot;&nbsp; ' + HAVELLIN_OFFICE_PHONE + ' &nbsp;&middot;&nbsp; agreements@havellinpalmbeach.com &nbsp;&middot;&nbsp; havellinpalmbeach.com<br>';
   content += 'Insured &amp; Bonded &nbsp;&middot;&nbsp; NASMM Member &nbsp;&middot;&nbsp; Confidential &nbsp;&middot;&nbsp; '+monthYear;
   content += '</div>';
   document.getElementById('agr-page-content').innerHTML = content;
@@ -22317,7 +22363,7 @@ function renderAgreement() {
   content += p('The approved Service Estimate, reference <strong>'+hvlId+'</strong>, is attached to this Agreement as Exhibit A. Its date, line-item breakdown, payment schedule, and total fees are incorporated into this Agreement by reference.');
 
   content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
-  content += 'Havellin Palm Beach, LLC  &middot;  FL LLC L26000216712  &middot;  (561) 370-4700  &middot;  agreements@havellinpalmbeach.com  &middot;  havellinpalmbeach.com<br>';
+  content += 'Havellin Palm Beach, LLC  &middot;  FL LLC L26000216712  &middot;  ' + HAVELLIN_OFFICE_PHONE + '  &middot;  agreements@havellinpalmbeach.com  &middot;  havellinpalmbeach.com<br>';
   content += 'Insured &amp; Bonded  &middot;  NASMM Member  &middot;  Confidential  &middot;  '+monthYear;
   content += '</div>';
 
@@ -22788,8 +22834,8 @@ var contractors = [];
 
 // Built-in defaults — always available
 var DEFAULT_CONTRACTORS = [
-  {id:'default-1', name:'Anthony Graziano Sr', role:'TC', phone:'(561) 370-4700', email:'anthony@havellinpalmbeach.com', rate:100, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
-  {id:'default-2', name:'Ashley Jerome', role:'TC', phone:'', email:'ashley@havellinpalmbeach.com', rate:100, status:'active', notes:'Partner, Client Relations', bio:'Ashley Jerome has spent 25 years as a trusted presence in the Palm Beach community — as a Pilates instructor at Squeeze in Royal Poinciana Plaza and as a parent at Palm Beach Day Academy. A licensed Douglas Elliman agent, Ashley brings warmth, discretion, and an intimate knowledge of Palm Beach families to every client relationship she manages.'},
+  {id:'default-1', name:'Anthony Graziano Sr', role:'TC', phone:'(617) 650-6588', email:'anthony@havellinpalmbeach.com', rate:100, status:'active', notes:'Managing Partner', bio:'Anthony Graziano brings 25 years of entrepreneurial and financial expertise alongside decades of deep personal roots in Palm Beach County dating to the 1970s. A licensed Douglas Elliman agent and founder of Havellin Palm Beach, Anthony oversees every engagement with the discretion and precision that high-value estate transitions demand.'},
+  {id:'default-2', name:'Ashley Jerome', role:'TC', phone:'(978) 857-5374', email:'ashley@havellinpalmbeach.com', rate:100, status:'active', notes:'Partner, Client Relations', bio:'Ashley Jerome has spent 25 years as a trusted presence in the Palm Beach community — as a Pilates instructor at Squeeze in Royal Poinciana Plaza and as a parent at Palm Beach Day Academy. A licensed Douglas Elliman agent, Ashley brings warmth, discretion, and an intimate knowledge of Palm Beach families to every client relationship she manages.'},
   {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:60, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
 ];
 

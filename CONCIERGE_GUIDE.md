@@ -544,6 +544,8 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| Your mobile is not on the estimate or the email you just sent | It comes from the phone field on your row in the **Contractors** tab. Add it there and it appears on every client document and email from then on. Until you do, the client gets the office line only — which works, it is just less direct. |
+| A client document shows a phone number that rings nowhere | The old office line was *(561) 370-4700* and it is retired. The app refuses to print it as anybody's mobile, so if you are seeing it, you are looking at a document generated before 2026-09-09 — regenerate it. The office is now **(561) 652-5522**. |
 | The Gmail draft opened in the wrong Google account | Fixed 2026-09-09 — the link now names your mailbox. If it still happens, switch account in Gmail and the draft is there. It was created in whichever account you picked in the Google window, and that is the one it sends from. |
 | There used to be a *Plain email* button and now there isn't | Deliberate. It carried no attachment, and having it beside the real button invited sending the wrong one. The app still falls back to a plain email on its own if Gmail cannot be used, and tells you that is what it did. |
 | agreements@ never got a copy of an agreement you sent | Before 2026-09-08 there was no working agreement email at all — the button was in the app and did nothing. Nothing was lost on your side; the copy simply never went. From now on both the Gmail draft and the plain email CC it automatically. |
