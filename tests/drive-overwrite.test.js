@@ -216,6 +216,64 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'the apostrophe is escaped, so the lookup still matches and does not duplicate');
   }
 
+  group('the deployment says which vintage it is, and cannot lie about it');
+  {
+    // ⚠ THIS IS THE GUARD FOR THE MOST EXPENSIVE FAILURE IN THIS PROJECT'S HISTORY.
+    // Three features shipped against a deployment that did not have them — saveMedia
+    // (the inventory manifest silently never synced), htmlToPdf (no PDF on any client
+    // email, reported three separate times) and the Shared-Drive fix to uploadHtmlToDrive
+    // (duplicate estimates piling up). The cause, found only from a screenshot of the
+    // browser address bar: the .gs was being copied from a DEAD BRANCH SIX WEEKS STALE.
+    // The deploy itself was done correctly every time. Nothing anywhere named the vintage
+    // that was answering, so a perfect redeploy of ancient code looked like a fresh one.
+
+    // The declared lists are what the app checks itself against, so a list that drifts from
+    // the dispatch beneath it is worse than no list — it would report a capability the
+    // deployment does not have. Both directions are asserted.
+    const declaredActions = JSON.parse(
+      '[' + /var BACKEND_ACTIONS = \[([\s\S]*?)\]/.exec(GS)[1].replace(/'/g, '"').replace(/,\s*$/, '') + ']');
+    const declaredTypes = JSON.parse(
+      '[' + /var BACKEND_TYPES = \[([\s\S]*?)\]/.exec(GS)[1].replace(/'/g, '"').replace(/,\s*$/, '') + ']');
+
+    const doPost = GS.slice(GS.indexOf('function doPost('));
+    const dispatch = doPost.slice(0, doPost.indexOf('\n}\n'));
+
+    const realActions = [...dispatch.matchAll(/data\.action === '([^']+)'/g)].map(m => m[1]);
+    const realTypes = [...dispatch.matchAll(/type === '([^']+)'/g)].map(m => m[1]);
+
+    eq(declaredActions.slice().sort(), [...new Set(realActions)].sort(),
+       'BACKEND_ACTIONS matches every action doPost dispatches');
+    eq(declaredTypes.slice().sort(), [...new Set(realTypes)].sort(),
+       'BACKEND_TYPES matches every type doPost dispatches');
+
+    // doGet must answer it, or the app can never tell a current deployment from an old one.
+    const doGet = GS.slice(GS.indexOf('function doGet('));
+    has(doGet.slice(0, doGet.indexOf('\n}\n')), "action === 'version'",
+        'doGet answers the version probe');
+    has(GS, 'var BACKEND_VERSION', 'and the file carries a version to report');
+
+    // Everything the app actually needs must be in the declared list, or the banner fires
+    // against a deployment that is in fact current — crying wolf, which is how a real
+    // warning gets ignored.
+    const needs = JSON.parse('[' + /var BACKEND_NEEDS = \[([^\]]*)\]/.exec(APP)[1].replace(/'/g, '"') + ']');
+    const needTypes = JSON.parse('[' + /var BACKEND_NEEDS_TYPES = \[([^\]]*)\]/.exec(APP)[1].replace(/'/g, '"') + ']');
+    needs.forEach(a => ok(declaredActions.includes(a), 'the current backend provides ' + a));
+    needTypes.forEach(t => ok(declaredTypes.includes(t), 'the current backend provides ' + t));
+
+    // Every named requirement has to be explainable to a person in terms of what BREAKS.
+    // A banner listing function names tells the reader nothing they can act on.
+    needs.concat(needTypes).forEach(a =>
+      ok(new RegExp(a + ':').test(APP), 'BACKEND_FEATURE_COST says what is lost without ' + a));
+
+    // The check is a READ. If it could write, a stale-deployment probe would become a way
+    // to make things worse on exactly the deployment that is already misbehaving.
+    const cbv = APP.slice(APP.indexOf('function checkBackendVersion('));
+    const cbvBody = cbv.slice(0, cbv.indexOf('\n}\n'));
+    lacks(cbvBody, 'method:', 'the probe never POSTs');
+    lacks(cbvBody, 'postSyncBadge', 'and never queues a write');
+    has(cbvBody, '.catch(', 'and stays silent when the backend cannot be reached');
+  }
+
   group('the estimate files itself, so the button is only the retry');
   {
     // The design half of Anthony's question. checkPin files on approval; the control is

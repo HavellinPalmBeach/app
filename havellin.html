@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 3:03pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 3:14pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4215,6 +4215,76 @@ var COST_RATES = {
 // not a machine key, so it reads correctly wherever a crew name is shown (log history,
 // invoice team table) without every one of those places needing a lookup.
 var CONTRACTOR_TC_NAME = 'Contractor — TC';
+
+// ─── IS THE APPS SCRIPT THE ONE THIS BUILD NEEDS? ─────────────────────────────
+// ⚠ THE APP HAS SHIPPED THREE FEATURES AGAINST A DEPLOYMENT THAT DID NOT HAVE THEM, and
+// every time it read as a bug in the app rather than a stale backend:
+//   saveMedia   (2026-08-24) — the inventory manifest silently never synced
+//   htmlToPdf   (2026-09-08) — no PDF on any client email, reported three times
+//   the Shared-Drive fix to uploadHtmlToDrive (2026-09-09) — duplicate estimates in Drive
+//
+// The cause, found 2026-09-09 off a screenshot of the browser address bar: the code was
+// being copied from a **dead branch six weeks stale**, not from main. The deploy itself was
+// done correctly every time. Nothing anywhere said which vintage was answering, so a
+// perfectly-executed redeploy of ancient code was indistinguishable from a fresh one.
+//
+// So the app asks. A current deployment answers `action=version` with what it supports; an
+// old one answers "Unknown action", which is itself the answer. This is a READ — it changes
+// nothing and cannot make anything worse — and it fails quiet: no Sheets URL, no network,
+// no complaint.
+var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails'];      // actions this build calls
+var BACKEND_NEEDS_TYPES = ['saveMedia'];                  // and post types
+var _backendVersion = null;
+
+function checkBackendVersion() {
+  if (!SHEETS_SYNC_URL) return;
+  fetch(SHEETS_SYNC_URL + '?action=version')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      // An old deployment has no `version` action and says so. Treat that as the stalest
+      // possible answer rather than as an error — it is exactly what we are looking for.
+      var known = (d && d.ok && d.version) ? d : null;
+      _backendVersion = known ? known.version : 'before 2026-09-09';
+      var have = known ? (known.actions || []).concat(known.types || []) : [];
+      var missing = BACKEND_NEEDS.concat(BACKEND_NEEDS_TYPES).filter(function(a){
+        return have.indexOf(a) < 0;
+      });
+      if (missing.length) _showBackendStaleBanner(_backendVersion, missing);
+    })
+    .catch(function(){ /* offline — say nothing rather than accuse the deployment */ });
+}
+
+// Names the vintage, what is broken BY CONSEQUENCE rather than by function name, and the two
+// mistakes that make a redeploy look done when it is not.
+var BACKEND_FEATURE_COST = {
+  htmlToPdf:     'client emails go out with no PDF attached',
+  getThumbnails: 'no photographs on the Inventory tab',
+  saveMedia:     'the inventory manifest never leaves this device',
+  uploadHtml:    'estimates filed to Drive pile up instead of replacing'
+};
+
+function _showBackendStaleBanner(version, missing) {
+  var id = 'backend-stale-banner';
+  if (document.getElementById(id)) return;
+  var host = document.querySelector('.wrap') || document.body;
+  if (!host) return;
+  var d = document.createElement('div');
+  d.id = id;
+  d.style.cssText = 'margin:10px 0;padding:12px 14px;border:1px solid #c98a2e;border-left-width:4px;'
+    + 'border-radius:4px;background:#fdf6e9;font-size:12px;line-height:1.6;';
+  var costs = missing.map(function(m){ return BACKEND_FEATURE_COST[m] || m; });
+  d.innerHTML = '<div style="font-weight:700;margin-bottom:4px;">The Apps Script deployment is out of date ('
+      + _emHtml(version) + ')</div>'
+    + '<div>Until it is updated: <strong>' + costs.map(_emHtml).join('</strong>; <strong>') + '</strong>.</div>'
+    + '<div style="margin-top:6px;">Copy <code>apps-script/main-sync.gs</code> <strong>from the '
+    + '<code>main</code> branch</strong> '
+    + '(<a href="https://github.com/HavellinPalmBeach/app/blob/main/apps-script/main-sync.gs" target="_blank" rel="noopener">open it</a>) '
+    + 'into the Apps Script editor, then <strong>Deploy &rarr; Manage deployments &rarr; edit &rarr; New version</strong>.</div>'
+    + '<div style="margin-top:6px;color:var(--gray);">Two things that make this look done when it is not: '
+    + 'pressing <em>Save</em> does not change what the live URL serves, and <em>Deploy &rarr; New deployment</em> '
+    + 'creates a <strong>different URL</strong> that Settings is not pointed at.</div>';
+  host.insertBefore(d, host.firstChild);
+}
 
 // ─── PERSON NAMES ─────────────────────────────────────────────────────────────
 // A person's NAME is this app's identity key for a person. It is what `job.tc`,
@@ -23991,6 +24061,9 @@ loadLogData();
 loadJobPlanData();
 loadContractors();
 loadChangeOrders();
+// Runs after loadJobs has resolved SHEETS_SYNC_URL from storage. A read-only check; it
+// only ever draws a banner, and says nothing at all when it cannot reach the backend.
+setTimeout(checkBackendVersion, 1200);
 // Clear stale single-slot estimate if no jobs exist
 if (jobs.length === 0) {
   currentEstimate = null;

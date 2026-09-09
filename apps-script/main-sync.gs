@@ -12,6 +12,39 @@
  * this same project — it's referenced from doPost below.
  */
 
+// ══ DEPLOYMENT IDENTITY ═════════════════════════════════════════════════════════
+// ⚠ THE APP HAS SHIPPED THREE FEATURES AGAINST A DEPLOYMENT THAT DID NOT HAVE THEM, AND
+// EACH TIME IT READ AS A BUG IN THE APP: saveMedia (2026-08-24, the inventory manifest
+// never synced), htmlToPdf (2026-09-08, no PDF on any client email — reported three times)
+// and the Shared-Drive fix to uploadHtmlToDrive (2026-09-09, duplicate estimates in Drive).
+//
+// THE CAUSE, found only from a screenshot of the browser address bar: the file was being
+// copied from a DEAD BRANCH SIX WEEKS STALE, not from main. Every redeploy was performed
+// correctly — on ancient code. Nothing named the vintage that was answering, so a perfect
+// redeploy of July's file was indistinguishable from a fresh one.
+//
+// Two further ways a redeploy looks done when it is not, both worth knowing: pressing Save
+// changes NOTHING about what the live /exec URL serves (that needs Deploy → Manage
+// deployments → edit → New version), and "Deploy → New deployment" mints a DIFFERENT URL
+// the app is not calling.
+//
+// So the deployment says who it is, and the app checks on load. BACKEND_ACTIONS/TYPES are
+// what this file can actually do; a test asserts they match the dispatch in doPost exactly,
+// in BOTH directions, so the lists cannot drift from the code beneath them — a list that
+// over-claims would be worse than no list at all.
+//
+// ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
+var BACKEND_VERSION = '2026-09-09';
+var BACKEND_ACTIONS = [
+  'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
+  'getThumbnails', 'shareFolder', 'unshareFolder'
+];
+var BACKEND_TYPES = [
+  'job', 'estimate', 'hours', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
+  'saveAllChangeOrders', 'saveAllLogs', 'saveAllContractors', 'deleteContractor',
+  'deleteJob', 'saveInventory', 'saveMedia', 'log'
+];
+
 var SHEET_ID = '16Z3yiRYbhYLsia0aG4v5znWo_O2eDRnB0dcldECjAJM';
 var ROOT_FOLDER_ID = '1X2bmAAjbruL5lLip-UgwwmPNo7y_Ubrb';
 
@@ -34,6 +67,13 @@ function _okWithDrops(r) {
 function doGet(e) {
   try {
     var action = e.parameter.action;
+
+    // Answered by every deployment that carries it; an OLD one answers 'Unknown action',
+    // which is itself the signal the app is looking for.
+    if (action === 'version') {
+      return jsonOut({ ok: true, success: true, version: BACKEND_VERSION,
+                       actions: BACKEND_ACTIONS, types: BACKEND_TYPES });
+    }
 
     if (action === 'loadJobs') {
       // `deletedJobs` is every id the sheet has seen and no longer holds (see JOB LEDGER), so a

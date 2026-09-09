@@ -145,6 +145,51 @@ itself … when she added a new client, it pushed the new client plus three old 
 - **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
   functions against a fake spreadsheet, and the app's receiving side out of the real source).
 
+## ⚠⚠ THE APPS SCRIPT WAS BEING COPIED FROM A DEAD BRANCH SIX WEEKS STALE (FOUND 2026-09-09)
+**The single most expensive defect in this project's history, and it was not in the code.**
+Anthony pasted the deployed `main-sync.gs` and it was missing `htmlToPdf`, `getThumbnails`,
+`saveMedia`, the whole `JobLedger`, and carried the pre-Shared-Drive `uploadHtmlToDrive`.
+The next screenshot showed the browser address bar:
+`github.com/HavellinPalmBeach/app/blob/claude/concierge-hours-pricing-3dv2gq/apps-script/main-sync.gs`
+— a branch whose last commit is **2026-07-29**.
+
+- **HE WAS DEPLOYING CORRECTLY THE WHOLE TIME.** The procedure was never wrong; the *source*
+  was. Every "⚠️ REQUIRES AN APPS SCRIPT REDEPLOY" note in this file since 2026-08-24 was
+  faithfully applied to July's code. **Ask what someone is copying FROM before explaining how
+  to deploy** — and when a redeploy "does not take" more than once, that is the question.
+- **Three features shipped against a backend that never had them, each read as an app bug:**
+  `saveMedia` (2026-08-24 — the inventory manifest silently never synced, and the
+  "forever-retrying" chip of that same day was this, correctly diagnosed and then mis-attributed
+  to a bad paste), `htmlToPdf` (2026-09-08 — **no PDF on any client email, reported three
+  separate times**), and the Shared-Drive `uploadHtmlToDrive` fix (2026-09-09 — duplicate
+  estimates in Drive). Days of work chasing MIME, base64 and URL encodings, all of it
+  downstream of a URL nobody looked at.
+- **THE FIX IS THAT THE DEPLOYMENT NOW SAYS WHO IT IS.** `BACKEND_VERSION` +
+  `BACKEND_ACTIONS` / `BACKEND_TYPES` in `main-sync.gs`, served by `doGet?action=version`;
+  an old deployment has no such action and answers *Unknown action*, **which is itself the
+  answer**. `checkBackendVersion()` runs 1.2s after load and draws a banner naming the
+  vintage, what is broken **by consequence** (*"client emails go out with no PDF attached"*,
+  not *"htmlToPdf missing"*), a link to the file **on `main`**, and the two other ways a
+  redeploy looks done when it is not: Save does not change what `/exec` serves, and
+  *New deployment* mints a **different URL** Settings is not pointed at.
+  - **It is a READ and it fails quiet.** No POST, no queued write, silent when the backend is
+    unreachable — a probe must not make things worse on the deployment already misbehaving,
+    and must not accuse anyone when the network is simply down. Tested on all three.
+  - **A test asserts `BACKEND_ACTIONS`/`TYPES` match the `doPost` dispatch in BOTH
+    directions**, so the declared list cannot drift from what the file can really do. A list
+    that over-claims would be worse than no list — the banner would stay silent on a
+    deployment that is genuinely stale. Reverting one dispatch line fails it.
+  - `BACKEND_NEEDS` names what the APP calls; a test asserts every entry exists in the
+    backend's declared list, so the banner cannot cry wolf against a current deployment.
+- **⚠ BUMP `BACKEND_VERSION` IN THE SAME COMMIT AS ANY `main-sync.gs` CHANGE.**
+- **Process note, and it is the real lesson:** when the same symptom survives three rounds of
+  fixes, stop fixing and ask what is actually running. I verified the MIME with a real parser
+  (correct) and the URL encoding (twice, both wrong) before anyone asked the cheap question —
+  *is the code I am debugging the code that is executing?*
+- **1242 committed checks.** Verified in headless Chromium against three stubbed backends:
+  the old one raises the banner with the right consequences, a current one raises nothing,
+  and an unreachable one stays silent.
+
 ## "Still no PDF" three times — the app never said why (FIXED 2026-09-09)
 *"i saw the drafts, but they still don't have PDFs attached on any of them."* Third report of
 the same sentence, and the reason it took three is that **the app's answer contained no cause**.
