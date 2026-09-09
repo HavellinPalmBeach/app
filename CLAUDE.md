@@ -145,6 +145,44 @@ itself … when she added a new client, it pushed the new client plus three old 
 - **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
   functions against a fake spreadsheet, and the app's receiving side out of the real source).
 
+## "Still no PDF" three times — the app never said why (FIXED 2026-09-09)
+*"i saw the drafts, but they still don't have PDFs attached on any of them."* Third report of
+the same sentence, and the reason it took three is that **the app's answer contained no cause**.
+
+- **⚠ THE MIME WAS SOUND — MEASURED, NOT ASSUMED, AND THAT IS WHAT NARROWED IT.** After the
+  bare-LF fix the obvious suspect was still the message assembly. So the real
+  `buildMimeMessage` was driven with a realistic 400KB PDF and the output parsed with
+  **Python's `email` module** — a spec-compliant parser, deliberately not my own reading of
+  the bytes. Result: `multipart/mixed` → `multipart/alternative` (plain + html) → the
+  `application/pdf` part, **zero defects at every level**, filename intact, payload
+  round-tripping byte for byte. That eliminates the entire class in one measurement and
+  leaves exactly one possibility: **`pdfBase64` arrives empty**, so the `if (o.pdfBase64)`
+  block never runs and there is no attachment part to drop. **Reach for a real parser before
+  re-reading your own generator; it is minutes, and it settles the question.**
+- **So the PDF is never BUILT — and the app was throwing away the one string that says why.**
+  `estimatePdfBase64` collapsed every failure to *"The PDF conversion failed."* A sentence
+  with no cause in it means each report comes back carrying nothing new, which is precisely
+  how the same symptom survived three rounds.
+- **The likely cause, and the app can now name it: a deployment that predates `htmlToPdf`.**
+  `doPost` falls past every `action` test to `data.type`, which is `undefined`, and answers
+  **`Unknown type: undefined`** — which `_backendErrorKind` **already** classified as `stale`.
+  The diagnosis existed and was never wired to this path. **A redeploy that was Saved but not
+  Deployed → New version leaves the live URL on the old code**, which looks done and is not.
+- **`_pdfFailAdvice(kind)` prescribes only what the error entitles it to** — the same rule
+  `_backendErrorKind` was built for. `stale` gets the exact redeploy steps *including the
+  saving-is-not-deploying trap*; `crash` gets the workaround and no instruction; anything
+  unclassified gets *Print / Save PDF and attach it by hand*. **Provenance is still
+  required** — `clientError` is passed through, so a fetch that never landed cannot read as
+  a stale deployment and send someone to redeploy a script that was never asked anything.
+- **The server's own words are printed under the buttons**, in the persistent strip rather
+  than a feedback line that scrolls away — the same lesson the sync chip already carries.
+- **The agreement email got the same treatment and had no strip at all**, so a signing packet
+  that failed to build was reported in a toast and nowhere else. `_showDraftLink` now takes
+  the host element id and serves both tabs.
+- **1229 committed checks.** Verified in headless Chromium: the stale branch renders the
+  redeploy steps and the server's words, the crash branch prescribes nothing, and the success
+  branch says the PDF is attached.
+
 ## Endless Drive duplicates, and a draft link Gmail could not resolve (FIXED 2026-09-09)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` `uploadHtmlToDrive` changed, and until
 it is redeployed the duplicates keep accumulating.

@@ -333,6 +333,53 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(noPdf.trim().endsWith('--'), 'and still closes its boundary');
   }
 
+  group('a missing PDF says WHY, in the words the server used');
+  {
+    // Three rounds of "still no PDF" happened because the app answered "The PDF conversion
+    // failed" — a sentence with no cause in it, so every report came back carrying nothing
+    // new. The message assembly was verified sound with a spec-compliant MIME parser
+    // (correct nesting, zero defects, attachment bytes round-tripping), which leaves only
+    // one possibility: the PDF never arrived. The reason it never arrived is a string the
+    // server sent, and the app was throwing it away.
+    const src = source();
+
+    const epb = src.slice(src.indexOf('function estimatePdfBase64('));
+    const body = epb.slice(0, epb.indexOf('\n}\n'));
+    has(body, '_backendErrorKind(err', 'the failure is classified with the app\'s one classifier');
+    lacks(body, "cb(null, (d && d.error) || 'The PDF conversion failed.');",
+          'the bare no-cause callback is gone');
+
+    // The agreement email builds its packet the same way and must not drift.
+    const spb = src.slice(src.indexOf('function signingPacketPdfBase64('));
+    has(spb.slice(0, spb.indexOf('\n}\n')), '_backendErrorKind(err',
+        'the signing packet reports its failure the same way');
+
+    // ⚠ PROVENANCE. Only text the SERVER sent may diagnose the server — the same rule
+    // _backendErrorKind was built for. A fetch that never landed must not read as a stale
+    // deployment and send someone to redeploy a script that was never asked anything.
+    has(body, 'clientError', 'a client-side failure is never blamed on the deployment');
+
+    const ctx = sandbox({ fns: ['_pdfFailAdvice'] });
+    // `stale` is the ONE case where "redeploy" is proof rather than a guess: the server
+    // saying it has no dispatch line for htmlToPdf. A deployment predating it answers
+    // "Unknown type: undefined", because doPost falls past every action test to data.type.
+    has(ctx._pdfFailAdvice('stale'), 'New version', 'a stale deployment gets the exact redeploy step');
+    has(ctx._pdfFailAdvice('stale'), 'saving alone does not update the live URL',
+        'and the trap that makes a redeploy look done when it is not');
+    lacks(ctx._pdfFailAdvice('crash'), 'New version', 'a crash prescribes no redeploy');
+    lacks(ctx._pdfFailAdvice(''), 'New version', 'and neither does an unclassified failure');
+    ['', 'crash', 'stale', undefined].forEach(function (k) {
+      ok(ctx._pdfFailAdvice(k).length > 0, 'every branch says something actionable: ' + JSON.stringify(k));
+    });
+
+    // The classifier reads the real message a pre-htmlToPdf deployment sends.
+    const kind = sandbox({ fns: ['_backendErrorKind'] });
+    eq(kind._backendErrorKind('Unknown type: undefined', true), 'stale',
+       'the answer from a deployment that predates htmlToPdf reads as stale');
+    eq(kind._backendErrorKind('Unknown type: undefined', false), '',
+       'but only when the server actually said it');
+  }
+
   group('the draft link cannot dead-end, whatever accounts the browser holds');
   {
     // ⚠ THIS ASSERTION HAS BEEN WRONG TWICE AND IS NOW WRITTEN AGAINST THE REQUIREMENT.

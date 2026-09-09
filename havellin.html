@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 2:57pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 3:03pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11430,8 +11430,16 @@ function signingPacketPdfBase64(jobId, cb) {
   var html = _exportDoc('Signing Packet – ' + (job.hvlId || ''), body,
     '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}');
   _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: html }, function(ok, d) {
-    if (ok && d && d.base64) cb(d.base64);
-    else cb(null, (d && d.error) || 'The PDF conversion failed.');
+    if (ok && d && d.base64) { cb(d.base64); return; }
+    // ⚠ PASS THE SERVER'S OWN WORDS THROUGH. "The PDF conversion failed" names no cause, so
+    // the same report ("still no PDF") comes back with nothing new in it — which is what
+    // made three rounds of this necessary. The one string that identifies the problem is
+    // the one the server sent, and a deployment predating htmlToPdf sends a specific one:
+    // doPost falls past every `action` test to `data.type`, which is undefined, and answers
+    // "Unknown type: undefined". _backendErrorKind already reads that as `stale`, so the
+    // app can say "redeploy" instead of "it failed".
+    var err = (d && d.error) || 'The PDF conversion failed.';
+    cb(null, err, _backendErrorKind(err, !(d && d.clientError)));
   }, true);
 }
 
@@ -11457,8 +11465,8 @@ function emailAgreementToClient() {
   _setAgrEmailBusy(true, '↻ Building packet…');
   showFB('agr-fb', 'info', 'Building the signing packet PDF…');
 
-  signingPacketPdfBase64(currentAgrJobId, function(pdf, pdfErr) {
-    if (!pdf) showFB('agr-fb', 'warn', 'Could not build the packet PDF (' + (pdfErr || 'unknown') + '). Creating the draft without it — attach a printed copy before sending.');
+  signingPacketPdfBase64(currentAgrJobId, function(pdf, pdfErr, pdfErrKind) {
+    if (!pdf) showFB('agr-fb', 'warn', 'Could not build the packet PDF — ' + (pdfErr || 'unknown') + '. Creating the draft without it — attach a printed copy before sending.');
     else showFB('agr-fb', 'info', 'Creating the draft in your Gmail…');
     _setAgrEmailBusy(true, '↻ Creating draft…');
 
@@ -11475,7 +11483,11 @@ function emailAgreementToClient() {
     gmailCreateDraft(mime, function(ok, d) {
       _setAgrEmailBusy(false);
       if (!ok) { _agreementEmailFallback(job, 'Gmail draft failed — ' + (d.error || 'unknown') + '. Opening a plain-text email instead.'); return; }
-      window.open(gmailDraftUrl(d.messageId || d.draftId), '_blank');
+      // Same treatment as the estimate: the draft exists, so opening it is best effort and
+      // the link is printed either way. The agreement tab had no strip at all.
+      var agrUrl = gmailDraftUrl(d.messageId || d.draftId);
+      try { window.open(agrUrl, '_blank'); } catch (e) {}
+      _showDraftLink(agrUrl, pdf, pdfErr, pdfErrKind, 'agr-fb');
       showFB('agr-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the signing packet attached' : '') + '. Review it, send, then click ✉ Mark Agreement Sent here.');
       showSyncBadge('Gmail draft created ✓');
     });
@@ -11875,8 +11887,16 @@ function estimatePdfBase64(job, cb) {
   if (!SHEETS_SYNC_URL) { cb(null, 'No Apps Script URL configured — add it in ⚙ Settings.'); return; }
   var html = _exportDoc('Estimate – ' + (job.hvlId || ''), el.innerHTML, '');
   _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: html }, function(ok, d) {
-    if (ok && d && d.base64) cb(d.base64);
-    else cb(null, (d && d.error) || 'The PDF conversion failed.');
+    if (ok && d && d.base64) { cb(d.base64); return; }
+    // ⚠ PASS THE SERVER'S OWN WORDS THROUGH. "The PDF conversion failed" names no cause, so
+    // the same report ("still no PDF") comes back with nothing new in it — which is what
+    // made three rounds of this necessary. The one string that identifies the problem is
+    // the one the server sent, and a deployment predating htmlToPdf sends a specific one:
+    // doPost falls past every `action` test to `data.type`, which is undefined, and answers
+    // "Unknown type: undefined". _backendErrorKind already reads that as `stale`, so the
+    // app can say "redeploy" instead of "it failed".
+    var err = (d && d.error) || 'The PDF conversion failed.';
+    cb(null, err, _backendErrorKind(err, !(d && d.clientError)));
   }, true);
 }
 
@@ -11914,10 +11934,10 @@ function emailEstimateToClient() {
   _setEstEmailBusy(true, '↻ Building PDF…');
   showFB('ce-fb', 'info', 'Building the estimate PDF…');
 
-  estimatePdfBase64(job, function(pdf, pdfErr) {
+  estimatePdfBase64(job, function(pdf, pdfErr, pdfErrKind) {
     // A missing PDF is not a reason to abandon the email — the body carries the summary and
     // the person can attach a printed copy. Say what happened and carry on.
-    if (!pdf) showFB('ce-fb', 'warn', 'Could not build the PDF (' + (pdfErr || 'unknown') + '). Creating the draft without it — attach a printed copy before sending.');
+    if (!pdf) showFB('ce-fb', 'warn', 'Could not build the PDF — ' + (pdfErr || 'unknown') + '. Creating the draft without it — attach a printed copy before sending.');
     else showFB('ce-fb', 'info', 'Creating the draft in your Gmail…');
     _setEstEmailBusy(true, '↻ Creating draft…');
 
@@ -11939,7 +11959,7 @@ function emailEstimateToClient() {
       // draft into a dead end with nowhere to go. So the link is printed too.
       var draftUrl = gmailDraftUrl(d.messageId || d.draftId);
       try { window.open(draftUrl, '_blank'); } catch (e) {}
-      _showDraftLink(draftUrl, pdf);
+      _showDraftLink(draftUrl, pdf, pdfErr, pdfErrKind, 'ce-fb');
       showFB('ce-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the estimate PDF attached' : ' &mdash; WITHOUT the PDF, attach a printed copy') + '. Review it, add anything personal, and send — then click Mark as Sent here.');
       showSyncBadge('Gmail draft created ✓');
     });
@@ -11949,13 +11969,14 @@ function emailEstimateToClient() {
 // A created draft, reachable by hand. window.open is blocked by default on some iPads and
 // the mailbox link can resolve differently in a browser signed in to several Google
 // accounts — neither is a reason to lose a draft that was successfully created.
-function _showDraftLink(url, hasPdf) {
-  var host = document.getElementById('ce-fb');
+function _showDraftLink(url, hasPdf, pdfErr, pdfErrKind, hostId) {
+  var host = document.getElementById(hostId || 'ce-fb');
   if (!host || !url) return;
-  var box = document.getElementById('ce-draft-link');
+  var boxId = (hostId || 'ce-fb') + '-draft-link';
+  var box = document.getElementById(boxId);
   if (!box) {
     box = document.createElement('div');
-    box.id = 'ce-draft-link';
+    box.id = boxId;
     box.style.cssText = 'margin-top:8px;padding:10px 12px;font-size:12px;line-height:1.55;'
       + 'border:1px solid var(--border-md);border-radius:4px;background:var(--cream);';
     host.parentNode.insertBefore(box, host.nextSibling);
@@ -11970,9 +11991,31 @@ function _showDraftLink(url, hasPdf) {
     + '<span style="color:var(--gray);"> &nbsp;&middot;&nbsp; if Gmail opens a different account, switch to '
     + who + ' with the avatar top-right — the draft is in <strong>Drafts</strong>.</span>'
     + (hasPdf
-        ? '<div style="color:var(--gray);margin-top:4px;">The estimate PDF is attached.</div>'
-        : '<div style="color:var(--warn-tx,#8a5a00);margin-top:4px;"><strong>The PDF did not attach</strong>'
-          + ' — use Print / Save PDF and attach it before sending.</div>');
+        ? '<div style="color:var(--gray);margin-top:4px;">The PDF is attached.</div>'
+        : '<div style="color:#8a5a00;margin-top:6px;"><strong>The PDF did not attach.</strong> '
+          + _pdfFailAdvice(pdfErrKind)
+          + (pdfErr ? '<div style="margin-top:3px;font-size:11px;opacity:.85;">The server said: <code>'
+                      + _emHtml(pdfErr) + '</code></div>' : '')
+          + '</div>');
+}
+
+// What to DO about a missing PDF — keyed on what the error actually proves.
+//
+// `stale` is the server reporting it has no dispatch line for htmlToPdf, which IS proof the
+// deployment predates it: the one case where "redeploy" is a diagnosis rather than a guess.
+// Everything else gets the workaround and no instruction, on the same reasoning
+// _backendErrorKind was built for — sending someone to redeploy a script they just
+// redeployed costs more than saying "it errored, here is the error".
+function _pdfFailAdvice(kind) {
+  if (kind === 'stale') {
+    return 'The Apps Script deployment does not have the PDF converter yet. Paste the current '
+         + '<code>main-sync.gs</code> into the editor, then <strong>Deploy &rarr; Manage deployments '
+         + '&rarr; edit &rarr; New version</strong> — saving alone does not update the live URL.';
+  }
+  if (kind === 'crash') {
+    return 'The Apps Script errored while converting. Attach a printed copy for now.';
+  }
+  return 'Use <strong>Print / Save PDF</strong> and attach it by hand before sending.';
 }
 
 // The pre-existing mailto: behaviour, unchanged, reached when Gmail cannot be used. Says
