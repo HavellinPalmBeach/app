@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 7:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 8:01pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2008,7 +2008,7 @@ body.no-smf .smf-col{display:none;}
 
     <label>Google OAuth Client ID</label>
     <input type="text" id="set-gmail-client-id" placeholder="1234567890-abc123.apps.googleusercontent.com">
-    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Lets <strong>Email to Client</strong> build the estimate as a formatted HTML email with the PDF attached, as a <strong>draft in your own Gmail</strong> — so it sends from whoever is signed in on this device and lands in their Sent folder. Create a Web application OAuth client in Google Cloud, enable the Gmail API, and add this app&rsquo;s address as an authorized JavaScript origin. Leave blank and the button falls back to a plain-text email.</div>
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Lets <strong>Email to Client</strong> build the estimate as a formatted HTML email with the PDF attached, as a <strong>draft in your own Gmail</strong> — so it sends from whoever is signed in on this device and lands in their Sent folder. The firm&rsquo;s client is already filled in &mdash; leave it alone unless you are pointing this device at a different Google Workspace. Clearing the box restores the default. <em>This is not a secret; a browser client id is public by design and the authorized origin is what protects it.</em></div>
 
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
 
@@ -11358,7 +11358,16 @@ function _agreementEmailFallback(job, why) {
 // It does NOT include gmail.send, so nothing here can put mail on the wire: the person
 // reads the draft and presses send. That is the requirement, and it is also why the
 // narrower scope is the right one to ask Google for.
-var GMAIL_CLIENT_ID = '';
+// The firm's OAuth client id, baked in as the DEFAULT so it does not have to be typed on
+// a phone. **A browser OAuth client id is public by design** — it is in the page source of
+// every site that uses one, and Google's own docs say so; what protects it is the
+// Authorized JavaScript origin, not secrecy. There is no client SECRET anywhere in this
+// file and there must never be: `initTokenClient` does not take one, and a secret in a
+// View-Source-able page is not a secret. If the id is ever rotated, change it here.
+// Settings still overrides it per device, so a second Workspace or a test client needs no
+// code change.
+var GMAIL_CLIENT_ID_DEFAULT = '49539205067-fe71rejrm6v1mvku30s70pv5aq7454cs.apps.googleusercontent.com';
+var GMAIL_CLIENT_ID = GMAIL_CLIENT_ID_DEFAULT;
 var GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
 // In memory only, and deliberately never in localStorage. It is a bearer token on the
 // user's mailbox, it expires in about an hour, and this file is served from a public
@@ -21471,7 +21480,10 @@ function saveSettings() {
   SHEETS_SYNC_URL    = document.getElementById('set-sheets-url').value.trim();
   DRIVE_FOLDER_ID    = document.getElementById('set-drive-id').value.trim();
   var vUrlEl2 = document.getElementById('set-vendor-url'); if (vUrlEl2) VENDOR_SYNC_URL = vUrlEl2.value.trim();
-  var gcEl2 = document.getElementById('set-gmail-client-id'); if (gcEl2) GMAIL_CLIENT_ID = gcEl2.value.trim();
+  // Clearing the field restores the firm default rather than disabling Gmail — an empty box
+  // reads as "use the normal one", and someone who really wants it off can say so in Settings.
+  var gcEl2 = document.getElementById('set-gmail-client-id');
+  if (gcEl2) GMAIL_CLIENT_ID = gcEl2.value.trim() || GMAIL_CLIENT_ID_DEFAULT;
   var rUrlEl2 = document.getElementById('set-referral-url'); if (rUrlEl2) REFERRAL_SYNC_URL = rUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
@@ -21519,7 +21531,7 @@ function loadSettings() {
     SHEETS_SYNC_URL   = localStorage.getItem('hav_sheets_url')    || localStorage.getItem('havellin_sheets_url') || '';
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
     VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
-    GMAIL_CLIENT_ID   = localStorage.getItem('hav_gmail_client_id') || '';
+    GMAIL_CLIENT_ID   = localStorage.getItem('hav_gmail_client_id') || GMAIL_CLIENT_ID_DEFAULT;
     REFERRAL_SYNC_URL = localStorage.getItem('hav_referral_url')  || '';
     try { var _rd = localStorage.getItem('hav_referral_dir'); if (_rd) referralDirectory = JSON.parse(_rd); } catch(e) {}
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';

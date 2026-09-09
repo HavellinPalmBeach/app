@@ -484,6 +484,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(decl('LOCAL_KEEP_KEYS'), 'hav_gmail_client_id',
         'and a device clear keeps it, like the other endpoint settings — retyping it on a phone is the thing that list exists to prevent');
 
+    // The firm's client id ships as the default, so a new device needs no setup step.
+    const cidDefault = decl('GMAIL_CLIENT_ID_DEFAULT');
+    has(cidDefault, '.apps.googleusercontent.com', 'a real client id is baked in as the default');
+    has(fn('loadSettings'), "|| GMAIL_CLIENT_ID_DEFAULT", 'a device with nothing stored falls back to it, not to empty');
+    has(fn('saveSettings'), '|| GMAIL_CLIENT_ID_DEFAULT', 'and clearing the field restores it rather than disabling Gmail');
+
+    // ⚠ A CLIENT SECRET MUST NEVER APPEAR IN THE APP. The browser flow is a public client:
+    // initTokenClient takes no secret, and a secret in a page anyone can View Source on is
+    // not a secret. The prefix is assembled rather than typed, so this test file does not
+    // itself trip a secret scan of the repository — the first version of it did.
+    const secretPrefix = 'GOCSPX' + '-';
+    eq(src.split(secretPrefix).length - 1, 0, 'no Google client secret anywhere in the app');
+    eq((src.match(/client_secret/gi) || []).length, 0, 'and nothing asks for one');
+    has(fn('gmailAuth'), 'client_id: GMAIL_CLIENT_ID', 'the token client is given the id and nothing else');
+
     const ui = fn('updateApprovalUI');
     has(ui, "getElementById('btn-html-email-est')", 'the tab shows it');
     has(ui, 'htmlEmailEl0.style.display = \'none\'', 'and hides it with the rest before deciding state');

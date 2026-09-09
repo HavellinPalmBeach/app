@@ -235,8 +235,26 @@ falls back to the old `mailto:` and says so.
     **`gmail.compose`** (create a draft; it deliberately CANNOT send), `users/me/drafts`, then
     deep-link to the draft. **Never add `gmail.send`** — a person pressing send is the feature.
   - **The token is memory-only** (`_gmailToken`, never localStorage): a bearer token on a
-    mailbox, on a public origin, on a shared iPad. `GMAIL_CLIENT_ID` is a Settings value like
-    the Apps Script URLs, in `LOCAL_KEEP_KEYS` so a device clear does not force a retype.
+    mailbox, on a public origin, on a shared iPad. `GMAIL_CLIENT_ID` is also a Settings value,
+    in `LOCAL_KEEP_KEYS` so a device clear does not force a retype.
+  - **⚠ THE CLIENT ID IS BAKED IN AS `GMAIL_CLIENT_ID_DEFAULT` AND THAT IS CORRECT.** A browser
+    OAuth client id is **public by design** — it is in the page source of every site using one —
+    and the **authorized JavaScript origin** is what protects it, not secrecy. Shipping it means
+    a new iPad works on first load instead of needing a string typed into Settings, which is the
+    pain this file already records about the Apps Script URLs. Settings still overrides per
+    device; clearing that field restores the default rather than disabling Gmail.
+  - **⚠ AND THERE IS NO CLIENT SECRET. Never add one.** Google issues one beside the id and it
+    is for SERVER-side flows; `initTokenClient` does not take it, and a secret in a
+    View-Source-able page is not a secret. Anthony pasted one into chat on 2026-09-08 and was
+    told to reset it — the app was unaffected because it never wanted it. A test asserts the
+    `GOCSPX-` prefix appears nowhere, and **builds that prefix by concatenation** so the test
+    file does not itself trip a secret scan of the repo (the first version did).
+  - **The consent screen's Audience is the thing to check, not the API enablement.**
+    `gmail.compose` is a Google **restricted** scope. On a Workspace-owned project the screen is
+    *Internal* and nothing further is needed. On an *External* project, production use needs
+    Google review **plus a paid third-party security assessment**, and everyone sees an
+    unverified-app warning until then; Testing mode (100 named users) is the workable interim,
+    and the 7-day refresh-token expiry does not bite because the token flow issues none.
   - **⚠ THE BODY IS A COVER NOTE, NOT THE WHOLE ESTIMATE, AND THAT IS THE DESIGN.** Mail
     clients strip `<style>` and do not support CSS custom properties at all, so
     `ce-page-content` renders as unstyled text in Gmail — email HTML has to be tables and

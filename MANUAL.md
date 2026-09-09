@@ -36,12 +36,16 @@ Open **Settings** (gear icon) and enter:
 | Google Drive — Jobs Folder ID | `1X2bmAAjbruL5lLip-UgwwmPNo7y_Ubrb` |
 | Vendor Directory — Apps Script URL | The Vendor Directory web-app `/exec` URL (separate sheet) |
 | Referral Partners — Apps Script URL | The Referral Partners web-app `/exec` URL (separate sheet) |
-| Gmail — Google OAuth Client ID | `….apps.googleusercontent.com` — turns on the HTML estimate email (§7) |
+| Gmail — Google OAuth Client ID | **Already filled in.** Change it only to point a device at a different Workspace; clearing it restores the firm default |
 | Stripe Publishable Key | `pk_live_...` (configure when live) |
 
-> **Creating the Gmail client ID — once for the firm, then pasted on each device.** In the Google Cloud console, on a project owned by the Havellin Workspace: **(1)** enable the *Gmail API*; **(2)** configure the OAuth consent screen as *Internal*, so only havellinpalmbeach.com accounts can use it and Google does not require app verification; **(3)** create an OAuth client of type *Web application* and add the app's own address as an **Authorized JavaScript origin** (the GitHub Pages origin — scheme and host only, no path); **(4)** paste the client ID here. It is not a secret — a browser client ID is public by design, and the origin restriction is what protects it, which is why it lives in Settings beside the Apps Script URLs rather than being hidden.
+> **Creating the Gmail client ID — once for the firm, then pasted on each device.** In the Google Cloud console, on a project owned by the Havellin Workspace: **(1)** enable the *Gmail API*; **(2)** configure the OAuth consent screen as *Internal*, so only havellinpalmbeach.com accounts can use it and Google does not require app verification; **(3)** create an OAuth client of type *Web application* and add the app's own address as an **Authorized JavaScript origin** (the GitHub Pages origin — scheme and host only, no path); **(4)** paste the client ID into `GMAIL_CLIENT_ID_DEFAULT` in `havellin.html`.
 >
-> Leave it blank and **Email to Client** falls back to a plain-text email, saying so. A device clear (§2, *This Device*) keeps it, like the other endpoint settings.
+> **This was done on 2026-09-08 and no device needs setting up.** The firm's client id ships in the app as the default, so a new iPad works the moment it loads the page. The Settings field overrides it per device and clearing that field restores the default. **It is not a secret** — a browser client ID is public by design (it is in the page source of every site that uses one), and the *authorized origin* is what protects it.
+>
+> **⚠ THERE IS NO CLIENT SECRET AND THERE MUST NEVER BE ONE.** Google issues one alongside the id; it is for server-side flows and `initTokenClient` does not take it. A secret pasted into this file would be readable by anyone who opens the page. A test asserts none is present. If one is ever exposed, reset it in the Cloud console — the app is unaffected either way.
+>
+> **The Audience setting decides what your team sees.** On a project owned by the Havellin Workspace the consent screen is *Internal* and nothing else is required. On an *External* project, `gmail.compose` is one of Google's **restricted** scopes: production use needs Google review plus a paid third-party security assessment, and until then everyone gets a "Google hasn't verified this app" warning they must click past. Testing mode (up to 100 named test users) works in the meantime — the token flow issues no refresh token, so the seven-day expiry that bites other apps does not apply here.
 
 Two further groups in Settings are **pricing policy**, not device setup — they change what jobs cost and who can see the margin. Set them once, deliberately:
 
