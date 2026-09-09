@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 11:04am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 11:34am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8004,7 +8004,16 @@ function updateApprovalUI() {
     badge.innerHTML = '<span class="badge b-approved">&#10003; Approved</span>' + (contractSigned ? ' <span class="badge b-ok">Under signed agreement</span>' : '');
     if (btnEdit && !contractSigned) btnEdit.style.display = 'inline-block';
     if (btnPdf) btnPdf.style.display = 'inline-block';
-    if (btnDriveEst) btnDriveEst.style.display = 'inline-block';
+    // ⚠ THE ESTIMATE FILES ITSELF, so this button is shown ONLY when that did not happen.
+    // checkPin calls saveFolderEstimate(true) on approval and editEstimateFromCE clears the
+    // stamp so a re-approval re-files — meaning on the normal path there is nothing for a
+    // person to press, and a button that re-does an automatic step can only ever produce
+    // the same document again. Anthony, 2026-09-09: "save to drive creates dupes endlessly
+    // if you keep hitting it. should a button even be there or do we automatically save
+    // estimates to drive in the background?" It does; so the control now exists only as the
+    // retry for a filing that failed, and disappears the moment one succeeds. The banner
+    // below carries "Filed to Drive · <when> · Open", which is the answer to "did that work".
+    if (btnDriveEst) btnDriveEst.style.display = (ceJob && ceJob.estimateDriveAt) ? 'none' : 'inline-block';
     if (mailtoEl) { mailtoEl.href = buildEstimateMailto(); }
     // The HTML-email button is the primary send path; the mailto anchor stays beside it as
     // the escape hatch (see _estimateEmailFallback).
@@ -11648,8 +11657,16 @@ function _gmailPostDraft(token, mime, cb) {
 
 // Deep link straight to the draft in Gmail. /mail/u/0/ is the first signed-in account in
 // that browser; Gmail redirects to the right one when the draft is not in account 0.
+// ⚠ THE MAILBOX SEGMENT IS NOT URL-ENCODED, AND MUST NOT BE.
+// Gmail accepts an email address in place of the account index — /mail/u/ashley@…/ — and
+// resolves it against the accounts signed in to that browser. It wants a LITERAL '@'.
+// encodeURIComponent turns it into %40, Gmail matches that against nothing, and the tab
+// lands on "Your account is not available" instead of the draft. Reported 2026-09-09:
+// "the HTML email generator now goes to a screen that says 'your account is not
+// available'". The address is our own resolved value, not user input; anything that is not
+// a plain address is refused below rather than pasted into a URL.
 function gmailDraftUrl(messageId) {
-  var who = _gmailUserEmail ? encodeURIComponent(_gmailUserEmail) : '0';
+  var who = /^[^\s/@]+@[^\s/@]+$/.test(_gmailUserEmail || '') ? _gmailUserEmail : '0';
   return 'https://mail.google.com/mail/u/' + who + '/#drafts?compose=' + encodeURIComponent(messageId || '');
 }
 
@@ -11911,11 +11928,35 @@ function emailEstimateToClient() {
     gmailCreateDraft(mime, function(ok, d) {
       _setEstEmailBusy(false);
       if (!ok) { _estimateEmailFallback('Gmail draft failed — ' + (d.error || 'unknown') + '. Opening a plain-text email instead.'); return; }
-      window.open(gmailDraftUrl(d.messageId || d.draftId), '_blank');
-      showFB('ce-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the estimate PDF attached' : '') + '. Review it, add anything personal, and send — then click Mark as Sent here.');
+      // The draft EXISTS at this point. Opening it is best effort — a popup blocker, or a
+      // mailbox link that resolves differently in this browser, must not turn a created
+      // draft into a dead end with nowhere to go. So the link is printed too.
+      var draftUrl = gmailDraftUrl(d.messageId || d.draftId);
+      try { window.open(draftUrl, '_blank'); } catch (e) {}
+      _showDraftLink(draftUrl, pdf);
+      showFB('ce-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the estimate PDF attached' : ' &mdash; WITHOUT the PDF, attach a printed copy') + '. Review it, add anything personal, and send — then click Mark as Sent here.');
       showSyncBadge('Gmail draft created ✓');
     });
   });
+}
+
+// A created draft, reachable by hand. window.open is blocked by default on some iPads and
+// the mailbox link can resolve differently in a browser signed in to several Google
+// accounts — neither is a reason to lose a draft that was successfully created.
+function _showDraftLink(url, hasPdf) {
+  var host = document.getElementById('ce-fb');
+  if (!host || !url) return;
+  var box = document.getElementById('ce-draft-link');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'ce-draft-link';
+    box.style.cssText = 'margin-top:8px;font-size:12px;';
+    host.parentNode.insertBefore(box, host.nextSibling);
+  }
+  box.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener" style="font-weight:600;">Open the draft in Gmail &rarr;</a>'
+    + '<span style="color:var(--gray);"> &nbsp;&middot;&nbsp; it is in your Drafts either way'
+    + (hasPdf ? ', with the PDF attached' : '. <strong>The PDF did not attach</strong> — use Print / Save PDF and attach it before sending')
+    + '.</span>';
 }
 
 // The pre-existing mailto: behaviour, unchanged, reached when Gmail cannot be used. Says
@@ -20990,7 +21031,9 @@ function uploadHtmlToDrive(folderId, filename, html, onDone) {
     body: JSON.stringify({action:'uploadHtml', folderId:folderId, filename:filename, html:html})
   })
   .then(function(r){ return r.json(); })
-  .then(function(d){ if (onDone) onDone(d.ok, d.fileUrl); })
+  // The third argument carries the server's own account of what it did — replaced in place
+  // or created, and how many duplicate copies it cleared out of the folder.
+  .then(function(d){ if (onDone) onDone(d.ok, d.fileUrl, d); })
   .catch(function(){ if (onDone) onDone(false); });
 }
 
@@ -21222,7 +21265,7 @@ function saveFolderEstimate(auto) {
     var el = document.getElementById('ce-page-content');
     if (!el) { _reset(); return; }
     var html = _exportDoc('Estimate – '+(job.hvlId||''), el.innerHTML, '');
-    uploadHtmlToDrive(folderId, estimateDocNames(job).driveClient, html, function(ok, fileUrl) {
+    uploadHtmlToDrive(folderId, estimateDocNames(job).driveClient, html, function(ok, fileUrl, meta) {
       // Record the filing on the JOB, the way markEstimateSent records delivery.
       // The 4-second toast was the only acknowledgement this had, and a toast in the
       // corner of a long scrolled page is missed by anyone watching the button they
@@ -21238,28 +21281,30 @@ function saveFolderEstimate(auto) {
       }
       _reset();
       if (typeof updateApprovalUI === 'function') updateApprovalUI();
-      if (ok) showSyncBadge(auto ? 'Client estimate filed to Drive ✓' : 'Estimate saved to Drive ✓');
+      var dropped = (meta && meta.duplicatesRemoved) || 0;
+      if (ok) showSyncBadge((auto ? 'Client estimate filed to Drive ✓' : 'Estimate saved to Drive ✓')
+        + (dropped ? ' — ' + dropped + ' duplicate' + (dropped === 1 ? '' : 's') + ' cleared' : ''));
       else if (!auto) showSyncBadge('Drive save failed', true);
     });
   });
 }
 
-// The Save to Drive button carries its own state, so the answer to "did that work?"
-// is on the control you pressed rather than in a toast that has already gone.
-// Pressing it again still re-files — the Apps Script overwrites by filename.
+// The button is the RETRY for a filing that did not happen — updateApprovalUI hides it
+// outright once job.estimateDriveAt is set, so a filed estimate has no control to press.
+// It keeps a success paint for the moment between the upload landing and the redraw.
 function _paintDriveEstBtn() {
   var btn = document.getElementById('btn-drive-est');
   if (!btn) return;
   var job = jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); });
   if (job && job.estimateDriveAt) {
-    btn.innerHTML = '&#10003; Saved to Drive';
-    btn.title = 'Filed ' + _driveStampText(job.estimateDriveAt) + ' — press again to re-file the current version';
+    btn.innerHTML = '&#10003; Filed to Drive';
+    btn.title = 'Filed ' + _driveStampText(job.estimateDriveAt);
     btn.style.color = 'var(--ok-tx)';
     btn.style.borderColor = 'var(--ok-tx)';
     btn.style.background = 'var(--ok-bg)';
   } else {
-    btn.innerHTML = '&#128193; Save to Drive';
-    btn.title = '';
+    btn.innerHTML = '&#128193; File to Drive';
+    btn.title = 'The automatic filing on approval did not land — press to try again';
     btn.style.color = '';
     btn.style.borderColor = '';
     btn.style.background = '';

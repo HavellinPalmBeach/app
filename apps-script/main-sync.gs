@@ -1012,21 +1012,117 @@ function uploadFileToDrive(folderId, filename, dataUrl) {
   }
 }
 
+// Every file in `folder` carrying exactly this name.
+//
+// ⚠ DO NOT COLLAPSE THIS BACK TO folder.getFilesByName(). That is what uploadHtmlToDrive
+// used, and on a SHARED DRIVE it can come back empty for files that are plainly there —
+// the same class of failure this project already hit with drive.files.get answering
+// "File not found" for a file DriveApp opens fine (see _driveThumbnail). When the lookup
+// finds nothing, the caller's "remove the old copy first" step silently does nothing and
+// every save creates another file. Reported 2026-09-09: "save to drive creates dupes
+// endlessly if you keep hitting it."
+//
+// So both sources are asked and the results unioned by id: DriveApp for the ordinary case,
+// and the advanced Drive service WITH supportsAllDrives/includeItemsFromAllDrives, which is
+// the one that actually answers on a Shared Drive.
+function _filesNamedInFolder(folder, name) {
+  var byId = {}, out = [];
+  function add(f) { if (f && !byId[f.getId()]) { byId[f.getId()] = 1; out.push(f); } }
+
+  try {
+    var it = folder.getFilesByName(name);
+    while (it.hasNext()) add(it.next());
+  } catch (e) { Logger.log('_filesNamedInFolder DriveApp: ' + e); }
+
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.list) {
+      var q = "'" + folder.getId() + "' in parents and title = '" + String(name).replace(/'/g, "\\'") +
+              "' and trashed = false";
+      var res = Drive.Files.list({
+        q: q, maxResults: 100,
+        supportsAllDrives: true, includeItemsFromAllDrives: true
+      });
+      var items = (res && (res.items || res.files)) || [];
+      for (var i = 0; i < items.length; i++) {
+        try { add(DriveApp.getFileById(items[i].id)); } catch (e2) {}
+      }
+    }
+  } catch (e3) { Logger.log('_filesNamedInFolder Drive API: ' + e3); }
+
+  return out;
+}
+
+// Render HTML to a PDF and put it in the job folder under a STABLE name, replacing what is
+// already there rather than adding beside it.
+//
+// The first match is updated IN PLACE where the advanced Drive service allows it, so the
+// file keeps its id — which matters because the app stamps job.estimateDriveUrl with it and
+// counsel may already have the link. Any further copies under the same name are trashed
+// (never deleted — Drive's 30-day undo is the safety net), so the first save after this
+// change collapses a folder that has already accumulated duplicates back down to one file.
 function uploadHtmlToDrive(folderId, filename, html) {
   try {
     var folder = DriveApp.getFolderById(folderId);
     var pdfName = filename.replace(/\.(html?|pdf)$/i, '') + '.pdf';
-    // Remove any existing copy so re-saving overwrites instead of duplicating
-    var existing = folder.getFilesByName(pdfName);
-    while (existing.hasNext()) { existing.next().setTrashed(true); }
     var htmlBlob = Utilities.newBlob(html, 'text/html', pdfName);
     var pdfBlob = htmlBlob.getAs('application/pdf').setName(pdfName);
-    var file = folder.createFile(pdfBlob);
-    return { ok: true, fileUrl: file.getUrl(), fileId: file.getId() };
+
+    var existing = _filesNamedInFolder(folder, pdfName);
+    var file = null, replaced = false, removed = 0;
+
+    if (existing.length) {
+      // Update the oldest copy in place; that is the one whose link has been handed out.
+      existing.sort(function(a, b){ return a.getDateCreated() - b.getDateCreated(); });
+      var keep = existing[0];
+      try {
+        if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.update) {
+          Drive.Files.update({}, keep.getId(), pdfBlob, { supportsAllDrives: true });
+          file = keep; replaced = true;
+        }
+      } catch (eUpd) { Logger.log('uploadHtmlToDrive in-place update failed: ' + eUpd); }
+      if (!file) { try { keep.setTrashed(true); removed++; } catch (eT) {} }
+      for (var i = 1; i < existing.length; i++) {
+        try { existing[i].setTrashed(true); removed++; } catch (eT2) {}
+      }
+    }
+
+    if (!file) file = folder.createFile(pdfBlob);
+
+    return { ok: true, fileUrl: file.getUrl(), fileId: file.getId(),
+             replaced: replaced, duplicatesRemoved: removed };
   } catch (error) {
     Logger.log('uploadHtmlToDrive error: ' + error.toString());
     return { ok: false, error: error.toString() };
   }
+}
+
+// Report what a job folder is actually holding, and collapse duplicate names down to the
+// newest copy. Run from the editor with a folder id when a folder looks wrong.
+//
+// Deliberately NOT reachable over HTTP and split preview/confirm, the same shape as
+// previewReset / resetAllJobDataConfirm — this trashes files, and a destructive action must
+// not be one malformed URL away.
+function previewFolderDuplicates(folderId) {
+  var folder = DriveApp.getFolderById(folderId);
+  var seen = {}, it = folder.getFiles(), n = 0;
+  while (it.hasNext()) { var f = it.next(); (seen[f.getName()] = seen[f.getName()] || []).push(f); n++; }
+  Logger.log('Folder "%s" holds %s files (DriveApp view).', folder.getName(), n);
+  Object.keys(seen).sort().forEach(function(name){
+    Logger.log('  %s x%s%s', name, seen[name].length, seen[name].length > 1 ? '   <-- DUPLICATE' : '');
+  });
+  return seen;
+}
+
+function dedupeFolderConfirm(folderId) {
+  var seen = previewFolderDuplicates(folderId), removed = 0;
+  Object.keys(seen).forEach(function(name){
+    var list = seen[name];
+    if (list.length < 2) return;
+    list.sort(function(a, b){ return b.getLastUpdated() - a.getLastUpdated(); });  // newest first
+    for (var i = 1; i < list.length; i++) { list[i].setTrashed(true); removed++; }
+  });
+  Logger.log('Trashed %s duplicate file(s). They are recoverable from Drive trash for 30 days.', removed);
+  return removed;
 }
 
 // Convert HTML to a PDF and hand the BYTES back, without writing anything to Drive.

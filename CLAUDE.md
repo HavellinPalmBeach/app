@@ -145,6 +145,72 @@ itself … when she added a new client, it pushed the new client plus three old 
 - **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
   functions against a fake spreadsheet, and the app's receiving side out of the real source).
 
+## Endless Drive duplicates, and a draft link Gmail could not resolve (FIXED 2026-09-09)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` `uploadHtmlToDrive` changed, and until
+it is redeployed the duplicates keep accumulating.
+*"it looks like save to drive creates dupes endlessly if you keep hitting it. should a button
+even be there or do we automatically save estimates to drive in the background? also, the HTML
+email generator now goes to a screen that says 'your account is not available' … and there is
+still no PDF attached."*
+
+- **⚠ THE DUPLICATES: `folder.getFilesByName()` ANSWERS EMPTY ON A SHARED DRIVE.**
+  `uploadHtmlToDrive` deleted the previous copy with that call before creating the new one. Every
+  estate folder is on a **Shared Drive**, where the lookup can return nothing for files that are
+  plainly sitting in the folder — so the removal loop ran **zero times** and every save created
+  another file. Silently, because `createFile` always succeeds. **This is the same failure this
+  file already records one section down**: *"`drive.files.get` answered *File not found* for a
+  file `DriveApp` opens fine — because the estate folders live in a Shared Drive, and the Drive
+  API needs `supportsAllDrives: true`."* Same root cause, a different method, a year of hindsight
+  not applied. **When a Drive read comes back empty against a folder you believe has files, the
+  Shared Drive flags are the first thing to check, not the last.**
+  - `_filesNamedInFolder` asks **both** sources and unions by id: `DriveApp` for the ordinary
+    case, and `Drive.Files.list` with **`supportsAllDrives` AND `includeItemsFromAllDrives`** —
+    a test asserts both flags on every call, because either one missing answers empty again.
+  - **It updates the existing file IN PLACE** (`Drive.Files.update`), so the file keeps its id.
+    That matters: `job.estimateDriveUrl` is stamped with it and counsel may already hold the
+    link. Trash-and-create would leave every previously-sent link pointing at a trashed file.
+    No update permission falls back to trash-then-create rather than duplicating.
+  - **Extra copies are TRASHED, never deleted** — Drive's 30-day undo, the same rule
+    `trashJobFoldersConfirm` follows. So **the first save after the redeploy collapses a folder
+    that already accumulated duplicates back to one file**, and the badge says how many it
+    cleared. The fix cleans up the mess it is fixing.
+  - The **oldest** copy is the one kept and refreshed — that is the id anyone was given a link
+    to. `previewFolderDuplicates(folderId)` / `dedupeFolderConfirm(folderId)` clean a folder by
+    hand, split preview/confirm and out of `doGet`/`doPost` like every other destructive action.
+- **THE DESIGN HALF, and it is the better answer: the estimate ALREADY files itself.** `checkPin`
+  has called `saveFolderEstimate(true)` on approval since 2026-08-03, and `editEstimateFromCE`
+  clears the stamp so re-approval re-files. So on the normal path there was nothing for a person
+  to press, and the button could only ever produce the same document again. It is now shown
+  **only when `job.estimateDriveAt` is absent** — the retry for a filing that failed — and
+  disappears the moment one succeeds. The banner's *📁 Filed to Drive · when · Open* is the
+  confirmation. **Do not restore an unconditional show**; a test asserts none survives.
+- **⚠ THE GMAIL DEAD END: `encodeURIComponent` ON THE MAILBOX SEGMENT.** Gmail resolves
+  `/mail/u/<address>/` against the accounts signed in to that browser and wants a **literal
+  `@`**; `%40` matches no account and renders *"Your account is not available"*. Introduced the
+  day before by the fix for the draft opening in the wrong mailbox.
+  - **⚠ AND A TEST WAS SITTING ON TOP OF IT, GREEN.** It asserted
+    `has(u, 'ashley%40havellinpalmbeach.com')` — precise, passing, and **describing the code
+    rather than the requirement**. A test written by reading what the function returns proves
+    only that it still returns it. It now asserts the literal `@`, that `%40` appears nowhere,
+    and that a malformed address falls back to `/u/0/` instead of being pasted into a URL.
+  - **A created draft is never a dead end now.** `window.open` is wrapped and the URL is also
+    **printed under the buttons** — a blocked popup on an iPad, or a browser signed in to
+    several Google accounts, must not lose a draft that was successfully created.
+- **The "no PDF" report is most likely the stale draft again.** He could not open a new draft at
+  all (the link errored), so what he was reading was the pre-fix one. **A Gmail draft is a
+  snapshot and never updates itself** — this is the second report of the same shape, so the app
+  now says *"WITHOUT the PDF, attach a printed copy"* in the success line and in the draft-link
+  strip whenever the conversion failed, rather than only in a feedback line that scrolls away.
+  If a fresh draft still has none, the failure is loud and names itself.
+- **1206 committed checks** (`tests/drive-overwrite.test.js`, 22 new — drives the real `.gs`
+  functions against a fake Drive whose `getFilesByName` answers empty exactly as a Shared Drive
+  does). **Reverting the lookup fails 14 of them**, the first being "ten saves, one file".
+  Verified in headless Chromium: the button shows unfiled and hides once filed, the banner
+  carries the Filed line, and the draft URL carries a literal `@`.
+- Manual **§7** three notes; playbook the approving-files-it paragraph and **four** symptom→cause
+  rows (button gone · folder already has duplicates · the account-not-available page · no PDF).
+  Both `.md` copies hand-edited.
+
 ## "Sr" removed — and a NAME is this app's only person key (BUILT 2026-09-09)
 *"lets remove 'Sr' everywhere. i do not want that anywhere."* One sentence, and a data
 migration rather than a relabelling.

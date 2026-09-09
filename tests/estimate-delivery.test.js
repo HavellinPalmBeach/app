@@ -340,7 +340,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ctx.gmailDraftUrl('abc123'), '/mail/u/0/', 'falls back to /u/0/ when the address is unknown');
     ctx._gmailUserEmail = 'ashley@havellinpalmbeach.com';
     const u = ctx.gmailDraftUrl('abc123');
-    has(u, 'ashley%40havellinpalmbeach.com', 'names the mailbox once it is known');
+
+    // ⚠ THIS ASSERTION USED TO REQUIRE THE ENCODED FORM, AND IT WAS LOCKING IN THE BUG.
+    // Gmail resolves /mail/u/<address>/ against the accounts signed in to that browser and
+    // wants a LITERAL '@'. Percent-encoded, it matches no account and the tab lands on
+    // "Your account is not available" — which is exactly what was reported on 2026-09-09,
+    // with a green test sitting over it. A test can be precise, pass, and still be asserting
+    // the wrong thing; this one described the code rather than the requirement.
+    has(u, '/mail/u/ashley@havellinpalmbeach.com/', 'names the mailbox with a literal @');
+    lacks(u, '%40', 'the mailbox segment is never percent-encoded');
+    has(u, '#drafts?compose=abc123', 'and deep-links to the draft');
+
+    // The address is ours, not typed by anyone — but it goes straight into a URL, so
+    // anything that is not a plain address falls back rather than being pasted in.
+    ['not an email', 'a@b/../evil', 'a b@c.d', 'x@y@z', ''].forEach(function (bad) {
+      ctx._gmailUserEmail = bad;
+      has(ctx.gmailDraftUrl('abc123'), '/mail/u/0/', 'refuses a malformed address: ' + JSON.stringify(bad));
+    });
     has(u, '#drafts?compose=abc123', 'and deep-links to the compose window, not the drafts list');
 
     has(decl('GMAIL_SCOPE'), 'userinfo.email', 'the email scope is requested so the address can be read');
