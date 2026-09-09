@@ -947,9 +947,11 @@ The premium's *rate* is pinned to the estimate the client accepted, so changing 
 
 ### 13a. Category Group & Category (how a vendor is filed)
 
-Every vendor is filed under a **Category group** (required) and a **Category**. The five groups are the fixed top-level taxonomy; categories live underneath them and are *open-ended* — you add a new one just by typing it.
+Every vendor is filed under a **Category group** (required, exactly one) and **one or more Categories**. The five groups are the fixed top-level taxonomy; categories live underneath them and are *open-ended* — you add a new one just by typing it.
 
-- **The group dictates the category.** Pick a group first; the Category field then offers only that group's existing categories. This prevents nonsensical pairings (e.g. a mover filed under "Document Shredding").
+- **A vendor that does several things is ONE row, with its trades separated by a semicolon** — `Jewelry & Watch Appraiser; Jewelry & Watch Buyer`. One row means one rating, one status, one phone number and one contact history, so a call logged against the firm is visible whichever trade you found it under. It is listed under *every* one of its categories in the Vendors tree, and counted once in its group header. **Semicolon, not comma** — eleven category names contain `/`, eight contain `&` and one contains a comma; none contains a semicolon.
+- **To add a trade to a firm already in the directory, use Edit on its card — do not add a second row.** The app refuses a second row under a name already present, because a vendor assigned to a job is resolved *by name*: two rows under one name make every later lookup pick between them at random.
+- **The group dictates the FIRST category.** Pick a group first; the Category field then offers only that group's existing categories, which prevents nonsensical pairings (e.g. a mover filed under "Document Shredding"). Past the first semicolon the suggestions widen to every category in the directory, because the reason you are typing a second trade is that it is a different kind of work.
 - **Adding a new category is self-serve.** If none of the group's categories fit a new specialty vendor (e.g. a stone/hardwood *Floor Refinishing* outfit), just type the new category name — it's created under the selected group. No developer/code change needed.
 - **The group decides which estimate menu — and fee — the vendor feeds** (see table). A category added under a group automatically shows up in that group's estimate menu and, once a vendor in it is **Active**, auto-populates the matching Job Plan sourcing slot.
 
@@ -964,6 +966,10 @@ Every vendor is filed under a **Category group** (required) and a **Category**. 
 The sixth estimate card, *End-of-Job Logistics*, is not a Category Group — it is a curated list of the five slots the Job Plan asks for, drawn across the groups. A category can therefore appear on two cards; adding the line from either one produces the same vendor line.
 
 > What stays fixed: the five groups and the group→menu routing above. Everything below them — the categories — is self-serve, so onboarding a new type of vendor never requires a code change.
+
+> **A multi-trade vendor still has only ONE group, and on a firm whose trades span two groups that is a real limitation.** The group is what routes a vendor to a Build Estimate card and to a fee (the table above), so an estate sale company that also hauls junk gets filed under whichever group you chose and its other trade appears on that same card rather than on *Disposal & Waste Management*. It is not lost — the vendor is still findable, still assignable, and the Job Plan resolves it by name — but file the firm under the group matching **the work you engage it for most**, and expect its second trade on that card. Most multi-trade firms are unaffected: an appraiser who also buys is Asset Liquidation & Valuation on both counts.
+
+> **An appraiser who also buys or sells is flagged, and the Independent box is unticked for you.** On the Inventory tab's appraiser roster, the directory picker marks such a firm *⚠ also Jewelry & Watch Buyer* and, when you pick it, unticks *Independent* and says why. A firm that may end up acquiring the property — buying it outright, or taking it to auction or an estate sale for a commission on the price — cannot give a defensible opinion of its value. The box stays editable: whether that matters on this estate is your call, not the app's. Before 2026-09-09 the option label hid the buying trade and the box shipped ticked, so the roster asserted *Independent* over precisely the firm that was not — **re-check the roster on any job where an appraiser was linked from the directory before that date.**
 
 ## 14. Referral Partners
 

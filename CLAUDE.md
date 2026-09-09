@@ -145,6 +145,77 @@ itself … when she added a new client, it pushed the new client plus three old 
 - **861 committed checks** (`tests/deleted-jobs.test.js`, 83 new — drives the real `.gs`
   functions against a fake spreadsheet, and the app's receiving side out of the real source).
 
+## A vendor in two categories already worked — what did NOT was the appraiser who buys (2026-09-09)
+*"we want to be able to put vendors into two or more categories. some vendors do jewelry
+appraisal and buy jewelry for example. or appraisers do multiple categories that we have broken
+out."* **The feature shipped 2026-07-31 and works** — one row, `;`-separated, `vendorCats(v)`
+splits it, the control is a text input labelled *separate several with ;*. It had almost no
+committed coverage, and auditing it found four real defects around it. **Do not "add"
+multi-category vendors again.**
+
+- **⚠ THE ONE THAT MATTERS: AN APPRAISER WHO ALSO BUYS WAS RECORDED "INDEPENDENT", IN GREEN.**
+  Anthony's own example. `_apprPickerHtml` filtered the option label through
+  `APPRAISER_DIR_CATEGORIES`, so on a row reading *Jewelry & Watch Appraiser; Jewelry & Watch
+  Buyer* **it printed the appraisal trade and dropped the buying one** — the single fact that
+  decides whether the appraisal is defensible was the exact thing the option did not say. And
+  `<input id="appr-indep" checked>` ships pre-checked with nothing ever unticking it.
+  - `APPRAISER_CONFLICT_CATEGORIES` is the acquiring trades — the outright buyers **plus**
+    Auction House / Online Auction House / Estate Sale Company, because a percentage of the sale
+    price means a higher appraisal pays them more. `apprConflictCats(v)` returns the ones a row
+    carries; the label appends *⚠ also …* and `_apprPickVendor` unticks Independent and prints
+    the reason.
+  - **IT FLAGS AND EXPLAINS; IT MUST NEVER REFUSE.** A family wanting the jeweller who has known
+    them thirty years to look at the jewellery is making a decision that is theirs, and on an
+    estate filing no 706 there may be no conflict rule to breach. The box stays editable. What
+    must never happen again is the app *asserting* independence over a firm its own directory
+    says buys the property.
+  - Blast radius is narrower than it looks and worth knowing: `a.independent` has exactly ONE
+    reader (the in-app roster badge) and reaches no client or court document. It is still the
+    field a concierge trusts when handing a valuation to counsel.
+- **⚠ A DATALIST MATCHES ITS OPTIONS AGAINST THE WHOLE INPUT VALUE, NOT THE WORD BEING TYPED.**
+  So once the field read `Art Appraiser; Antiq` **nothing matched and the suggestions went
+  silent** — on precisely the segment that is the point of the feature. These are long
+  punctuated names (*Antiques & Furniture Appraiser*, *Pest Inspection / Treatment*) and a typo
+  does not fail: it mints a new category that then appears in every picker built from the
+  directory, forever. `refreshVendorCategoryList` now **prefixes each option with everything up
+  to the last `;`** so the whole-value match succeeds, and runs on `oninput` because the prefix
+  changes per keystroke. **Group scoping is kept for the FIRST category only** — a firm whose
+  trades cross groups is the case that most needs a suggestion for its second.
+- **`canonVendorCategories` on the way in** — trims, drops blanks, dedupes case-insensitively,
+  and snaps a case-variant onto the spelling already in the directory. `art appraiser` beside
+  `Art Appraiser` is two headings in the Vendors tree and two entries in every picker. Quo
+  already deduped its tags this way; the app did not. **It deliberately does NOT correct a
+  misspelling** — inventing a category nobody typed is worse than storing the one they did, and
+  a genuinely new trade must stay creatable by typing it. Tested both ways.
+- **The group header counted a firm once PER TRADE.** The buckets deliberately hold the same
+  object under every category so the tree can list it under either heading; concatenating them
+  made a three-trade appraiser read as *3 vendors* in its group. Deduped by record identity.
+  **The per-CATEGORY counts were already right** and are untouched — there the firm really is
+  one of N.
+- **⚠ OPEN, AND IT IS ANTHONY'S CALL, NOT MINE: `category_group` HOLDS EXACTLY ONE VALUE.**
+  The group is what routes a vendor to a Build Estimate card and to a fee, so an estate sale
+  company that also hauls junk is filed under one group and its other trade lands on that same
+  card. **Anthony's literal jewelry example is unaffected** — both trades are Asset Liquidation
+  & Valuation. Documented as a limitation with the advice to file under the work you engage the
+  firm for most; do not build multi-group without asking, it touches `GROUP_JOB_MENU`, the fee
+  routing and `vendorGroupOfLine`.
+- **⚠ AND THE FIRST TEST PASS COULD NOT FAIL — caught by reverting, not by reading.** The 35
+  checks written first covered `vendorCats` and friends and asserted **nothing** about any of the
+  four fixes: reverting the picker label left the suite green. That is the third time in this
+  file. **Every one of the five is now revert-verified individually** (1309/1310 passed with
+  each one backed out), and both category lists are pulled from the real source rather than
+  stubbed — a stub of `_cePhases` that did not match source is what hid the `&amp;amp;` defect
+  the same week.
+- **1311 committed checks** (`tests/vendor-categories.test.js`). Verified in headless Chromium:
+  the option reads *⚠ also Jewelry & Watch Buyer*, picking it unticks Independent and names the
+  trade, the clean appraiser ticks it back, the datalist completes past the semicolon and
+  crosses groups there but not on the first trade, and a three-trade firm reads *3 vendors ·
+  5 categories* in its group header. No page errors.
+- Manual **§13a** rewritten (it said "a **Category**", singular, which has been wrong since
+  2026-07-31) with the one-group limitation and the appraiser-conflict note; playbook the
+  one-row rule on Step 2, a `.stop` on the appraiser roster, and **five** symptom→cause rows.
+  Both `.md` copies hand-edited and parity-checked.
+
 ## ⚠⚠ THE APPS SCRIPT WAS BEING COPIED FROM A DEAD BRANCH SIX WEEKS STALE (FOUND 2026-09-09)
 **The single most expensive defect in this project's history, and it was not in the code.**
 Anthony pasted the deployed `main-sync.gs` and it was missing `htmlToPdf`, `getThumbnails`,
@@ -2311,7 +2382,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-08 (eighteenth pass, same day)** — manual **§2/§6b/§7/§8**
+- Last reconciled against the app: **2026-09-09 (nineteenth pass)** — manual **§13a** against the
+  multi-category vendor audit (the section described a single category per vendor, wrong since
+  2026-07-31); playbook Step 2, the appraiser-roster `.stop` and five symptom→cause rows. Both
+  `.md` copies hand-edited and parity-checked.
+- Prior pass **2026-09-08 (eighteenth pass, same day)** — manual **§2/§6b/§7/§8**
   against the estimate delivery path; playbook **Step 3/4/6** and eight symptom→cause rows. Both
   `.md` copies hand-edited and parity-checked. *Note: `manual.html` has an unbalanced `<code>`
   count, and it is a FALSE POSITIVE — the extra one is prose inside a CSS comment in the phone

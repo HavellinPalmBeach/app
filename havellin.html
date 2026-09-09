@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 3:14pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 6:33pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2245,7 +2245,7 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div class="fld">
         <label>Category <span class="lbl-hint">— or type to create; separate several with ;</span></label>
-        <input type="text" id="v-category" list="v-cat-list" placeholder="Art Appraiser; Antiques &amp; Furniture Appraiser">
+        <input type="text" id="v-category" list="v-cat-list" oninput="refreshVendorCategoryList()" placeholder="Art Appraiser; Antiques &amp; Furniture Appraiser">
         <datalist id="v-cat-list"></datalist>
       </div>
       <div class="fld">
@@ -14482,6 +14482,35 @@ var APPRAISER_DIR_CATEGORIES = [
   'Real Estate Appraiser', 'Vehicle / Boat Appraiser', 'Wine Appraiser'
 ];
 
+// ⚠ THE TRADES THAT DISQUALIFY AN APPRAISAL. A firm that may end up ACQUIRING the property
+// — buying it outright, or taking it on consignment and earning a commission on the sale —
+// cannot give a defensible opinion of its value. That is the whole point of the word
+// "independent" in the card's own blurb above this roster, and it is precisely the vendor
+// Anthony asked about on 2026-09-09: *"some vendors do jewelry appraisal and buy jewelry."*
+//
+// This list is the buyer and liquidation categories from VENDOR_SLOT_CATEGORY_MAP's
+// disposition map. Auction House / Estate Sale Company / Online Auction House are here for
+// the same reason as the outright buyers: their fee is a percentage of what the property
+// fetches, so a higher appraisal pays them more.
+//
+// It flags and explains; it does NOT refuse. A family that wants the local jeweller who has
+// known them thirty years to look at the jewellery is making a decision that is theirs, and
+// on an estate filing no 706 there may be no conflict rule to breach at all. What must never
+// happen is the app asserting "Independent" in green over a firm its own directory says buys
+// the very property — which is what it did before this.
+var APPRAISER_CONFLICT_CATEGORIES = [
+  'Coin Buyer', 'Gold & Silver Buyer', 'Jewelry & Watch Buyer', 'Rare Books & Manuscripts',
+  'Online Reseller', 'Replacements / Matching Service', 'Firearms Dealer (FFL)',
+  'Auction House', 'Online Auction House', 'Estate Sale Company'
+];
+
+// The acquiring trades this vendor carries, as a list. Empty for a pure appraiser.
+function apprConflictCats(v) {
+  var want = {};
+  APPRAISER_CONFLICT_CATEGORIES.forEach(function(c){ want[String(c).toLowerCase()] = 1; });
+  return vendorCats(v).filter(function(c){ return want[String(c).trim().toLowerCase()] === 1; });
+}
+
 // Directory rows serving any appraiser category, de-duplicated and sorted by name.
 function _appraiserVendors() {
   if (typeof vendorDirectory === 'undefined' || !vendorDirectory) return [];
@@ -14525,6 +14554,23 @@ function _apprPickVendor(sel) {
   // in the DOM (addAppraiser still reads it), it just stops being shown.
   if (wrap) wrap.style.display = 'none';
   if (nameEl) nameEl.placeholder = 'Contact at ' + (v.vendor_name || 'the firm');
+
+  // ⚠ THE INDEPENDENCE BOX SHIPS CHECKED AND NOTHING USED TO UNCHECK IT. Selecting a firm
+  // the directory says also buys therefore produced a roster row reading "Independent" in
+  // green against the one firm that plainly is not. It is a judgement the concierge must
+  // make deliberately, so the app sets the honest default and states the reason; the box
+  // stays editable, because whether a conflict exists is theirs to decide, not the app's.
+  var indepEl = document.getElementById('appr-indep');
+  var conf = apprConflictCats(v);
+  var note = document.getElementById('appr-conflict-note');
+  if (indepEl) indepEl.checked = !conf.length;
+  if (note) {
+    note.innerHTML = conf.length
+      ? '<span style="color:#8a5a00;">&#9888; The directory lists this firm as <strong>' + esc(conf.join(' / '))
+        + '</strong>. A firm that may acquire the property cannot be an independent appraiser for it &mdash; '
+        + 'Independent has been unticked. Tick it back only if you have a reason.</span>'
+      : '';
+  }
 }
 
 // The picker itself. Empty directory => a note rather than an empty dropdown, so the
@@ -14536,7 +14582,14 @@ function _apprPickerHtml() {
   }
   var opts = '<option value="">From Vendor Directory&hellip;</option>' + list.map(function(v, i){
     var cats = vendorCats(v).filter(function(c){ return APPRAISER_DIR_CATEGORIES.indexOf(c) >= 0; }).join(' / ');
-    return '<option value="' + i + '">' + esc(v.vendor_name || '(unnamed)') + (cats ? ' — ' + esc(cats) : '') + '</option>';
+    // ⚠ THE CONFLICT IS NAMED IN THE LABEL, and this line is the fix for a real defect.
+    // The filter above keeps only APPRAISER categories, so on a firm listed
+    // "Jewelry & Watch Appraiser; Jewelry & Watch Buyer" it dropped the Buyer half — the one
+    // fact that decides whether the appraisal is defensible was the exact thing the option
+    // did not say. Do not remove this suffix to tidy the label.
+    var conf = apprConflictCats(v);
+    var warn = conf.length ? '  \u26a0 also ' + conf.join(' / ') : '';
+    return '<option value="' + i + '">' + esc(v.vendor_name || '(unnamed)') + (cats ? ' — ' + esc(cats) : '') + esc(warn) + '</option>';
   }).join('');
   return '<select onchange="_apprPickVendor(this)" style="font-size:11px;width:100%;margin-bottom:3px;">' + opts + '</select>';
 }
@@ -14563,7 +14616,7 @@ function _renderAppraiserRoster(job) {
     + '<tfoot><tr>'
     + '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><div id="appr-firm-wrap"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></div></td>'
     + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
-    + '<td style="font-size:11px;"><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
+    + '<td style="font-size:11px;"><div id="appr-conflict-note" style="font-size:10px;line-height:1.4;margin-bottom:3px;"></div><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
     + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
@@ -18016,6 +18069,34 @@ function _catSet(cats) {
   var set = {}; (cats||[]).forEach(function(c){ set[String(c).trim().toLowerCase()] = 1; });
   return set;
 }
+
+// Tidy a typed category list before it is stored.
+//
+// ⚠ THE SECOND CATEGORY IS TYPED, NOT PICKED, and that is inherent — a datalist completes one
+// value, so beyond the first semicolon a person is typing a long punctuated name from memory.
+// Two things follow, and neither fails loudly: "art appraiser" and "Art Appraiser" become TWO
+// headings in the Vendors tree and two entries in every picker built from the directory; and
+// "Art Appraiser; Art Appraiser" renders the same firm twice under one heading and counts it
+// twice. Quo already dedupes its tags case-insensitively; the app did not.
+//
+// So: trim, drop blanks, drop repeats case-insensitively, and snap a case-variant onto the
+// spelling already in use in the directory. It deliberately does NOT correct a misspelling —
+// inventing a category nobody typed is worse than storing the one they did, and a genuinely
+// new trade must still be creatable by typing it.
+function canonVendorCategories(raw) {
+  var known = {};
+  (typeof directoryCategories === 'function' ? directoryCategories() : []).forEach(function(c){
+    known[String(c).trim().toLowerCase()] = c;
+  });
+  var seen = {}, out = [];
+  vendorCats({ category: raw }).forEach(function(c){
+    var k = c.toLowerCase();
+    if (seen[k]) return;
+    seen[k] = 1;
+    out.push(known[k] || c);
+  });
+  return out.join('; ');
+}
 // A vendor's categories, as a list. The directory cell holds ONE OR MORE categories
 // separated by semicolons — "Art Appraiser; Antiques & Furniture Appraiser" — because a
 // firm that does two things is one firm with one phone number, one rating and one
@@ -18864,12 +18945,34 @@ function populateVendorFilters() {
 
 // Rebuild the intake datalist for the group currently selected in the form (all
 // categories if none is chosen yet). Called on load and whenever the group changes.
+// ⚠ A DATALIST FILTERS ITS OPTIONS AGAINST THE WHOLE INPUT VALUE, NOT THE WORD BEING TYPED.
+// So once the field read "Art Appraiser; Antiq" nothing matched, the suggestions went silent,
+// and the SECOND category — the entire point of the multi-category feature — was the one
+// typed from memory. These are long, punctuated names ("Antiques & Furniture Appraiser",
+// "Pest Inspection / Treatment"); a typo does not fail, it silently mints a new category that
+// then appears in every picker built from the directory, forever.
+//
+// The fix is to prefix each option with what has already been typed, so the browser's
+// whole-value match succeeds on the segment after the last ';'. Called on input as well as on
+// group change, because the prefix changes with every keystroke.
+//
+// The list is NOT scoped to the selected group once a second category is being typed: a firm
+// whose trades cross groups (an estate sale company that also hauls junk) would otherwise get
+// no suggestion at all for its second trade, which is the case that most needs one.
 function refreshVendorCategoryList() {
   var dl = document.getElementById('v-cat-list');
   if (!dl) return;
   var g = _getV('v-group');
-  var cats = g ? directoryCategories({group: g}) : directoryCategories();
-  dl.innerHTML = cats.map(function(c){ return '<option value="' + esc(c) + '">'; }).join('');
+  var raw = String(_getV('v-category') || '');
+  var cut = raw.lastIndexOf(';');
+  var prefix = cut >= 0 ? raw.slice(0, cut + 1) + ' ' : '';
+  // First category: keep the group scoping that stops nonsensical pairings. Beyond the
+  // first, offer everything — the whole reason to type a second is that it is another trade.
+  var cats = (!prefix && g) ? directoryCategories({group: g}) : directoryCategories();
+  // Never suggest a trade this row already lists.
+  var already = _catSet(vendorCats({ category: raw }));
+  dl.innerHTML = cats.filter(function(c){ return already[String(c).toLowerCase()] !== 1; })
+    .map(function(c){ return '<option value="' + esc(prefix + c) + '">'; }).join('');
 }
 
 // ── ESTIMATE JOB MENUS (data-driven from the taxonomy) ───────────────────────
@@ -19129,7 +19232,14 @@ function renderVendorsTab() {
   var catOrder = [];
   var body = groups.map(function(g, gi){
     var cats = Object.keys(byGroup[g]).sort();
-    var allInGroup = cats.reduce(function(a,c){ return a.concat(byGroup[g][c]); }, []);
+    // ⚠ DEDUPED BY RECORD, because the buckets above deliberately hold the SAME vendor object
+    // under every category it serves. Concatenating them counted a firm once per trade, so a
+    // three-trade appraiser read as "3 vendors" in its group header — and the group header is
+    // exactly where multi-category vendors concentrate, since one row carries one group.
+    // The per-CATEGORY counts are correct as they are: there the vendor really is one of N.
+    var seenInGroup = [];
+    var allInGroup = cats.reduce(function(a,c){ return a.concat(byGroup[g][c]); }, [])
+      .filter(function(v){ if (seenInGroup.indexOf(v) >= 0) return false; seenInGroup.push(v); return true; });
     var gcounts = _vendorCounts(allInGroup);
     var gopen = active || !!vendorExpandedGroups[g];
     var gHeader = '<div onclick="toggleVendorGroup(' + gi + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--tan);border:1px solid var(--border-md);border-radius:6px;padding:11px 13px;margin-bottom:6px;">' +
@@ -19599,6 +19709,10 @@ function saveVendor() {
   if (!VENDOR_SYNC_URL) { showFB('v-fb','err','Set the Vendor Directory URL in Settings first — vendors are saved to the shared sheet.'); return; }
   var fields = {};
   Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ fields[VENDOR_FORM_MAP[fid]] = _getV(fid); });
+  // Tidy the typed category list on the way in — the second and third trades are typed from
+  // memory, so a repeat or a case slip is the normal failure, and either one silently mints
+  // a duplicate heading in every picker built from the directory. See canonVendorCategories.
+  if (fields.category != null) fields.category = canonVendorCategories(fields.category);
   // primary_contact is retired — the app no longer writes it (contact now lives in the
   // split contact_first / contact_last fields), so the legacy column can be deleted.
   var editId = document.getElementById('v-edit-row').value;
