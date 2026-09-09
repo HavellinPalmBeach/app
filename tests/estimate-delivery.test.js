@@ -222,7 +222,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(561) 370-4700', email: 'ashley@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
         svcLabelOf: () => 'Estate Settlement',
-        _cePhases: () => ([{ title: 'Mobilization & Access' }, { title: 'Sorting, Documentation & Inventory' }]),
+        _cePhases: () => ([{ title: 'Mobilization &amp; Access' }, { title: 'Sorting, Documentation &amp; Inventory' }]),
       },
     });
     const job = { id: 1, name: 'Margaret Ellsworth', addr: '1234 Ocean Blvd, Palm Beach, FL', hvlId: 'HVL-0007', svc: 'cleanout' };
@@ -238,7 +238,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, 'Margaret', 'and it greets the person the email is actually going to');
     has(html, 'Ashley Graziano', 'signed by the assigned concierge');
     has(html, 'Havellin adds no markup', 'the at-cost rule appears where vendors do');
-    has(html, 'Sorting, Documentation &amp; Inventory', 'the stages are named, escaped');
+    // ⚠ NOT double-escaped. _cePhases writes HTML literals that already carry entities, so
+    // running them through _emHtml again printed a literal "&amp;" to the client.
+    has(html, 'Sorting, Documentation &amp; Inventory', 'the stages are named');
+    lacks(html, '&amp;amp;', 'and not escaped a second time');
     has(html, 'hours actually worked and logged', 'and an hourly job says so');
 
     // Fee-only: the email must not promise hours either.
@@ -281,7 +284,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the MIME message is a real multipart with the PDF attached');
   {
-    const ctx = sandbox({ fns: ['buildMimeMessage', '_mimeHeader'] });
+    const ctx = sandbox({ fns: ['buildMimeMessage', '_mimeHeader', '_b64Wrap'] });
     const mime = ctx.buildMimeMessage({
       to: 'client@example.com', cc: 'estimates@havellinpalmbeach.com',
       subject: 'Havellin Palm Beach — Service Estimate for 1234 Ocean Blvd',
@@ -297,6 +300,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(mime, 'Content-Type: application/pdf', 'and the PDF');
     has(mime, 'Content-Disposition: attachment; filename="Havellin Service Estimate.pdf"', 'named for the client');
     has(mime, '=?UTF-8?B?', 'the subject is RFC 2047 encoded, so the em dash survives');
+    // ⚠ THE ASSERTION THAT MATTERS, AND THE ONE THE FIRST VERSION LACKED. Checking that CRLF
+    // is *present* passes on a message that is mostly CRLF with a few bare LFs hidden inside
+    // a base64 body — which is exactly what shipped: the wrap used \n while the structure
+    // used \r\n, and Gmail dropped the attachment. Anthony: "there is no attached PDF".
+    let bareLF = 0;
+    for (let i = 0; i < mime.length; i++) if (mime[i] === '\n' && mime[i - 1] !== '\r') bareLF++;
+    eq(bareLF, 0, 'every line ending is CRLF, including inside the base64 parts');
     ok(mime.indexOf('\r\n') > -1, 'CRLF line endings, as the RFC requires');
     // Every boundary opened must be closed, or Gmail rejects the message.
     const mix = mime.match(/boundary="(MIX-[^"]+)"/)[1];
@@ -311,6 +321,34 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const noPdf = ctx.buildMimeMessage({ to: 'a@b.c', subject: 's', text: 't', html: '<i>h</i>' });
     lacks(noPdf, 'application/pdf', 'a message with no PDF carries no attachment part');
     ok(noPdf.trim().endsWith('--'), 'and still closes its boundary');
+  }
+
+  group('the draft opens in the mailbox that owns it, not whatever account signed in first');
+  {
+    const ctx = sandbox({ fns: ['gmailDraftUrl'], vars: ['GMAIL_SCOPE'] });
+    ctx._gmailUserEmail = '';
+    has(ctx.gmailDraftUrl('abc123'), '/mail/u/0/', 'falls back to /u/0/ when the address is unknown');
+    ctx._gmailUserEmail = 'ashley@havellinpalmbeach.com';
+    const u = ctx.gmailDraftUrl('abc123');
+    has(u, 'ashley%40havellinpalmbeach.com', 'names the mailbox once it is known');
+    has(u, '#drafts?compose=abc123', 'and deep-links to the compose window, not the drafts list');
+
+    has(decl('GMAIL_SCOPE'), 'userinfo.email', 'the email scope is requested so the address can be read');
+    lacks(decl('GMAIL_SCOPE'), 'gmail.send', 'still no send scope — a person presses send');
+    has(fn('gmailResolveUser'), 'oauth2/v3/userinfo', 'resolved from the token');
+    has(fn('gmailResolveUser'), '.catch(', 'best effort — a failure must not block the draft');
+    has(fn('gmailCreateDraft'), 'gmailResolveUser', 'and it happens before the draft link is built');
+  }
+
+  group('the plain-text email is the automatic fallback, not a button beside the real one');
+  {
+    // Two email buttons side by side invites sending the plain one by mistake, which loses
+    // the attachment. The anchor stays in the DOM because updateApprovalUI sets its href.
+    lacks(src, '&#9993; Plain email', 'no second email button on the tab');
+    const ui = fn('updateApprovalUI');
+    has(ui, 'mailtoEl.href = buildEstimateMailto()', 'the href is still maintained');
+    lacks(ui, "mailtoEl.style.display = 'inline-block'", 'but it is never shown');
+    has(fn('emailEstimateToClient'), '_estimateEmailFallback', 'the fallback is reached in code, not by the user picking it');
   }
 
   group('base64url, because the Gmail API will not take standard base64');

@@ -544,6 +544,8 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| The Gmail draft opened in the wrong Google account | Fixed 2026-09-09 — the link now names your mailbox. If it still happens, switch account in Gmail and the draft is there. It was created in whichever account you picked in the Google window, and that is the one it sends from. |
+| There used to be a *Plain email* button and now there isn't | Deliberate. It carried no attachment, and having it beside the real button invited sending the wrong one. The app still falls back to a plain email on its own if Gmail cannot be used, and tells you that is what it did. |
 | agreements@ never got a copy of an agreement you sent | Before 2026-09-08 there was no working agreement email at all — the button was in the app and did nothing. Nothing was lost on your side; the copy simply never went. From now on both the Gmail draft and the plain email CC it automatically. |
 | The worksheet in a Home Prep client's Estimate folder is blank | Fixed 2026-09-08. A prep job has no rooms and no hours, so the old worksheet rendered an empty table. Re-approve the estimate and it re-files with the vendor lines and the fee on it. (And check the folder holds the client estimate too — see the row above about a table of rooms and hours.) |
 | **Email to Client** opened a plain-text email instead of the formatted one | The app fell back, and it will have said why in the message bar. Almost always the Google sign-in window was closed before it finished — press the button again and complete it. (Gmail is set up in the app already; nothing to configure on your device.) The plain email works; you just have to attach the PDF yourself. |

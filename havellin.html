@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 8:01pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.08 · 8:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1600,7 +1600,12 @@ body.no-smf .smf-col{display:none;}
         <button class="btn-s" id="btn-deny-est" onclick="openDenyModal()" style="display:none;color:var(--err-tx);border-color:var(--err-tx);">Deny</button>
         <button class="btn-bronze" id="btn-pdf" onclick="printClientEstimate()" style="display:none;">Print / Save PDF</button>
         <button class="btn-bronze" id="btn-html-email-est" onclick="emailEstimateToClient()" style="display:none;">&#9993; Email to Client</button>
-        <a class="btn-s" id="btn-mailto-est" href="#" style="display:none;text-decoration:none;" title="Plain-text email in your own mail app, no attachment">&#9993; Plain email</a>
+        <!-- The mailto path is reached automatically by _estimateEmailFallback (Gmail
+             unconfigured, sign-in cancelled, draft failed) and says why it fell back. It is
+             NOT offered as a choice: a second email button beside the real one invites
+             sending the plain version by mistake, which loses the attachment. The anchor
+             stays in the DOM because updateApprovalUI sets its href. -->
+        <a id="btn-mailto-est" href="#" style="display:none;"></a>
         <button class="btn-s" id="btn-drive-est" onclick="saveFolderEstimate()" style="display:none;">&#128193; Save to Drive</button>
         <button class="btn-s" id="btn-mark-sent" onclick="markEstimateSent()" style="display:none;">&#10003; Mark as Sent</button>
         <button class="btn-s" id="btn-offer-discount" onclick="openDiscountModal()" style="display:none;">Offer Discount</button>
@@ -7932,7 +7937,7 @@ function updateApprovalUI() {
     if (btnEdit && !contractSigned) btnEdit.style.display = 'inline-block';
     if (btnPdf) btnPdf.style.display = 'inline-block';
     if (btnDriveEst) btnDriveEst.style.display = 'inline-block';
-    if (mailtoEl) { mailtoEl.style.display = 'inline-block'; mailtoEl.href = buildEstimateMailto(); }
+    if (mailtoEl) { mailtoEl.href = buildEstimateMailto(); }
     // The HTML-email button is the primary send path; the mailto anchor stays beside it as
     // the escape hatch (see _estimateEmailFallback).
     var htmlEmailEl = document.getElementById('btn-html-email-est');
@@ -11368,7 +11373,13 @@ function _agreementEmailFallback(job, why) {
 // code change.
 var GMAIL_CLIENT_ID_DEFAULT = '49539205067-fe71rejrm6v1mvku30s70pv5aq7454cs.apps.googleusercontent.com';
 var GMAIL_CLIENT_ID = GMAIL_CLIENT_ID_DEFAULT;
-var GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
+// gmail.compose creates a draft and CANNOT send. `userinfo.email` is added only so the
+// deep link can name the mailbox: /mail/u/0/ is whichever Google account signed in FIRST in
+// that browser, so on anyone with a personal Gmail open the draft link landed in the wrong
+// account and the draft looked missing. Gmail accepts an address in that slot. userinfo.email
+// is a non-sensitive scope and does not affect verification.
+var GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/userinfo.email';
+var _gmailUserEmail = '';
 // In memory only, and deliberately never in localStorage. It is a bearer token on the
 // user's mailbox, it expires in about an hour, and this file is served from a public
 // origin — persisting it would leave mailbox access sitting in site data on a shared iPad.
@@ -11426,6 +11437,17 @@ function _b64url(str) {
 // RFC 2047 for the Subject, so an em dash or an accent is not mangled in the header.
 function _mimeHeader(v) { return '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(String(v)))) + '?='; }
 
+// ⚠ EVERY LINE BREAK IN A MIME MESSAGE IS CRLF, INCLUDING THE ONES INSIDE A BASE64 BODY.
+// The first version wrapped the base64 parts at 76 chars with a bare \n while joining the
+// STRUCTURE with \r\n, so the message carried ten malformed line endings and Gmail dropped
+// the attachment: the draft arrived with a body and no PDF. The tests looked right —
+// they asserted CRLF was present and that no line exceeded 998 chars — and neither
+// notices a \n hiding inside an otherwise well-formed message. There is a test on it now
+// that counts bare LFs.
+function _b64Wrap(str) {
+  return btoa(unescape(encodeURIComponent(str))).replace(/(.{76})/g, '$1\r\n');
+}
+
 // multipart/mixed( multipart/alternative(text, html), application/pdf )
 // The alternative part is what makes the plain-text fallback work; nesting it inside mixed
 // is what keeps the attachment from replacing the body in older clients.
@@ -11446,12 +11468,12 @@ function buildMimeMessage(o) {
   L.push('Content-Type: text/plain; charset="UTF-8"');
   L.push('Content-Transfer-Encoding: base64');
   L.push('');
-  L.push(btoa(unescape(encodeURIComponent(o.text || ''))).replace(/(.{76})/g, '$1\n'));
+  L.push(_b64Wrap(o.text || ''));
   L.push('--' + alt);
   L.push('Content-Type: text/html; charset="UTF-8"');
   L.push('Content-Transfer-Encoding: base64');
   L.push('');
-  L.push(btoa(unescape(encodeURIComponent(o.html || ''))).replace(/(.{76})/g, '$1\n'));
+  L.push(_b64Wrap(o.html || ''));
   L.push('--' + alt + '--');
   if (o.pdfBase64) {
     L.push('--' + mix);
@@ -11460,7 +11482,7 @@ function buildMimeMessage(o) {
     L.push('Content-Transfer-Encoding: base64');
     L.push('');
     // Apps Script hands back unwrapped base64; MIME wants lines of at most 76 chars.
-    L.push(String(o.pdfBase64).replace(/\s+/g, '').replace(/(.{76})/g, '$1\n'));
+    L.push(String(o.pdfBase64).replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'));
   }
   L.push('--' + mix + '--');
   return L.join('\r\n');
@@ -11470,6 +11492,12 @@ function buildMimeMessage(o) {
 function gmailCreateDraft(mime, cb) {
   gmailAuth(function(token, err) {
     if (!token) { cb(false, { error: err }); return; }
+    gmailResolveUser(token, function(){ _gmailPostDraft(token, mime, cb); });
+  });
+}
+
+function _gmailPostDraft(token, mime, cb) {
+  {
     fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -11491,13 +11519,24 @@ function gmailCreateDraft(mime, cb) {
         }
       })
       .catch(function(e){ cb(false, { error: (e && e.message) || String(e) }); });
-  });
+  }
 }
 
 // Deep link straight to the draft in Gmail. /mail/u/0/ is the first signed-in account in
 // that browser; Gmail redirects to the right one when the draft is not in account 0.
 function gmailDraftUrl(messageId) {
-  return 'https://mail.google.com/mail/u/0/#drafts?compose=' + encodeURIComponent(messageId || '');
+  var who = _gmailUserEmail ? encodeURIComponent(_gmailUserEmail) : '0';
+  return 'https://mail.google.com/mail/u/' + who + '/#drafts?compose=' + encodeURIComponent(messageId || '');
+}
+
+// Resolve which mailbox the token belongs to, so the draft link opens there. Best effort:
+// a failure just falls back to /u/0/, which is what it did before.
+function gmailResolveUser(token, cb) {
+  if (_gmailUserEmail) { cb(); return; }
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if (d && d.email) _gmailUserEmail = d.email; cb(); })
+    .catch(function(){ cb(); });
 }
 
 // ─── THE HTML ESTIMATE EMAIL ──────────────────────────────────────────────────
@@ -11576,7 +11615,11 @@ function buildEstimateEmailHtml(e, job) {
         '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:10px;">' +
         phases.map(function(ph, i) {
           return '<tr><td width="26" valign="top" style="padding:5px 0;font-size:14px;color:' + B.bronze + ';font-weight:700;">' + (i + 1) + '.</td>' +
-                 '<td style="padding:5px 0;font-size:14px;color:' + B.ink + ';">' + _emHtml(ph.title || '') + '</td></tr>';
+                 // NOT escaped: _cePhases writes its titles as HTML literals and they already
+                 // carry entities ("Scoping &amp; Sourcing"). Running them through _emHtml a
+                 // second time produced &amp;amp;, which the client read as a literal "&amp;".
+                 // They are app-authored constants, never user input.
+                 '<td style="padding:5px 0;font-size:14px;color:' + B.ink + ';">' + (ph.title || '') + '</td></tr>';
         }).join('') + '</table>' +
         '<div style="margin-top:8px;font-size:13px;color:' + B.gray + ';">Each stage has a written completion standard, set out in full in the attached estimate.</div>';
     }

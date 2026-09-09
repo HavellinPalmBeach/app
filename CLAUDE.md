@@ -267,6 +267,29 @@ falls back to the old `mailto:` and says so.
     Reading the filed copy back instead would need a Drive scope and a signed-in user who can
     see that Shared Drive; this runs as the Havellin account and needs neither. A test asserts
     the function never touches `DriveApp`.
+  - **⚠ FOUR THINGS FOUND ON THE FIRST REAL SEND (2026-09-09), and two were defects.**
+    *"email to client fired to my drafts … the full contents of an estimate were not in there
+    and there is no attached PDF."*
+    - **THE PDF DID NOT ATTACH BECAUSE OF TEN BARE LINE FEEDS.** `buildMimeMessage` wrapped the
+      base64 parts at 76 chars with `\n` while joining the structure with `\r\n`. Every line
+      break in a MIME message is CRLF, base64 bodies included; Gmail took the body and dropped
+      the attachment. **The tests looked right and caught nothing** — they asserted CRLF was
+      *present* and that no line exceeded 998 chars, and neither notices a `\n` inside an
+      otherwise well-formed message. `_b64Wrap` now does it, and a test COUNTS bare LFs.
+    - **`&amp;amp;` on the client's screen.** `_cePhases` writes its titles as HTML literals
+      that already carry entities (*Scoping &amp; Sourcing*), and the email ran them through
+      `_emHtml` a second time. They are app constants, never user input, so they go in raw.
+      **The test's own `_cePhases` stub returned a bare `&`, which is what hid it** — a stub
+      that does not match the real source is worse than no stub.
+    - **The draft opened in the wrong mailbox.** `/mail/u/0/` is whichever Google account
+      signed in FIRST in that browser. `userinfo.email` (non-sensitive) is now requested
+      alongside `gmail.compose`, `gmailResolveUser` reads the address off the token, and the
+      link names the mailbox — Gmail accepts an address in that slot. Best effort: a failed
+      lookup falls back to `/u/0/` rather than blocking the draft.
+    - **The *Plain email* button is gone from the tab.** Two email buttons side by side invite
+      sending the plain one by mistake, which loses the attachment. The anchor stays in the DOM
+      (`updateApprovalUI` still sets its href) and `_estimateEmailFallback` still reaches it
+      automatically. **Reached in code, never offered as a choice.**
   - **The `mailto:` path SURVIVES as `_estimateEmailFallback` and must not be deleted** —
     unconfigured client id, cancelled popup, failed draft. A plain compose window that opens
     beats a button that reports an error. A failed PDF still produces the draft, and says so.
