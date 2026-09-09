@@ -242,6 +242,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // running them through _emHtml again printed a literal "&amp;" to the client.
     has(html, 'Sorting, Documentation &amp; Inventory', 'the stages are named');
     lacks(html, '&amp;amp;', 'and not escaped a second time');
+
+    // ⚠ THE CONTRACT THAT MAKES THE LINE ABOVE SAFE: every _cePhases title is an HTML
+    // fragment with its entities already written in. The email passes them through raw, so a
+    // title added later with a BARE "&" would ship unescaped. Assert the contract at source
+    // rather than normalising at runtime — one rule, checked, beats two encodings guessing.
+    const phaseSrc = fn('_cePhases');
+    const titles = (phaseSrc.match(/title:\s*'([^']*)'/g) || []).map(s => s.replace(/^title:\s*'/, '').replace(/'$/, ''));
+    ok(titles.length > 5, 'the phase titles are locatable (' + titles.length + ' found)');
+    const bare = titles.filter(x => /&(?!(amp|lt|gt|quot|#\d+|nbsp|mdash|ndash|rsquo|hellip);)/.test(x));
+    eq(bare, [], 'every phase title is already entity-escaped, so passing it through raw is safe');
     has(html, 'hours actually worked and logged', 'and an hourly job says so');
 
     // Fee-only: the email must not promise hours either.

@@ -280,7 +280,11 @@ falls back to the old `mailto:` and says so.
       that already carry entities (*Scoping &amp; Sourcing*), and the email ran them through
       `_emHtml` a second time. They are app constants, never user input, so they go in raw.
       **The test's own `_cePhases` stub returned a bare `&`, which is what hid it** — a stub
-      that does not match the real source is worse than no stub.
+      that does not match the real source is worse than no stub. A test now asserts the CONTRACT at
+      source — every `_cePhases` title is already entity-escaped — rather than normalising at
+      runtime; one rule, checked, beats two encodings each guessing what the other did.
+      **A Gmail draft is a snapshot and does not update itself**, so the first report after a
+      fix here is usually a stale draft: delete it and press the button again.
     - **The draft opened in the wrong mailbox.** `/mail/u/0/` is whichever Google account
       signed in FIRST in that browser. `userinfo.email` (non-sensitive) is now requested
       alongside `gmail.compose`, `gmailResolveUser` reads the address off the token, and the
