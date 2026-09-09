@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 11:34am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 2:57pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11657,17 +11657,23 @@ function _gmailPostDraft(token, mime, cb) {
 
 // Deep link straight to the draft in Gmail. /mail/u/0/ is the first signed-in account in
 // that browser; Gmail redirects to the right one when the draft is not in account 0.
-// ⚠ THE MAILBOX SEGMENT IS NOT URL-ENCODED, AND MUST NOT BE.
-// Gmail accepts an email address in place of the account index — /mail/u/ashley@…/ — and
-// resolves it against the accounts signed in to that browser. It wants a LITERAL '@'.
-// encodeURIComponent turns it into %40, Gmail matches that against nothing, and the tab
-// lands on "Your account is not available" instead of the draft. Reported 2026-09-09:
-// "the HTML email generator now goes to a screen that says 'your account is not
-// available'". The address is our own resolved value, not user input; anything that is not
-// a plain address is refused below rather than pasted into a URL.
+// ⚠ THE ADDRESS NEVER GOES IN THE URL. THIS WAS GOT WRONG TWICE; DO NOT TRY A THIRD TIME.
+//
+// /mail/u/<address>/ was tried percent-encoded (2026-09-08, "Your account is not
+// available") and then with a literal '@' (2026-09-09, "Temporary Error (404) — your
+// account is temporarily unavailable"). Two different spellings of the same idea, two
+// dead-end error pages. Whatever Gmail does with that path segment, it is not something
+// this app can rely on: it depends on which Google accounts the BROWSER has a session
+// for, which is invisible from here and different on every device. Signing in to the
+// OAuth popup does not guarantee it either — that authorises a token, not a Gmail session.
+//
+// /mail/u/0/ is the only form that always resolves. Its one weakness is that account 0 is
+// whichever Google account signed in FIRST in that browser, which may not be the mailbox
+// holding the draft — so the mailbox is named ON SCREEN instead (see _showDraftLink) and
+// Gmail's own account switcher, which always works, is the way across. A named mailbox
+// plus a working page beats a URL that guesses and errors.
 function gmailDraftUrl(messageId) {
-  var who = /^[^\s/@]+@[^\s/@]+$/.test(_gmailUserEmail || '') ? _gmailUserEmail : '0';
-  return 'https://mail.google.com/mail/u/' + who + '/#drafts?compose=' + encodeURIComponent(messageId || '');
+  return 'https://mail.google.com/mail/u/0/#drafts?compose=' + encodeURIComponent(messageId || '');
 }
 
 // Resolve which mailbox the token belongs to, so the draft link opens there. Best effort:
@@ -11950,13 +11956,23 @@ function _showDraftLink(url, hasPdf) {
   if (!box) {
     box = document.createElement('div');
     box.id = 'ce-draft-link';
-    box.style.cssText = 'margin-top:8px;font-size:12px;';
+    box.style.cssText = 'margin-top:8px;padding:10px 12px;font-size:12px;line-height:1.55;'
+      + 'border:1px solid var(--border-md);border-radius:4px;background:var(--cream);';
     host.parentNode.insertBefore(box, host.nextSibling);
   }
-  box.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener" style="font-weight:600;">Open the draft in Gmail &rarr;</a>'
-    + '<span style="color:var(--gray);"> &nbsp;&middot;&nbsp; it is in your Drafts either way'
-    + (hasPdf ? ', with the PDF attached' : '. <strong>The PDF did not attach</strong> — use Print / Save PDF and attach it before sending')
-    + '.</span>';
+  // NAMING THE MAILBOX IS THE POINT OF THIS BLOCK. The link can only open account 0, so
+  // when that is the wrong Google account the person needs to know two things the browser
+  // will not tell them: the draft really was created, and which mailbox to look in.
+  var who = _gmailUserEmail ? _emHtml(_gmailUserEmail) : 'your Havellin mailbox';
+  box.innerHTML =
+      '<div style="font-weight:600;margin-bottom:4px;">Draft created in ' + who + '</div>'
+    + '<a href="' + url + '" target="_blank" rel="noopener" style="font-weight:600;">Open Gmail &rarr;</a>'
+    + '<span style="color:var(--gray);"> &nbsp;&middot;&nbsp; if Gmail opens a different account, switch to '
+    + who + ' with the avatar top-right — the draft is in <strong>Drafts</strong>.</span>'
+    + (hasPdf
+        ? '<div style="color:var(--gray);margin-top:4px;">The estimate PDF is attached.</div>'
+        : '<div style="color:var(--warn-tx,#8a5a00);margin-top:4px;"><strong>The PDF did not attach</strong>'
+          + ' — use Print / Save PDF and attach it before sending.</div>');
 }
 
 // The pre-existing mailto: behaviour, unchanged, reached when Gmail cannot be used. Says

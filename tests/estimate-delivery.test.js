@@ -333,37 +333,40 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(noPdf.trim().endsWith('--'), 'and still closes its boundary');
   }
 
-  group('the draft opens in the mailbox that owns it, not whatever account signed in first');
+  group('the draft link cannot dead-end, whatever accounts the browser holds');
   {
+    // ⚠ THIS ASSERTION HAS BEEN WRONG TWICE AND IS NOW WRITTEN AGAINST THE REQUIREMENT.
+    //
+    // v1 asserted the address percent-encoded. Gmail: "Your account is not available".
+    // v2 asserted the address with a literal '@'. Gmail: "Temporary Error (404) — your
+    //    account is temporarily unavailable".
+    // Both passed. Both described what the function returned rather than what had to be
+    // true, so each one locked in the bug it was written beside. What actually has to be
+    // true is that the URL RESOLVES — the browser's Google session is invisible from the
+    // app, so any account identifier we put in the path is a guess, and a wrong guess is
+    // an error page with nowhere to go.
     const ctx = sandbox({ fns: ['gmailDraftUrl'], vars: ['GMAIL_SCOPE'] });
-    ctx._gmailUserEmail = '';
-    has(ctx.gmailDraftUrl('abc123'), '/mail/u/0/', 'falls back to /u/0/ when the address is unknown');
-    ctx._gmailUserEmail = 'ashley@havellinpalmbeach.com';
-    const u = ctx.gmailDraftUrl('abc123');
 
-    // ⚠ THIS ASSERTION USED TO REQUIRE THE ENCODED FORM, AND IT WAS LOCKING IN THE BUG.
-    // Gmail resolves /mail/u/<address>/ against the accounts signed in to that browser and
-    // wants a LITERAL '@'. Percent-encoded, it matches no account and the tab lands on
-    // "Your account is not available" — which is exactly what was reported on 2026-09-09,
-    // with a green test sitting over it. A test can be precise, pass, and still be asserting
-    // the wrong thing; this one described the code rather than the requirement.
-    has(u, '/mail/u/ashley@havellinpalmbeach.com/', 'names the mailbox with a literal @');
-    lacks(u, '%40', 'the mailbox segment is never percent-encoded');
-    has(u, '#drafts?compose=abc123', 'and deep-links to the draft');
-
-    // The address is ours, not typed by anyone — but it goes straight into a URL, so
-    // anything that is not a plain address falls back rather than being pasted in.
-    ['not an email', 'a@b/../evil', 'a b@c.d', 'x@y@z', ''].forEach(function (bad) {
-      ctx._gmailUserEmail = bad;
-      has(ctx.gmailDraftUrl('abc123'), '/mail/u/0/', 'refuses a malformed address: ' + JSON.stringify(bad));
+    // Whatever we know or do not know about the mailbox, the URL is the same.
+    ['', 'ashley@havellinpalmbeach.com', 'not an email', 'a@b/../evil', 'x@y@z'].forEach(function (who) {
+      ctx._gmailUserEmail = who;
+      const u = ctx.gmailDraftUrl('abc123');
+      has(u, 'https://mail.google.com/mail/u/0/', 'always the account-0 path: ' + JSON.stringify(who));
+      lacks(u, '@havellin', 'no address in the URL: ' + JSON.stringify(who));
+      lacks(u, '%40', 'and nothing percent-encoded in its place: ' + JSON.stringify(who));
+      has(u, '#drafts?compose=abc123', 'still deep-links to the draft: ' + JSON.stringify(who));
     });
-    has(u, '#drafts?compose=abc123', 'and deep-links to the compose window, not the drafts list');
 
-    has(decl('GMAIL_SCOPE'), 'userinfo.email', 'the email scope is requested so the address can be read');
-    lacks(decl('GMAIL_SCOPE'), 'gmail.send', 'still no send scope — a person presses send');
-    has(fn('gmailResolveUser'), 'oauth2/v3/userinfo', 'resolved from the token');
-    has(fn('gmailResolveUser'), '.catch(', 'best effort — a failure must not block the draft');
-    has(fn('gmailCreateDraft'), 'gmailResolveUser', 'and it happens before the draft link is built');
+    // The mailbox is named ON SCREEN instead — that is what replaces it, and dropping it
+    // would leave someone whose account 0 is a personal Gmail with no idea where the
+    // draft went.
+    const appSrc = source();
+    const sd = appSrc.slice(src.indexOf('function _showDraftLink('));
+    const body = sd.slice(0, sd.indexOf('\n}\n'));
+    has(body, '_gmailUserEmail', 'the strip names the mailbox the draft was created in');
+    has(body, 'Draft created in', 'and says the draft exists');
+    has(body, 'Drafts', 'and where to find it if Gmail opens another account');
+    has(body, '_emHtml(', 'the address is escaped before going into HTML');
   }
 
   group('the plain-text email is the automatic fallback, not a button beside the real one');

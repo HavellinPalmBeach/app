@@ -184,18 +184,29 @@ still no PDF attached."*
   **only when `job.estimateDriveAt` is absent** — the retry for a filing that failed — and
   disappears the moment one succeeds. The banner's *📁 Filed to Drive · when · Open* is the
   confirmation. **Do not restore an unconditional show**; a test asserts none survives.
-- **⚠ THE GMAIL DEAD END: `encodeURIComponent` ON THE MAILBOX SEGMENT.** Gmail resolves
-  `/mail/u/<address>/` against the accounts signed in to that browser and wants a **literal
-  `@`**; `%40` matches no account and renders *"Your account is not available"*. Introduced the
-  day before by the fix for the draft opening in the wrong mailbox.
-  - **⚠ AND A TEST WAS SITTING ON TOP OF IT, GREEN.** It asserted
-    `has(u, 'ashley%40havellinpalmbeach.com')` — precise, passing, and **describing the code
-    rather than the requirement**. A test written by reading what the function returns proves
-    only that it still returns it. It now asserts the literal `@`, that `%40` appears nowhere,
-    and that a malformed address falls back to `/u/0/` instead of being pasted into a URL.
-  - **A created draft is never a dead end now.** `window.open` is wrapped and the URL is also
-    **printed under the buttons** — a blocked popup on an iPad, or a browser signed in to
-    several Google accounts, must not lose a draft that was successfully created.
+- **⚠ THE GMAIL DEAD END: THE MAILBOX ADDRESS IN THE URL. GOT WRONG TWICE — DO NOT TRY A
+  THIRD SPELLING.** `/mail/u/<address>/` was shipped percent-encoded (*"Your account is not
+  available"*) and then, as the fix for that, with a literal `@` — which Anthony hit the same
+  day: *"i have to sign into my havellin google account, fine, but then i get this error"*,
+  **Temporary Error (404)**. Two spellings of one idea, two dead-end error pages.
+  - **The premise was wrong, not the encoding.** What that path segment resolves against is
+    the **browser's** Google session list — invisible from the app, different on every device
+    — and authorising the OAuth popup grants a **token, not a Gmail session**, so the account
+    can be authorised and still absent from the path lookup.
+  - **`/mail/u/0/` is the only form that cannot fail**, and that is what ships. Its weakness
+    (account 0 is whichever Google account signed in first) is answered **on screen instead**:
+    `_showDraftLink` names the mailbox the draft was created in and says to switch with
+    Gmail's own avatar menu. **A named mailbox plus a working page beats a URL that guesses.**
+  - **⚠ AND THE TEST WAS GREEN THROUGH BOTH.** v1 asserted the `%40` form; v2, written as the
+    fix, asserted the literal `@`. Each **described what the function returned rather than
+    what had to be true**, so each locked in the bug it was written beside. It now asserts the
+    requirement — the URL resolves, carries no address in any spelling, and still deep-links —
+    across every value `_gmailUserEmail` can hold. **When a test is rewritten to match a fix,
+    check it states the requirement; that is twice this one did not.**
+  - **A created draft is never a dead end now.** `window.open` is wrapped and the strip is
+    always printed — a blocked popup on an iPad, an error page, or the wrong account must not
+    lose a draft that was successfully created. The draft was created on every one of these
+    failures; only the link opening it was broken.
 - **The "no PDF" report is most likely the stale draft again.** He could not open a new draft at
   all (the link errored), so what he was reading was the pre-fix one. **A Gmail draft is a
   snapshot and never updates itself** — this is the second report of the same shape, so the app
