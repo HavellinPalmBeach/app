@@ -309,6 +309,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(solo.prepFee, 3000, 'a standalone prep job still bills 30%');
   }
 
+  group('the model, in the words Anthony stated it (2026-09-10)');
+  {
+    // "If a painter comes in at ten thousand dollars, we pass through the ten thousand dollar
+    // bill to the client, and the client pays the painter directly. We just charge a thirty
+    // percent management fee on top." That is the whole commercial model for prep work, and it
+    // is the sentence every client document has to be consistent with — so it is a test, not a
+    // comment. Deliberately a SECOND case beside the $45,000 one above: this one is the stated
+    // rule at its simplest, and it is the one to read first if this area ever needs re-deriving.
+    const est = { svc: 'downsizing', prepEnabled: true,
+                  prepItems: [{ type: 'Painting', cost: 10000 }], vendors: [] };
+    const job = { id: 9, svc: 'downsizing', prepSourcing: { 0: { quote: 10000 } },
+                  vendorSourcing: {}, logisticsSourcing: {} };
+    const act = ctx.getVendorActuals(job, est);
+
+    eq(act.prepTotal, 10000, 'the painter passes through at $10,000 — exactly what he billed');
+    eq(act.prepTotal - 10000, 0, 'nothing is added to the painter\'s own invoice');
+    eq(act.prepFee, 3000, 'Havellin bills a $3,000 management fee on top');
+    eq(act.smf, 0, 'and no second fee lands on the same vendor');
+    eq(act.prepTotal + act.prepFee, 13000, 'the client is out $13,000 all in');
+
+    // The sentence the client reads has to say both halves of that, or it misleads.
+    const n = ctx.vendorFeeNote({ prepEnabled: true, prepCost: 10000 });
+    has(n, 'no markup', 'the document says the vendor invoice is not marked up');
+    has(n, '30%', 'and names the fee that IS charged');
+  }
+
   group('the client estimate states the fee where the spend is, and reads the rate');
   {
     const ce = fn('renderClientEstimate');

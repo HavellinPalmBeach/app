@@ -222,7 +222,13 @@ client-facing surfaces were wrong.**
   then the quoted phrase *"Havellin does not mark them up"* inside the comment explaining why it was
   removed. A `lacks()` over an extracted function body sees comments. Reword the comment; do not
   weaken the assertion.
-- **1566 committed checks** (37 more). All seven of these revert-verified individually. The real
+- **THE MODEL, IN ANTHONY'S OWN WORDS, IS NOW A TEST** — *"if a painter comes in at ten thousand
+  dollars, we pass through the ten thousand dollar bill to the client, and the client pays the
+  painter directly. We just charge a thirty percent management fee on top."* `$10,000` through
+  the real `getVendorActuals`: passes through at `10000`, markup `0`, fee `3000`, SMF `0`, client
+  out `13000`. A deliberate second case beside the $45,000 one — this is the stated rule at its
+  simplest and the one to read first if this area ever needs re-deriving.
+- **1573 committed checks** (44 more). All seven of these revert-verified individually. The real
   rendered wording was read out of a headless browser rather than asserted on source — the bundled
   sentence, the fee-only variant, both invoice branches, and §3.5 off a rendered agreement.
 - Manual **§7** note; playbook **one symptom row** — the answer to give when a client asks
