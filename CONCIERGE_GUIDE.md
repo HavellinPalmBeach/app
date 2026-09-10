@@ -92,12 +92,16 @@ Don't compare room hours between service types. The same closet shows *more* hou
 
 > **⚠** **Score the whole house, not a sample.** Volume and complexity are averaged across the rooms you score and then applied to the *entire* square footage. Tick one foyer at 1/1 on a 10,000 sqft estate and the app prices all 10,000 sqft as if the whole house looked like that foyer — on a real job that dropped the quote from about $44,900 to $24,100. A half-finished walkthrough doesn't give you half a price, it gives you a *wrong* price.
 
-The app checks you on this. Under the room grid it compares the bedrooms and baths recorded at intake against the ones you've actually scored:
+The app checks you on this. Under the room grid it compares the bedrooms and baths recorded at intake against the ones you have **accounted for** — scored, *or* deliberately marked out of scope:
 
 | Badge | What to do |
 | --- | --- |
-| **Green** — room coverage matches intake | Nothing. Every bedroom and bath on record is scored. |
-| **Amber** — walkthrough looks incomplete | It names the shortfall: "scored *2 of 5* bedrooms". Finish the walkthrough. It won't stop you saving — it's on you to know why you're ignoring it. |
+| **Green** — room coverage matches intake | Nothing. Every bedroom and bath on record is accounted for. If some are out of scope it says so — "2 scored, 5 out of scope". |
+| **Red** — walkthrough looks incomplete | It names the shortfall: "accounted for *2 of 5* bedrooms". Either finish the walkthrough, or mark the rooms we are not touching as out of scope. It won't stop you saving — it's on you to know why you're ignoring it. |
+
+> **⚠ Not doing every room? Say so — don't just leave it blank.** The Scope box beside each room has *three* states, and tapping cycles through them: **blank → ✓ in scope → ✕ out of scope → blank**. Blank means "nobody has looked at this yet". ✕ means "we are deliberately not touching this — the client is handling it". They are different answers and the app treats them differently. On a job that is mostly Home Prep, where the guest wing, the kitchen and the laundry are the client's own, tap those rooms round to **✕**: the red badge clears, they cost nothing, and they still print on the client estimate and the job plan as explicitly *not ours* — which is exactly what you want the client to see. Leave them blank instead and the app cannot tell you from someone who quit halfway.
+
+An ✕ room keeps its **notes and photos** — use the note to record *why* it is out of scope ("client is emptying the garage themselves"). That sentence is what stops the question coming back on job day.
 
 If it says nothing at all, intake never captured the bed and bath counts. Go and fill them in — the check has nothing to compare against without them.
 
@@ -629,8 +633,11 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | A crew member isn't in the staffing dropdown | They aren't *Active* on the Contractors tab. |
 | Fixed-price toggle is disabled | It's a probate or contested probate job. Those bill on logged hours. |
 | The estimate won't save | No rooms are scored. Score at least one — and read the coverage badge before you settle for one. |
-| Amber badge: "walkthrough looks incomplete" | Fewer bedrooms or baths scored than intake recorded. It won't block you; finish the walkthrough anyway. |
-| Amber badge says "1 of 2 half baths" and you've ticked the only one you can find | There are five *Half Bath* rows, not one — Entry & Living, Kitchen & Utility, both bedroom floors, and *Pool / Cabana Half Bath* under Exterior & Auxiliary. Tick the one matching where the powder room is. If the house genuinely has fewer half baths than intake recorded, the intake figure is wrong — fix it there. |
+| "Every included room needs a volume and complexity score" — and it names rooms you deliberately left out | **Fixed 2026-09-10.** Save and Submit were counting out-of-scope rooms as unscored, and an ✕ room has its volume and complexity boxes greyed out, so there was no way to comply. If you see this now, the rooms it names are genuinely still *blank*, not ✕ — tap each one round to ✓ and score it, or round to ✕ to put it out of scope. |
+| Red badge: "walkthrough looks incomplete" | Fewer bedrooms or baths accounted for than intake recorded. Either score them, or mark the ones we're not touching **✕ out of scope**. It won't block you; don't ignore it without knowing why. |
+| You marked rooms out of scope and the badge still complains | Check they're on **✕** and not blank — the box cycles blank → ✓ → ✕, so one tap from blank only gets you to ✓. Blank reads as "not looked at yet". Also check the room is one intake actually counted: outbuildings don't count toward the main-house bed and bath numbers. |
+| The badge says "2 scored, 5 out of scope" — is that a problem? | No, that's the confirmation. It's green. It's telling you the walkthrough is complete and reminding you five rooms are deliberately not ours, so nothing looks like an oversight later. |
+| Red badge says "1 of 2 half baths" and you've ticked the only one you can find | There are five *Half Bath* rows, not one — Entry & Living, Kitchen & Utility, both bedroom floors, and *Pool / Cabana Half Bath* under Exterior & Auxiliary. Tick the one matching where the powder room is. If the house genuinely has fewer half baths than intake recorded, the intake figure is wrong — fix it there. |
 | You ticked *Additional Bathroom(s)* for a powder room and the badge got worse | That row counts as a *full* bath. Untick it and use a *Half Bath* row instead. |
 | The guest house has its own kitchen and bath — where are those rows? | Gone on purpose. Score the whole building on one row, sized by bedrooms. Its kitchen and bath are already in that weight. |
 | Can't find the casita | It moved from Exterior & Auxiliary into Outbuildings & Guest Quarters. |

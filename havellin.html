@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 12:12pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 1:04pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3776,42 +3776,98 @@ var COVERAGE_HALF_BATHS = ['Half Bath','Pool / Cabana Half Bath'];
 // today: beds 8, full baths 14, half baths 5 — all main-house rows, counted across the
 // First Floor and Second Floor sections. (Beds and full baths were 11 and 17 until the
 // outbuilding rows came off these lists later the same day; see COVERAGE_BEDROOMS.)
-function roomCoverage(scoredNames) {
-  var count = function(list) {
-    return scoredNames.filter(function(n){ return list.indexOf(n) >= 0; }).length;
+//
+// ⚠ AN EXPLICITLY EXCLUDED ROOM IS ACCOUNTED FOR, NOT MISSING. The scope toggle has
+// THREE states (blank → in scope ✓ → homeowner-handled / out of scope ✕), and until
+// 2026-09-10 this function only ever saw the ✓ rooms — so a room the estimator had
+// deliberately marked ✕ was indistinguishable from one nobody had opened. On a job that
+// is mostly Home Prep, where whole floors are legitimately out of scope, the badge
+// therefore cried "walkthrough looks incomplete" at a walkthrough that was finished, and
+// the only way to clear it was to price rooms Havellin is not touching. A check that is
+// wrong on a normal job teaches people to ignore it, which costs the half-scored house it
+// exists to catch. `accounted` = scored + excluded is what the intake count is tested
+// against; `scored` and `excluded` are kept apart so the badge can say which is which
+// rather than implying an out-of-scope room was walked.
+function roomCoverage(scoredNames, excludedNames) {
+  var count = function(list, names) {
+    return (names || []).filter(function(n){ return list.indexOf(n) >= 0; }).length;
   };
-  return { beds: count(COVERAGE_BEDROOMS),
-           fullBaths: count(COVERAGE_FULL_BATHS),
-           halfBaths: count(COVERAGE_HALF_BATHS) };
+  var kind = function(list) {
+    var sc = count(list, scoredNames), ex = count(list, excludedNames);
+    return { scored: sc, excluded: ex, accounted: sc + ex };
+  };
+  return { beds: kind(COVERAGE_BEDROOMS),
+           fullBaths: kind(COVERAGE_FULL_BATHS),
+           halfBaths: kind(COVERAGE_HALF_BATHS) };
 }
 
-// Renders the shortfall against intake, or nothing when the walkthrough looks complete.
-function renderCoverageBadge(scoredNames) {
+// The ONE definition of "a room that still needs scoring", read by Save, Submit and the
+// manager PIN.
+//
+// ⚠ IT WAS THREE COPIES AND THEY DISAGREED (fixed 2026-09-10). checkPin skipped
+// homeowner-handled rooms; saveEstimateAndPreview and submitForApproval did not. So a
+// walkthrough with ANY room marked ✕ could be approved but never SAVED or SUBMITTED — and
+// it was a deadlock rather than a nag, because setRoomState DISABLES and clears vol/cplx on
+// an excluded row. The app demanded a 1–5 score in a field it had greyed out, naming rooms
+// the estimator had deliberately put out of scope, with no way to comply. It surfaced on a
+// mostly-Home-Prep job where the guest wing, kitchen and laundry were the client's own.
+//
+// Excluded rooms ride the snapshot at vol:0/cplx:0 on purpose, so they can print at $0 on
+// the client estimate and the job plan — that zero is the record of a decision, not a gap.
+// Any gate reading it as "unscored" has the scope toggle's three states collapsed to two.
+// Don't re-inline this test; three copies is what produced the deadlock.
+function unscoredRoomNames(est) {
+  return (((est && est.rooms) || [])
+    .filter(function(r){ return !r.excluded && (!(r.vol >= 1) || !(r.cplx >= 1)); })
+    .map(function(r){ return r.name; }));
+}
+
+// Renders the shortfall against intake, or nothing when every room on record is accounted
+// for. Takes BOTH scope lists: see roomCoverage on why an excluded room counts.
+// Red (a-err), not amber — this is a mispricing, not a tidiness note, and Anthony asked for
+// it to read as an actual warning.
+function renderCoverageBadge(scoredNames, excludedNames) {
   var el = document.getElementById('coverage-badge');
   if (!el) return;
+  scoredNames = scoredNames || []; excludedNames = excludedNames || [];
   var jobId = document.getElementById('e-job') ? (parseInt(document.getElementById('e-job').value) || 0) : 0;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  // No job attached, or intake never captured the counts — nothing to check against.
-  if (!job || !scoredNames.length) { el.innerHTML = ''; return; }
+  // No job attached, nothing touched yet, or intake never captured the counts — nothing to
+  // check against. An all-excluded walkthrough is a real state, so 'nothing touched' has to
+  // test both lists or the badge goes silent on exactly the job this change is about.
+  if (!job || (!scoredNames.length && !excludedNames.length)) { el.innerHTML = ''; return; }
   var num = function(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; };
   var wantBeds = num(job.beds), wantFull = num(job.baths), wantHalf = num(job.halfBaths);
   if (wantBeds == null && wantFull == null && wantHalf == null) { el.innerHTML = ''; return; }
-  var got = roomCoverage(scoredNames);
-  var short = [];
-  if (wantBeds != null && got.beds < wantBeds)
-    short.push('<strong>' + got.beds + ' of ' + wantBeds + '</strong> bedrooms');
-  if (wantFull != null && got.fullBaths < wantFull)
-    short.push('<strong>' + got.fullBaths + ' of ' + wantFull + '</strong> full baths');
-  if (wantHalf != null && got.halfBaths < wantHalf)
-    short.push('<strong>' + got.halfBaths + ' of ' + wantHalf + '</strong> half baths');
+  var got = roomCoverage(scoredNames, excludedNames);
+  var short = [], nScored = 0, nExcl = 0;
+  // Only kinds intake actually recorded are tallied — an excluded bath on a job whose intake
+  // never captured a bath count is not evidence of anything to report.
+  var check = function(want, k, label) {
+    if (want == null) return;
+    nScored += k.scored; nExcl += k.excluded;
+    if (k.accounted < want)
+      short.push('<strong>' + k.accounted + ' of ' + want + '</strong> ' + label);
+  };
+  check(wantBeds, got.beds, 'bedrooms');
+  check(wantFull, got.fullBaths, 'full baths');
+  check(wantHalf, got.halfBaths, 'half baths');
   if (!short.length) {
-    el.innerHTML = '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">Room coverage matches intake \u2014 every bedroom and bath on record has been scored.</div>';
+    // Never claim an out-of-scope room was scored — it was not, and the whole point of the
+    // ✕ state is that Havellin is not touching it.
+    var okMsg = nExcl
+      ? 'Room coverage matches intake \u2014 every bedroom and bath on record is accounted for ('
+        + nScored + ' scored, ' + nExcl + ' out of scope).'
+      : 'Room coverage matches intake \u2014 every bedroom and bath on record has been scored.';
+    el.innerHTML = '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">' + okMsg + '</div>';
     return;
   }
-  el.innerHTML = '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">'
-    + '<strong>Walkthrough looks incomplete.</strong> Scored ' + short.join(', ')
+  el.innerHTML = '<div class="alert a-err" style="margin-top:8px;font-size:11px;">'
+    + '<strong>Walkthrough looks incomplete.</strong> Accounted for ' + short.join(', ')
     + ' recorded at intake. Volume and complexity are averaged across the rooms you score and applied to the whole property, '
-    + 'so an unfinished walkthrough misprices the job rather than just under-counting it.</div>';
+    + 'so an unfinished walkthrough misprices the job rather than just under-counting it. '
+    + 'A room the client is handling themselves is not a gap \u2014 mark it \u2717 (out of scope) '
+    + 'in the Scope column and it counts here.</div>';
 }
 
 // ─── ROOM TABLE ───────────────────────────────────────────────────────────────
@@ -5264,7 +5320,8 @@ function calcAll() {
   // the sizing loop counts it against TARGET_DAYS instead of discovering the overrun
   // after the crew has already been chosen.
   // Coverage flag: what intake says the property has against what has been scored.
-  renderCoverageBadge(roomMeta.map(function(r){ return r.name; }));
+  renderCoverageBadge(roomMeta.map(function(r){ return r.name; }),
+                      excludedMeta.map(function(r){ return r.name; }));
 
   var _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, 0, colOnsiteTC);
   var _recommendedPS = _sup.requiredPS;
@@ -7128,8 +7185,8 @@ function saveEstimateAndPreview() {
     }
   } else {
     if (currentEstimate.havellinTotal === 0 || !currentEstimate.rooms || currentEstimate.rooms.length === 0) { showFB('e-fb','warn','No rooms scored — check at least one room and set volume/complexity before saving.'); return; }
-    var unscoredRooms = currentEstimate.rooms.filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
-    if (unscoredRooms.length > 0) { showFB('e-fb','warn','Every included room needs a volume and complexity score (1–5): ' + unscoredRooms.map(function(r){ return r.name; }).join(', ')); return; }
+    var unscoredRooms = unscoredRoomNames(currentEstimate);
+    if (unscoredRooms.length > 0) { showFB('e-fb','warn','Every included room needs a volume and complexity score (1–5): ' + unscoredRooms.join(', ')); return; }
     var propValEl = document.getElementById('e-propval');
     if (!propValEl || !propValEl.value || propValEl.value === '0') {
       showFB('e-fb','warn','Property value is required — set the approximate home value in Client Intake for this client, then reopen the estimate.');
@@ -8534,8 +8591,8 @@ function submitForApproval() {
     showFB('e-fb','warn','No estimate to submit.');
     return;
   }
-  var unscoredRooms = (currentEstimate.rooms||[]).filter(function(r){ return !(r.vol >= 1) || !(r.cplx >= 1); });
-  if (unscoredRooms.length > 0) { showFB('e-fb','warn','Cannot submit — every included room needs a volume and complexity score (1–5): ' + unscoredRooms.map(function(r){ return r.name; }).join(', ')); return; }
+  var unscoredRooms = unscoredRoomNames(currentEstimate);
+  if (unscoredRooms.length > 0) { showFB('e-fb','warn','Cannot submit — every included room needs a volume and complexity score (1–5): ' + unscoredRooms.join(', ')); return; }
 
   // Walkthrough-note check. Rooms and collections with no note are flagged.
   // Soft-required by default (one-click override); a Settings toggle promotes
@@ -8915,8 +8972,8 @@ function checkPin() {
   var pin = document.getElementById('pin-input').value;
   var _approver = resolvePin(pin);
   if (_approver) {
-    var unscoredRooms = (currentEstimate && currentEstimate.rooms||[]).filter(function(r){ return !r.excluded && (!(r.vol >= 1) || !(r.cplx >= 1)); });
-    if (unscoredRooms.length > 0) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — unscored rooms: ' + unscoredRooms.map(function(r){ return r.name; }).join(', ') + '</div>'; return; }
+    var unscoredRooms = unscoredRoomNames(currentEstimate);
+    if (unscoredRooms.length > 0) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — unscored rooms: ' + unscoredRooms.join(', ') + '</div>'; return; }
     estimateApproved = true;
     estimateSubmitted = false;
     discountRevision = false;

@@ -118,6 +118,65 @@ into a session scratchpad and died with the session that wrote it.
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
 
+## A room marked OUT OF SCOPE is accounted for, not missing (FIXED 2026-09-10)
+*"since this is primarily a home prep, we are not cleaning out every room. so we are specifically
+excluding the guest beds and baths, as well as kitchen, laundry room and half bath. the notice
+i have screenshotted should pick up rooms that are out of scope, and not think that they have
+not been considered in the walkthrough."* Then, minutes later: *"it does block saving the
+estimate b/c we haven't scored every room. that is another bug."* App-only, no redeploy.
+
+- **⚠ THE SCOPE TOGGLE HAS THREE STATES AND FOUR READERS HAD COLLAPSED IT TO TWO.** `roomState`
+  returns `off` / `in` / `excl` and `cycleRoom` walks blank → ✓ → ✕ → blank. `excl` is a real,
+  deliberate answer — `setRoomState`'s own comment says notes and media stay live on an excluded
+  row *"so the crew can record WHY it's out of scope"* — and `calcAll` already collects it into
+  `excludedMeta` and pins it on the snapshot at `vol:0, cplx:0, excluded:true` so it prints at $0
+  on the client estimate and the job plan. **Everything downstream then read `excluded` as
+  `off`.** That is the whole bug, twice over.
+- **THE BADGE.** `renderCoverageBadge` was handed `roomMeta` alone, so a room marked ✕ counted
+  identically to one nobody had opened. On a mostly-Home-Prep job — the guest wing, kitchen and
+  laundry legitimately the client's own — it read *"Walkthrough looks incomplete"* at a finished
+  walkthrough, and **the only way to clear it was to price rooms Havellin is not touching.**
+  `roomCoverage(scored, excluded)` now returns `{scored, excluded, accounted}` per kind and the
+  intake count is tested against `accounted`.
+  - **The confirmation must never claim an excluded room was walked.** Zero exclusions keeps the
+    old sentence (*"every bedroom and bath on record has been scored"* — still exactly true); any
+    exclusions get *"is accounted for (2 scored, 5 out of scope)"*. Two branches, because one
+    sentence covering both would have to lie in one of them.
+  - **Red (`a-err`), not amber, on Anthony's call** — *"this warning should be in red font to
+    look like an actual warning."* Right for the failure it describes: a half-scored house
+    **misprices** rather than under-counts, since volume and complexity are averaged over the
+    rooms scored and applied to the whole sqft.
+  - **The empty-state guard had to learn it too.** `!scoredNames.length` alone would go silent on
+    an all-excluded walkthrough — exactly the job this change is about. It tests both lists now.
+  - The warning **carries the fix** (*"mark it ✕ (out of scope) in the Scope column and it counts
+    here"*), per the standing rule that a panel reporting a blocker must say how to clear it.
+- **⚠ AND THE SAME BLINDNESS WAS A HARD DEADLOCK ON SAVE. THE RULE EXISTED IN THREE PLACES AND
+  THEY DISAGREED.** `checkPin` (manager approval) filtered `!r.excluded`; `saveEstimateAndPreview`
+  and `submitForApproval` did not. So a walkthrough with any ✕ room **could be approved but never
+  saved or submitted** — and it was unsatisfiable, not merely annoying, because `setRoomState`
+  **disables and clears** `vol`/`cplx` on an excluded row. The app demanded a 1–5 score in a field
+  it had greyed out, naming the seven rooms Anthony had deliberately excluded.
+  - **`unscoredRoomNames(est)` is the one definition now**, read by all three. A test counts the
+    call sites at exactly 3 and asserts no inlined copy survives. **Do not re-inline it** — three
+    copies is what produced a gate only one of them enforced correctly, and the correct one was
+    the last anybody reaches.
+  - The excluded row's `vol:0/cplx:0` is **the record of a decision, not a gap.** Any gate reading
+    it as unscored has the three states collapsed again.
+- **1679 committed checks** (`tests/room-coverage.test.js`, 54 new — the first committed coverage
+  of this badge at all; it had none). **All six changes revert-verified individually**: dropping
+  the excluded list from `roomCoverage` fails 16, the call site 3, the red class 2, the
+  empty-state guard 3, the `!r.excluded` filter 2, and re-inlining Save's copy 2.
+- **Verified end to end in headless Chromium on the real page**, not asserted on source: the ✕
+  toggle → `calcAll` → `excludedMeta` → badge path produces the exact seven-room excluded list
+  from Anthony's screenshot, `unscoredRoomNames` returns `[]`, the badge reads *"2 scored, 5 out
+  of scope"* in `a-ok`, the incomplete case renders `a-err` at computed `rgb(121,31,31)`, and
+  **pressing Save really saves** — *"Saved: 10 rooms · 51.0 TC hrs · 74.0 PS hrs · $15,050"* with
+  the record landing in `estimateStore`. No page errors.
+- Manual **§5b** (badge table rewritten + two notes); playbook **Step 2** (badge table, a `.stop`
+  on the three states, the note-why-it-is-excluded line) and **four** symptom→cause rows. Both
+  `.md` copies hand-edited and parity-checked; tag balance verified on both HTML files
+  (`manual.html`'s `<code>` delta is still the documented false positive at 1).
+
 ## Re-typing a job on the walkthrough + bundled prep flips to the 30% fee (BUILT 2026-09-10)
 *"we need to be able to change the job type in an estimate … if we get a home prep client at
 intake and then we show up on-site to do a walkthrough, it might turn out that they actually
