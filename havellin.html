@@ -926,7 +926,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:49pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:59pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8403,16 +8403,14 @@ function buildPrepEstimateBody(e, job) {
     '</tbody></table></div>';
 }
 
-function renderClientEstimate() {
-  var _ceJob = currentEstimate && (currentEstimate.job || jobs.find(function(j){ return j.id===currentEstimate.jobId; }));
-  if (!currentEstimate || !_ceJob) {
-    document.getElementById('ce-page-content').innerHTML = '<div class="tab-empty">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>';
-    updateApprovalUI();
-    return;
-  }
-  var e = currentEstimate;
+// The client-facing estimate, as a string. Takes the estimate it is to render rather
+// than reading `currentEstimate`, so a caller can build ANY job's document without
+// touching the tab — see `_approvedEstimateHtml`, which had to borrow the tab to get one.
+function clientEstimateHtml(e, job) {
+  if (!e) return '';
+  job = job || e.job || jobs.find(function(j){ return j.id===e.jobId; });
+  if (!job) return '';
   var _eSplit = paymentSplit(e.havellinTotal);
-  var job = e.job || jobs.find(function(j){ return j.id===e.jobId; }) || {};
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   var svcLabels = SVC_LABELS;
 
@@ -8859,7 +8857,17 @@ function renderClientEstimate() {
     'Insured &amp; Bonded' +
     '</div>';
 
-  document.getElementById('ce-page-content').innerHTML = html;
+  return html;
+}
+
+// The shim. The empty state lives here rather than in the builder: "there is nothing to
+// show on this tab" is a statement about the TAB, and a builder that returned it would
+// put that sentence inside a printed PDF.
+function renderClientEstimate() {
+  var _ceJob = currentEstimate && (currentEstimate.job || jobs.find(function(j){ return j.id===currentEstimate.jobId; }));
+  document.getElementById('ce-page-content').innerHTML = (currentEstimate && _ceJob)
+    ? clientEstimateHtml(currentEstimate, _ceJob)
+    : '<div class="tab-empty">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>';
   updateApprovalUI();
 }
 
@@ -18494,21 +18502,23 @@ function setInvStage(v) {
   renderInvoice();
 }
 
-function renderInvoice() {
-  var jobId = currentInvJobId;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  var content = document.getElementById('inv-page-content');
-  var btnApprove = document.getElementById('btn-inv-approve');
-  var btnPdf = document.getElementById('btn-inv-pdf');
-  var badge = document.getElementById('inv-approval-badge');
-  var banner = document.getElementById('inv-banner-wrap');
-
-  if (!job) {
-    content.innerHTML = '<div class="tab-empty">Select a job and stage to generate an invoice.</div>';
-    btnApprove.style.display = 'none'; btnPdf.style.display = 'none';
-    badge.innerHTML = ''; banner.innerHTML = '';
-    return;
-  }
+// The invoice for one job at one stage, AND the gates that apply to it, computed
+// together and returned. Returns null when there is no job.
+//
+// ⚠ THE GATES COME BACK WITH THE DOCUMENT BECAUSE THEY CANNOT BE RE-DERIVED CHEAPLY.
+// `requiresApproval` needs `overUnder`, which needs the actual hours, the change orders,
+// the rush premium and the stage split — most of this function. A separate `invoiceGate`
+// re-deriving that would be a second copy of the money, and two copies of the money is
+// how the flag and the figure it describes come to disagree. So there is ONE computation
+// and it hands back both.
+//
+// ⚠ AND THIS IS WHY `printInvoice` MUST CALL IT RATHER THAN READ THE GLOBALS.
+// `invBlocked` / `invRequiresApproval` are set by whichever render ran LAST — for
+// whatever job and whatever stage that was. Printing while trusting them is printing
+// against another document's verdict.
+function invoiceHtml(job, stage) {
+  if (!job) return null;
+  var jobId = job.id;
 
   var logs = jobLogs[jobId] || [];
   var actTC = 0, actPS = 0;
@@ -18537,7 +18547,7 @@ function renderInvoice() {
   var prepEmail = preparer ? (preparer.email || '—') : '—';
   var pkgCost = est ? (est.pkgCost||0) : 0;
   var pkgLabel = est ? (est.pkgLabel||'None') : 'None';
-  var stage = currentInvStage || 'final';
+  stage = stage || currentInvStage || 'final';
   var vendors = est ? (est.vendors||[]) : [];
 
   // Resolved actuals from the Job Plan sourcing (fall back to estimate per line).
@@ -18649,9 +18659,12 @@ function renderInvoice() {
   var stageTitle = stage === 'deposit' ? 'Deposit Invoice' : (stage === 'midpoint' ? 'Midpoint Invoice' : 'Final Invoice');
 
   // Logo (same as client estimate)
-  var logoB64 = document.querySelector('#ce-page-content img') ?
-    document.querySelector('#ce-page-content img').src : '';
-  var logoHTML = logoB64 ? '<img src="' + logoB64 + '" style="width:220px;height:auto;display:block;margin:0 auto;" alt="Havellin">' : '<div style="font-family:Cormorant Garamond,serif;font-size:36px;color:var(--gray);text-align:center;">Havellin</div>';
+  // The wordmark. ⚠ This used to try `document.querySelector('#ce-page-content img')`
+  // first — scavenging a logo out of the CLIENT ESTIMATE's rendered panel. The estimate
+  // emits no <img> (its mark is an inline SVG), so that lookup never once resolved and
+  // this fallback is what every invoice has always printed. All it bought was a
+  // dependency on another document having been rendered first.
+  var logoHTML = '<div style="font-family:Cormorant Garamond,serif;font-size:36px;color:var(--gray);text-align:center;">Havellin</div>';
 
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 
@@ -18880,16 +18893,60 @@ function renderInvoice() {
 
     '<div style="text-align:center;margin-top:2rem;font-size:10px;color:var(--gray);letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401 &nbsp;&middot;&nbsp; ' + HAVELLIN_OFFICE_PHONE + '<br>Insured &amp; Bonded</div>';
 
-  content.innerHTML = html;
+  // Blocked finals are not approvable — no PIN, no PDF, no email. Deliberately NOT the
+  // same thing as `requiresApproval`: that means "a manager can unlock this", and nobody
+  // can unlock a missing timesheet.
+  //
+  // Non-blocking beside it: crew hours logged with no concierge hours against them.
+  var _warnBanner = _noTCHours ?
+    '<div class="alert a-warn" style="margin:0 0 1rem;"><strong>' + actPS.toFixed(1) + ' crew hours logged with no concierge hours.</strong> ' +
+    'The concierge is on site for every crew hour, so this final is likely under-billing ' + fmt(Math.round((est ? est.totTC : 0) * tcRate)) +
+    ' of concierge time. Check the log before sending.</div>' : '';
 
+  // Deposit and midpoint are formulaic from the approved estimate, so no manager PIN.
+  // The final needs one only when it diverges from the estimate by more than ±15%
+  // (change orders excluded — they are separately client-approved).
+  var _variancePct = estHavellinTotal > 0 ? Math.abs(overUnder) / estHavellinTotal : 0;
+  return {
+    html: html,
+    stage: stage,
+    blocked: _noHours,
+    requiresApproval: !_noHours && (stage === 'final') && (_variancePct > 0.15),
+    variancePct: _variancePct,
+    overUnder: overUnder,
+    amtDue: stageAmtDue,
+    warnHtml: _warnBanner
+  };
+}
+
+// The shim: write the document into the tab and wire the tab's own controls off the
+// gate that came back with it.
+function renderInvoice() {
+  var job = jobs.find(function(j){ return j.id === currentInvJobId; });
+  var content = document.getElementById('inv-page-content');
+  var btnApprove = document.getElementById('btn-inv-approve');
+  var btnPdf = document.getElementById('btn-inv-pdf');
+  var badge = document.getElementById('inv-approval-badge');
+  var banner = document.getElementById('inv-banner-wrap');
   var mailEl = document.getElementById('btn-mailto-inv');
 
-  // Blocked finals are not approvable — no PIN, no PDF, no email. This is deliberately
-  // NOT routed through invRequiresApproval: that flag means "a manager can unlock this",
-  // and nobody can unlock a missing timesheet.
-  invBlocked = _noHours;
+  var doc = invoiceHtml(job, currentInvStage);
+  if (!doc) {
+    content.innerHTML = '<div class="tab-empty">Select a job and stage to generate an invoice.</div>';
+    btnApprove.style.display = 'none'; btnPdf.style.display = 'none';
+    if (mailEl) mailEl.style.display = 'none';
+    badge.innerHTML = ''; banner.innerHTML = '';
+    invBlocked = false; invRequiresApproval = false;
+    return;
+  }
+  content.innerHTML = doc.html;
+
+  // The globals are a MIRROR of the verdict now, kept only for the tab's own controls.
+  // Nothing that decides anything may read them — see printInvoice.
+  invBlocked = doc.blocked;
+  invRequiresApproval = doc.requiresApproval;
+
   if (invBlocked) {
-    invRequiresApproval = false;
     btnApprove.style.display = 'none';
     btnPdf.style.display = 'none';
     if (mailEl) mailEl.style.display = 'none';
@@ -18900,24 +18957,16 @@ function renderInvoice() {
     return;
   }
 
-  // Non-blocking: crew hours logged with no concierge hours against them.
-  var _warnBanner = _noTCHours ?
-    '<div class="alert a-warn" style="margin:0 0 1rem;"><strong>' + actPS.toFixed(1) + ' crew hours logged with no concierge hours.</strong> ' +
-    'The concierge is on site for every crew hour, so this final is likely under-billing ' + fmt(Math.round((est ? est.totTC : 0) * tcRate)) +
-    ' of concierge time. Check the log before sending.</div>' : '';
-
-  // Approval UI — deposit & midpoint are formulaic from the approved estimate, so no
-  // manager PIN. The final needs PIN only when it diverges from the estimate by more
-  // than ±15% (change orders excluded — they're separately client-approved).
-  var _variancePct = estHavellinTotal > 0 ? Math.abs(overUnder) / estHavellinTotal : 0;
-  invRequiresApproval = (stage === 'final') && (_variancePct > 0.15);
+  var _warnBanner = doc.warnHtml;
+  var _variancePct = doc.variancePct;
+  var overUnder = doc.overUnder;
   var unlocked = !invRequiresApproval || invApproved;
 
   btnApprove.style.display = (invRequiresApproval && !invApproved) ? 'inline-block' : 'none';
   btnPdf.style.display = unlocked ? 'inline-block' : 'none';
   if (mailEl) {
     mailEl.style.display = unlocked ? 'inline-block' : 'none';
-    if (unlocked) mailEl.href = buildInvoiceMailto(job, stageAmtDue, stage);
+    if (unlocked) mailEl.href = buildInvoiceMailto(job, doc.amtDue, doc.stage);
   }
 
   if (!invRequiresApproval) {
@@ -18977,8 +19026,16 @@ function checkInvPin() {
 }
 
 function printInvoice() {
-  if (invBlocked) { alert('No hours have been logged for this job, so the final invoice cannot be issued. Log the hours worked on the Job Plan tab first.'); return; }
-  if (invRequiresApproval && !invApproved) { alert('This final invoice is outside the ±15% tolerance and needs manager approval before printing.'); return; }
+  // ⚠ THE GATE IS RE-COMPUTED, NOT READ OFF THE GLOBALS. `invBlocked` and
+  // `invRequiresApproval` are whatever the LAST `renderInvoice()` left behind — for
+  // whatever job and whatever stage that was. Printing while trusting them is printing
+  // against another document's verdict: a final blocked for no hours on one job could be
+  // printed the moment a different job's deposit invoice had rendered and cleared them.
+  var _pj = jobs.find(function(j){ return j.id === currentInvJobId; });
+  var _pDoc = invoiceHtml(_pj, currentInvStage);
+  if (!_pDoc) { alert('Select a job and stage first.'); return; }
+  if (_pDoc.blocked) { alert('No hours have been logged for this job, so the final invoice cannot be issued. Log the hours worked on the Job Plan tab first.'); return; }
+  if (_pDoc.requiresApproval && !invApproved) { alert('This final invoice is outside the ±15% tolerance and needs manager approval before printing.'); return; }
   // @media print hides every .panel and shows only #print-target, so the invoice has
   // to be rendered into #print-target (same approach as the estimate/agreement) —
   // otherwise the printout is a blank page.
@@ -23149,22 +23206,16 @@ function buildSigningPacketHtml(agrHtml, estHtml, job) {
 // The approved estimate rendered for `jobId` WITHOUT disturbing what the Client Estimate tab
 // is showing: renderClientEstimate reads three globals and writes one element, so they are
 // swapped in, the page is read back, and all four are restored — the tab's approval UI too.
+// ⚠ THIS USED TO BORROW THE CLIENT ESTIMATE TAB. It swapped `currentEstimate`,
+// `estimateApproved` and `estimateSubmitted`, rendered into `#ce-page-content`, read the
+// innerHTML back out, and put all four back in a `finally`. It worked — and it was one
+// early return away from leaving the tab showing another client's estimate, and it armed
+// `applyEstimateLock`'s 12-second approval poll against a job nobody was looking at.
+// A function that returns a string cannot fail that way. It mutates nothing now.
 function _approvedEstimateHtml(jobId) {
   var snap = approvedEstimateFor(jobId);
-  var el = document.getElementById('ce-page-content');
-  if (!snap || !el) return '';
-  var keep = { est: currentEstimate, appr: estimateApproved, sub: estimateSubmitted, html: el.innerHTML };
-  var out = '';
-  try {
-    currentEstimate = snap; estimateApproved = true; estimateSubmitted = true;
-    renderClientEstimate();
-    out = el.innerHTML;
-  } finally {
-    currentEstimate = keep.est; estimateApproved = keep.appr; estimateSubmitted = keep.sub;
-    el.innerHTML = keep.html;
-    updateApprovalUI();
-  }
-  return out;
+  if (!snap) return '';
+  return clientEstimateHtml(snap, jobs.find(function(j){ return j.id === jobId; }));
 }
 
 function signingPacketHtml(jobId) {
@@ -23613,11 +23664,12 @@ function _agrMidpointTrigger(docScope) {
   return 'Due upon completion of the ' + phase + ' stage or at project midpoint, whichever comes first';
 }
 
-function renderProbateAgreement() {
-  var jobId = currentAgrJobId;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  var est = approvedEstimateFor(jobId) || ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
+// The estate / probate agreement, as a string. Addressed to a REPRESENTATIVE rather
+// than an owner — see isDecedentJob for why the service type alone decides that.
+function probateAgreementHtml(job, est) {
+  if (!job) return '';
+  var jobId = job.id;
+  if (!est) est = approvedEstimateFor(jobId) || ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
   if (!est) { var rec = estimateStore[jobId]; if (rec && rec.estimate) est = rec.estimate; }
   var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
   var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of T&M
@@ -23978,28 +24030,43 @@ function renderProbateAgreement() {
   content += 'Havellin Palm Beach, LLC &nbsp;&middot;&nbsp; FL LLC L26000216712 &nbsp;&middot;&nbsp; ' + HAVELLIN_OFFICE_PHONE + ' &nbsp;&middot;&nbsp; agreements@havellinpalmbeach.com &nbsp;&middot;&nbsp; havellinpalmbeach.com<br>';
   content += 'Insured &amp; Bonded &nbsp;&middot;&nbsp; NASMM Member &nbsp;&middot;&nbsp; Confidential &nbsp;&middot;&nbsp; '+monthYear;
   content += '</div>';
-  document.getElementById('agr-page-content').innerHTML = content;
-  updateAgrUI();
-  // NOT exported to Drive here. This fires on every render — opening the tab, changing
-  // the job picker — so it filed the BLANK, UNAPPROVED template, repeatedly, while the
-  // signed copy was never retained at all. The export now runs on approval only
-  // (checkAgrPin), which is the first moment the document means anything.
+  return content;
 }
 
 
-function renderAgreement() {
-  var jobId = currentAgrJobId;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
+// ─── SLICE 2: THE DOCUMENT RENDERERS ARE PURE FUNCTIONS ──────────────────────
+// Each of these BUILDS a document and returns it as a string; nothing in one touches
+// the DOM. The `renderX()` beside it is a one-line shim that writes the result into
+// that tab's panel and does the tab's own UI wiring.
+//
+// ⚠ WHY: the drilldown has to be able to view, print, file and email all three
+// documents, and until now the only way to OBTAIN one was to render it into its tab's
+// panel and read the innerHTML back out. That is exactly what `_approvedEstimateHtml`
+// does — it borrows the Client Estimate tab, swaps three globals, renders, reads, and
+// restores in a `finally`. It works, and it is one early return away from leaving the
+// tab showing another client's estimate. A function that returns a string cannot have
+// that failure mode at all.
+//
+// ⚠ AND THE SHIMS MUST STAY THIN. The moment a shim grows a rule the pure function does
+// not have, the document you PRINT and the document you EMAIL begin to differ — the
+// second-renderer drift this file records over and over.
+
+// The standard (living-owner) agreement, as a string. Returns '' when there is no job.
+// ⚠ It still ROUTES: a decedent job gets the estate form, and that decision belongs here
+// rather than in a caller, because a caller that forgets sends a living-owner contract to
+// an executor.
+function agreementHtml(job, est) {
+  if (!job) return '';
+  var jobId = job.id;
   // Which agreement a job gets follows the LIVING / DECEASED rule, not the service
   // list — see isDecedentJob. The old test named four service types, which meant a
   // Home Cleanout of a house whose owner had just died got the STANDARD agreement,
   // written throughout to a living owner of their own property. A recorded date of
   // death or an authorised representative now routes it to the estate form, which is
   // the one that addresses a representative.
-  if (isDecedentJob(job)) { renderProbateAgreement(); return; }
+  if (isDecedentJob(job)) return probateAgreementHtml(job, est);
 
-  var est = approvedEstimateFor(jobId) || ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
+  if (!est) est = approvedEstimateFor(jobId) || ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
   var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of hourly billing
   var tcRate    = est ? est.tcRate  : (job.premium ? 185 : 150);
@@ -24031,8 +24098,8 @@ function renderAgreement() {
   var year      = today.getFullYear();
 
   // Logo
-  var logoEl  = document.querySelector('#ce-page-content img') || document.querySelector('#inv-page-content img');
-  var logoSrc = logoEl ? logoEl.src : '';
+  // Same dead scavenge as the invoice had — neither panel has ever contained an <img>.
+  var logoSrc = '';
   var logoHTML = logoSrc
     ? '<img src="'+logoSrc+'" style="width:160px;height:auto;display:block;margin:0 auto;" alt="Havellin">'
     : '<div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:500;color:var(--gray-dk);text-align:center;letter-spacing:.04em;">Havellin</div>';
@@ -24286,12 +24353,18 @@ function renderAgreement() {
   content += 'Insured &amp; Bonded  &middot;  NASMM Member  &middot;  Confidential  &middot;  '+monthYear;
   content += '</div>';
 
-  document.getElementById('agr-page-content').innerHTML = content;
+  return content;
+}
+
+// The shim. ⚠ NOT exported to Drive here: this fires on every render — opening the tab,
+// changing the job picker — so it filed the BLANK, UNAPPROVED template repeatedly while
+// the signed copy was never retained at all. The export runs on the approval stamp only
+// (`ensureAgreementApproved`), which is the first moment the document means anything.
+function renderAgreement() {
+  var job = jobs.find(function(j){ return j.id === currentAgrJobId; });
+  if (!job) return;
+  document.getElementById('agr-page-content').innerHTML = agreementHtml(job, null);
   updateAgrUI();
-  // NOT exported to Drive here. This fires on every render — opening the tab, changing
-  // the job picker — so it filed the BLANK, UNAPPROVED template, repeatedly, while the
-  // signed copy was never retained at all. The export now runs on approval only
-  // (checkAgrPin), which is the first moment the document means anything.
 }
 
 function agrSection(title, content) {

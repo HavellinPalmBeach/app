@@ -62,7 +62,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the standard agreement names the services the client is buying');
   {
-    const agr = fn('renderAgreement');
+    const agr = fn('agreementHtml');
     has(agr, "downsizing:'Home Editing'", 'the agreement header map, editing');
     has(agr, "downsizing_move:'Home Transition'", 'the agreement header map, transition');
     has(agr, 'home editing, home transition and move-management, property preparation', '§1.1 Services lists the renamed work');

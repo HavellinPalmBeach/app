@@ -10,8 +10,8 @@ const { fn, decl, source } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const smfDecl = decl('SMF_PCT');
-  const agr = fn('renderAgreement');
-  const prob = fn('renderProbateAgreement');
+  const agr = fn('agreementHtml');
+  const prob = fn('probateAgreementHtml');
 
   group('the fee is off, and both agreements read the constant rather than a literal');
   {

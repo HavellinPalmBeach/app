@@ -34,9 +34,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('both agreements read the APPROVED estimate, never a total with no rates behind it');
   {
-    has(fn('renderAgreement'), 'var est = approvedEstimateFor(jobId) ||', 'standard form reads the approved snapshot first');
-    has(fn('renderProbateAgreement'), 'var est = approvedEstimateFor(jobId) ||', 'estate form too');
-    const agr = fn('renderAgreement');
+    // ⚠ Both take `est` as an argument now (Slice 2) and fall back to the approved
+    // snapshot when a caller passes none — so the assertion is that the FALLBACK is still
+    // the approved record, never `job.havellinEst`, which carries no rates, no
+    // fixed-price flag and no documentation scope.
+    has(fn('agreementHtml'), 'if (!est) est = approvedEstimateFor(jobId) ||', 'standard form falls back to the approved snapshot');
+    has(fn('probateAgreementHtml'), 'if (!est) est = approvedEstimateFor(jobId) ||', 'estate form too');
+    has(fn('agreementHtml'), 'function agreementHtml(job, est)'.slice(9), 'and the caller may hand one in');
+    const agr = fn('agreementHtml');
     eq((agr.match(/attached as Exhibit A and incorporated by reference/g) || []).length, 2,
        '§1.1 on both standard-form arms says the Estimate is ATTACHED, because now it is');
   }
@@ -55,10 +60,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // filing moved to `ensureAgreementApproved` — the one place the approval is stamped.
     has(fn('ensureAgreementApproved'), 'exportSigningPacketToDrive(jobId)', 'and it fires when the approval is stamped');
     has(fn('ensureAgreementApproved'), 'exportAgreementToDrive(jobId)', 'alongside the agreement itself');
+    // ⚠ THIS USED TO ASSERT A `finally` THAT PUT THE CLIENT ESTIMATE TAB BACK. Slice 2
+    // removed the borrow it was compensating for: `_approvedEstimateHtml` swapped three
+    // globals, rendered into #ce-page-content, read the innerHTML out and restored all
+    // four. It was one early return away from leaving the tab on another client's
+    // estimate, and it armed the 12-second approval poll against a job nobody was
+    // looking at. The requirement was never "restore carefully" — it was "do not
+    // disturb the tab at all", which a function returning a string cannot fail to meet.
     const est = fn('_approvedEstimateHtml');
-    has(est, 'finally {', 'the estimate tab is restored whatever the renderer does');
-    has(est, 'el.innerHTML = keep.html;', 'including its HTML');
-    has(est, 'updateApprovalUI();', 'and its approval UI');
+    has(est, 'clientEstimateHtml(snap,', 'it builds the document from the approved snapshot');
+    has(est, 'approvedEstimateFor(jobId)', 'and only while that record is approved');
+    ['currentEstimate =', 'estimateApproved =', 'estimateSubmitted =', 'innerHTML',
+     'renderClientEstimate', 'updateApprovalUI'].forEach(function(n){
+      lacks(est, n, 'it mutates nothing — no ' + n);
+    });
   }
 
   group('the button follows the Print / Save PDF button exactly');
@@ -73,7 +88,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('no bracketed instruction survives on a signing document');
   {
-    const agr = fn('renderAgreement');
+    const agr = fn('agreementHtml');
     lacks(agr, '[Attach the approved Service Estimate', 'the Exhibit A block is a statement, not a note-to-self');
     has(agr, 'is attached to this Agreement as Exhibit A. Its date, line-item breakdown, payment schedule, and total fees are incorporated', 'and it says the estimate is attached, which the packet makes true');
   }

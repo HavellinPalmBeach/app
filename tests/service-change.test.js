@@ -351,7 +351,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the client estimate states the fee where the spend is, and reads the rate');
   {
-    const ce = fn('renderClientEstimate');
+    const ce = fn('clientEstimateHtml');
     has(ce, "Havellin GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '% of prep vendors)",
         'the fee row sits in the Home Prep section and reads the constant');
     lacks(ce, 'Home Prep for Sale — GC / Site Management Fee (30%)',
@@ -374,7 +374,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx._pctWords(0.15), 'fifteen percent (15%)', 'and the SMF rate too, if it ever comes back');
     eq(ctx._pctWords(0.07), '7%', 'a rate with no spelling falls back to the figure, not invented prose');
 
-    const agr = fn('renderAgreement');
+    const agr = fn('agreementHtml');
     has(agr, '_agrHasPrepVendors(est)', '§3.5 branches on the ESTIMATE, not the service key');
     has(agr, '3.5 Vendor Coordination and Home Sale Preparation Fee.',
         'and there is a third arm for a job that carries both');
@@ -382,7 +382,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The plain no-fee clause must survive for a job with no prep vendors — most jobs.
     has(agr, '3.5 Vendor Coordination.', 'the no-fee clause is still there for a job with no prep');
 
-    const pro = fn('renderProbateAgreement');
+    const pro = fn('probateAgreementHtml');
     has(pro, '_agrHasPrepVendors(est)', 'the probate fee table asks the same question');
     has(pro, 'Home Sale Preparation Fee', 'and adds the row only when Exhibit A carries one');
     has(pro, "'At cost — no fee'", 'while the general third-party row is untouched');
@@ -424,12 +424,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // incomplete the moment bundled prep started charging 30%, which is precisely what
     // Anthony asked to be checked: "I just wanna make sure we don't make claims of not
     // putting a fee on top of other vendors."
-    has(fn('renderClientEstimate'), 'vendorFeeNote(e, {feeAlreadyStated:true})', 'the estimate Terms, fee-only arm');
+    has(fn('clientEstimateHtml'), 'vendorFeeNote(e, {feeAlreadyStated:true})', 'the estimate Terms, fee-only arm');
     has(fn('buildEstimateEmailHtml'), '_emHtml(vendorFeeNote(e))', 'the HTML email');
     has(fn('buildEstimateMailto'), 'var _vFee = vendorFeeNote(e);', 'the plain-text email');
     // And the two Terms arms that are not fee-only carve prep out inline, because there the
     // sentence has to attach to an existing clause rather than stand alone.
-    const ce = fn('renderClientEstimate');
+    const ce = fn('clientEstimateHtml');
     has(ce, "Home preparation vendors are the exception", 'the fixed-price Terms arm');
     has(ce, "on home preparation vendors Havellin\\'s own fee is the separate", 'and the hourly Terms arm');
 
@@ -458,7 +458,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'neither fee: it no longer points at a Service Management Fee line the invoice lacks');
     lacks(ctx._invVendorFeeSentence(0, 0), 'shown above', 'and does not reference a line that is not there');
 
-    const inv = fn('renderInvoice');
+    const inv = fn('invoiceHtml');
     has(inv, '_invVendorFeeSentence(smf, prepFee)', 'the invoice note reads the function');
     lacks(inv, "Havellin\\'s coordination fee is the Service Management Fee shown above.</div>",
           'the old unconditional sentence is gone');
@@ -471,15 +471,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Anthony, 2026-09-10: "30% should be the number, it's an industry standard general
     // contractor" — so it is a constant, not a per-job dial. What matters then is that no
     // document hardcodes the digits, or the day it ever moves they disagree.
-    ['renderClientEstimate', 'renderInvoice', 'renderAgreement', 'renderProbateAgreement',
+    ['clientEstimateHtml', 'invoiceHtml', 'agreementHtml', 'probateAgreementHtml',
      'buildPrepEstimateBody'].forEach((name) => {
       const body = fn(name);
       lacks(body, '(30%)', name + ' hardcodes no (30%) literal');
       lacks(body, '30% of prep', name + ' hardcodes no "30% of prep" literal');
     });
-    has(fn('renderProbateAgreement'), "Math.round(prepFeeRate()*100)+'% of prep vendor cost'",
+    has(fn('probateAgreementHtml'), "Math.round(prepFeeRate()*100)+'% of prep vendor cost'",
         'the probate fee table reads the constant');
-    has(fn('renderProbateAgreement'), 'except for the home sale preparation vendors in the row below',
+    has(fn('probateAgreementHtml'), 'except for the home sale preparation vendors in the row below',
         'and its no-markup row is scoped once a prep row sits under it');
   }
 
@@ -499,7 +499,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'GC / Site Management Fee</td>', 'and the invoice row they gated is gone');
     has(fn('calcAll'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
         'the services total adds only the five fees that exist');
-    has(fn('renderInvoice'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
+    has(fn('invoiceHtml'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
         'and the invoice agrees with it, term for term');
   }
 

@@ -70,6 +70,64 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## SLICE 2 — the three client documents are PURE FUNCTIONS (2026-09-10)
+Invisible by design: **all five rendered documents were captured before and after and are
+BYTE-IDENTICAL.** App-only, no redeploy. This is the plumbing Slices 3–5 stand on.
+
+- **⚠ WHY IT MATTERS BEYOND TIDINESS. The only way to OBTAIN a document was to render it
+  into its own tab's panel and read the innerHTML back out.** `_approvedEstimateHtml` did
+  exactly that for the signing packet: swap `currentEstimate`, `estimateApproved` and
+  `estimateSubmitted`, render into `#ce-page-content`, read, and put all four back in a
+  `finally`. It worked — and it was **one early return away from leaving the Client Estimate
+  tab showing another client's estimate**, and from arming `applyEstimateLock`'s 12-second
+  approval poll against a job nobody was looking at. It mutates nothing now.
+- **`clientEstimateHtml(e, job)` · `agreementHtml(job, est)` · `probateAgreementHtml(job, est)`
+  · `invoiceHtml(job, stage)`.** Each BUILDS and returns; the `renderX()` beside it is a thin
+  shim that writes into the panel and does that tab's UI wiring. **⚠ THE SHIMS MUST STAY
+  THIN** — the moment a shim grows a rule the builder does not have, the document you PRINT
+  and the document you EMAIL begin to differ, which is the second-renderer drift this file
+  records over and over. Tested at ≤10 lines each.
+  - **The empty state belongs to the SHIM.** *"Select a job and stage"* is a statement about
+    the TAB; a builder that returned it would put that sentence inside a printed PDF.
+  - **⚠ THE LIVING/DECEASED ROUTING STAYS IN THE BUILDER.** `agreementHtml` returns
+    `probateAgreementHtml` itself, because a caller that forgets sends a living-owner
+    contract to an executor. A test asserts the shim never mentions `isDecedentJob`.
+- **⚠ `printInvoice` WAS PRINTING AGAINST ANOTHER DOCUMENT'S VERDICT.** `invBlocked` and
+  `invRequiresApproval` are module globals set by whichever `renderInvoice()` ran **last** —
+  for whatever job and whatever stage that was. So a final blocked for no logged hours on one
+  job could be printed the moment a different job's deposit invoice had rendered and cleared
+  the flags. It calls `invoiceHtml` and reads the fresh verdict now; the globals survive only
+  as a mirror for the tab's own controls, and the shim clears them when there is no job.
+- **⚠ THE GATE TRAVELS BACK WITH THE DOCUMENT, AND THAT IS DELIBERATE — do not "tidy" it into
+  a separate `invoiceGate()`.** `requiresApproval` needs `overUnder`, which needs the actual
+  hours, the change orders, the rush premium and the stage split — most of a 439-line
+  function. A separate gate re-deriving that would be a **second copy of the money**, and two
+  copies of the money is precisely how a flag and the figure it describes come to disagree.
+  One computation, both answers. `invoiceHtml` returns
+  `{html, stage, blocked, requiresApproval, variancePct, overUnder, amtDue, warnHtml}`.
+  - **`blocked` and `requiresApproval` are NOT the same idea and must not be collapsed.**
+    `requiresApproval` means *a manager can unlock this*; **nobody can unlock a missing
+    timesheet.** These gates had **no committed coverage at all** before this slice.
+- **⚠ FOUND BY THE DOM-FREE TEST AND IT WAS DEAD CODE: both the invoice and the agreement
+  scavenged a logo out of ANOTHER document's rendered panel** —
+  `document.querySelector('#ce-page-content img')`. **The client estimate emits no `<img>`**
+  (its mark is an inline SVG, `.ce-logo-svg`), so that lookup has never once resolved and
+  both documents have always printed the wordmark fallback. Measured in a browser before
+  removing it. All it bought was a dependency on a third document having been rendered first —
+  so an agreement printed from the dashboard, with the estimate tab never opened, was
+  reaching for something that was not there either way.
+- **2498 committed checks** (`tests/document-renderers.test.js`, 68 new). **All 11 changes
+  revert-verified individually.** ⚠ One revert came back green and **the revert was wrong,
+  not the test** — it added a CALL to `invoiceHtml` where the assertion counts DECLARATIONS.
+  Re-done properly it fails 13.
+- **⚠ SEVEN EXISTING SUITES REACHED THESE RENDERERS BY THE OLD `render*` NAME.** Every one of
+  them asks about the DOCUMENT rather than the DOM write, so they point at the builder now —
+  which is the function that actually produces the wording they assert on. `signing-packet`'s
+  three checks on the borrow's `finally` are rewritten to *mutates nothing*: the requirement
+  was never "restore carefully", it was "do not disturb the tab at all".
+- **Still coupled, and recorded so it is not mistaken for done: `signingPacketHtml` still
+  reads `#agr-page-content`** for its first page. Slice 3 finishes that.
+
 ## The agreement's manager PIN is GONE — approval became a consequence (2026-09-10)
 Anthony: *"there are a lot of 'gates'. maybe too many. once an estimate is approved by a manager
 and accepted by a client, a TC should be able to send an agreement without further manager

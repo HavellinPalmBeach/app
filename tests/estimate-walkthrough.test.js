@@ -325,7 +325,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'both disposition tables carry it — one of the two alone is the bug, not the fix');
     // The width is set once in CSS rather than inline on either table, so the two cannot
     // drift apart again the way they just did.
-    lacks(fn('renderClientEstimate'), "width:55%", 'the width is not inlined on either table');
+    lacks(fn('clientEstimateHtml'), "width:55%", 'the width is not inlined on either table');
   }
 
   group('insured & bonded is claimed ONCE, in the footer');
@@ -334,7 +334,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // where a COMMERCIAL rule belongs — what the client is charged, what is billed at cost,
     // how long the quote stands — not a standing fact about the firm that the footer of
     // every Havellin document already carries.
-    const ce = fn('renderClientEstimate');
+    const ce = fn('clientEstimateHtml');
     lacks(ce, 'Havellin Palm Beach is insured and bonded.', 'the Terms bullet is gone');
     eq((ce.match(/[Ii]nsured (&amp;|and) [Bb]onded/g) || []).length, 1,
       'and the claim survives exactly once — in the footer');

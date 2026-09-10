@@ -88,14 +88,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(f({ svc: 'probate', totTC: 10, totPS: 0 }), false, 'concierge hours alone still count as hours');
 
     // The invoice's copy of the rule, so a future edit to one shows up against the other.
-    const invoice = fn('renderInvoice');
+    const invoice = fn('invoiceHtml');
     has(invoice, "=== 'prep')", 'the invoice still keys fee-only off the same service');
     has(invoice, '(est.totTC || 0) + (est.totPS || 0)) === 0', 'and the same zero-hours arm');
   }
 
   group('a prep estimate no longer promises hours it can never bill');
   {
-    const ce = fn('renderClientEstimate');
+    const ce = fn('clientEstimateHtml');
     has(ce, 'var _isFeeOnlyEst = estimateIsFeeOnly(e, job);', 'the document computes it once');
 
     has(ce, '30% management fee on actual vendor spend', 'prep states the fee it actually charges');
@@ -122,7 +122,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('and its payment schedule has milestones that exist on the engagement');
   {
-    const ce = fn('renderClientEstimate');
+    const ce = fn('clientEstimateHtml');
     has(ce, 'Due once the vendor schedule is booked', 'prep bills against the booking, not a project midpoint');
     has(ce, 'Due at show-ready handover', 'and against handover');
     has(ce, 'Management fee only', 'labelled as the fee rather than "Havellin services"');
