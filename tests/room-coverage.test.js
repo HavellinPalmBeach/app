@@ -196,11 +196,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // setRoomState disables vol/cplx on an excluded row, so it could not be complied with.
     const inlined = (src.match(/\.rooms\s*\|\|\s*\[\]\)\.filter\(function\(r\)\{ return[^\n]*vol >= 1|\.rooms\.filter\(function\(r\)\{ return[^\n]*vol >= 1/g) || []).length;
     eq(inlined, 0, 'no inlined copy of the scoring test survives anywhere');
-    const readers = (src.match(/unscoredRoomNames\(currentEstimate\)/g) || []).length;
-    eq(readers, 3, 'exactly three call sites — Save, Submit and checkPin — read the shared one');
+    // ⚠ THIS PINNED THE LITERAL `unscoredRoomNames(currentEstimate)` AND THE EXACT
+    // showFB CALL, and both moved when Submit's refusals were extracted into
+    // `estimateSubmitBlocker` so they could be printed on whichever surface fired it
+    // (they all went to #e-fb, inside a panel the Client Dashboard is not showing, so a
+    // refusal was invisible and the button read as dead). A true statement about a
+    // requirement must not break because a line moved. So: name the functions that have
+    // to consult the shared definition, and assert each one does.
+    const fnBody = (sig) => {
+      const from = src.indexOf('function ' + sig);
+      if (from < 0) return '';
+      const rest = src.slice(from + 10);
+      const end = rest.indexOf('\nfunction ');
+      return end < 0 ? rest : rest.slice(0, end);
+    };
+    [['saveEstimateAndPreview()', 'Save'], ['estimateSubmitBlocker(est)', 'Submit'],
+     ['checkPin()', 'the manager PIN'], ['jobTimeline(job, estRec, logs, cos)', 'the timeline rail'],
+    ].forEach(([sig, what]) => {
+      has(fnBody(sig), 'unscoredRoomNames(', `${what} reads the shared definition`);
+    });
+    eq((src.match(/unscoredRoomNames\(/g) || []).length, 5,
+       'and nothing else calls it — four readers plus the definition itself');
     has(src, "showFB('e-fb','warn','Every included room needs a volume and complexity score",
        'Save still refuses a genuinely unscored room');
-    has(src, "showFB('e-fb','warn','Cannot submit", 'Submit still does too');
+    has(fnBody('estimateSubmitBlocker(est)'), 'Cannot submit — every included room needs',
+       'Submit still does too, and still says why');
+    has(fnBody('submitForApproval(opts)'), 'estimateSubmitBlocker(currentEstimate)',
+       'and Submit reads that one blocker rather than re-testing');
     has(src, 'Cannot approve — unscored rooms:',
        'and the manager PIN still does');
   }

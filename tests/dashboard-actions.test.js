@@ -1,0 +1,350 @@
+'use strict';
+// SLICE 1 — acting on a job from the Client Dashboard (2026-09-10).
+//
+// ⚠⚠ THE DEFECT CLASS THIS SUITE EXISTS FOR, AND IT IS NOT A COSMETIC ONE.
+// Every action the rail now fires was written when the ONLY way to reach it was to
+// pick a job from a <select> on its own tab. So almost none of them takes a job id —
+// they read a GLOBAL that the tab's own loader set:
+//
+//   checkPin · openDenyModal · openDiscountModal · markEstimateSent  →  currentEstimate
+//   checkAgrPin                                                      →  currentAgrJobId
+//   markAgreementSent · markAgreementSigned · openDepositModal        →  _agrJob() / #agr-job
+//
+// Fired from the drilldown with those globals holding ANOTHER job's values, the benign
+// outcome is a silent no-op printed onto a panel you are not looking at. The malignant
+// one is real and was reproduced in a browser before it was fixed: **`checkPin` approves
+// whichever estimate happens to be loaded**, stamping an approver and a frozen lock
+// snapshot onto the wrong client's job, and `saveDeposit` records a cheque against the
+// wrong client. Both are silent and neither is recoverable by looking at the screen.
+//
+// So the load-bearing assertion in this file is not "the button works". It is **every
+// handler primes before it acts**, and a new one that forgets fails the suite.
+
+const { sandbox, source } = require('./harness');
+
+module.exports = function ({ group, ok, eq, has, lacks }) {
+  const src = source();
+
+  // One function's source, bounded at the next top-level `function`.
+  const body = (sig) => {
+    const from = src.indexOf('function ' + sig);
+    if (from < 0) return '';
+    const rest = src.slice(from + 10);
+    const end = rest.indexOf('\nfunction ');
+    return end < 0 ? rest : rest.slice(0, end);
+  };
+  const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+
+  const ctx = sandbox({
+    fns: ['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'estimateSubmitBlocker',
+      'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
+      'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
+      'depositTargetFor'],
+    stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
+  });
+
+  const room = (name, o) => Object.assign({ name, vol: 3, cplx: 3, note: 'seen' }, o || {});
+  const EST = () => ({ rooms: [room('Kitchen'), room('Primary Bedroom')], havellinTotal: 24100, collections: [] });
+
+  function fixture(over, recOver) {
+    const job = Object.assign({ id: 7, name: 'Butler', created: 'Sep 8, 2026', svc: 'cleanout',
+      status: 'new', walkthrough: '2020-01-01' }, over || {});
+    const rec = Object.assign({ estimate: EST(), savedAt: 'Sep 8, 2026', approved: false, submitted: false }, recOver || {});
+    // `{estimate: null}` is how a caller asks for a job with nothing built yet — the
+    // default above supplies one, so without this the very first case silently tested
+    // the row after the one it named.
+    if (recOver && recOver.estimate === null) rec.estimate = null;
+    ctx.estimateStore = { 7: rec }; ctx.jobs = [job];
+    return { job, rec };
+  }
+  const railFor = (over, recOver) => {
+    const f = fixture(over, recOver);
+    const rows = ctx.jobTimeline(f.job, f.rec, [], []);
+    return { rows, next: ctx.jobTimelineNext(rows), job: f.job, rec: f.rec };
+  };
+  const actFor = (over, recOver) => {
+    const r = railFor(over, recOver);
+    return { a: ctx.jobTimelineActions(r.next, r.job, r.rec), row: r.next, r };
+  };
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ EVERY HANDLER PRIMES BEFORE IT ACTS — the wrong-job guarantee');
+  {
+    // Which global each handler's target reads, and therefore which primer it must run
+    // FIRST. A handler that acts before priming acts on the previously-loaded job.
+    const HANDLERS = [
+      ['dashSubmitEstimate(jobId)',     '_primeEstimateFor(jobId)',  'submitForApproval'],
+      ['dashApproveEstimate(jobId)',    '_primeEstimateFor(jobId)',  'openPinModal'],
+      ['dashDenyEstimate(jobId)',       '_primeEstimateFor(jobId)',  'openDenyModal'],
+      ['dashOfferDiscount(jobId)',      '_primeEstimateFor(jobId)',  'openDiscountModal'],
+      ['dashMarkEstimateSent(jobId)',   '_primeEstimateFor(jobId)',  'markEstimateSent'],
+      ['dashApproveAgreement(jobId)',   '_primeAgreementFor(jobId)', 'openAgrPinModal'],
+      ['dashMarkAgreementSent(jobId)',  '_primeAgreementFor(jobId)', 'markAgreementSent'],
+      ['dashMarkAgreementSigned(jobId)', '_primeAgreementFor(jobId)', 'markAgreementSigned'],
+      ['dashRecordPayment(jobId, stage)', '_primeAgreementFor(jobId)', 'openDepositModal'],
+    ];
+    HANDLERS.forEach(([sig, primer, target]) => {
+      const b = noComments(body(sig));
+      ok(b.length > 0, `${sig} exists`);
+      const iPrime = b.indexOf(primer);
+      const iAct = b.indexOf(target + '(');
+      ok(iPrime >= 0, `${sig} calls ${primer}`);
+      ok(iAct >= 0, `${sig} calls ${target}`);
+      ok(iPrime >= 0 && iAct >= 0 && iPrime < iAct, `${sig} primes BEFORE it calls ${target}`);
+      // And it must not act anyway when the priming failed.
+      ok(/if \(!_prime/.test(b), `${sig} refuses when the priming fails rather than acting on the last job`);
+    });
+
+    // The priming is synchronous and local. The tab loaders chain two cloud fetches and
+    // assign the global in a callback — opening a PIN modal behind one is a race whose
+    // loser is an approval on the wrong job.
+    const pe = noComments(body('_primeEstimateFor(jobId)'));
+    has(pe, 'estimateStore[jobId]', '_primeEstimateFor reads the local store');
+    lacks(pe, 'refreshEstimateFromCloud', 'and never waits on a fetch');
+    lacks(pe, 'loadClientEstimateFromSelect', 'nor on the tab loader');
+    ['currentEstimate', 'estimateApproved', 'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt']
+      .forEach((g) => has(pe, g + ' =', `_primeEstimateFor sets ${g}`));
+    ok(/return null/.test(pe), 'and returns null when there is no saved estimate');
+
+    // The agreement side runs the REAL loader rather than duplicating what it restores —
+    // a second copy of that restore is how agrApproved drifts from job.agrApproved.
+    const pa = noComments(body('_primeAgreementFor(jobId)'));
+    has(pa, 'loadAgreement()', '_primeAgreementFor runs the real loader');
+    has(pa, 'populateAgrSelect()', 'after making sure the option exists');
+    ok(/return false/.test(pa), 'and reports failure when the job has no option');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ _agrJob — six functions resolve their job through it, none takes an id');
+  {
+    // markAgreementSent, markAgreementSigned, openDepositModal, onDepStageChange,
+    // saveDeposit and updateDepModalHints. With the drilldown open its job WINS, because
+    // #agr-job can be holding whatever was last picked days ago.
+    const b = noComments(body('_agrJob()'));
+    has(b, "getElementById('client-dashboard-view')", '_agrJob checks whether the drilldown is open');
+    has(b, '_dashboardJobId', 'and resolves through it');
+    const iDash = b.indexOf('_dashboardJobId');
+    const iSel = b.indexOf("getElementById('agr-job')");
+    ok(iDash >= 0 && iSel >= 0 && iDash < iSel, 'the drilldown wins over the Agreement tab select');
+
+    // The requirement is not a count of who mentions the select — populateAgrSelect,
+    // docPdf and docEmail legitimately WRITE to it. It is that everything which RESOLVES
+    // a job for an agreement or payment action goes through the one resolver, so the
+    // drilldown precedence above cannot be bypassed by re-inlining the read.
+    ['markAgreementSent()', 'markAgreementSigned()', 'openDepositModal(stage)',
+     'onDepStageChange()', 'saveDeposit()'].forEach((sig) => {
+      const b = noComments(body(sig));
+      has(b, '_agrJob()', `${sig} resolves its job through _agrJob`);
+      lacks(b, "getElementById('agr-job')", `${sig} does not re-read the select itself`);
+    });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('estimateSubmitBlocker — one rule, and the caller decides where it prints');
+  {
+    // ⚠ All three refusals printed to showFB('e-fb', …), and #e-fb lives inside
+    // #panel-estimate — a panel neither the Client Estimate tab nor the drilldown is
+    // showing. A refusal fired from either landed in the DOM and was seen by nobody,
+    // which is precisely what makes a button look dead.
+    eq(ctx.estimateSubmitBlocker(EST()), null, 'a complete estimate has no blocker');
+    eq(ctx.estimateSubmitBlocker(null).code, 'noest', 'no estimate at all');
+    eq(ctx.estimateSubmitBlocker({ havellinTotal: 0, rooms: [] }).code, 'noest', 'nor a zero total');
+
+    const half = EST(); half.rooms.push({ name: 'Garage (2-car)', vol: 0, cplx: 0, note: 'x' });
+    const blk = ctx.estimateSubmitBlocker(half);
+    eq(blk.code, 'unscored', 'an unscored room blocks');
+    has(blk.msg, 'Garage (2-car)', 'and the message names it');
+
+    // An excluded room is a decision, not a gap — inherited from unscoredRoomNames.
+    const exc = EST(); exc.rooms.push({ name: 'Guest Wing', vol: 0, cplx: 0, excluded: true });
+    eq(ctx.estimateSubmitBlocker(exc), null, 'a room marked out of scope does not block');
+
+    // Notes are soft by default and hard only when Settings says so.
+    const noNote = EST(); noNote.rooms[0].note = '';
+    eq(ctx.estimateSubmitBlocker(noNote), null, 'a missing note is not a blocker by default');
+    const strict = sandbox({ fns: ['estimateSubmitBlocker', 'estimateNoteGaps', 'unscoredRoomNames'],
+      stubs: { REQUIRE_WALKTHROUGH_NOTES: true } });
+    eq(strict.estimateSubmitBlocker(noNote).code, 'notes', 'and is one when the Settings requirement is on');
+    eq(ctx.estimateNoteGaps(noNote), ['Kitchen'], 'the gap list names the room');
+
+    // submitForApproval reads it rather than re-testing, and hands it back so a caller
+    // on another surface can print it where the person actually is.
+    const sub = noComments(body('submitForApproval(opts)'));
+    has(sub, 'estimateSubmitBlocker(currentEstimate)', 'submitForApproval reads the one rule');
+    has(sub, 'return blk', 'and returns the blocker');
+    has(sub, 'opts.silent', 'and can be told not to print it itself');
+    has(sub, 'return null', 'returning null on success');
+    // The soft confirm stays out of the blocker: a question is not a blocker, and the
+    // blocker function has to be answerable with no user present.
+    lacks(noComments(body('estimateSubmitBlocker(est)')), 'confirm(', 'the blocker never asks a question');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('jobTimelineActions — one primary per live step, and it is the right one');
+  {
+    const cases = [
+      [{}, { estimate: null }, 'Build the estimate', 'dashGoEstimate(7)'],
+      [{}, { estimate: EST() }, 'Submit for approval', 'dashSubmitEstimate(7)'],
+      [{ status: 'pending' }, { estimate: EST(), submitted: true }, 'Manager approval', 'dashApproveEstimate(7)'],
+      [{ approved: true }, { estimate: EST(), approved: true }, '&#10003; Mark as sent', 'dashMarkEstimateSent(7)'],
+      [{ approved: true, estimateSentDate: 'Sep 8, 2026' }, { estimate: EST(), approved: true },
+        '&#10003; Client accepted — mark won', 'openWonModal(7)'],
+      [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true }, { estimate: EST(), approved: true },
+        'Approve agreement', 'dashApproveAgreement(7)'],
+      [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true },
+        { estimate: EST(), approved: true }, '&#10003; Mark agreement sent', 'dashMarkAgreementSent(7)'],
+      [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true },
+        { estimate: EST(), approved: true }, '&#10003; Record signature received', 'dashMarkAgreementSigned(7)'],
+      [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true, agrSigned: true },
+        { estimate: EST(), approved: true }, '&#10003; Record payment', "dashRecordPayment(7,'deposit')"],
+    ];
+    cases.forEach(([j, r, label, call]) => {
+      const { a, row } = actFor(j, r);
+      eq(a.primary && a.primary.label, label, `${row.key}: the primary reads "${label}"`);
+      eq(a.primary && a.primary.call, call, `${row.key}: and calls ${call}`);
+    });
+
+    // Deny sits beside Manager Approval, and is marked as the destructive one.
+    const sub = actFor({ status: 'pending' }, { estimate: EST(), submitted: true });
+    eq(sub.a.secondary.map((x) => x.call), ['dashDenyEstimate(7)'], 'Deny is offered beside the PIN');
+    ok(sub.a.secondary[0].danger, 'and is marked destructive');
+    const won = actFor({ approved: true, estimateSentDate: 'x' }, { estimate: EST(), approved: true });
+    ok(won.a.secondary.some((x) => x.call === 'openCloseoutModal(7)'), 'Mark lost sits beside Mark won');
+
+    // ⚠ A blocked estimate points at where the fix is, rather than at nothing.
+    const halfRec = { estimate: EST(), approved: false };
+    halfRec.estimate.rooms.push({ name: 'Garage (2-car)', vol: 0, cplx: 0, note: 'x' });
+    const blocked = actFor({}, halfRec);
+    eq(blocked.row.state, 'blocked', 'the estimate-approved row is blocked');
+    eq(blocked.a.primary.call, 'dashGoEstimate(7)', 'and its button opens Build Estimate, where the scores are');
+
+    // ⚠ A blocked ACTIVATION has no button: the fix is a phone call to the executor, and
+    // a button that alerts the same blocker back at you is worse than none.
+    const auth = actFor({ approved: true, estimateSentDate: 'x', won: true, agrApproved: true, agrSent: true,
+      agrSigned: true, depositReceived: true, svc: 'contested_probate', executorAuth: 'pending',
+      payments: [{ id: 1, stage: 'deposit', amount: 12050 }] }, { estimate: EST(), approved: true });
+    eq(auth.row.key, 'job_active', 'the activation row is the live one');
+    eq(auth.row.state, 'blocked', 'and it is blocked');
+    eq(auth.a.primary, null, 'with no button — the fix is off-app');
+
+    // Out-of-sequence actions, and the one rule that keeps them safe.
+    const railDone = railFor({ approved: true, estimateSentDate: 'x' }, { estimate: EST(), approved: true });
+    const intake = ctx.jobTimelineActions(railDone.rows[0], railDone.job, railDone.rec);
+    eq(intake.secondary.map((x) => x.call), ['dashEditClient(7)'], 'Edit client is always available');
+    const built = railDone.rows.filter((r) => r.key === 'estimate_built')[0];
+    ok(ctx.jobTimelineActions(built, railDone.job, railDone.rec).secondary.length === 1,
+      'Edit estimate is offered while the client has not signed');
+    // ⚠ updateApprovalUI hides Edit Estimate on agrSigned because the signature IS the
+    // lock. A second door into the same edit that ignored that would be a way around it.
+    const signedRail = railFor({ approved: true, estimateSentDate: 'x', won: true, agrApproved: true,
+      agrSent: true, agrSigned: true }, { estimate: EST(), approved: true });
+    const builtSigned = signedRail.rows.filter((r) => r.key === 'estimate_built')[0];
+    eq(ctx.jobTimelineActions(builtSigned, signedRail.job, signedRail.rec).secondary, [],
+      'and withdrawn the moment the client signs');
+    const sentSigned = signedRail.rows.filter((r) => r.key === 'estimate_sent')[0];
+    eq(ctx.jobTimelineActions(sentSigned, signedRail.job, signedRail.rec).secondary, [],
+      'so is Offer discount — a signed price is not re-negotiated from here');
+
+    // A dead job offers nothing.
+    const lost = railFor({ status: 'lost', lostReasonLabel: 'Went elsewhere' }, { estimate: EST() });
+    eq(lost.next, null, 'a lost job lights nothing');
+    eq(ctx.jobTimelineActions(lost.rows[0], lost.job, lost.rec).primary, null, 'and offers no action');
+
+    // DOM-free, like the derivation it serves.
+    ['document.', 'getElementById', 'innerHTML'].forEach((n) =>
+      lacks(noComments(body('jobTimelineActions(row, job, estRec)')), n, `jobTimelineActions is DOM-free (${n})`));
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('the primary button is drawn in the band and nowhere else');
+  {
+    // The lit row and the band are the SAME step, so drawing the button on both puts the
+    // same control on screen twice — and two identical buttons make you check which is
+    // the real one. The rail stays a status read.
+    const rc = body('renderClientDashboard(jobId)');
+    has(rc, "if (r.state !== 'current' && r.state !== 'blocked') {",
+      'rows render their actions only when they are NOT the lit one');
+    has(rc, 'jt-btn jt-btn-p', 'the band draws the primary');
+    has(rc, 'jt-ghost', 'and rows draw only quiet secondaries');
+    eq((rc.match(/jt-btn-p/g) || []).length, 1, 'exactly one primary button site');
+    // ⚠ Labels carry HTML entities and are app constants, never user input. Escaping
+    // them a second time is what printed `&amp;amp;` on a client's screen once already.
+    lacks(rc, 'esc(_jtA.primary.label)', 'a button label is not double-escaped');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('feedback reaches the surface the person is actually looking at');
+  {
+    // agr-fb, dep-fb and e-fb all live inside panels the drilldown hides.
+    const t = noComments(body('_dashFbTarget(fallbackId)'));
+    has(t, "'dash-fb'", '_dashFbTarget redirects to the drilldown strip');
+    has(t, "getElementById('dash-fb')", 'but only when that strip actually exists');
+    has(t, 'return fallbackId', 'and falls back to the tab strip otherwise');
+
+    ['markAgreementSent()', 'markAgreementSigned()', 'openDepositModal(stage)', 'saveDeposit()'].forEach((sig) => {
+      const b = noComments(body(sig));
+      eq((b.match(/showFB\('agr-fb'/g) || []).length, 0,
+        `${sig} routes every message through _dashFbTarget, confirmations included`);
+      has(b, "_dashFbTarget('agr-fb')", `${sig} uses the redirect`);
+    });
+    // ⚠ The confirmations were left on the bare id in the first pass, so from the
+    // drilldown a refusal was visible and the "it worked" was not — the more confusing
+    // half of the two.
+    has(body('markAgreementSent()'), "_dashFbTarget('agr-fb'),'ok'", 'the sent confirmation reaches the drilldown');
+    has(body('markAgreementSigned()'), "_dashFbTarget('agr-fb'),'ok'", 'so does the signature confirmation');
+
+
+    // ⚠ The handlers must NOT re-check gates their target already enforces.
+    ['dashMarkAgreementSent(jobId)', 'dashMarkAgreementSigned(jobId)'].forEach((sig) => {
+      const b = noComments(body(sig));
+      lacks(b, 'agrApproved', `${sig} does not keep a second copy of the gate`);
+      lacks(b, 'agrSent', `${sig} leaves the rule where it is enforced`);
+    });
+
+    // showFB did getElementById(id).innerHTML with no guard. It is called from functions
+    // reachable from more than one surface now, and a TypeError mid-save is worse than a
+    // message nobody sees.
+    const fb = noComments(body('showFB(elId, type, msg)'));
+    has(fb, 'if (!el) return', 'showFB survives a missing target');
+    // `.a-info` is defined in the stylesheet and showFB's map never carried the key, so
+    // every info alert in the file rendered as a warning.
+    has(fb, "info:'a-info'", "showFB knows 'info'");
+    has(src, '.a-info{background:var(--info-bg)', 'and the class it names exists');
+    has(fb, 'if (e2)', 'including on the timer that clears it');
+    has(noComments(body('populateAgrSelect()')), 'if (!sel) return', 'populateAgrSelect guards its select too');
+
+    // The notice has to survive the innerHTML rewrite the redraw performs, and must not
+    // outlive the client it was about.
+    has(src, 'var _dashNotice = null;', 'the notice is module state, not DOM state');
+    has(body('renderClientDashboard(jobId)'), '_dashNotice = null;', 'and is cleared once shown');
+    has(body('openClientDashboard(jobId)'), '_dashNotice = null;', 'and again when another client is opened');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('openDepositModal takes the stage the row was pressed on');
+  {
+    const b = noComments(body('openDepositModal(stage)'));
+    has(b, 'PAYMENT_STAGES.indexOf(stage) >= 0', 'a recognised stage is honoured');
+    has(b, '_defaultPaymentStage(job)', 'and anything else falls back to the default');
+    // Record Payment on the midpoint row must not land on deposit.
+    has(body('jobTimelineActions(row, job, estRec)'), "dashRecordPayment(\" + id + \",'midpoint')",
+      'the midpoint row asks for the midpoint stage');
+    has(body('jobTimelineActions(row, job, estRec)'), "dashRecordPayment(\" + id + \",'final')",
+      'and the final row for the final');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('the old tab-hopping submit is gone');
+  {
+    // dashboardSubmitForApproval submitted, then closed the drilldown and threw you onto
+    // the Client Estimate tab — the behaviour this slice exists to remove. It also held
+    // its own copy of the priming, which is what made the wrong-job hazard easy to miss:
+    // it read as ceremony rather than as the thing standing between a PIN and the wrong
+    // client's estimate.
+    const b = noComments(body('dashboardSubmitForApproval(jobId)'));
+    has(b, 'dashSubmitEstimate(jobId)', 'it delegates to the handler that stays put');
+    lacks(b, 'closeClientDashboard', 'and no longer closes the drilldown');
+    lacks(b, 'renderClientEstimate', 'nor renders another tab');
+    lacks(b, 'currentEstimate =', 'nor keeps a second copy of the priming');
+  }
+};

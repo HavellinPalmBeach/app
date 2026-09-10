@@ -40,6 +40,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     return body.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
   })();
 
+  // The source of one function, bounded at the next top-level `function` so an
+  // assertion cannot wander into unrelated code — the trap that made three of this
+  // suite's first assertions unable to fail.
+  const body = (sig) => {
+    const from = src.indexOf('function ' + sig);
+    if (from < 0) return '';
+    const rest = src.slice(from + 10);
+    const end = rest.indexOf('\nfunction ');
+    return end < 0 ? rest : rest.slice(0, end);
+  };
+
   const ctx = sandbox({
     fns: [
       'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
@@ -393,17 +404,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // read undone on a job that has a priced estimate. _estStoreLanded is what corrects
     // it — and the dashboard was not in its list. Same shape as the 2026-08-24 Job Plan
     // bug: render before the data, never re-render after.
-    const landed = src.slice(src.indexOf('function _estStoreLanded()'));
-    const landedBody = landed.slice(0, landed.indexOf('\n}') + 2);
-    has(landedBody, 'client-dashboard-view', '_estStoreLanded redraws the open drilldown');
-    has(landedBody, 'renderClientDashboard(_dashboardJobId)', 'by job id, not blindly');
+    // ⚠ These pinned the inline redraw BYTE SEQUENCE, and Slice 1 folded three copies
+    // of it into one `_dashRedraw`. A true statement about a requirement should not
+    // break because a line moved — this file has paid for that twice. So they state the
+    // requirement: there is ONE redraw, it is properly guarded, and every surface that
+    // has to correct the drilldown calls it.
+    const redraw = body('_dashRedraw(jobId)');
+    has(redraw, "getElementById('client-dashboard-view')", '_dashRedraw checks the drilldown is open');
+    has(redraw, "style.display === 'none'", 'and that it is actually visible');
+    has(redraw, '_dashboardJobId !== jobId', 'and refuses to redraw a job that is not the one open');
+    has(redraw, 'renderClientDashboard(_dashboardJobId)', 'then redraws it');
 
-    // The 12s approval poll only ever redrew #panel-client-estimate. Once a manager
-    // approves from the rail, that panel is never the active one.
-    const watch = src.slice(src.indexOf('function approvalWatchTick(jobId)'));
-    const watchBody = watch.slice(0, watch.indexOf('\n}\n') + 3);
-    has(watchBody, 'renderClientDashboard(jobId)', 'approvalWatchTick redraws the drilldown too');
-    has(watchBody, '_dashboardJobId === jobId', 'and only for the job actually open');
+    has(body('_estStoreLanded()'), '_dashRedraw()', '_estStoreLanded corrects the drilldown on a cold cache');
+    has(body('approvalWatchTick(jobId)'), '_dashRedraw(jobId)', 'approvalWatchTick corrects it on a remote approval');
+
+    // Every writer the rail can now fire has to land its result on the rail. Before
+    // Slice 1 not one of them knew the drilldown existed.
+    [['checkPin()', 'the estimate PIN'], ['checkAgrPin()', 'the agreement PIN'],
+     ['markEstimateSent()', 'marking the estimate sent'], ['markAgreementSent()', 'marking the agreement sent'],
+     ['markAgreementSigned()', 'recording the signature'], ['saveDeposit()', 'recording a payment'],
+    ].forEach(([sig, what]) => {
+      has(body(sig), '_dashRedraw(', `${what} redraws the drilldown`);
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

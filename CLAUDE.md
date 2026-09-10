@@ -70,6 +70,112 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## The rail gets its buttons — SLICE 1 of the tab consolidation (BUILT 2026-09-10)
+Slice 1 of eight. Every action that used to need the Client Estimate or Agreement tab is now
+a button on the timeline rail, and **every one of them calls the existing function unchanged**.
+What is new is the priming in front of it and the redraw behind it. App-only, no redeploy.
+
+- **⚠⚠ THE PRIMING IS NOT CEREMONY. IT IS THE WHOLE SLICE, AND WITHOUT IT `checkPin` APPROVES
+  THE WRONG CLIENT'S ESTIMATE.** These actions were written when the only way to reach them
+  was a `<select>` on their own tab, so almost none of them takes a job id — they read a
+  GLOBAL that the tab's own loader set:
+  `checkPin` · `openDenyModal` · `openDiscountModal` · `markEstimateSent` → **`currentEstimate`**;
+  `checkAgrPin` → **`currentAgrJobId`**; `markAgreementSent` · `markAgreementSigned` ·
+  `openDepositModal` · `onDepStageChange` · `saveDeposit` · `updateDepModalHints` → **`_agrJob()`,
+  i.e. `#agr-job`**. Fired from the drilldown with those globals holding ANOTHER job's values,
+  the benign outcome is a silent no-op printed onto a panel you are not looking at. The
+  malignant one was **reproduced in a browser before it was fixed**: with the Client Estimate
+  tab sitting on Ellsworth, approving from Butler's dashboard stamped Butler's approver and
+  Butler's frozen lock snapshot onto **Ellsworth**. Same shape for `saveDeposit` and a cheque.
+  - **`_primeEstimateFor(jobId)` and `_primeAgreementFor(jobId)`**, and a test asserts every
+    `dash*` handler calls its primer **at a lower source index than the action it fires**, and
+    refuses outright when the priming fails. A handler that forgets fails the suite.
+  - **⚠ THE PRIMING IS SYNCHRONOUS AND LOCAL-STORE ONLY, and must stay that way.**
+    `loadClientEstimateFromSelect` chains `refreshJobsFromCloud` then a second fetch and
+    assigns the global in a **callback** — opening a PIN modal behind one is a race whose
+    loser is an approval on the wrong job. A test asserts no cloud call in the primer.
+  - **`_primeAgreementFor` runs the REAL `loadAgreement()`** rather than assigning
+    `currentAgrJobId` by hand: that loader is also what restores `agrApproved`/`By`/`At` off
+    the job record, and a second copy of that restore is how the global drifts from
+    `job.agrApproved`.
+- **⚠ `_agrJob()` NOW PREFERS THE OPEN DRILLDOWN, UNCONDITIONALLY.** Six functions resolve
+  their job through it and not one takes an id. The precedence is the safe one: if the
+  drilldown is on screen, the job it is showing is the job the person means — whereas
+  `#agr-job` can be holding whatever was last picked days ago. **Verified in a browser with
+  the select deliberately pointed at the other client**: the $12,050 landed on Butler and
+  Ellsworth stayed at $0.
+- **⚠ EVERY REFUSAL WAS PRINTING ONTO A PANEL NOBODY WAS LOOKING AT, AND THAT IS WHAT MAKES A
+  BUTTON READ AS DEAD.** `submitForApproval` sent all three of its refusals to
+  `showFB('e-fb', …)`, and `#e-fb` lives inside `#panel-estimate` — which neither the Client
+  Estimate tab nor the drilldown is showing. `estimateSubmitBlocker(est)` is the rule now,
+  DOM-free and in one place; `submitForApproval(opts)` reads it, still prints to `e-fb` by
+  default, and **returns it** so a caller on another surface can print it where the person
+  actually is. `_dashFbTarget(fallbackId)` does the same job for the agreement and payment
+  messages, and `#dash-fb` is the strip.
+  - **The soft walkthrough-note confirm stays OUT of the blocker.** A question is not a
+    blocker: the blocker function has to be answerable with no user present, or the tests
+    cannot drive it. Tested that it contains no `confirm(`.
+  - **⚠ THE CONFIRMATIONS WERE LEFT ON THE BARE ID IN THE FIRST PASS**, so from the drilldown
+    a refusal was visible and the "it worked" was not — the more confusing half of the two.
+- **⚠ AND MY OWN HANDLERS HAD RE-IMPLEMENTED TWO GATES.** `dashMarkAgreementSent` re-checked
+  `agrApproved` and `dashMarkAgreementSigned` re-checked `agrSent`, which `markAgreementSent`
+  and `markAgreementSigned` already enforce. That is the two-copies-drift defect this file
+  records over and over, written by the person who had just finished writing about it. Both
+  handlers prime and delegate now, and a test asserts neither mentions the field.
+- **`_dashRedraw(jobId)` is the ONE redraw**, replacing the three inline copies (two of them
+  added by Slice 0 the same day). Eight surfaces call it: `_estStoreLanded`,
+  `approvalWatchTick`, `checkPin`, `checkAgrPin`, `markEstimateSent`, `markAgreementSent`,
+  `markAgreementSigned`, `saveDeposit`. **Before Slice 1 not one of those knew the drilldown
+  existed** — a manager's PIN updated the store and the screen it was typed on went on
+  reading *"waiting on a manager PIN"*.
+- **`_dashNotice` is module state, not DOM state**, because `renderClientDashboard` rewrites
+  the whole drilldown with `innerHTML` — a handler that prints and then redraws wipes its own
+  message on the same tick. It is cleared once shown, and again in `openClientDashboard` so a
+  message about the last client cannot open on the next one.
+- **⚠ THE PRIMARY BUTTON IS RENDERED IN THE PINNED BAND AND NOWHERE ELSE.** The lit row and
+  the band are the same step, so drawing it on both puts the same control on screen twice —
+  and two identical buttons make you check which one is real. The rail stays a status read.
+  `jobTimelineActions(row, job, estRec)` is DOM-free and separate from `jobTimeline` for the
+  same reason that one is: what state a step is in and what you may do about it are two
+  questions, and collapsing them means the tests can read neither on its own.
+  - **A blocked ESTIMATE points at where the fix is** (Build Estimate, where the scores are).
+    **A blocked ACTIVATION has no button at all** — the fix is a phone call to the executor,
+    and a button that alerts the same blocker back at you is worse than none.
+  - **`Edit estimate` and `Offer discount` are withdrawn the moment `agrSigned` is true**,
+    because `updateApprovalUI` hides them on exactly that condition — the signature IS the
+    lock, and a second door into the same edit would be a way around it. Tested both ways.
+  - Button labels carry HTML entities and are app constants, never user input, so they go in
+    **raw**; escaping them a second time is what printed `&amp;amp;` on a client's screen once.
+- **`openDepositModal(stage)`** takes an optional stage so Record Payment on the midpoint row
+  does not land on deposit; an unrecognised value falls back to `_defaultPaymentStage`.
+- **Found and fixed in passing:** `showFB` did `getElementById(elId).innerHTML` with **no
+  guard**, on both the write and the 4-second clear — and it is now called from functions
+  reachable from more than one surface, where a TypeError mid-save is worse than a message
+  nobody sees. `populateAgrSelect` had the same bare read. And **`showFB`'s class map never
+  carried the `info` key**, although `.a-info` is defined in the stylesheet and five call
+  sites ask for it — every one of them has been rendering as a warning.
+- **`dashboardSubmitForApproval` no longer throws you onto the Client Estimate tab.** It also
+  held its own copy of the priming, which is what made the wrong-job hazard easy to miss: it
+  read as ceremony rather than as the thing standing between a PIN and the wrong client's
+  estimate. It delegates to `dashSubmitEstimate` now.
+- **2322 committed checks** (`tests/dashboard-actions.test.js`, 158 new). **All 20 changes
+  revert-verified individually** — including reordering one handler so it acts before it
+  primes, which is the wrong-job bug itself and turns the suite red.
+- **⚠ TWO PRE-EXISTING TESTS PINNED BYTE SEQUENCES AND BROKE ON A TRUE CHANGE**, the third and
+  fourth time this file has recorded it. `room-coverage.test.js` pinned the literal
+  `unscoredRoomNames(currentEstimate)` at a count of 3 and the exact `showFB('e-fb','warn',
+  'Cannot submit` call; both moved when the rule was extracted. Rewritten to name the four
+  functions that must consult the shared definition and assert each one does. Slice 0's own
+  redraw assertions pinned the inline text and were rewritten against `_dashRedraw`'s body.
+- **Verified end to end in headless Chromium on the real page**: two jobs seeded, the whole
+  lifecycle walked by pressing the rail's own buttons — approve (PIN) → mark sent → mark won →
+  approve agreement (PIN) → mark sent → record signature → record deposit → activate, nine
+  steps with no tab switch. Both wrong-job traps set deliberately and both held. A refusal
+  fired on a job whose agreement was never sent prints *"Record the agreement as sent first."*
+  on `#dash-fb`. 390px overflow 0, no page errors.
+- Documents still need no pass: nothing client-facing changed. **Slice 4 is the one that will
+  need both**, since it changes how every client document is sent.
+
 ## The Client Dashboard gets a timeline rail — SLICE 0 of the tab consolidation (BUILT 2026-09-10)
 *"we are finding ourselves having to go to too many tabs … all of the functionality that we
 currently have in client estimate agreement and invoices needs to go into the client dashboard …

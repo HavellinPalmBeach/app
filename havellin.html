@@ -273,6 +273,19 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-wait .jt-lbl{color:var(--gray);opacity:.72;}
 .jt-term{border-left-color:var(--err-tx);}
 .jt-term .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
+/* Actions. The primary lives in the band and nowhere else; `.jt-ghost` is the
+   quiet out-of-sequence action on a row (edit the client, edit the estimate). */
+.jt-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
+.jt-btn{font-size:12px;font-weight:600;padding:6px 13px;border-radius:4px;border:1px solid var(--bronze);background:var(--white);color:var(--bronze);cursor:pointer;font-family:inherit;}
+.jt-btn:hover{background:#fdfaf4;}
+.jt-btn-p{background:var(--gray-dk);border-color:var(--gray-dk);color:var(--white);}
+.jt-btn-p:hover{background:#000;}
+.jt-btn-d{border-color:var(--err-tx);color:var(--err-tx);}
+.jt-btn-d:hover{background:var(--err-bg);}
+.jt-next-blk .jt-btn-p{background:var(--err-tx);border-color:var(--err-tx);}
+.jt-ghost{font-size:11px;padding:0;border:0;background:none;color:var(--bronze);cursor:pointer;font-family:inherit;text-decoration:underline;}
+.jt-fb:empty{display:none;}
+.jt-fb{margin-bottom:10px;}
 .var-white{background:var(--white);}
 .jtbl th{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--gray);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--tan);}
 .jtbl td{font-size:12px;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
@@ -851,7 +864,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 6:53pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9027,9 +9040,7 @@ function approvalWatchTick(jobId) {
     // #panel-client-estimate being active, which it will not be once approving is
     // done from the rail — so without this the manager's PIN updates the store and
     // the screen it was typed on goes on showing "waiting on a manager PIN".
-    var _apDv = document.getElementById('client-dashboard-view');
-    if (_apDv && _apDv.style.display !== 'none' && _dashboardJobId === jobId
-        && typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
+    _dashRedraw(jobId);
     // renderClientEstimate/updateApprovalUI end in applyEstimateLock, which
     // re-arms or disarms this watch based on the freshly-loaded state.
   });
@@ -9037,26 +9048,54 @@ function approvalWatchTick(jobId) {
 
 // ─── TC REVIEW / SUBMIT FOR APPROVAL ────────────────────────────────────────
 
-function submitForApproval() {
-  if (!currentEstimate || currentEstimate.havellinTotal === 0) {
-    showFB('e-fb','warn','No estimate to submit.');
-    return;
-  }
-  var unscoredRooms = unscoredRoomNames(currentEstimate);
-  if (unscoredRooms.length > 0) { showFB('e-fb','warn','Cannot submit — every included room needs a volume and complexity score (1–5): ' + unscoredRooms.join(', ')); return; }
+// Rooms and collections carrying no walkthrough note. Soft-required by default (a
+// one-click override); the Settings toggle promotes it to the hard block below.
+function estimateNoteGaps(est) {
+  return ((est && est.rooms) || []).filter(function(r){ return !(r.note && r.note.trim()); }).map(function(r){ return r.name; })
+    .concat(((est && est.collections) || []).filter(function(c){ return !(c.note && c.note.trim()); }).map(function(c){ return (c.name||'Collection') + ' (collection)'; }));
+}
 
-  // Walkthrough-note check. Rooms and collections with no note are flagged.
-  // Soft-required by default (one-click override); a Settings toggle promotes
-  // this to a hard block.
-  var noteMissing = (currentEstimate.rooms||[]).filter(function(r){ return !(r.note && r.note.trim()); }).map(function(r){ return r.name; })
-    .concat((currentEstimate.collections||[]).filter(function(c){ return !(c.note && c.note.trim()); }).map(function(c){ return (c.name||'Collection') + ' (collection)'; }));
-  if (noteMissing.length > 0) {
-    var list = noteMissing.join(', ');
-    if (REQUIRE_WALKTHROUGH_NOTES) {
-      showFB('e-fb','warn','Cannot submit — walkthrough notes required and missing for: ' + list + '. Add notes or turn off the requirement in Settings.');
-      return;
+// The hard reasons an estimate cannot go to a manager, in ONE place and DOM-free.
+// Returns {code, msg} or null.
+//
+// ⚠ EXTRACTED BECAUSE THE REFUSALS WERE PRINTING ON A PANEL NOBODY WAS LOOKING AT.
+// All three went to `showFB('e-fb', …)`, and `#e-fb` lives inside #panel-estimate —
+// but Submit is also fired from the Client Estimate tab and now from the Client
+// Dashboard, neither of which is showing that panel. The refusal landed somewhere
+// invisible and the button read as dead. The RULE stays in one place; what moved is
+// the decision about WHERE the message goes, which now belongs to the caller.
+function estimateSubmitBlocker(est) {
+  if (!est || est.havellinTotal === 0) return { code:'noest', msg:'No estimate to submit.' };
+  var unscored = unscoredRoomNames(est);
+  if (unscored.length > 0) {
+    return { code:'unscored',
+      msg:'Cannot submit — every included room needs a volume and complexity score (1–5): ' + unscored.join(', ') };
+  }
+  if (REQUIRE_WALKTHROUGH_NOTES) {
+    var gaps = estimateNoteGaps(est);
+    if (gaps.length > 0) {
+      return { code:'notes',
+        msg:'Cannot submit — walkthrough notes required and missing for: ' + gaps.join(', ') + '. Add notes or turn off the requirement in Settings.' };
     }
-    if (!confirm('No walkthrough note for: ' + list + '.\n\nContinue anyway?')) return;
+  }
+  return null;
+}
+
+// Returns the blocker that stopped it, or null on success. `opts.silent` suppresses
+// the e-fb print for a caller that will show the message somewhere the user can see.
+function submitForApproval(opts) {
+  opts = opts || {};
+  var blk = estimateSubmitBlocker(currentEstimate);
+  if (blk) { if (!opts.silent) showFB('e-fb','warn', blk.msg); return blk; }
+
+  // The soft arm: with the Settings requirement off, a missing note is a one-click
+  // confirm rather than a refusal. It stays here rather than in the blocker because a
+  // question is not a blocker — the blocker function must be answerable without a user.
+  if (!REQUIRE_WALKTHROUGH_NOTES) {
+    var noteMissing = estimateNoteGaps(currentEstimate);
+    if (noteMissing.length > 0 && !confirm('No walkthrough note for: ' + noteMissing.join(', ') + '.\n\nContinue anyway?')) {
+      return { code:'cancelled', msg:'' };
+    }
   }
 
   estimateSubmitted = true;
@@ -9069,6 +9108,7 @@ function submitForApproval() {
   updateApprovalUI();
 
   notifyManagerForApproval(currentEstimate, null);
+  return null;
 }
 
 // Manager approval is remote: the TC submits, the manager gets an email, then
@@ -9154,6 +9194,7 @@ function markEstimateSent() {
   saveJobs();
   syncJobToSheets(job);
   updateApprovalUI();
+  _dashRedraw(job.id);
   showSyncBadge('Estimate marked as sent ✓');
 }
 
@@ -9455,6 +9496,11 @@ function checkPin() {
     }
     applyEstimateLock();
     renderClientEstimate();
+    // The manager may have typed that PIN on the Client Dashboard. renderClientEstimate
+    // writes into #panel-client-estimate whether or not it is the visible panel — which
+    // is what keeps the Drive export below working — but nothing was redrawing the rail
+    // the approval was actually requested from.
+    _dashRedraw(currentEstimate && currentEstimate.jobId);
     if (currentEstimate && currentEstimate.jobId) {
       var _apprJobN = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
       notifyTCOfDecision(_apprJobN, currentEstimate, 'approved', '');
@@ -10154,7 +10200,22 @@ function saveChangeOrder() {
 //
 // There is now one step per real-world event, each recording who and when.
 
+// ⚠⚠ SIX FUNCTIONS RESOLVE THEIR JOB THROUGH THIS AND NONE OF THEM TAKES AN ID —
+// markAgreementSent, markAgreementSigned, openDepositModal, onDepStageChange,
+// saveDeposit and updateDepModalHints. They were written when the Agreement tab's
+// own <select> was the only way to reach them. Fired from the Client Dashboard with
+// that select unset, every one of them silently answered "Select a job first" onto a
+// panel nobody was looking at; fired with it holding ANOTHER job, they would have
+// recorded a signature or a cheque against the wrong client.
+//
+// So when the drilldown is open it WINS, unconditionally. That precedence is the
+// safe one: if the drilldown is on screen, the job it is showing is the job the
+// person means — whereas #agr-job can be holding whatever was last picked days ago.
 function _agrJob() {
+  var dv = document.getElementById('client-dashboard-view');
+  if (dv && dv.style.display !== 'none' && _dashboardJobId) {
+    return jobs.find(function(j){ return j.id === _dashboardJobId; }) || null;
+  }
   var el = document.getElementById('agr-job');
   var id = el ? parseInt(el.value) || 0 : 0;
   return jobs.find(function(j){ return j.id === id; }) || null;
@@ -10170,26 +10231,26 @@ function _actor(job) {
 
 function markAgreementSent() {
   var job = _agrJob();
-  if (!job) { showFB('agr-fb','warn','Select a job first.'); return; }
-  if (!job.agrApproved) { showFB('agr-fb','warn','Approve the agreement before recording it as sent.'); return; }
+  if (!job) { showFB(_dashFbTarget('agr-fb'),'warn','Select a job first.'); return; }
+  if (!job.agrApproved) { showFB(_dashFbTarget('agr-fb'),'warn','Approve the agreement before recording it as sent.'); return; }
   job.agrSent = true;
   job.agrSentBy = _actor(job);
   job.agrSentAt = _stamp();
   saveJobs(); syncJobToSheets(job);
-  updateAgrUI(); renderJobs();
-  showFB('agr-fb','ok','Agreement recorded as sent. Record the signature when it comes back.');
+  updateAgrUI(); renderJobs(); _dashRedraw(job.id);
+  showFB(_dashFbTarget('agr-fb'),'ok','Agreement recorded as sent. Record the signature when it comes back.');
 }
 
 function markAgreementSigned() {
   var job = _agrJob();
-  if (!job) { showFB('agr-fb','warn','Select a job first.'); return; }
-  if (!job.agrSent) { showFB('agr-fb','warn','Record the agreement as sent first.'); return; }
+  if (!job) { showFB(_dashFbTarget('agr-fb'),'warn','Select a job first.'); return; }
+  if (!job.agrSent) { showFB(_dashFbTarget('agr-fb'),'warn','Record the agreement as sent first.'); return; }
   job.agrSigned = true;
   job.agrSignedBy = _actor(job);
   job.agrSignedAt = _stamp();
   saveJobs(); syncJobToSheets(job);
-  updateAgrUI(); renderJobs();
-  showFB('agr-fb','ok','Agreement recorded as signed. Record the deposit when it arrives.');
+  updateAgrUI(); renderJobs(); _dashRedraw(job.id);
+  showFB(_dashFbTarget('agr-fb'),'ok','Agreement recorded as signed. Record the deposit when it arrives.');
 }
 
 // Deposit target: 50% of the approved job total. Read from the saved estimate so the
@@ -10297,12 +10358,18 @@ function currentDepStage() {
   return PAYMENT_STAGES.indexOf(v) >= 0 ? v : 'deposit';
 }
 
-function openDepositModal() {
+// `stage` is optional: the Agreement tab opens it with none and lets
+// `_defaultPaymentStage` choose, while the timeline rail opens it on the stage of the
+// row that was pressed — Record Payment on the midpoint row must not land on deposit.
+// An unrecognised value falls back to the default rather than writing money to a stage
+// that does not exist.
+function openDepositModal(stage) {
   var job = _agrJob();
-  if (!job) { showFB('agr-fb','warn','Select a job first.'); return; }
-  if (!job.agrSigned) { showFB('agr-fb','warn','Record the signed agreement before the deposit.'); return; }
+  if (!job) { showFB(_dashFbTarget('agr-fb'),'warn','Select a job first.'); return; }
+  if (!job.agrSigned) { showFB(_dashFbTarget('agr-fb'),'warn','Record the signed agreement before the deposit.'); return; }
   var stageEl = document.getElementById('dep-stage');
-  if (stageEl) stageEl.value = _defaultPaymentStage(job);
+  var wanted = (PAYMENT_STAGES.indexOf(stage) >= 0) ? stage : _defaultPaymentStage(job);
+  if (stageEl) stageEl.value = wanted;
   document.getElementById('dep-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('dep-method').value = '';
   document.getElementById('dep-reference').value = '';
@@ -10459,13 +10526,13 @@ function saveDeposit() {
   }
 
   document.getElementById('deposit-modal').style.display = 'none';
-  updateAgrUI(); renderJobs();
+  updateAgrUI(); renderJobs(); _dashRedraw(job.id);
   if (typeof loadInvoice === 'function' && document.getElementById('invoice-job')) {
     try { loadInvoice(); } catch(e) {}   // invoice stage advances off depositReceived
   }
   var funded = isJobFunded(job);
   var stageWord = PAYMENT_STAGE_LABELS[stage] || stage;
-  showFB('agr-fb', (!isDep || funded) ? 'ok' : 'warn', fmt(amount) + ' recorded against ' + stageWord
+  showFB(_dashFbTarget('agr-fb'), (!isDep || funded) ? 'ok' : 'warn', fmt(amount) + ' recorded against ' + stageWord
     + (clearsOnReceipt ? '' : ' — uncleared until the bank confirms')
     + (!isDep
         ? '. Job total received is now ' + fmt(jobPaidTotal(job)) + '.'
@@ -10612,6 +10679,7 @@ function printChangeOrder(coId) {
 
 function openClientDashboard(jobId) {
   _dashboardJobId = jobId;
+  _dashNotice = null;   // a message about the last client must not open on the next one
   document.getElementById('clients-list-view').style.display = 'none';
   document.getElementById('client-dashboard-view').style.display = 'block';
   renderClientDashboard(jobId);
@@ -10668,25 +10736,12 @@ function toggleProbatePkg(jobId) {
   renderClientDashboard(jobId);
 }
 
-function dashboardSubmitForApproval(jobId) {
-  var rec = estimateStore[jobId];
-  if (!rec || !rec.estimate) return;
-  currentEstimate = rec.estimate;
-  estimateApproved = rec.approved || false;
-  estimateSubmitted = rec.submitted || false;
-  approvedBy = rec.approvedBy || '';
-  approvedAt = rec.approvedAt || '';
-  submitForApproval();
-  closeClientDashboard();
-  var tabs = document.querySelectorAll('.nb');
-  tabs.forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-  var ceTab = Array.from(tabs).find(function(t){ return t.textContent.trim() === 'Client Estimate'; });
-  if (ceTab) ceTab.classList.add('active');
-  var cePanel = document.getElementById('panel-client-estimate');
-  if (cePanel) cePanel.classList.add('active');
-  renderClientEstimate();
-}
+// Kept as the name the action-bar button uses; it is `dashSubmitEstimate` now, which
+// stays on the dashboard instead of throwing you onto the Client Estimate tab. It also
+// held its own copy of the priming — the copy that made the wrong-job hazard easy to
+// miss, because it looked like ceremony rather than the thing standing between a PIN
+// and the wrong client's estimate.
+function dashboardSubmitForApproval(jobId) { dashSubmitEstimate(jobId); }
 
 function getJobActuals(jobId) {
   var logs = jobLogs[jobId] || [];
@@ -10928,6 +10983,267 @@ function jobTimelineNext(rows) {
     if (rows[i].state === 'current' || rows[i].state === 'blocked') return rows[i];
   }
   return null;
+}
+
+// ─── WHAT EACH STEP LETS YOU DO ──────────────────────────────────────────────
+// Deliberately SEPARATE from `jobTimeline`, and DOM-free for the same reason it
+// is: what state a step is in and what you may do about it are two questions,
+// and collapsing them means the tests can no longer read either one on its own.
+//
+// ⚠ THE PRIMARY BUTTON IS RENDERED IN THE PINNED BAND AND NOWHERE ELSE. The lit
+// row and the band are the same step, so drawing the button on both puts the
+// same control on screen twice — the duplication the client-copy rule cuts, and
+// worse here, because two identical buttons make you check which one is real.
+// The rail stays a status read; the band is the one place anything is pressed.
+//
+// `secondary` is the exception, and only where an action is genuinely available
+// out of sequence: the intake answers are edited all through a job, and an
+// estimate stays editable until the client signs.
+function jobTimelineActions(row, job, estRec) {
+  var id = job.id;
+  var out = { primary: null, secondary: [] };
+  var live = (row.state === 'current' || row.state === 'blocked');
+  var estApproved = !!((estRec && estRec.approved) || job.approved);
+  var estSubmitted = !!((estRec && estRec.submitted) || (job.status === 'pending' && !estApproved));
+
+  switch (row.key) {
+    case 'intake':
+      out.secondary.push({ label: '&#9998; Edit client', call: 'dashEditClient(' + id + ')' });
+      break;
+
+    case 'walkthrough':
+      if (live) out.primary = { label: job.walkthrough ? 'Change the walkthrough date' : 'Set the walkthrough date',
+                                call: 'dashEditClient(' + id + ')' };
+      break;
+
+    case 'estimate_built':
+      if (live) out.primary = { label: 'Build the estimate', call: 'dashGoEstimate(' + id + ')' };
+      // ⚠ Offered only while the client has NOT signed. `updateApprovalUI` hides Edit
+      // Estimate on `agrSigned` because the signature is the lock, and a second door
+      // into the same edit that ignored that rule would be a way around it.
+      else if (row.state === 'done' && !job.agrSigned) out.secondary.push({ label: '&#9998; Edit estimate', call: 'dashGoEstimate(' + id + ')' });
+      break;
+
+    case 'estimate_approved':
+      // Blocked means unscored rooms, and the fix is on Build Estimate — so the button
+      // goes there rather than being absent, which would read as a dead end.
+      if (row.state === 'blocked') out.primary = { label: 'Open Build Estimate', call: 'dashGoEstimate(' + id + ')' };
+      else if (row.state === 'current' && estSubmitted) {
+        out.primary = { label: 'Manager approval', call: 'dashApproveEstimate(' + id + ')' };
+        out.secondary.push({ label: 'Deny', call: 'dashDenyEstimate(' + id + ')', danger: true });
+      } else if (row.state === 'current') {
+        out.primary = { label: 'Submit for approval', call: 'dashSubmitEstimate(' + id + ')' };
+      }
+      break;
+
+    case 'estimate_sent':
+      if (live) out.primary = { label: '&#10003; Mark as sent', call: 'dashMarkEstimateSent(' + id + ')' };
+      // A discount is a re-approval, so it is only offered on an approved estimate the
+      // client has not yet signed against.
+      if (estApproved && !job.agrSigned) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
+      break;
+
+    case 'client_accepted':
+      if (live) {
+        out.primary = { label: '&#10003; Client accepted — mark won', call: 'openWonModal(' + id + ')' };
+        out.secondary.push({ label: 'Mark lost', call: 'openCloseoutModal(' + id + ')', danger: true });
+      }
+      break;
+
+    case 'agreement_approved':
+      if (live) out.primary = { label: 'Approve agreement', call: 'dashApproveAgreement(' + id + ')' };
+      break;
+
+    case 'agreement_sent':
+      if (live) out.primary = { label: '&#10003; Mark agreement sent', call: 'dashMarkAgreementSent(' + id + ')' };
+      break;
+
+    case 'agreement_signed':
+      // ⚠ SLICE 6 REPLACES THIS BUTTON WITH A READ-ONLY STATUS LINE the moment an
+      // e-signature provider is configured. A reachable "mark it signed" control while
+      // an envelope is outstanding is a manual write that bypasses the provider — the
+      // one hole the signature record exists to close. It stays a button only while
+      // wet-signed-and-scanned is the whole workflow.
+      if (live) out.primary = { label: '&#10003; Record signature received', call: 'dashMarkAgreementSigned(' + id + ')' };
+      break;
+
+    case 'deposit_received':
+      if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'deposit')" };
+      break;
+
+    case 'job_active':
+      // A blocked activation is chased off-app — the fix names the representative and
+      // their number. There is nothing to press, and a button that alerts the same
+      // blocker back at you is worse than none.
+      if (row.state === 'current') out.primary = { label: '&#9654; Activate job', call: 'activateOrCycle(' + id + ')' };
+      break;
+
+    case 'midpoint_received':
+      if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'midpoint')" };
+      break;
+
+    case 'work_complete':
+      if (live) out.primary = { label: '&#9632; Close job', call: 'activateOrCycle(' + id + ')' };
+      break;
+
+    case 'final_paid':
+      if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'final')" };
+      break;
+  }
+  return out;
+}
+
+// ─── ACTING ON A JOB FROM THE CLIENT DASHBOARD ───────────────────────────────
+// SLICE 1 of moving the document tabs into the drilldown. Every handler below
+// calls an EXISTING function unchanged; what is new is the priming in front of
+// it and the redraw behind it.
+//
+// ⚠⚠ WHY PRIMING IS THE WHOLE PROBLEM, AND WHY THIS IS NOT OPTIONAL CEREMONY.
+// These actions were written when the only way to reach them was to pick a job
+// from a <select> on their own tab, so almost none of them takes a job id —
+// they read a GLOBAL that the tab's own loader set:
+//
+//   checkPin / openDenyModal / openDiscountModal / markEstimateSent → currentEstimate
+//   checkAgrPin                                                     → currentAgrJobId
+//   markAgreementSent / markAgreementSigned / openDepositModal       → _agrJob(), i.e. #agr-job
+//
+// Fired from the drilldown with those globals holding ANOTHER job's values, the
+// benign outcome is a silent no-op ("Select a job first" printed on a tab you
+// are not looking at). The malignant one is real: **`checkPin` would approve
+// whichever estimate happened to be loaded**, stamping an approver and a locked
+// snapshot onto the wrong client's job. Prime first, always.
+//
+// The priming is deliberately SYNCHRONOUS and local-store only. The tab loaders
+// (`loadClientEstimateFromSelect`) chain two cloud fetches and assign the global
+// in a callback, so opening a PIN modal behind one is a race whose loser is an
+// approval on the wrong job.
+
+var _dashNotice = null;   // {type:'ok'|'warn'|'err', msg} — survives the redraw below
+
+// ⚠ A handler cannot print feedback and THEN redraw: `renderClientDashboard`
+// rewrites the whole drilldown with innerHTML, so the message would be wiped on
+// the same tick it was written. Set the notice, then redraw; the renderer prints
+// it. Same reason the sync chip keeps its state in a variable rather than in the DOM.
+function dashNotice(type, msg) { _dashNotice = { type: type, msg: msg }; }
+
+// The drilldown is a surface all of these actions can now be fired from, and not
+// one of them knew it existed. ONE redraw, one definition — three call sites had
+// started to grow their own copy.
+function _dashRedraw(jobId) {
+  var dv = document.getElementById('client-dashboard-view');
+  if (!dv || dv.style.display === 'none' || !_dashboardJobId) return false;
+  if (jobId && _dashboardJobId !== jobId) return false;
+  if (typeof renderClientDashboard !== 'function') return false;
+  renderClientDashboard(_dashboardJobId);
+  return true;
+}
+
+// Load this job's estimate into the globals the estimate actions read. Returns the
+// store record, or null when there is nothing saved for the job — in which case the
+// caller must NOT go on to fire an action, or it acts on the previous job's estimate.
+function _primeEstimateFor(jobId) {
+  var rec = estimateStore[jobId];
+  if (!rec || !rec.estimate) return null;
+  currentEstimate = rec.estimate;
+  estimateApproved = rec.approved || false;
+  estimateSubmitted = rec.submitted || false;
+  discountRevision = rec.discountRevision || false;
+  approvedBy = rec.approvedBy || '';
+  approvedAt = rec.approvedAt || '';
+  return rec;
+}
+
+// The agreement side has no equivalent global to set by hand: `loadAgreement()` is
+// what assigns `currentAgrJobId` AND restores agrApproved/By/At off the job record,
+// and it reads `#agr-job`. So point the select and run the real loader rather than
+// duplicating what it does — a second copy of that restore is how `agrApproved`
+// would drift from `job.agrApproved`.
+function _primeAgreementFor(jobId) {
+  var sel = document.getElementById('agr-job');
+  if (!sel) return false;
+  populateAgrSelect();
+  sel.value = String(jobId);
+  if ((parseInt(sel.value) || 0) !== jobId) return false;   // no option for this job
+  loadAgreement();
+  return true;
+}
+
+// ─── THE HANDLERS ────────────────────────────────────────────────────────────
+
+function dashEditClient(jobId) { showEditClient(jobId); }
+
+// Build Estimate is a data-entry tab, not a document — the one row that leaves the
+// dashboard by design. The drilldown has to close first or the estimate tab renders
+// behind it.
+function dashGoEstimate(jobId) {
+  closeClientDashboard();
+  setTimeout(function(){ editEstimateForJob(jobId); }, 100);
+}
+
+function dashSubmitEstimate(jobId) {
+  if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet — build it first.'); _dashRedraw(jobId); return; }
+  // ⚠ submitForApproval RETURNS its blocker now rather than only printing it. It
+  // printed all three refusals to `e-fb`, which lives inside #panel-estimate — a
+  // panel the drilldown is not showing — so a refusal fired from here was invisible
+  // and the button read as dead. The RULE stays in one place; only the destination
+  // of the message moved to the caller.
+  var blk = submitForApproval({ silent: true });
+  if (blk) { dashNotice('warn', blk.msg); _dashRedraw(jobId); return; }
+  dashNotice('ok', 'Submitted for manager approval — the manager gets an email.');
+  _dashRedraw(jobId);
+}
+
+function dashApproveEstimate(jobId) {
+  if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
+  openPinModal();
+}
+
+function dashDenyEstimate(jobId) {
+  if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
+  openDenyModal();
+}
+
+function dashOfferDiscount(jobId) {
+  if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
+  openDiscountModal();
+}
+
+function dashMarkEstimateSent(jobId) {
+  if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
+  markEstimateSent();
+  dashNotice('ok', 'Estimate recorded as sent.');
+  _dashRedraw(jobId);
+}
+
+function dashApproveAgreement(jobId) {
+  if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
+  // The gate is re-checked inside checkAgrPin as defence in depth; this is the same
+  // wording the Agreement tab shows, printed where the person actually is.
+  var blk = agrApprovalBlocker(jobId);
+  if (blk === 'estimate') { dashNotice('warn', 'Approve the estimate for this job first.'); _dashRedraw(jobId); return; }
+  if (blk === 'notwon')   { dashNotice('warn', 'Record the client\'s acceptance first — until they have said yes there is nothing to put under contract.'); _dashRedraw(jobId); return; }
+  if (blk)                { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
+  openAgrPinModal();
+}
+
+// ⚠ NEITHER OF THESE RE-CHECKS THE GATE, DELIBERATELY. `markAgreementSent` already
+// refuses without `agrApproved` and `markAgreementSigned` without `agrSent`, and both
+// now print that refusal — and their confirmation — onto the drilldown's own strip.
+// A second copy of the rule in the caller is the two-copies-drift defect this file has
+// paid for repeatedly, and the copy here would be the one nobody remembers to update.
+function dashMarkAgreementSent(jobId) {
+  if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
+  markAgreementSent();
+}
+
+function dashMarkAgreementSigned(jobId) {
+  if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
+  markAgreementSigned();
+}
+
+function dashRecordPayment(jobId, stage) {
+  if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the payment recorder for this job.'); _dashRedraw(jobId); return; }
+  openDepositModal(stage);
 }
 
 function renderClientDashboard(jobId) {
@@ -11197,6 +11513,17 @@ function renderClientDashboard(jobId) {
 
   h += '<div class="jt">';
 
+  // ⚠ THE ONE PLACE A HANDLER'S MESSAGE CAN LAND. Every agreement and payment action
+  // prints to a strip inside its own tab's panel (`agr-fb`, `dep-fb`, `e-fb`), and
+  // those panels are hidden while the drilldown is up — so a refusal fired from here
+  // was written into the DOM and seen by nobody, which is exactly what makes a button
+  // read as dead. `_dashFbTarget` redirects to this strip; `_dashNotice` survives the
+  // innerHTML rewrite that `renderClientDashboard` does on every action.
+  h += '<div class="jt-fb" id="dash-fb">'
+     + (_dashNotice ? '<div class="alert ' + ({ok:'a-ok',warn:'a-warn',err:'a-err'}[_dashNotice.type] || 'a-warn') + '">' + esc(_dashNotice.msg) + '</div>' : '')
+     + '</div>';
+  _dashNotice = null;   // shown once; a stale one must not reappear on the next redraw
+
   // The NEXT band. It is the answer to the question the dashboard exists to answer —
   // open a client, know the one thing to do — so it sits above the rail rather than
   // being something you find by reading down it.
@@ -11212,6 +11539,18 @@ function renderClientDashboard(jobId) {
       if (_jtNext.blockedFix) h += '<div class="jt-next-fix">' + esc(_jtNext.blockedFix) + '</div>';
     } else if (_jtNext.sub) {
       h += '<div class="jt-next-sub">' + esc(_jtNext.sub) + '</div>';
+    }
+    // The buttons. ⚠ Labels carry HTML entities (&#10003;, &#9654;) and are app
+    // constants, never user input, so they go in RAW — running them through esc() a
+    // second time is what printed `&amp;amp;` on a client's screen once already.
+    var _jtA = jobTimelineActions(_jtNext, job, estRec);
+    if (_jtA.primary || _jtA.secondary.length) {
+      h += '<div class="jt-acts">';
+      if (_jtA.primary) h += '<button class="jt-btn jt-btn-p" onclick="' + _jtA.primary.call + '">' + _jtA.primary.label + '</button>';
+      _jtA.secondary.forEach(function(a){
+        h += '<button class="jt-btn' + (a.danger ? ' jt-btn-d' : '') + '" onclick="' + a.call + '">' + a.label + '</button>';
+      });
+      h += '</div>';
     }
     h += '</div>';
   } else if (_jtRows.length && _jtRows[0].state !== 'terminal') {
@@ -11234,6 +11573,17 @@ function renderClientDashboard(jobId) {
     // A blocked row says nothing extra: the band directly above carries the reason and
     // the fix, and repeating them here is the duplication the client-copy rule cuts.
     if (r.state !== 'blocked' && r.sub) h += '<div class="jt-sub">' + esc(r.sub) + '</div>';
+    // A row that is NOT the lit one shows only its out-of-sequence actions, as quiet
+    // links. The lit row shows none: its buttons are in the band directly above, and
+    // the same control twice is the duplication the client-copy rule cuts.
+    if (r.state !== 'current' && r.state !== 'blocked') {
+      var _rA = jobTimelineActions(r, job, estRec);
+      if (_rA.secondary.length) {
+        h += '<div class="jt-sub" style="display:flex;gap:12px;">';
+        _rA.secondary.forEach(function(a){ h += '<button class="jt-ghost" onclick="' + a.call + '">' + a.label + '</button>'; });
+        h += '</div>';
+      }
+    }
     h += '</div>';
   });
   h += '</div>';   // close .jt
@@ -11884,9 +12234,23 @@ function formatPropVal(v) {
   return '$' + Math.round(v/1000).toLocaleString() + 'K';
 }
 function showFB(elId, type, msg) {
-  var cls = {ok:'a-ok',warn:'a-warn',err:'a-err'}[type]||'a-warn';
-  document.getElementById(elId).innerHTML = '<div class="alert '+cls+'">'+msg+'</div>';
-  setTimeout(function(){ document.getElementById(elId).innerHTML=''; }, 4000);
+  var cls = {ok:'a-ok',warn:'a-warn',err:'a-err',info:'a-info'}[type]||'a-warn';
+  // Guarded: this is called from functions that are now reachable from more than one
+  // surface, and a missing strip must not throw and abandon the rest of the handler
+  // half-done. A message nobody sees is bad; a TypeError mid-save is worse.
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = '<div class="alert '+cls+'">'+msg+'</div>';
+  setTimeout(function(){ var e2 = document.getElementById(elId); if (e2) e2.innerHTML=''; }, 4000);
+}
+
+// Where a message should land. The agreement and payment handlers print to strips
+// that live inside their own tab's panel; when the drilldown is what is on screen,
+// that panel is hidden and the message is lost. One redirect, at the point of use.
+function _dashFbTarget(fallbackId) {
+  var dv = document.getElementById('client-dashboard-view');
+  if (dv && dv.style.display !== 'none' && _dashboardJobId && document.getElementById('dash-fb')) return 'dash-fb';
+  return fallbackId;
 }
 function generateHvlId() {
   var now = new Date();
@@ -12159,9 +12523,7 @@ function _estStoreLanded() {
   // visited in a week — the rail paints "Estimate built" undone on a job that has a
   // priced estimate, and pins the NEXT band on the wrong step. Exactly the shape of
   // the 2026-08-24 Job Plan bug: render before the data, never re-render after.
-  var dv = document.getElementById('client-dashboard-view');
-  if (dv && dv.style.display !== 'none' && _dashboardJobId
-      && typeof renderClientDashboard === 'function') renderClientDashboard(_dashboardJobId);
+  _dashRedraw();
 }
 
 // The APPROVED estimate for a job, as the client documents attach it — the snapshot inside
@@ -22861,6 +23223,7 @@ function populateIntakeTCDropdown() {
 
 function populateAgrSelect() {
   var sel = document.getElementById('agr-job');
+  if (!sel) return;
   var cur = sel.value;
   sel.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
@@ -23983,6 +24346,7 @@ function checkAgrPin() {
     }
     document.getElementById('agr-pin-modal').style.display = 'none';
     renderAgreement();
+    _dashRedraw(currentAgrJobId);
     // File the APPROVED agreement to Drive. Previously this fired on every render, so
     // Drive collected copies of the blank unapproved template; now it runs once, here,
     // on the version that was actually signed off. renderAgreement() has just rewritten
