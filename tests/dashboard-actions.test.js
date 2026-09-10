@@ -40,6 +40,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
       'depositTargetFor'],
+    vars: ['JT_SHORT'],
     stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
   });
 
@@ -262,11 +263,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // same control on screen twice — and two identical buttons make you check which is
     // the real one. The rail stays a status read.
     const rc = body('renderClientDashboard(jobId)');
-    has(rc, "if (r.state !== 'current' && r.state !== 'blocked') {",
-      'rows render their actions only when they are NOT the lit one');
     has(rc, 'jt-btn jt-btn-p', 'the band draws the primary');
-    has(rc, 'jt-ghost', 'and rows draw only quiet secondaries');
     eq((rc.match(/jt-btn-p/g) || []).length, 1, 'exactly one primary button site');
+
+    // ⚠ The out-of-sequence actions used to hang off their own row, which the horizontal
+    // track has no room for and which scattered them down the vertical rail. They are
+    // ONE deduped strip now, serving both layouts — so an action appears once on screen
+    // whichever layout is showing, and the primary is still only ever in the band.
+    has(rc, 'jt-quick', 'the secondaries live in a single strip');
+    // ⚠ `has(rc, '_qaSeen[a.call]')` matched the ASSIGNMENT on the next line, so this
+    // could not fail with the guard removed. Assert the guard itself.
+    has(rc, 'if (_qaSeen[a.call]) return;', 'deduped by call, so one action cannot render twice');
+    has(rc, "if (r.state === 'current' || r.state === 'blocked') return;",
+      'and the lit row is skipped — its buttons are already in the band');
+    eq((rc.match(/jt-ghost/g) || []).length, 1, 'exactly one ghost-button site');
     // ⚠ Labels carry HTML entities and are app constants, never user input. Escaping
     // them a second time is what printed `&amp;amp;` on a client's screen once already.
     lacks(rc, 'esc(_jtA.primary.label)', 'a button label is not double-escaped');

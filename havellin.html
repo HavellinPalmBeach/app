@@ -265,10 +265,10 @@ input:checked+.slider:before{transform:translateX(18px);}
    one thread with beads on it rather than as a stack of bordered rows. */
 .jt-row{position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:5px 0 5px 22px;margin-left:6px;border-left:2px solid var(--border);}
 .jt-row::before{content:'';position:absolute;left:-8px;top:7px;width:13px;height:13px;border-radius:50%;box-sizing:border-box;border:2px solid var(--border);background:var(--white);}
-.jt-done::before{border-color:var(--sage-dk);background:radial-gradient(circle,var(--white) 0 2.5px,var(--sage-dk) 2.5px);}
-.jt-cur::before{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
-.jt-blk::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
-.jt-term::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
+.jt-row.jt-done::before{border-color:var(--sage-dk);background:radial-gradient(circle,var(--white) 0 2.5px,var(--sage-dk) 2.5px);}
+.jt-row.jt-cur::before{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
+.jt-row.jt-blk::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
+.jt-row.jt-term::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
 /* Takes the slack so the meta sits hard right and the label never wraps while there
    is room for it. */
 .jt-lbl{flex:1 1 auto;min-width:0;font-size:12.5px;color:var(--gray);}
@@ -276,17 +276,17 @@ input:checked+.slider:before{transform:translateX(18px);}
    own line, which is the layout that fits at 390px. Nothing to override. */
 .jt-meta{font-size:11px;color:var(--gray);margin-left:auto;text-align:right;}
 .jt-sub{font-size:11px;color:var(--gray);flex-basis:100%;padding-left:0;}
-.jt-done{border-left-color:var(--sage-dk);}
-.jt-done .jt-lbl{color:var(--gray-dk);}
-.jt-done .jt-meta{color:var(--sage-dk);}
-.jt-cur{border-left-color:var(--bronze);background:#fdfaf4;}
-.jt-cur .jt-lbl{font-weight:600;color:var(--gray-dk);font-size:13px;}
-.jt-blk{border-left-color:var(--err-tx);background:var(--err-bg);}
-.jt-blk .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
-.jt-blk .jt-sub{color:var(--err-tx);}
-.jt-wait .jt-lbl{color:var(--gray);opacity:.72;}
-.jt-term{border-left-color:var(--err-tx);}
-.jt-term .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
+.jt-row.jt-done{border-left-color:var(--sage-dk);}
+.jt-row.jt-done .jt-lbl{color:var(--gray-dk);}
+.jt-row.jt-done .jt-meta{color:var(--sage-dk);}
+.jt-row.jt-cur{border-left-color:var(--bronze);background:#fdfaf4;}
+.jt-row.jt-cur .jt-lbl{font-weight:600;color:var(--gray-dk);font-size:13px;}
+.jt-row.jt-blk{border-left-color:var(--err-tx);background:var(--err-bg);}
+.jt-row.jt-blk .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
+.jt-row.jt-blk .jt-sub{color:var(--err-tx);}
+.jt-row.jt-wait .jt-lbl{color:var(--gray);opacity:.72;}
+.jt-row.jt-term{border-left-color:var(--err-tx);}
+.jt-row.jt-term .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
 /* Actions. The primary lives in the band and nowhere else; `.jt-ghost` is the
    quiet out-of-sequence action on a row (edit the client, edit the estimate). */
 .jt-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
@@ -298,6 +298,54 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-btn-d:hover{background:var(--err-bg);}
 .jt-next-blk .jt-btn-p{background:var(--err-tx);border-color:var(--err-tx);}
 .jt-ghost{font-size:11px;padding:0;border:0;background:none;color:var(--bronze);cursor:pointer;font-family:inherit;text-decoration:underline;}
+/* One strip for the out-of-sequence actions, serving both layouts. */
+.jt-quick{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);}
+
+/* ─── THE HORIZONTAL TRACK ───────────────────────────────────────────────────
+   On a desk the vertical rail "take[s] up a lot of real estate vertically and uses
+   very little horizontal" (Anthony, on the shipped build) — fourteen rows is most of
+   a screen of scrolling with the right two-thirds empty. So on a desk the same
+   fourteen steps run left to right in TWO LEGS, and on a phone the rail takes over,
+   because a 150px column cannot exist at 390px. One derivation, two layouts.
+   Default is the rail; the min-width block below swaps them, so a browser that never
+   evaluates it still gets a working timeline. */
+.jt-track{display:none;}
+.jt-leg{display:flex;align-items:flex-start;margin-bottom:20px;}
+.jt-leg:last-child{margin-bottom:0;}
+/* max-width keeps leg two's five steps at the same pitch as leg one's nine, so the
+   two read as one track that wrapped rather than as two unrelated rows. */
+.jt-step{position:relative;flex:0 0 calc(100% / var(--jt-cols, 9));min-width:0;padding-right:10px;}
+.jt-sgrp{font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--gray);height:15px;white-space:nowrap;overflow:hidden;}
+/* The connector runs from this node's centre to the next one's — left:6px is the
+   centre of a 13px node, and one full step width lands exactly on the next. The node
+   is opaque and above it, so the line passing beneath is hidden. */
+.jt-step::after{content:'';position:absolute;left:6px;width:100%;top:20.5px;height:2px;background:var(--border);}
+.jt-last::after{display:none;}
+.jt-step.jt-done::after{background:var(--sage-dk);}
+.jt-node{position:relative;z-index:1;width:13px;height:13px;border-radius:50%;box-sizing:border-box;border:2px solid var(--border);background:var(--white);}
+.jt-step.jt-done .jt-node{border-color:var(--sage-dk);background:radial-gradient(circle,var(--white) 0 2.5px,var(--sage-dk) 2.5px);}
+.jt-step.jt-cur .jt-node{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
+.jt-step.jt-blk .jt-node{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
+.jt-step.jt-term .jt-node{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
+.jt-slbl{font-size:11.5px;color:var(--gray);margin-top:7px;line-height:1.25;}
+.jt-step.jt-done .jt-slbl{color:var(--gray-dk);}
+.jt-step.jt-cur .jt-slbl,.jt-step.jt-blk .jt-slbl,.jt-step.jt-term .jt-slbl{font-weight:600;color:var(--gray-dk);}
+.jt-step.jt-blk .jt-slbl,.jt-step.jt-term .jt-slbl{color:var(--err-tx);}
+.jt-step.jt-wait .jt-slbl{opacity:.72;}
+.jt-smeta{font-size:10.5px;font-weight:600;color:var(--gray-dk);margin-top:2px;line-height:1.25;}
+.jt-step.jt-wait .jt-smeta{font-weight:500;color:var(--gray);}
+.jt-ssub{font-size:9.5px;color:var(--gray);margin-top:1px;line-height:1.25;}
+/* ⚠ NOT scoped to `screen`: this is a layout swap, and Chrome lays Letter out at about
+   739px, so a printed dashboard falls below the breakpoint and gets the vertical rail —
+   which is the right answer on paper anyway, where there is no horizontal room to spend
+   and a fourteen-step track would be unreadable at that width. */
+@media (min-width:900px){
+  .jt-track{display:block;}
+  .jt-rail{display:none;}
+  /* The reading column exists so a vertical row's label and its meta stay paired. The
+     track has no such problem and wants the width Anthony is asking it to use. */
+  .jt{max-width:none;}
+}
 .jt-fb:empty{display:none;}
 .jt-fb{margin-bottom:10px;}
 .var-white{background:var(--white);}
@@ -878,7 +926,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:19pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:34pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10818,6 +10866,27 @@ function sectionHdr(title) {
 // `state` is one of: done · current · blocked · waiting · terminal.
 // THE INVARIANT, asserted over a fixture matrix: at most ONE row is `current`
 // OR `blocked`, never both and never two. That is the entire point of the rail.
+// Names for the horizontal track, where a step gets ~150px and "Estimate sent to
+// client" cannot fit. Two pairs repeat ("Approved" for the estimate and again for the
+// agreement), which is deliberate: each sits under its own group band, and the band is
+// what tells them apart. The vertical rail keeps the full labels.
+var JT_SHORT = {
+  intake:'Intake', walkthrough:'Walkthrough', estimate_built:'Built',
+  estimate_approved:'Approved', estimate_sent:'Sent', client_accepted:'Accepted',
+  agreement_approved:'Approved', agreement_sent:'Packet sent', agreement_signed:'Signed',
+  deposit_received:'Deposit', job_active:'Active', midpoint_received:'Midpoint',
+  work_complete:'Complete', final_paid:'Final'
+};
+
+// ⚠ WHERE THE TRACK WRAPS, AND IT IS NOT AN ARBITRARY WRAP POINT. Fourteen steps do not
+// fit one line at any sane width, and letting flex-wrap choose means the break moves
+// with the window — the same steps landing in different places on a laptop and a
+// monitor. This one is a real division: leg one is WINNING AND PAPERING the job (intake
+// through the client's signature), leg two is DOING IT AND GETTING PAID. The signature
+// is the hinge the whole engagement turns on — it locks the estimate and unlocks the
+// deposit — so a reader already thinks in these two halves.
+var JT_LEG_BREAK = 'agreement_signed';
+
 function jobTimeline(job, estRec, logs, cos) {
   if (!job) return [];
 
@@ -10859,7 +10928,7 @@ function jobTimeline(job, estRec, logs, cos) {
 
   function row(o) {
     return {
-      key: o.key, group: o.group, label: o.label,
+      key: o.key, group: o.group, label: o.label, short: JT_SHORT[o.key] || o.label,
       done: !!o.done,
       at: o.at || '', atKind: o.atKind || 'text', by: o.by || '',
       sub: o.sub || '', amount: (typeof o.amount === 'number') ? o.amount : null,
@@ -11582,11 +11651,54 @@ function renderClientDashboard(jobId) {
        + '<div class="jt-next-step">Every milestone on this job is recorded</div></div>';
   }
 
+  var _jtCls = function(r){ return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait'; };
+
+  // ── THE TRACK — horizontal, on a desk. Anthony, on the vertical-only build: it
+  // "take[s] up a lot of real estate vertically and uses very little horizontal … there
+  // is a lot of vertical scrolling now and a lot of white space in the middle."
+  //
+  // ⚠ THE SAME `jobTimeline` ROWS FEED BOTH LAYOUTS. Two renderings of one derivation
+  // can disagree about presentation, which is what a media query is for, and can never
+  // disagree about STATE — which is the failure this file records again and again
+  // whenever a second renderer grows its own copy of a rule.
+  var _legAt = _jtRows.map(function(r){ return r.key; }).indexOf(JT_LEG_BREAK);
+  var _legs = (_legAt >= 0 && _jtRows.length > _legAt + 1)
+    ? [_jtRows.slice(0, _legAt + 1), _jtRows.slice(_legAt + 1)]
+    : [_jtRows];
+  // ⚠ ONE COLUMN COUNT FOR BOTH LEGS, published as a custom property rather than an
+  // inline width per step. `flex:1` alone let leg one squeeze to 134px while leg two
+  // stopped at its cap, and two different pitches read as two unrelated rows instead of
+  // one track that wrapped.
+  h += '<div class="jt-track" style="--jt-cols:' + Math.max.apply(null, _legs.map(function(l){ return l.length; })) + ';">';
+  _legs.forEach(function(leg){
+    h += '<div class="jt-leg">';
+    var _lg = '';
+    leg.forEach(function(r, i){
+      h += '<div class="jt-step ' + _jtCls(r) + (i === leg.length - 1 ? ' jt-last' : '') + '">';
+      // The band prints on the first step of its group and is an empty spacer on the
+      // rest, so every node in a leg sits on one baseline whatever the labels do.
+      h += '<div class="jt-sgrp">' + (r.group !== _lg ? esc(r.group) : '') + '</div>';
+      _lg = r.group;
+      h += '<div class="jt-node"></div>';
+      h += '<div class="jt-slbl">' + esc(r.short) + '</div>';
+      // One figure per step: the money where there is money, otherwise the date. Both
+      // plus a name is three lines under a 150px column and stops being scannable.
+      var _sm = (r.amount !== null) ? fmtMoney(r.amount) : _jtAt(r);
+      if (_sm) h += '<div class="jt-smeta">' + esc(_sm) + '</div>';
+      var _ss = r.by || (r.state === 'blocked' ? '' : r.sub);
+      if (_ss) h += '<div class="jt-ssub">' + esc(_ss) + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  });
+  h += '</div>';
+
+  // ── THE RAIL — vertical, on a phone, where a 150px column cannot exist.
+  h += '<div class="jt-rail">';
   var _jtGrp = '';
   _jtRows.forEach(function(r){
     if (r.group !== _jtGrp) { _jtGrp = r.group; h += '<div class="jt-grp">' + esc(_jtGrp) + '</div>'; }
-    var _jtCls = {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait';
-    h += '<div class="jt-row ' + _jtCls + '">';
+    h += '<div class="jt-row ' + _jtCls(r) + '">';
     h += '<div class="jt-lbl">' + esc(r.label) + '</div>';
     var _jtMeta = [];
     if (r.amount !== null) _jtMeta.push('<strong>' + fmtMoney(r.amount) + '</strong>');
@@ -11597,19 +11709,27 @@ function renderClientDashboard(jobId) {
     // A blocked row says nothing extra: the band directly above carries the reason and
     // the fix, and repeating them here is the duplication the client-copy rule cuts.
     if (r.state !== 'blocked' && r.sub) h += '<div class="jt-sub">' + esc(r.sub) + '</div>';
-    // A row that is NOT the lit one shows only its out-of-sequence actions, as quiet
-    // links. The lit row shows none: its buttons are in the band directly above, and
-    // the same control twice is the duplication the client-copy rule cuts.
-    if (r.state !== 'current' && r.state !== 'blocked') {
-      var _rA = jobTimelineActions(r, job, estRec);
-      if (_rA.secondary.length) {
-        h += '<div class="jt-sub" style="display:flex;gap:12px;">';
-        _rA.secondary.forEach(function(a){ h += '<button class="jt-ghost" onclick="' + a.call + '">' + a.label + '</button>'; });
-        h += '</div>';
-      }
-    }
     h += '</div>';
   });
+  h += '</div>';   // close .jt-rail
+
+  // ── OUT-OF-SEQUENCE ACTIONS, ONCE. They used to hang off their own row, which the
+  // horizontal track has no room for and which scattered them down the rail. Gathered
+  // and deduped by call, they are a single strip serving BOTH layouts — and the primary
+  // is still only ever in the band, so no control appears twice on screen.
+  var _qa = [], _qaSeen = {};
+  _jtRows.forEach(function(r){
+    if (r.state === 'current' || r.state === 'blocked') return;
+    jobTimelineActions(r, job, estRec).secondary.forEach(function(a){
+      if (_qaSeen[a.call]) return;
+      _qaSeen[a.call] = 1; _qa.push(a);
+    });
+  });
+  if (_qa.length) {
+    h += '<div class="jt-quick">';
+    _qa.forEach(function(a){ h += '<button class="jt-ghost" onclick="' + a.call + '">' + a.label + '</button>'; });
+    h += '</div>';
+  }
   h += '</div>';   // close .jt
   h += '</div>';  // close card
   // (Estimate total and the deposit/midpoint/final amounts now live on the timeline

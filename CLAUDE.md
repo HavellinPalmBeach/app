@@ -70,6 +70,62 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## The timeline goes HORIZONTAL on a desk, two legs, breaking at the signature (2026-09-10)
+Anthony, on the vertical build: *"on desktop, the vertical render take up a lot of real estate
+vertically and uses very little horizontal real estate. cant we make the timeline go left to
+right, with a break at say, agreement signed, and then have a second line progressing left to
+right? there is a lot of vertical scrolling now and a lot of white space in the middle."*
+App-only, no redeploy. **Measured: the card went 976px → 453px on a desk.**
+
+- **⚠ ONE `jobTimeline` CALL FEEDS BOTH LAYOUTS, AND THIS IS THE RULE TO KEEP.** The track
+  and the rail are two renderings of the same rows: they may disagree about presentation,
+  which is what a media query is for, and can **never** disagree about state. A second
+  renderer growing its own copy of a rule is the failure this file records more often than
+  any other. A test counts the `jobTimeline(...)` call sites in the renderer at exactly 1 and
+  asserts both share `_jtCls`, the one state→class mapping.
+- **⚠ `JT_LEG_BREAK = 'agreement_signed'` IS A REAL DIVISION, NOT AN ARBITRARY WRAP.** Fourteen
+  steps do not fit one line at any sane width, and letting `flex-wrap` choose means the break
+  **moves with the window** — the same steps landing differently on a laptop and a monitor.
+  Anthony picked this point and it is the right one: **leg one is winning and papering the job**
+  (intake → the client's signature), **leg two is doing it and getting paid**. The signature is
+  the hinge the engagement turns on — it locks the estimate and unlocks the deposit — so a
+  reader already thinks in those halves. Asserted at 9 steps and 5.
+- **`JT_SHORT` — a step gets ~134px and "Estimate sent to client" cannot fit.** Two pairs
+  repeat ("Approved" for the estimate and again for the agreement); that is deliberate, because
+  each sits under its own group band and **a test asserts those two bands actually differ** —
+  without that check the repeat would be a defect rather than a design. A key with no entry
+  falls back to the full label rather than rendering blank. The rail keeps the long names.
+- **⚠ THE TWO LEGS RAN AT DIFFERENT PITCHES AND IT READ AS TWO UNRELATED ROWS.** `flex:1 1 0`
+  with a `max-width` let leg one squeeze to **134px** while leg two hit its **200px** cap.
+  Both are laid out on the **longest leg's column count** now, published once as
+  `--jt-cols` on the track rather than as an inline width per step, so leg two simply stops
+  early and leaves the right-hand end empty — which is what a track that wrapped looks like.
+- **⚠ THE RAIL'S STATE CLASSES WERE BARE AND THE TRACK SHARES THEM.** `.jt-cur` and `.jt-blk`
+  are set on a `.jt-row` **and** on a `.jt-step`, so the rail's row highlight painted a stray
+  cream box behind the live step on the horizontal track — measured at `rgb(253,250,244)` on
+  `.jt-step.jt-cur`. Every rail state rule is scoped `.jt-row.…` now, and a test asserts no
+  bare one survives. **Two layouts sharing a class vocabulary is exactly how this happens;
+  scope by container, always.**
+- **The out-of-sequence actions became ONE strip.** They used to hang off their own rail row,
+  which the horizontal track has no room for and which scattered them down the rail. Gathered,
+  deduped by call, rendered once — serving both layouts, with the primary still only ever in
+  the band, so no control is on screen twice whichever layout is showing.
+- **The default is the RAIL and the desk block swaps in the track**, so a browser that never
+  evaluates the query still gets a working timeline. **Not scoped to `screen`**, deliberately:
+  Chrome lays Letter out at ~739px, so a printed dashboard falls below the breakpoint and gets
+  the vertical rail — the right answer on paper, where there is no horizontal room to spend.
+- **⚠ AND TWO OF MY OWN ASSERTIONS COULD NOT FAIL — THE FIFTH TIME IN THIS FILE.** Both matched
+  a NEIGHBOURING string instead of the thing they named: `has(rc, '_qaSeen[a.call]')` matched
+  the assignment on the next line rather than the guard, and `has(css, '@media
+  (min-width:900px){')` matched with the rule inside it renamed, so the one check that a desk
+  actually gets the track was green either way. Caught by reverting, not by reading. **When an
+  assertion names a behaviour, pin the line that IMPLEMENTS it, not a string that happens to
+  sit beside it.**
+- **2403 committed checks. All 14 changes revert-verified individually.** Measured in Chromium
+  at 1440 / 1100 / 390px: horizontal above 900px with legs of 9 and 5 at an identical 134px
+  pitch, vertical at 390px, zero overflow at 1440 and 390. (The 83px at 1100px is the
+  pre-existing dashboard overflow already recorded above — identical before and after.)
+
 ## The rail looks like a timeline again — presentation pass off the live build (2026-09-10)
 Anthony, reading the shipped build: *"it looks like a lot of wasted space in the middle. and we
 liked the 'timeline' look we had before with the milestone turned green when complete."* Plus a

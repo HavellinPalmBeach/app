@@ -57,6 +57,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments',
       'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
     ],
+    // The short names the horizontal track uses. A top-level var, so the sandbox has to
+    // be told about it — without it `row()` throws and every check in the file is lost.
+    vars: ['JT_SHORT'],
   });
 
   const PAST = '2020-01-01';
@@ -401,6 +404,80 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(['done', 'current', 'blocked', 'waiting', 'terminal'].indexOf(r.state) >= 0, `${r.key}: state is one of the five`);
       ok(r.blockedFix === '' || r.blockedWhy !== '', `${r.key}: never offers a fix without naming the problem`);
     });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  group('the horizontal track — two legs, and one derivation behind both layouts');
+  {
+    // Anthony, on the vertical-only build: it "take[s] up a lot of real estate
+    // vertically and uses very little horizontal … a lot of vertical scrolling now and
+    // a lot of white space in the middle." So on a desk the same fourteen steps run
+    // left to right in two legs; the rail stays for the phone.
+    const rows = run('built');
+    rows.forEach((r) => {
+      ok(typeof r.short === 'string' && r.short.length > 0, `${r.key}: carries a short label`);
+      ok(r.short.length <= 12, `${r.key}: "${r.short}" fits a ~150px column`);
+    });
+    eq(byKey(rows, 'estimate_sent').short, 'Sent', 'the long labels are shortened for the track');
+    eq(byKey(rows, 'estimate_sent').label, 'Estimate sent to client', 'and the full one survives for the rail');
+    // Two pairs repeat by design — each sits under its own group band, which is what
+    // tells them apart. Assert the bands really do differ, or the repeat is a defect.
+    eq(byKey(rows, 'estimate_approved').short, byKey(rows, 'agreement_approved').short,
+      'both approvals read "Approved"');
+    ok(byKey(rows, 'estimate_approved').group !== byKey(rows, 'agreement_approved').group,
+      'and their group bands differ, which is what disambiguates them');
+    // A row with no entry in the map must fall back rather than render blank.
+    const lost = run('sent', { status: 'lost', lostReasonLabel: 'x' });
+    eq(lost[0].short, lost[0].label, 'a row with no short name falls back to its full one');
+
+    // ⚠ THE BREAK IS A REAL DIVISION, NOT AN ARBITRARY WRAP. Letting flex-wrap choose
+    // means the same steps land in different places on a laptop and a monitor.
+    has(src, "var JT_LEG_BREAK = 'agreement_signed';", 'the wrap point is named and fixed');
+    const keys = rows.map((r) => r.key);
+    const at = keys.indexOf('agreement_signed');
+    eq(at, 8, 'leg one runs intake through the signature — winning and papering the job');
+    eq(rows.length - at - 1, 5, 'leg two is doing it and getting paid');
+
+    // ⚠ ONE DERIVATION FEEDS BOTH LAYOUTS. Two renderers may differ about presentation;
+    // they must never differ about state, which is the failure this file records every
+    // time a second renderer grows its own copy of a rule.
+    const rc = body('renderClientDashboard(jobId)');
+    eq((rc.match(/jobTimeline\(job, estRec, logs, cos\)/g) || []).length, 1,
+      'the rail and the track are built from a single jobTimeline call');
+    has(rc, 'var _jtCls = function(r)', 'and share one state-to-class mapping');
+    has(rc, "h += '<div class=\"jt-track\" style=\"--jt-cols:'", 'the track renders');
+    // ⚠ Both legs are laid out on ONE column count. `flex:1` alone let leg one squeeze
+    // to 134px while leg two stopped at its 200px cap, and two pitches read as two
+    // unrelated rows rather than one track that wrapped.
+    has(rc, 'Math.max.apply(null, _legs.map', 'on the longest leg, so both share a pitch');
+    has(rc, "h += '<div class=\"jt-rail\">'", 'so does the rail');
+
+    // The swap, and the reason it is not scoped to `screen`.
+    const css = src.slice(src.indexOf('<style>'), src.indexOf('</style>'));
+    has(css, '.jt-track{display:none;}', 'the rail is the default, so a browser that skips the query still works');
+    // ⚠ Assert the SWAP, not just that a media block exists — `has(css, '@media
+    // (min-width:900px){')` still matched with the rule inside it renamed, so the one
+    // check that a desk actually gets the track could not fail. Fifth time in this file.
+    const deskBlock = css.slice(css.indexOf('@media (min-width:900px){'));
+    ok(css.indexOf('@media (min-width:900px){') > -1, 'a desk breakpoint exists');
+    has(deskBlock.slice(0, deskBlock.indexOf('}\n}') + 3), '.jt-track{display:block;}',
+      'and inside it the track is shown');
+    has(css, '.jt-rail{display:none;}', 'hiding the rail there');
+    ['.jt-leg{', '.jt-step{', '.jt-node{', '.jt-sgrp{', '.jt-slbl{', '.jt-smeta{', '.jt-quick{'].forEach((r) => {
+      has(css, r, `the track's ${r.slice(0, -1)} rule is present`);
+    });
+    has(css, '.jt-step.jt-done::after{background:var(--sage-dk);}', 'a completed connector goes green');
+    has(css, '.jt-step.jt-done .jt-node{border-color:var(--sage-dk)', 'and so does its node');
+    has(css, '.jt-last::after{display:none;}', 'the last step in a leg trails no connector');
+    has(css, 'flex:0 0 calc(100% / var(--jt-cols, 9))', 'the step honours the shared column count');
+    // ⚠ The rail's row states must not leak onto a track step — they share class names,
+    // and the bare `.jt-cur` background painted a stray cream box behind the live step
+    // on the horizontal track, measured at rgb(253,250,244).
+    ['.jt-row.jt-cur{', '.jt-row.jt-blk{', '.jt-row.jt-done{', '.jt-row.jt-term{'].forEach((r) => {
+      has(css, r, `${r.slice(0, -1)} is scoped to the rail`);
+    });
+    lacks(css, '\n.jt-cur{', 'no bare state rule can reach a track step');
+    lacks(css, '\n.jt-blk{', 'nor the blocked one');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
