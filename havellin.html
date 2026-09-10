@@ -392,374 +392,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      under all of that — at 320px the row now fits, but a narrower viewport or an
      inflated accessibility font degrades into a second line rather than a spill.
      margin-left:auto keeps the cluster right-aligned once it does wrap. */
-  .hdr>*{min-width:0;}
-  .hdr>*:last-child{margin-left:auto;}
-  .hdr button{padding:5px 9px!important;}
-  .hdr-ct{display:none;}
-  .nav{padding:0 .5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-  .nav::-webkit-scrollbar{display:none;}
-  .nb{flex:0 0 auto;padding:12px 13px;}
-  .main{padding:.85rem .7rem;}
-
-  /* Stack the fixed multi-column grids. grid3/grid4 keep two columns so metric
-     tiles stay scannable instead of becoming a tall ribbon. */
-  .grid2{grid-template-columns:1fr;gap:.8rem;}
-  .grid3,.grid4{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .card{padding:.85rem .9rem;}
-
-  /* The Client Dashboard's field grids were never stacked, so .d-grid4 still ran
-     four columns inside a ~339px card — about 80px each. Every value shattered:
-     "HVL-2607-RRC4" broke over three lines, "AUTHORIZED REP" and "LETTERS OF ADMIN"
-     ran together with no visible gutter, and the rep email overflowed its 80px track
-     straight across the name beside it. Two columns (~161px) is the widest that
-     actually fits, and it holds every label on one line. */
-  .d-grid4{grid-template-columns:repeat(2,minmax(0,1fr));}
-  /* .d-split2 goes single-file instead: it holds whole blocks (an attorney's four
-     fields, an hours-log progress bar), and halving 161px again to fit a nested
-     .d-grid2 inside gives ~68px per field — narrower than the labels themselves.
-     The inline gap has to be overridden or the stacked halves touch (gap:0 24px sets
-     no row gap, which is invisible only while they sit side by side). */
-  .d-split2{grid-template-columns:1fr;gap:12px!important;}
-  /* The lifecycle strip scrolls rather than reflows — stacking eight steps vertically
-     would cost most of a screen, and this card is deliberately hoisted above the fold
-     as the "where do we stand" glance. 78px a step is the narrowest that keeps a
-     caption off its neighbour. Both selectors have to out-specify .card div, which
-     sets flex-wrap:wrap (the strip would break into rows instead of scrolling) and
-     min-width:0 (the steps would collapse back to ~42px). */
-  .tbl-scroll .tl-strip{flex-wrap:nowrap;}
-  .tl-strip .tl-step{min-width:78px;}
-
-  /* Modals become bottom sheets — anchored to the thumb, full width, and always
-     scrollable. The inline width:NNNpx on individual boxes has to be overridden. */
-  .modal-overlay{align-items:flex-end;}
-  .modal-box{width:100%!important;max-width:100%!important;padding:1.1rem 1rem 1.4rem;
-    border-radius:12px 12px 0 0;max-height:92vh;}
-
-  /* 16px inputs stop iOS Safari from auto-zooming the page on focus — the single
-     biggest cause of "the app jumps around when I tap a field". */
-  input,select,textarea{font-size:16px!important;}
-  /* iOS gives date inputs a different intrinsic height than selects and text boxes,
-     so a date sitting beside a dropdown looks like a mistake. Pin them all to one
-     height and the row reads as a row. */
-  input,select{min-height:44px;}
-  /* …and the width. This reverses an earlier call — the note on input[type=date] up
-     top said the sizing caps were enough and the appearance reset was not worth the
-     change to how the picker renders. Measured off a real 320px phone, they are not:
-     every select and text input on Client Intake lands on 267px and all three date
-     fields on 288px, hanging out past the card. 21px is not an arbitrary overhang —
-     it is exactly this form's 20px of horizontal padding plus its 2px of border, so
-     iOS is applying the specified width to the control's INNER value box and adding
-     the padding and border outside it. box-sizing never enters into it, which is why
-     the border-box declaration up top reads like it should already have fixed this.
-     Nor is it the flexbox automatic minimum, which is why min-width:0 looked right
-     and did nothing. appearance:none drops that whole native layout path so the field
-     sizes like the text input beside it. It restyles the field box, NOT the picker:
-     tapping still opens the native iOS date wheel, and iOS shows no placeholder in an
-     empty date field either way, so nothing is lost from the empty state. Scoped to
-     the phone block so the desk view keeps the native rendering it has always had. */
-  input[type=date]{min-height:44px;line-height:normal;-webkit-appearance:none;appearance:none;box-sizing:border-box;}
-  /* ::-webkit-date-and-time-value is that inner value box named directly — belt and
-     braces on the rule above, and what left-aligns the date with the text in every
-     other input on the form rather than leaving it centred. Unknown pseudo-elements
-     are dropped by browsers that do not implement them, so this costs nothing else. */
-  input[type=date]::-webkit-date-and-time-value{width:100%;text-align:left;margin:0;}
-
-  /* Paired fields stack on a phone. Two fields side by side at 390px leaves ~170px
-     each, which wraps a label like "Hard target date (optional — closing date, court
-     date, etc.)" to four lines and strands its input far below its neighbour's.
-     Short numeric groups (sqft/years, beds/baths) stay inline via .row-tight — they
-     read better as a compact set and their labels don't wrap. */
-  .row{flex-wrap:wrap;}
-  .row>*{flex:1 1 100%;}
-  .row.row-tight>*{flex:1 1 0;min-width:0;}
-  /* Thumb-sized controls. */
-  .btn-s,.btn-p,.btn-bronze,.icon-btn{min-height:38px;}
-  .fb{min-height:34px;}
-
-  /* Vendor + referral cards go single-column and surface their tap-to-contact row.
-     The accordion indent is dropped so a card isn't squeezed into ~300px. */
-  .dir-cards{grid-template-columns:1fr;margin-left:0;}
-  .dir-group-body{margin-left:0;}
-  .vc-tap{display:flex;}
-  /* Note field over the button rather than beside it — side by side leaves ~150px
-     to type into on a phone. */
-  .vc-log,.rc-log{flex-direction:column;align-items:stretch!important;}
-  .vc-log .btn-s,.rc-log .btn-s{width:100%;}
-
-  /* The vendor toolbar filters stack: search gets its own full-width row, then the
-     four dropdowns go two-up so none of them collapses to an unreadable sliver. */
-  .vtoolbar{flex-direction:column;align-items:stretch!important;}
-  .vtoolbar .vt-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
-  .vtoolbar select{min-width:0!important;width:100%;}
-
-  /* Search first. On a phone the desk-bound header (title + how-it-works blurb +
-     stat tiles) pushed the search box most of a screen down — in the field the
-     search box IS the tab, so the toolbar is hoisted above the header card and the
-     explanatory blurb (which nobody reads standing in a driveway) is dropped. */
-  #panel-vendors.active,#panel-referrals.active{display:flex;flex-direction:column;}
-  .vdir-toolbar,.rdir-toolbar{order:-1;}
-  .vdir-blurb{display:none;}
-  /* Referral leaderboard is a wide desktop table — it stays reachable by scrolling
-     the tab, but it shouldn't sit between search and the partner cards on a phone. */
-  #referrals-leaderboard{order:2;}
-
-  /* 22 controls across the app carry a hard inline width/min-width sized for a desk
-     (a 340px job picker, a 320px plan picker, 150px filter dropdowns…). One of those
-     in a ~339px card spills the card, widening the document and producing the
-     cut-off-header look. max-width:100% alone can't fix it — the control's parent is
-     itself a flex item that grew to fit it, so 100% of a too-wide parent is still too
-     wide. The inline width has to be overridden outright, so standalone controls go
-     fluid on a phone. min-width:0 also releases the flexbox automatic minimum, which
-     is what lets iOS's wide native date/select widgets shrink at all.
-     Forcing width:100% is safe everywhere, including inside tables — the base rule
-     already sizes controls that way, so a table cell's control simply fills its cell
-     exactly as before. (Do NOT use width:auto as the table exception: auto is the
-     control's intrinsic size, which for a text input with a long placeholder is far
-     WIDER than 100%, and it blows the table out rather than containing it.) */
-  input,select,textarea{width:100%!important;max-width:100%!important;min-width:0!important;}
-  /* Checkboxes and radios must keep their intrinsic box — never stretch them. */
-  input[type=checkbox],input[type=radio]{width:auto!important;}
-  /* Capping the control isn't enough on its own: its wrapper is usually a flex item
-     that already grew to fit the desk-sized control, so `width:100%` just resolves
-     against a too-wide parent and nothing moves. Releasing the wrappers' automatic
-     minimum lets that chain collapse. Scoped to divs, so table cells keep the column
-     minimums that make their tables scroll rather than crush. */
-  .card div,.modal-box div{min-width:0;}
-  /* A control forced to 100% leaves no room for a button sitting beside it, and a
-     flex row that can't wrap then overflows. Job Plan's picker + "Print Job Plan" is
-     the case that bites (the button is hidden until a job loads, so a tab-level
-     overflow sweep won't catch it); let these rows wrap so the button drops below. */
-  .card div{flex-wrap:wrap;}
-  /* …and the other half of that picker. Forcing the control to width:100% only helps
-     if its containing block is the card: #plan-job sits in a shrink-to-fit flex wrapper
-     that used to be sized by the select's own inline min-width:320px, so once that is
-     released the wrapper collapses to the width of the words "Select job" and the tab's
-     primary control renders about a third of the card wide. Give the wrapper the whole
-     row. Scoped by id — every other desk-sized picker in the app declares a flex grow
-     factor and already fills its row. */
-  .card div:has(> #plan-job){flex:1 1 100%;}
-  /* The client estimate is a print document: a 780px page with 2.5rem padding and
-     4-column header rows. On a phone that leaves ~290px of usable width for four
-     columns, so the header collapses to two and the page padding comes back to
-     something a 390px screen can spare. */
-  .ce-page{padding:1.1rem .9rem;}
-  .ce-hdr-row-1,.ce-ident-row,.ce-hdr-row-4,.ce-hdr-row-5{grid-template-columns:1fr 1fr;}
-  /* Two columns means the second cell is the row's last child; leave it left-aligned
-     rather than flinging every other value to the right margin. */
-  .ce-hdr-row>*:last-child:not(:first-child){text-align:left;}
-  .ce-brand{font-size:28px;}
-  .ce-title{font-size:17px;}
-  /* An inline flex-shrink:0 keeps a button cluster at its full single-line width, so
-     it never wraps and spills the card — the Client Dashboard drilldown's action bar
-     (Estimate / Change Order / Edit Client / …) is 501px that way. Released only for
-     elements that actually declare it, so nothing else changes behaviour. */
-  .card div[style*="flex-shrink:0"]{flex-shrink:1!important;}
-}
-
-/* Narrow phones — an iPhone SE, or any handset in iOS Display Zoom, which reports a
-   320px viewport rather than 390 and is what the original mobile sweep never measured.
-   The brand line ("Havellin Palm Beach" at 17px Cormorant, ~148px) and a two-word
-   Settings button cannot both hold their ground in 291px of content width, and the
-   brand is the one worth keeping whole — wrapped to "Havellin Palm / Beach" it reads
-   like the layout broke. The gear alone is an understood control and keeps its title. */
-@media (max-width:400px){
-  .hdr-btn-label{display:none;}
-}
-
-/* ══════════════════════ FIELD MODE ══════════════════════
-   Phone-shaped capture mode. Reached with ?field=1 (bookmark it to the home screen)
-   and remembered afterwards, so the icon always opens straight into it.
-
-   The governing rule: THE PHONE CAPTURES WHAT YOU CAN ONLY LEARN BY BEING IN THE
-   HOUSE; THE DESK MAKES THE COMMERCIAL DECISIONS. So difficult access, heirs, premium
-   estate, room scoring, collections, vehicles, materials and prep all stay — you cannot
-   come back for the boat. Crew sizing, discount, expedite, fixed price and every
-   calculated output are hidden.
-
-   The rule used to be "the desk decides everything about PRICE", and that sorted badly:
-   every adjustment changes the price, so it grouped premium estate with discount and
-   fixed price and hid it. But premium is not a commercial decision — the agreement
-   defines it (3.3) as a property "containing fine art, antiques, collectibles, or
-   high-value contents", which is an OBSERVATION, and one nobody can make from a desk. It
-   is the most field-dependent judgment on the tab. Difficult access and multiple heirs
-   are the same kind of thing and were always on the phone; premium was the odd one out.
-   Hiding it also protected nothing, since `i-prem` sets the same flag on the Client
-   Intake tab, which is itself a field tab — so it was reachable on a phone anyway, just
-   one tab away from any number showing what it does. Observation vs. commercial decision
-   is the cut that holds; "does it move the price" is not.
-
-   HIDDEN, NEVER REMOVED. calcAll() reads 89 distinct element ids and a display:none
-   element still answers getElementById, so the estimate computes and saves in FULL on
-   the phone — you just don't render the arithmetic. Deleting any of this would throw
-   null references through the pricing engine. Same reason the intake-derived fields
-   further down are kept in a hidden div rather than dropped.
-
-   Not inside a max-width query on purpose: field mode has to be testable in a desktop
-   browser at any width. */
-body.field-mode .nb:not([data-field]){display:none;}
-body.field-mode .nav{
-  position:fixed;bottom:0;left:0;right:0;z-index:200;
-  padding:0;border-top:1px solid var(--border);border-bottom:none;
-  box-shadow:0 -2px 10px rgba(0,0,0,.07);
-  justify-content:space-around;overflow:visible;
-}
-/* Thumb-reachable, and the label under the tab is the short data-field-label rather
-   than the desk name — "Estimate" fits a quarter of a phone, "Build Estimate" doesn't. */
-body.field-mode .nb{
-  flex:1 1 0;padding:10px 4px calc(10px + env(safe-area-inset-bottom,0px));
-  font-size:0;border-bottom:none;border-top:2px solid transparent;min-height:52px;
-}
-body.field-mode .nb::after{content:attr(data-field-label);font-size:10.5px;letter-spacing:.03em;}
-body.field-mode .nb.active{border-top-color:var(--bronze);border-bottom-color:transparent;background:var(--cream);}
-/* Clear the fixed bar so the last field on a form is never trapped under it. */
-body.field-mode .main{padding-bottom:88px;}
-
-/* Desk-only panels. Hidden, still readable by calcAll.
-   #adj-pricing came OFF this list — see the premium-estate reasoning in the block above.
-   Its wrapper stays in the markup: it still groups the toggle with #prem-badge, and it is
-   the hook to re-hide it if the call is ever reversed. */
-body.field-mode #est-summary-col,
-/* Crew sizing moved in beside the other staffing questions, so it needs hiding by
-   name now rather than inheriting it from the old Property Specialists column. */
-body.field-mode #crew-size-wrap,
-body.field-mode #est-crew-col{display:none!important;}
-/* The two-column grids collapse to one so the capture cards run full width. */
-body.field-mode #est-job-grid,
-body.field-mode #est-main-grid{grid-template-columns:1fr!important;}
-body.field-mode #est-build-col{width:100%;}
-
-/* Per-room TC / PS hours — the calculated columns. Hiding these two takes the room
-   table from eight columns to six, which is most of the way to fitting a phone before
-   the card reflow lands. Column order: scope · room · volume · complexity · special ·
-   TC · PS · media. */
-body.field-mode .rtable th:nth-child(6), body.field-mode .rtable td:nth-child(6),
-body.field-mode .rtable th:nth-child(7), body.field-mode .rtable td:nth-child(7){display:none;}
-
-/* The mode toggle, and the banner that keeps you from wondering why half the tab is
-   missing. Desk view hides both by default. */
-/* Always visible — it is the way in as well as the way out. Filled bronze while field
-   mode is on so the app never looks merely broken when nine tabs are missing. */
-#field-toggle{display:inline-block;white-space:nowrap;}
-body.field-mode #field-toggle{background:var(--bronze)!important;border-color:var(--bronze)!important;color:#fff!important;}
-#field-banner{display:none;}
-body.field-mode #field-banner{
-  display:block;background:var(--tan);border:1px solid var(--border-md);border-radius:5px;
-  padding:7px 11px;margin-bottom:.9rem;font-size:11.5px;color:var(--gray-dk);
-}
-
-/* Both sync toasts are fixed at bottom:16px, set inline from JS — which in field mode
-   puts them squarely on top of the bottom nav. #sync-pending is the worst of the two:
-   it means "unsaved changes not yet synced" and you TAP IT to retry, which is exactly
-   the state a phone in a big house on patchy signal will be in. A stylesheet rule with
-   !important is what beats an inline style, so it has to be written this way. */
-body.field-mode #sync-status,
-body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px))!important;}
-/* Both are shrink-to-fit boxes pinned 16px off one edge, so their available width is
-   the viewport minus that one offset — a long message ("Vendor Directory URL not set
-   — add it in Settings to load vendors") then runs off the opposite edge on a 320px
-   phone. Cap them against both gutters. Set here rather than inline because showSyncBadge
-   builds the toast's styles from JS and this must not be something a caller can forget. */
-#sync-status,#sync-pending{max-width:calc(100vw - 32px);}
-
-@media print { body.field-mode .nav{display:none!important;} }
-
-@media print {
-  /* Printed page margins: 1in top, 0.5in bottom/sides — keeps content off the paper
-     edges on every page, including across page breaks. Requires the print dialog's
-     "Default" margins (selecting "None" zeroes @page in Chrome). */
-  @page{margin:1in .5in .5in .5in;}
-  /* Page 1 rides higher — the document's own wordmark/tagline header sits near the top,
-     while continuation pages keep the 1in top band. */
-  @page :first{margin-top:.4in;}
-  .hdr,.nav,.ce-controls,.approval-banner{display:none!important;}
-  .main{padding:0!important;max-width:100%!important;}
-  .panel{display:none!important;}
-  #print-target{display:block!important;}
-  .approved-stamp{display:none!important;}
-  body{background:white;margin:0;padding:0;}
-  /* Light page padding only — the @page margin above supplies the real edge gap,
-     so the page-1 header rides up a little rather than sitting an inch down. */
-  .ce-page{padding:.1in .15in;max-width:100%;font-size:10px;line-height:1.4;}
-  .packet-exhibit{break-before:page;page-break-before:always;}
-  /* Force background colors to print */
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
-  .ce-brand{font-size:30px;}
-  .ce-title{font-size:16px;margin-bottom:.6rem;}
-  .ce-meta{gap:.25rem 1.5rem;margin-bottom:.8rem;}
-  .ce-hdr-row{gap:.4rem 1rem;margin-bottom:.5rem;}
-  .ce-hdr-row-1{grid-template-columns:1.4fr 2fr 1fr 1.2fr;}
-  .ce-hdr-row-3{grid-template-columns:1fr;}
-  .ce-ident-row,.ce-hdr-row-4{grid-template-columns:repeat(4,minmax(0,1fr));}
-  .ce-hdr-row-5{grid-template-columns:repeat(5,minmax(0,1fr));}
-  .ce-hdr-row>*:last-child:not(:first-child){text-align:right;}
-  .ce-meta-label{font-size:9px;}
-  .ce-meta-val{font-size:11px;}
-  .ce-section-hdr,.ce-band{padding:5px 10px;font-size:9px;}
-  .ce-tbl td,.ce-tbl th{padding:5px 10px;font-size:10px;}
-  .ce-tbl tr.subtotal td{font-size:11px;}
-  .ce-tbl tr.grand td{font-size:12px;}
-  .ce-tbl tr.grand td.r{font-size:16px;}
-  .ce-note{font-size:9px;padding:5px 10px;}
-  .pay-tbl td{padding:5px 10px;font-size:10px;}
-  .ce-terms li{font-size:9px;padding:2px 0 2px 12px;}
-  .ce-terms-title{font-size:9px;}
-  .ce-divider{margin:.6rem 0;}
-  .ce-divider-thick{margin:.6rem 0;}
-  .sig-grid{gap:1rem;margin-top:1rem;}
-  .sig-line{height:24px;}
-  .sig-label{font-size:9px;}
-  .approved-stamp{padding:6px;margin:.4rem 0;}
-  .approved-stamp-text{font-size:14px;}
-  .ce-logo-wrap{margin-bottom:.8rem;}
-  .ce-logo-wrap img{width:160px!important;}
-}
-/* The vendor table's fee column is dead weight while SMF_PCT is 0 — every cell reads $0.
-   Hidden rather than deleted so the column comes back intact if a coordination fee is
-   ever reinstated; body.no-smf is set once at startup off the constant. */
-body.no-smf .smf-col{display:none;}
-/* Room sections run two-up on a wide screen. Each .room-sec is an independent
-   accordion, so a plain two-column grid lets Entry & Living sit opposite Kitchen &
-   Utility instead of stacking into one long scroll. min-width:0 on the children is
-   load-bearing: each section holds a fixed-column room table inside .tbl-scroll, and
-   without it the auto floor of a 1fr track is min-content, so the table would widen
-   its own column and drag the document past the viewport. Single column below the
-   phone breakpoint, where two of these tables side by side is unreadable. */
-#room-table-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;align-items:start;}
-#room-table-wrap>*{min-width:0;}
-@media (max-width:1100px){#room-table-wrap{grid-template-columns:1fr;}}
-/* Detail the estimator does not need on this tab — the hours breakdown, the per-role
-   fee lines, the suggested fixed fee and the blended-rate bar. All of it reappears on
-   the client estimate, which is the document those numbers are actually for. Hidden and
-   NOT removed: calcAll writes into every one of these ids on each recalculation, and a
-   display:none element still answers getElementById. */
-[data-est-detail]{display:none;}
-/* Five Category Group cards, three across. Two rows of 3 + 2 at desk width; one column
-   on a phone, where two of these side by side leaves no room for the cost box. */
-.vgrp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
-.vgrp-card{border:1px solid var(--border);border-radius:5px;padding:9px 10px;background:var(--white);min-width:0;}
-.vgrp-title{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--bronze);margin-bottom:6px;}
-@media (max-width:1100px){.vgrp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media (max-width:700px){.vgrp-grid{grid-template-columns:1fr;}}
-/* Standalone Home Prep shows one card. Left in the 3-col track it rendered a third of the
-   way across with two empty columns beside it; !important because the breakpoints above
-   are equally specific and would win at narrow widths for no reason — one column is one
-   column at every size. */
-.vgrp-grid.vgrp-solo{grid-template-columns:1fr!important;}
-/* The three adjustment toggles, across the page. min-width:0 for the usual reason — a
-   1fr track's auto floor is min-content, and these subtitles are long enough to push the
-   track wider than its share. align-items:stretch so the three boxes match height however
-   many lines each subtitle wraps to. */
-.adj-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:stretch;}
-.adj-grid>*{min-width:0;}
-.adj-grid .toggle-wrap{height:100%;margin:0;}
-@media (max-width:900px){.adj-grid{grid-template-columns:1fr;}}
-/* Two cards abreast. Same min-width:0 reasoning as the room grid — each of these holds
-   a fixed-column table, and a 1fr track's auto floor is min-content. */
-.est-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:start;margin-top:1rem;}
-.est-pair>*{min-width:0;}
-@media (max-width:1100px){.est-pair{grid-template-columns:1fr;}}
-#print-target{display:none;}
-</style>
+  .hdr>2026.09.10 · 10:38am ET</style>
 </head>
 <body>
 
@@ -6439,6 +6072,64 @@ function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost;
 var PREP_FEE_RATE = 0.30;
 function prepFeeRate() { return PREP_FEE_RATE; }
 
+// ─── WHAT WE CHARGE ON VENDORS, IN ONE SENTENCE ───────────────────────────────
+// ⚠ EVERY CLIENT-FACING SURFACE READS THIS. Six of them stated the vendor-fee rule in their
+// own words, and the moment bundled prep started carrying the 30% (2026-09-10) four of those
+// six became false or incomplete on a job with prep vendors on it — the estimate's Terms, the
+// HTML email, the plain-text email and the invoice's closing note all told the client some
+// version of "Havellin adds no markup" while the fee table two inches above charged 30% on the
+// painter. Anthony caught the risk before it shipped to anyone: "I just wanna make sure we
+// don't make claims of not putting a fee on top of other vendors — for those we clearly
+// charge 30%."
+//
+// The distinction the sentence has to carry, and it is a real one rather than a hedge: the
+// VENDOR'S OWN INVOICE is never marked up — the client pays the painter exactly what the
+// painter charges — and Havellin's 30% is a separate, disclosed line for managing that trade.
+// Both halves are true at once, and a client reading only the first half would be misled about
+// the second.
+//
+// Returns plain sentences with no markup, so the caller wraps it as an <li>, a <div> or a line
+// of a text email. DOM-free on purpose: the tests read the real wording rather than grepping a
+// fragment of it.
+function vendorFeeNote(e, opts) {
+  opts = opts || {};
+  var hasPrep  = !!(e && e.prepEnabled && (e.prepCost || 0) > 0);
+  var hasOther = !!(e && (e.vendorCost || 0) > 0);
+  var pct = Math.round(prepFeeRate() * 100) + '%';
+  var out = [];
+  // On a fee-only engagement the caller has already stated the 30% as its own bullet, so
+  // repeating it here would be the restatement the client-copy rule exists to cut. What is
+  // still worth saying is the part that is NOT obvious: the vendors' own bills are untouched.
+  if (opts.feeAlreadyStated) {
+    return 'The vendors invoice you directly, at their own price — Havellin adds nothing to their invoices. The '
+      + pct + ' above is Havellin\'s own fee for managing the work.';
+  }
+  if (hasOther) out.push('Third-party vendors invoice you directly at cost. Havellin adds no markup to their work.');
+  if (hasPrep) {
+    out.push((hasOther ? 'Home preparation vendors are billed to you at cost in the same way, and Havellin adds no markup to their invoices either'
+                       : 'Home preparation vendors invoice you directly at cost, and Havellin adds no markup to their invoices')
+      + ' — Havellin\'s fee on that work is the separate ' + pct
+      + ' general contracting and site management fee shown above, covering sourcing, scheduling, on-site oversight and quality control.');
+  }
+  return out.join(' ');
+}
+
+// The invoice's version. Past tense, and it answers a different question — "why are the
+// vendors not on this bill, and which line here is Havellin's fee on them?" Kept separate
+// rather than folded into vendorFeeNote because a shared sentence that had to serve both
+// tenses would serve neither well.
+function _invVendorFeeSentence(smf, prepFee) {
+  if (prepFee > 0) {
+    return 'Havellin\'s fee on the home preparation vendors is the ' + Math.round(prepFeeRate() * 100)
+      + '% general contracting and site management fee shown above'
+      + (smf > 0 ? ', and the Service Management Fee covers the rest.' : '; no fee is charged on any other vendor.');
+  }
+  if (smf > 0) return 'Havellin\'s coordination fee is the Service Management Fee shown above.';
+  // SMF_PCT has been 0 since 2026-08-02, so this is the normal case — and the note used to
+  // point at a Service Management Fee line that is not on the invoice at all.
+  return 'Havellin charges no fee on those vendors; the concierge time spent coordinating them is billed in the hours above.';
+}
+
 // Does this estimate bill any HOURS at all? A fee-only engagement does not, and every
 // client document that talks about hours has to branch on it.
 //
@@ -7781,7 +7472,8 @@ function buildPrepEstimateBody(e, job) {
     '<table class="ce-tbl"><tbody>' + prepRows + '</tbody>' +
     '<tr class="subtotal"><td>Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note" style="margin-top:6px;">Vendor amounts are estimates. Actual invoices are billed to you directly at cost — Havellin does not mark them up.</div>' +
+    '<div class="ce-note" style="margin-top:6px;">Vendor amounts are estimates. The vendors invoice you directly at their own price and Havellin adds nothing to those invoices; the '
+      + Math.round(prepFeeRate()*100) + '% above is Havellin\'s own fee for managing the work, and it trues up to what the vendors actually bill.</div>' +
 
     // 2) Then Havellin\'s 30% management fee on that spend
     '<div class="ce-band" style="margin-top:1.25rem;">Havellin Management Fee</div>' +
@@ -8220,15 +7912,21 @@ function renderClientEstimate() {
     (_isFeeOnlyEst
       ? '<li>Havellin\'s fee for this project is a <strong>30% management fee on actual vendor spend</strong> — sourcing, scheduling, on-site oversight and quality control. It is not billed hourly.</li>' +
         '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins. The fee trues up to what the vendors actually invoice.</li>' +
-        '<li>Third-party vendors invoice you directly at cost. Havellin adds no markup to their work.</li>' +
+        '<li>' + vendorFeeNote(e, {feeAlreadyStated:true}) + '</li>' +
         '<li>Adding or removing work changes the vendor scope, so it is re-quoted and agreed with you in writing before that work proceeds.</li>'
       : (e.fixedPrice
       ? '<li>This is a <strong>fixed-price</strong> proposal. The Havellin Services fee is firm for the scope of work described and does not change based on the actual hours worked.</li>' +
         '<li>Any change to the agreed scope will be documented in a written change order, with any price adjustment agreed in writing before the additional work proceeds.</li>' +
-        '<li>Third-party vendor costs are estimated and billed separately at cost via direct vendor invoices; Havellin\'s coordination of those vendors is included in the fixed fee.</li>'
+        '<li>Third-party vendor costs are estimated and billed separately at cost via direct vendor invoices; Havellin\'s coordination of those vendors is included in the fixed fee.'
+          + ((e.prepEnabled && (e.prepCost||0) > 0)
+             ? ' Home preparation vendors are the exception: those carry the separate ' + Math.round(prepFeeRate()*100) + '% general contracting and site management fee shown above, which is not part of the fixed fee.'
+             : '') + '</li>'
       : '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
         '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
-        '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.</li>' +
+        '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.'
+          + ((e.prepEnabled && (e.prepCost||0) > 0)
+             ? ' Havellin adds no markup to any vendor\'s invoice; on home preparation vendors Havellin\'s own fee is the separate ' + Math.round(prepFeeRate()*100) + '% general contracting and site management fee shown above.'
+             : '') + '</li>' +
         (SMF_PCT > 0
               ? '<li>A ' + Math.round(SMF_PCT*100) + '% Service Management Fee applies to all third-party vendors coordinated by Havellin, including any home-prep vendors managed as part of this engagement.</li>'
               : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>') +
@@ -12120,7 +11818,7 @@ function buildEstimateEmailHtml(e, job) {
 
     '<div style="margin-top:16px;font-size:13px;line-height:1.6;color:' + B.gray + ';">' + _emHtml(basis) + '</div>' +
     ((e.vendorCost || 0) > 0 || (e.prepEnabled && (e.prepCost || 0) > 0)
-      ? '<div style="margin-top:8px;font-size:13px;line-height:1.6;color:' + B.gray + ';">Third-party vendors invoice you directly at cost. Havellin adds no markup to their work.</div>'
+      ? '<div style="margin-top:8px;font-size:13px;line-height:1.6;color:' + B.gray + ';">' + _emHtml(vendorFeeNote(e)) + '</div>'
       : '') +
 
     exclHtml + phaseHtml +
@@ -12329,6 +12027,10 @@ function buildEstimateMailto() {
   var costLines = [(e.fixedPrice ? 'Fixed Project Fee: ' : 'Havellin Services: ') + money(e.havellinTotal)];
   if ((e.vendorCost||0) > 0) costLines.push('Estimated Third-Party Vendors (billed at cost): ' + money(e.vendorCost));
   if (e.prepEnabled && (e.prepCost||0) > 0) costLines.push('Estimated Home Prep Vendors (billed at cost): ' + money(e.prepCost));
+  // The plain email carried the pass-through COSTS and never said what Havellin charges on
+  // them, which on a job with prep vendors leaves the one disclosed fee unmentioned in the
+  // only document some clients read. Same sentence as the estimate and the HTML email.
+  var _vFee = vendorFeeNote(e);
   var grand = e.grandTotal || e.havellinTotal || 0;
   // Excluded rooms — remind the client, in the email body, which spaces they told us
   // they'll handle themselves so it's clear the estimate priced no work in them.
@@ -12346,7 +12048,11 @@ function buildEstimateMailto() {
   ].concat(exclNote).concat(costLines).concat([
     'Total Estimated Project Cost: ' + money(grand),
     '',
-    'Third-party vendor and home-prep costs are estimates billed directly to you at cost — Havellin does not mark them up. Full details are in the attached estimate.',
+    // This line used to name third-party AND home-prep costs, say Havellin adds nothing to
+    // them, and stop — which on a job carrying prep vendors leaves the one fee Havellin does
+    // charge unmentioned in the only document some clients read end to end.
+    (_vFee ? _vFee + ' Full details are in the attached estimate.'
+           : 'Full details are in the attached estimate.'),
     '',
     '** Please attach the estimate PDF before sending — use the "Print / Save PDF" button in the app to generate it. **',
     '',
@@ -17413,7 +17119,7 @@ function renderInvoice() {
     '<tbody>' + teamRows + '</tbody>' +
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
-    (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (30%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
+    (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
@@ -17460,7 +17166,7 @@ function renderInvoice() {
     '<tr><td>Havellin labor (estimate' + (discountPct > 0 ? ', net of ' + discountPct + '% discount' : '') + ')</td><td style="text-align:right;">' + fmt(estLaborNet) + '</td></tr>' +
     (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
     (advSmf > 0 ? '<tr><td>Service Management Fee (15% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
-    (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
+    (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
     (legacyFees > 0 ? '<tr><td>GC / Site Management Fee</td><td style="text-align:right;">' + fmt(legacyFees) + '</td></tr>' : '') +
     (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">Compressing the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
@@ -17489,7 +17195,8 @@ function renderInvoice() {
   // by each vendor — they are NOT charged on Havellin's invoice. Havellin's coordination
   // fee (the 15% SMF, and 30% prep GC fee) stays in the services section above.
   var vendorNote = (vendorCost > 0 || act.prep.length)
-    ? '<div class="ce-note" style="margin-top:1rem;">Third-party vendor costs (movers, hauling, donation, cleaning, etc.) are billed to you directly by each vendor and are not included on this invoice. Havellin\'s coordination fee is the Service Management Fee shown above.</div>'
+    ? '<div class="ce-note" style="margin-top:1rem;">Third-party vendor costs (movers, hauling, donation, cleaning, etc.) are billed to you directly by each vendor and are not included on this invoice. '
+      + _invVendorFeeSentence(smf, prepFee) + '</div>'
     : '';
   // Fixed-price jobs: the invoice bills the agreed flat fee, so replace the hours-based
   // service tables and the over/under-vs-estimate payment summary with fixed-fee versions.
@@ -17518,7 +17225,8 @@ function renderInvoice() {
       '<tr><td>Fixed project fee — full scope of work per agreement</td><td style="text-align:right;">' + fmt(_fixedTotal) + '</td></tr>' +
       '<tr class="subtotal"><td>Havellin Services Total</td><td style="text-align:right;">' + fmt(_fixedTotal) + '</td></tr>' +
       '</table>' +
-      '<div class="ce-note">This engagement is billed at the agreed fixed price. Third-party vendor costs are billed to you directly at cost.</div>';
+      '<div class="ce-note">This engagement is billed at the agreed fixed price. Third-party vendor costs are billed to you directly at cost.'
+      + (prepFee > 0 ? ' ' + _invVendorFeeSentence(smf, prepFee) : '') + '</div>';
   }
   var bodyHtml = (stage === 'final')
     ? (finalServices + coSection + finalPayment + vendorNote)
@@ -22446,7 +22154,12 @@ function renderProbateAgreement() {
     // percentage markup on a third-party invoice is exactly the line counsel questions.
     (SMF_PCT > 0
       ? ['Vendor Management Fee', Math.round(SMF_PCT*100)+'% of vendor invoice', 'Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
-      : ['Third-Party Vendors', 'At cost — no fee', 'Vendors bill the estate directly at cost. Havellin adds no markup; the concierge time spent coordinating them is billed at the TC rate above.'])
+      // "Havellin adds no markup" is unqualified, and the Home Sale Preparation row added
+      // below it charges 30%. On an estate matter with prep vendors the table would state
+      // both without reconciling them, in front of a court that reviews the expenses.
+      : ['Third-Party Vendors', 'At cost — no fee',
+         'Vendors bill the estate directly at cost. Havellin adds no markup to any vendor invoice; the concierge time spent coordinating them is billed at the TC rate above'
+         + (_agrHasPrepVendors(est) ? ', except for the home sale preparation vendors in the row below.' : '.')])
   ];
   // Home sale preparation is the one exception to the row above, and it only earns a row when
   // the attached Exhibit A actually carries prep vendors — an estate matter usually does not.
@@ -22799,7 +22512,7 @@ function renderAgreement() {
   content += agrSection('1. Scope of Services',
     (isPrepAgr
       ? p(b('1.1 Services.')+'  Contractor will provide home sale preparation project-management services (the "Services") as described in the written estimate or work order (the "Estimate"), which is attached as Exhibit A and incorporated by reference. The Services consist of sourcing, coordinating, and overseeing the third-party vendors and tradespeople engaged to prepare the Property for sale.')+
-        p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and a written preparation plan; sourcing and scheduling of vendors and tradespeople (including painting, repairs, cleaning, landscaping, pressure washing, handyman work, and staging); on-site oversight, quality control, and coordination of that work through completion; and management of vendor scheduling and Property access. Third-party vendors are engaged for and invoiced to Client at cost; Contractor\'s fee for the Services is a management fee equal to thirty percent (30%) of the total third-party vendor costs managed under this Agreement. Contractor does not provide real estate brokerage, listing, or transactional representation.')
+        p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and a written preparation plan; sourcing and scheduling of vendors and tradespeople (including painting, repairs, cleaning, landscaping, pressure washing, handyman work, and staging); on-site oversight, quality control, and coordination of that work through completion; and management of vendor scheduling and Property access. Third-party vendors are engaged for and invoiced to Client at cost; Contractor\'s fee for the Services is a management fee equal to '+_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this Agreement. Contractor does not provide real estate brokerage, listing, or transactional representation.')
       : p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, home editing, home transition and move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is attached as Exhibit A and incorporated by reference.')+
         p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and project planning; sorting, organizing, and packing of personal property and household goods; coordination of appraisers, auction houses, estate sale providers, movers, junk removal, art/antique handlers, and other third-party vendors; move-management, scheduling, and oversight; limited assistance identifying items that may have value for referral to qualified third parties; and basic home preparation and staging in anticipation of sale (excluding real estate brokerage services unless covered under a separate written brokerage agreement).')
     )+

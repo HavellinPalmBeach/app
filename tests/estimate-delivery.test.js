@@ -216,8 +216,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
-            'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
-      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
+            'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
+            // Both emails state the vendor-fee rule through the one shared sentence (2026-09-10).
+            'vendorFeeNote', 'prepFeeRate'],
+      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
       stubs: {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(561) 370-4700', email: 'ashley@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -274,8 +276,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A phase list that throws must not take the email down with it.
     const ctx2 = sandbox({
-      fns: ['buildEstimateEmailHtml', 'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
-      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
+      fns: ['buildEstimateEmailHtml', 'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
+            'vendorFeeNote', 'prepFeeRate'],
+      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',

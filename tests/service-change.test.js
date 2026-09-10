@@ -30,6 +30,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const ctx = sandbox({
     fns: ['svcLabelOf', 'isDecedentJob', 'svcFamily', 'svcFamilyOptions', 'sameSvcFamily',
           'isTMOnly', '_svcChangeConsequences', 'prepFeeRate', 'getVendorActuals',
+          'vendorFeeNote', '_invVendorFeeSentence',
           '_agrHasPrepVendors', '_pctWords', 'ecIsProbateSvc', 'ecIsEstateSvc'],
     vars: ['SVC_LABELS', 'DECEDENT_SERVICES', 'SVC_ORDER', 'PREP_FEE_RATE', 'SMF_PCT', '_PCT_WORDS'],
   });
@@ -345,6 +346,101 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(pro, '_agrHasPrepVendors(est)', 'the probate fee table asks the same question');
     has(pro, 'Home Sale Preparation Fee', 'and adds the row only when Exhibit A carries one');
     has(pro, "'At cost — no fee'", 'while the general third-party row is untouched');
+  }
+
+  // ── 6b. NO DOCUMENT MAY CLAIM WE CHARGE NOTHING ON A VENDOR WE CHARGE 30% ON ──
+  group('vendorFeeNote — one sentence, and it never says less than the truth');
+  {
+    const prep  = { prepEnabled: true, prepCost: 45000 };
+    const other = { vendorCost: 12000 };
+    const both  = { prepEnabled: true, prepCost: 45000, vendorCost: 12000 };
+
+    eq(ctx.vendorFeeNote({}), '', 'a job with no vendors at all says nothing');
+
+    let n = ctx.vendorFeeNote(other);
+    has(n, 'adds no markup', 'vendors with no prep: the plain no-markup line, unchanged');
+    lacks(n, '30%', 'and no fee is mentioned, because none is charged');
+
+    n = ctx.vendorFeeNote(prep);
+    has(n, 'no markup to their invoices', 'prep alone: the vendor invoice is still not marked up');
+    has(n, 'separate 30%', 'AND the 30% is named — this is the claim that would otherwise be false');
+    has(n, 'general contracting and site management fee', 'in the words the fee line uses');
+
+    n = ctx.vendorFeeNote(both);
+    has(n, 'adds no markup to their work', 'both: the general vendors keep their line');
+    has(n, 'separate 30%', 'and prep still names its fee');
+
+    n = ctx.vendorFeeNote(prep, { feeAlreadyStated: true });
+    has(n, 'adds nothing to their invoices', 'a fee-only estimate has already stated the 30% above');
+    has(n, "30% above is Havellin's own fee", 'so this line draws the distinction instead of restating it');
+
+    // Zero-cost placeholder lines are not vendors.
+    eq(ctx.vendorFeeNote({ prepEnabled: true, prepCost: 0 }), '', 'an unpriced prep line claims nothing');
+  }
+
+  group('every client-facing surface reads that one sentence');
+  {
+    // Six surfaces stated this rule in their own words. Four of them became false or
+    // incomplete the moment bundled prep started charging 30%, which is precisely what
+    // Anthony asked to be checked: "I just wanna make sure we don't make claims of not
+    // putting a fee on top of other vendors."
+    has(fn('renderClientEstimate'), 'vendorFeeNote(e, {feeAlreadyStated:true})', 'the estimate Terms, fee-only arm');
+    has(fn('buildEstimateEmailHtml'), '_emHtml(vendorFeeNote(e))', 'the HTML email');
+    has(fn('buildEstimateMailto'), 'var _vFee = vendorFeeNote(e);', 'the plain-text email');
+    // And the two Terms arms that are not fee-only carve prep out inline, because there the
+    // sentence has to attach to an existing clause rather than stand alone.
+    const ce = fn('renderClientEstimate');
+    has(ce, "Home preparation vendors are the exception", 'the fixed-price Terms arm');
+    has(ce, "on home preparation vendors Havellin\\'s own fee is the separate", 'and the hourly Terms arm');
+
+    // THE ASSERTION THAT MATTERS: no surface states a bare no-markup claim any more.
+    lacks(ce, 'Third-party vendors invoice you directly at cost. Havellin adds no markup to their work.</li>',
+          'the estimate Terms no longer hardcodes it');
+    lacks(fn('buildEstimateEmailHtml'), 'Havellin adds no markup to their work.</div>',
+          'nor does the HTML email');
+    lacks(fn('buildEstimateMailto'), 'Havellin does not mark them up',
+          'and the plain email no longer names home-prep costs and then omits the fee on them');
+  }
+
+  group('the invoice says which line IS the fee, and it exists');
+  {
+    eq(ctx._invVendorFeeSentence(0, 13500).indexOf('30% general contracting') > 0, true,
+       'with a prep fee, it points at the 30% line');
+    has(ctx._invVendorFeeSentence(0, 13500), 'no fee is charged on any other vendor',
+        'and says what is NOT charged, rather than leaving it open');
+    has(ctx._invVendorFeeSentence(500, 13500), 'Service Management Fee covers the rest',
+        'both fees present, both named');
+    has(ctx._invVendorFeeSentence(500, 0), 'coordination fee is the Service Management Fee',
+        'SMF alone keeps the old sentence');
+    // SMF_PCT has been 0 since 2026-08-02, so the note used to point at a line that is not
+    // on the invoice at all. That was true before this change and is fixed with it.
+    has(ctx._invVendorFeeSentence(0, 0), 'charges no fee on those vendors',
+        'neither fee: it no longer points at a Service Management Fee line the invoice lacks');
+    lacks(ctx._invVendorFeeSentence(0, 0), 'shown above', 'and does not reference a line that is not there');
+
+    const inv = fn('renderInvoice');
+    has(inv, '_invVendorFeeSentence(smf, prepFee)', 'the invoice note reads the function');
+    lacks(inv, "Havellin\\'s coordination fee is the Service Management Fee shown above.</div>",
+          'the old unconditional sentence is gone');
+    has(inv, "GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)",
+        'and the fee row reads the rate rather than a literal 30');
+  }
+
+  group('30% is stated as the constant everywhere a client reads it');
+  {
+    // Anthony, 2026-09-10: "30% should be the number, it's an industry standard general
+    // contractor" — so it is a constant, not a per-job dial. What matters then is that no
+    // document hardcodes the digits, or the day it ever moves they disagree.
+    ['renderClientEstimate', 'renderInvoice', 'renderAgreement', 'renderProbateAgreement',
+     'buildPrepEstimateBody'].forEach((name) => {
+      const body = fn(name);
+      lacks(body, '(30%)', name + ' hardcodes no (30%) literal');
+      lacks(body, '30% of prep', name + ' hardcodes no "30% of prep" literal');
+    });
+    has(fn('renderProbateAgreement'), "Math.round(prepFeeRate()*100)+'% of prep vendor cost'",
+        'the probate fee table reads the constant');
+    has(fn('renderProbateAgreement'), 'except for the home sale preparation vendors in the row below',
+        'and its no-markup row is scoped once a prep row sits under it');
   }
 
   // ── 7. THE EDIT CLIENT BUG ON THE CONTESTED PATH ───────────────────────────

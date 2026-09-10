@@ -556,6 +556,7 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| A client asks whether you mark up the vendors | Straight answer, and it is on every document: **no — the vendor bills them at the vendor's own price and we add nothing to that invoice.** On home prep vendors we charge a separate, clearly-shown **30% general contracting and site management fee** for sourcing, scheduling, on-site oversight and quality control. Both things are true at once; do not say only the first half. |
 | The job is not the service type intake said it was | Change it in the **service type** dropdown on Build Estimate (from 2026-09-10). Everything you have scored is kept and the price re-runs. It offers living services on a living job and estate services on an estate job, and never both. |
 | The service dropdown does not offer the type you want | You are trying to cross the living/deceased line — a living client cannot become an Estate Settlement here, because nobody has been asked for a representative or a date of death. Do it on **Edit Client**, and fill those fields in while you are there. |
 | The service dropdown is greyed out | Either the estimate is out for manager approval, or it is approved, or the agreement is signed. For the first two, press **Edit Estimate** on the Client Estimate tab and it opens again (you will need to re-approve). Once the agreement is *signed* it is a **Change Order**, not an edit. |

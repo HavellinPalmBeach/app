@@ -525,6 +525,8 @@ Each stage states three things: what Havellin does, **what we need from the clie
 
 > **The header is one identity line** — Job ID · Estate/Client · Property · Date — then the representative row (which now carries *Service*), then the dates row (which now carries *Date of Death*). Rows run even columns with the last value flush right. The *Estate*/*Client* label flips on whether an **authorised representative is recorded**, not on the service type, so a cleanout job with no rep correctly reads *Client*.
 
+> **Every client-facing surface states the vendor-fee rule from one sentence, as of 2026-09-10.** The estimate's Terms, the HTML email, the plain-text email and the invoice's closing note each had their own wording, and four of them said some version of *"Havellin adds no markup"* — which became **false on any job carrying home-prep vendors** the moment bundled prep started charging 30%. They all read `vendorFeeNote()` now. The distinction it draws is a real one and worth knowing when you are asked: **the vendor's own invoice is never marked up** — the client pays the painter exactly what the painter charges — and **the 30% is Havellin's separate, disclosed line** for managing that trade. Both are true at once, and a client told only the first would be misled about the second.
+
 ### Approval
 
 Hit **Submit for Approval** → manager enters PIN → estimate is locked and marked *Approved for Release*. PDF is unlocked. Estimate cannot be edited after approval — use a Change Order instead.

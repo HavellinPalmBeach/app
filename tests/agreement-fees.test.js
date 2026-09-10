@@ -29,7 +29,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(agr, 'Contractor adds no fee or markup to third-party vendor invoices', 'in plain words');
     has(agr, 'billed as Transition Concierge time under Section 3.3', 'and says where the coordination time IS billed — hourly or inside the fixed fee, §3.3 is both');
     has(agr, "3.5 Management Fee.", 'standalone Home Prep keeps its own clause');
-    has(agr, 'thirty percent (30%) of the total third-party vendor costs', 'at 30%, the only fee that engagement bills');
+    // The rate is spelled by _pctWords(prepFeeRate()) since 2026-09-10 rather than typed into
+    // the clause, so the requirement is what this asserts: the fee stated in the contract comes
+    // from the same constant the estimate and the invoice charge on. Asserting the rendered
+    // digits instead would pass just as happily against a hardcoded copy that had drifted —
+    // which is exactly how §3.5 went on promising 15% for five weeks after the fee came off.
+    has(agr, "_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this",
+        'at the one rate the estimate and the invoice bill, read from the constant');
+    has(agr, "equal to '+_pctWords(prepFeeRate())+'", '§1.2 states it from the same place, not by hand');
     has(prob, "'Third-Party Vendors', 'At cost — no fee'", 'the probate fee table names the vendors as at-cost with no fee');
     lacks(prob, 'materials, and vendor fees based on', '§3.2 no longer describes the estimate as carrying vendor fees');
   }

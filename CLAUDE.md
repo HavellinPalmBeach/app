@@ -177,6 +177,57 @@ relegated to home prep when it's part of another job and just simply charge the 
   invoice arrive above the quote. `coordHrsRollup`'s fallback still re-derives prep touches for a
   record with no `prepTCHrs` field, which is correct — that estimate really did price them.
 
+### The no-markup claim, swept (same day, on Anthony's challenge)
+*"30% should be the number, it's an industry standard general contractor … is that updated on
+our estimate document as well as the agreement document — I just wanna make sure we don't make
+claims of not putting a fee on top of other vendors."* He was right to ask, and **four of six
+client-facing surfaces were wrong.**
+
+- **30% IS A CONSTANT, NOT A DIAL — asked and answered.** No per-job override. What that makes
+  load-bearing instead is that no document hardcodes the digits, or the day it moves they
+  disagree. A test walks `renderClientEstimate`, `renderInvoice`, `renderAgreement`,
+  `renderProbateAgreement` and `buildPrepEstimateBody` and fails on a `(30%)` literal in any of
+  them. It found **three** on the first run: the invoice's deposit-stage prep row (a SECOND fee
+  row I had missed while fixing the final-stage one), and the standalone prep agreement's §1.2,
+  which spelled *thirty percent (30%)* by hand.
+- **⚠ SIX SURFACES EACH STATED THE VENDOR-FEE RULE IN THEIR OWN WORDS.** The estimate's Terms
+  (three arms), the HTML email, the plain-text email, the invoice's closing note, and both
+  agreement forms. Four went false or incomplete the moment bundled prep charged 30%:
+  - The estimate's **T&M Terms arm** — the one a bundled prep job actually hits — said *"Third-party
+    vendor costs are estimated and billed at cost"* and stopped, never mentioning the fee shown in
+    its own table two inches above.
+  - The **fixed-price arm** said *"Havellin's coordination of those vendors is included in the fixed
+    fee"*, which is wrong for prep — that carries its own 30% on top of the flat fee.
+  - The **HTML email** printed a flat *"Havellin adds no markup to their work"* whenever any vendor
+    cost existed, prep included.
+  - The **plain-text email** was the worst of them: it named *"third-party vendor AND HOME-PREP
+    costs … Havellin does not mark them up"*, explicitly, in the one document some clients read
+    end to end, and never mentioned the fee at all.
+  - The **invoice's** note pointed at *"the Service Management Fee shown above"* — a line that has
+    not existed since `SMF_PCT` went to 0 on 2026-08-02. Wrong before this change, too.
+- **`vendorFeeNote(e, opts)` is the one sentence now, DOM-free, read by all four.**
+  **⚠ THE DISTINCTION IT CARRIES IS REAL AND MUST NOT BE COLLAPSED IN EITHER DIRECTION:** the
+  VENDOR'S OWN INVOICE is never marked up — the client pays the painter exactly what the painter
+  charges — and Havellin's 30% is a **separate, disclosed line** for managing that trade. Both
+  are true at once. Saying only the first misleads about the second, which is what four documents
+  did; saying only the second invites "so you mark up my painter", which is false. `opts
+  .feeAlreadyStated` is for the fee-only estimate, whose Terms state the 30% one bullet above —
+  there the sentence draws the distinction instead of restating the rate, per the client-copy rule.
+  `_invVendorFeeSentence(smf, prepFee)` is kept separate on purpose: the invoice is past tense and
+  answers a different question ("which line here IS the fee?"), and one sentence serving both
+  tenses would serve neither.
+- The probate fee table's *Havellin adds no markup* row is scoped once a Home Sale Preparation row
+  sits under it — on a court-reviewed matter the table must not state both without reconciling them.
+- **⚠ AND A TEST NEEDLE TRIPPED ON MY OWN COMMENT, TWICE IN ONE SESSION** — first `standalonePrep`,
+  then the quoted phrase *"Havellin does not mark them up"* inside the comment explaining why it was
+  removed. A `lacks()` over an extracted function body sees comments. Reword the comment; do not
+  weaken the assertion.
+- **1566 committed checks** (37 more). All seven of these revert-verified individually. The real
+  rendered wording was read out of a headless browser rather than asserted on source — the bundled
+  sentence, the fee-only variant, both invoice branches, and §3.5 off a rendered agreement.
+- Manual **§7** note; playbook **one symptom row** — the answer to give when a client asks
+  outright whether we mark the vendors up.
+
 ### Found on the way: Edit Client hid the fields it was about to save
 - **`ecToggleProbate` tested plain `probate` for the case block and omitted `contested_probate`
   from the rep block, while `showEditClient`'s initial render tested both correctly and
@@ -192,7 +243,7 @@ relegated to home prep when it's part of another job and just simply charge the 
   Unreachable through the UI (nothing offers the key) and changing the predicate would move
   agreement routing for any job still carrying it, so it is flagged rather than altered.
   `svcFamily` places it correctly and the picker repairs it on the next change.
-- **1525 committed checks** (`tests/service-change.test.js`, 151 new). **All ten fixes
+- **1566 committed checks** (`tests/service-change.test.js`, 188 new). **All ten fixes
   revert-verified individually** — every one turns the suite red on its own, including the two
   that are pure source assertions. Verified in headless Chromium end to end with no page errors:
   the picker offers four living services on the prep job and three decedent ones on the estate
