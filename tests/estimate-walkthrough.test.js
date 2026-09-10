@@ -312,6 +312,51 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'the hand-written copy on the standalone prep form is gone, not left beside it');
   }
 
+  group('the two disposition tables read as ONE column');
+  {
+    // Notable Collections and Vehicles & Watercraft are separate tables under separate
+    // bands, and a reader takes the two right-hand columns as one list of answers. With the
+    // default auto layout each table sized its first column to its OWN content, so a short
+    // "Asian Art" put the disposition at 44% of the page while "Mercedes convertible" over a
+    // spec line pushed the one below it out to 58% — the same kind of answer in two places.
+    has(src, '.ce-disp-tbl{table-layout:fixed;}', 'fixed layout, so content cannot move the column');
+    has(src, '.ce-disp-tbl td:first-child{width:55%;}', 'and one shared first-column width');
+    eq((src.match(/ce-tbl ce-disp-tbl/g) || []).length, 2,
+      'both disposition tables carry it — one of the two alone is the bug, not the fix');
+    // The width is set once in CSS rather than inline on either table, so the two cannot
+    // drift apart again the way they just did.
+    lacks(fn('renderClientEstimate'), "width:55%", 'the width is not inlined on either table');
+  }
+
+  group('insured & bonded is claimed ONCE, in the footer');
+  {
+    // It was a Term as well, seven lines above the footer of the same document. Terms is
+    // where a COMMERCIAL rule belongs — what the client is charged, what is billed at cost,
+    // how long the quote stands — not a standing fact about the firm that the footer of
+    // every Havellin document already carries.
+    const ce = fn('renderClientEstimate');
+    lacks(ce, 'Havellin Palm Beach is insured and bonded.', 'the Terms bullet is gone');
+    eq((ce.match(/[Ii]nsured (&amp;|and) [Bb]onded/g) || []).length, 1,
+      'and the claim survives exactly once — in the footer');
+    has(ce, "'Insured &amp; Bonded' +", 'which is the footer line');
+    // The licence rule this sits beside is unchanged and still absolute (see CLAUDE.md).
+    lacks(src, 'Havellin Palm Beach is licensed', 'Havellin is still never described as licensed');
+  }
+
+  group('the vehicle row keeps + Add on one line');
+  {
+    // ⚠ flex-basis MUST be 0, and `auto` is not good enough: the global
+    // input,select,textarea{width:100%} rule makes an auto basis resolve to the full row,
+    // so the input claimed the whole line and the wrapping container pushed the button onto
+    // a second one — leaving this card 43px deeper than Notable Collections beside it, in a
+    // two-up whose columns are already the same width. Measured in Chromium, not guessed.
+    has(src, "id=\"new-veh-desc\"", 'the input is still there');
+    const row = src.slice(src.indexOf('id="vehicles-tbl"'), src.indexOf('id="est-vendors-card"'));
+    has(row, 'flex:1 1 0;min-width:0;', 'basis 0 — it takes the space left over after the button');
+    lacks(row, 'flex:1 1 100%', 'never 100%, which is what wrapped the button');
+    lacks(row, 'flex:1 1 auto', 'and never auto, which the global width:100% rule resolves to the same thing');
+  }
+
   group('the note is rendered ABOVE the numbers it qualifies');
   {
     // A caveat under a table is read after the total has already been taken as a price.

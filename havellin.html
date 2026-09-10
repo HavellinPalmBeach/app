@@ -362,6 +362,15 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .ce-tbl tr.subtotal td{background:var(--tan);font-weight:600;font-size:14px;}
 .ce-tbl tr.grand td{background:var(--gray-dk);color:var(--cream);font-weight:600;font-size:15px;}
 .ce-tbl tr.grand td.r{font-family:'Cormorant Garamond',serif;font-size:20px;}
+/* ⚠ THE TWO DISPOSITION TABLES ARE READ AS ONE LIST AND MUST LINE UP. Notable Collections
+   and Vehicles & Watercraft are separate tables under separate bands, and with the default
+   auto layout each sized its first column to its OWN content — so a short "Asian Art" put
+   the disposition at 44% of the page while "Mercedes convertible" over a spec line pushed
+   the one below it out to 58%. Two columns of the same kind of answer, in two places.
+   Fixed layout plus one shared width is what holds them in a single column whatever the
+   rows happen to contain. Set it here, once, rather than on either table. */
+.ce-disp-tbl{table-layout:fixed;}
+.ce-disp-tbl td:first-child{width:55%;}
 .ce-note{font-size:11px;color:var(--gray);font-style:italic;padding:8px 14px;background:var(--cream);border:1px solid var(--border);border-radius:0 0 4px 4px;margin-bottom:1.25rem;}
 /* .ce-note is shaped to close a table (rounded bottom, a margin under it). .ce-lead is the
    same voice OPENING one: it butts onto the band above and the table below, so a caveat
@@ -800,7 +809,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 4:44pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 5:01pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1411,7 +1420,7 @@ body.no-smf .smf-col{display:none;}
 
       <div class="card" id="est-vehicles-card">
         <div class="sec">Vehicles &amp; Watercraft <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(cars, boats, motorcycles — flag collectors for appraisal)</span></div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Ordinary vehicles are valued from a book value (KBB / NADA) as of the date of death — we can do that ourselves. Collectors, classics, and boats route to a Vehicle / Boat appraiser. Add each below, then fill in its details.</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Ordinary vehicles are valued from a book value (KBB / NADA) as of the date of death — we can do that ourselves. Collectors, classics, and boats route to a Vehicle / Boat appraiser.</div>
         <table class="vtbl" id="vehicles-tbl">
           <thead><tr>
             <th style="min-width:180px;">Vehicle / Watercraft</th>
@@ -1423,7 +1432,15 @@ body.no-smf .smf-col{display:none;}
           <tfoot>
             <tr>
               <td colspan="2"><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
-                <input type="text" id="new-veh-desc" placeholder="e.g. 2019 Lexus RX 350, Harley Softail, Boston Whaler 210" style="font-size:11px;flex:1 1 100%;min-width:0;">
+                <!-- ⚠ flex-basis MUST be 0 here, and `auto` is NOT good enough — the global
+                     `input,select,textarea{width:100%}` rule is why. With basis:auto the input's base
+                     size resolves to that 100%, so it claimed the whole row on its own and the wrapping
+                     container pushed "+ Add" onto a second line. That made this card 43px deeper than
+                     Notable Collections beside it, and the two sit in a two-up whose columns are already
+                     the same width, so the mismatched height was the only thing breaking the pair.
+                     Basis 0 means the input takes the space LEFT OVER after the button instead.
+                     Same global rule that stretches a bare checkbox full-width; see .hf-tick. -->
+                <input type="text" id="new-veh-desc" placeholder="e.g. 2019 Lexus RX 350, Harley Softail, Boston Whaler 210" style="font-size:11px;flex:1 1 0;min-width:0;">
                 <button class="icon-btn" style="flex:0 0 auto;" onclick="addVehicle()">+ Add</button>
               </div></td>
             </tr>
@@ -8557,7 +8574,7 @@ function renderClientEstimate() {
         // No column header row — the band above already names the section, and
         // "Collection / Item" over a list of collections says nothing the reader
         // did not already have. Two stacked header bars for one small table.
-        '<table class="ce-tbl" style="margin-bottom:1.25rem;">' +
+        '<table class="ce-tbl ce-disp-tbl" style="margin-bottom:1.25rem;">' +
         '<tbody>' + rows + '</tbody></table>';
     })() +
 
@@ -8588,7 +8605,7 @@ function renderClientEstimate() {
           '</td><td>' + flags.join('<br>') + '</td></tr>';
       }).join('');
       return '<div class="ce-band" style="margin-top:1rem;">Vehicles &amp; Watercraft</div>' +
-        '<table class="ce-tbl">' +
+        '<table class="ce-tbl ce-disp-tbl">' +
         '<tbody>' + rows + '</tbody></table>' +
         '<div style="font-size:11px;color:var(--gray);padding:6px 10px 0;font-style:italic;">' +
         'Each vehicle above is included in the estate documentation. The disposition path — sale, ' +
@@ -8724,7 +8741,10 @@ function renderClientEstimate() {
               : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>') +
         '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>')) +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
-    '<li>Havellin Palm Beach is insured and bonded.</li>' +
+    // The insured-and-bonded bullet used to sit here and is gone (2026-09-10, Anthony's
+    // call). The footer of this same document states it seven lines below, so as a Term it
+    // was the restatement the client-copy rule exists to cut — and Terms is where a
+    // COMMERCIAL rule belongs, not a standing fact about the firm.
     '</ul></div>' +
 
     (preparer && preparer.bio ? '' : '') +

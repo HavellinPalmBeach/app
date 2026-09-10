@@ -218,6 +218,44 @@ appraisers to determine whether or not it's even worth the appraiser coming on-s
   about photographs at all. A test asserts both directions and that the old sentence is **gone
   from the file**.
 
+### Four presentation fixes off the same screenshots
+- **⚠ THE VEHICLES CARD SAT 43px DEEPER THAN NOTABLE COLLECTIONS BESIDE IT, AND THE CAUSE IS A
+  TRAP THIS FILE ALREADY RECORDS ONCE.** `new-veh-desc` carried `flex:1 1 100%`, so it claimed
+  the whole tfoot row and the wrapping container pushed **+ Add** onto a second line. The two
+  cards sit in `.est-pair`, whose columns are `repeat(2,minmax(0,1fr))` — **already equal
+  width, measured at 618px each** — so the mismatched height was the only thing breaking the
+  pair. **⚠ `flex:1 1 auto` DOES NOT FIX IT, and that is the whole lesson: the global
+  `input,select,textarea{width:100%}` rule makes an auto basis resolve to the full row.**
+  Measured in Chromium — basis `auto` left the input at 554px and the button still wrapped.
+  **Basis 0** is the fix: the input takes what is left after the button (498px). Same rule that
+  paints a bare checkbox full-width; see `.hf-tick`.
+  - The card's trailing *"Add each below, then fill in its details."* went with it — an input
+    and a **+ Add** button sit directly beneath it, so it described what the reader can see.
+  - **Heights measured before → after, at six widths:** Δ was 43 / 26 / 43 / 43 / 43 / 43px and
+    is now **-4 / -4 / 13 / 13 / 13 / 13**. The residual 13 at ≥1440px is the vehicles blurb
+    still running to two lines where the collections blurb fits on one; at the widths where
+    both wrap, vehicles is 4px *shallower*. Not chased further — the remaining copy is real
+    guidance (KBB/NADA, collector routing) and the pair is top-aligned anyway.
+  - **Noted, NOT introduced, NOT fixed: the tab overflows 63px at 1120px.** Identical before and
+    after the change (checked against the stashed tree). `.est-pair` collapses at ≤1100px, so it
+    is a narrow band between breakpoints and belongs to a layout pass rather than this one.
+- **⚠ THE TWO DISPOSITION TABLES ON THE CLIENT ESTIMATE DID NOT LINE UP.** *"let's line up the
+  auction house, appraise, flagged for disposition, flagged for disposition so they look like
+  they are in one column."* Notable Collections and Vehicles & Watercraft are separate tables
+  under separate bands and a reader takes their right-hand columns as **one list of answers** —
+  but with default auto layout each sized its first column to its OWN content, so a short
+  *Asian Art* put the disposition at 44% of the page while *Mercedes convertible* over a spec
+  line pushed the one below it to 58%. `.ce-disp-tbl` (`table-layout:fixed` + a shared
+  `td:first-child{width:55%}`) holds them in one column whatever the rows contain. **Set once in
+  CSS, not inlined on either table** — a test asserts both tables carry the class and that no
+  `width:55%` literal survives in `renderClientEstimate`. Verified in Chromium: all four values
+  share an x at 1400 / 780 / 390px, zero overflow.
+- **The estimate's Terms bullet *"Havellin Palm Beach is insured and bonded."* is CUT.** It
+  restated the footer of the same document seven lines below, and Terms is for commercial rules
+  rather than standing facts about the firm. See the licence section for the important half:
+  **the footers are untouched, and whether Havellin currently holds either is an open question
+  Anthony raised and has not answered.**
+
 ### The vendor figures say they are good faith, above the numbers
 *"in the estimate itself for third party vendors, we need to flag at the top that these are good
 faith estimates and that actuals may vary. But, obviously, these are directly billed to the
@@ -245,9 +283,10 @@ client. So the client will see the actual bill from the third party vendor."*
 - **The standalone prep form's below-table `.ce-note` is DELETED, not left beside it.** It
   restated the Terms almost word for word; the one fact it carried that is stated nowhere else
   is that the amounts are estimates, and that is what survives, moved above the table.
-- **1942 committed checks** (`tests/estimate-walkthrough.test.js`, 76 new). **All fifteen
+- **1954 committed checks** (`tests/estimate-walkthrough.test.js`, 88 new). **All twenty
   changes revert-verified individually** — every one turns the suite red on its own, including
-  the CSS rule, the prep shuttle's anchor and the job-switch reset.
+  the two CSS rules, the prep shuttle's anchor, the job-switch reset, the vehicle input's flex
+  basis and the cut Terms bullet.
 - **Verified end to end in headless Chromium on the real page**, not asserted on source: the
   build column renders `est-rooms-card · .est-pair · est-vendors-card · est-materials-card`;
   pressing **Packed** with nothing ticked then ticking three rooms opens them at 5 / 3 / 5;
@@ -2382,6 +2421,17 @@ cutting; do not wait to be told.
 claiming a licence Havellin does not hold. Fixed on all four — client estimate footer,
 invoice footer, standard agreement footer, probate agreement footer — plus the Terms line
 (*"Havellin Palm Beach is insured and bonded."*).
+- **⚠ THAT TERMS LINE IS GONE AS OF 2026-09-10, ON ANTHONY'S CALL — the FOOTERS ARE NOT.**
+  It restated the estimate's own footer seven lines below it, and Terms is where a
+  **commercial** rule belongs (what is charged, what is at cost, how long the quote stands),
+  not a standing fact about the firm. A test asserts the claim now appears **exactly once**
+  in `renderClientEstimate`. **Do not read this as the claim being retired** — the footer on
+  all four client documents still carries *Insured & Bonded*, deliberately and untouched.
+  ⚠ Anthony's words when he asked for the cut were *"i don't think it is either"*, i.e. he is
+  not certain Havellin currently holds either. **That is a live question about the FOOTERS and
+  it is his and counsel's, not a judgement call** — it was raised back to him rather than acted
+  on, because stripping a standing claim from four client documents is not what "cut this
+  duplicate bullet" asked for.
 - **The first sweep missed two of the four.** The agreement footers build the string
   differently, so a grep on the estimate's phrasing came back clean while
   `renderAgreement`/`renderProbateAgreement` still said it. A test asserting the claim
