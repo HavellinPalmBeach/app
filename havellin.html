@@ -231,6 +231,46 @@ input:checked+.slider:before{transform:translateX(18px);}
 .fin-v{font-weight:600;}
 .doc-r{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);}
 .doc-r:last-child{border-bottom:none;}
+/* ─── THE JOB TIMELINE RAIL ─────────────────────────────────────────────────
+   The Client Dashboard's spine: one row a milestone, intake → final payment,
+   with exactly one row lit as "do this next". Vertical, replacing the eight-step
+   horizontal .tl-strip — a horizontal strip has nowhere to put a reason, a fix
+   or a button, and at 78px a step it was already scrolling sideways on a phone.
+   A vertical rail reflows instead of scrolling and has the room to say what is
+   blocking a step, which is the whole point of it. The .tl-strip rules stay:
+   nothing else uses them today, but they are three lines and removing a rule no
+   test reads is how this stylesheet lost 368 lines once already. */
+.jt{border-top:0.5px solid var(--border);padding-top:12px;}
+.jt-next{background:var(--tan);border:1px solid var(--bronze-lt);border-radius:5px;padding:9px 12px;margin-bottom:14px;}
+.jt-next-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);}
+.jt-next-step{font-size:14.5px;font-weight:600;color:var(--gray-dk);margin-top:2px;}
+.jt-next-sub{font-size:11.5px;color:var(--gray-dk);margin-top:3px;}
+.jt-next-fix{font-size:11.5px;color:var(--err-tx);margin-top:3px;}
+.jt-next-done{background:var(--ok-bg);border-color:var(--ok-tx);}
+.jt-next-done .jt-next-lbl,.jt-next-done .jt-next-step{color:var(--ok-tx);}
+.jt-next-blk{background:var(--err-bg);border-color:var(--err-tx);}
+.jt-next-blk .jt-next-lbl,.jt-next-blk .jt-next-step,.jt-next-blk .jt-next-sub{color:var(--err-tx);}
+.jt-grp{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);margin:11px 0 3px;}
+.jt-grp:first-of-type{margin-top:0;}
+/* The 2px left edge IS the rail. Colour carries the state, so a row needs no
+   badge and stays one line. */
+.jt-row{display:flex;align-items:baseline;gap:8px;padding:5px 0 5px 11px;margin-left:4px;border-left:2px solid var(--border);}
+.jt-lbl{font-size:12.5px;color:var(--gray);}
+/* Pushed right on a desk; on a phone .card div{flex-wrap:wrap} drops it onto its
+   own line, which is the layout that fits at 390px. Nothing to override. */
+.jt-meta{font-size:11px;color:var(--gray);margin-left:auto;text-align:right;}
+.jt-sub{font-size:11px;color:var(--gray);flex-basis:100%;padding-left:0;}
+.jt-done{border-left-color:var(--sage-dk);}
+.jt-done .jt-lbl{color:var(--gray-dk);}
+.jt-done .jt-meta{color:var(--sage-dk);}
+.jt-cur{border-left-color:var(--bronze);background:#fdfaf4;}
+.jt-cur .jt-lbl{font-weight:600;color:var(--gray-dk);font-size:13px;}
+.jt-blk{border-left-color:var(--err-tx);background:var(--err-bg);}
+.jt-blk .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
+.jt-blk .jt-sub{color:var(--err-tx);}
+.jt-wait .jt-lbl{color:var(--gray);opacity:.72;}
+.jt-term{border-left-color:var(--err-tx);}
+.jt-term .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
 .var-white{background:var(--white);}
 .jtbl th{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--gray);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--tan);}
 .jtbl td{font-size:12px;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
@@ -809,7 +849,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 5:01pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 6:48pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8981,6 +9021,13 @@ function approvalWatchTick(jobId) {
     var ap = document.querySelector('.panel.active');
     if (ap && ap.id === 'panel-client-estimate') renderClientEstimate();
     else updateApprovalUI();
+    // The drilldown is a fourth place this decision has to land. It branches on
+    // #panel-client-estimate being active, which it will not be once approving is
+    // done from the rail — so without this the manager's PIN updates the store and
+    // the screen it was typed on goes on showing "waiting on a manager PIN".
+    var _apDv = document.getElementById('client-dashboard-view');
+    if (_apDv && _apDv.style.display !== 'none' && _dashboardJobId === jobId
+        && typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
     // renderClientEstimate/updateApprovalUI end in applyEstimateLock, which
     // re-arms or disarms this watch based on the freshly-loaded state.
   });
@@ -10671,6 +10718,216 @@ function sectionHdr(title) {
   return '<div class="d-sec-hdr">'+title+'</div>';
 }
 
+// ─── THE JOB TIMELINE ────────────────────────────────────────────────────────
+// The rail the Client Dashboard runs on: intake → final payment, one row per
+// milestone, and EXACTLY ONE row lit as "do this next".
+//
+// ⚠ DOM-FREE ON PURPOSE, the same reason `standingFlagLines` and
+// `_agrScopeServices` are: the tests drive the real state machine and read the
+// real wording, rather than grepping rendered HTML for a substring.
+//
+// ⚠⚠ AND `job.status` IS NOT THE LIFECYCLE POINTER. FIVE carriers hold a job's
+// state and four of them move without it — `job.status`,
+// `estimateStore[id].approved` / `.submitted`, `job.won`, the agrApproved →
+// agrSent → agrSigned chain, and `isJobFunded(job)` derived from
+// `job.payments[]`. Five estimate functions overwrite `job.status` and touch
+// none of the others; `checkPin` alone knocks a WON job back to `'approved'`,
+// because its preserve list carries 'active' and 'closed' and not 'won'. So a
+// rail driven off `job.status` would tell you a signed, funded, active job is
+// "Approved — Awaiting Client". **Every row below reads the carrier that owns
+// its own milestone**, and there is a test for exactly that job.
+//
+// ⚠ THE INVOICE-SENT ROWS ARE DELIBERATELY ABSENT AND THIS IS NOT AN OVERSIGHT.
+// Nothing in this app records that an invoice was sent: `midpointInvoiceSent` is
+// a self-attested Job Plan checkbox with no who and no when, and the deposit and
+// final invoices have no field at all. A row whose `done` cannot be answered
+// honestly is worse than no row — it would read as a milestone while being a
+// guess. They arrive with the send record that backs them, not before.
+//
+// `state` is one of: done · current · blocked · waiting · terminal.
+// THE INVARIANT, asserted over a fixture matrix: at most ONE row is `current`
+// OR `blocked`, never both and never two. That is the entire point of the rail.
+function jobTimeline(job, estRec, logs, cos) {
+  if (!job) return [];
+
+  var est = (estRec && estRec.estimate) || null;
+  var hav = est ? (est.havellinTotal || 0) : (job.havellinEst || 0);
+  var split = paymentSplit(hav);
+
+  // The carriers, read once each and never inferred from job.status.
+  var estBuilt = !!(est && (est.rooms || []).length > 0 && hav > 0);
+  var estApproved = !!((estRec && estRec.approved) || job.approved);
+  // `job.status==='pending'` syncs reliably per job, so it is trusted as the
+  // submitted signal even when the estimate blob's own flag has drifted across
+  // devices — the same expression the action bar above already uses.
+  var estSubmitted = !!((estRec && estRec.submitted) || (job.status === 'pending' && !estApproved));
+  var won = isJobWon(job);
+  var funded = isJobFunded(job);
+  var depPaid = depositPaidTotal(job);
+  var depTgt = depositTargetFor(job);
+  var midPaid = stagePaidTotal(job, 'midpoint');
+  var finPaid = stagePaidTotal(job, 'final');
+
+  // A walkthrough that produced a scored house happened, whatever the calendar
+  // says — and a date in the past with no estimate behind it did too. Either is
+  // enough; only a job with neither is still waiting on one.
+  var walked = estBuilt || !!(job.walkthrough && new Date(job.walkthrough + 'T12:00:00') <= new Date());
+
+  // ⚠ The rail is the ONE reader of the activation rule. The dashboard's chip row
+  // used to keep its own copy that tested `svc === 'probate'` and omitted
+  // contested_probate, so a contested matter showed no executor-authorization
+  // warning and then refused to activate, naming a blocker nothing on screen had
+  // mentioned. `jobActivationBlockers` is the definition; nothing re-inlines it.
+  var actBlockers = jobActivationBlockers(job);
+  var authBlocker = actBlockers.filter(function (b) { return b.indexOf('Executor') === 0; })[0] || '';
+
+  // Rooms still needing a score — the hard gate on BOTH submit and approve
+  // (`submitForApproval` and `checkPin` both read it). It is the only reason a
+  // built estimate cannot be put in front of a manager.
+  var unscored = estBuilt ? unscoredRoomNames(est) : [];
+
+  function row(o) {
+    return {
+      key: o.key, group: o.group, label: o.label,
+      done: !!o.done,
+      at: o.at || '', atKind: o.atKind || 'text', by: o.by || '',
+      sub: o.sub || '', amount: (typeof o.amount === 'number') ? o.amount : null,
+      blockedWhy: o.blockedWhy || '', blockedFix: o.blockedFix || '',
+      state: 'waiting'
+    };
+  }
+
+  var rows = [
+    row({ key: 'intake', group: 'Set up', label: 'Client intake',
+      done: !!job.created, at: job.created }),
+
+    row({ key: 'walkthrough', group: 'Set up', label: 'Walkthrough',
+      done: walked, at: job.walkthrough, atKind: 'date',
+      sub: (!walked && !job.walkthrough) ? 'No date set yet' : '' }),
+
+    row({ key: 'estimate_built', group: 'Estimate', label: 'Estimate built',
+      done: estBuilt, at: (estRec && estRec.savedAt) || '',
+      amount: estBuilt ? hav : null }),
+
+    row({ key: 'estimate_approved', group: 'Estimate', label: 'Estimate approved',
+      done: estApproved,
+      at: (estRec && estRec.approvedAt) || '', by: (estRec && estRec.approvedBy) || '',
+      sub: estApproved ? ''
+        : estSubmitted ? 'Submitted — waiting on a manager PIN'
+        : (est && est.denyReason) ? ('Denied by ' + (est.deniedBy || 'a manager') + ' — ' + est.denyReason)
+        : '',
+      // The only thing that stops a built estimate reaching a manager.
+      blockedWhy: unscored.length
+        ? (unscored.length + (unscored.length === 1 ? ' room still needs' : ' rooms still need') + ' a volume and complexity score: ' + unscored.slice(0, 4).join(', ') + (unscored.length > 4 ? ' …' : ''))
+        : '',
+      blockedFix: unscored.length
+        ? 'Score them on Build Estimate, or mark a room ✕ (out of scope) if Havellin is not touching it.'
+        : '' }),
+
+    row({ key: 'estimate_sent', group: 'Estimate', label: 'Estimate sent to client',
+      done: !!job.estimateSentDate, at: job.estimateSentDate }),
+
+    row({ key: 'client_accepted', group: 'Acceptance', label: 'Client accepted',
+      done: won, at: job.wonAt || '', atKind: 'date', by: job.wonBy || '',
+      sub: won && job.wonMethod
+        ? ({ email: 'By email', call: 'By phone', text: 'By text', in_person: 'In person' }[job.wonMethod] || '')
+        : '' }),
+
+    row({ key: 'agreement_approved', group: 'Agreement', label: 'Agreement approved',
+      done: !!job.agrApproved, at: job.agrApprovedAt || '', by: job.agrApprovedBy || '',
+      // A revocation is the one piece of history worth carrying forward here: the
+      // agreement was approved, the estimate was then edited, and Exhibit A no
+      // longer exists in the form the client was given.
+      sub: (!job.agrApproved && job.agrRevokedBy === 'estimate-edited')
+        ? 'Approval was revoked when the estimate was edited — re-approve to re-file Exhibit A' : '' }),
+
+    row({ key: 'agreement_sent', group: 'Agreement', label: 'Signing packet sent',
+      done: !!job.agrSent, at: job.agrSentAt || '', by: job.agrSentBy || '' }),
+
+    row({ key: 'agreement_signed', group: 'Agreement', label: 'Agreement signed',
+      done: !!job.agrSigned, at: job.agrSignedAt || '', by: job.agrSignedBy || '' }),
+
+    row({ key: 'deposit_received', group: 'Deposit & start', label: 'Deposit received',
+      done: funded, amount: hav ? split.deposit : null,
+      at: job.depositReceivedAt || '', atKind: 'date',
+      // A short payment must read as short rather than as unpaid — that is the
+      // whole reason payments are a list and not a boolean.
+      sub: (!funded && depPaid > 0 && depTgt)
+        ? ('Part paid — $' + Math.round(depPaid).toLocaleString() + ' of $' + Math.round(depTgt).toLocaleString())
+        : '' }),
+
+    row({ key: 'job_active', group: 'Deposit & start', label: 'Job active',
+      done: (job.status === 'active' || !!job.deliveredOn),
+      blockedWhy: authBlocker, blockedFix: authBlocker
+        ? ('Contact ' + (job.executor || 'the authorized representative')
+          + (job.executorPhone ? ' on ' + job.executorPhone : (job.executorEmail ? ' at ' + job.executorEmail : ''))
+          + ' — the Letters must be received before work can start.')
+        : '' }),
+
+    row({ key: 'midpoint_received', group: 'Work', label: 'Midpoint payment',
+      done: midPaid > 0, amount: hav ? split.midpoint : null,
+      sub: midPaid > 0 ? ('$' + Math.round(midPaid).toLocaleString() + ' received') : '' }),
+
+    // ⚠ `deliveredOn` — the WRITE-ONCE stamp `applyJobTransition` sets on the first
+    // close, so re-opening and re-closing never moves the date the job was really
+    // handed over. The strip this replaces read `job.completionDate`, which is read
+    // in two places and WRITTEN NOWHERE IN THE FILE, so "Work completed" has been
+    // blank on every job this app has ever had.
+    row({ key: 'work_complete', group: 'Work', label: 'Work complete',
+      done: !!job.deliveredOn, at: job.deliveredOn || '', atKind: 'date', by: job.deliveredBy || '' }),
+
+    row({ key: 'final_paid', group: 'Close-out', label: 'Final payment',
+      done: finPaid > 0, amount: hav ? split.final : null,
+      sub: finPaid > 0 ? ('$' + Math.round(finPaid).toLocaleString() + ' received') : 'Balance of actual hours' })
+  ];
+
+  // A job that died collapses the whole rail to one honest line. Neither `lost`
+  // nor `closed_retained` has a next action — `JOB_TRANSITIONS` deliberately has
+  // no entry for either — so lighting a step on one would invite a click the
+  // state machine will refuse.
+  var terminalKind = job.status === 'lost' ? 'lost' : (job.status === 'closed_retained' ? 'retained' : '');
+  if (terminalKind) {
+    var retained = terminalKind === 'retained';
+    return [row({
+      key: 'terminal', group: 'Close-out',
+      label: retained ? 'Closed — deposit retained' : 'Lost',
+      // ⚠ `lostAt` is an ISO stamp, not the yyyy-mm-dd every other milestone carries
+      // (`confirmMarkLost` writes toISOString()). Handed over whole it rendered as
+      // "2026-09-12T00:00:00Z" on the one row a client-facing screen shows on a dead
+      // job. Take the date half and let it format like the rest of the rail.
+      done: true, at: (job.lostAt || '').slice(0, 10), atKind: 'date', by: '',
+      sub: (job.lostReasonLabel || job.lostReason || '')
+        + (retained && depPaid > 0 ? ' · $' + Math.round(depPaid).toLocaleString() + ' retained' : '')
+    })].map(function (r) { r.state = 'terminal'; return r; });
+  }
+
+  // Assign state. The first row that is not done owns the light: `blocked` when
+  // its own gate refuses, `current` otherwise. Everything after it waits.
+  //
+  // ⚠ `done` IS NOT MONOTONIC and the walk must not assume it is. Every milestone
+  // reads its own carrier, and several are set by manual buttons somebody can
+  // skip — `markEstimateSent` is the only writer of `estimateSentDate`, so a job
+  // whose agreement is signed and funded can still carry no estimate-sent date. A
+  // later row that IS done stays done; the light lands on the earliest gap.
+  var lit = false;
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].done) { rows[i].state = 'done'; continue; }
+    if (!lit) { rows[i].state = rows[i].blockedWhy ? 'blocked' : 'current'; lit = true; }
+    else rows[i].state = 'waiting';
+  }
+  return rows;
+}
+
+// The row the rail is pointing at, or null when every milestone is done and there
+// is nothing left to do. One definition, so the pinned NEXT band and the rail can
+// never disagree about which step is live.
+function jobTimelineNext(rows) {
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].state === 'current' || rows[i].state === 'blocked') return rows[i];
+  }
+  return null;
+}
+
 function renderClientDashboard(jobId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) { closeClientDashboard(); return; }
@@ -10706,10 +10963,22 @@ function renderClientDashboard(jobId) {
 
   // ── Blocker checks. `short` is the compact top-row chip label; `fix` is the
   // hover tooltip / detail so the chips stay tight without losing the how-to.
-  var blockers = [];
-  if (!job.agrSigned) blockers.push({msg:'Service agreement not yet signed', short:'Agreement not signed', fix:'Go to Agreement tab to approve and send'});
-  if (!job.depositReceived) blockers.push({msg:'Deposit (50%) not received', short:'Deposit not received', fix:'Mark received on Agreement tab once payment clears'});
-  if (job.svc==='probate' && job.executorAuth==='pending') blockers.push({msg:'Executor authorization pending', short:'Executor auth pending', fix:'Contact '+( job.executor||'executor')+' — '+(job.executorPhone||job.executorEmail||'see probate info')});
+  // ⚠ THESE CHIPS KEPT THEIR OWN COPY OF THE ACTIVATION RULE AND IT DISAGREED WITH
+  // THE GATE. The third test read `job.svc==='probate'` while `jobActivationBlockers`
+  // (the rule Activate Job actually enforces) reads probate OR contested_probate — so
+  // a contested matter with the Letters outstanding showed NO warning anywhere and
+  // then refused to activate, naming a blocker nothing on screen had ever mentioned.
+  // One definition now. `_JT_CHIP_FIX` carries the how-to the chips add on top; the
+  // rule itself is never re-inlined here.
+  var _JT_CHIP_FIX = {
+    'Service agreement must be signed': {short:'Agreement not signed', fix:'Approve the agreement, send the signing packet, then record the signature'},
+    'Deposit (50%) must be received': {short:'Deposit not received', fix:'Record the payment once it arrives — work starts on received, not cleared'},
+    'Executor authorization must be received': {short:'Executor auth pending', fix:'Contact '+(job.executor||'the authorized representative')+' — '+(job.executorPhone||job.executorEmail||'see the probate card below')}
+  };
+  var blockers = jobActivationBlockers(job).map(function(b){
+    var meta = _JT_CHIP_FIX[b] || {short:b, fix:b};
+    return {msg:b, short:meta.short, fix:meta.fix};
+  });
 
   var h = '';
 
@@ -10789,7 +11058,11 @@ function renderClientDashboard(jobId) {
        + (_reC ? ' <span style="opacity:.8;">·</span> <strong style="color:#FFF3DC;">' + formatPropVal(_reC.net) + ' potential</strong>' : '')
        + '</span>';
   }
-  if (blockers.length > 0 && job.status !== 'active' && job.status !== 'closed') {
+  // A job that died has nothing to unblock — `JOB_TRANSITIONS` has no entry for
+  // `lost` or `closed_retained`, so "Agreement not signed" on one is an instruction
+  // that cannot be followed, sitting beside a rail that correctly says the job is over.
+  var _jtDead = (job.status === 'lost' || job.status === 'closed_retained');
+  if (blockers.length > 0 && !_jtDead && job.status !== 'active' && job.status !== 'closed') {
     blockers.forEach(function(b){
       h += '<span class="badge" style="'+_bpad+'background:#FCEBEB;color:#A32D2D;border:0.5px solid #F09595;cursor:default;" title="'+esc(b.fix)+'">&#9888; '+esc(b.short)+'</span>';
     });
@@ -10888,7 +11161,7 @@ function renderClientDashboard(jobId) {
   var hav = est ? est.havellinTotal : (job.havellinEst||0);
   var tot = job.totalEst || hav;
   var _split = paymentSplit(hav);
-  var dep = _split.deposit, mid = _split.midpoint, fin2 = _split.final;
+  var dep = _split.deposit, mid = _split.midpoint;
 
   // TIMELINE & PAYMENTS CARD. Built here (needs the figures above) but hoisted to
   // the slot under the header — see _tlStart capture / splice below.
@@ -10900,51 +11173,68 @@ function renderClientDashboard(jobId) {
   h += field('Walkthrough', fmtDate2(job.walkthrough)||'—');
   h += field('Target start', fmtDate2(job.start)||'—');
   h += field('Hard target', fmtDate2(job.completion) ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.completion)+'</span>' : '—');
-  if (job.svc==='probate') h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
+  // Same omission the chips carried: contested_probate has a §733.604 deadline too.
+  if (job.svc==='probate' || job.svc==='contested_probate') h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
   h += field('Estimate sent', job.estimateSentDate ? '<span style="color:#1D9E75;">'+job.estimateSentDate+'</span>' : '<span style="color:var(--gray);font-style:italic;">—</span>');
   h += field('Agreement signed', job.agrSigned ? '<span style="color:#1D9E75;">Yes</span>' : '<span style="display:flex;align-items:center;">'+dot('#A32D2D')+'<span style="color:#A32D2D;">Not signed</span></span>');
-  h += field('Work completed', job.completionDate ? '<span style="color:#1D9E75;">'+job.completionDate+'</span>' : '<span style="color:var(--gray);font-style:italic;">—</span>');
+  // ⚠ WAS `job.completionDate` — read here and on the old timeline strip, and
+  // WRITTEN NOWHERE IN THE FILE, so this field has read "—" on every job this app
+  // has ever had. The real stamp is `deliveredOn`, set write-once by
+  // `applyJobTransition` on the first close (11086-11089).
+  h += field('Work completed', job.deliveredOn ? '<span style="color:#1D9E75;">'+fmtDate2(job.deliveredOn)+'</span>' : '<span style="color:var(--gray);font-style:italic;">—</span>');
   h += '</div>';
-  // Timeline bar — the full lifecycle with the estimate + payments folded in as
-  // steps (with dollar amounts): intake → walkthrough → estimate sent → agreement
-  // → first deposit → midpoint → complete → final invoice. Replaces the old
-  // separate Estimate & Payments grid + balance-due line.
-  var _wDone   = !!(job.walkthrough && new Date(job.walkthrough+'T12:00:00') <= new Date());
-  var _wActive = !!(job.walkthrough && new Date(job.walkthrough+'T12:00:00') >  new Date());
-  var steps = [
-    {name:'Intake', done:true, dt:job.created||'—'},
-    {name:'Walkthrough', done:_wDone, active:_wActive, dt:fmtDate2(job.walkthrough)||'—'},
-    {name:'Estimate sent', done:!!job.estimateSentDate, dt:job.estimateSentDate||'—', sub:(hav?fmtMoney(hav):''), subColor:'var(--gray-dk)'},
-    {name:'Agreement', done:!!job.agrSigned, dt:job.agrSigned?'Signed':'—'},
-    {name:'First deposit', done:!!job.depositReceived, active:(job.agrSigned && !job.depositReceived), dt:(hav?fmtMoney(dep):'—'), sub:(job.depositReceived?'received':(job.agrSigned?'due now':'50%')), subColor:(job.depositReceived?'#1D9E75':(job.agrSigned?'#A32D2D':'var(--gray)')), pay:true},
-    {name:'Midpoint', done:false, dt:(hav?fmtMoney(mid):'—'), sub:'25% · pending', subColor:'var(--gray)', pay:true},
-    {name:'Complete', done:job.status==='closed', active:job.status==='active', dt:job.completionDate||(job.status==='active'?'In progress':(job.status==='closed'?'Done':'—'))},
-    {name:'Final invoice', done:job.status==='closed', dt:(hav?fmtMoney(fin2):'—'), sub:'on completion', subColor:'var(--gray)', pay:true},
-  ];
-  if (job.svc==='probate') steps.push({name:'Court deadline', done:false, dt:fmtDate2(job.probateDeadline), active:false, deadline:true});
-  // Eight steps (nine on probate) sharing the card width. On a phone that's ~42px a
-  // step against labels like "First deposit" and "$24,100", so every caption ran into
-  // the one beside it. The strip keeps its full-width proportional layout on a desk
-  // and scrolls sideways below the breakpoint — see .tl-strip in the phone block.
-  h += '<div style="border-top:0.5px solid var(--border);padding-top:14px;">';
-  h += '<div class="tbl-scroll"><div class="tl-strip" style="display:flex;">';
-  steps.forEach(function(s, i){
-    var isLast = i === steps.length-1;
-    h += '<div class="tl-step" style="flex:1;position:relative;">';
-    if (!isLast) h += '<div style="position:absolute;top:9px;left:50%;width:100%;height:1.5px;background:'+(s.done?'#1D9E75':'var(--border)')+'"></div>';
-    h += '<div style="display:flex;flex-direction:column;align-items:center;position:relative;">';
-    var dotBg = s.deadline ? '#A32D2D' : (s.done ? '#1D9E75' : (s.active ? 'white' : 'white'));
-    var dotBorder = s.deadline ? '#A32D2D' : (s.done ? '#1D9E75' : (s.active ? '#BA7517' : 'var(--border)'));
-    var innerDot = s.done ? '<div style="width:7px;height:7px;border-radius:50%;background:white;"></div>' : (s.active ? '<div style="width:7px;height:7px;border-radius:50%;background:#BA7517;"></div>' : (s.deadline ? '<div style="width:7px;height:7px;border-radius:50%;background:#A32D2D;"></div>' : ''));
-    h += '<div style="width:18px;height:18px;border-radius:50%;border:2px solid '+dotBorder+';background:'+dotBg+';display:flex;align-items:center;justify-content:center;margin-bottom:5px;background:var(--white);">'+(s.done?'<div style="width:18px;height:18px;border-radius:50%;background:#1D9E75;margin:-2px;display:flex;align-items:center;justify-content:center;"><div style="width:7px;height:7px;border-radius:50%;background:white;"></div></div>':innerDot)+'</div>';
-    h += '<div style="font-size:10px;font-weight:500;color:'+(s.deadline?'#A32D2D':'var(--gray-dk)')+';text-align:center;">'+s.name+'</div>';
-    // Payment nodes lead with the dollar amount (bold, dark); date nodes with the date.
-    var _dtColor = s.deadline?'#A32D2D':(s.pay?'var(--gray-dk)':(s.done?'#1D9E75':(s.active?'#BA7517':'var(--gray)')));
-    h += '<div style="font-size:10px;color:'+_dtColor+';text-align:center;'+(s.pay?'font-weight:600;':'')+'">'+s.dt+'</div>';
-    if (s.sub) h += '<div style="font-size:9px;color:'+(s.subColor||'var(--gray)')+';text-align:center;margin-top:1px;">'+s.sub+'</div>';
-    h += '</div></div>';
+  // THE RAIL. One row a milestone, exactly one lit, and a pinned NEXT band above it
+  // so "what do I do now" is answered before any scrolling. Replaces the eight-step
+  // horizontal strip, which could carry no reason and no fix, hardcoded Midpoint to
+  // `done:false` whatever had actually been paid, and read `job.completionDate` — a
+  // field nothing in this file writes. The state machine itself is `jobTimeline`,
+  // which is DOM-free and tested; everything here is presentation.
+  var _jtRows = jobTimeline(job, estRec, logs, cos);
+  var _jtNext = jobTimelineNext(_jtRows);
+  var _jtAt = function(r){ return r.at ? (r.atKind === 'date' ? fmtDate2(r.at) : String(r.at)) : ''; };
+
+  h += '<div class="jt">';
+
+  // The NEXT band. It is the answer to the question the dashboard exists to answer —
+  // open a client, know the one thing to do — so it sits above the rail rather than
+  // being something you find by reading down it.
+  if (_jtNext) {
+    var _jtBlocked = _jtNext.state === 'blocked';
+    h += '<div class="jt-next' + (_jtBlocked ? ' jt-next-blk' : '') + '">';
+    h += '<div class="jt-next-lbl">' + (_jtBlocked ? '&#9888; Blocked' : 'Next') + '</div>';
+    h += '<div class="jt-next-step">' + esc(_jtNext.label) + '</div>';
+    if (_jtBlocked) {
+      h += '<div class="jt-next-sub">' + esc(_jtNext.blockedWhy) + '</div>';
+      // A panel reporting a blocker carries the fix. Standing rule, and the reason
+      // the old chips' how-to was in a `title=` that a touch device cannot reach.
+      if (_jtNext.blockedFix) h += '<div class="jt-next-fix">' + esc(_jtNext.blockedFix) + '</div>';
+    } else if (_jtNext.sub) {
+      h += '<div class="jt-next-sub">' + esc(_jtNext.sub) + '</div>';
+    }
+    h += '</div>';
+  } else if (_jtRows.length && _jtRows[0].state !== 'terminal') {
+    h += '<div class="jt-next jt-next-done"><div class="jt-next-lbl">Complete</div>'
+       + '<div class="jt-next-step">Every milestone on this job is recorded</div></div>';
+  }
+
+  var _jtGrp = '';
+  _jtRows.forEach(function(r){
+    if (r.group !== _jtGrp) { _jtGrp = r.group; h += '<div class="jt-grp">' + esc(_jtGrp) + '</div>'; }
+    var _jtCls = {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait';
+    h += '<div class="jt-row ' + _jtCls + '">';
+    h += '<div class="jt-lbl">' + esc(r.label) + '</div>';
+    var _jtMeta = [];
+    if (r.amount !== null) _jtMeta.push('<strong>' + fmtMoney(r.amount) + '</strong>');
+    var _jtWhen = _jtAt(r);
+    if (_jtWhen) _jtMeta.push(esc(_jtWhen));
+    if (r.by) _jtMeta.push(esc(r.by));
+    if (_jtMeta.length) h += '<div class="jt-meta">' + _jtMeta.join(' &middot; ') + '</div>';
+    // A blocked row says nothing extra: the band directly above carries the reason and
+    // the fix, and repeating them here is the duplication the client-copy rule cuts.
+    if (r.state !== 'blocked' && r.sub) h += '<div class="jt-sub">' + esc(r.sub) + '</div>';
+    h += '</div>';
   });
-  h += '</div></div></div>';  // close timeline flex + .tbl-scroll + bar wrapper
+  h += '</div>';   // close .jt
   h += '</div>';  // close card
   // (Estimate total and the deposit/midpoint/final amounts now live on the timeline
   // steps above; the standalone payments grid and "Balance due" line are retired.)
@@ -11861,6 +12151,15 @@ function _estStoreLanded() {
   if (jp && jp.classList.contains('active') && typeof loadJobPlanTab === 'function') loadJobPlanTab();
   var iv = document.getElementById('panel-inventory');
   if (iv && iv.classList.contains('active') && typeof renderInventoryTab === 'function') renderInventoryTab();
+  // ⚠ THE CLIENT DASHBOARD IS THE THIRD SURFACE THAT READS THIS STORE AND IT WAS NOT
+  // HERE. Its timeline rail reads estimateStore for four of its rows, so on a cold
+  // cache — a new iPad, cleared data, or Safari evicting storage for a site not
+  // visited in a week — the rail paints "Estimate built" undone on a job that has a
+  // priced estimate, and pins the NEXT band on the wrong step. Exactly the shape of
+  // the 2026-08-24 Job Plan bug: render before the data, never re-render after.
+  var dv = document.getElementById('client-dashboard-view');
+  if (dv && dv.style.display !== 'none' && _dashboardJobId
+      && typeof renderClientDashboard === 'function') renderClientDashboard(_dashboardJobId);
 }
 
 // The APPROVED estimate for a job, as the client documents attach it — the snapshot inside

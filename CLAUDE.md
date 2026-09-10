@@ -49,8 +49,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/hopeful-hamilton-5sw4wm`
-  (was `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/practical-knuth-tp2twr`
+  (was `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
@@ -69,6 +69,106 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Single-file app: `havellin.html` — all CSS, JS, HTML in one file
 - Hosted on GitHub Pages from `main` branch
 - No build process
+
+## The Client Dashboard gets a timeline rail — SLICE 0 of the tab consolidation (BUILT 2026-09-10)
+*"we are finding ourselves having to go to too many tabs … all of the functionality that we
+currently have in client estimate agreement and invoices needs to go into the client dashboard …
+on the job timeline … that way, as we're going through a job, we know what to do next."*
+App-only, no redeploy. **This is the FIRST of eight slices**; the plan and the seven that follow
+are in the section below this one. Slice 0 is read-only on purpose — it replaces the timeline and
+ships three standing bug fixes, and adds no buttons.
+
+- **⚠⚠ `job.status` IS NOT THE LIFECYCLE POINTER AND A RAIL DRIVEN OFF IT LIES. This is the single
+  most important fact in this build.** FIVE carriers hold a job's state and four move without it:
+  `job.status`, `estimateStore[id].approved`/`.submitted`, `job.won`, the `agrApproved → agrSent →
+  agrSigned` chain, and `isJobFunded(job)` derived from `job.payments[]`. **Five estimate functions
+  overwrite `job.status` and touch none of the others** — `submitForApproval` 9019,
+  `applyDiscountRevision` 9199, `submitDeny` 9328, `editEstimateFromCE` 9230, and `checkPin` 9396,
+  which alone knocks a **WON** job back to `'approved'` because its preserve list carries `active`
+  and `closed` and **not `won`**. So re-approving an estimate on a signed, funded, active job would
+  have the rail announce *"Approved — Awaiting Client"*. **Every row reads the carrier that owns its
+  own milestone**, a test drives exactly that job, and a source assertion caps `job.status` reads
+  inside `jobTimeline` at four.
+- **`jobTimeline(job, estRec, logs, cos)` is DOM-free**, the same reason `standingFlagLines` and
+  `_agrScopeServices` are: the tests drive the real state machine and read the real wording rather
+  than grepping rendered HTML. `jobTimelineNext(rows)` is the ONE definition of which step is live,
+  so the pinned band and the rail can never disagree; a test counts its call sites at exactly 1.
+- **THE INVARIANT: at most one row is `current` OR `blocked`, never both and never two.** That is
+  the whole promise — open a client, know the one thing to do. Asserted over a fourteen-stage
+  fixture matrix, plus the converse (every unfinished job lights exactly one).
+- **⚠ `done` IS NOT MONOTONIC AND THE WALK MUST NOT ASSUME IT IS.** `markEstimateSent` is the only
+  writer of `estimateSentDate` and it is a manual button somebody can skip, so a signed, funded,
+  active job can legitimately carry no estimate-sent date. A later done row stays done; the light
+  lands on the **earliest** gap. A `for` loop with an early `break` would have marked everything
+  after the gap as waiting and shown the job as far less complete than it is.
+- **THREE STANDING BUGS FIXED, each one on its own worth the slice:**
+  - **⚠ `job.completionDate` IS READ TWICE AND WRITTEN NOWHERE IN THE FILE.** The old strip's
+    *Complete* node and the *"Work completed"* field beside it have therefore been **blank on every
+    job this app has ever had**. The real stamp is `deliveredOn`, set write-once by
+    `applyJobTransition` (11086-11089) on the first close. Both now read it.
+  - **The `Midpoint` node was hardcoded `done:false` and `'25% · pending'`** — a midpoint cheque
+    could be banked, recorded and reconciled and the timeline still said pending. Reads
+    `stagePaidTotal(job,'midpoint')` now.
+  - **⚠ THE BLOCKER CHIPS KEPT THEIR OWN COPY OF THE ACTIVATION RULE AND IT DISAGREED WITH THE
+    GATE.** The chip tested `job.svc==='probate'`; `jobActivationBlockers` (what *Activate Job*
+    actually enforces) tests probate **OR contested_probate**. So a contested matter with the
+    Letters outstanding showed **no warning anywhere** and then refused to activate, naming a
+    blocker nothing on screen had ever mentioned. The chips read `jobActivationBlockers` now and
+    add only the how-to on top; the rule is never re-inlined. The *Court deadline* field beside it
+    carried the identical omission and was fixed in the same pass.
+- **⚠ THE COLD-CACHE BUG, ON A THIRD SURFACE.** `loadEstimateState` hydrates from localStorage
+  synchronously then fetches, so on a device with no cache `estimateStore` is `{}` at first paint —
+  and four of the rail's rows read it. `_estStoreLanded` is what corrects that, and **the dashboard
+  was not in its list**: the rail would paint *"Estimate built"* undone on a job that has a priced
+  estimate and stay wrong until you navigated away and back. Exactly the 2026-08-24 Job Plan bug.
+  Measured in a browser: `Estimate built` → `Client accepted` the moment the store lands.
+- **⚠ AND `approvalWatchTick` ONLY EVER REDREW `#panel-client-estimate`.** It branches on that
+  panel being active, which it will never be once approving happens from the rail — so a manager's
+  PIN would update the store and the screen it was typed on would go on reading *"waiting on a
+  manager PIN"*. It redraws the drilldown too now, and only for the job actually open.
+- **A blocked row carries the reason AND the fix, on screen rather than in a `title=`.** The old
+  chips put their how-to in a tooltip, **which a touch device cannot reach at all** — on the iPad
+  this app is run from, the fix was unreachable by construction. Only two rows can genuinely block:
+  `estimate_approved` (unscored rooms — the gate `submitForApproval` and `checkPin` both read, and
+  the fix names the ✕ out-of-scope route so it is not unsatisfiable on a Home Prep job) and
+  `job_active` (executor authorization, the one activation blocker that is not a prior row).
+- **⚠ THE INVOICE-SENT ROWS ARE ABSENT ON PURPOSE — DO NOT "COMPLETE" THE RAIL BY ADDING THEM.**
+  Nothing in this app records that an invoice was sent: `midpointInvoiceSent` is a self-attested Job
+  Plan checkbox with no who and no when, and the deposit and final have **no field at all**. A row
+  whose `done` cannot be answered honestly reads as a milestone while being a guess. They arrive in
+  Slice 4 with the send record that backs them. A test asserts the rail never reads that checkbox.
+- **A dead job collapses to one row.** `JOB_TRANSITIONS` has no entry for `lost` or
+  `closed_retained`, so there is no next action and lighting a step would invite a click the state
+  machine refuses. **Found in the browser and not by the tests: the terminal row printed `lostAt`
+  raw as `2026-09-12T00:00:00Z`** — it is an ISO stamp while every other date on the rail is
+  yyyy-mm-dd. **Also found in the browser: a lost job still shouted "⚠ Agreement not signed" and
+  "⚠ Deposit not received"** — activation blockers on a job that cannot be activated, an
+  instruction that cannot be followed sitting beside a rail saying the job is over. The guard stood
+  the chips down on `active` and `closed` and had missed the two terminal statuses.
+- **2149 committed checks** (`tests/job-timeline.test.js`, 195 new — the first committed coverage of
+  this timeline at all; it had none, which is why it was wrong in three ways for months).
+  **All 17 changes revert-verified individually**, including both CSS rules and both redraw hooks.
+  ⚠ **One revert came back GREEN on the first pass and the test was fine — the REVERT was too weak**
+  (it renamed a variable instead of removing the behaviour). A revert that does not actually undo
+  the change proves nothing; re-done properly, it fails 2.
+- **⚠ AND THREE OF MY OWN ASSERTIONS COULD NOT FAIL, ALL THE SAME WAY.** `src.slice(src.indexOf(
+  'function jobTimeline('))` runs to the end of a 1.6MB file, so every `lacks()` over it was
+  searching the whole app; and a raw body includes this function's own comments, **which name
+  `job.status` and `completionDate` precisely because they explain why it does not read them**.
+  This file has now paid for that trap three times. `jtBody` is bounded AND comment-stripped, once.
+- **Verified end to end in headless Chromium on the real page**, not asserted on source: six jobs
+  seeded into localStorage and driven through the REAL `renderClientDashboard` at every point in the
+  lifecycle — the light lands on Estimate approved (blocked, naming the unscored garage and the ✕
+  route), Estimate approved (submitted), Client accepted, Deposit received (*"Part paid — $5,000 of
+  $12,050"*), Job active (blocked, naming Jane Doe and her phone number), and nothing at all on the
+  lost job. Edge colours measured: done `rgb(122,154,64)`, current `rgb(166,124,69)`, blocked
+  `rgb(121,31,31)`; the blocked band is `--err-bg` after it was measured painting the same tan as an
+  ordinary one. **390px overflow is 0** and no page errors.
+- **The `.tl-strip` / `.tl-step` CSS is deliberately KEPT** although nothing reads it today. It is
+  three lines, and removing a rule no test reads is how this stylesheet lost 368 lines once already.
+- No document pass needed: nothing user-facing changed wording, and the manual and playbook do not
+  describe the dashboard's timeline. **Slice 4 is the one that will need both**, since it changes
+  how every client document is sent.
 
 ## ⚠️ THE HISTORICAL TEST COUNTS ARE STILL NOT RUNNABLE — but there is a harness now (2026-08-24)
 **A committed harness finally exists: `tests/harness.js`, `tests/run.js`, `tests/inventory.test.js`,
