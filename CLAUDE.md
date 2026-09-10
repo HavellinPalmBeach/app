@@ -49,15 +49,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/editable-job-type-estimates-90hbj5`
-  (was `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/trusting-edison-jh2sht`
+  (was `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/editable-job-type-estimates-90hbj5:main`
+  `git push origin claude/trusting-edison-jh2sht:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -3490,6 +3490,26 @@ the QuickBooks posting layer is deliberately NOT, pending Laura's September char
   assumed a hoard-level volume score, and Havellin does not take hoards.
 
 ## Backlog / don't forget
+- **HELD, ON PURPOSE — delete `saveEstimateToSheet` / `saveHoursToSheet` from `main-sync.gs`
+  with the NEXT real backend change.** Both are dead: the app posts `saveAllEstimates` and
+  `saveAllLogs`, and posts neither `type:'estimate'` nor `type:'hours'` anywhere (verified
+  2026-09-10 — zero such posts in `havellin.html`). They are held rather than removed only
+  because taking them out costs a paste-and-redeploy, and that is not worth spending on
+  housekeeping alone. **Bundle, don't deploy twice.**
+  - **⚠ THEY ARE WHAT CREATES THE FOSSIL `Estimates` AND `Hours` TABS, AND THAT IS THE WHOLE
+    REASON TO REMOVE THEM.** A reader looking at the sheet sees an empty `Estimates` tab and
+    an absent `Hours` tab and reads it as lost hours. Anthony asked exactly that on
+    2026-09-10 — *"are we not keeping hours any more for jobs?"* — which is the correct
+    reading of what is on screen and the wrong conclusion. **The real hours are `LogStore`;
+    the real estimates are `EstimateStore`**, both one JSON string in column B, so the sheet
+    gives a reader no way to tell. Removing the writers is what stops the question recurring.
+  - **It is four edits, not two, and a partial removal fails the suite — which is correct.**
+    The two `function` bodies, their two `doPost` dispatch lines, and `'estimate'` / `'hours'`
+    out of `BACKEND_TYPES`. A test asserts `BACKEND_TYPES` matches the dispatch in BOTH
+    directions, so dropping the functions and leaving the list over-claiming is caught.
+    **And bump `BACKEND_VERSION` in the same commit**, or the banner cannot tell the new
+    deployment from the old one.
+  - Nothing client-side reads either path, so no manual or playbook pass is needed.
 - ~~Warm up the **estimate email language** — personal touch tying back to the in-home
   walkthrough. `buildEstimateMailto()`.~~ **Done 2026-07-08.**
 - **Contractor tab — remaining directory upgrades.** Search, tap-to-contact, and a
