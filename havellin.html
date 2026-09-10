@@ -250,11 +250,25 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-next-done .jt-next-lbl,.jt-next-done .jt-next-step{color:var(--ok-tx);}
 .jt-next-blk{background:var(--err-bg);border-color:var(--err-tx);}
 .jt-next-blk .jt-next-lbl,.jt-next-blk .jt-next-step,.jt-next-blk .jt-next-sub{color:var(--err-tx);}
-.jt-grp{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);margin:11px 0 3px;}
+.jt-grp{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);margin:12px 0 4px;padding-left:6px;}
 .jt-grp:first-of-type{margin-top:0;}
 /* The 2px left edge IS the rail. Colour carries the state, so a row needs no
    badge and stays one line. */
-.jt-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:5px 0 5px 11px;margin-left:4px;border-left:2px solid var(--border);}
+/* ⚠ THE RAIL IS CAPPED. Left-label / right-meta across a 1900px card put the two
+   halves of a row on opposite sides of the screen with a third of a metre of nothing
+   between them, and the eye cannot pair them. A reading column is the fix; the card
+   stays full width behind it. */
+.jt{max-width:860px;}
+/* The 2px left edge is the connector and the ::before is the MILESTONE — the node that
+   fills in when a step is done, which is the part of the old horizontal strip worth
+   keeping. It sits ON the line (left:-8px against the 2px border) so the rail reads as
+   one thread with beads on it rather than as a stack of bordered rows. */
+.jt-row{position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:5px 0 5px 22px;margin-left:6px;border-left:2px solid var(--border);}
+.jt-row::before{content:'';position:absolute;left:-8px;top:7px;width:13px;height:13px;border-radius:50%;box-sizing:border-box;border:2px solid var(--border);background:var(--white);}
+.jt-done::before{border-color:var(--sage-dk);background:radial-gradient(circle,var(--white) 0 2.5px,var(--sage-dk) 2.5px);}
+.jt-cur::before{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
+.jt-blk::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
+.jt-term::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
 /* Takes the slack so the meta sits hard right and the label never wraps while there
    is room for it. */
 .jt-lbl{flex:1 1 auto;min-width:0;font-size:12.5px;color:var(--gray);}
@@ -864,7 +878,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:19pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10863,7 +10877,11 @@ function jobTimeline(job, estRec, logs, cos) {
       sub: (!walked && !job.walkthrough) ? 'No date set yet' : '' }),
 
     row({ key: 'estimate_built', group: 'Estimate', label: 'Estimate built',
-      done: estBuilt, at: (estRec && estRec.savedAt) || '',
+      // ⚠ `savedAt` is `Date.now()` — a merge-recency marker, not a display date. Handed
+      // over as text it printed as "1789067253747" beside the money. `epoch` is its own
+      // kind rather than being converted here, because the derivation stays free of
+      // formatting: the renderer owns how a date looks.
+      done: estBuilt, at: (estRec && estRec.savedAt) || '', atKind: 'epoch',
       amount: estBuilt ? hav : null }),
 
     row({ key: 'estimate_approved', group: 'Estimate', label: 'Estimate approved',
@@ -11486,20 +11504,18 @@ function renderClientDashboard(jobId) {
   var _tlStart = h.length;
   h += '<div class="card" style="margin-bottom:12px;">';
   h += sectionHdr('Job Timeline & Payments');
+  // ⚠ THIS GRID USED TO CARRY EIGHT FIELDS AND FIVE OF THEM WERE ALSO ROWS ON THE RAIL
+  // DIRECTLY BELOW IT — Client intake, Walkthrough, Estimate sent, Agreement signed and
+  // Work completed. Two statements of the same fact, and they could disagree: the grid
+  // said "Not signed" in red while the rail lit "Agreement signed" as the live step, so
+  // the eye had to reconcile a warning with an instruction that were the same thing.
+  // What survives is only what the rail does NOT say, and cannot: these three are
+  // TARGETS — dates somebody typed at intake — not milestones anything reaches.
   h += '<div class="d-grid4" style="margin-bottom:16px;margin-top:12px;">';
-  h += field('Client intake', job.created ? '<span style="color:#1D9E75;">'+job.created+'</span>' : '—');
-  h += field('Walkthrough', fmtDate2(job.walkthrough)||'—');
   h += field('Target start', fmtDate2(job.start)||'—');
   h += field('Hard target', fmtDate2(job.completion) ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.completion)+'</span>' : '—');
   // Same omission the chips carried: contested_probate has a §733.604 deadline too.
   if (job.svc==='probate' || job.svc==='contested_probate') h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
-  h += field('Estimate sent', job.estimateSentDate ? '<span style="color:#1D9E75;">'+job.estimateSentDate+'</span>' : '<span style="color:var(--gray);font-style:italic;">—</span>');
-  h += field('Agreement signed', job.agrSigned ? '<span style="color:#1D9E75;">Yes</span>' : '<span style="display:flex;align-items:center;">'+dot('#A32D2D')+'<span style="color:#A32D2D;">Not signed</span></span>');
-  // ⚠ WAS `job.completionDate` — read here and on the old timeline strip, and
-  // WRITTEN NOWHERE IN THE FILE, so this field has read "—" on every job this app
-  // has ever had. The real stamp is `deliveredOn`, set write-once by
-  // `applyJobTransition` on the first close (11086-11089).
-  h += field('Work completed', job.deliveredOn ? '<span style="color:#1D9E75;">'+fmtDate2(job.deliveredOn)+'</span>' : '<span style="color:var(--gray);font-style:italic;">—</span>');
   h += '</div>';
   // THE RAIL. One row a milestone, exactly one lit, and a pinned NEXT band above it
   // so "what do I do now" is answered before any scrolling. Replaces the eight-step
@@ -11509,7 +11525,15 @@ function renderClientDashboard(jobId) {
   // which is DOM-free and tested; everything here is presentation.
   var _jtRows = jobTimeline(job, estRec, logs, cos);
   var _jtNext = jobTimelineNext(_jtRows);
-  var _jtAt = function(r){ return r.at ? (r.atKind === 'date' ? fmtDate2(r.at) : String(r.at)) : ''; };
+  var _jtAt = function(r){
+    if (!r.at) return '';
+    if (r.atKind === 'date') return fmtDate2(r.at);
+    if (r.atKind === 'epoch') {
+      var _ms = Number(r.at);
+      return _ms > 0 ? new Date(_ms).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    }
+    return String(r.at);
+  };
 
   h += '<div class="jt">';
 

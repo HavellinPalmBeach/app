@@ -218,9 +218,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const del = run('delivered');
     eq(byKey(del, 'work_complete').done, true, 'work_complete reads deliveredOn');
     eq(byKey(del, 'work_complete').at, '2026-09-30', 'and reports the date it was really handed over');
+
+    // ⚠ `savedAt` is `Date.now()` — a merge-recency marker for the by-job-id reconcile,
+    // never a display value. The rail handed it over as plain text, so the live build
+    // read "$25,715 · 1789067253747" beside the money on Estimate built.
+    const built = byKey(run('built'), 'estimate_built');
+    eq(built.atKind, 'epoch', 'the estimate-built date declares itself an epoch');
+    lacks(jtBody, 'toLocaleDateString', 'and the derivation still does no formatting itself');
+    has(body('renderClientDashboard(jobId)'), "r.atKind === 'epoch'", 'the renderer knows how to print one');
     lacks(jtBody, 'completionDate', 'jobTimeline never reads completionDate');
-    lacks(src, "field('Work completed', job.completionDate",
-      'and the dashboard field beside it no longer does either');
+    // ⚠ The whole field is gone now, not just corrected: it said the same thing as the
+    // rail's own `Work complete` row two inches below. Five of that grid's eight fields
+    // were duplicates of rail rows, and the pair could actively disagree — the grid
+    // printed "Not signed" in red while the rail lit "Agreement signed" as the live
+    // step, so a warning and an instruction that were the same fact sat side by side.
+    const dash = body('renderClientDashboard(jobId)');
+    ["field('Work completed'", "field('Client intake'", "field('Walkthrough'",
+     "field('Estimate sent'", "field('Agreement signed'"].forEach((f) => {
+      lacks(dash, f, `${f.slice(7, -1)} is stated once, on the rail`);
+    });
+    // What survives is what the rail does not say and cannot: these are TARGETS typed
+    // at intake, not milestones anything reaches.
+    ["field('Target start'", "field('Hard target'", "field('Court deadline'"].forEach((f) => {
+      has(dash, f, `${f.slice(7, -1)} survives — it is a target, not a milestone`);
+    });
 
     // 2. Midpoint was hardcoded done:false.
     eq(byKey(run('active'), 'midpoint_received').done, false, 'no midpoint money, not done');
@@ -454,7 +475,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // squeezed its own label ("Client accepted" rendered as "Client / accepted"). The
     // phone block's .card div{flex-wrap:wrap} only applies under 820px, which is why it
     // looked right at 390px and wrong on the desk.
-    has(css, '.jt-row{display:flex;flex-wrap:wrap;', 'the row wraps, so a sub-line takes its own line');
+    has(css, 'flex-wrap:wrap;align-items:baseline', 'the row wraps, so a sub-line takes its own line');
+    // ⚠ THE MILESTONE DOTS. The horizontal strip this replaced had a node per step that
+    // filled green when done, and Anthony asked for that back off the live build: the
+    // vertical rail had the connector (the coloured left edge) and nothing ON it, so
+    // nothing read as a milestone being ticked off. Every state paints its own node, or
+    // a step silently renders as an ordinary one.
+    has(css, '.jt-row::before{', 'each step draws a milestone node on the thread');
+    ['.jt-done::before{', '.jt-cur::before{', '.jt-blk::before{', '.jt-term::before{'].forEach((r) => {
+      has(css, r, `the ${r.slice(4, -10)} state paints its own node`);
+    });
+    has(css, '.jt-done::before{border-color:var(--sage-dk)', 'and a completed milestone goes green');
+    // Left-label / right-meta across a 1900px card puts the two halves of a row on
+    // opposite sides of the screen. The rail is a reading column; the card stays wide.
+    has(css, '.jt{max-width:', 'the rail is capped to a readable width');
     has(css, '.jt-lbl{flex:1 1 auto;min-width:0;', 'and the label takes the slack rather than shrinking');
     has(src, "'<div class=\"jt-next' + (_jtBlocked ? ' jt-next-blk' : '') + '\">'",
       'and the renderer puts the modifier on it');

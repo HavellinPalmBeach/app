@@ -70,6 +70,43 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## The rail looks like a timeline again — presentation pass off the live build (2026-09-10)
+Anthony, reading the shipped build: *"it looks like a lot of wasted space in the middle. and we
+liked the 'timeline' look we had before with the milestone turned green when complete."* Plus a
+real bug visible in his screenshot. App-only, no redeploy.
+
+- **⚠ `estRec.savedAt` IS `Date.now()` AND THE RAIL PRINTED IT RAW.** *Estimate built* read
+  **`$25,715 · 1789067253747`** on the live build. `savedAt` is a **merge-recency marker** — it
+  exists so the sheet can reconcile two devices' estimates by job id, newest wins — and is
+  never a display value anywhere else. `atKind:'epoch'` is its own kind rather than being
+  converted in the derivation, because `jobTimeline` stays free of formatting: the renderer
+  owns how a date looks. A test asserts the derivation contains no `toLocaleDateString`.
+  **Nothing in Slice 0's fixture matrix had a realistic `savedAt`**, which is why 195 checks
+  went green over it — a fixture that invents a plausible value tests the fixture.
+- **THE MILESTONE NODES ARE BACK, and they were the half of the old horizontal strip worth
+  keeping.** The vertical rail had the connector — the coloured left edge — and nothing *on*
+  it, so no step read as being ticked off. `.jt-row::before` is a 13px node sitting on the
+  thread (`left:-8px` against the 2px border), and every state paints its own: green filled
+  with a white centre when done, bronze ringed when current, red when blocked or terminal,
+  an empty grey ring while waiting. A test asserts all four, because a state with no node
+  silently renders as an ordinary row.
+- **⚠ `.jt{max-width:860px}` — the "wasted space in the middle" was label-left / meta-right
+  across a 1900px card.** The two halves of one row sat on opposite sides of the screen with a
+  third of a metre of nothing between them, and the eye cannot pair them at that distance. The
+  rail is a reading column now; the card stays full width behind it. Measured: the gap between
+  a label and its own meta went from most of the screen to 8px.
+- **⚠ AND THE FIELD GRID ABOVE IT WAS RESTATING THE RAIL — five of its eight fields.** Client
+  intake, Walkthrough, Estimate sent, Agreement signed and Work completed were all rows two
+  inches below. Worse than redundant: **the pair could disagree in tone.** The grid printed
+  *"● Not signed"* in red at the same moment the rail lit *Agreement signed* as the live step
+  with a button under it — a warning and an instruction that are the same fact, side by side.
+  What survives is the three the rail does not say and cannot: **Target start · Hard target ·
+  Court deadline are TARGETS**, dates somebody typed at intake, not milestones anything
+  reaches. That distinction is the rule to keep if this grid is ever added to.
+- **2339 committed checks. All 8 changes revert-verified individually.** Verified in Chromium
+  at 1400px and 390px: the thread reads green through the completed steps, the live step is
+  bronze, *Estimate built* prints `$25,715 · Sep 10, 2026`, and overflow is 0 at both widths.
+
 ## The rail gets its buttons — SLICE 1 of the tab consolidation (BUILT 2026-09-10)
 Slice 1 of eight. Every action that used to need the Client Estimate or Agreement tab is now
 a button on the timeline rail, and **every one of them calls the existing function unchanged**.
