@@ -49,15 +49,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/eloquent-ptolemy-cagox5`
-  (was `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/hopeful-hamilton-5sw4wm`
+  (was `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/eloquent-ptolemy-cagox5:main`
+  `git push origin claude/hopeful-hamilton-5sw4wm:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -117,6 +117,158 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## The fullness preset only ever reached the rooms already ticked (FIXED 2026-09-10)
+*"when you score an entire home, how full is the house … it only scores the rooms that you have
+already ticked. and when you tick new rooms as you walk through the house, they default to
+whatever the defaults are … it needs to apply to any rooms that don't already have a hard coded
+reference number."* App-only, no redeploy. Three more off the same pass, below.
+
+- **⚠ THE CHIP WAS A ONE-SHOT SWEEP AND THE WALKTHROUGH IS NOT A ONE-SHOT ACTIVITY.**
+  `applyVolPreset` walked `ROOMS`, skipped anything not `in` scope, and stopped. Rooms are
+  ticked **as you walk**, so on the natural order — stand in the first room, say the place is
+  packed, then work through the house — every room ticked after the press took
+  `setRoomState`'s bare `roomDefault(rname).vol` instead. The estimator had told the app the
+  property was packed and the app had agreed about the first four rooms.
+- **⚠ AND IT IS INVISIBLE, WHICH IS WHY IT SURVIVED SINCE 2026-08-03.** A room sitting at 3
+  because the preset never reached it is indistinguishable from a room at 3 somebody meant.
+  Worse, the damage does not stay local: **volume is averaged over the rooms scored and applied
+  to the whole sqft**, so a handful of unreached rooms moves the price of the **entire job**.
+  Nothing on any screen could have shown it. Same silent-misprice shape as the room-coverage
+  badge two sections down, and the same reason it matters more than it looks.
+- **`volPresetSeed(name)` IS THE ONE DEFINITION AND `setRoomState` READS IT.** That is the whole
+  fix: the preset became a **standing setting** rather than an event. Pressing it with nothing
+  ticked is now the sensible opening move, so the feedback **reports rather than warns** — the
+  old *"No rooms are in scope yet — tick the rooms first"* was telling people to do it in the
+  order that produced the bug. A test asserts the `roomDefault(x).vol + shift` arithmetic exists
+  in **exactly one place**; two copies of it is precisely how the two paths came to disagree.
+- **⚠ A ROOM SCORED BY HAND IS NEVER OVERWRITTEN — Anthony's *"hard coded reference number"*,
+  and it is the half that makes the standing setting safe.** `_volHandSet[id]` is set at exactly
+  one site, `onVolInput` — the estimator's own keystroke — and `applyVolPreset` skips those
+  rooms and re-bases everything else around them. **A typed number is a direct observation, a
+  person standing in the room looking at it; the chip is a guess about the property as a whole.
+  The guess does not get to flatten the observation.** Without this the fix would have been a
+  downgrade: a standing preset that also overwrote hand-scores would wipe the estimator's own
+  work every time they changed their mind about the house.
+  - **The escape hatch is untick / re-tick, and it is why the flag is cleared in `setRoomState`'s
+    `else` branch rather than anywhere else.** That branch is where the *value* is cleared, so
+    the flag and the number it describes can never disagree. A flag outliving its value would
+    hold a preset off a room on the strength of a score that no longer exists.
+  - **The feedback says what it did NOT touch** — *"2 rooms set to Seasonal — 1 scored by hand
+    left as it is"* — because a silent skip is indistinguishable from a dead button.
+- **⚠ IT RIDES THE SAVED ROOM AS `volSet`, NEVER A MAP KEYED BY ROW ID.** Row ids are positional
+  (`r0`, `r7`), and this file already records what trusting `idx` across a `ROOMS` insert costs:
+  a saved estimate restores its scores onto whatever row inherited the number. `volSet` travels
+  on the room record, so it restores through the same **section+name** matching every other
+  per-room field uses. A test asserts no `volHandSet:` map reaches the snapshot.
+  - **An estimate saved before today carries no `volSet`, so nothing in it reads as hand-scored
+    and a preset re-bases the lot — which is exactly how that estimate behaved on the day it was
+    priced.** Nothing to migrate.
+- **Complexity is still untouched, and a test asserts `applyVolPreset` never mentions it.**
+  Unchanged from the original build and for the same reason: *how careful* and *how much* are
+  two questions, and collapsing them costs you "ordinary house, everything fragile".
+- **⚠ FOUND ON THE WAY, AND THE FIX CREATED IT: `_volPreset` LEAKED ACROSS A JOB SWITCH.**
+  `neutralizeEstimateView` exists because *"a Home Prep estimate bled into an unrelated Estate
+  Settlement job"*, and it already drops `_estimateAlphaPin`, `_estimateCostPin` and
+  `_estimateDocScope` for that reason — but not the preset, **because until today the preset
+  changed no number after it was pressed.** A stale `_volPreset` only lit the wrong chip. The
+  moment `setRoomState` began seeding from it, opening a fresh job after a packed estate and
+  ticking a room opened it at **default+2**, priced off the previous property's answer.
+  `clearAllRooms` already took the hand-set flags with it (they clear in `setRoomState`'s `off`
+  branch); the preset itself now resets on the same line as the α pin, and
+  `restoreEstimateToUI` re-pins it from the saved record exactly as α is.
+  **The thing to take from it: a change that gives an existing variable a new reader can turn a
+  harmless stale value into a pricing one, and the leak is in code you did not touch.** Same
+  shape as the `assignedTCContact` fallback on 2026-09-09 — an untouched line whose blast radius
+  moved underneath it.
+
+### The tab now asks for vendors AFTER the walkthrough
+*"we should move the third party vendor box … below notable collections. it makes way more sense
+to assign third party vendors after you've added any notable collections because then you know
+you need auction houses or appraisers or whatever … it doesn't work at the top when you haven't
+even walked through the house to determine what you need yet."*
+
+- **The card was promoted to the top of the build column on the reasoning that vendors are the
+  common case on a walkthrough. True, and beside the point — you cannot know WHICH vendors until
+  you have been through the house.** It is the collections and the vehicles that say there is an
+  auction house, a gemologist or a boat appraiser on this job at all, so the question was being
+  asked at the one moment nobody could answer it. Order is now rooms → collections + vehicles →
+  vendors → materials.
+- **⚠ THE PREP SHUTTLE HAD TO STOP ANCHORING ON AN ORDINAL.** `applyEstimateServiceMode` moves
+  the card into `est-job-grid` on a standalone prep job and puts it back afterwards — with
+  `buildCol.insertBefore(vendCard, buildCol.firstChild)`. **A position expressed as "first child"
+  cannot describe a position that has moved**, so the shuttle would have dragged the card back to
+  the top on the first prep job. It anchors on `est-materials-card` now; if that card is ever
+  removed, `insertBefore(…, null)` appends, which still leaves the vendors below the collections.
+  The degradation is the safe one. A test asserts the old expression is gone.
+
+### "Nothing is assessed from a photograph" was not true
+*"in section two, sorting, we say nothing is assessed from a photograph, and that's not
+technically true. we will probably take photographs of things on-site and email them to
+appraisers to determine whether or not it's even worth the appraiser coming on-site."*
+
+- **The claim was absolute and the practice is the opposite.** The stage now says we photograph
+  a piece and send it ahead **so an on-site appraisal is only booked where the item warrants
+  one** — which is a client benefit, not a caveat: it is what stops them paying a call-out fee
+  on something that does not need one. The promise that actually matters survives untouched:
+  **anything of consequence is valued in person.** Anthony picked this over simply deleting the
+  claim, and it is the better answer — the sentence now earns its place instead of denying
+  something nobody asked about.
+- It renders only on a job that has a valuing specialist on it; a job with none says nothing
+  about photographs at all. A test asserts both directions and that the old sentence is **gone
+  from the file**.
+
+### The vendor figures say they are good faith, above the numbers
+*"in the estimate itself for third party vendors, we need to flag at the top that these are good
+faith estimates and that actuals may vary. But, obviously, these are directly billed to the
+client. So the client will see the actual bill from the third party vendor."*
+
+- **⚠ THE TWO HALVES MUST NOT BE SEPARATED, AND A TEST ASSERTS THE ORDER.** *"These may move"*
+  alone is a hedge. It only reads as straight dealing beside *"and you will see the real invoice
+  yourself"* — which is already true of this engagement, since every vendor bills the client
+  directly. `vendorEstimateNote(opts)` is DOM-free and read by **all three** vendor surfaces
+  (the third-party band, the bundled Home Prep band, the standalone prep body), because six
+  client-facing surfaces each stating the vendor rule in their own words is a defect this file
+  has already paid for once.
+- **`.ce-lead` exists because `.ce-note` is shaped to CLOSE a table** (rounded bottom, a margin
+  under it). A caveat read after the total has already been taken as a price has arrived too
+  late to do its job, so this one butts onto the band above and the table below.
+  - **⚠ AND THE FIRST TEST OF IT COULD NOT FAIL.** `has(src, '.ce-lead{')` also matches the phone
+    override, so deleting the base rule left the check green. Caught by reverting, not by
+    reading — the fourth time in this file. It asserts the **declaration** now. A stylesheet no
+    test can notice the loss of is the exact shape of the regex that ate 368 lines this morning.
+- **`feeTruesUp` is passed on the BUNDLED prep band and not on the standalone form**, because
+  that is where the documents differ: the standalone prep Terms state it twice already
+  (`vendorFeeNote(feeAlreadyStated)` plus the vendor-quote bullet), and the bundled job takes the
+  T&M or fixed-price Terms arm, which never says it. The rate is **read from `prepFeeRate()`**,
+  never typed — a test asserts no `'30%'` literal in the function.
+- **The standalone prep form's below-table `.ce-note` is DELETED, not left beside it.** It
+  restated the Terms almost word for word; the one fact it carried that is stated nowhere else
+  is that the amounts are estimates, and that is what survives, moved above the table.
+- **1942 committed checks** (`tests/estimate-walkthrough.test.js`, 76 new). **All fifteen
+  changes revert-verified individually** — every one turns the suite red on its own, including
+  the CSS rule, the prep shuttle's anchor and the job-switch reset.
+- **Verified end to end in headless Chromium on the real page**, not asserted on source: the
+  build column renders `est-rooms-card · .est-pair · est-vendors-card · est-materials-card`;
+  pressing **Packed** with nothing ticked then ticking three rooms opens them at 5 / 3 / 5;
+  hand-scoring the kitchen to 2 and pressing **Seasonal** lands 1 / 1 / **2** with the feedback
+  reading *"2 rooms set to Seasonal — 1 scored by hand left as it is"*; untick + re-tick returns
+  the kitchen to 1; a job switch through the real `neutralizeEstimateView` drops the preset back
+  to Normal with an empty hand-set map, so the next room ticked opens at **3** rather than 5;
+  both `.ce-lead` blocks render between their `.ce-band` and their `<table>`,
+  the prep one carrying the fee sentence; the sorting stage prints the new photograph wording;
+  390px overflow is 0. **No page errors.**
+- **⚠ A PRE-EXISTING TEST ASSERTED TWO ADJACENT SOURCE LINES AND BROKE ON A TRUE CHANGE.**
+  `doc-scope.test.js` pinned `"_volPreset = 'normal'; paintVolPreset();\n  _estimateDocScope =
+  'full';"` — a byte sequence, not a requirement — so adding `_volHandSet = {}` beside it failed
+  a check about the documentation scope. Rewritten against `resetEstimate`'s **body**. A true
+  statement about a requirement should not break because a line moved.
+- Manual **§5 layout map · §5b** (two new notes) **· §5d · §7** (two new notes); playbook
+  **Step 2** (the standing rule and the hand-score rule in field language) **· Step 3** (the
+  good-faith flag and what to say when a client asks about photographs) and **five**
+  symptom→cause rows. Both `.md` copies hand-edited and **21 claims parity-checked** across the
+  four files; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still
+  the documented false positive at 1).
 
 ## Intake asks what is in the house, and the crew is told (BUILT 2026-09-10)
 *"instead of a simple 'Notes' field, i want Two questions to ask on every intake call"* — is
@@ -2839,7 +2991,15 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-10 (twenty-first pass)** — both documents, against the
+- Last reconciled against the app: **2026-09-10 (twenty-second pass)** — both documents, against the
+  fullness preset becoming a standing setting, the vendor card moving below the collections, the
+  photograph correction and the good-faith vendor flag. Manual **§5 layout map · §5b** (the standing
+  rule and the hand-scored rule, both marked ⚠ because an estimate priced the old way is under-scored)
+  **· §5d · §7** (the good-faith line above both vendor tables, and the photograph correction);
+  playbook **Step 2 · Step 3** and **five** symptom→cause rows, including the one for somebody who
+  priced a job on the old build. Both `.md` copies hand-edited and 21 claims parity-checked; tag
+  balance verified on both HTML files.
+- Prior pass **2026-09-10 (twenty-first pass)** — both documents, against the
   intake "what's in the house" questions. Manual **§4** gained a new subsection (the seven-row table,
   where the answers surface, the firearms-is-the-only-red rule, the ticked-with-no-note wording, and
   that Notes survives demoted) and **§11** a note on the standing-flags panel; playbook **Step 1**

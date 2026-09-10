@@ -363,6 +363,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .ce-tbl tr.grand td{background:var(--gray-dk);color:var(--cream);font-weight:600;font-size:15px;}
 .ce-tbl tr.grand td.r{font-family:'Cormorant Garamond',serif;font-size:20px;}
 .ce-note{font-size:11px;color:var(--gray);font-style:italic;padding:8px 14px;background:var(--cream);border:1px solid var(--border);border-radius:0 0 4px 4px;margin-bottom:1.25rem;}
+/* .ce-note is shaped to close a table (rounded bottom, a margin under it). .ce-lead is the
+   same voice OPENING one: it butts onto the band above and the table below, so a caveat
+   about the figures reads before them rather than after. */
+.ce-lead{font-size:11px;color:var(--gray);font-style:italic;padding:7px 14px;background:var(--cream);border-bottom:1px solid var(--border);margin-bottom:0;}
 .pay-tbl{width:100%;border-collapse:collapse;margin-bottom:1rem;}
 .pay-tbl td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px;}
 .pay-tbl td.r{text-align:right;font-weight:600;}
@@ -728,6 +732,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
   .ce-tbl tr.grand td{font-size:12px;}
   .ce-tbl tr.grand td.r{font-size:16px;}
   .ce-note{font-size:9px;padding:5px 10px;}
+  .ce-lead{font-size:9px;padding:5px 10px;}
   .pay-tbl td{padding:5px 10px;font-size:10px;}
   .ce-terms li{font-size:9px;padding:2px 0 2px 12px;}
   .ce-terms-title{font-size:9px;}
@@ -795,7 +800,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 4:06pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 4:44pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1357,17 +1362,6 @@ body.no-smf .smf-col{display:none;}
        squeezed to about 300px each. -->
   <div id="est-main-grid" style="align-items:start;">
     <div id="est-build-col">
-      <!-- Promoted out of "Moving Materials & Third-Party Vendors" and to the top of the
-           build column. Vendors are the common case on a walkthrough — an estate sale
-           company, a hauler, a general appraiser for the furniture and artwork — and they
-           were filed under a materials heading four cards down, below two sections about
-           exceptional items. Notable Collections stays what it is: specific items needing
-           a custody trail and a disposition channel, which a vendor line does not carry. -->
-      <div class="card" style="margin-bottom:1rem;" id="est-vendors-card">
-        <div class="sec" id="vendors-card-title">Third-Party Vendors</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;" id="vendors-card-sub">Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly, and each line below books that time.</div>
-        <div id="vendor-group-cards"></div>
-      </div>
       <div class="card" style="padding:0;overflow:hidden;" id="est-rooms-card">
         <div style="padding:.9rem 1.1rem .5rem;">
           <div class="sec" style="margin-bottom:4px;">Room-by-Room Assessment</div>
@@ -1445,6 +1439,21 @@ body.no-smf .smf-col{display:none;}
            zero everywhere downstream), and the two dropdowns offered different names for the
            same trades. One entry point now — the Property Preparation card — and inclusion is
            simply whether any prep line exists. -->
+      <!-- ⚠ THIS CARD FOLLOWS THE WALKTHROUGH, AND THAT IS THE WHOLE REASON IT IS DOWN HERE
+           (2026-09-10). It spent a spell at the TOP of the build column, on the reasoning
+           that vendors are the common case on a walkthrough. True, and beside the point:
+           you cannot know WHICH vendors until you have been through the house. It is the
+           collections and the vehicles that tell you there is an auction house, a
+           gemologist or a boat appraiser on this job at all, so a vendor list offered
+           before either of them is a list of guesses — asked at the one moment nobody can
+           answer it. Rooms, then collections and vehicles, then the vendors they imply.
+           Notable Collections stays what it is: specific items needing a custody trail and
+           a disposition channel, which a vendor line does not carry. -->
+      <div class="card" style="margin-top:1rem;" id="est-vendors-card">
+        <div class="sec" id="vendors-card-title">Third-Party Vendors</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;" id="vendors-card-sub">Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly, and each line below books that time.</div>
+        <div id="vendor-group-cards"></div>
+      </div>
       <div class="card" id="est-materials-card" style="margin-top:1rem;">
         <div class="sec">Moving Materials</div>
         <label>Moving materials package</label>
@@ -3304,31 +3313,69 @@ function volPresetShift(key){
   return p ? p.shift : 0;
 }
 
-// Applied to every room currently IN SCOPE. Idempotent — pressing the same preset
-// twice lands on the same numbers, and pressing a different one re-bases from the
-// defaults rather than compounding. Any per-room adjustment made afterwards stands
-// until another preset is pressed, which is the point: this is a starting position.
+// ⚠ THE PRESET IS A STANDING SETTING, NOT A ONE-SHOT SWEEP (2026-09-10). It used to
+// apply once, to whatever happened to be ticked at the moment it was pressed. That is
+// the wrong half of the walkthrough: you tick rooms AS YOU WALK, so every room ticked
+// after the press went back to the bare ROOM_DEFAULTS — the estimator had told the app
+// the house was packed and the app had quietly agreed about the first four rooms. The
+// under-scoring is invisible, because a 3 looks exactly like a 3 you meant.
+// volPresetSeed is read by setRoomState too, so a room ticked on the second floor an
+// hour later opens as full as the house the estimator already described.
+//
+// ⚠ AND A ROOM SCORED BY HAND IS NEVER OVERWRITTEN. _volHandSet records the rooms whose
+// volume somebody typed. Those are direct observations — a person standing in the room
+// looking at it — where a preset is a guess about the property as a whole, so the
+// observation wins and a later preset re-bases everything around it. To hand a room back
+// to the preset, untick and re-tick it: leaving scope clears the value and the flag
+// together, which is the only place the two can be cleared without disagreeing.
+var _volHandSet = {};
+
+// The starting volume for `name` under the active preset, clamped to the 1–5 scale.
+// ONE definition, read by applyVolPreset and by setRoomState. Two copies of this shift
+// is precisely how the two paths came to disagree about the same house.
+function volPresetSeed(name) {
+  return Math.max(1, Math.min(5, roomDefault(name).vol + volPresetShift(_volPreset)));
+}
+
+function volPresetLabel(key) {
+  var p = VOL_PRESETS.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+// Applied to every room in scope that has NOT been hand-scored. Idempotent — pressing the
+// same preset twice lands on the same numbers, and pressing a different one re-bases from
+// the defaults rather than compounding.
 function applyVolPreset(key) {
-  var shift = volPresetShift(key);
-  var ri = 0, touched = 0;
+  _volPreset = key;                 // set first — volPresetSeed reads it
+  var ri = 0, touched = 0, held = 0;
   ROOMS.forEach(function(sec) {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri; ri++;
       if (roomState(id) !== 'in') return;
       var nameEl = document.getElementById('name-' + id);
       if (!nameEl) return;
-      var nm = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
       var volEl = document.getElementById('vol-' + id);
       if (!volEl) return;
-      volEl.value = Math.max(1, Math.min(5, roomDefault(nm).vol + shift));
+      if (_volHandSet[id]) { held++; return; }
+      var nm = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
+      volEl.value = volPresetSeed(nm);
       touched++;
     });
   });
-  _volPreset = key;
   paintVolPreset();
   calcAll();
-  if (!touched) {
-    showFB('e-fb', 'warn', 'No rooms are in scope yet — tick the rooms first, then set how full the house is.');
+  // Pressing this before ticking anything is a legitimate opening move now rather than a
+  // mistake — it sets the position every room will open at — so it reports instead of
+  // warning. And a press that moved nothing because every room in scope was scored by hand
+  // has to say so, or a working button reads as a dead one.
+  if (!touched && !held) {
+    showFB('e-fb', 'ok', 'Set — every room you tick from here opens at ' + volPresetLabel(key) + '.');
+  } else if (!touched) {
+    showFB('e-fb', 'ok', 'Set for rooms you tick from here. The ' + held + ' room' + (held === 1 ? '' : 's')
+      + ' in scope kept the score you typed — untick and re-tick a room to hand it back to the preset.');
+  } else if (held) {
+    showFB('e-fb', 'ok', touched + ' room' + (touched === 1 ? '' : 's') + ' set to ' + volPresetLabel(key)
+      + ' — ' + held + ' scored by hand left as ' + (held === 1 ? 'it is' : 'they are') + '.');
   }
 }
 
@@ -3354,7 +3401,7 @@ function volPresetButtonsHTML() {
           + 'border-radius:11px;border:1px solid var(--border-md);background:var(--cream);color:var(--gray-dk);">'
           + p.label + '</button>';
       }).join('')
-    + '<span style="font-size:10px;color:var(--gray);">sets every room in scope — adjust any of them afterwards</span>'
+    + '<span style="font-size:10px;color:var(--gray);">applies to rooms you have not scored by hand, and to every room you tick from here</span>'
     + '</div>';
 }
 
@@ -4103,10 +4150,19 @@ function setRoomState(id, state) {
   if (scoringOn) {
     var rname = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
     var def = roomDefault(rname);
-    vol.disabled = false; if (!vol.value) vol.value = def.vol;
+    // Volume opens at this room's own default SHIFTED BY THE ACTIVE FULLNESS PRESET, which
+    // is what makes the preset a standing answer about the property rather than a one-shot
+    // sweep over whatever was ticked when it was pressed. Complexity is deliberately not
+    // shifted — how careful the work is and how much of it there is are two questions, and
+    // collapsing them costs you "ordinary house, everything fragile". See VOL_PRESETS.
+    vol.disabled = false; if (!vol.value) vol.value = volPresetSeed(rname);
     cplx.disabled = false; if (!cplx.value) cplx.value = def.cplx;
     spcl.disabled = false;
   } else {
+    // The score is being cleared, so the record that a person typed it goes with it. A flag
+    // outliving its value would hold a preset off a room on the strength of a number that no
+    // longer exists — and this is the one route back for a hand-score entered by mistake.
+    delete _volHandSet[id];
     vol.disabled = true; vol.value = '';
     cplx.disabled = true; cplx.value = '';
     spcl.disabled = true; spcl.checked = false;
@@ -4141,6 +4197,10 @@ function toggleRoom(id) {
 function onVolInput(id) {
   var vol = document.getElementById('vol-' + id);
   var cplx = document.getElementById('cplx-' + id);
+  // Typed by somebody standing in the room, so this room's volume is an observation now and
+  // no later fullness preset may overwrite it. This is the ONLY site that sets the flag —
+  // the estimator's own keystroke — which is what keeps "hand-scored" meaning what it says.
+  _volHandSet[id] = true;
   if (vol && cplx && parseInt(vol.value, 10) === 5) cplx.value = 5;
   calcAll();
 }
@@ -5054,13 +5114,18 @@ function applyEstimateServiceMode(isPrep) {
       vendCard.style.marginTop = '0';
       vendCard.style.marginBottom = '0';
     } else {
-      // Back to the TOP of the build column, not appended — buildCol.appendChild would
-      // strand it below the rooms grid, and vendors are the common case on a walkthrough.
-      if (vendCard.parentNode !== buildCol || buildCol.firstElementChild !== vendCard) {
-        buildCol.insertBefore(vendCard, buildCol.firstChild);
+      // Back to its markup home: after the collections/vehicles pair and immediately above
+      // Moving Materials, because the vendors a job needs are what the walkthrough tells you
+      // (see the comment on the card itself). Anchored on the materials card rather than on
+      // "first child" — a position expressed as an ordinal is what stranded it at the top
+      // through the reorder. If that card is ever removed, insertBefore(…, null) appends,
+      // which still leaves this below the collections; the degradation is the safe one.
+      var matCard = document.getElementById('est-materials-card');
+      if (vendCard.parentNode !== buildCol || vendCard.nextElementSibling !== matCard) {
+        buildCol.insertBefore(vendCard, matCard);
       }
-      vendCard.style.marginTop = '0';
-      vendCard.style.marginBottom = '1rem';
+      vendCard.style.marginTop = '1rem';
+      vendCard.style.marginBottom = '0';
     }
   }
 }
@@ -5130,7 +5195,8 @@ function calcAll() {
         // Special-items flag = extra-careful handling → bump this room's complexity (capped at 5)
         var effCpx = Math.min(5, cplx + (spcl ? 1 : 0));
         engineRooms.push({name: roomName, vol: vol, cplx: effCpx});
-        roomMeta.push({id:id, ri:ri, name:roomName, vol:vol, cplx:cplx, spcl:spcl, note:note, section:sec.section});
+        roomMeta.push({id:id, ri:ri, name:roomName, vol:vol, cplx:cplx, spcl:spcl, note:note, section:sec.section,
+          volSet: !!_volHandSet[id]});
         totalVol += vol; includedRoomCount++;
       } else if (st === 'excl') {
         // Out of scope: not fed to the pricing engine, but still recorded so it
@@ -5410,6 +5476,10 @@ function calcAll() {
     psEl.textContent = psH.toFixed(1) + ' PS'; psEl.className = 'calc on'; psEl.style.color = 'var(--gray)';
     includedRooms.push({idx:m.ri, name:m.name, vol:m.vol, cplx:m.cplx, spcl:m.spcl, mult:1,
       elapsed:elapsed, tcH:tcH, psH:psH,
+      // Whether that volume was typed or came from the fullness preset — see _volHandSet.
+      // Without it a reopened estimate forgets which rooms were observed, and the next
+      // preset press flattens the estimator's own scores back to a guess.
+      volSet: !!m.volSet,
       roomDollar:Math.round(tcH*tcRate + psH*psRate), note:m.note, section:m.section});
   });
   // Excluded (homeowner-handled) rooms — carried through with zero hours/dollars so
@@ -6526,6 +6596,37 @@ function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost;
 var PREP_FEE_RATE = 0.30;
 function prepFeeRate() { return PREP_FEE_RATE; }
 
+// ─── THE VENDOR FIGURES ARE GOOD FAITH, AND THE DOCUMENT HAS TO SAY SO ─────────
+// Every vendor number on a client estimate is a walkthrough figure — what the trade is
+// likely to charge, written down before the trade has quoted. It is printed inside a
+// document whose Havellin lines ARE a commitment, and with nothing to the contrary the
+// two read as the same kind of number. The first painter's invoice that lands above the
+// estimate then looks like Havellin missing its own price rather than a painter pricing
+// a paint job.
+//
+// What makes the caveat safe to state plainly is the thing already true of this
+// engagement: the vendor bills the client directly, so the client sees the real invoice
+// whatever this page said. Saying only "these may move" is a hedge; saying both is a
+// reassurance, and the two must not be separated.
+//
+// DOM-free and shared by all three vendor surfaces — the third-party band, the bundled
+// Home Prep band, and the standalone prep body — so one sentence cannot become three
+// that drift. `feeTruesUp` adds the prep arm's extra fact, that Havellin's percentage is
+// charged on what the vendors ACTUALLY bill (getVendorActuals computes prepFee off the
+// recorded actuals, not off this estimate). It is passed only where the document does
+// not already say so in its Terms — the standalone prep form does, twice.
+function vendorEstimateNote(opts) {
+  opts = opts || {};
+  var s = 'These are good-faith estimates taken at the walkthrough — each vendor sets its own final '
+        + 'price. Every vendor invoices you directly, so you will see their actual bill, and the '
+        + 'figures here may move against it.';
+  if (opts.feeTruesUp) {
+    s += ' Havellin\'s ' + Math.round(prepFeeRate() * 100) + '% fee is charged on what the vendors '
+       + 'actually bill, not on the estimate above.';
+  }
+  return s;
+}
+
 // ─── WHAT WE CHARGE ON VENDORS, IN ONE SENTENCE ───────────────────────────────
 // ⚠ EVERY CLIENT-FACING SURFACE READS THIS. Six of them stated the vendor-fee rule in their
 // own words, and the moment bundled prep started carrying the 30% (2026-09-10) four of those
@@ -7145,6 +7246,14 @@ function neutralizeEstimateView() {
   // has a saved estimate, restoreEstimateToUI re-pins it from that record; if it
   // doesn't, this is a fresh build and should price at the current Settings value.
   _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';
+  // ⚠ AND THE FULLNESS PRESET, for exactly the same reason and as of the same day it
+  // started mattering (2026-09-10). While the preset was a one-shot sweep, a stale
+  // _volPreset only lit the wrong chip; now that setRoomState SEEDS from it, carrying it
+  // across a job switch prices the next property off the last one's answer — tick a room
+  // on a fresh job after a packed estate and it opens at default+2. That is the bleed this
+  // whole function exists to stop. restoreEstimateToUI re-pins it from the saved record if
+  // the job being opened has one, the same way the α pin above is handled.
+  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
   clearAllRooms();
   resetEstimateExtras();
   window._suppressEstimateAutoSave = false;
@@ -7544,7 +7653,7 @@ function populateJobSelect() {
 function resetEstimate() {
   var ri = 0;
   ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; setRoomState(id, 'off'); ri++; }); });
-  _volPreset = 'normal'; paintVolPreset();
+  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
   _estimateDocScope = 'full';
   document.getElementById('e-prem').checked = false;
   var _fxR = document.getElementById('e-fixed'); if (_fxR) _fxR.checked = false;
@@ -7832,7 +7941,9 @@ function _cePhases(e, job) {
   }
   if (vend.value.length) {
     sortBody += ' The specialists valuing items on this engagement — ' + _vList(vend.value)
-      + ' — attend while the contents are still in place, so nothing is assessed from a photograph after the fact.';
+      + ' — attend while the contents are still in place. Where it helps we photograph a piece first and send it'
+      + ' ahead, so an on-site appraisal is only booked where the item warrants one — anything of consequence is'
+      + ' valued in person rather than from a photograph.';
   }
   P.push({ title: sortTitle, body: sortBody, need: sortNeed, done: sortDone });
 
@@ -8147,11 +8258,11 @@ function buildPrepEstimateBody(e, job) {
 
     // 1) Vendors first — billed at cost
     '<div class="ce-band">Home Prep Vendors — Estimated (billed to you at cost)</div>' +
+    '<div class="ce-lead">' + vendorEstimateNote() + '</div>' +
     '<table class="ce-tbl"><tbody>' + prepRows + '</tbody>' +
     '<tr class="subtotal"><td>Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note" style="margin-top:6px;">Vendor amounts are estimates. The vendors invoice you directly at their own price and Havellin adds nothing to those invoices; the '
-      + Math.round(prepFeeRate()*100) + '% above is Havellin\'s own fee for managing the work, and it trues up to what the vendors actually bill.</div>' +
+    '<div style="margin-bottom:1.25rem;"></div>' +
 
     // 2) Then Havellin\'s 30% management fee on that spend
     '<div class="ce-band" style="margin-top:1.25rem;">Havellin Management Fee</div>' +
@@ -8496,6 +8607,9 @@ function renderClientEstimate() {
     // something were missing.
     (showVendors ?
     '<div class="ce-band" style="margin-top:1rem;">Third-Party Vendors To Be Engaged</div>' +
+    // Above the numbers, not under them: a caveat read after the total has already been
+    // taken as a price is a caveat that arrives too late to do its job.
+    '<div class="ce-lead">' + vendorEstimateNote() + '</div>' +
     '<table class="ce-tbl">' +
     '<tbody>' + vendorRows + '</tbody>' +
     '<tr class="subtotal"><td>Estimated Third-Party Total (at cost)</td><td class="r">' + fmt(e.vendorCost) + '</td></tr>' +
@@ -8515,6 +8629,7 @@ function renderClientEstimate() {
         return '<tr><td>' + p.type + '</td><td class="r">' + fmt(p.cost) + '</td></tr>';
       }).join('');
       return '<div class="ce-band" style="margin-top:1rem;">Home Prep for Sale</div>' +
+        '<div class="ce-lead">' + vendorEstimateNote({feeTruesUp: prepGcFee > 0}) + '</div>' +
         '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody>' +
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
@@ -9790,6 +9905,10 @@ function restoreEstimateToUI(est) {
             if (volEl) volEl.value = savedRoom.vol || 3;
             if (cplxEl) cplxEl.value = savedRoom.cplx || 3;
             if (spclEl) spclEl.checked = savedRoom.spcl || false;
+            // An estimate saved before 2026-09-10 carries no volSet, so nothing in it reads
+            // as hand-scored and a preset re-bases the lot — which is exactly how that
+            // estimate behaved on the day it was priced. Nothing to migrate.
+            if (savedRoom.volSet) _volHandSet[id] = true; else delete _volHandSet[id];
           }
           if (noteEl && savedRoom.note) {
             noteEl.value = savedRoom.note;

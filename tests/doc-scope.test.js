@@ -12,7 +12,7 @@
 // both read the pin — an agreement promising a §733.604 inventory over an estimate that
 // priced none is a contract for work nobody is paying for.
 
-const { sandbox, source } = require('./harness');
+const { sandbox, source, fn } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
 
@@ -115,7 +115,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const resets = (src.match(/_estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';/g) || []).length;
     eq(resets, 2, 'the two no-job reset sites clear the scope pin with the α pin');
     has(src, "_estimateDocScope = seedDocScopeFromJob(job);   // fresh build", 'the fresh-build site seeds from the job instead — a stale scope on a fresh build misprices the next job');
-    has(src, "_volPreset = 'normal'; paintVolPreset();\n  _estimateDocScope = 'full';", 'resetEstimate clears it with the preset');
+    // Asserted against resetEstimate's BODY rather than against two adjacent source lines.
+    // The literal version failed the day the fullness preset gained a second thing to clear
+    // beside it (_volHandSet, 2026-09-10) — a true statement about the requirement should not
+    // break because a line moved. What has to hold is that Reset clears the scope pin at all.
+    has(fn('resetEstimate'), "_estimateDocScope = 'full';", 'resetEstimate clears the scope pin');
+    has(fn('resetEstimate'), "_volPreset = 'normal';", 'and the fullness preset with it');
   }
 
   group('the client estimate follows the scope it priced, once, in the stage');
