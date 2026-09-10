@@ -20,15 +20,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/ecstatic-feynman-b3j90u`
-  (was `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/editable-job-type-estimates-90hbj5`
+  (was `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/ecstatic-feynman-b3j90u:main`
+  `git push origin claude/editable-job-type-estimates-90hbj5:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -88,6 +88,122 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## Re-typing a job on the walkthrough + bundled prep flips to the 30% fee (BUILT 2026-09-10)
+*"we need to be able to change the job type in an estimate … if we get a home prep client at
+intake and then we show up on-site to do a walkthrough, it might turn out that they actually
+need some editing … at the estimate stage we make that editable until the final estimate is
+locked."* App-only, no redeploy.
+
+- **THE LOCK LADDER HE ASKED ME TO CONFIRM, because his guess was off by one step in his own
+  favour.** It is not the agreement stage. Draft → editable · **submitted** → hard-locked on
+  every device (only the manager moves it) · **approved** → still editable via *Edit Estimate* /
+  *Offer Discount*, which un-approve and **revoke the agreement's approval with them** · **sent
+  to the client** → same · **`agrSigned`** → Change Order only. Agreement *approval* is not a
+  lock: `editEstimateFromCE` revokes it and re-approval re-files a fresh Exhibit A. The client's
+  signature is the lock, which is the right place for it and is exactly the price-pushback
+  flexibility he described.
+- **⚠ THE RULE IS WITHIN A FAMILY, NEVER ACROSS ONE — and it is Anthony's, not mine.** I offered
+  any→any with a completeness gate; he answered *"living jobs should be editable into other
+  living jobs and the jobs after death should be edited with other jobs after death … we could
+  enter an estate settlement and all of a sudden somebody could contest the will."* That is
+  better, and it **deletes the hard part**: `toggleIntakeFields` shows the authorized-rep block,
+  the probate case fields and the deceased name/phone handling on the decedent three and on
+  nothing else, so a move inside a family cannot leave a required field unasked and needs no
+  gate at all. A move across one always would — a living job re-typed as an Estate Settlement
+  has no representative, no date of death, and a phone number belonging to someone who is dead.
+  That is a different client, not a re-priced job, and it stays on Client Intake / Edit Client.
+- **`SVC_ORDER` + `svcFamily` + `svcFamilyOptions`, and the family is DERIVED from
+  `DECEDENT_SERVICES` rather than listed a second time.** Two copies of this taxonomy is the
+  one thing that would make the feature dangerous — the picker would offer a decedent service
+  inside the living list. A test asserts the two agree key by key in both directions.
+  `estate` (the retired alias) is placed as decedent but never offered, so a legacy job gets the
+  right picker and switching off it quietly repairs the key.
+- **⚠ IT WRITES `job.svc`, NOT A SECOND COPY ON THE ESTIMATE.** `job.svc` is what the dashboard,
+  the invoice header, the approval email, the agreement routing and `isDecedentJob` all read;
+  leaving it behind would price the estimate as one service under an agreement drawn for
+  another. `est.svc` stays the record of what was **priced**, and `restoreEstimateToUI` now takes
+  the JOB's key first — a job re-typed while an estimate sat in draft would otherwise go on
+  quoting a service it no longer is. The divergence prints in the picker's own note, not a
+  toast: `applyOpenedEstimate` fires *"Estimate loaded"* one call later and would wipe it.
+- **The picker needed no new lock.** `applyEstimateLock` already disables every `input, select,
+  textarea, button` in `panel-estimate` except `e-job` and the nav, so a `<select>` added there
+  is locked by construction in both the submitted and approved states. A test asserts the
+  exemption list has not grown. `agrSigned || depositReceived` is checked in the handler as
+  defence in depth, as is the family test.
+- **`_svcChangeConsequences(prev, next, job)` is DOM-free** so the tests read the real wording
+  rather than grepping a substring — same reason `_pendingChipCopy` and `_agrScopeServices` are
+  separate functions. It says only what actually moves, and a move that changes none of them
+  says nothing rather than padding the dialog.
+
+### The prep fee flipped, and it is real money
+*"does the estimator currently estimate transition concierge hours for home prep when it's
+bundled … we don't wanna double count … I'm leaning towards taking out any concierge hours
+relegated to home prep when it's part of another job and just simply charge the 30%."*
+
+- **THERE WAS NEVER A DOUBLE COUNT — the two arms were already strictly either/or**, which is
+  what made this a straight choice rather than a fix. `prepTCHrs = (prepEnabled && !isPrep) ?
+  getPrepTCHrs() : 0` on one side and `prepFeeRate(svc) { return svc === 'prep' ? 0.30 :
+  SMF_PCT }` on the other: standalone charged the fee and no hours, bundled charged hours and no
+  fee. **Bundled was the wrong half.** A realistic Palm Beach package (paint · deep clean ·
+  landscaper · handyman · pressure wash · staging · carpet) is 16 touches → **8.0 hrs → $1,200**
+  at $150, against **$13,500** on a $45,000 package. ~11×.
+- **ONE RULE NOW: prep vendors carry 30% wherever they appear and book ZERO coordination hours
+  anywhere.** `prepFeeRate()` takes no argument; `prepTCHrs` is 0 unconditionally. **⚠ THE TWO
+  MUST MOVE TOGETHER** — charging the fee *and* the hours is the double charge that took
+  `SMF_PCT` to 0, and it would be invisible, because those hours land inside `coordTC` beside
+  every other coordination figure.
+- **Every surface that stated the old rule was corrected in the same commit, because a contract
+  clause and an invoice that disagree is the defect this file already records once.**
+  - `getVendorActuals` held **its own `standalonePrep` branch and its own hardcoded `0.30`** —
+    two copies of one rule. Both read the function now, and prep is out of the SMF base
+    unconditionally (moot at `SMF_PCT` 0, not moot the day it comes back).
+  - The client estimate's fee row **moved out of the *Moving Materials & Vendor Coordination*
+    band into the Home Prep section**, under the spend it is charged on — the same misfiling
+    this renderer already made once, and CLAUDE.md records it.
+  - **Agreement §3.5 has THREE arms now.** The plain *Vendor Coordination* clause says Havellin
+    adds no fee to vendor invoices — true of a job with no prep and false of one with it, which
+    would have told a Home Editing client exactly the wrong thing over an Exhibit A charging 30%
+    on the painter. `_agrHasPrepVendors(est)` branches on the **estimate**, not the service key,
+    because a bundled prep IS a Home Editing job. The probate fee table gains a matching row on
+    the same condition. `_pctWords` spells the rate for contract prose.
+  - The Property Preparation **card footer** advertised `+8.0 hrs concierge`; it states the fee
+    now, ungated on the service. The vendors-card subtitle carves prep out of *"Havellin adds no
+    fee"* — it sat directly above the one card that is the exception.
+  - `getPrepTCHrs` is deleted rather than left dead; `prepLineTCHrs` survives at its one real
+    reader.
+- **⚠ AN ESTIMATE SAVED BEFORE 2026-09-10 WAS QUOTED THE OTHER WAY**, so reopening it reprices
+  and the total moves **up**. Both documents say to re-send after re-approval rather than let the
+  invoice arrive above the quote. `coordHrsRollup`'s fallback still re-derives prep touches for a
+  record with no `prepTCHrs` field, which is correct — that estimate really did price them.
+
+### Found on the way: Edit Client hid the fields it was about to save
+- **`ecToggleProbate` tested plain `probate` for the case block and omitted `contested_probate`
+  from the rep block, while `showEditClient`'s initial render tested both correctly and
+  `saveClientEdit` read every one of those fields back out.** So opening Edit Client on a
+  contested matter was fine, and **switching the service type to Contested Probate hid the case
+  number, the §733.604 deadline, the attorney of record AND the authorized representative** —
+  with the save still reading them out of the hidden div. Nothing was lost (a hidden input keeps
+  its value); there was simply no way to enter or correct any of it, **on exactly the transition
+  Anthony named**. Four sites read `ecIsProbateSvc` / `ecIsEstateSvc` now.
+- **Not fixed, and worth knowing: `isDecedentJob({svc:'estate'})` returns FALSE.** `estate` is a
+  legacy alias for `cleanout` that `SVC_LABELS` and three `isEstate` expressions still resolve,
+  but the predicate does not — so such a job would take the living-client agreement form.
+  Unreachable through the UI (nothing offers the key) and changing the predicate would move
+  agreement routing for any job still carrying it, so it is flagged rather than altered.
+  `svcFamily` places it correctly and the picker repairs it on the next change.
+- **1525 committed checks** (`tests/service-change.test.js`, 151 new). **All ten fixes
+  revert-verified individually** — every one turns the suite red on its own, including the two
+  that are pure source assertions. Verified in headless Chromium end to end with no page errors:
+  the picker offers four living services on the prep job and three decedent ones on the estate
+  job, prep → Home Editing opens the room grid and crew sizing, the same $45,000 of prep vendors
+  books **$13,500 on the bundled job where it booked $0 before**, `prepTCHrs` reads 0, the client
+  estimate prints the fee under the prep vendors, Estate Settlement → Contested Probate lands and
+  withdraws fixed price, and Edit Client keeps the case fields visible across the switch.
+- Manual **§4 · §5 · §5d · §5e · §8 · §11 · §13a · §16**; playbook **Step 1 · Step 2 · Step 10 ·
+  quick reference** and **seven** symptom→cause rows. Both `.md` copies hand-edited and
+  parity-checked; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is
+  still the documented false positive at 1).
 
 ## Deleted clients came back from a stale laptop — the sheet now keeps a job ledger (BUILT 2026-09-08)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` and `saveInventory.gs` both changed.
@@ -2443,7 +2559,16 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-09 (nineteenth pass)** — manual **§13a** against the
+- Last reconciled against the app: **2026-09-10 (twentieth pass)** — both documents, against the
+  editable service type and the bundled-prep fee flip. This pass **corrects eight standing claims**
+  rather than only adding: every "30% GC fee applies only to a standalone Home Prep engagement"
+  statement in either document is now false, and they sat in §5d, §5e, §8 (twice), §11, §13a and
+  §16 of the manual plus Step 2, Step 10 and the quick reference of the playbook. Manual §4 gained
+  the within-family rule and §5's layout map now calls the service type a dropdown; playbook Step 1's
+  `.stop` says what can and cannot be fixed later, Step 2 gained a `.stop` for the walkthrough
+  re-type, and **seven** symptom→cause rows landed. Both `.md` copies hand-edited and
+  parity-checked claim by claim; tag balance verified on both HTML files.
+- Prior pass **2026-09-09 (nineteenth pass)** — manual **§13a** against the
   multi-category vendor audit (the section described a single category per vendor, wrong since
   2026-07-31); playbook Step 2, the appraiser-roster `.stop` and five symptom→cause rows. Both
   `.md` copies hand-edited and parity-checked.

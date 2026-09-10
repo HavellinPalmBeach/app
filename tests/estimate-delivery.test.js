@@ -656,7 +656,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ws, 'Prep vendor line', 'and renders the vendor lines the fee is computed on');
     has(ws, 'Scope note', 'with their scope notes');
     has(ws, '<strong>Vendor spend:</strong>', 'the footer states the spend');
-    has(ws, 'Math.round(prepFeeRate(est.svc)*100)', 'and the rate from the real function, not a literal');
+    // prepFeeRate stopped being service-scoped on 2026-09-10 (bundled prep charges the 30%
+    // too), so it takes no argument now. The requirement is unchanged and is what this
+    // asserts: the percentage on the worksheet comes out of the one function, never a literal.
+    has(ws, 'Math.round(prepFeeRate()*100)', 'and the rate from the real function, not a literal');
     lacks(ws, "Fee rate:</strong> 30%", 'no hardcoded 30 beside it');
     has(ws, 'No prep vendor lines on this estimate', 'an empty one says so rather than rendering a bare table');
     // The room path is untouched for every other job.

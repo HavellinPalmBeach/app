@@ -767,7 +767,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.09 · 7:24pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 10:20am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1141,9 +1141,10 @@ body.no-smf .smf-col{display:none;}
           <button class="btn-s" onclick="clearEstimateTab()" title="Clear all rooms and reset estimate">Clear</button>
         </div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
-        <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
-        <div id="e-svc-display" style="padding:6px 10px;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--gray-dk);font-weight:500;">—</div>
-        <input type="hidden" id="e-svc" value="">
+        <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span>
+          <span class="lbl-hint">what the walkthrough found, not what the phone call said</span></label>
+        <select id="e-svc" onchange="changeEstimateService()"><option value="">&mdash;</option></select>
+        <div id="e-svc-note" style="font-size:10px;color:var(--gray);margin-top:3px;"></div>
         <!-- "Target start date", matching what Client Intake calls the same field. It read
              "Start date" here, which sounded like a commitment rather than the target the
              intake form actually captured. -->
@@ -1450,7 +1451,7 @@ body.no-smf .smf-col{display:none;}
           <tr id="s-smf-row" style="display:none;"><td class="muted">Vendor coordination fee</td><td class="num" id="s-smf">$0</td></tr>
           <!-- The coordination-hours lines live in the hours table above, where hours belong;
                a "2.0 hrs" row inside a table of dollar amounts read as a charge. -->
-          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee (30%)</td><td class="num" id="s-prep-fee">$0</td></tr>
+          <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee</td><td class="num" id="s-prep-fee">$0</td></tr>
           <tr class="total-row" id="s-havellin-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
           <tr id="s-rush-row" style="display:none;"><td style="color:var(--bronze);font-weight:600;" id="s-rush-label">Expedited delivery (20%)</td><td class="num" id="s-rush-amt" style="color:var(--bronze);font-weight:600;">$0</td></tr>
@@ -4058,6 +4059,146 @@ function svcTypeChanged() {
   calcAll();
 }
 
+// ─── RE-TYPING A JOB ON THE WALKTHROUGH ───────────────────────────────────────
+// The value the picker is currently SHOWING. Read as the "from" side of a change and as
+// what to snap back to when one is refused or cancelled — deliberately not job.svc, which
+// would report the wrong service the moment the two ever disagreed.
+var _svcSelPrev = '';
+
+// Rebuild the service picker for `svc`'s family. Called from every site that used to set
+// the old read-only display, so the options can never be left showing another family's.
+function paintEstimateService(svc, job, pricedAs) {
+  var sel = document.getElementById('e-svc');
+  if (!sel) return;
+  svc = svc || '';
+  var opts = svcFamilyOptions(svc);
+  // No job, or a key the catalogue cannot place: show exactly what is stored and offer no
+  // move. Guessing a family for an unknown key is how a job gets re-typed across the
+  // living/decedent line by accident.
+  if (!opts.length) opts = svc ? [svc] : [];
+  var html = opts.length ? '' : '<option value="">\u2014</option>';
+  opts.forEach(function(k) {
+    html += '<option value="' + esc(k) + '"' + (k === svc ? ' selected' : '') + '>' + esc(SVC_LABELS[k] || k) + '</option>';
+  });
+  sel.innerHTML = html;
+  sel.value = svc;
+  _svcSelPrev = svc;
+
+  var note = document.getElementById('e-svc-note');
+  if (note) {
+    // A saved estimate that was PRICED as something else has to say so where the number
+    // is, not in a feedback line that the next toast scrolls away. Same lesson the sync
+    // chip and the draft-link strip already carry.
+    var _drift = (pricedAs && pricedAs !== svc)
+      ? '<span style="color:var(--bronze);font-weight:700;">Priced as ' + esc(SVC_LABELS[pricedAs] || pricedAs)
+        + '; the job is now ' + esc(SVC_LABELS[svc] || svc) + ' and this estimate has been repriced. Re-check the scope before sending.</span>'
+      : '';
+    var _stamp = _svcChangeStampHtml(job, svc);
+    note.innerHTML = _drift + (_drift && _stamp ? '<br>' : '') + _stamp;
+  }
+}
+
+// A reclassification is a fact about the job worth keeping: the client was told one thing
+// on the phone and priced for another after the walkthrough, and the estimate is the only
+// place that transition is visible.
+function _svcChangeStampHtml(job, svc) {
+  if (!job || !job.svcChangedFrom) return '';
+  if (job.svcChangedFrom === svc) return '';   // switched back — the record is moot
+  return 'Re-typed from <strong>' + esc(SVC_LABELS[job.svcChangedFrom] || job.svcChangedFrom) + '</strong> on the walkthrough'
+       + (job.svcChangedAt ? ' \u00b7 ' + esc(job.svcChangedAt) : '')
+       + (job.svcChangedBy ? ' \u00b7 ' + esc(job.svcChangedBy) : '') + '.';
+}
+
+// What actually moves when the service changes, in plain sentences. Split out with no DOM
+// in it so the tests can read the real wording rather than grep for a substring of it —
+// the same reason _pendingChipCopy and _agrScopeServices are separate functions.
+function _svcChangeConsequences(prev, next, job) {
+  var out = [];
+  var prevPrep = prev === 'prep', nextPrep = next === 'prep';
+  if (nextPrep && !prevPrep) {
+    out.push('Home Prep for Sale bills no concierge or specialist hours — the fee is 30% of managed vendor spend. Any room scoring on this estimate stops pricing; it is kept and comes back if you switch again.');
+  }
+  if (prevPrep && !nextPrep) {
+    out.push('The room grid opens up and concierge and specialist hours start billing. Score the house on the walkthrough — until you do, the estimate prices on square footage alone.');
+    out.push('The prep vendors already entered stay, and still carry the 30% fee.');
+  }
+  if (isTMOnly(next) && !isTMOnly(prev)) {
+    out.push('Fixed price is not offered on probate matters — they bill time-and-materials on logged hours, itemized for the Personal Representative and the court. A fixed fee set here will be cleared.');
+  }
+  if (isTMOnly(prev) && !isTMOnly(next)) {
+    out.push('Fixed price becomes available again on this matter.');
+  }
+  // Estate Settlement carries no case number, deadline or attorney of record; the two
+  // probate services do, and nothing on this tab collects them.
+  if ((next === 'probate' || next === 'contested_probate') && !(prev === 'probate' || prev === 'contested_probate')) {
+    out.push('Add the case number, the \u00a7733.604 deadline and the attorney of record on Edit Client — the probate services carry those and Estate Settlement does not.');
+  }
+  if (job && job.estimateSentDate) {
+    out.push('\u26a0 This estimate was already sent to the client on ' + job.estimateSentDate + ' as ' + (SVC_LABELS[prev] || prev)
+      + '. Re-send it after re-approval, or they are holding a document for a service this job no longer is.');
+  }
+  return out;
+}
+
+// The picker's onchange. Writes the new key to the JOB, not just to the estimate: job.svc
+// is what the dashboard, the invoice header, the approval email, the agreement routing and
+// isDecedentJob all read, so leaving it behind would produce an estimate priced as one
+// service under an agreement drawn for another. One value, corrected in place.
+function changeEstimateService() {
+  var sel = document.getElementById('e-svc');
+  if (!sel) return;
+  var next = sel.value, prev = _svcSelPrev;
+  var revert = function(){ sel.value = prev; };
+  if (!next || next === prev) { revert(); return; }
+
+  var jobId = parseInt(document.getElementById('e-job').value) || 0;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) {
+    revert();
+    showFB('e-fb', 'warn', 'Pick a client first — the service type is a fact about the job, not about this screen.');
+    return;
+  }
+
+  // Defense in depth. The picker only ever offers one family, so this cannot be reached
+  // through the UI — but a family jump is the one change that leaves required intake
+  // fields unasked, and it must not become possible by some later edit to the options.
+  if (!sameSvcFamily(prev, next)) {
+    revert();
+    showFB('e-fb', 'err', 'A living-client job and a decedent job ask different questions at intake — the representative, the date of death, the contact who is not the client. Change that on Client Intake, where those fields are.');
+    return;
+  }
+
+  // The hard lock. Everything softer than this — approved, sent to the client — already
+  // disables the picker through applyEstimateLock, and Edit Estimate is the way back.
+  if (job.agrSigned || job.depositReceived) {
+    revert();
+    showFB('e-fb', 'err', 'This job is under a signed agreement' + (job.depositReceived ? ' with the deposit recorded' : '')
+      + '. The service type is the basis of that contract — raise a Change Order from the Client Dashboard rather than re-typing the job behind it.');
+    return;
+  }
+
+  var lines = _svcChangeConsequences(prev, next, job);
+  var msg = 'Change this job from ' + (SVC_LABELS[prev] || prev) + ' to ' + (SVC_LABELS[next] || next) + '?\n\n'
+    + 'The estimate reprices immediately, and the client record, the agreement form and every document naming the service follow it.\n'
+    + 'Rooms, vendors, collections and vehicles are all kept.\n'
+    + (lines.length ? '\n' + lines.map(function(l){ return '\u2022 ' + l; }).join('\n\n') + '\n' : '');
+  if (!confirm(msg)) { revert(); return; }
+
+  job.svcChangedFrom = prev;
+  job.svcChangedAt   = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  var _by = document.getElementById('e-prepared-by');
+  job.svcChangedBy   = (_by && _by.value) || job.tc || '';
+  job.svc = next;
+  job.svcLabel = SVC_LABELS[next] || next;
+  saveJobs();
+  syncJobToSheets(job);
+
+  paintEstimateService(next, job);
+  renderJobRefStrip(job);
+  svcTypeChanged();          // calcAll — reprices, reshapes the tab, clears a stale fixed fee
+  showFB('e-fb', 'ok', 'Now a ' + (SVC_LABELS[next] || next) + ' job. Re-check the scope below before submitting for approval.');
+}
+
 // ─── COLLECTIONS HOURS (TC + PS) ──────────────────────────────────────────────
 // PS = physical execution: stage/organize, pack accepted items, transport if offsite drop.
 //      Joins the hands-on work pool and is split between crew and concierge like any
@@ -4571,6 +4712,56 @@ function isDecedentJob(job, svcKey) {
   return !!DECEDENT_SERVICES[svc];
 }
 
+// ─── SERVICE FAMILIES — what a job may be RECLASSIFIED to on the walkthrough ───
+// A job is entered at intake on the best information a phone call gives you, and the
+// walkthrough is where that gets tested. A Home Prep client who turns out to need the
+// closets edited is the case Anthony raised (2026-09-10): "we take the anticipated job
+// type at client intake, but at the estimate stage we make that editable."
+//
+// ⚠ THE CHANGE IS ALLOWED WITHIN A FAMILY AND NEVER ACROSS ONE, and that rule is what
+// makes this safe rather than merely convenient. The two families ask DIFFERENT INTAKE
+// QUESTIONS — toggleIntakeFields shows the authorized-representative block, the probate
+// case fields and the deceased name/phone handling on the decedent three and on nothing
+// else. So a move inside a family can never leave a required field unasked, and needs no
+// completeness gate. Crossing the line would: a living job reclassified to Estate
+// Settlement has no representative, no date of death and a phone number belonging to
+// someone who is dead. That is a different client, not a re-priced job, and it stays on
+// Client Intake / Edit Client where those fields live.
+//
+// Anthony's own example is the one this is sized for: "we could enter an estate
+// settlement and all of a sudden somebody could contest the will and it could become a
+// contested estate." All three decedent services share one intake block, so that move is
+// free — and gateDispute already exists for exactly the job that turns contested
+// mid-engagement.
+//
+// The order matches Client Intake so the same list reads the same way in both places.
+// `estate` is deliberately NOT here: it is a legacy alias for `cleanout` that SVC_LABELS
+// still resolves so an old job renders its name, but it must never be offered as a new
+// choice. svcFamily still PLACES it (decedent), so a legacy job gets the right picker and
+// switching off it quietly repairs the key.
+var SVC_ORDER = ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate', 'prep'];
+
+// Derived from DECEDENT_SERVICES rather than listed a second time. Two copies of one
+// taxonomy is how the fee table and the room grid drifted apart, and how PRICING_REF and
+// the agreement's svcMap each grew their own service names — this file records both.
+function svcFamily(svc) {
+  if (svc === 'estate') return 'decedent';        // legacy alias for cleanout
+  if (!svc || SVC_ORDER.indexOf(svc) < 0) return '';
+  return isDecedentJob(null, svc) ? 'decedent' : 'living';
+}
+// The services this job could legitimately be re-typed as, itself included. Empty for a
+// key the catalogue does not know, which is what keeps the picker from offering a move
+// off a service it cannot reason about.
+function svcFamilyOptions(svc) {
+  var fam = svcFamily(svc);
+  if (!fam) return [];
+  return SVC_ORDER.filter(function(k){ return svcFamily(k) === fam; });
+}
+function sameSvcFamily(a, b) {
+  var fa = svcFamily(a);
+  return !!fa && fa === svcFamily(b);
+}
+
 // ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
 // Contingency buffer added on top of the hourly estimate for fixed-price proposals.
 // Probate and contested probate keep a buffer figure because the panel still shows what
@@ -4728,9 +4919,12 @@ function applyEstimateServiceMode(isPrep) {
   var vTitle = document.getElementById('vendors-card-title');
   var vSub   = document.getElementById('vendors-card-sub');
   if (vTitle) vTitle.textContent = isPrep ? 'Home Prep for Sale — Managed Vendors' : 'Third-Party Vendors';
+  // ⚠ THE BUNDLED SUBTITLE HAS TO CARVE PREP OUT. "Havellin adds no fee" is true of five of
+  // the six cards and false of Property Preparation, which carries 30% on every engagement
+  // now (see prepFeeRate) — and this heading sits directly above that card.
   if (vSub) vSub.innerHTML = isPrep
-    ? 'Billed to the client directly at cost. Havellin’s fee is <strong>30% of vendor spend</strong> — no hours are billed on a standalone prep engagement.'
-    : 'Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly, and each line below books that time.';
+    ? 'Billed to the client directly at cost. Havellin’s fee is <strong>' + Math.round(prepFeeRate()*100) + '% of vendor spend</strong> — no hours are billed on a standalone prep engagement.'
+    : 'Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly, and each line below books that time. <strong>Property Preparation is the exception:</strong> those vendors carry the ' + Math.round(prepFeeRate()*100) + '% GC fee instead, and book no concierge hours.';
   // Rebuild the cards when the service crosses into or out of prep, because the card SET
   // changes (six groups vs Property Preparation alone). Guarded on an actual transition
   // rather than run unconditionally: applyEstimateServiceMode is called from every calcAll,
@@ -5048,8 +5242,15 @@ function calcAll() {
   // means; nothing else can now disagree with it.
   var prepEnabled = isPrep || prepItems.length > 0;
   var prepCost = prepEnabled ? getPrepCost() : 0;
-  var prepFee  = prepEnabled ? getPrepFee(svcKey) : 0;
-  var prepTCHrs = (prepEnabled && !isPrep) ? getPrepTCHrs() : 0;
+  var prepFee  = prepEnabled ? getPrepFee() : 0;
+  // ZERO ON EVERY ENGAGEMENT since 2026-09-10. The 30% GC fee covers prep coordination whether
+  // prep is the whole job or an add-on, so billing it by the hour as well is the double charge
+  // that took SMF_PCT to zero — and it would be invisible, because these hours land inside
+  // coordTC beside every other coordination figure. Kept as a named variable rather than
+  // deleted: it is stamped on the snapshot, and coordHrsRollup reads it back to tell an estimate
+  // saved BEFORE this change (which really did price these hours, and was quoted on them) from
+  // one saved after. See prepFeeRate.
+  var prepTCHrs = 0;
   // Third-party vendor coordination — the hours that make "no fee, coordination bills
   // hourly" true (see VENDOR_TC_HRS). Off-site only, so it joins coordTC rather than the
   // hands-on pool, exactly like prep coordination. Zero on standalone prep: that engagement
@@ -5934,7 +6135,10 @@ function renderVendorGroupCards() {
       // show nowhere at all now that the second entry point is gone.
       if (!isPrep && vendorGroupOfLine(v.type) !== card.group) return '';
       cardCost += (v.cost || 0);
-      cardHrs  += isPrep ? prepLineTCHrs(v.type) : vendorLineTCHrs(v.type);
+      // Prep lines contribute NO concierge hours — their coordination is inside the 30% fee
+      // (see prepFeeRate), so a "+8.0 hrs concierge" chip on the prep card would advertise
+      // time the estimate does not bill. The card's cost total is what matters there.
+      cardHrs  += isPrep ? 0 : vendorLineTCHrs(v.type);
       return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">' +
         '<span style="flex:1;min-width:0;font-size:11.5px;">' + esc(v.type) + '</span>' +
         // Money field, not a spinner. A vendor quote is never nudged one dollar at a
@@ -5962,8 +6166,12 @@ function renderVendorGroupCards() {
     var footer = '';
     if (cardCost > 0 || cardHrs > 0) {
       var bits = ['$' + Math.round(cardCost).toLocaleString() + ' at cost'];
-      if (isPrep && isPrepSvc) bits.push('30% GC fee $' + Math.round(cardCost * 0.30).toLocaleString());
-      else if (cardHrs > 0)    bits.push('+' + (Math.round(cardHrs * 10) / 10).toFixed(1) + ' hrs concierge');
+      // The fee chip is no longer gated on the SERVICE being prep. Prep vendors carry the
+      // 30% wherever they appear (see prepFeeRate), so gating it here left the Property
+      // Preparation card on a bundled job showing "$45,000 at cost" and nothing about the
+      // $13,500 it books — the one card whose rule differs from the heading above it.
+      if (isPrep)           bits.push(Math.round(prepFeeRate()*100) + '% GC fee $' + Math.round(cardCost * prepFeeRate()).toLocaleString());
+      else if (cardHrs > 0) bits.push('+' + (Math.round(cardHrs * 10) / 10).toFixed(1) + ' hrs concierge');
       footer = '<div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--border);' +
         'font-size:10px;color:var(--gray);">' + bits.join(' \u00b7 ') + '</div>';
     }
@@ -6179,14 +6387,6 @@ var prepItems = [];
 // drift. Every one of its values was a multiple of half an hour, so it converted to touch
 // counts exactly; prepLineTCHrs still exists and still returns the same numbers.
 
-// Prep coordination hours. No longer gated on a checkbox — inclusion IS having lines, so
-// the hours follow the lines. The old guard read e-prep-enabled directly, which is how a
-// prep vendor added from the Property Preparation card booked zero coordination time while
-// sitting on screen with a dollar figure in it.
-function getPrepTCHrs() {
-  return Math.round(prepItems.reduce(function(a,p){ return a + prepLineTCHrs(p.type); }, 0) * 10) / 10;
-}
-
 function removePrepItem(i) { prepItems.splice(i,1); renderPrepItems(); calcAll(); }
 
 // The Home Prep table this used to draw is gone; prep lines render in the Property
@@ -6217,14 +6417,27 @@ function updatePrepCost(i, val) {
 
 function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost; }, 0); }
 
-// Home Prep for Sale fee is engagement-scoped. Booked on its own ('prep' service) it is a
-// full GC project — a flat 30% on managed vendor spend, no billed labor at all, so the fee
-// is the entire revenue. Ridden on a downsizing/estate job it carries NO fee: the vendors
-// are billed to the client at cost like every other vendor, and the coordination is billed
-// by the hour as prepTCHrs on top of the host service's labor. A percentage as well would
-// be the same double charge that took SMF_PCT to zero. Any service other than 'prep' is a
-// bundled add-on.
-function prepFeeRate(svc) { return svc === 'prep' ? 0.30 : SMF_PCT; }
+// Home Prep for Sale carries a flat 30% GC / site-management fee on managed vendor spend, on
+// EVERY engagement it appears in — booked on its own as the `prep` service, or ridden on a
+// Home Editing / Transition / estate job as an add-on.
+//
+// ⚠ IT WAS ENGAGEMENT-SCOPED UNTIL 2026-09-10 AND THE BUNDLED ARM WAS THE WRONG HALF OF THE
+// TRADE. A bundled prep charged NO fee and billed the coordination by the hour instead
+// (prepTCHrs); standalone charged the fee and billed no hours. The two were already strictly
+// either/or — `(prepEnabled && !isPrep)` on one side, `svc === 'prep'` on the other — so there
+// was never a double charge to avoid, and the only real question was which arm pays. It is not
+// close. A realistic Palm Beach prep package (paint, deep clean, landscaper, handyman, pressure
+// wash, staging, carpet) is 16 touches → 8.0 concierge hours → $1,200 at $150/hr, against
+// $13,500 on a $45,000 vendor package. Anthony, 2026-09-10: "take out any transition concierge
+// hours relegated to home prep when it's part of another job and just simply charge the 30%
+// general contractor fee."
+//
+// ⚠ THE HOURS SIDE MOVES WITH IT AND MUST STAY AT ZERO — calcAll's prepTCHrs. Charging the 30%
+// AND the coordination hours is the double charge that took SMF_PCT to zero in the first place,
+// and it would be invisible: the hours land inside coordTC alongside every other coordination
+// figure. Do not restore one without the other.
+var PREP_FEE_RATE = 0.30;
+function prepFeeRate() { return PREP_FEE_RATE; }
 
 // Does this estimate bill any HOURS at all? A fee-only engagement does not, and every
 // client document that talks about hours has to branch on it.
@@ -6245,7 +6458,7 @@ function estimateIsFeeOnly(e, job) {
   return !!e && ((e.totTC || 0) + (e.totPS || 0)) === 0;
 }
 function currentSvc() { var el = document.getElementById('e-svc'); return el ? el.value : 'cleanout'; }
-function getPrepFee(svc)  { return Math.round(getPrepCost() * prepFeeRate(svc || currentSvc())); }
+function getPrepFee()     { return Math.round(getPrepCost() * prepFeeRate()); }
 
 // ─── INTAKE ───────────────────────────────────────────────────────────────────
 function isWeekend(dateStr) {
@@ -6578,11 +6791,7 @@ function loadJobIntoEstimate() {
   renderJobRefStrip(job);
 
   // Load service type and dates
-  var svcEl = document.getElementById('e-svc');
-  if (svcEl) svcEl.value = job.svc || '';
-  var svcLabelsDisp = SVC_LABELS;
-  var svcDisplay = document.getElementById('e-svc-display');
-  if (svcDisplay) svcDisplay.textContent = svcLabelsDisp[job.svc] || job.svc || '—';
+  paintEstimateService(job.svc || '', job);
   svcTypeChanged();
   // Contested probate carries its multi-heir / multi-attorney premium inside its own
   // JOB_STEPS coefficients, so we no longer auto-enable the generic "multiple
@@ -6756,10 +6965,7 @@ function clearEstimateTab() {
   document.getElementById('e-job').value = '';
   var refEl = document.getElementById('e-job-ref');
   if (refEl) { refEl.innerHTML = ''; refEl.style.display = 'none'; }
-  var svcDisplay = document.getElementById('e-svc-display');
-  if (svcDisplay) svcDisplay.textContent = '—';
-  var svcEl = document.getElementById('e-svc');
-  if (svcEl) svcEl.value = '';
+  paintEstimateService('', null);
   var propValEl = document.getElementById('e-propval');
   if (propValEl) propValEl.value = '';
   // THE INTAKE-DERIVED FIELDS, which nothing was clearing.
@@ -7757,7 +7963,11 @@ function renderClientEstimate() {
   var _subHdrStyle = 'padding:6px 10px;font-size:11px;font-weight:600;color:var(--bronze);text-transform:uppercase;letter-spacing:.05em;';
   var vendorSMF = e.smf || 0;
   var prepGcFee = e.prepFee || 0;
-  var hasMaterialsSection = e.pkgCost > 0 || vendorSMF > 0 || prepGcFee > 0;
+  // prepGcFee is deliberately NOT part of this test any more. The fee row used to print in
+  // the "Moving Materials & Vendor Coordination" band, which is the same misfiling this
+  // renderer already made once — a home-prep line sitting under a Moving Materials heading.
+  // It now prints inside the Home Prep for Sale section, under the vendors it is charged on.
+  var hasMaterialsSection = e.pkgCost > 0 || vendorSMF > 0;
 
   // Move-management destination hours are folded into totTC/totPS (and tcFee/psFee),
   // so show the on-site rows NET of destination — otherwise the destination labor is
@@ -7806,7 +8016,7 @@ function renderClientEstimate() {
         '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
         (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
         (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (' + Math.round(SMF_PCT*100) + '%)</td><td>—</td><td>' + Math.round(SMF_PCT*100) + '% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
-        (prepGcFee > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (30%)</td><td>—</td><td>30% of prep vendors</td><td class="r">' + fmt(prepGcFee) + '</td></tr>' : '')
+        ''
       : '') +
       // DELETED: "Includes N TC hrs for home prep vendor coordination — factored into
       // Transition Concierge total above." Three things wrong with it at once. It was a
@@ -7939,6 +8149,14 @@ function renderClientEstimate() {
         '<table class="ce-tbl">' +
         '<tbody>' + rows + '</tbody>' +
         '<tr class="subtotal"><td>Est. Prep Vendor Total (at cost)</td><td class="r">' + fmt(e.prepCost) + '</td></tr>' +
+        // Havellin's fee on this work, stated where the spend it is charged on is — not in
+        // the Moving Materials band two sections up. Reads prepFeeRate rather than a literal
+        // so the document can never promise a percentage the invoice does not bill; that is
+        // exactly how the agreements went on selling a 15% vendor fee for five weeks after
+        // SMF_PCT went to zero.
+        (prepGcFee > 0
+          ? '<tr class="subtotal"><td>Havellin GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '% of prep vendors)</td><td class="r">' + fmt(prepGcFee) + '</td></tr>'
+          : '') +
         // Same reasoning: the subtotal above already reads "(at cost)". The only
         // thing left worth saying is what a Service Management Fee COVERS, and only
         // while one is actually being charged (SMF_PCT is 0 today).
@@ -8896,8 +9114,7 @@ function editEstimateForJob(jobId) {
   neutralizeEstimateView();
   var _editJob = jobs.find(function(j){ return j.id === jobId; });
   if (_editJob) {
-    var _svcElE = document.getElementById('e-svc'); if (_svcElE) _svcElE.value = _editJob.svc || '';
-    var _svcDispE = document.getElementById('e-svc-display'); if (_svcDispE) _svcDispE.textContent = SVC_LABELS[_editJob.svc] || _editJob.svc || '—';
+    paintEstimateService(_editJob.svc || '', _editJob);
     svcTypeChanged();
   }
 
@@ -9015,14 +9232,15 @@ function restoreEstimateToUI(est) {
         psStandard: est.costRates.psStandard, psSenior: est.costRates.psSenior }
     : null;
 
-  // Set service type (read-only display)
-  var svcEl = document.getElementById('e-svc');
-  if (svcEl && est.svc) { svcEl.value = est.svc; }
-  var svcDisplayR = document.getElementById('e-svc-display');
-  if (svcDisplayR && est.svc) {
-    var svcLabelsR = SVC_LABELS;
-    svcDisplayR.textContent = svcLabelsR[est.svc] || est.svc;
-  }
+  // ⚠ THE JOB'S SERVICE TYPE WINS, NOT THE SNAPSHOT'S. est.svc records what this estimate
+  // was PRICED as and stays on the record for every client-document renderer that reads it
+  // back — but the live editing surface has to follow the job, or a job re-typed while this
+  // estimate sat in draft goes on quoting a service it no longer is. The picker's note says
+  // so in place when the two differ; a toast here would be wiped by applyOpenedEstimate's
+  // own "Estimate loaded" line one call later.
+  var _svcJobR = jobs.find(function(j){ return j.id === est.jobId; });
+  var _svcNowR = (_svcJobR && _svcJobR.svc) || est.svc || '';
+  paintEstimateService(_svcNowR, _svcJobR, est.svc || '');
   svcTypeChanged();
 
   // Set premium
@@ -16283,17 +16501,18 @@ function getVendorActuals(job, est) {
     });
   }
 
-  // Fees are engagement-scoped, matching the estimate: a standalone Home Prep job
-  // ('prep' service) bills a 30% GC fee on prep vendors; on a bundled downsizing/estate
-  // job the prep vendors fold in with all other coordinated vendors at the 15% SMF.
-  var standalonePrep = ((est.svc || job.svc) === 'prep');
-  var smfBase = tp.total + (standalonePrep ? 0 : pr.total);
+  // Prep vendors carry their own 30% on EVERY engagement (see prepFeeRate), so they are out of
+  // the SMF base unconditionally — folding them in as well would charge both fees on one
+  // invoice. Moot while SMF_PCT is 0, and exactly the kind of thing that is not moot the day it
+  // is switched back on. This used to hold its own engagement branch and its own hardcoded
+  // 0.30, which is two copies of one rule; both now read the one function.
+  var smfBase = tp.total;
   return {
     thirdParty: tp.lines, thirdPartyTotal: tp.total,
-    thirdPartyAnyEst: tp.anyEst || (!standalonePrep && pr.anyEst),
+    thirdPartyAnyEst: tp.anyEst,
     smf: Math.round(smfBase * SMF_PCT),
     prep: pr.lines, prepTotal: pr.total, prepAnyEst: pr.anyEst,
-    prepFee: standalonePrep ? Math.round(pr.total * 0.30) : 0
+    prepFee: Math.round(pr.total * prepFeeRate())
   };
 }
 
@@ -18412,7 +18631,10 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setPrepVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
           (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
-          _coordHrsField('setPrepVendorCoordHrs(' + jobId + ',' + i + ',this.value)', coordHrsFor(p.type, 'prep'), rec, _noCoord) +
+          // Always hidden, not just on a standalone prep job: since 2026-09-10 prep books no
+          // coordination hours on ANY engagement, so there is no quoted figure to check a
+          // recorded one against. "est 1.5" beside a line that priced zero invents one.
+          _coordHrsField('setPrepVendorCoordHrs(' + jobId + ',' + i + ',this.value)', prepLineTCHrs(p.type), rec, true) +
         '</div>' + _vendorRefLine(rec) +
       '</div>';
     }).join('');
@@ -21456,7 +21678,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
         : '<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours (hands-on)</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+_coordRow+'</tbody></table>')
       +'<div style="margin-top:20px;font-size:14px;">'
       +(_feeOnlyWs
-        ? '<strong>Vendor spend:</strong> '+fmt(est.prepCost)+' &nbsp;|&nbsp; <strong>Fee rate:</strong> '+Math.round(prepFeeRate(est.svc)*100)+'% &nbsp;|&nbsp; '
+        ? '<strong>Vendor spend:</strong> '+fmt(est.prepCost)+' &nbsp;|&nbsp; <strong>Fee rate:</strong> '+Math.round(prepFeeRate()*100)+'% &nbsp;|&nbsp; '
         : '<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; ')
       +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
       +'</div></body></html>';
@@ -22046,6 +22268,22 @@ function updateAgrPayTrack() {
 // because an agreement promising a §733.604 inventory over an estimate that priced none is
 // a contract for work nobody is being paid for. Pulled out of renderProbateAgreement so the
 // tests can read them without a DOM.
+// Does the estimate this agreement attaches as Exhibit A carry home-prep vendors? §3.5 reads
+// this rather than the service key, because a BUNDLED prep is a Home Editing / estate job that
+// nonetheless charges the 30% — keying on job.svc would print the plain no-fee clause over an
+// Exhibit A that charges one.
+function _agrHasPrepVendors(est) {
+  return !!(est && est.prepEnabled && (est.prepItems || []).some(function(p){ return (p.cost || 0) > 0; }));
+}
+// A contract states a percentage in words with the figure after it. Only the rates this app can
+// actually charge need a spelling; anything else falls back to the figure alone rather than
+// inventing prose for a number nobody set.
+var _PCT_WORDS = { 10:'ten', 15:'fifteen', 20:'twenty', 25:'twenty-five', 30:'thirty', 35:'thirty-five' };
+function _pctWords(rate) {
+  var n = Math.round((rate || 0) * 100);
+  return (_PCT_WORDS[n] ? _PCT_WORDS[n] + ' percent (' + n + '%)' : n + '%');
+}
+
 function _agrScopeServices(docScope) {
   if (docScope === 'none') {
     return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by the estate attorney\'s office; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney; Havellin works from the schedule they provide. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
@@ -22210,6 +22448,14 @@ function renderProbateAgreement() {
       ? ['Vendor Management Fee', Math.round(SMF_PCT*100)+'% of vendor invoice', 'Applied to estate sale, liquidation, and moving vendor invoices coordinated by Havellin.']
       : ['Third-Party Vendors', 'At cost — no fee', 'Vendors bill the estate directly at cost. Havellin adds no markup; the concierge time spent coordinating them is billed at the TC rate above.'])
   ];
+  // Home sale preparation is the one exception to the row above, and it only earns a row when
+  // the attached Exhibit A actually carries prep vendors — an estate matter usually does not.
+  // Without this the table would tell the Personal Representative and the court that Havellin
+  // adds no markup, over an estimate charging 30% on the painter. See prepFeeRate.
+  if (_agrHasPrepVendors(est)) {
+    feeRows.push(['Home Sale Preparation Fee', Math.round(prepFeeRate()*100)+'% of prep vendor cost',
+      'General contractor / site management fee on the home sale preparation vendors identified in Exhibit A. Those vendors bill at cost; this fee covers Havellin\'s coordination and site supervision of that work, which is not additionally billed at the TC rate above.']);
+  }
   feeRows.forEach(function(r){
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
   });
@@ -22588,13 +22834,21 @@ function renderAgreement() {
     // §3.5 follows SMF_PCT. The 15% Service Management Fee came off on 2026-08-02 — the
     // estimate, the invoice and the Terms all stopped charging it that day — and this clause
     // went on promising it in every agreement for five weeks. A contract clause that charges a
-    // fee the invoice never bills is worse than either alone. Standalone Home Prep keeps its
-    // 30% (that engagement bills no hours, so the fee is its whole revenue — see prepFeeRate).
+    // fee the invoice never bills is worse than either alone.
+    //
+    // THREE ARMS SINCE 2026-09-10, because Home Prep now carries its 30% on a BUNDLED job too
+    // (see prepFeeRate). The plain no-fee arm was true of a job with no prep vendors and false
+    // of one with them — it would have told a Home Editing client that Havellin adds no fee to
+    // vendor invoices while the estimate beside it charged 30% on the painter. Same defect as
+    // the 15% clause, one service over, so the clause reads the estimate rather than the
+    // service key: _agrHasPrepVendors.
     (SMF_PCT > 0
       ? p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) '+Math.round(SMF_PCT*100)+'% of vendor invoices for Estate Settlement, Home Editing and Home Transition engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')
       : isPrepAgr
-        ? p(b('3.5 Management Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2, equal to thirty percent (30%) of the total third-party vendor costs managed under this Agreement. No other fee or markup is applied to vendor invoices.')
-        : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is billed as Transition Concierge time under Section 3.3.'))+
+        ? p(b('3.5 Management Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2, equal to '+_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this Agreement. No other fee or markup is applied to vendor invoices.')
+        : _agrHasPrepVendors(est)
+          ? p(b('3.5 Vendor Coordination and Home Sale Preparation Fee.')+'  Contractor adds no fee or markup to third-party vendor invoices, and the Transition Concierge time spent sourcing, scheduling, and supervising those vendors is billed as Transition Concierge time under Section 3.3.  Home sale preparation vendors identified in the Estimate are the exception: those are billed to Client at cost, and Contractor charges a General Contractor / Site Management Fee of '+_pctWords(prepFeeRate())+' of those vendor costs.  That fee covers Contractor\'s coordination and site supervision of the preparation work, which is not additionally billed as Transition Concierge time.')
+          : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is billed as Transition Concierge time under Section 3.3.'))+
     p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     (isFixedAgr
@@ -23607,11 +23861,11 @@ function loadContractors() {
 function showEditClient(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var isProbate = (job.svc === 'probate' || job.svc === 'contested_probate');
+  var isProbate = ecIsProbateSvc(job.svc);
   // Same three services as DECEDENT_SERVICES, plus the legacy 'estate' key this modal has
   // always accepted. Kept as its own expression rather than a call to isDecedentJob so the
   // legacy key survives; if they ever need to diverge further, this is the one to change.
-  var isEstate = (job.svc === 'probate' || job.svc === 'contested_probate' || job.svc === 'cleanout' || job.svc === 'estate');
+  var isEstate = ecIsEstateSvc(job.svc);
   var svcLabels = SVC_LABELS;
 
   var m = document.getElementById('edit-client-modal');
@@ -23720,13 +23974,30 @@ function showEditClient(jobId) {
   m.style.display = 'flex';
 }
 
+// ⚠ BOTH ARMS WERE WRONG ON contested_probate, AND THE SAVE READS THOSE FIELDS.
+// showEditClient's initial render tests `probate || contested_probate` for the case block and
+// adds `cleanout || estate` for the rep block; this handler tested plain `probate` for the
+// first and omitted contested_probate from the second. So opening Edit Client on a contested
+// matter showed both correctly, and CHANGING the service type to Contested Probate hid the
+// case number, the §733.604 deadline, the attorney of record AND the authorized
+// representative — while saveClientEdit went on reading every one of them out of the hidden
+// div. Nothing was lost (a hidden input keeps its value), but there was no way to enter or
+// correct any of it, on exactly the transition Anthony named on 2026-09-10: "we could enter an
+// estate settlement and all of a sudden somebody could contest the will."
+// The two expressions read the shared predicates now, so the handler cannot drift from the
+// render or from what the save reads.
 function ecToggleProbate() {
   var svcVal = document.getElementById('ec-svc') ? document.getElementById('ec-svc').value : '';
   var pf = document.getElementById('ec-probate-fields');
-  if (pf) pf.style.display = svcVal === 'probate' ? 'block' : 'none';
+  if (pf) pf.style.display = ecIsProbateSvc(svcVal) ? 'block' : 'none';
   var af = document.getElementById('ec-estate-auth-fields');
-  if (af) af.style.display = (svcVal === 'probate' || svcVal === 'cleanout' || svcVal === 'estate') ? 'block' : 'none';
+  if (af) af.style.display = ecIsEstateSvc(svcVal) ? 'block' : 'none';
 }
+// The two service tests Edit Client runs, in one place each. `estate` is the legacy alias for
+// cleanout and is accepted here for the same reason showEditClient accepts it — an old job may
+// still carry the key even though nothing offers it any more.
+function ecIsProbateSvc(svc) { return svc === 'probate' || svc === 'contested_probate'; }
+function ecIsEstateSvc(svc)  { return ecIsProbateSvc(svc) || svc === 'cleanout' || svc === 'estate'; }
 
 function saveClientEdit(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -23782,7 +24053,7 @@ function saveClientEdit(jobId) {
   job.re    = document.getElementById('ec-re').value;
   if (!_locked) job.premium = document.getElementById('ec-premium').value === 'yes';
 
-  var isEstateEdit = (svc === 'probate' || svc === 'contested_probate' || svc === 'cleanout' || svc === 'estate');
+  var isEstateEdit = ecIsEstateSvc(svc);
   // Who builds the inventory — every estate service, not only probate. Seeds the next
   // fresh estimate; an estimate already priced keeps its own pin.
   if (isEstateEdit) {
@@ -23790,7 +24061,7 @@ function saveClientEdit(jobId) {
     if (_ecDs && typeof docScopeDef === 'function' && docScopeDef(_ecDs.value)) job.docScope = _ecDs.value;
   }
   // Probate-only fields (attorney + case info)
-  if (svc === 'probate' || svc === 'contested_probate') {
+  if (ecIsProbateSvc(svc)) {
     var attyFname = (document.getElementById('ec-atty-fname').value||'').trim();
     var attyLname = (document.getElementById('ec-atty-lname').value||'').trim();
     job.probateCase      = document.getElementById('ec-probate-case').value;
