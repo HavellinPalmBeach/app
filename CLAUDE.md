@@ -1,16 +1,45 @@
 # Havellin Palm Beach — App Notes
 
 ## Always on every commit
-- Update the version timestamp in `havellin.html` line ~247:
-  `2026.MM.DD · H:MMpm ET`
-  Use the current date and approximate ET time.
-  Format: `YYYY.MM.DD · H:MMpm ET`
+- **Run `tools/stamp-build.sh`. Do not edit the stamp any other way, and above all do not
+  write a regex against `hdr-ver`.** It reads the ET clock itself, anchors on the span's
+  full opening tag, and refuses to write if the `</style>` count or the file size moves.
+  Pass an explicit stamp as `$1` only if you have a reason to.
 - **READ THE CLOCK — do not increment the stamp you found in the file.** The container runs
-  UTC, so get ET with `TZ=America/New_York date '+%Y.%m.%d · %-I:%M%P ET'` and paste that.
-  On 2026-08-03 five commits shipped with invented times (7:05pm → 11:05pm) against a real
-  4:17pm, because the stamp already in the file was treated as a counter to bump. The point
-  of the stamp is telling which build is on the phone; a made-up time makes it useless and
-  a stamp in the future makes it actively misleading.
+  UTC, so get ET with `TZ=America/New_York date '+%Y.%m.%d · %-I:%M%P ET'`. On 2026-08-03
+  five commits shipped with invented times (7:05pm → 11:05pm) against a real 4:17pm, because
+  the stamp already in the file was treated as a counter to bump. The point of the stamp is
+  telling which build is on the phone; a made-up time makes it useless and a stamp in the
+  future makes it actively misleading.
+
+### ⚠⚠ THE STAMP REGEX DELETED 368 LINES OF CSS AND SHIPPED IT THREE TIMES (2026-09-10)
+`re.sub(r'(hdr-ver[^>]*>)[^<]+(<)', …, count=1)`. **`hdr-ver` occurs TWICE** — first as the
+CSS rule `.hdr-ver{…}` at line 381, then as the markup span at line 770. `count=1` took the
+CSS one; `[^>]*` ran on to the next `>` fourteen lines below (`.hdr>*`) and `[^<]+` then
+swallowed **everything up to the `<` of `</style>`**. Commits `8185a7e`, `de7ceb7` and
+`deae778` each ran it again on the already-broken file and each pushed to `main`.
+- **What was gone, measured in a headless browser on the shipped build, not guessed:**
+  **793px of horizontal overflow at 390px** (the phone header and nav render at viewport
+  width against a page half again as wide); **field mode did nothing** — 12 tabs visible
+  instead of 4; **`#print-target` rendered inline at `display:block` with ZERO `@media print`
+  rules parsed**, so printing a client estimate, invoice, agreement or signing packet would
+  have printed the whole app UI. 227 CSS rules against 265.
+- **⚠ THE STAMP NEVER MOVED, WHICH IS HOW IT RAN FOR TWO HOURS.** All three builds kept
+  reading `10:20am ET` — the regex wrote the new stamp *into the stylesheet*. Anthony sent a
+  screenshot of the header to ask why his phone looked stale; that screenshot is the only
+  reason it was found at all.
+- **⚠ AND ALL 1606 TESTS WERE GREEN THROUGH EVERY ONE OF THEM.** The harness lifts JavaScript
+  out of `havellin.html` by source text and drives it in a `vm`; **nothing in the suite had
+  ever read the CSS**. A single-file app whose stylesheet no test looks at is a stylesheet
+  that can be deleted silently. `tests/page-shell.test.js` is the tripwire now — the block's
+  line count, the first and last rule of what was eaten, field mode, both print blocks, both
+  phone breakpoints, and *no build stamp inside `<style>`*. **Revert-verified by re-running
+  the original regex: 12 of the 19 checks fail.**
+- **The lesson, and it is not "be careful with regexes":** the damage was invisible to the
+  thing I was checking. I verified the change I *meant* to make (1606 green, the JS behaviour
+  driven in Chromium) and never looked at what the edit *tool* had done to the file. **A
+  scripted edit to a 1.2 MB file needs a diff read, not just a passing suite** — `git diff
+  --stat` alone said `-374 +7` on a commit that was supposed to touch prose.
 
 ## Git identity — set this at the start of every session
 ```
