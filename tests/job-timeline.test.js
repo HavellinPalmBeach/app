@@ -427,6 +427,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // band, differing only by a word. A warning has to read as a warning — the standing
     // call on this file, made about the room-coverage badge.
     has(css, '.jt-next-blk{background:var(--err-bg);', 'a blocked NEXT band is painted as a warning');
+    // ⚠ Measured at 1400px: `.jt-sub{flex-basis:100%}` without flex-wrap is not a line
+    // break, it is a third item demanding the whole row — so every row carrying a sub
+    // squeezed its own label ("Client accepted" rendered as "Client / accepted"). The
+    // phone block's .card div{flex-wrap:wrap} only applies under 820px, which is why it
+    // looked right at 390px and wrong on the desk.
+    has(css, '.jt-row{display:flex;flex-wrap:wrap;', 'the row wraps, so a sub-line takes its own line');
+    has(css, '.jt-lbl{flex:1 1 auto;min-width:0;', 'and the label takes the slack rather than shrinking');
     has(src, "'<div class=\"jt-next' + (_jtBlocked ? ' jt-next-blk' : '') + '\">'",
       'and the renderer puts the modifier on it');
   }

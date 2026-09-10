@@ -254,8 +254,10 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-grp:first-of-type{margin-top:0;}
 /* The 2px left edge IS the rail. Colour carries the state, so a row needs no
    badge and stays one line. */
-.jt-row{display:flex;align-items:baseline;gap:8px;padding:5px 0 5px 11px;margin-left:4px;border-left:2px solid var(--border);}
-.jt-lbl{font-size:12.5px;color:var(--gray);}
+.jt-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:5px 0 5px 11px;margin-left:4px;border-left:2px solid var(--border);}
+/* Takes the slack so the meta sits hard right and the label never wraps while there
+   is room for it. */
+.jt-lbl{flex:1 1 auto;min-width:0;font-size:12.5px;color:var(--gray);}
 /* Pushed right on a desk; on a phone .card div{flex-wrap:wrap} drops it onto its
    own line, which is the layout that fits at 390px. Nothing to override. */
 .jt-meta{font-size:11px;color:var(--gray);margin-left:auto;text-align:right;}
@@ -849,7 +851,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 6:48pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 6:53pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>

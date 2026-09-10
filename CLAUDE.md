@@ -164,6 +164,22 @@ ships three standing bug fixes, and adds no buttons.
   lost job. Edge colours measured: done `rgb(122,154,64)`, current `rgb(166,124,69)`, blocked
   `rgb(121,31,31)`; the blocked band is `--err-bg` after it was measured painting the same tan as an
   ordinary one. **390px overflow is 0** and no page errors.
+- **⚠ A ROW CARRYING A SUB-LINE SQUEEZED ITS OWN LABEL, and only on the desk.**
+  `.jt-sub{flex-basis:100%}` without `flex-wrap` is not a line break — it is a third flex
+  item demanding the whole row, so the label and the meta shrank to fit beside it and
+  *Client accepted* rendered as *"Client / accepted"* at 1400px. **It looked correct at
+  390px**, because the phone block's `.card div{flex-wrap:wrap}` only applies under 820px.
+  Same trap as `.hf-tick`: a phone-scoped rule mistaken for a general one. The row wraps
+  explicitly now and `.jt-lbl` takes the slack. Measured at 1400 / 1100 / 900 / 390px: no
+  label wraps at any width.
+- **⚠ NOTED, NOT INTRODUCED, NOT FIXED: the drilldown overflows 83px at 1100px, 183px at
+  1000px and 283px at 900px.** Measured **identical before and after** against the
+  pre-change tree, so it belongs to a layout pass rather than this one — it is the band
+  between the desktop layout and the 820px phone breakpoint, the same shape as the
+  estimate tab's documented 63px at 1120px. **What DID move is the phone: the widest
+  element at 390px was the old strip's `tl-step` at 651px inside its sideways-scrolling
+  container, and is now the card itself at 379px.** The rail reflows where the strip
+  scrolled.
 - **The `.tl-strip` / `.tl-step` CSS is deliberately KEPT** although nothing reads it today. It is
   three lines, and removing a rule no test reads is how this stylesheet lost 368 lines once already.
 - No document pass needed: nothing user-facing changed wording, and the manual and playbook do not
