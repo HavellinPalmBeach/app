@@ -127,6 +127,28 @@ All fields marked * are required. Job ID is auto-generated (`HVL-YYMM-XXXX`). Go
 
 > **Intake seeds the scope; the estimate prices it.** The estimate's own dropdown remains the thing that decides the price, so the walkthrough can override this answer — if the attorney changed their mind, or the paralegal turns out to be out of their depth. When the two disagree the hint under the estimate's dropdown says so: *"Intake recorded Capture only; this estimate is priced at Full."* Changing the intake answer later (Edit Client also offers it, on every estate service) re-seeds nothing already priced — a saved estimate keeps its own pin, which is what keeps the invoice's variance check honest. Two controls that both claimed to decide it would be the two-copies-drift bug again.
 
+### What's in the house — two questions on every intake call
+
+New 2026-09-10, replacing the single free-text *Notes* box as the main thing intake asks about the property. Two questions, then a seven-row checklist — tick what is in the house and write down what you are told:
+
+| Row | What to write in the notes box |
+| --- | --- |
+| **Cash** — loose cash, envelopes, hidden spots | Approx amount, and where. |
+| **Valuables** — jewellery, gold/silver, watches, coins, art, collectibles | What, where, who gets it, appraisal wanted? |
+| **Firearms & ammunition** | How many, where, and who is authorized to take possession. |
+| **Safes & lockboxes** | Location, do you have the combination or key, are the contents known? |
+| **Documents & digital** — will/trust, deeds, insurance, statements, passports, plus crypto wallets, thumb drives, seed phrases, old laptops and phones | What you are looking for, and where it might be. |
+| **Sentimental must-finds** — photos, letters, specific heirlooms | Name them. |
+| **Access & security** — alarm and codes, cameras, smart locks, who else has keys (caregivers, cleaners, family), gated or HOA | Codes, contact, anything we need to disarm. |
+
+> **The answers do not stay on the intake form — they become the crew's standing job flags.** Everything ticked, plus both free-text answers, renders as a **Standing job flags** panel at the top of the **Job Plan** (§11) and on the client dashboard, and it goes out on paper with *Print Job Plan*. Phase 0 has carried a checkbox reading *"Standing job flags read aloud to the crew"* since long before anything in the app produced any flags to read; this is what it now reads from. Asking a widow on the phone where her husband kept the cash and then not telling the two people emptying the house is worse than never asking — the person who asked believes it was passed on.
+
+> **Firearms prints red and carries the standing rule with it**, above every other flag on the brief: *nothing moves without written authority; photograph it where it lies; tell the concierge the same day; let nobody carry one out, family included.* It is the only red row, and it should stay the only one — red means stop and do not touch, and a second red row costs the first one its meaning. This is the same rule the Inventory tab enforces on the item itself (§10a), reached a fortnight earlier.
+
+> **A row ticked with no note still reaches the crew, and says so:** *"Ticked at intake, no detail recorded — ask the client before Day 1."* Silence there would be indistinguishable from never having asked. A row left unticked prints nothing at all, and a job where none of this was recorded — anything created before 2026-09-10 — renders no panel rather than an empty one.
+
+> **Notes survives, demoted.** The two questions and seven prompts cover the property; they do not cover family dynamics, urgency, or who actually makes the decisions. That is what the general *Notes* box at the bottom of the card is still for, and it still shows on the dashboard and the client list. **Edit Client carries all of it** — both questions and the whole checklist, built from the same list, so the two forms cannot end up asking different questions about the same house. Correct it there the moment a client tells you something new.
+
 **Referral source:** Intake records how the job came in. Professional referral types (attorney, realtor, trust officer, etc.) link to a specific **Referral Partner** from that directory, so referrals are attributed on the partner leaderboard. Personal sources (family, friend, existing client) use a free-text "Referred by" name instead.
 
 > **The partner doesn't have to be in the directory yet — *+ New* beside the picker adds them without leaving intake.** Name, firm, phone, email; it writes to the Referral Partners sheet through the same `addPartner` path the directory tab uses, then selects them on the form. A referral arrives from someone new more often than not, and leaving intake to go and add them first is precisely how the attribution gets dropped. The rest of the prospecting detail (partner type, rating, contact history) is desk work on the Referral Partners tab afterwards — §14.
@@ -878,6 +900,8 @@ NFA-flagged items print on their own notice on the Appraisal Worklist, separate 
 **Tab: Job Plan** → select job. Generates once the estimate is approved. For labor-based services it runs the phase playbook (Phase 0 Pre-Job → Phase 4 Close-Out), vendor & partner sourcing, and daily hours logging. For **Home Prep for Sale** it is the streamlined vendor/budget/checklist view described in Section 6c.
 
 > **Room cards run in walkthrough order** — Entry & Living, then Kitchen & Utility, then Lifestyle Rooms, and so on: the same top-to-bottom as the Build Estimate grid and the client estimate, so a room can be found in one document by its position in the other. Both phase grids read the same order. Until 2026-08-03 they were sorted by complexity descending, which matched nothing else in the app and read as random. A room saved without a grid position keeps its stored place at the end rather than dropping out of the plan.
+
+> **Standing job flags sit at the top of the plan** (new 2026-09-10). Whatever intake recorded on the *What's in the house* questions (§4) renders here as a banded panel — firearms first and in red with its standing rule, then the must-find and safety answers, then the rest. It is part of the plan *header*, which is what **Print Job Plan** puts on the page, so the crew can carry it. It renders on the Home Prep plan too: an alarm code and a loaded gun safe do not care which service was sold. A job with nothing recorded shows no panel.
 
 The plan header shows the **documentation level** on estate/formal jobs. **Chain of custody is mandatory** when that level is Formal or the job is any probate — it is driven by the documentation level (§4), *not* the Premium-estate rate. Estate/probate jobs also carry the §733.604 documentation stream.
 

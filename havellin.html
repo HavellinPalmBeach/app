@@ -246,6 +246,34 @@ input:checked+.slider:before{transform:translateX(18px);}
    an empty bordered box under the §733.604 deadline field. Reported 2026-08-24. */
 .fb:empty{display:none;}
 .fb:hover{background:var(--tan);}.fb.active{background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);}
+/* ── What's in the house: the intake checklist, and the crew brief it feeds ──
+   The global `input,select,textarea{width:100%}` rule above paints a bare checkbox
+   full-width with its label stranded beside it, so the tick needs a size scoped here
+   the way .rtable already does. The phone block's input[type=checkbox]{width:auto}
+   only applies under 820px and is NOT a substitute. */
+.hf-list{display:flex;flex-direction:column;gap:7px;margin:2px 0 4px;}
+.hf-row{border:1px solid var(--border);border-radius:4px;padding:7px 10px;background:var(--cream);}
+.hf-row.on{border-color:var(--bronze-lt);background:var(--white);}
+.hf-row.on-err{border-color:#c04040;background:var(--err-bg);}
+.hf-tick{display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray-dk);line-height:1.45;}
+.hf-tick input[type=checkbox]{width:15px;height:15px;flex:0 0 auto;margin-top:1px;cursor:pointer;accent-color:var(--bronze);}
+.hf-name{font-weight:600;}
+.hf-detail{color:var(--gray);}
+.hf-note{margin-top:6px;}
+/* Seven of these expanded at the app's default textarea height (70px) makes the intake
+   card scroll for ever; two lines is what these prompts actually want. */
+.hf-note textarea{font-size:11.5px;background:var(--white);height:46px;}
+/* The standing-flags brief on the Job Plan header — on screen in the house, and on
+   paper via printJobPlan, which prints #job-plan-header along with the content. */
+.sf-brief{margin-top:8px;border:1px solid var(--border-md);border-radius:4px;overflow:hidden;}
+.sf-hd{background:var(--gray-dk);color:var(--cream);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;}
+.sf-row{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 11px;font-size:11.5px;line-height:1.5;border-top:1px solid var(--border);background:var(--white);}
+.sf-row.sf-warn{background:var(--warn-bg);color:var(--warn-tx);}
+.sf-row.sf-err{background:var(--err-bg);color:var(--err-tx);}
+.sf-lbl{flex:0 0 150px;font-weight:700;}
+.sf-txt{flex:1 1 220px;min-width:0;}
+.sf-rule{flex:1 1 100%;margin-left:160px;font-weight:700;}
+@media (max-width:820px){.sf-lbl{flex:1 1 100%;}.sf-rule{margin-left:0;}}
 .divider{height:1px;background:var(--border);margin:1rem 0;}
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--gray);font-size:12px;}
 /* The "nothing selected yet" panel, shared by Client Estimate, Inventory, Job Plan and
@@ -767,7 +795,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 1:04pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 4:06pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -985,8 +1013,22 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div class="divider"></div>
       </div>
-      <label>Notes</label>
-      <textarea id="i-notes" placeholder="Family situation, urgency, special collections, access issues, etc."></textarea>
+      <div class="divider"></div>
+      <div class="sec" style="margin-bottom:6px;">What&rsquo;s In The House <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(ask on every intake call)</span></div>
+      <div style="font-size:10.5px;color:var(--gray);margin-bottom:9px;line-height:1.5;">
+        Two questions, then tick what is in the house and write down what you are told. Everything
+        recorded here prints on the Job Plan as <strong>standing job flags</strong> &mdash; it is what
+        the crew is read before Day 1. A blank answer is a question nobody gets to ask twice.
+      </div>
+      <label>1. Is there anything in the house you need us to find?<span class="lbl-hint"> &mdash; something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of</span></label>
+      <textarea id="i-mustfind" rows="2" placeholder="What it is, and where they think it might be."></textarea>
+      <label style="margin-top:10px;">2. Is there anything we need to be aware of for safety, or that needs special handling?</label>
+      <textarea id="i-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, medical sharps, chemicals, a family member who will be difficult on site &mdash; anything the crew should know before they walk in."></textarea>
+      <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:13px 0 5px;">What&rsquo;s in the house &mdash; tick if yes, then say what you know</div>
+      <div id="i-houseflags"></div>
+      <div class="divider"></div>
+      <label>Notes <span class="lbl-hint">&mdash; anything the two questions above did not cover</span></label>
+      <textarea id="i-notes" placeholder="Family situation, urgency, who actually makes the decisions, etc."></textarea>
     </div>
     <div class="card">
       <div class="sec">Job Details</div>
@@ -6741,6 +6783,13 @@ function saveIntake() {
     refPartnerName: (document.getElementById('i-refpartner') && document.getElementById('i-refpartner').value && typeof lookupReferralById === 'function' && lookupReferralById(document.getElementById('i-refpartner').value)) ? lookupReferralById(document.getElementById('i-refpartner').value).partner_name : '',
     referredByName: document.getElementById('i-referredby') ? document.getElementById('i-referredby').value.trim() : '',
     notes:document.getElementById('i-notes').value,
+    // The two intake-call questions and the ticked checklist. These ride the job record
+    // as JSON (the Jobs sheet stores JSON.stringify(job) in its Data column, so a nested
+    // object survives the round trip and no backend change is needed) and are re-read by
+    // standingFlagLines on the Job Plan.
+    mustFind:    (document.getElementById('i-mustfind')||{}).value||'',
+    safetyNotes: (document.getElementById('i-safety')||{}).value||'',
+    houseFlags:  readHouseFlagInputs('i'),
     destAddr:destAddr, destCity:destCity, destZip:destZip,
     destSqft:destSqft, destBeds:destBeds, destBaths:destBaths,
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
@@ -6816,6 +6865,220 @@ function saveIntake() {
   }, 800);
 }
 
+// ─── WHAT'S IN THE HOUSE — the two questions asked on every intake call ───────
+// Anthony, 2026-09-10: "instead of a simple Notes field, I want two questions to ask on
+// every intake call" — is there anything you need us to FIND, and is there anything we
+// need to be aware of for SAFETY or that needs special handling — over a ticked list of
+// the seven things worth naming out loud rather than hoping the caller volunteers them.
+//
+// ⚠ ONE CATALOGUE, FOUR SURFACES. The intake form, Edit Client, the Job Plan's standing-
+// flags brief and the client dashboard all build from this array; add a row here and all
+// four follow. Never hand-write the list into a second place. This file records the fee
+// table and the room grid drifting apart, PRICING_REF and the agreement's svcMap each
+// growing their own service names, and the Edit Client modal keeping its own hardcoded
+// service list — all the same mistake. Here it would be worse than untidy: a checklist
+// that says "cash" on intake and nothing on the crew brief is worse than no checklist,
+// because the person who asked the question believes it was passed on.
+//
+// `ask` is the placeholder in the notes box, and it is where the value of a row lives.
+// "Firearms ✓" tells a crew standing in the driveway nothing; "two, hall closet safe,
+// only the PR may take possession" tells them what to do. The prompts are Anthony's own.
+//
+// ⚠ severity:'err' IS FIREARMS ONLY, AND KEEP IT THAT WAY. Red on the crew brief means
+// stop and do not touch — the same rule the Inventory tab already enforces, where
+// invReleaseBlocked holds a firearm until written authority exists. Painting a second
+// row red costs the first one its meaning, and this is the row where getting it wrong is
+// a felony rather than an apology.
+//
+// ⚠ LABELS AND PROMPTS ARE PLAIN TEXT, NOT PRE-ESCAPED HTML, AND EVERY RENDERER CALLS
+// esc(). The opposite contract is what put `&amp;amp;` on a client's screen when the
+// estimate email ran _cePhases' already-escaped titles through the escaper a second time.
+// One rule, checked by a test, beats two encodings each guessing what the other did.
+var HOUSE_FLAGS = [
+  { key:'cash', label:'Cash',
+    detail:'Loose cash, envelopes, hidden spots.',
+    ask:'Approx amount, and where.' },
+  { key:'valuables', label:'Valuables',
+    detail:'Jewelry, gold/silver, watches, coins, art, collectibles.',
+    ask:'What, where, who gets it, appraisal wanted?' },
+  { key:'firearms', label:'Firearms & ammunition', severity:'err',
+    detail:'Anything that fires, plus ammunition.',
+    ask:'How many, where, and who is authorized to take possession.',
+    crewRule:'Nothing moves without written authority. Photograph it where it lies, tell the concierge the same day, and let nobody carry one out — family included.' },
+  { key:'safes', label:'Safes & lockboxes',
+    detail:'Wall, floor, closet or freestanding.',
+    ask:'Location, do you have the combination or key, are the contents known?' },
+  { key:'documents', label:'Documents & digital',
+    detail:'Will/trust, deeds, insurance, financial statements, passports, plus crypto wallets, thumb drives, seed phrases, old laptops and phones.',
+    ask:'What you are looking for, and where it might be.' },
+  { key:'sentimental', label:'Sentimental must-finds',
+    detail:'Photos, letters, specific heirlooms.',
+    ask:'Name them.' },
+  { key:'access', label:'Access & security',
+    detail:'Alarm system and codes, cameras, smart locks, who else has keys (caregivers, cleaners, family), gated or HOA.',
+    ask:'Codes, contact, anything we need to disarm.' }
+];
+
+// Normalise whatever a record holds into { key:{on,note} } for every catalogue row.
+// A job created before 2026-09-10 carries no houseFlags at all and reads as nothing
+// ticked — which is the honest answer rather than a defaulted one: nobody was asked.
+function houseFlagsOf(job) {
+  var raw = (job && job.houseFlags) || {};
+  var out = {};
+  HOUSE_FLAGS.forEach(function(f) {
+    var v = raw[f.key];
+    out[f.key] = {
+      on:   !!(v && v.on),
+      note: (v && typeof v.note === 'string') ? v.note : ''
+    };
+  });
+  return out;
+}
+
+// The ticked rows, in catalogue order, each carrying the note typed against it.
+function activeHouseFlags(job) {
+  var st = houseFlagsOf(job);
+  return HOUSE_FLAGS.filter(function(f) { return st[f.key].on; })
+    .map(function(f) {
+      return { key:f.key, label:f.label, severity:f.severity || 'warn',
+               crewRule:f.crewRule || '', note:st[f.key].note };
+    });
+}
+
+// Everything the crew is owed before they walk in: the ticked flags and the two answers,
+// as { severity, label, note, rule } lines.
+//
+// DOM-FREE ON PURPOSE — the same reason _svcChangeConsequences and _agrScopeServices are —
+// so the tests read the real wording instead of grepping rendered HTML for a substring.
+// A stub that did not match source is what hid the &amp;amp; defect in the estimate email.
+//
+// FIREARMS SORTS TO THE TOP when it is ticked. The brief is read top-down by somebody
+// about to open a door. Everything else keeps intake order, which is the order it was
+// asked in, so the concierge reading it back recognises their own call.
+//
+// A row ticked with no note still prints, and says so. Silence there is indistinguishable
+// from "not asked", and this panel carries its own fix the way every other blocker panel
+// in the app does rather than leaving the reader to work out what to do about it.
+function standingFlagLines(job) {
+  var NO_DETAIL = 'Ticked at intake, no detail recorded — ask the client before Day 1.';
+  var flags = activeHouseFlags(job);
+  var line = function(f) {
+    return { severity:f.severity, label:f.label,
+             note:(f.note || '').trim() || NO_DETAIL, rule:f.crewRule || '' };
+  };
+  var lines = flags.filter(function(f) { return f.severity === 'err'; }).map(line);
+  var mustFind = String((job && job.mustFind) || '').trim();
+  var safety   = String((job && job.safetyNotes) || '').trim();
+  if (mustFind) lines.push({ severity:'warn', label:'Must find', note:mustFind, rule:'' });
+  if (safety)   lines.push({ severity:'warn', label:'Safety / handling', note:safety, rule:'' });
+  return lines.concat(flags.filter(function(f) { return f.severity !== 'err'; }).map(line));
+}
+
+function jobHasStandingFlags(job) { return standingFlagLines(job).length > 0; }
+
+// One-line list of what was ticked, for the client-list detail row — which answers
+// "which of my jobs have firearms in them" at a glance and nothing else.
+function houseFlagSummary(job) {
+  var on = activeHouseFlags(job);
+  return on.length ? on.map(function(f) { return f.label; }).join(' · ') : '';
+}
+
+// ─── The checklist control, shared by Client Intake ('i') and Edit Client ('ec') ──
+// Two forms asking different questions about the same house is the drift this catalogue
+// exists to prevent, so both build their rows from here rather than from markup.
+function houseFlagInputsHtml(prefix, job) {
+  var st = houseFlagsOf(job);
+  return '<div class="hf-list">' + HOUSE_FLAGS.map(function(f) {
+    var on = st[f.key].on;
+    return '<div class="' + _houseFlagRowClass(f, on) + '" id="' + prefix + '-hfr-' + f.key + '">' +
+      '<label class="hf-tick">' +
+        '<input type="checkbox" id="' + prefix + '-hf-' + f.key + '"' + (on ? ' checked' : '') +
+          ' onchange="onHouseFlagToggle(\'' + prefix + '\',\'' + f.key + '\')">' +
+        '<span><span class="hf-name">' + esc(f.label) + '</span>' +
+          (f.detail ? ' <span class="hf-detail">' + esc(f.detail) + '</span>' : '') +
+        '</span>' +
+      '</label>' +
+      '<div class="hf-note" id="' + prefix + '-hfw-' + f.key + '"' + (on ? '' : ' style="display:none;"') + '>' +
+        '<textarea id="' + prefix + '-hfn-' + f.key + '" rows="2" placeholder="' + esc(f.ask) + '">' +
+          esc(st[f.key].note) + '</textarea>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function _houseFlagRowClass(f, on) {
+  return on ? (f.severity === 'err' ? 'hf-row on-err' : 'hf-row on') : 'hf-row';
+}
+
+function onHouseFlagToggle(prefix, key) {
+  var box = document.getElementById(prefix + '-hf-' + key);
+  if (!box) return;
+  var on = !!box.checked;
+  var wrap = document.getElementById(prefix + '-hfw-' + key);
+  var row  = document.getElementById(prefix + '-hfr-' + key);
+  // The note is HIDDEN on untick, never wiped. An accidental untick must not destroy
+  // what somebody typed on a call they cannot repeat, and readHouseFlagInputs stores it
+  // against on:false, where activeHouseFlags filters it out anyway.
+  if (wrap) wrap.style.display = on ? '' : 'none';
+  if (row) {
+    var f = HOUSE_FLAGS.filter(function(x) { return x.key === key; })[0];
+    if (f) row.className = _houseFlagRowClass(f, on);
+  }
+  if (on) { var t = document.getElementById(prefix + '-hfn-' + key); if (t) t.focus(); }
+}
+
+function readHouseFlagInputs(prefix) {
+  var out = {};
+  HOUSE_FLAGS.forEach(function(f) {
+    var box = document.getElementById(prefix + '-hf-' + f.key);
+    var txt = document.getElementById(prefix + '-hfn-' + f.key);
+    out[f.key] = { on: !!(box && box.checked), note: (txt ? String(txt.value) : '').trim() };
+  });
+  return out;
+}
+
+// ⚠ resetIntakeFields sets .value = '' on every id in INTAKE_FIELDS, which does NOTHING
+// to a checkbox. Without this the next client created in the same session inherits the
+// last one's firearms tick — the exact leak the INTAKE_FIELDS comment above exists about,
+// and the one place a stale value would be actively dangerous rather than merely wrong.
+function clearHouseFlagInputs(prefix) {
+  HOUSE_FLAGS.forEach(function(f) {
+    var box = document.getElementById(prefix + '-hf-' + f.key);
+    var txt = document.getElementById(prefix + '-hfn-' + f.key);
+    if (box) box.checked = false;
+    if (txt) txt.value = '';
+    onHouseFlagToggle(prefix, f.key);
+  });
+}
+
+function buildHouseFlagInputs() {
+  var host = document.getElementById('i-houseflags');
+  if (host) host.innerHTML = houseFlagInputsHtml('i', null);
+}
+
+// The standing job flags, rendered for the Job Plan header — what the crew has open in
+// the house, and what printJobPlan puts on paper (it prints #job-plan-header along with
+// the content). Also shown on the client dashboard, where the job is prepped.
+//
+// ⚠ THIS IS THE POINT OF THE INTAKE QUESTIONS. Asking a widow on the phone where her
+// husband kept the cash and then not telling the two people emptying the house is worse
+// than never asking. Phase 0 has carried a checkbox reading "Standing job flags read
+// aloud to the crew" since long before anything in the app produced any flags to read.
+function standingFlagsBlock(job) {
+  var lines = standingFlagLines(job);
+  if (!lines.length) return '';
+  return '<div class="sf-brief">' +
+    '<div class="sf-hd">&#9888; Standing job flags &mdash; read to the crew before Day 1</div>' +
+    lines.map(function(l) {
+      return '<div class="sf-row sf-' + l.severity + '">' +
+        '<span class="sf-lbl">' + esc(l.label) + '</span>' +
+        '<span class="sf-txt">' + esc(l.note) + '</span>' +
+        (l.rule ? '<span class="sf-rule">' + esc(l.rule) + '</span>' : '') +
+      '</div>';
+    }).join('') +
+  '</div>';
+}
+
 // Every field on the Client Intake form, and the three that reset to something other
 // than blank. ONE list, shared by the post-save clear and the Clear button.
 //
@@ -6837,7 +7100,7 @@ var INTAKE_FIELDS = [
   'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
   'i-probate-atty-phone', 'i-probate-atty-email',
   'i-date-of-death', 'i-letters-date', 'i-probate-case', 'i-probate-deadline', 'i-probate-sale',
-  'i-notes', 'i-ptype', 'i-tc',
+  'i-mustfind', 'i-safety', 'i-notes', 'i-ptype', 'i-tc',
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
@@ -6851,6 +7114,10 @@ function resetIntakeFields() {
     var el = document.getElementById(id);
     if (el) el.value = INTAKE_FIELD_DEFAULTS[id] || '';
   });
+  // The checklist is checkboxes and per-row notes, and the .value = '' loop above does
+  // nothing to a checkbox — a tick left standing would put the last client's firearms on
+  // the next client's crew brief.
+  clearHouseFlagInputs('i');
   var pd = document.getElementById('i-probate-deadline'); if (pd) delete pd.dataset.userEdited;
   var dfb = document.getElementById('i-deadline-fb'); if (dfb) dfb.textContent = '';
   var fb = document.getElementById('i-fb'); if (fb) fb.innerHTML = '';
@@ -9113,6 +9380,7 @@ function renderJobs() {
       ['Hard target', j.completion ? new Date(j.completion+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
       ['RE potential', j.re||'—'], ['Premium estate', j.premium?'Yes':'No'],
       ['Notes', j.notes||'—'],
+      ['House flags', esc(houseFlagSummary(j)) || '—'],
     ];
     var detailHtml = '<tr id="detail-'+j.id+'" style="display:none;"><td colspan="9" style="padding:0;">' +
       '<div style="background:var(--cream);padding:12px 16px;border-top:1px solid var(--border);">' +
@@ -10427,6 +10695,9 @@ function renderClientDashboard(jobId) {
   h += '<span class="dfl" style="text-transform:uppercase;">Notes</span> ';
   h += '<span style="font-size:12px;color:var(--gray-dk);">'+(job.notes||'<span style="color:var(--gray);font-style:italic;">None</span>')+'</span>';
   h += '</div>';
+  // The intake answers, in the same brief the Job Plan prints — this is where the job is
+  // prepped, so it is where a missing answer is still cheap to go back and get.
+  h += standingFlagsBlock(job);
   h += '</div>';
 
   // PROBATE CARD (probate only)
@@ -20865,7 +21136,10 @@ function renderPrepJobPlan(jobId, job, est) {
     (job.driveFolder ? '<span><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Photos in Drive</a></span>' : '') +
     '</div>' +
     '<div style="margin-top:7px;font-size:11px;color:var(--gray-dk);"><span style="color:var(--bronze);font-weight:700;">Timeline:</span> Vendor-driven — scheduled around each trade’s availability. Confirm the working schedule with the homeowner once vendors are booked.</div>' +
-    '</div>';
+    '</div>' +
+    // A prep job runs vendors through the same house, so the same flags apply — an alarm
+    // code and a loaded gun safe do not care which service was sold.
+    standingFlagsBlock(job);
   var _jpHeader = document.getElementById('job-plan-header');
   if (_jpHeader) _jpHeader.innerHTML = hdr;
 
@@ -21137,7 +21411,10 @@ function renderJobPlan(jobId, job, est) {
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
     (custodyMandatory ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
-    '</div>';
+    '</div>' +
+    // What intake was told about this house. Phase 0's "Standing job flags read aloud to
+    // the crew" checkbox has existed far longer than anything that produced the flags.
+    standingFlagsBlock(job);
 
   // Client info renders at the top of the Job Plan tab (above Log Hours), not inline
   // with the phase content below.
@@ -24007,6 +24284,18 @@ function showEditClient(jobId) {
   html += fld('Notes', txt('notes', job.notes, 'Notes...'), false);
   html += '</div>';
 
+  // What's in the house. Built from HOUSE_FLAGS, exactly as Client Intake is, so the two
+  // forms cannot end up asking different questions about the same property — the defect
+  // this file already records when the Edit Client modal kept its own hardcoded service
+  // list and a rename missed it.
+  html += '<div class="sec" style="margin-top:14px;">What&rsquo;s In The House</div>';
+  html += '<div style="font-size:10.5px;color:var(--gray);margin-bottom:8px;line-height:1.5;">Asked on the intake call. Everything here prints on the Job Plan as standing job flags &mdash; correct it the moment the client tells you something new.</div>';
+  html += '<div class="df" style="margin-bottom:8px;"><div class="dfl">Anything we need to find?</div>' +
+    '<textarea id="ec-mustfind" rows="2" placeholder="What it is, and where they think it might be." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.mustFind||'')+'</textarea></div>';
+  html += '<div class="df" style="margin-bottom:8px;"><div class="dfl">Safety / special handling?</div>' +
+    '<textarea id="ec-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, sharps, chemicals, a difficult family member." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.safetyNotes||'')+'</textarea></div>';
+  html += houseFlagInputsHtml('ec', job);
+
   // Job Details
   html += '<div class="sec" style="margin-top:14px;">Job Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
@@ -24139,6 +24428,9 @@ function saveClientEdit(jobId) {
   job.city  = document.getElementById('ec-city').value;
   job.zip   = document.getElementById('ec-zip').value;
   job.notes = document.getElementById('ec-notes').value;
+  job.mustFind    = (document.getElementById('ec-mustfind')||{}).value||'';
+  job.safetyNotes = (document.getElementById('ec-safety')||{}).value||'';
+  job.houseFlags  = readHouseFlagInputs('ec');
   job.svc   = svc;
   job.svcLabel = svcLabels[svc] || svc;
   job.tc    = document.getElementById('ec-tc').value;
@@ -24558,6 +24850,7 @@ buildRoomTable();
 renderVendors();
 rebuildDropdowns();
 populateIntakeTCDropdown();
+buildHouseFlagInputs();
 // Force Client Intake date fields to use the calendar picker only — block manual
 // keyboard entry so you can't type a malformed or impossible date.
 (function(){

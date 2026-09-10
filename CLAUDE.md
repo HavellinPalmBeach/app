@@ -49,15 +49,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/trusting-edison-jh2sht`
-  (was `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/eloquent-ptolemy-cagox5`
+  (was `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/trusting-edison-jh2sht:main`
+  `git push origin claude/eloquent-ptolemy-cagox5:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -117,6 +117,84 @@ into a session scratchpad and died with the session that wrote it.
   the same reason. `manual.html` and `concierge-guide.html` stay the source; the markdown is
   generated and must be regenerated in the same commit as any edit, which is only reliable if the
   generator still exists.
+
+## Intake asks what is in the house, and the crew is told (BUILT 2026-09-10)
+*"instead of a simple 'Notes' field, i want Two questions to ask on every intake call"* — is
+there anything you need us to **find**, and anything we need to know for **safety** or that
+needs special handling — over a ticked list of seven things, *"Firearms & ammunition — flag
+red … This one prints on the crew brief automatically."* App-only, no redeploy: the Jobs sheet
+stores `JSON.stringify(job)` in its Data column, so a nested `houseFlags` object rides the
+existing sync untouched. **This is not `savePhotoRefs` — there is no column whitelist to add to.**
+
+- **⚠ THERE WAS NO CREW BRIEF. What there was, and had been for months, is a Phase 0 checkbox
+  reading *"Standing job flags read aloud to the crew"* with NOTHING ANYWHERE PRODUCING ANY
+  FLAGS.** That checkbox is the whole design brief for this build and it is what the panel is
+  named after. The Job Plan tab IS the crew's surface — it is what a phone has open in the
+  house — and `printJobPlan` prints `#job-plan-header` along with the content, so injecting the
+  panel into the HEADER (not the phase content) is what puts it on paper. Both headers get it:
+  `renderJobPlan` and `renderPrepJobPlan`. **A prep job runs vendors through the same house;
+  an alarm code and a loaded gun safe do not care which service was sold.**
+- **THE REQUIREMENT IS NOT "intake stores an answer", IT IS "the answer reaches the crew".**
+  Asking a widow on the phone where her husband kept the cash and then not telling the two
+  people emptying the house is **worse than never asking**, because the person who asked
+  believes it was passed on. Every test in the suite is pointed at that sentence.
+- **`HOUSE_FLAGS` IS ONE CATALOGUE READ BY FOUR SURFACES** — Client Intake, Edit Client, the
+  Job Plan brief and the dashboard. Intake's rows are *rendered from it* (`buildHouseFlagInputs`
+  at INIT into `#i-houseflags`), not typed into the markup, and Edit Client calls the same
+  `houseFlagInputsHtml('ec', job)`. **A test asserts each row's prompt and detail text appears
+  in the file exactly once**, so a hand-written second copy fails the suite.
+  - **⚠ The uniqueness check is on the row's PROSE, not its label, and that is not laziness.**
+    Two labels are ordinary English the app already uses — *Cash* is a payment method on the
+    deposit recorder and an inventory line, *Valuables* is the estate agreement's §4.3 heading.
+    A label count is a false positive on those two and proves nothing on the rest.
+- **⚠ `severity:'err'` IS FIREARMS ONLY. Do not paint a second row red.** Red on the brief means
+  stop and do not touch — the same rule `invReleaseBlocked` already enforces on the item itself.
+  A second red row costs the first one its meaning. Firearms also **sorts to the top** (the brief
+  is read top-down by somebody about to open a door) and carries a `crewRule` printed under its
+  note: *nothing moves without written authority, photograph it where it lies, tell the concierge
+  the same day, let nobody carry one out — family included.*
+- **⚠ THE RESET LEAK, AND IT IS THE ONE PLACE A STALE VALUE IS DANGEROUS RATHER THAN MERELY
+  WRONG.** `resetIntakeFields` walks `INTAKE_FIELDS` setting `.value = ''`, which does **nothing
+  to a checkbox**. Without `clearHouseFlagInputs('i')` the next client created in the same
+  session inherits the last one's firearms tick — the exact shape of the leak the `INTAKE_FIELDS`
+  comment above it already exists to describe, on the exact field where it would matter most.
+  Verified in a browser: after a save, every box is unticked, every note blank, every row
+  collapsed and repainted.
+- **A ROW TICKED WITH NO NOTE STILL PRINTS, AND SAYS SO** — *"Ticked at intake, no detail
+  recorded — ask the client before Day 1."* Silence there is indistinguishable from never having
+  asked, and the panel carries its own fix the way every other blocker panel in the app does.
+  **A job with nothing recorded renders NO panel**, not an empty one; every job created before
+  today is that job.
+- **`standingFlagLines(job)` IS DOM-FREE ON PURPOSE**, the same reason `_svcChangeConsequences`
+  and `_agrScopeServices` are — the tests read the real wording rather than grepping rendered
+  HTML. **Labels are PLAIN TEXT and every renderer calls `esc()`**; storing `&amp;` and escaping
+  again is what printed `&amp;amp;` on a client's screen in the estimate email. A test asserts
+  the contract at source, and the suite lifts the REAL `esc` rather than the harness stub, which
+  does not escape apostrophes.
+- **Notes survives, demoted — Anthony's call when asked.** Three surfaces read `job.notes`
+  (client list, dashboard, Edit Client); dropping it from intake would leave all three reading
+  *None* forever on every new job, and the two questions cover the house but not family
+  dynamics, urgency or who actually decides.
+- **1865 committed checks** (`tests/intake-house-flags.test.js`, 186 new). **All 17 changes
+  revert-verified individually** — every one turns the suite red on its own, including the
+  reset leak, both Job Plan headers, the escaping, and the CSS checkbox width.
+- **Verified end to end in headless Chromium on the real page**, not asserted on source: seven
+  rows render from the catalogue, the checkbox is 15×15 rather than full-width, ticking reveals
+  the note and repaints the row `rgb(252,232,232)`, a full Estate Settlement intake saves with
+  `mustFind`/`safetyNotes`/`houseFlags` intact, the form is blank for the next client, the real
+  `renderJobPlan` writes the panel into `#job-plan-header`, **`printJobPlan` carries it onto the
+  page with the firearms rule and the must-find answer**, the prep plan carries it, a flagless
+  job renders nothing, Edit Client round-trips a newly-ticked row, and 390px has zero overflow.
+  No page errors.
+- **⚠ The global `input,select,textarea{width:100%}` rule paints a bare checkbox full-width**
+  with its label stranded beside it. `.hf-tick input[type=checkbox]` scopes a size the way
+  `.rtable` already does — **the phone block's `input[type=checkbox]{width:auto}` only applies
+  under 820px and is not a substitute.**
+- Manual **§4** (a new subsection with the row table and four notes) and **§11** (the panel on
+  the plan header); playbook **Step 1** (the questions verbatim, the table, a `.stop`) and
+  **Step 10** (a `.stop` on reading it to the crew) plus **four** symptom→cause rows. Both `.md`
+  copies hand-edited and **22 claims parity-checked** across the four files; tag balance verified
+  on both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1).
 
 ## A room marked OUT OF SCOPE is accounted for, not missing (FIXED 2026-09-10)
 *"since this is primarily a home prep, we are not cleaning out every room. so we are specifically
@@ -2761,7 +2839,14 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-10 (twentieth pass)** — both documents, against the
+- Last reconciled against the app: **2026-09-10 (twenty-first pass)** — both documents, against the
+  intake "what's in the house" questions. Manual **§4** gained a new subsection (the seven-row table,
+  where the answers surface, the firearms-is-the-only-red rule, the ticked-with-no-note wording, and
+  that Notes survives demoted) and **§11** a note on the standing-flags panel; playbook **Step 1**
+  gained the two questions in Anthony's own words, the tick→write table and a `.stop`, **Step 10** a
+  `.stop` on reading the flags to the crew before anyone starts, and **four** symptom→cause rows.
+  Both `.md` copies hand-edited and 22 claims parity-checked; tag balance verified on both HTML files.
+- Prior pass **2026-09-10 (twentieth pass)** — both documents, against the
   editable service type and the bundled-prep fee flip. This pass **corrects eight standing claims**
   rather than only adding: every "30% GC fee applies only to a standalone Home Prep engagement"
   statement in either document is now false, and they sat in §5d, §5e, §8 (twice), §11, §13a and

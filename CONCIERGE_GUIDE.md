@@ -47,6 +47,33 @@ Fill in everything marked *. The Job ID (`HVL-YYMM-XXXX`) and the client's Drive
 >
 > **What you CAN fix later, from 2026-09-10:** a living job re-typed as another living job, and an estate job re-typed as another estate job — on Build Estimate, right on the walkthrough. What you still cannot do anywhere but this form is cross between the two, which is exactly the mistake above.
 
+### What's in the house — ask these on every call
+
+New 2026-09-10. This replaced the old single *Notes* box as the main thing intake asks about the property. Two questions, in these words, then the checklist:
+
+1. **"Is there anything in the house you need us to find? Something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of?"**
+2. **"Is there anything in the house we need to be aware of for safety, or that needs special handling?"**
+
+Then tick what is in the house and **write down what you are told** — the tick on its own is worth almost nothing:
+
+| Tick | Then write |
+| --- | --- |
+| **Cash** — loose cash, envelopes, hidden spots | Roughly how much, and where. |
+| **Valuables** — jewellery, gold/silver, watches, coins, art, collectibles | What, where, who gets it, and whether they want it appraised. |
+| **Firearms & ammunition** | How many, where, and *who is authorised to take possession*. |
+| **Safes & lockboxes** | Where it is, whether they have the combination or key, whether they know what is inside. |
+| **Documents & digital** | Will or trust, deeds, insurance, statements, passports — and the digital ones people forget: crypto wallets, thumb drives, seed phrases, old laptops and phones. What they are looking for, and where it might be. |
+| **Sentimental must-finds** — photos, letters, specific heirlooms | Name them. "Sentimental things" is not findable; "the blue photo album from the Navy years" is. |
+| **Access & security** | Alarm and codes, cameras, smart locks, who else has keys — caregivers, cleaners, family — and any gate or HOA. Anything we need to disarm. |
+
+> **⚠** **Everything you write here is read out to the crew before Day 1. That is the whole point of asking.** It comes back as a **Standing job flags** panel at the top of the Job Plan and prints with it, so the two people emptying the house know about the cash in the freezer and the ring in the blue box. If you tick a row and leave the note blank, the crew sees *"Ticked at intake, no detail recorded — ask the client before Day 1"* — which is honest, but it means somebody has to make the call you should have made.
+>
+> **Firearms is the red one, and it prints first.** It carries the standing rule with it wherever it appears: *nothing moves without written authority, photograph it where it lies, tell the concierge the same day, and let nobody carry one out — family included.* Get the name of who is authorised to take possession while you have them on the phone; that is the answer that stops the job later if you do not have it.
+>
+> None of this is a gate. Nothing here blocks a save, and you can correct any of it later on **Edit Client**, which asks the same questions. Do that the moment a client tells you something new — the crew reads the current version, not the one from the call.
+
+> **The plain *Notes* box is still there, at the bottom.** The questions above cover the house; Notes is for everything else — family dynamics, urgency, who actually makes the decisions, which sibling will be difficult on site.
+
 > **Home Prep for Sale runs a shorter version of this whole playbook** — no room scoring, no crew, no hours. Skip to the Home Prep section near the end once intake is saved.
 
 ## Step 2 · Build the estimate — Build Estimate tab
@@ -343,6 +370,10 @@ Photos can be captured from the moment the job is **Won** — you do not have to
 > 
 > The room cards themselves are in **walkthrough order**, matching the estimate, so you can work down the plan the way you walked the house.
 
+> **⚠** **Read the Standing job flags to the crew before anyone starts, and hand them the printed plan.** The panel at the top of the Job Plan is what intake was told about this house — firearms and cash and safes, the thing the family cannot lose, the dog and the rotten step. Phase 0 has a checkbox for exactly this. *Print Job Plan* carries the panel onto the paper.
+>
+> If a row reads *"Ticked at intake, no detail recorded"*, that is a question nobody finished asking — ring the client before Day 1 rather than finding out with a crew standing in the driveway. If something turns up that intake never mentioned, put it on the record through **Edit Client** so the next person reading the plan has it too.
+
 ### b. Log hours — Job Plan tab, every single day
 
 One entry per working day: the **date**, an **activity summary**, and **hours against each named crew member**. The roles come from the roster you confirmed — concierge rows log as TC, specialist rows as PS.
@@ -560,6 +591,10 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| Somebody found cash, a gun or a safe that intake never mentioned | Nothing moves. Put it on the record through **Edit Client** — tick the row, write what you found and where — and it appears on the Job Plan brief for everyone else. A firearm additionally waits for **written authority** naming who may take possession; the app will not release one without it, and neither should you. |
+| A flag on the crew brief reads *"Ticked at intake, no detail recorded"* | Somebody ticked the box on the intake call and never wrote the answer down. Ring the client and get it **before Day 1**, then fix it on Edit Client. The app prints the row rather than hiding it precisely so this is visible while it is still cheap. |
+| The Job Plan shows no Standing job flags panel at all | Either nothing was ticked and neither question was answered, or the job predates 2026-09-10, when the questions were added. Nothing is broken — an empty panel would just be noise. Fill it in on **Edit Client** and it appears. |
+| You are looking for the old free-text *Notes* box on intake | Still there, at the bottom of the first card, under the two questions and the checklist. It is for what the questions do not cover — family dynamics, urgency, who really decides. What used to go in it about the *house* now has proper rows of its own. |
 | A client asks whether you mark up the vendors | Straight answer, and it is on every document: **no — the vendor bills them at the vendor's own price and we add nothing to that invoice.** On home prep vendors we charge a separate, clearly-shown **30% general contracting and site management fee** for sourcing, scheduling, on-site oversight and quality control. Both things are true at once; do not say only the first half. |
 | The job is not the service type intake said it was | Change it in the **service type** dropdown on Build Estimate (from 2026-09-10). Everything you have scored is kept and the price re-runs. It offers living services on a living job and estate services on an estate job, and never both. |
 | The service dropdown does not offer the type you want | You are trying to cross the living/deceased line — a living client cannot become an Estate Settlement here, because nobody has been asked for a representative or a date of death. Do it on **Edit Client**, and fill those fields in while you are there. |
