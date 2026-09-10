@@ -392,7 +392,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
      under all of that — at 320px the row now fits, but a narrower viewport or an
      inflated accessibility font degrades into a second line rather than a spill.
      margin-left:auto keeps the cluster right-aligned once it does wrap. */
-  .hdr>2026.09.10 · 10:40am ET</style>
+  .hdr>2026.09.10 · 10:58am ET</style>
 </head>
 <body>
 
@@ -1703,8 +1703,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
     <div style="font-size:11px;color:var(--gray);margin-top:6px;margin-bottom:8px;">
       Raising a cost rate lowers margin and raises the walk-away floor on every <em>fresh</em> estimate. A saved
       estimate keeps the crew cost it was priced with, so changing these never restates a quote you have already
-      given. <strong>Estimates saved before 2026-09-02</strong> predate that stamp and are still costed at
-      whatever these say today.
+      given.
     </div>
 
     <div class="sec" style="margin-top:14px;">Walkthrough Notes</div>
@@ -2759,12 +2758,6 @@ var PRICING_REF = {
     {l:'Trophy estate (6,000–10,000 sqft)',min:43000,max:95000,days:'18–40 days'},
     {l:'Ultra estate (10,000+ sqft / $30M+)',min:80000,max:220000,days:'30–70 days'}
   ]},
-  estate:{label:'Probate',sizes:[
-    {l:'Condo / apartment (<2,000 sqft)',min:7000,max:13000,days:'4–7 days'},
-    {l:'Home (2,000–4,000 sqft)',min:12000,max:22000,days:'6–11 days'},
-    {l:'Estate (4,000–6,000 sqft)',min:18000,max:35000,days:'9–17 days'},
-    {l:'Trophy estate (6,000+ sqft)',min:30000,max:65000,days:'14–28 days'}
-  ]},
   prep:{label:'Home Sale Preparation',sizes:[
     {l:'Condo / apartment (<2,000 sqft)',min:4000,max:8000,days:'3–6 days'},
     {l:'Home (2,000–4,000 sqft)',min:7000,max:14000,days:'5–9 days'},
@@ -2792,7 +2785,6 @@ var SVC_LABELS = {
   cleanout:          'Estate Settlement',
   probate:           'Probate Estate Settlement',
   contested_probate: 'Contested Probate Estate Settlement',
-  estate:            'Estate Settlement',
   prep:              'Home Prep for Sale'
 };
 // A job stores `svcLabel` at intake, so a job saved before a rename carries the OLD name
@@ -4378,7 +4370,6 @@ var SVC_ORDER = ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', '
 // taxonomy is how the fee table and the room grid drifted apart, and how PRICING_REF and
 // the agreement's svcMap each grew their own service names — this file records both.
 function svcFamily(svc) {
-  if (svc === 'estate') return 'decedent';        // legacy alias for cleanout
   if (!svc || SVC_ORDER.indexOf(svc) < 0) return '';
   return isDecedentJob(null, svc) ? 'decedent' : 'living';
 }
@@ -4963,7 +4954,6 @@ function calcAll() {
   });
 
   var svcType = document.getElementById('e-svc').value;
-  var coordDays = 0, vendorTotal = 0, gcFee = 0, stagerCost = 0, stagerGcFee = 0;
 
   // Round billable hours UP to the next whole hour. The estimator computes to
   // the tenth, but that implies a precision the walkthrough can't deliver and
@@ -5113,7 +5103,7 @@ function calcAll() {
   // planner a pass behind, which read as two day counts moving in opposite directions.
   renderTimelinePlanner();
 
-  var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
+  var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;
 
   // Apply preferred client discount to Havellin labor fees
   var discountPct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('e-discount') ? document.getElementById('e-discount').value : 0) || 0));
@@ -5129,7 +5119,7 @@ function calcAll() {
   if (isPrep) isRush = false;
   var rushAmt = isRush ? Math.round((havellinTotal - discountAmt) * RUSH_PCT) : 0;
   var havellinTotalDiscounted = havellinTotal - discountAmt + rushAmt;
-  var grandTotal = havellinTotalDiscounted + vendorCost + vendorTotal + stagerCost + (prepEnabled ? prepCost : 0);
+  var grandTotal = havellinTotalDiscounted + vendorCost + (prepEnabled ? prepCost : 0);
 
   // Update discount badge
   var discBadge = document.getElementById('discount-badge');
@@ -5564,7 +5554,7 @@ function calcAll() {
     discountPct:discountPct,
     rush:isRush, rushPct:RUSH_PCT, rushAmt:rushAmt,
     grandTotal: isFixed
-      ? Math.round(fixedAmount + vendorCost + vendorTotal + stagerCost + (prepEnabled ? prepCost : 0))
+      ? Math.round(fixedAmount + vendorCost + (prepEnabled ? prepCost : 0))
       : Math.round(grandTotal),
     vendors:JSON.parse(JSON.stringify(vendors)),
     collections:JSON.parse(JSON.stringify(collectionsData)),
@@ -5595,8 +5585,6 @@ function calcAll() {
     // by the client-estimate renderer — the whole point is that it is not client-facing.
     privateNote: _privateWalkNote || '',
     psBlendedCost: Math.round(getBlendedPSCost()*100)/100,
-    coordDays: coordDays, vendorTotal: vendorTotal,
-    gcFee: gcFee, stagerCost: stagerCost, stagerGcFee: stagerGcFee,
     prepEnabled: prepEnabled, prepItems: JSON.parse(JSON.stringify(prepItems)),
     prepCost: prepCost, prepFee: prepFee, prepTCHrs: prepTCHrs,
     // Recorded for the same reason prepTCHrs is: the hours are already inside totTC, but
@@ -6880,7 +6868,6 @@ function resetEstimate() {
   var coordEl = document.getElementById('e-coord-days'); if(coordEl) coordEl.value=0;
   var vendorEl = document.getElementById('e-vendor-total'); if(vendorEl) vendorEl.value=0;
   var stagerEl = document.getElementById('e-stager'); if(stagerEl) stagerEl.value='none';
-  var stagerCostEl = document.getElementById('e-stager-cost'); if(stagerCostEl) stagerCostEl.value=0;
   var stagerWrap = document.getElementById('stager-cost-wrap'); if(stagerWrap) stagerWrap.style.display='none';
   var prepFields = document.getElementById('prep-fields'); if(prepFields) prepFields.style.display='none';
   var prepNote = document.getElementById('prep-note'); if(prepNote) prepNote.style.display='none';
@@ -7643,7 +7630,6 @@ function renderClientEstimate() {
     downsizing: 'Onsite Home Editing Services',
     downsizing_move: 'Onsite Home Transition Services',
     home_cleanout: 'Onsite Home Cleanout Services',
-    estate: 'Onsite Estate Settlement Services',
     cleanout: 'Onsite Estate Settlement Services',
     probate: 'Onsite Probate Estate Settlement Services',
     contested_probate: 'Onsite Contested Probate Estate Services'
@@ -8642,7 +8628,7 @@ function renderJobs() {
       case 'lost': return j.status==='lost';
       case 'downsizing': return j.status!=='lost' && (j.svc==='downsizing'||j.svc==='downsizing_move');
       case 'home_cleanout': return j.status!=='lost' && j.svc==='home_cleanout';
-      case 'cleanout': return j.status!=='lost' && (j.svc==='cleanout'||j.svc==='estate');
+      case 'cleanout': return j.status!=='lost' && j.svc==='cleanout';
       case 'probate': return j.status!=='lost' && j.svc==='probate';
       case 'contested_probate': return j.status!=='lost' && j.svc==='contested_probate';
       case 'prep': return j.status!=='lost' && j.svc==='prep';
@@ -8914,16 +8900,16 @@ function restoreEstimateToUI(est) {
   // Pin the concierge production rate to whatever this estimate was priced under, so
   // the calcAll() at the end of this function reproduces the saved figures instead of
   // repricing them against this device's Settings value. See _estimateAlphaPin.
-  // Estimates saved before α was stamped (no tcAlpha) fall back to the default it was
-  // introduced with, NOT the current setting — same reasoning: don't move an old quote.
+  // A record with no tcAlpha falls back to the default α was introduced with, NOT the current
+  // setting. Unreachable now that every estimate stamps it (the pre-stamp records were cleared
+  // prelaunch, 2026-09-10); kept as the null-guard, so a malformed record still renders.
   _estimateAlphaPin = (typeof est.tcAlpha === 'number' && isFinite(est.tcAlpha) && est.tcAlpha >= 0)
     ? est.tcAlpha
     : (est.hoursModel === 'v4-working-supervisor' ? TC_ONSITE_ALPHA_DEFAULT : null);
 
-  // Same treatment for what the crew COST. An estimate saved before 2026-09-02 carries no
-  // costRates, and there is nothing honest to invent for it — those fall back to the live
-  // Settings values, which is the old behaviour, and the margin panel says so rather than
-  // implying the figure is historical.
+  // Same treatment for what the crew COST. A record with no costRates falls back to the live
+  // Settings values — the same null-guard, equally unreachable now, and Settings no longer
+  // advertises the exception because there is nothing left that can hit it.
   _estimateCostPin = (est.costRates && typeof est.costRates === 'object'
     && isFinite(est.costRates.founderTC) && est.costRates.founderTC > 0)
     ? { founderTC: est.costRates.founderTC, contractorTC: est.costRates.contractorTC,
@@ -10916,7 +10902,6 @@ function refreshEstimateFromCloud(jobId, onReady) {
       window._estCloudBehind = null;
       if (data.estimates[jobId]) {
         var rec = data.estimates[jobId];
-        normalizeLegacyRoomKeys(rec);
         // Cloud wins — but NOT over a local record that is demonstrably newer. It used to
         // win unconditionally, and that turned any failed write into silent data loss:
         // the save throws in Apps Script (see the 50,000-character cell cap in
@@ -10985,31 +10970,11 @@ function saveEstimateState() {
   postSyncBadge({ type: 'saveAllEstimates', payload: estimateStore }, 'Estimate synced to cloud ✓', 'Cloud sync failed — saved locally only');
 }
 
-// Legacy normalizer: estimates saved before the csH→psH rename store PS hours
-// under the key csH. Copy to psH and remove csH so all readers use psH uniformly.
-function normalizeLegacyRoomKeys(rec) {
-  if (!rec || !rec.estimate || !Array.isArray(rec.estimate.rooms)) return;
-  rec.estimate.rooms.forEach(function(r) {
-    if ('csH' in r && !('psH' in r)) { r.psH = r.csH; delete r.csH; }
-  });
-}
-
 function loadEstimateState() {
   try {
     var s = localStorage.getItem('havellin_est_v4');
     if (s) {
       estimateStore = migrateRetiredNames(JSON.parse(s));
-      Object.keys(estimateStore).forEach(function(k) { normalizeLegacyRoomKeys(estimateStore[k]); });
-    }
-    // Also migrate any old single estimate, then remove the legacy key so it
-    // can't re-clobber a newer v4 record on every subsequent load.
-    var old = localStorage.getItem('havellin_est_v3');
-    if (old) {
-      var d = JSON.parse(old);
-      if (d.estimate && d.estimate.jobId && !estimateStore[d.estimate.jobId]) {
-        estimateStore[d.estimate.jobId] = d;
-      }
-      localStorage.removeItem('havellin_est_v3');
     }
   } catch(e) {}
   // Pull from Sheets — the sheet is the source of truth. The cloud copy wins for
@@ -11025,7 +10990,6 @@ function loadEstimateState() {
         if (data.estimates && typeof data.estimates === 'object') {
           Object.keys(data.estimates).forEach(function(key){
             var sheetsRec = data.estimates[key];
-            normalizeLegacyRoomKeys(sheetsRec);
             estimateStore[key] = migrateRetiredNames(sheetsRec);   // cloud wins
           });
           try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
@@ -16970,13 +16934,11 @@ function renderInvoice() {
 
   var tcFee = Math.round(actTC * tcRate);
   var psFee = Math.round(actPS * psRate);
-  var coordDays = 0, vendorTotal = 0, gcFee = 0, stagerCost = 0, stagerGcFee = 0;
 
   // Discount from saved estimate only — never from live estimator form fields
   var discountPct = est ? (est.discountPct || 0) : 0;
   function _netLabor(g){ return g - Math.round(g * discountPct / 100); }
   var materials  = pkgCost;
-  var legacyFees = gcFee + stagerGcFee;
   var estLaborNet = _netLabor(est ? ((est.tcFee||0)+(est.psFee||0)) : (tcFee + psFee));
   var actLaborNet = _netLabor(tcFee + psFee);
   var laborBase = tcFee + psFee;
@@ -17038,14 +17000,14 @@ function renderInvoice() {
   // flat fee, hence the !_fixed guard. Change orders are priced when they are agreed, so
   // the premium is computed BEFORE coTotal is added rather than levied on top of it.
   var _rushRate      = (!_fixed && est && est.rush) ? (est.rushPct || RUSH_PCT) : 0;
-  var _midServices   = _fixed ? _fixedTotal : (estLaborNet + materials + smf + prepFee + legacyFees);
-  var _finalServices = _fixed ? _fixedTotal : (actLaborNet + materials + smf + prepFee + legacyFees);
+  var _midServices   = _fixed ? _fixedTotal : (estLaborNet + materials + smf + prepFee);
+  var _finalServices = _fixed ? _fixedTotal : (actLaborNet + materials + smf + prepFee);
   var midRushAmt     = Math.round(_midServices * _rushRate);
   var finalRushAmt   = Math.round(_finalServices * _rushRate);
 
   var totalDepositBasis = _fixed ? _fixedTotal
                         : ((est && est.havellinTotal) ? est.havellinTotal
-                          : (estLaborNet + materials + smfEst + prepFeeEst + legacyFees + ((est && est.rushAmt) || 0)));
+                          : (estLaborNet + materials + smfEst + prepFeeEst + ((est && est.rushAmt) || 0)));
   var totalMidBasis     = _midServices + midRushAmt;
   var totalFinalBasis   = _finalServices + finalRushAmt + coTotal;
 
@@ -17054,8 +17016,8 @@ function renderInvoice() {
   var midpointAmt  = midCumTarget - depositAmt;
   var finalDue     = Math.round(totalFinalBasis) - depositAmt - midpointAmt;
 
-  // Legacy aliases consumed by the final-invoice body below.
-  var havellinTotal = tcFee + psFee + pkgCost + smf + gcFee + stagerGcFee + prepFee;
+  // Aliases consumed by the final-invoice body below.
+  var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;
   var havellinTotalDiscounted = totalFinalBasis - coTotal; // actual Havellin services (pre-CO)
   var grandTotal = havellinTotalDiscounted + vendorCost + prepCost;
   var estHavellinTotal = (est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted;
@@ -17167,7 +17129,6 @@ function renderInvoice() {
     (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
     (advSmf > 0 ? '<tr><td>Service Management Fee (15% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
     (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
-    (legacyFees > 0 ? '<tr><td>GC / Site Management Fee</td><td style="text-align:right;">' + fmt(legacyFees) + '</td></tr>' : '') +
     (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">Compressing the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
     '</table>' +
@@ -22055,7 +22016,7 @@ function renderProbateAgreement() {
   var attyFirm = esc(job.probateAttyFirm || '');
   var hvlId = job.hvlId || '—';
   var lettersMap = {received:'Attached', pending:'Pending', notneeded:'N/A (non-probate)'};
-  var svcLabelMap = {probate:'Probate Estate Settlement', cleanout:'Estate Settlement', estate:'Estate Settlement'};
+  var svcLabelMap = {probate:'Probate Estate Settlement', cleanout:'Estate Settlement'};
   var svcLabel = svcLabelMap[job.svc] || esc(job.svcLabel) || 'Estate Services';
   var letters = lettersMap[job.executorAuth] || 'Pending';
   var today = new Date();
@@ -22429,7 +22390,6 @@ function renderAgreement() {
     cleanout:'Estate Settlement', probate:'Probate Estate Settlement',
     downsizing:'Home Editing',
     downsizing_move:'Home Transition',
-    estate:'Estate Settlement',
     prep:'Home Prep for Sale'
   };
   var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
@@ -23575,9 +23535,6 @@ function showEditClient(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var isProbate = ecIsProbateSvc(job.svc);
-  // Same three services as DECEDENT_SERVICES, plus the legacy 'estate' key this modal has
-  // always accepted. Kept as its own expression rather than a call to isDecedentJob so the
-  // legacy key survives; if they ever need to diverge further, this is the one to change.
   var isEstate = ecIsEstateSvc(job.svc);
   var svcLabels = SVC_LABELS;
 
@@ -23706,11 +23663,12 @@ function ecToggleProbate() {
   var af = document.getElementById('ec-estate-auth-fields');
   if (af) af.style.display = ecIsEstateSvc(svcVal) ? 'block' : 'none';
 }
-// The two service tests Edit Client runs, in one place each. `estate` is the legacy alias for
-// cleanout and is accepted here for the same reason showEditClient accepts it — an old job may
-// still carry the key even though nothing offers it any more.
+// The two service tests Edit Client runs, in one place each. These ARE the decedent three —
+// ecIsEstateSvc and isDecedentJob now select exactly the same set, and a test asserts it. They
+// stay separate functions because they answer different questions (which fields this modal
+// shows, versus who a document is written to), not because the sets differ.
 function ecIsProbateSvc(svc) { return svc === 'probate' || svc === 'contested_probate'; }
-function ecIsEstateSvc(svc)  { return ecIsProbateSvc(svc) || svc === 'cleanout' || svc === 'estate'; }
+function ecIsEstateSvc(svc)  { return ecIsProbateSvc(svc) || svc === 'cleanout'; }
 
 function saveClientEdit(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });

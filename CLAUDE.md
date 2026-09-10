@@ -262,6 +262,63 @@ client-facing surfaces were wrong.**
   parity-checked; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is
   still the documented false positive at 1).
 
+## Prelaunch cleanup — the retired `estate` key and five fields that were always zero (2026-09-10)
+*"we have no existing clients. this is all prelaunch. so let's make sure we clean up everything
+that needs cleaning up, and don't worry that there's some sort of legacy agreement or estimate
+that's gonna be messed up at this point because there it's not."* App-only, no redeploy.
+
+- **⚠ THE LINE THIS SWEEP DREW, AND IT IS THE MOST IMPORTANT THING IN THIS SECTION.**
+  **Client jobs and estimates did not exist**, so their compatibility code went. **The VENDOR
+  DIRECTORY (152 rows), the REFERRAL PARTNERS (79) and the CONTRACTOR ROSTER are real data**
+  that has been accumulating since July and lives on Anthony's and Ashley's devices — their
+  legacy columns, their retired statuses and `migrateRetiredNames` / `samePerson` /
+  `canonPersonName` are **not** dead code. A future pass grepping for the word *legacy* would
+  take them. **There is a test group, `⚠ WHAT THE PRELAUNCH SWEEP MUST NEVER TAKE`, that fails
+  if any of the six is removed** — verified by reverting one.
+- **THE `estate` KEY WAS NOT REDUNDANT ANY MORE, IT WAS WRONG — three opinions of one key.**
+  `SVC_LABELS` printed *Estate Settlement*; `PRICING_REF` called it **Probate**; and
+  `isDecedentJob` **did not know it at all**. So a job on that key would have taken the
+  **living-client agreement form**, the living-owner estimate voice (*"your home"*, *"decisions
+  room by room"* — to an executor), and **never tripped the 706 / Strict Mode gate**, which is
+  ANDed with `isDecedentJob`. All three silent. It surfaced only because `svcFamily` (built the
+  same day) placed it as decedent and therefore disagreed with `isDecedentJob` out loud.
+  - **Deleted outright rather than taught to a fifth predicate.** Six sites: `SVC_LABELS`,
+    `PRICING_REF`, `svcFamily`, the client estimate's fee-table sub-header, the Win/Loss filter,
+    both agreement service maps and `ecIsEstateSvc`. `cleanout` **is** Estate Settlement and
+    always was.
+  - **The test states the requirement, not the absence:** every predicate answering *"is this a
+    decedent job"* — `svcFamily`, `isDecedentJob`, `ecIsEstateSvc` — now selects **exactly the
+    same set** over `SVC_ORDER`, asserted pairwise. A key one of them knows and another does not
+    is the entire defect class, and that is what is now impossible.
+- **`coordDays` · `vendorTotal` · `gcFee` · `stagerCost` · `stagerGcFee` were declared 0 in BOTH
+  `calcAll` and `renderInvoice` and reassigned by nothing, anywhere.** They summed into
+  `havellinTotal` and `grandTotal` as literal `+0`, rode the estimate snapshot as 0, and gated a
+  **"GC / Site Management Fee" row on the client's invoice that could never render**. Nothing
+  read one of them back. Residue of a fee model that came out.
+  - **The test asserts them by NAME, not by checking a total** — the whole point is that they
+    changed no total, so a value test could not have detected them. `havellinTotal` is now
+    `tcFee + psFee + pkgCost + smf + prepFee` in both functions, and a test asserts the two
+    agree term for term.
+- **Two migrations that could never run:** `normalizeLegacyRoomKeys` (a `csH` → `psH` room-key
+  rename predating every record) and the `havellin_est_v3` single-estimate migration, plus a
+  reset writing to `e-stager-cost`, an element that does not exist.
+  - **⚠ The v3 localStorage key is still REMOVED by the device clear, deliberately.** The
+    migration read it on load; the clear deletes it. A phone or iPad that ran an old build may
+    hold a stale v3 blob against a ~5MB origin quota, and the manifest write is the one that
+    must never fail. The test asserts on `getItem`, not on the string.
+- **Settings stopped caveating a promise nothing can break.** *"Estimates saved before
+  2026-09-02 … are still costed at whatever these say today"* named an exception class with no
+  members left. **The existing test asserted that sentence was PRESENT**, so it failed on the
+  removal — correctly — and now asserts the reverse: the promise is stated without a caveat.
+  The α and cost-rate null-guards themselves **survive**; a malformed record must still render.
+  The line held throughout: **remove dead code and wrong claims, keep cheap null-guards.**
+- **1606 committed checks** (26 more). **All eight removals revert-verified individually**,
+  including the vendor-directory fallback, which turns the suite red if a later sweep takes it.
+  Verified in headless Chromium with no page errors: an Estate Settlement job resolves decedent
+  and renders the **estate** agreement form, and the invoice still bills prep at 30% with the
+  mover passing through at cost. **No document changed** — nothing removed was user-facing, so
+  the manual and playbook needed no pass.
+
 ## Deleted clients came back from a stale laptop — the sheet now keeps a job ledger (BUILT 2026-09-08)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` and `saveInventory.gs` both changed.
 *"if a computer has clients stored in its local memory, that pushes those locally stored clients

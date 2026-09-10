@@ -70,15 +70,29 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('svcFamily'), 'isDecedentJob(', 'and it is derived, not listed a second time');
   }
 
-  group('`estate` — the legacy alias — is placed, and never offered');
+  group('the retired `estate` key is GONE — one catalogue, no aliases');
   {
-    eq(ctx.svcFamily('estate'), 'decedent',
-       'a job still carrying the retired key is decedent work, not living');
-    ok(ctx.SVC_ORDER.indexOf('estate') < 0, 'but it is not on the selectable list');
-    ok(ctx.svcFamilyOptions('estate').indexOf('estate') < 0,
-       'so the picker on such a job offers the three real decedent keys and quietly repairs it');
-    eq(ctx.svcFamilyOptions('estate'), ['cleanout', 'probate', 'contested_probate'],
-       'those three, in catalogue order');
+    // It was a legacy alias for `cleanout` and it had drifted into being WRONG rather than
+    // redundant: SVC_LABELS printed "Estate Settlement", PRICING_REF called it "Probate", and
+    // isDecedentJob did not know it at all — so a job on that key took the LIVING-client
+    // agreement form, the living-owner estimate voice, and never tripped the 706 gate. Six
+    // sites, three opinions of one key. Removed 2026-09-10 (prelaunch, no client data).
+    eq(ctx.svcFamily('estate'), '', 'the key is placed nowhere, because it no longer exists');
+    eq(ctx.svcFamilyOptions('estate'), [], 'and offers no move');
+    eq(ctx.SVC_LABELS.estate, undefined, 'the catalogue does not name it');
+    lacks(src, "estate:{label:'Probate'", 'no reference band under it');
+    lacks(src, "svc === 'estate'", 'no predicate tests for it');
+    lacks(src, "j.svc==='estate'", 'the Win/Loss filter does not fold it into Estate Settlement');
+    lacks(src, "estate:'Estate Settlement'", 'no agreement service map carries it');
+    // THE REQUIREMENT, not just the absence: every predicate that answers "is this a decedent
+    // job" now selects exactly the same set. That is what the alias broke, and it is what has
+    // to stay true — a key one of them knows and another does not is the whole defect.
+    eq(ctx.SVC_ORDER.filter((k) => ctx.svcFamily(k) === 'decedent').sort(),
+       ctx.SVC_ORDER.filter((k) => ctx.ecIsEstateSvc(k)).sort(),
+       'svcFamily and ecIsEstateSvc select the same services');
+    eq(ctx.SVC_ORDER.filter((k) => ctx.isDecedentJob(null, k)).sort(),
+       ctx.SVC_ORDER.filter((k) => ctx.ecIsEstateSvc(k)).sort(),
+       'and so does isDecedentJob — no key any of the three disagrees about');
   }
 
   group('svcFamilyOptions never crosses the line');
@@ -469,6 +483,58 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'and its no-markup row is scoped once a prep row sits under it');
   }
 
+  // ── 6c. THE PRELAUNCH CLEANUP, AND THE LINE IT DREW ────────────────────────
+  group('five fields that were always zero are gone');
+  {
+    // coordDays · vendorTotal · gcFee · stagerCost · stagerGcFee were declared 0 in BOTH
+    // calcAll and renderInvoice, reassigned by nothing anywhere, summed into havellinTotal
+    // and grandTotal as literal +0, rode the snapshot as 0, and gated a "GC / Site Management
+    // Fee" row on the client's invoice that could never render. Residue of a fee model that
+    // came out. Asserted by NAME rather than by reading the totals, because the whole point
+    // is that they changed no total — a value test could not have told they were there.
+    ['coordDays', 'vendorTotal', 'gcFee', 'stagerCost', 'stagerGcFee', 'legacyFees'].forEach((f) => {
+      lacks(src, 'var ' + f + ' =', f + ' is not declared anywhere');
+      lacks(src, f + ': ' + f, f + ' is not stamped on the estimate snapshot');
+    });
+    lacks(src, 'GC / Site Management Fee</td>', 'and the invoice row they gated is gone');
+    has(fn('calcAll'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
+        'the services total adds only the five fees that exist');
+    has(fn('renderInvoice'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
+        'and the invoice agrees with it, term for term');
+  }
+
+  group('migrations that could never run are gone');
+  {
+    lacks(src, 'normalizeLegacyRoomKeys', 'the csH → psH room-key normalizer');
+    // The MIGRATION is gone (nothing reads the v3 key on load any more), but the device-clear
+    // still REMOVES it — a phone or iPad that used an old build may hold a stale v3 blob, and
+    // deleting it is free housekeeping against a 5MB origin quota. Assert on the read, which
+    // is the path that could write into estimateStore, not on the string.
+    lacks(src, "getItem('havellin_est_v3')", 'nothing reads the v3 localStorage key on load');
+    has(src, "removeItem('havellin_est_v3')", 'but a device clear still sweeps a stale one away');
+    lacks(src, "getElementById('e-stager-cost')", 'plus a reset writing to an element that does not exist');
+  }
+
+  group('⚠ WHAT THE PRELAUNCH SWEEP MUST NEVER TAKE');
+  {
+    // THE LINE, and it is the reason this group exists rather than a comment. Client jobs and
+    // estimates did not exist on 2026-09-10, so their compatibility code went. The VENDOR
+    // DIRECTORY (152 rows), the REFERRAL PARTNERS (79) and the CONTRACTOR ROSTER are real
+    // data that has been accumulating since July and lives on Anthony's and Ashley's devices.
+    // Their legacy columns and the retired-name migration are NOT dead code, and a future
+    // "clean up the legacy stuff" pass reading only the word `legacy` would take them.
+    has(src, 'Legacy fallback: a vendor saved before the split',
+        'a vendor row predating the contact_first/contact_last split still resolves');
+    has(src, 'Legacy statuses (Contacted/Qualified/Contracted)',
+        'and a directory row on a retired status still renders');
+    ['migrateRetiredNames', 'canonPersonName', 'samePerson'].forEach((f) => {
+      has(src, 'function ' + f, f + ' survives — the roster is real and holds pre-rename names');
+    });
+    has(src, 'VENDOR_SLOT_CATEGORY_MAP', 'the old vendor slot labels still map to directory categories');
+    has(src, 'Fallback to legacy GET for older Apps Script',
+        'and the backend fallback stays — that guards a DEPLOYMENT, not client data');
+  }
+
   // ── 7. THE EDIT CLIENT BUG ON THE CONTESTED PATH ───────────────────────────
   group('Edit Client stops hiding the fields it is about to save');
   {
@@ -476,7 +542,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(ctx.ecIsProbateSvc('contested_probate'), 'and so does contested probate — it did not before');
     ok(!ctx.ecIsProbateSvc('cleanout'), 'Estate Settlement does not');
     ok(ctx.ecIsEstateSvc('contested_probate'), 'contested probate carries the representative block');
-    ok(ctx.ecIsEstateSvc('cleanout') && ctx.ecIsEstateSvc('estate'), 'so do both Estate Settlement keys');
+    ok(ctx.ecIsEstateSvc('cleanout'), 'so does Estate Settlement — now the only key for it');
+    ok(!ctx.ecIsEstateSvc('estate'), 'and the retired alias is not quietly still accepted');
     ok(!ctx.ecIsEstateSvc('downsizing') && !ctx.ecIsEstateSvc('prep'), 'living services carry neither');
 
     // Every one of the four sites reads the shared predicate, so the toggle cannot drift from

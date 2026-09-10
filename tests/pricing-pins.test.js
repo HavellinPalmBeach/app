@@ -126,7 +126,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const cAt = src.indexOf('Raising a cost rate lowers margin');
     const cBlurb = src.slice(cAt, src.indexOf('</div>', cAt));
     has(cBlurb, 'keeps the crew cost it was priced with', 'the promise is still made');
-    has(cBlurb, 'before 2026-09-02', 'and the estimates it cannot keep it for are named');
+    // The copy used to name an exception — estimates saved before costRates was stamped,
+    // which fell back to the live values. Those records were cleared prelaunch (2026-09-10)
+    // and every estimate stamps the pin now, so the exception has no members. The requirement
+    // is therefore the reverse of what it was: the promise must be stated WITHOUT a caveat
+    // that nothing can trigger, because a stated exception reads as a limit on the promise.
+    lacks(cBlurb, 'before 2026-09-02', 'and no longer caveats it with a class of estimate that no longer exists');
+    lacks(cBlurb, 'costed at', 'nor describes them falling back to the live rate');
   }
 
   group('the five tabs answer "nothing selected yet" the same way');
