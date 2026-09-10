@@ -39,7 +39,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     fns: ['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'estimateSubmitBlocker',
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
-      'depositTargetFor'],
+      'depositTargetFor', 'agreementReady'],
     vars: ['JT_SHORT'],
     stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
   });
@@ -79,7 +79,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['dashDenyEstimate(jobId)',       '_primeEstimateFor(jobId)',  'openDenyModal'],
       ['dashOfferDiscount(jobId)',      '_primeEstimateFor(jobId)',  'openDiscountModal'],
       ['dashMarkEstimateSent(jobId)',   '_primeEstimateFor(jobId)',  'markEstimateSent'],
-      ['dashApproveAgreement(jobId)',   '_primeAgreementFor(jobId)', 'openAgrPinModal'],
       ['dashMarkAgreementSent(jobId)',  '_primeAgreementFor(jobId)', 'markAgreementSent'],
       ['dashMarkAgreementSigned(jobId)', '_primeAgreementFor(jobId)', 'markAgreementSigned'],
       ['dashRecordPayment(jobId, stage)', '_primeAgreementFor(jobId)', 'openDepositModal'],
@@ -141,6 +140,71 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ the agreement lost its manager PIN — what must NOT be lost with it');
+  {
+    // Anthony: *"once an estimate is approved by a manager and accepted by a client, a TC
+    // should be able to send an agreement without further manager approval or emails …
+    // there is literally no way to amend an agreement that comes out of the system."*
+    // Right, and the reason it is safe: the commercial terms ARE the approved estimate,
+    // attached as Exhibit A, and the document has no free-text field a manager could read
+    // differently. Both facts needing a human were already captured by a named person.
+    // What must survive is the GATE — the same two conditions — and the ATTRIBUTION.
+    // ⚠ DRIVEN, NOT GREPPED. Source assertions that the body mentions `isJobWon` survive
+    // an early `return ''` placed above them — an inserted early return removes the gate
+    // entirely and left every one of them green. Caught by reverting. The gate is the one
+    // thing that must not go with the PIN, so it is exercised, not read.
+    ctx.estimateStore = { 10: { estimate: EST(), approved: true }, 11: { estimate: EST(), approved: false } };
+    const J = (o) => Object.assign({ id: 10, svc: 'cleanout', status: 'new' }, o || {});
+    eq(ctx.agreementReady(null, null), 'nojob', 'no job is refused rather than cleared');
+    eq(ctx.agreementReady(J({ id: 11 }), null), 'estimate', 'an unapproved estimate blocks');
+    eq(ctx.agreementReady(J({ id: 99 }), null), 'estimate', 'so does a job with no estimate at all');
+    eq(ctx.agreementReady(J({ won: false }), null), 'notwon', 'an approved estimate the client has not accepted still blocks');
+    eq(ctx.agreementReady(J({ won: true }), null), '', 'approved and accepted clears');
+    // isJobWon's legacy fallback must not be a back door: status alone is not acceptance
+    // on a job that has explicitly been marked not-won.
+    eq(ctx.agreementReady(J({ won: false, status: 'active' }), null), 'notwon',
+      'a withdrawn job does not clear on status alone');
+    const ready = noComments(body('agreementReady(job, estRec)'));
+    has(ready, 'isJobWon(job)', 'and it reads the same acceptance predicate as the rest of the app');
+
+    const ensure = noComments(body('ensureAgreementApproved(jobId)'));
+    has(ensure, 'agreementReady(job, null)', 'the stamp reads that one gate');
+    has(ensure, 'if (blk) return blk', 'and refuses rather than stamping when it is not met');
+    // ⚠ `_actor(job)` reads agrApprovedBy for agrSentBy, agrSignedBy, depositReceivedBy
+    // AND deliveredBy. Losing the PIN must not leave all four blank — the manager who
+    // approved the price is the named person who signed off on what this document says.
+    has(ensure, 'job.agrApprovedBy = (rec && rec.approvedBy)', 'attribution falls to the estimate approver');
+    has(ensure, "|| job.wonBy || job.tc || ''", 'with a real name behind that, never a blank');
+    has(ensure, 'exportAgreementToDrive(jobId)', 'the agreement files itself on the stamp');
+    has(ensure, 'exportSigningPacketToDrive(jobId)', 'and so does the signing packet');
+    // ⚠ It files into a client's Drive folder off whatever the agreement panel holds.
+    has(ensure, '_primeAgreementFor(jobId)', 'it primes that panel first');
+    has(ensure, "return 'nojob'", 'and refuses if it cannot, rather than filing the wrong estate');
+
+    // Every door into the agreement stamps through that one function.
+    ['markAgreementSent()', 'emailAgreementToClient()', 'printAgreement()',
+     'printSigningPacket()', 'generateStripeLink()'].forEach((sig) => {
+      has(noComments(body(sig)), 'ensureAgreementApproved(', `${sig} stamps on the way through`);
+    });
+
+    // The tab reads readiness, not the stamp — a job that is ready but has not been acted
+    // on yet would otherwise show no buttons at all.
+    has(noComments(body('updateAgrUI()')), 'var _ready = !agreementReady(_agrJ, null);',
+      'updateAgrUI reads readiness rather than the stamp');
+    has(noComments(body('updateAgrUI()')), "(_ready && !_sent)", 'and gates its steps on it');
+
+    // The PIN and its internal notification are gone, not disabled.
+    lacks(src, 'function checkAgrPin(', 'the PIN handler is deleted');
+    lacks(src, 'agr-pin-modal', 'its modal markup with it');
+    lacks(src, 'Agreement Approved &amp; Ready to Send', 'and the internal notify-the-manager email');
+    // ⚠ But the CC to agreements@ on what the CLIENT is sent is a different thing and
+    // stays: that is the firm's own record of what went out, and it was a defect that it
+    // was ever missing.
+    has(noComments(body('emailAgreementToClient()')), 'DEPT_EMAILS.agreements',
+      'the client-facing send still copies agreements@');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   group('estimateSubmitBlocker — one rule, and the caller decides where it prints');
   {
     // ⚠ All three refusals printed to showFB('e-fb', …), and #e-fb lives inside
@@ -190,10 +254,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       [{ approved: true }, { estimate: EST(), approved: true }, '&#10003; Mark as sent', 'dashMarkEstimateSent(7)'],
       [{ approved: true, estimateSentDate: 'Sep 8, 2026' }, { estimate: EST(), approved: true },
         '&#10003; Client accepted — mark won', 'openWonModal(7)'],
+      // ⚠ No 'Approve agreement' step: it is stamped as a side effect of the first print
+      // or send now, so a won job goes straight to sending the packet.
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true }, { estimate: EST(), approved: true },
-        'Approve agreement', 'dashApproveAgreement(7)'],
-      [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true },
-        { estimate: EST(), approved: true }, '&#10003; Mark agreement sent', 'dashMarkAgreementSent(7)'],
+        '&#10003; Mark agreement sent', 'dashMarkAgreementSent(7)'],
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true },
         { estimate: EST(), approved: true }, '&#10003; Record signature received', 'dashMarkAgreementSigned(7)'],
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true, agrSigned: true },

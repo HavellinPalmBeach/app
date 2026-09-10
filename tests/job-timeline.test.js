@@ -150,7 +150,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const expected = {
       intake: 'walkthrough', walkthrough: 'estimate_built', built: 'estimate_approved',   // eslint-disable-line
-      approved: 'estimate_sent', sent: 'client_accepted', won: 'agreement_approved',
+      // ⚠ 'won' goes straight to sending the packet: the agreement's approval step is
+      // gone, stamped as a side effect of the first print or send instead.
+      approved: 'estimate_sent', sent: 'client_accepted', won: 'agreement_sent',
       agrApproved: 'agreement_sent', agrSent: 'agreement_signed', agrSigned: 'deposit_received',
       funded: 'job_active', active: 'midpoint_received', midpoint: 'work_complete',
       delivered: 'final_paid',
@@ -380,12 +382,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('shape, grouping and the deliberate absences');
   {
     const rows = run('built');
-    eq(rows.length, 14, 'fourteen milestones');
+    eq(rows.length, 13, 'thirteen milestones');
     eq(rows.map((r) => r.key).join(','),
       'intake,walkthrough,estimate_built,estimate_approved,estimate_sent,client_accepted,'
-      + 'agreement_approved,agreement_sent,agreement_signed,deposit_received,job_active,'
+      + 'agreement_sent,agreement_signed,deposit_received,job_active,'
       + 'midpoint_received,work_complete,final_paid',
       'in the order the work actually happens');
+    // ⚠ AND NO 'agreement_approved' ROW. It was a manager PIN that reviewed nothing — the
+    // commercial terms ARE the approved estimate attached as Exhibit A, and the document
+    // has no free-text field a manager could read differently. It is stamped as a side
+    // effect of the first print or send now, so it is a consequence and not a step.
+    ok(!rows.some((r) => r.key === 'agreement_approved'), 'the agreement-approval step is gone');
+    lacks(src, "call: 'dashApproveAgreement(", 'and nothing offers it as an action');
     eq([...new Set(rows.map((r) => r.group))].join(' · '),
       'Set up · Estimate · Acceptance · Agreement · Deposit & start · Work · Close-out',
       'under seven groups, each contiguous');
@@ -422,10 +430,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(byKey(rows, 'estimate_sent').label, 'Estimate sent to client', 'and the full one survives for the rail');
     // Two pairs repeat by design — each sits under its own group band, which is what
     // tells them apart. Assert the bands really do differ, or the repeat is a defect.
-    eq(byKey(rows, 'estimate_approved').short, byKey(rows, 'agreement_approved').short,
-      'both approvals read "Approved"');
-    ok(byKey(rows, 'estimate_approved').group !== byKey(rows, 'agreement_approved').group,
-      'and their group bands differ, which is what disambiguates them');
+    eq(byKey(rows, 'agreement_sent').short, 'Packet sent', 'the agreement group leads with the packet');
+    ok(byKey(rows, 'estimate_approved').group !== byKey(rows, 'agreement_sent').group,
+      'and its band differs from the estimate group beside it');
     // A row with no entry in the map must fall back rather than render blank.
     const lost = run('sent', { status: 'lost', lostReasonLabel: 'x' });
     eq(lost[0].short, lost[0].label, 'a row with no short name falls back to its full one');
@@ -435,7 +442,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, "var JT_LEG_BREAK = 'agreement_signed';", 'the wrap point is named and fixed');
     const keys = rows.map((r) => r.key);
     const at = keys.indexOf('agreement_signed');
-    eq(at, 8, 'leg one runs intake through the signature — winning and papering the job');
+    eq(at, 7, 'leg one runs intake through the signature — winning and papering the job');
     eq(rows.length - at - 1, 5, 'leg two is doing it and getting paid');
 
     // ⚠ ONE DERIVATION FEEDS BOTH LAYOUTS. Two renderers may differ about presentation;
@@ -518,7 +525,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Every writer the rail can now fire has to land its result on the rail. Before
     // Slice 1 not one of them knew the drilldown existed.
-    [['checkPin()', 'the estimate PIN'], ['checkAgrPin()', 'the agreement PIN'],
+    // ⚠ `checkAgrPin` is gone — the agreement's PIN reviewed nothing. Its one-click
+    // replacement carries the redraw instead.
+    [['checkPin()', 'the estimate PIN'], ['approveAgreementNow()', 'approving and filing the agreement'],
      ['markEstimateSent()', 'marking the estimate sent'], ['markAgreementSent()', 'marking the agreement sent'],
      ['markAgreementSigned()', 'recording the signature'], ['saveDeposit()', 'recording a payment'],
     ].forEach(([sig, what]) => {

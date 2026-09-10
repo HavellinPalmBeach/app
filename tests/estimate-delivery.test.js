@@ -150,11 +150,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     has(blocker, 'isJobWon(job)', 'the gate reads the same predicate the rest of the app does');
 
-    const pin = fn('checkAgrPin');
-    has(pin, 'agrApprovalBlocker(currentAgrJobId)', 'the PIN check reads the gate too, not its own copy');
-    has(pin, "_blk === 'notwon'", 'and refuses a correct PIN on an unaccepted job');
-    has(pin, 'mark this job Won', 'naming what to do about it');
-    lacks(pin, 'var estApproved = !!(estimateStore[currentAgrJobId]', 'the old inline estimate-only check is gone');
+    // ⚠ THE AGREEMENT'S MANAGER PIN IS GONE (2026-09-10) — it reviewed nothing. The
+    // commercial terms ARE the approved estimate, attached as Exhibit A, and the document
+    // has no free-text field a manager could read differently; both facts needing a human
+    // were already captured by a named person (the pricing PIN and the client's recorded
+    // acceptance). What must NOT go with it is the GATE, which is the same two conditions.
+    const ready = fn('agreementReady');
+    has(ready, 'isJobWon(job)', 'readiness still requires the client to have accepted');
+    has(ready, 'rec.approved', 'and the estimate to have been approved');
+    const ensure = fn('ensureAgreementApproved');
+    has(ensure, 'agreementReady(job, null)', 'and every action stamps through that one gate');
+    has(ensure, "if (blk) return blk", 'refusing rather than stamping when it is not met');
+    // ⚠ It files two documents into a client's Drive folder off whatever the agreement
+    // panel currently holds, so it must guarantee the panel is on THIS job.
+    has(ensure, '_primeAgreementFor(jobId)', 'it primes the agreement panel before filing');
+    has(ensure, "return 'nojob'", 'and refuses if it cannot');
+    lacks(src, 'function checkAgrPin(', 'the PIN function is deleted, not left dead');
+    lacks(src, 'agr-pin-modal', 'and its modal markup with it');
   }
 
   group('editing the estimate revokes the agreement it is Exhibit A to');
@@ -584,7 +596,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const send = fn('emailAgreementToClient');
     has(send, 'cc: DEPT_EMAILS.agreements', "CC'd to agreements@ — the thing that was missing");
-    has(send, 'if (!agrApproved)', 'refuses an unapproved agreement');
+    // The gate is the same two conditions; what changed is that meeting them STAMPS the
+    // approval rather than requiring a separate one.
+    has(send, 'ensureAgreementApproved(currentAgrJobId)', 'refuses an agreement that is not ready');
     has(send, 'No client email on this job', 'and a job with no client email');
     has(send, 'if (_agrEmailBusy) return;', 'a second press while working is a no-op');
     has(send, '_agreementEmailFallback', 'and it falls back like the estimate does');

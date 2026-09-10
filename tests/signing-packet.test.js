@@ -44,14 +44,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the print and the filing');
   {
     const print = fn('printSigningPacket');
-    has(print, "if (!agrApproved) { alert('Agreement must be approved before printing.'); return; }", 'same gate as printAgreement');
+    has(print, 'ensureAgreementApproved(currentAgrJobId)', 'same gate as printAgreement');
     has(print, '_printDocument(html)', 'routes through the ONE print path — no hand-rolled print sequence');
     lacks(print, 'window.print()', 'and does not call window.print itself');
     has(print, "'-Signing-Packet'", 'the PDF is named as a packet');
     const exp = fn('exportSigningPacketToDrive');
     has(exp, "resolveSubfolderId(job, 'Agreement'", 'filed to the Agreement subfolder beside the agreement');
     has(exp, "'_Signing_Packet.html'", 'under the packet name');
-    has(src, 'setTimeout(function(){ exportSigningPacketToDrive(currentAgrJobId); }, 900);', 'and it fires on agreement approval');
+    // ⚠ It used to fire inside the agreement's PIN handler. The PIN is gone, so the
+    // filing moved to `ensureAgreementApproved` — the one place the approval is stamped.
+    has(fn('ensureAgreementApproved'), 'exportSigningPacketToDrive(jobId)', 'and it fires when the approval is stamped');
+    has(fn('ensureAgreementApproved'), 'exportAgreementToDrive(jobId)', 'alongside the agreement itself');
     const est = fn('_approvedEstimateHtml');
     has(est, 'finally {', 'the estimate tab is restored whatever the renderer does');
     has(est, 'el.innerHTML = keep.html;', 'including its HTML');

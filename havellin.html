@@ -926,7 +926,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:34pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:49pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2029,7 +2029,7 @@ body.no-smf .smf-col{display:none;}
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
         <select id="agr-job" onchange="loadAgreement()" style="width:340px;font-size:12px;"><option value="">Select job</option></select>
         <span id="agr-approval-badge"></span>
-        <button class="btn-s" id="btn-agr-approve" onclick="openAgrPinModal()" style="display:none;">Manager Approval</button>
+        <button class="btn-s" id="btn-agr-approve" onclick="approveAgreementNow()" style="display:none;">Approve &amp; File</button>
         <button class="btn-s" id="btn-agr-stripe" onclick="generateStripeLink()" style="display:none;">Generate Payment Link</button>
         <button class="btn-bronze" id="btn-agr-pdf" onclick="printAgreement()" style="display:none;">Print / Save PDF</button>
         <button class="btn-bronze" id="btn-agr-packet" onclick="printSigningPacket()" style="display:none;" title="The agreement with the approved estimate attached as Exhibit A — one document to sign">Print Signing Packet</button>
@@ -2089,18 +2089,6 @@ body.no-smf .smf-col{display:none;}
 </div>
 
 <!-- PIN MODAL FOR AGREEMENT -->
-<div class="modal-overlay" id="agr-pin-modal" style="display:none;">
-  <div class="modal-box">
-    <div class="modal-title">Manager Approval</div>
-    <div class="modal-sub">Enter your 4-digit PIN to approve this agreement for sending.</div>
-    <input type="password" class="pin-input" id="agr-pin-input" maxlength="4" placeholder="••••" oninput="if(this.value.length===4) checkAgrPin()">
-    <div id="agr-pin-fb" style="margin-top:10px;"></div>
-    <div style="display:flex;gap:8px;margin-top:1rem;">
-      <button class="btn-s" style="flex:1;" onclick="document.getElementById('agr-pin-modal').style.display='none'">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <!-- RECORD DEPOSIT MODAL -->
 <!-- Deposit is never waived, so this is the gate the whole job hangs off. It captures
      evidence rather than a bare tick: amount, date, method, reference and payer. In estate
@@ -10294,7 +10282,9 @@ function _actor(job) {
 function markAgreementSent() {
   var job = _agrJob();
   if (!job) { showFB(_dashFbTarget('agr-fb'),'warn','Select a job first.'); return; }
-  if (!job.agrApproved) { showFB(_dashFbTarget('agr-fb'),'warn','Approve the agreement before recording it as sent.'); return; }
+  // The old order was approve (PIN) then mark sent. Approval is a consequence now, so
+  // this stamps it and files both documents rather than refusing.
+  if (ensureAgreementApproved(job.id)) { showFB(_dashFbTarget('agr-fb'),'warn','The estimate must be approved and the client\'s acceptance recorded first.'); return; }
   job.agrSent = true;
   job.agrSentBy = _actor(job);
   job.agrSentAt = _stamp();
@@ -10873,7 +10863,7 @@ function sectionHdr(title) {
 var JT_SHORT = {
   intake:'Intake', walkthrough:'Walkthrough', estimate_built:'Built',
   estimate_approved:'Approved', estimate_sent:'Sent', client_accepted:'Accepted',
-  agreement_approved:'Approved', agreement_sent:'Packet sent', agreement_signed:'Signed',
+  agreement_sent:'Packet sent', agreement_signed:'Signed',
   deposit_received:'Deposit', job_active:'Active', midpoint_received:'Midpoint',
   work_complete:'Complete', final_paid:'Final'
 };
@@ -10977,16 +10967,18 @@ function jobTimeline(job, estRec, logs, cos) {
         ? ({ email: 'By email', call: 'By phone', text: 'By text', in_person: 'In person' }[job.wonMethod] || '')
         : '' }),
 
-    row({ key: 'agreement_approved', group: 'Agreement', label: 'Agreement approved',
-      done: !!job.agrApproved, at: job.agrApprovedAt || '', by: job.agrApprovedBy || '',
-      // A revocation is the one piece of history worth carrying forward here: the
-      // agreement was approved, the estimate was then edited, and Exhibit A no
-      // longer exists in the form the client was given.
-      sub: (!job.agrApproved && job.agrRevokedBy === 'estimate-edited')
-        ? 'Approval was revoked when the estimate was edited — re-approve to re-file Exhibit A' : '' }),
-
+    // ⚠ THERE IS NO 'agreement_approved' ROW ANY MORE, AND ITS ABSENCE IS THE POINT.
+    // Approving the agreement was a manager PIN that reviewed nothing — the commercial
+    // terms are the approved estimate, attached as Exhibit A, and the document has no
+    // free-text field a manager could read differently. It is stamped as a side effect
+    // of the first print or send now (`ensureAgreementApproved`), so it is a consequence
+    // rather than a step, and a rail step nobody decides is a step that should not exist.
     row({ key: 'agreement_sent', group: 'Agreement', label: 'Signing packet sent',
-      done: !!job.agrSent, at: job.agrSentAt || '', by: job.agrSentBy || '' }),
+      done: !!job.agrSent, at: job.agrSentAt || '', by: job.agrSentBy || '',
+      // The one piece of agreement history still worth surfacing: the estimate was
+      // edited after the packet was prepared, so the Exhibit A the client holds is stale.
+      sub: (!job.agrSent && job.agrRevokedBy === 'estimate-edited')
+        ? 'The estimate was edited after this was prepared — re-approve it and send a fresh packet' : '' }),
 
     row({ key: 'agreement_signed', group: 'Agreement', label: 'Agreement signed',
       done: !!job.agrSigned, at: job.agrSignedAt || '', by: job.agrSignedBy || '' }),
@@ -11135,10 +11127,6 @@ function jobTimelineActions(row, job, estRec) {
         out.primary = { label: '&#10003; Client accepted — mark won', call: 'openWonModal(' + id + ')' };
         out.secondary.push({ label: 'Mark lost', call: 'openCloseoutModal(' + id + ')', danger: true });
       }
-      break;
-
-    case 'agreement_approved':
-      if (live) out.primary = { label: 'Approve agreement', call: 'dashApproveAgreement(' + id + ')' };
       break;
 
     case 'agreement_sent':
@@ -11300,17 +11288,6 @@ function dashMarkEstimateSent(jobId) {
   markEstimateSent();
   dashNotice('ok', 'Estimate recorded as sent.');
   _dashRedraw(jobId);
-}
-
-function dashApproveAgreement(jobId) {
-  if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
-  // The gate is re-checked inside checkAgrPin as defence in depth; this is the same
-  // wording the Agreement tab shows, printed where the person actually is.
-  var blk = agrApprovalBlocker(jobId);
-  if (blk === 'estimate') { dashNotice('warn', 'Approve the estimate for this job first.'); _dashRedraw(jobId); return; }
-  if (blk === 'notwon')   { dashNotice('warn', 'Record the client\'s acceptance first — until they have said yes there is nothing to put under contract.'); _dashRedraw(jobId); return; }
-  if (blk)                { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
-  openAgrPinModal();
 }
 
 // ⚠ NEITHER OF THESE RE-CHECKS THE GATE, DELIBERATELY. `markAgreementSent` already
@@ -13046,7 +13023,8 @@ function _setAgrEmailBusy(on, label) {
 
 function emailAgreementToClient() {
   if (_agrEmailBusy) return;
-  if (!agrApproved) { showFB('agr-fb', 'warn', 'Approve the agreement before sending it.'); return; }
+  // Approval is a consequence now, not a step: stamp it on the way through.
+  if (ensureAgreementApproved(currentAgrJobId)) { showFB(_dashFbTarget('agr-fb'), 'warn', 'The estimate must be approved and the client\'s acceptance recorded before sending the packet.'); return; }
   var job = jobs.find(function(j){ return j.id === currentAgrJobId; });
   if (!job) { showFB('agr-fb', 'warn', 'Job not found.'); return; }
   var to = bestClientEmail(job);
@@ -23201,7 +23179,8 @@ function signingPacketHtml(jobId) {
 // Same gate as printAgreement, same single print path. The PDF filename carries the
 // packet's name the way printClientEstimate names the estimate's.
 function printSigningPacket() {
-  if (!agrApproved) { alert('Agreement must be approved before printing.'); return; }
+  // Approval is a consequence now, not a step: stamp it on the way through.
+  if (ensureAgreementApproved(currentAgrJobId)) { alert('The estimate must be approved and the client\'s acceptance recorded before this can be printed.'); return; }
   var html = signingPacketHtml(currentAgrJobId);
   if (!html) { alert('The signing packet needs an approved estimate for this job.'); return; }
   var job = jobs.find(function(j){ return j.id === currentAgrJobId; }) || {};
@@ -24354,12 +24333,19 @@ function updateAgrUI() {
   // Funded, not "a payment exists" — a part-paid deposit must keep the button available
   // so the second cheque can be recorded.
   var _paid   = !!(_agrJ && isJobFunded(_agrJ));
-  if (bSent)   bSent.style.display   = (agrApproved && !_sent)             ? 'inline-block' : 'none';
-  if (bSigned) bSigned.style.display = (agrApproved && _sent && !_signed)  ? 'inline-block' : 'none';
-  if (bDep)    bDep.style.display    = (agrApproved && _signed && !_paid)  ? 'inline-block' : 'none';
+  // ⚠ READINESS, NOT THE STAMP. `agrApproved` is now written as a side effect of the
+  // first print/send/file rather than by a gate of its own, so a job that is ready but
+  // has not been acted on yet would show no buttons at all if these still read the flag.
+  var _ready = !agreementReady(_agrJ, null);
+  if (bSent)   bSent.style.display   = (_ready && !_sent)             ? 'inline-block' : 'none';
+  if (bSigned) bSigned.style.display = (_ready && _sent && !_signed)  ? 'inline-block' : 'none';
+  if (bDep)    bDep.style.display    = (_ready && _signed && !_paid)  ? 'inline-block' : 'none';
 
-  if (agrApproved) {
-    btnApprove.style.display='none'; btnStripe.style.display='inline-block'; btnPdf.style.display='inline-block'; if (btnPacket) btnPacket.style.display='inline-block';
+  if (_ready) {
+    // Approve & File stays offered until the documents have actually been filed; after
+    // that there is nothing left for it to do.
+    btnApprove.style.display = (_agrJ && _agrJ.agrApproved) ? 'none' : 'inline-block';
+    btnStripe.style.display='inline-block'; btnPdf.style.display='inline-block'; if (btnPacket) btnPacket.style.display='inline-block';
     // The client email, beside the two print buttons. It was `btn-mailto-agr` in the markup
     // and NOTHING ever showed it or set its href — so agreements@ never received a copy of
     // anything a client was sent. See emailAgreementToClient.
@@ -24448,6 +24434,64 @@ function updateAgrUI() {
 // you are about to talk through is legitimate. What is gated is APPROVAL, which is what
 // files it and what unlocks sending. Sequence: estimate approved → sent → client accepts →
 // Mark Won → agreement approvable.
+// ⚠⚠ THE AGREEMENT NO LONGER HAS AN APPROVAL GATE OF ITS OWN, ON ANTHONY'S CALL:
+// *"once an estimate is approved by a manager and accepted by a client, a TC should be
+// able to send an agreement without further manager approval or emails … there is
+// literally no way to amend an agreement that comes out of the system, so that should be
+// safe to send without manager approval."*
+//
+// He is right, and the reason it is safe is worth writing down so nobody restores the
+// gate as a precaution. **A second PIN here was reviewing nothing.** The agreement's
+// commercial terms ARE the approved estimate — it is attached as Exhibit A and both
+// forms say the agreement is not valid without it. The rest of the document is generated
+// from the service type and the job record; there is no free-text field anywhere in it,
+// so there is no version of it a manager could read that differs from the one the
+// pricing PIN already approved. The two facts that DO need a human are both already
+// captured by a named person: a manager approved the price (`estimateStore[id].approvedBy`,
+// PIN-resolved) and the client accepted it (`job.wonBy`, with method and date).
+//
+// So approval became a CONSEQUENCE rather than a step. `agreementReady` is the question;
+// `ensureAgreementApproved` stamps it the first time anyone prints, sends or files.
+function agreementReady(job, estRec) {
+  if (!job) return 'nojob';
+  var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
+  if (!(rec && rec.approved)) return 'estimate';
+  if (!isJobWon(job)) return 'notwon';
+  return '';
+}
+
+// Stamps the approval and files the agreement + signing packet to Drive, once. Returns
+// '' when the agreement may be acted on, or the blocker code.
+//
+// ⚠ IT PRIMES THE AGREEMENT PANEL FIRST AND REFUSES IF IT CANNOT. `exportAgreementToDrive`
+// reads `#agr-page-content` — whatever `loadAgreement()` last rendered — so firing this
+// from the dashboard with another job loaded would file THAT client's agreement into THIS
+// client's Drive folder. Same wrong-job class as the priming in Slice 1, with a worse
+// blast radius: a document in the wrong estate's folder is not something the app can
+// notice afterwards.
+function ensureAgreementApproved(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var blk = agreementReady(job, null);
+  if (blk) return blk;
+  if (job.agrApproved) return '';
+  if (currentAgrJobId !== jobId && !_primeAgreementFor(jobId)) return 'nojob';
+  var rec = estimateStore[jobId];
+  job.agrApproved = true;
+  // Attribution without a PIN: the manager who approved the PRICE is the named person
+  // who signed off on everything this document says. `_actor` reads this for agrSentBy,
+  // agrSignedBy, depositReceivedBy and deliveredBy, so it must never be blank.
+  job.agrApprovedBy = (rec && rec.approvedBy) || job.wonBy || job.tc || '';
+  job.agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  delete job.agrRevokedBy; delete job.agrRevokedAt;
+  saveJobs(); syncJobToSheets(job);
+  agrApproved = true; agrApprovedBy = job.agrApprovedBy; agrApprovedAt = job.agrApprovedAt;
+  // renderAgreement has just run inside _primeAgreementFor (or the tab is already on this
+  // job); the delay lets that DOM settle before it is read, exactly as the PIN path did.
+  setTimeout(function(){ exportAgreementToDrive(jobId); }, 400);
+  setTimeout(function(){ exportSigningPacketToDrive(jobId); }, 900);
+  return '';
+}
+
 function agrApprovalBlocker(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return 'nojob';
@@ -24456,76 +24500,25 @@ function agrApprovalBlocker(jobId) {
   return '';
 }
 
-function openAgrPinModal() {
-  document.getElementById('agr-pin-modal').style.display = 'flex';
-  document.getElementById('agr-pin-input').value = '';
-  document.getElementById('agr-pin-fb').innerHTML = '';
-  setTimeout(function(){ document.getElementById('agr-pin-input').focus(); }, 100);
-}
-
-function checkAgrPin() {
-  var pin = document.getElementById('agr-pin-input').value;
-  var _agrApprover = resolvePin(pin);
-  if (_agrApprover) {
-    // Defense in depth: the same gate the buttons enforce. A correct PIN is not authority
-    // to approve an agreement the client has not accepted.
-    var _blk = agrApprovalBlocker(currentAgrJobId);
-    if (_blk === 'estimate') {
-      document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">Approve the estimate for this job first.</div>';
-      return;
-    }
-    if (_blk === 'notwon') {
-      document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">Record the client\'s acceptance first — mark this job Won on the Client Dashboard. Until they have said yes there is nothing to put under contract.</div>';
-      return;
-    }
-    if (_blk) { document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">This job could not be found.</div>'; return; }
-    agrApproved = true;
-    agrApprovedBy = _agrApprover;
-    agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-    // Persist to the job record so approval survives reloads and job switches
-    var job = jobs.find(function(j){ return j.id === currentAgrJobId; });
-    if (job) {
-      job.agrApproved = true; job.agrApprovedBy = agrApprovedBy; job.agrApprovedAt = agrApprovedAt;
-      saveJobs(); syncJobToSheets(job);
-    }
-    document.getElementById('agr-pin-modal').style.display = 'none';
-    renderAgreement();
-    _dashRedraw(currentAgrJobId);
-    // File the APPROVED agreement to Drive. Previously this fired on every render, so
-    // Drive collected copies of the blank unapproved template; now it runs once, here,
-    // on the version that was actually signed off. renderAgreement() has just rewritten
-    // the page, so the delay lets that settle before the DOM is read.
-    setTimeout(function(){ exportAgreementToDrive(currentAgrJobId); }, 400);
-    // And the signing packet — the same agreement with the approved estimate attached.
-    setTimeout(function(){ exportSigningPacketToDrive(currentAgrJobId); }, 900);
-    // Notify the agreements group that a signature-ready agreement exists.
-    if (job) {
-      var agrTc = assignedTCContact(job);
-      notifyDept(DEPT_EMAILS.agreements,
-        'Havellin — Agreement Approved & Ready to Send: ' + (job.name||'Client'),
-        [
-          'An agreement has been approved and is ready to send to the client for signature:',
-          '',
-          'Client: ' + (job.name||'—'),
-          'Property: ' + (job.addr||'—'),
-          'Service: ' + svcLabelOf(job),
-          'Approved by: ' + agrApprovedBy + ' on ' + agrApprovedAt,
-          '',
-          'Open the Havellin app, go to the Agreement tab, and use Print / Save PDF to send it for signature.',
-          '',
-          agrTc.name,
-          'Havellin Palm Beach'
-        ]);
-    }
-  } else if (pin.length === 4) {
-    document.getElementById('agr-pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN.</div>';
-    document.getElementById('agr-pin-input').value = '';
-  }
+// ⚠ THE AGREEMENT'S MANAGER PIN IS GONE — see `agreementReady` for why it was reviewing
+// nothing. This is the one-click replacement for the Agreement tab's old button: it
+// approves, files both documents to Drive, and says what it did. No PIN and no internal
+// notification email; the manager already approved the price and the client already said
+// yes, and telling the manager about the consequence of their own decision is the kind of
+// oversight step Anthony asked to have taken out.
+function approveAgreementNow() {
+  var blk = ensureAgreementApproved(currentAgrJobId);
+  if (blk === 'estimate') { showFB(_dashFbTarget('agr-fb'),'warn','Approve the estimate for this job first.'); return; }
+  if (blk === 'notwon')   { showFB(_dashFbTarget('agr-fb'),'warn','Record the client\'s acceptance first — until they have said yes there is nothing to put under contract.'); return; }
+  if (blk)                { showFB(_dashFbTarget('agr-fb'),'warn','This job could not be found.'); return; }
+  renderAgreement();
+  _dashRedraw(currentAgrJobId);
+  showFB(_dashFbTarget('agr-fb'),'ok','Agreement and signing packet filed to Drive. Send it whenever you are ready.');
 }
 
 
 function generateStripeLink() {
-  if (!agrApproved) { showFB('agr-fb','warn','Approve the agreement first.'); return; }
+  if (ensureAgreementApproved(currentAgrJobId)) { showFB(_dashFbTarget('agr-fb'),'warn','The estimate must be approved and the client\'s acceptance recorded first.'); return; }
   var job = jobs.find(function(j){ return j.id===currentAgrJobId; });
   if (!job) return;
   var est = (currentEstimate && currentEstimate.jobId === job.id) ? currentEstimate : null;
@@ -24579,7 +24572,8 @@ function copyStripeLink(type) {
 }
 
 function printAgreement() {
-  if (!agrApproved) { alert('Agreement must be approved before printing.'); return; }
+  // Approval is a consequence now, not a step: stamp it on the way through.
+  if (ensureAgreementApproved(currentAgrJobId)) { alert('The estimate must be approved and the client\'s acceptance recorded before this can be printed.'); return; }
   var content = document.getElementById('agr-page-content').innerHTML;
   var printTarget = document.getElementById('print-target');
   printTarget.innerHTML = '<div class="ce-page">' + content + '</div>';

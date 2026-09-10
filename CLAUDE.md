@@ -70,6 +70,70 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## The agreement's manager PIN is GONE — approval became a consequence (2026-09-10)
+Anthony: *"there are a lot of 'gates'. maybe too many. once an estimate is approved by a manager
+and accepted by a client, a TC should be able to send an agreement without further manager
+approval or emails … there is literally no way to amend an agreement that comes out of the
+system, so that should be safe to send without manager approval."* App-only, no redeploy.
+
+- **⚠ WHY IT IS SAFE, WRITTEN DOWN SO NOBODY RESTORES THE GATE AS A PRECAUTION. The second PIN
+  was reviewing nothing.** The agreement's commercial terms **are** the approved estimate — it
+  is attached as Exhibit A and both forms say the agreement is not valid without it — and the
+  rest of the document is generated from the service type and the job record. **There is no
+  free-text field anywhere in it**, so there is no version a manager could read that differs
+  from the one the pricing PIN already approved. The two facts that genuinely need a human are
+  both already captured by a NAMED person: a manager approved the price
+  (`estimateStore[id].approvedBy`, PIN-resolved) and the client accepted it (`job.wonBy`, with
+  method, date and note).
+- **`agreementReady(job, estRec)` is the question; `ensureAgreementApproved(jobId)` is the
+  stamp.** The GATE is unchanged — estimate approved AND client accepted, the same two
+  conditions `agrApprovalBlocker` always enforced. What changed is that **meeting them stamps
+  the approval on the way through** the first print, send or file, instead of demanding a
+  separate act. The rail lost a whole row: 13 milestones, not 14.
+- **⚠ ATTRIBUTION IS THE THING THAT ALMOST WENT WITH THE PIN.** `_actor(job)` reads
+  `job.agrApprovedBy` for **`agrSentBy`, `agrSignedBy`, `depositReceivedBy` AND `deliveredBy`** —
+  four downstream stamps that would all have gone blank. It falls to the estimate's approver,
+  who is the named person that signed off on everything the document says. Blanking it turns
+  the suite red.
+- **⚠ AND IT FILES TWO DOCUMENTS INTO A CLIENT'S DRIVE FOLDER OFF WHATEVER THE AGREEMENT PANEL
+  HOLDS.** `exportAgreementToDrive` reads `#agr-page-content`, so firing this from the dashboard
+  with another job loaded would file **that** client's agreement into **this** client's estate
+  folder. `ensureAgreementApproved` primes the panel first and returns `nojob` rather than
+  filing if it cannot. Same class as the Slice 1 priming, worse blast radius: a document in the
+  wrong estate's folder is not something the app can notice afterwards.
+- **The internal "an agreement is ready to send" email to agreements@ is gone** — it told a
+  manager about the consequence of a decision they had already made. **⚠ The CC to agreements@
+  on the document the CLIENT is sent STAYS**, and is a different thing: that is the firm's own
+  record of what went out, and this file records that it was a defect it was ever missing.
+- `checkAgrPin`, `openAgrPinModal` and the `#agr-pin-modal` markup are **deleted, not disabled** —
+  dead code that still compiles is how a gate gets restored "as a precaution" six months later.
+  The tab keeps a one-click **Approve & File** (`approveAgreementNow`) for filing to Drive
+  before sending; it disappears once the documents are filed.
+- **⚠ A SOURCE ASSERTION COULD NOT FAIL AND REVERT-VERIFICATION IS THE ONLY REASON IT WAS
+  FOUND.** The gate's checks were `has(body, 'isJobWon(job)')` — which **survives an inserted
+  early `return ''` above them**, i.e. survives the gate being removed entirely. Four assertions
+  green against no gate at all. The predicate is **driven in the sandbox** now, case by case.
+  **Grepping a function body proves the line exists, not that it runs.**
+- **PAYMENT METHODS WERE ALREADY BUILT AND ANTHONY DID NOT NEED THEM ADDED.** Personal cheque,
+  cashier's cheque, wire, cash and Stripe have all been accepted since the payments list
+  replaced the boolean, and every one of them funds the job and opens hours logging. Verified in
+  a browser end to end: a **$12,858 cheque** funds the job with `clearedOn: null` (a cheque has
+  not cleared on receipt — that distinction is deliberate and `depositClearedTotal` reads it),
+  and **cash** funds it with `clearedOn` set. `isJobFunded` → hours logging unlocks. **Do not
+  "add" cheque or cash support again.**
+- **⚠ STRIPE ACH-ONLY IS NOT AN APP CHANGE.** *"we only really want to take stripe ACH, since
+  that's a max $5 charge vs 3% for credit card."* The payment link is minted by a **separate
+  Apps Script** whose URL lives in Settings (`STRIPE_SCRIPT_URL`) and which is **not in this
+  repo** — the app posts `{type:'stripe_link', payload:{…}}` and gets a link back. Which payment
+  methods that link offers is decided in **that script or in the Stripe Dashboard**, so
+  restricting it to `us_bank_account` has to be done there. Flagged to Anthony rather than
+  pretending the app controls it.
+- **2424 committed checks. All 13 changes revert-verified individually.** Verified in headless
+  Chromium across two jobs: a won job with an approved estimate lights *Signing packet sent*
+  with no approval step in front of it, pressing it stamps the approval to the estimate's
+  approver **per job** (Anthony on one, Ashley on the other), files both documents, and marks it
+  sent — with the other job untouched. No page errors.
+
 ## The timeline goes HORIZONTAL on a desk, two legs, breaking at the signature (2026-09-10)
 Anthony, on the vertical build: *"on desktop, the vertical render take up a lot of real estate
 vertically and uses very little horizontal real estate. cant we make the timeline go left to
