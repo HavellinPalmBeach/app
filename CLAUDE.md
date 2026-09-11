@@ -77,6 +77,158 @@ $1,360 = 5.3%.
   the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 41 tables
   full-width under `print`**.
 
+## ⚠⚠ "APPS SCRIPT NEEDS REDEPLOYING" OVER A SCRIPT THAT HAD JUST RUN (FIXED 2026-09-11)
+Anthony, minutes after the fix above shipped, on a second photograph: **1 change not saved — Apps Script needs
+redeploying**, `saveAllJobPlans → main sheet`, reason **`Unknown action`**. App-only, no redeploy — which is
+the whole point, because the app was telling him to do one. **Read this with the section below it; the two
+reports are one cause wearing two faces.**
+
+- **⚠⚠ `Unknown action` IS EMITTED BY `doGet` AND BY NOTHING ELSE. `doPost`'s OWN FALLBACK NAMES THE TYPE.**
+  Grep `main-sync.gs`: the bare string is at **one** site, `doGet`'s fallback; the POST router answers
+  `'Unknown type: ' + type`. So a store write answered `Unknown action` **never reached the half of the script
+  that writes** — and, just as conclusively, **that deployment's `doGet` ran**, so it is not too old to know
+  `saveAllJobPlans`. The app read it as proof of the opposite and sent him to redeploy.
+- **⚠⚠ HOW A POST BECOMES A GET, because it looks impossible until you see it.** Apps Script answers a POST to
+  `/exec` with a **302**, and a 302 on a POST is followed as a **GET with the body dropped**. Normally the
+  `Location` is Google's `googleusercontent.com/macros/echo` URL, which replays the already-computed answer, so
+  the hop is invisible. When the request needs a Google **session**, the hop re-enters the web app instead — a
+  bare GET, no `action`, straight into `doGet`'s fallback. **The identical hop landing on a sign-in page is the
+  login/HTML error that produced the report below**, which is why both arrived on the same afternoon from the
+  same device. In both, the fix is the `/exec` URL in Settings and the deployment's **Who has access**, and in
+  both **a new version changes nothing**.
+- **⚠⚠ AND THE TEXT ALONE CANNOT SETTLE IT — WHAT WE SENT CAN, WHICH IS WHY THE BODY IS AN ARGUMENT NOW.**
+  `?action=createFolder` and `?action=version` are GETs the app makes **on purpose**, and `doGet` answering
+  *Unknown action* to one of those genuinely **is** a stale deployment — the backend-version banner has read it
+  that way since it was built. A store write carries a `type` and no `action`, and there the same words mean
+  the opposite thing. `_backendErrorKind(errText, fromServer, body)`: `type && !action` → **`route`**,
+  everything else keeps **`stale`**. **With no body the answer stays `stale`**, so every existing caller is
+  unmoved; the two that ask about an action now **declare it** (`{action:'createFolder'}`,
+  `{action:'htmlToPdf'}`) so the rule decides rather than the default.
+  - **⚠ I COLLAPSED THEM ON THE FIRST PASS AND `drive-folder.test.js` CAUGHT IT.** Reading every
+    *Unknown action* as `route` broke two pre-existing checks that the Drive-folder path says *redeploy* on a
+    genuinely old deployment — and they were **right**. A suite catching the over-correction is what stopped
+    the fix trading one wrong instruction for another.
+- **⚠ THIS IS THE 2026-09-01 DEFECT ONE LEVEL FINER.** That one stopped the app reading OUR OWN errors as a
+  verdict on the server (`fromServer`). This one stops it reading one of the SERVER's own sentences as a
+  verdict about the server's **version** when it is a statement about **routing**. Same rule both times:
+  **a claim about the deployment needs evidence that is actually about the deployment.**
+- **The chip says what has to change.** *"check the Apps Script URL and its access"*, and the note names the
+  three things worth looking at — the URL is the **jobs** script rather than the Vendor or Referral Partners
+  one (a directory URL pasted into the jobs field answers every store write with its own idea of unknown),
+  it ends in **`/exec`** and not `/dev`, and the deployment was published with **Who has access: Anyone**. It
+  states **RE-DEPLOYING WILL NOT FIX IT** outright, because the previous wording is what a reader will
+  remember. Held rather than hammered, like `stale` and `crash`: the same POST to the same URL does the same
+  thing.
+- **4331 committed checks** (13 new in `tests/sync-queue.test.js`). **All six changes revert-verified
+  individually** — the `route` rule and the classifier reading the body and the enqueue site's argument fail
+  **9** each, the chip branch 6, the Drive path's declared action 2, the retry site's argument 1.
+- **⚠ THREE PRE-EXISTING ASSERTIONS BROKE CORRECTLY AND ALL THREE ARE RESTATED, not deleted**: the flat
+  `eq(f('Unknown action', true), 'stale')`, and two byte-sequence pins on the classifier's call shape that
+  moved when it grew a third argument. Twelfth time this file records the byte-sequence pattern.
+- **Verified end to end in headless Chromium on the real page**, answering every POST exactly as his
+  deployment did:
+
+  | | old build | new build |
+  |---|---|---|
+  | kind | `stale` | `route` |
+  | chip head | *"1 change not saved — Apps Script needs redeploying"* | *"1 change not saved — check the Apps Script URL and its access"* |
+  | what it tells you to do | *Deploy → Manage deployments → New version* | the URL, `/exec` vs `/dev`, and the access setting |
+  | `createFolder` / store write / `Unknown type` | `stale` / **`stale`** / `stale` | `stale` / **`route`** / `stale` |
+
+  The old build reproduces his screenshot word for word. Overflow **0** at 1440 and 390px, no page errors.
+- Manual **§2** — **the existing chip note said *Apps Script needs redeploying* appears on
+  `Unknown type/action`, and that sentence is now FALSE**; corrected to `Unknown type: <name>` with the reason
+  beside it, plus a new note. Playbook **two** symptom→cause rows, deliberately adjacent so the two wordings
+  are told apart on the page. Both `.md` copies hand-edited and **15 claims parity-checked**; tag balance
+  verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1),
+  rendered at 1440/390 with **0 overflow** and **all 41 tables full-width under `print`**.
+
+## ⚠⚠ "2 UNSAVED CHANGES — RETRYING…" THAT NEVER CLEARED — THE RETRY WAS CAUSING IT (FIXED 2026-09-11)
+Anthony, from a job site, on a photograph of the chip: **`saveAllJobPlans` and `saveAllJobs`**, both held,
+both reading *"the web app returned a login/HTML page, not data"*. App-only, no redeploy.
+
+- **⚠⚠ THE CLASSIFICATION WAS RIGHT AND THE SENDING WAS WRONG, WHICH IS WHY NOTHING ABOVE IT LOOKED
+  BROKEN.** `_backendErrorKind` calls that interstitial retryable and that is correct — it really does clear.
+  But **`flushPendingWrites` `Promise.all`-ed the whole queue**, firing every held write SIMULTANEOUSLY. Every
+  store write on the server takes `LockService.getScriptLock()`, and **that lock is GLOBAL to the deployment**,
+  so two whole-store writes going out together make one of them wait on a lock *we are holding ourselves* —
+  and a long enough wait is what fails it again. **The retry manufactured the condition it was retrying.**
+- **⚠⚠ IT IS THE EXACT DEFECT THE OUTBOUND COALESCER WAS BUILT TO REMOVE, REINTRODUCED ON THE ONE PATH
+  THAT ONLY RUNS WHEN WRITES ARE ALREADY FAILING.** `_flushOutbox`'s own comment has said *"sending
+  sequentially means nothing ever waits on a lock we are holding ourselves"* since it was written; the queue
+  three functions above it fanned out. **Measured on the real page, not argued** — the outbox's first pass is
+  `start/end/start/end` and the **first retry** is `start saveAllJobs → start saveAllJobPlans (inFlight=2)`.
+- **⚠ SERIALISING INSIDE EACH SENDER IS ONLY HALF THE RULE — the two senders must not overlap EACH OTHER.**
+  They post to the same deployment and take the same lock, so a retry landing mid-batch is the same collision
+  by another route. `flushPendingWrites` stands down on `_outboxSending` and re-checks within one batch window
+  (**not** the 60s backoff, or a queue would stall behind a 250ms condition); `_flushOutbox` stands down on
+  `_flushing`. Both directions driven.
+- **⚠⚠ AND THE CHIP SAID THE SAME REASSURING THING AFTER AN HOUR THAT IT SAID AFTER TWO SECONDS.** Only
+  SOME of what `_backendErrorKind` calls retryable really clears: a dropped connection and Google's transient
+  interstitial are gone within a few attempts, while **a stale `/exec` URL, a deployment whose access is not
+  "Anyone", and a quota wall look identical to them and NEVER clear.** Writes now carry `tries`, and past
+  `SYNC_STUCK_TRIES` (6 — just under three minutes on the existing backoff) the head reads *"N changes not
+  saved — still failing after N attempts"* and the note names those two causes.
+  - **⚠ IT NEVER STOPS RETRYING, deliberately, and a test pins that.** The app cannot tell a wrong URL from
+    a slow network, and giving up on the second would strand a queue that was about to drain. It stops
+    *implying the next attempt will work*; it does not stop working.
+  - **⚠ A DEFINITIVE VERDICT STILL OUTRANKS THE COUNT.** `stale` and `crash` name a specific fix; the count
+    only says "this is not a blip". Both pinned at 40 attempts.
+  - **⚠ THE FAILURE COUNT CARRIES OVER WHEN A NEWER SNAPSHOT SUPERSEDES THE PAYLOAD.** The key is the
+    logical target, so *"saveAllJobs has now failed six times"* stays true when the body underneath is
+    replaced. Resetting it is how a permanently stuck queue on a store somebody is actively editing would
+    look brand new on every save, forever.
+- **⚠⚠ THE THING NOTHING ON SCREEN SAID AT ALL: CLOSING THE TAB DESTROYS THE WORK, NOT JUST THE WRITE.**
+  `_pendingWrites` is memory-only, and `loadJobs` **overwrites the local cache from the sheet** on the next
+  load (*"Sheets is the source of truth — always overwrite local"*) — so an edit that never synced is gone on
+  the reload rather than merely delayed, while the chip read *"retrying…"*. A `beforeunload` guard challenges
+  it, **and only while writes are outstanding**: a prompt on every close is trained past within a day, on an
+  app people close all day.
+  - **⚠ IT IS DELIBERATELY NOT PERSISTED TO localStorage INSTEAD, and a test pins that the queue never
+    touches it.** These are whole-store snapshots — hundreds of KB — against a ~5MB origin quota **shared
+    with the inventory manifest**, and starving the one write that must never fail is a worse defect than
+    this one.
+  - **⚠ A CLIENT-SIDE MERGE IN `loadJobs` WAS CONSIDERED AND REJECTED.** Not clobbering a locally-newer job
+    is exactly how deleted clients came back from a stale laptop on 2026-09-08, which the job ledger exists
+    to stop. The server owns the merge.
+- **4318 committed checks** (`tests/sync-retry.test.js`, 54 new — the first coverage of how the queue SENDS
+  rather than how it classifies). **All eight app changes revert-verified individually** — and the true
+  revert of `flushPendingWrites` to its old `Promise.all` body fails **19**; the chip escalation 7, the
+  outbox interlock and the `tries` increment and the unload guard 3 each, the outbox-side interlock 2, and
+  the carry-over and the mid-sweep guard 1 each.
+  - **⚠ AN IMMEDIATELY-RESOLVING SYNCHRONOUS THENABLE CANNOT MEASURE THIS AND WOULD HAVE PASSED ON THE
+    DEFECT.** The house pattern (`drive-folder.test.js`) resolves inline, so each response runs before the
+    next request starts and **no two requests can overlap in either build** — the very thing under test
+    becomes unobservable. This suite's thenable stays **pending until the test answers it**, so "how many are
+    on the wire" is a real question. A sequential sender starts its next request inside one of those
+    resolutions, which is the behaviour, not a trick.
+  - **⚠ TWO OF MY OWN ASSERTIONS COULD NOT FAIL AT FIRST, AND `_retrySoon`'S ONE-TIMER GUARD IS WHY.** Both
+    arrived with a backoff timer already armed by `_enqueueWrite`, so the guard correctly declined to arm a
+    second and the test counted zero either way. They now null `_retryTimer` first — the state the real timer
+    callback leaves behind — so the check is falsifiable.
+- **⚠ A PRE-EXISTING ASSERTION PINNED A BYTE SEQUENCE AND BROKE CORRECTLY**, the eleventh time this file
+  records it: `_pendingWrites[_writeKey(body, target)] =` moved when the key was hoisted into a local so the
+  previous entry's count could carry over. Restated as the requirement rather than deleted.
+- **Verified end to end in headless Chromium on the real page**, driving the real queue against a backend
+  that answers exactly as Google does when it serves a login page:
+
+  | | old build | new build |
+  |---|---|---|
+  | peak concurrent POSTs on retry | **2** (one per queued write) | **1** |
+  | peak on the recovery sweep | **2** | **1** |
+  | attempts recorded per write | **null** — never counted | 2 |
+  | chip after six failures | *"2 unsaved changes — retrying…"* | *"2 changes not saved — still failing after 6 attempts"* |
+  | closing the tab over an unsent queue | **closes silently** | challenged |
+
+  Once the backend answers normally the queue drains one at a time and the chip goes. Overflow **0** at 1440
+  and 390px, no page errors.
+- Manual **§2** (a note under the existing chip note); playbook **four** symptom→cause rows — the chip
+  retrying, the chip stuck, the browser asking whether you really want to leave, **and the standing
+  *"photos fail on site → the client has no Drive folder"* row this file has been asking for since
+  2026-09-11.** Both `.md` copies hand-edited and **13 claims parity-checked**; tag balance verified on both
+  HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
+  1440/390 with **0 overflow** and **all 41 tables full-width under `print`**.
+
 ## ⚠⚠ "WE NEED APPRAISAL IN THERE TOO" — AND IT WAS ALREADY THERE, UNREACHABLE (BUILT 2026-09-11)
 Anthony, from a job site: *"when we're doing the room by room sorting and taking pictures for an
 estate client, the only disposition avenues are auction, consign, donate, hold, junk, keep, or sell.
@@ -300,9 +452,11 @@ App-only, no redeploy. **He was right about the causal chain and it points one s
     plus a one-press repair door is the safe shape: it recovers the client without ever re-sending a
     write on its own.
 - No document pass: nothing client-facing changed wording, and neither the manual nor the playbook
-  describes when the Drive folder is created. **⚠ The playbook's symptom→cause table should gain a row
+  describes when the Drive folder is created. ~~**⚠ The playbook's symptom→cause table should gain a row
   for *"photos fail on site"* → *the client has no Drive folder; open the client and press Create
-  Drive folder* on the next documentation pass.**
+  Drive folder* on the next documentation pass.**~~ **DONE 2026-09-11**, in the sync-queue pass at the top
+  of this file. *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
+  outstanding work.*
 
 ## THE DASHBOARD HEADER OFFERED FIVE BUTTONS THAT WERE ALREADY ON THE TIMELINE (FIXED 2026-09-11)
 Anthony, reading the shipped build: *"i kind of feel like the functionality on the top of the client
@@ -488,6 +642,8 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 
 ## Branches
 - Active feature branch: `claude/busy-heisenberg-h24ya9`
+  (`claude/festive-noether-ggr0fn` shipped alongside it on 2026-09-11 — two sessions ran
+  concurrently and both are on `main`; neither is stale.)
   (was `claude/trusting-allen-iadbqe`, then `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
