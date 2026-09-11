@@ -16,7 +16,9 @@ Browser-based app used by all Havellin staff. No installation. Data syncs across
 >
 > The tagline on all four client documents is **"Havellin handles the work no family should face alone."** It replaced *Guiding Families Through Life's Transitions* on 2026-08-03.
 
-**Navigation tabs (in order):** Win / Loss · Client Dashboard · Client Intake · Build Estimate · Client Estimate · Agreement · Job Plan · Inventory · Invoices · Contractors · Vendors · Referral Partners
+**Navigation tabs (in order):** Win / Loss · Client Dashboard · Client Intake · Build Estimate · Job Plan · Inventory · Contractors · Vendors · Referral Partners
+
+> **Three tabs were retired from the navigation on 2026-09-11 — Client Estimate, Agreement and Invoices.** Everything they carried now lives on the **job timeline** inside the Client Dashboard (§9), on the row for the milestone it belongs to. Anthony's reason for the change: *"we are finding ourselves having to go to too many tabs … that way, as we're going through a job, we know what to do next."* **§7, §8 and §12 still describe those documents** — what is in them, what the gates are, what each one promises a client. Only the *route* to them moved. Where one of those sections says "the tab", read it as the matching row on the timeline.
 
 > The app opens on the **Client Dashboard** even though Win / Loss is the first tab.
 
@@ -85,7 +87,7 @@ To open the **Apps Script** behind any of these sheets (to view, edit, or re-dep
 
 ```
 Intake → Estimate → Manager Approval → Send to Client → Client Accepts → Mark Won
-→ Approve & Send Agreement → Staff the Job Team → Mark Agreement Signed → Record Deposit
+→ Send Signing Packet → Staff the Job Team → Record the Signed Agreement → Record Payment
 → Job Active → Job Plan / Document Property → Log Hours → Invoices → Complete
 ```
 
@@ -279,7 +281,7 @@ Each weight is the **sum of the sub-rooms it replaces**, so a fully-ticked build
 - **Quote as a fixed price** — every service bills **time-and-materials by default**; the concierge may switch an individual estimate to a firm flat fee. The amount prefills from the suggested fee (hourly basis + a flat **20% contingency**) and is fully editable. **Not available on Probate or Contested Probate** — the toggle is disabled there, because those bill on actual logged hours for Personal-Representative and court defensibility. Estate Settlement is a private engagement with a family or trustee, so a flat quote *is* available on it.
   > **The prefilled fee tracks the estimate until you type one.** It used to prefill once and then freeze while crew size, room scores, adjustments, the premium toggle, the discount and rush all kept moving the basis underneath it — a real estimate showed **$109,613 against a $77,620 services total**, a 41% markup where the contingency is 20%, because the toggle had been flipped when the total was around $91,300 and the crew changed afterwards. That figure goes on the client estimate, the agreement and every invoice, so a stale prefill is money. Type a number and it stops tracking — that is your price — but if the estimate then moves away from it the panel says by how much and offers the current suggestion in one click. Reopening a saved estimate always holds its agreed fee.
   > The contingency is **20% on every service you can actually quote fixed**. Estate Settlement was 25% and came down to match: 25% on top of an already-buffered hourly estimate reads as padding to a client comparing quotes. Probate keeps 25% and contested probate 35%, and that is not an inconsistency — those two are time-and-materials only, so their buffer is never quoted to anyone. It exists solely as the internal *"what would a flat fee have run"* reference line the panel shows on this tab, where a wider band on the riskiest work is the honest figure.
-- **Preferred Client Discount** — percentage off Havellin labor fees only, **capped at 15%**. The same cap applies to *Offer Discount* on the Client Estimate tab (§7), which is the route to use once the estimate has already gone out.
+- **Preferred Client Discount** — percentage off Havellin labor fees only, **capped at 15%**. The same cap applies to *Offer Discount* on the timeline's *Estimate approved* row (§9a), which is the route to use once the estimate has already gone out.
 - **Moving Materials Package** — None, or an Estate tier (Basic $500 · Standard $750 · Premium $1,500) or Home Editing / Transition tier (Basic $200 · Standard $350 · Premium $550)
 
 ### 5d. Third-Party Vendors & Moving Materials
@@ -497,7 +499,7 @@ A Home Prep job opens a stripped-down Job Plan — no hours log, no PS crew, no 
 
 ## 7. Client Estimate & Approval
 
-**Tab: Client Estimate** → select job. The client-facing estimate document renders here. Review for accuracy. The estimate is informational — no client signature is required or requested.
+**Client Dashboard → open the job → the *Estimate approved* and *Estimate sent to client* rows on the timeline** (§9a). **👁 View** renders the client-facing document; read it for accuracy. The estimate is informational — no client signature is required or requested. The Client Estimate tab was retired from the navigation on 2026-09-11; the document, the approval PIN and every gate below are unchanged.
 
 ### What the document contains
 
@@ -569,9 +571,9 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 ### Sending to Client
 
-> **An unapproved estimate cannot be emailed.** The app refuses, from the Client Estimate tab and from the Client Dashboard shortcut alike. Approve it first — the figure isn't final until someone has signed off on it.
+> **An unapproved estimate cannot be emailed.** The app refuses, and says so on the dashboard where you pressed it. Approve it first — the figure isn't final until someone has signed off on it.
 
-**Email to Client** builds a formatted HTML email with the estimate PDF attached and leaves it as a **draft in your own Gmail**. Read it, add anything personal, and send it yourself. Then hit **✓ Mark as Sent** here to record delivery. Wait for the client to confirm before taking further steps.
+**✉ Send estimate** on the *Estimate sent to client* row builds a formatted HTML email with the estimate PDF attached and leaves it as a **draft in your own Gmail**. Read it, add anything personal, and send it yourself. Then hit **✓ I've sent it** here to record delivery. Wait for the client to confirm before taking further steps.
 
 > **The draft is in the mailbox of whoever is signed in on the device, and that is the point (new 2026-09-08).** Ashley pressing the button gets a draft in Ashley's Gmail that sends from Ashley's address, lands in Ashley's Sent folder, and gets the client's reply. Google asks which account the first time on each device and is silent afterwards. The app holds a Gmail token only in memory and never writes it to the device, and the scope it requests is **compose only** — it can create a draft and cannot send one. Nothing leaves the building without a person pressing send.
 >
@@ -595,7 +597,7 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 > **The client-facing name says what the document is (new 2026-09-08).** The printed PDF and the email attachment are now *Havellin Service Estimate - 1234 Ocean Blvd - Sep 8 2026.pdf*. It used to be the surname and the job id — *Ellsworth-HVL-0007.pdf* — which reads as a database key on a document going to a client. `estimateDocNames(job)` is the single source, so the printed PDF, the email attachment and the Drive copy cannot drift apart. *The Drive names deliberately carry no date*: the Apps Script overwrites by filename, so a dated name would leave a new file behind on every re-file instead of replacing the current one.
 
-> **⚠ TWO DIFFERENT DOCUMENTS WERE WRITING THE SAME FILENAME, AND THE CLIENT FOLDER GOT WHICHEVER FINISHED LAST.** The *internal worksheet* (room-by-room volume and complexity scores, TC/PS hours, per-room dollars, the walkthrough notes) and the *client estimate* both wrote `<HVL-ID>_Estimate.html` into the same **Estimate** subfolder. On approval both fire, 400ms apart, and the Apps Script deletes by name and re-creates — so on a cold start the order they landed was not the order they were sent, and roughly half the time the file sitting in the client's folder was our cost breakdown. They are now `<HVL-ID> - Havellin Service Estimate` and `<HVL-ID> - Estimate Worksheet (INTERNAL)`, and the worksheet carries a red *Internal worksheet — not a client document* line at the top of its first page. **Any job estimated before 2026-09-08 should have its Estimate folder checked** — if the file there is a table of rooms and hours, re-approve or press *Save to Drive* to file the client version. Both files are **PDFs**: `uploadHtmlToDrive` has always converted, whatever the `.html` in the function name suggests.
+> **⚠ TWO DIFFERENT DOCUMENTS WERE WRITING THE SAME FILENAME, AND THE CLIENT FOLDER GOT WHICHEVER FINISHED LAST.** The *internal worksheet* (room-by-room volume and complexity scores, TC/PS hours, per-room dollars, the walkthrough notes) and the *client estimate* both wrote `<HVL-ID>_Estimate.html` into the same **Estimate** subfolder. On approval both fire, 400ms apart, and the Apps Script deletes by name and re-creates — so on a cold start the order they landed was not the order they were sent, and roughly half the time the file sitting in the client's folder was our cost breakdown. They are now `<HVL-ID> - Havellin Service Estimate` and `<HVL-ID> - Estimate Worksheet (INTERNAL)`, and the worksheet carries a red *Internal worksheet — not a client document* line at the top of its first page. **Any job estimated before 2026-09-08 should have its Estimate folder checked** — if the file there is a table of rooms and hours, re-approve or press *📁 File to Drive* to file the client version. Both files are **PDFs**: `uploadHtmlToDrive` has always converted, whatever the `.html` in the function name suggests.
 
 > **⚠ THE ESTIMATE FILES ITSELF ON APPROVAL — there is normally no button to press.** Approving with a PIN writes the client estimate into the job's Drive *Estimates* folder automatically, and editing an approved estimate clears the stamp so re-approving re-files the corrected version. The approval banner carries *📁 Filed to Drive · &lt;when&gt; · Open*, which is the answer to "did that work?" both now and tomorrow. A **📁 File to Drive** button appears *only* when that automatic filing did not land — it is the retry, and it disappears the moment a filing succeeds. Before 2026-09-09 the button was always on screen, and pressing it repeatedly is what produced the duplicates described below.
 
@@ -603,11 +605,11 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 > **⚠ THE MAILBOX ADDRESS NEVER GOES IN THE DRAFT URL — got wrong twice.** `/mail/u/<address>/` was tried percent-encoded (*"Your account is not available"*) and then with a literal `@` (*"Temporary Error (404)"*). Whatever Gmail does with that segment depends on which Google accounts the **browser** holds a session for, which is invisible from the app and different on every device — and authorising the OAuth popup grants a token, not a Gmail session. The link is now always `/mail/u/0/`, the one form that cannot fail, and the mailbox the draft was created in is **named on screen** instead, with the instruction to switch accounts using Gmail's own avatar menu. A named mailbox plus a working page beats a URL that guesses and errors. **Do not put the address back in the path.**
 
-> **Save to Drive confirms itself, and still says so tomorrow.** The button repaints to a green **✓ Saved to Drive** carrying the time in its tooltip, and the approval banner gains a persistent **📁 Filed to Drive · &lt;when&gt; · Open** line linking straight to the filed copy. Before 2026-08-03 the only acknowledgement was a four-second toast in the bottom-right corner of a long page — missed by anyone watching the button they had just pressed — and nothing anywhere recorded that an estimate had ever been filed. A *failed* upload writes no stamp and the button stays plain, so it can never claim a save that didn't happen. **Editing an approved estimate clears the stamp**, because the copy in Drive is the previous version the moment you edit; re-approval re-files and re-stamps automatically. Pressing the button again re-files and overwrites by filename.
+> **Filing confirms itself, and still says so tomorrow.** The button repaints to a green **✓ Saved to Drive** carrying the time in its tooltip, and the approval banner gains a persistent **📁 Filed to Drive · &lt;when&gt; · Open** line linking straight to the filed copy. Before 2026-08-03 the only acknowledgement was a four-second toast in the bottom-right corner of a long page — missed by anyone watching the button they had just pressed — and nothing anywhere recorded that an estimate had ever been filed. A *failed* upload writes no stamp and the button stays plain, so it can never claim a save that didn't happen. **Editing an approved estimate clears the stamp**, because the copy in Drive is the previous version the moment you edit; re-approval re-files and re-stamps automatically. Pressing the button again re-files and overwrites by filename.
 
 ## 8. Service Agreement
 
-**Tab: Agreement** → select job
+**Client Dashboard → open the job → the *Signing packet sent* and *Agreement signed* rows on the timeline** (§9a). The Agreement tab was retired from the navigation on 2026-09-11; the document and every gate below are unchanged.
 
 > **Which of the two agreement forms you get is decided by the same living/deceased rule as the estimate** (§7) — `isDecedentJob(job)`. A **deceased** client gets the **estate form**, which is written to an authorised representative signing in a fiduciary capacity; a **living** client gets the standard form, written to an owner contracting for their own property. You do not choose it and there is no override on the tab.
 
@@ -635,19 +637,40 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 ### Generate & Send
 
-1. Select job → agreement auto-populates from approved estimate data
-2. Manager enters PIN to approve for sending. *The approved agreement files itself to the Drive **Agreement** folder at this point* — approval is the first moment the document means anything.
-3. **Print / Save PDF** or **Email to Client**, then hit **✉ Mark Agreement Sent**.
+> **⚠ THE AGREEMENT'S SECOND MANAGER PIN WAS REMOVED ON 2026-09-10. Do not restore it as a precaution.** Anthony: *"there are a lot of 'gates'. maybe too many. once an estimate is approved by a manager and accepted by a client, a TC should be able to send an agreement without further manager approval … there is literally no way to amend an agreement that comes out of the system."* **Why it is safe, written down so nobody adds it back.** The agreement's commercial terms *are* the approved estimate — attached as Exhibit A, and both forms say the agreement is not valid without it — and the rest is generated from the service type and the job record. **There is no free-text field anywhere in it**, so there was no version a second manager could read that differed from the one the pricing PIN had already approved. The two facts that genuinely need a human are both already captured against a *named* person: a manager approved the price, and the client accepted it. **The GATE is unchanged** — estimate approved *and* client accepted, exactly as before. What changed is that meeting it now **stamps the approval on the way through** the first print, send or file, instead of demanding a separate act. The timeline lost a whole row for it.
+
+1. Open the job on the Client Dashboard — the agreement populates from the approved estimate.
+2. **✉ Send signing packet** on the *Signing packet sent* row. This stamps the approval, files the agreement *and* the packet to the Drive **Agreement** folder, and builds the Gmail draft CC'd to agreements@ — in one press. (**🖨 Print** instead if you are handing it over in person; it stamps and files the same way.)
+3. Send the mail, then **✓ I've sent it**.
 
 > **Generate Payment Link** asks the Stripe service for a deposit link and mails it to `billing@havellinpalmbeach.com` for you to forward. **Believe what it tells you.** It used to report success unconditionally — the request was sent in a mode that makes the reply unreadable, so a 404 from an undeployed URL and a 500 from a script that threw both printed *"payment link generated and sent"*. It now reads the reply and says plainly when nothing was created; if it does, send the deposit invoice instead and record the payment by hand. Nothing yet reads *back* from Stripe — there is no webhook and no automatic payment record (§3).
 
 ### Then, as each thing actually happens
 
-Three ordered steps, each recording who did it and when. Each button appears only at its own stage, and each refuses to run out of order — you can't mark a signature on an agreement that was never sent.
+Each step appears only at its own row on the timeline, records who did it and when, and refuses to run out of order — you cannot record a signature on an agreement that was never sent.
 
-1. **✉ Mark Agreement Sent** — you've emailed or handed it over.
-2. **✓ Mark Agreement Signed** — the signed copy has come back. *Signing does not imply payment*; these are separate facts and the app keeps them separate.
-3. **✓ Record Deposit** — see below. This is what allows work to begin.
+1. **✓ I've sent it** — you have actually sent the packet (§9b).
+2. **✓ Record the signed agreement** — the signed copy has come back. *Signing does not imply payment*; these are separate facts and the app keeps them separate.
+3. **✓ Record payment** — see below. This is what allows work to begin.
+
+#### The signature record
+
+> **⚠ UNTIL 2026-09-11 THE APP HELD NO RECORD OF WHO SIGNED AN AGREEMENT, AND THE NAME IT SHOWED WAS OURS.** *Mark Agreement Signed* stamped the Havellin manager who had approved the **price**, so the dashboard read *"Agreement signed · Anthony Graziano"* over a contract Anthony did not sign. This has nothing to do with e-signatures — it was live on every wet signature. On a court-reviewed probate matter it is exactly the question counsel asks: **who bound the estate to this?** "Our managing partner" is not an answer.
+
+**✓ Record the signed agreement** now asks four things:
+
+| Field | Notes |
+|---|---|
+| **Who signed it?** | The *client*. Prefilled with the estate's authorised representative, or the client on a living-owner job. **A blank is refused** — a signature record with no signer on it is the state this replaced. |
+| **How did it come back?** | *Signed in person* · *Signed copy returned*. |
+| **Date signed** | The date *they* signed, not the date you typed it in. |
+| **Note** | Free text — e.g. where the original is held. |
+
+> **The signer and the recorder are two people and stay two fields.** Who signed is the client; who recorded it is whoever typed it in, which is what the old field really held all along. Both are kept, with both dates.
+
+> **A job signed before 2026-09-11 is still signed, and its signer is unknown.** That is a fact about the world rather than about our records, so it reads as signed with **nobody named** and the row says *"Signed before the signature record — who signed it is not on file"*. It does not print the old name as the signer, because that name is ours.
+
+> **⚠ *Electronic signature* is never offered to a person, deliberately.** The picker lists only the two manual methods and the app refuses anything else, so nobody can record an electronic signature that no provider issued. If an e-signature provider is ever switched on, **the manual button stands itself down on its own** — the row then says the provider is watching for it, and the signature arrives from the provider, which knows who authenticated and when. That is the point of using one. *No provider is connected today*; DocuSign is declared in the app and not built, and a half-built integration that reports success on an unreadable reply is a defect this app has shipped once already.
 
 ### Recording a payment
 
@@ -678,11 +701,41 @@ A *certified* cheque and a *cashier's* cheque are not the same thing: certified 
 | Midpoint | Brings cumulative to 75%, with vendor & home-prep fees trued to actual Job Plan quotes | Due at project midpoint |
 | Final | Balance — labor trued to logged hours, fees on actuals, plus any approved Change Orders | Within 7 days of final invoice |
 
-Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 30% GC fee on home-prep vendors — on a standalone engagement *and* on prep bundled into a labor job, since 2026-09-10 — is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; no fee is charged on any other third-party vendor; lines with no logged quote fall back to the estimate, tagged "est." Generate each stage from the Invoices tab via the Stage selector.
+Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 30% GC fee on home-prep vendors — on a standalone engagement *and* on prep bundled into a labor job, since 2026-09-10 — is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; no fee is charged on any other third-party vendor; lines with no logged quote fall back to the estimate, tagged "est." Each stage is generated from its own row on the job timeline (§9a).
 
 ## 9. Client Dashboard
 
-**Tab: Client Dashboard** → select job card. Shows full job status, action checklist, referral source / partner, Drive folder link, and all management actions.
+**Tab: Client Dashboard** → select job card. Shows full job status, the job timeline, referral source / partner, Drive folder link, and all management actions.
+
+### 9a. The job timeline — where the whole job is run
+
+Opening a client draws a **timeline** of sixteen milestones, from intake to final payment. On a desk it runs left to right in two legs, breaking at *Agreement signed*; on a phone it runs top to bottom. They are two renderings of one thing and can never disagree about state.
+
+**Exactly one step is ever lit** — as the current step, or as blocked. That is the promise the timeline exists to keep: open a client, and the one thing to do next is on screen. Completed steps go green; a blocked one goes red and says both the reason and the fix, on the row rather than in a tooltip (a tooltip cannot be reached on an iPad at all).
+
+| Milestone | What is on the row |
+|---|---|
+| Client intake · Walkthrough | Recorded at intake. |
+| Estimate built | **Build the estimate** — opens Build Estimate on this job. |
+| Estimate approved | **Submit for approval**, then **🔑 Manager approval** (PIN), **Deny**, **Offer discount**, **✎ Edit estimate**. |
+| Estimate sent to client | **✉ Send estimate** → **✓ I've sent it**. Plus View / Print / the Drive copy. |
+| Client accepted | **✓ Client accepted — mark won**. |
+| Signing packet sent | **✉ Send signing packet** → **✓ I've sent it**. |
+| Agreement signed | **✓ Record the signed agreement** — see §8. |
+| Deposit invoice sent | **✉ Send deposit invoice**, **💳 Stripe link**. |
+| Deposit received | **✓ Record payment**. |
+| Job active | **▶ Activate job**. Blocks on executor authorisation where that applies. |
+| Midpoint / Final invoice sent | Same send pair. The final carries **🔑 Manager approval** when it is outside ±15% (§12). |
+| Midpoint / Final payment | **✓ Record payment** at that stage. |
+| Work complete | **■ Close job** — stamps the handover date, once. |
+
+> **The action button is drawn in the pinned band and nowhere else.** The lit row and the band are the same step, so drawing it twice would put one control on screen twice and make you check which is real. The rows themselves are a status read. Actions that are out of sequence (edit the client, mark the job lost) gather into one strip at the foot.
+
+> **The timeline is driven by the five things that actually carry a job's state, not by the status label.** The status word on a job card moves independently of the estimate record, the client's acceptance, the agreement chain and the payments — re-approving an estimate on a signed, funded job even knocks the status back to *Approved*. Each milestone reads whichever of the five owns it, so the timeline stays right when the status word is not. **Trust the timeline over the status chip.**
+
+> **A step can be done out of order and the timeline copes.** *Estimate sent to client* is a button somebody can legitimately skip, so a signed and funded job may carry no estimate-sent date. Later steps stay green and the light lands on the *earliest* gap rather than treating everything after it as unfinished.
+
+> **A dead job collapses to one row.** *Lost* and *Closed — Deposit Retained* are terminal, so there is no next action and nothing is lit — a button there would invite a click the app refuses.
 
 | Status | Meaning |
 | --- | --- |
@@ -700,6 +753,29 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 > **The handover date is recorded once.** The first time a job is closed, the app stamps the delivery date, the time, and who closed it. Re-opening and re-closing does *not* move that date — it records when the work was actually handed over, not the last time somebody touched the button. Nothing in the app previously recorded delivery at all (the *completion date* on the intake form is a target, not an observation), and this is the field revenue recognition will read once the QuickBooks twin goes live.
 
 > **"Approved" and "Won" are different things, and the difference is the point.** Approved means a manager signed off on our own figure. Won means the *client* said yes. Previously the app had no way to tell them apart — it counted a job as won the moment we approved our own estimate, so the win rate measured how often we approved our own work.
+
+### 9b. The five client documents — one way to view, print, send and file
+
+Client estimate · signing packet · deposit invoice · midpoint invoice · final invoice. Every one of them is reached the same way from its own row on the timeline, and the sameness is the deliverable — Anthony: *"if they've sent an estimate they'll know how to send an agreement, and they'll know how to send an invoice."*
+
+| Button | What it does |
+|---|---|
+| **👁 View** | Opens the document in a reader over the dashboard. Closing it drops the document. |
+| **🖨 Print** | Print / Save as PDF. The PDF is named for the client and the property, never a database key. |
+| **✉ Send…** | Builds the PDF, creates a **draft in your own Gmail** with it attached and the right department CC'd, and opens it. |
+| **✓ I've sent it** | Appears after the draft is made. Press it once you have actually sent the mail. |
+| **↗ Open the … draft** | Re-opens the draft you made. It is withdrawn once you confirm the send. |
+| **📁 Filed copy** / **📁 File to Drive** | Opens the copy in the client's Drive folder, or files it if that did not land. |
+
+> **Why there are two taps and not one.** The app is allowed to *create* a Gmail draft and is deliberately not allowed to send one — that is the feature: every client email is read by a person before it goes. So between the app making the draft and the mail leaving there is a real gap the app cannot see across. Pressing **Send** records a *draft*; pressing **✓ I've sent it** records the *send*. Recording the draft as a send would turn the timeline green over an untouched draft sitting in a mailbox — and on the estimate, that is what unlocks Mark Won. The row says *"Drafted — read it, send it, then confirm"* while it is waiting.
+
+> **The confirming tap belongs to the mail provider, not to the document.** If a sender that can send on its own is ever wired in, the tap disappears by itself on all five documents. Nothing on screen needs changing for that.
+
+> **The invoice had no real email at all until 2026-09-11.** It had a plain-text message whose body read *"Please find attached your invoice"* with **nothing attached** — a plain mail link cannot carry an attachment. Any invoice emailed before that date went out saying an attachment was there when it was not.
+
+> **Filing is answerable for all five now.** Each document records when it was filed and where, so "is this in Drive?" has an answer on the row. A document that was *sent* and never filed offers **📁 File to Drive** — that is the case that matters, because it is the one the firm could not produce later. An unsent draft offers neither; it has not gone anywhere yet.
+
+> **Fixed 2026-09-11, and worth knowing if you filed anything before then:** the estimate and the agreement were filed to Drive by reading whatever the old Client Estimate / Agreement tab happened to be showing. Filed from the dashboard with another client loaded, that wrote **the other client's document into this client's estate folder**, under this client's job id — and reported success. If a filed document in a Drive folder names the wrong client, this is why. Re-file it from the timeline and delete the stray.
 
 ### Marking a job Won
 
@@ -949,9 +1025,9 @@ Assign a directory vendor to each estimate line and logged category, set status,
 
 ## 12. Invoices
 
-**Tab: Invoices** → select job, then pick a **Stage** (Deposit / Midpoint / Final). *Deposit* is the 50% estimate basis. *Midpoint* brings the cumulative collected to 75% and trues vendor & home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). *Final* trues labor to logged hours, fees to actuals, and adds any approved Change Orders.
+**Client Dashboard → open the job → the *Deposit / Midpoint / Final invoice sent* rows on the timeline** (§9a). Each row is its own invoice — there is no stage picker any more, because the row you are on *is* the stage. The Invoices tab was retired from the navigation on 2026-09-11. The three stages are unchanged: *Deposit* is the 50% estimate basis. *Midpoint* brings the cumulative collected to 75% and trues vendor & home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). *Final* trues labor to logged hours, fees to actuals, and adds any approved Change Orders.
 
-> **Most invoices need no PIN.** Deposit and midpoint are formulaic from the approved estimate — nothing to review, so they print straight out and show *No approval required*. Only the **final** asks for a manager PIN, and only when it lands more than **±15%** away from the estimate; the banner names the percentage and the direction. Approved Change Orders are excluded from that comparison, since the client already agreed to those separately. An approval is per stage and per job — re-picking the stage asks again.
+> **Most invoices need no PIN.** Deposit and midpoint are formulaic from the approved estimate — nothing to review, so they print straight out and show *No approval required*. Only the **final** asks for a manager PIN, and only when it lands more than **±15%** away from the estimate — **🔑 Manager approval** appears on the *Final invoice sent* row when it does, and the banner names the percentage and the direction. Approved Change Orders are excluded from that comparison, since the client already agreed to those separately. An approval is per stage and per job — re-picking the stage asks again.
 
 > **The final invoice is blocked outright until hours are logged.** On a time-and-materials labor job with no hours recorded there is no PIN, no PDF and no email — a manager cannot unlock it, because nobody can approve a total that has nothing behind it. The final bills labor at the hours actually worked, so the Job Plan timesheet *is* the invoice. This catches a dry run especially: skip the daily logging on a practice job and the final simply will not issue. Log the hours, then reprint. (Fixed-price and fee-only jobs are exempt — their labor total does not come from the log.)
 
@@ -961,7 +1037,8 @@ That describes a **time-and-materials** job, which is the default. On a job quot
 
 > **Every invoice you print is filed to Drive automatically**, into the job's **Invoice** folder, named per stage (`HVL-xxxx_Invoice_Deposit.html` and so on) so the three never overwrite each other. Reprinting a stage replaces its own copy, which is what you want when a figure is corrected and reissued. Until recently no invoice was retained anywhere in any form.
 
-The invoice stage advances by itself as the job progresses, reading the payments you've recorded (§8): no deposit recorded keeps it on *Deposit*, a funded deposit moves it to *Midpoint*, and a recorded midpoint payment moves it to *Final*. Previously it read a flag that nothing ever set, so every funded job stuck on the Midpoint stage and the Final invoice could only be reached by picking it from the Stage selector by hand.
+**You no longer pick a stage — the timeline lights the invoice that is due.** Each of the three has its own row, so the stage is wherever the job has got to: an unrecorded deposit lights *Deposit invoice sent*, a funded deposit moves the light on to the midpoint, and a recorded midpoint payment on to the final. The three are separate records, so a midpoint can never inherit a final's gate.
+*Historical:* when there was a single Stage selector it read a flag that nothing ever set, so every funded job stuck on the Midpoint stage and the Final invoice could only be reached by picking it by hand.
 
 > **The expedited-delivery premium now appears on the midpoint and final invoices.** On a rush job (§5, §16) the 20% premium shows as its own line on all three stages. It previously appeared on the quote, the client estimate and the deposit invoice, but was dropped from the midpoint and final — so a rush client was asked for a deposit that included the premium and then billed a total that didn't, and a job that landed exactly on its estimate printed a phantom *"came in under estimate — credit applied"* line for the premium amount. If you have invoiced a rush job before now, re-print its midpoint and final stages and check the totals against what the client agreed.
 
@@ -1100,7 +1177,9 @@ Loss reasons are captured at closeout — price, scope, timing, unresponsive, co
 
 ## 17. Manager PINs
 
-Required for: estimate approval · estimate denial · agreement approval · **a final invoice more than ±15% off the estimate** (§12 — deposit and midpoint invoices need none) · deleting a client, vendor or partner.
+> **Agreement approval came off this list on 2026-09-10.** There is no second PIN on the agreement any more — meeting its two conditions (estimate approved, client marked Won) stamps the approval as the packet is printed, sent or filed. See §8 for why that is safe, and do not restore the gate as a precaution.
+
+Required for: estimate approval · estimate denial · **a final invoice more than ±15% off the estimate** (§12 — deposit and midpoint invoices need none) · deleting a client, vendor or partner.
 
 Not required for a Change Order (§9) — that one is settled with the client, not internally.
 

@@ -235,9 +235,10 @@ be written against them.
   entirely**, the recorder refuses to open, and the row says what is watching; a `delivered`
   status does not sign it, `completed` does and names the signer, and the envelope then drops
   off the poll. 390px overflow 0, no page errors.
-- ⚠️ **`manual.html` / `concierge-guide.html` are now THREE slices behind** — how documents are
-  sent (4), where they are filed and how to tell (5), and now who signed and what changes when
-  a provider is switched on (6). The playbook is the one that goes stale dangerously.
+- ~~⚠️ **`manual.html` / `concierge-guide.html` are now THREE slices behind.**~~ **Done in the
+  twenty-third pass, 2026-09-11**, together with Slice 7 and the agreement PIN removal. See the docs
+  section for what it corrected. *This flag is cleared rather than deleted, per the standing rule that
+  a fixed flag left standing reads as outstanding work — this file has recorded that twice.*
 
 ## SLICE 5 — ONE WAY TO FILE ANY CLIENT DOCUMENT TO DRIVE (2026-09-11)
 The last verb: `docAction(jobId, kind, 'file', opt)`. App-only, no redeploy.
@@ -319,9 +320,8 @@ The last verb: `docAction(jobId, kind, 'file', opt)`. App-only, no redeploy.
   without Exhibit A. Keeping both means a folder holding a document the client did not sign,
   which is one way to send the wrong one. Kept as-is because removing a retained document is a
   records decision, not a refactor.
-- ⚠️ **`manual.html` / `concierge-guide.html` still need the Slice 4 + 5 pass** — how every
-  client document is sent, the confirming tap, the retired Documents card, the invoice
-  documents on the timeline, and now where each document is filed and how to tell.
+- ~~⚠️ **`manual.html` / `concierge-guide.html` still need the Slice 4 + 5 pass.**~~ **Done in the
+  twenty-third pass, 2026-09-11.**
 
 ## SLICE 4 — ONE WAY TO SEND ANY CLIENT DOCUMENT (2026-09-11)
 *"when we are sending documents to a client, whether it's the estimate, the agreement, or an
@@ -437,9 +437,8 @@ is nested on the job and the Jobs sheet stores `JSON.stringify(job)` in its Data
   screen**. Viewing the agreement does not stamp it; printing it does. An unconfigured Gmail opens
   a plain compose window carrying the same CC and says it has no attachment. 390px overflow 0, no
   page errors.
-- ⚠️ **`manual.html` / `concierge-guide.html` need a pass** — this changes how every client
-  document is sent, adds the confirming tap, retires the Documents card and moves the invoice
-  documents onto the timeline. Not done here.
+- ~~⚠️ **`manual.html` / `concierge-guide.html` need a pass.**~~ **Done in the twenty-third pass,
+  2026-09-11.**
 
 ## SLICE 3 — one way to NAME, VIEW and PRINT any client document (2026-09-11)
 Slice 2 made the documents pure; this gives them ONE registry, one naming rule, one viewer
@@ -3918,7 +3917,26 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-10 (twenty-second pass)** — both documents, against the
+- Last reconciled against the app: **2026-09-11 (twenty-third pass)** — both documents, against Slices 4–7 and the
+  agreement PIN removal. **This is the pass that corrects the STRUCTURE of both documents rather than adding to it.**
+  Three tabs were retired from the nav, and the playbook’s whole spine was organised around them: **five of its thirteen step
+  headings named a tab that no longer exists** (Steps 3, 4, 6, 9, 11&12), so a reader following it went looking for a tab that is
+  not there. Both now point at the **job timeline** on the Client Dashboard.
+  - Manual: the nav list 12 → 9 with a note on where the three went · **new §9a** (the sixteen-milestone timeline, the
+    one-step-is-lit rule, the trust-the-timeline-over-the-status-chip rule, out-of-order steps, dead jobs) · **new §9b** (the five
+    documents and the one view/print/send/file path, why there are two taps, the invoice having had no real email, the wrong-client
+    filing bug) · §7/§8/§12 relocated · **§8 rewritten** for the removed PIN and the new **signature record** · §12 loses the stage
+    picker · §17 loses agreement approval from the PIN list.
+  - Playbook: two opening `.stop` blocks (one screen now; every document goes out the same way) · the five headings · Step 3/4/6/8
+    bodies · Step 6’s PIN removed · **Step 8 rewritten** around *who signed it* · the invoice step loses the stage picker · the quick
+    reference’s PIN list · and **ten** symptom→cause rows.
+  - **Three claims were corrected rather than added to, and each would have stranded somebody:** the agreement’s second manager PIN
+    (removed 2026-09-10, still documented as required in both files and in both PIN lists), the Invoices stage picker, and
+    *Mark Agreement Signed* — which now asks **who signed it** and means the client.
+  - **27 claims parity-checked** across the four files; tag balance verified on both HTML files (`manual.html`’s `<code>` delta is
+    still the documented false positive at 1). Rendered in Chromium at 1440 and 390px — zero overflow, no page errors — and
+    **under `print` media all 40 tables keep their full width**, so the phone block is still correctly scoped to `screen`.
+- Prior pass **2026-09-10 (twenty-second pass)** — both documents, against the
   fullness preset becoming a standing setting, the vendor card moving below the collections, the
   photograph correction and the good-faith vendor flag. Manual **§5 layout map · §5b** (the standing
   rule and the hand-scored rule, both marked ⚠ because an estimate priced the old way is under-scored)

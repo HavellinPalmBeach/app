@@ -16,10 +16,14 @@ It deliberately does not explain how the app is built. Setup, Apps Script URLs, 
 
 ```
 1. Intake → 2. Build the estimate → 3. Manager approves it → 4. Email it to the client
-→ 5. Client says yes → Mark Won → 6. Approve & send the agreement → 7. Staff the job team
+→ 5. Client says yes → Mark Won → 6. Send the signing packet → 7. Staff the job team
 → 8. Mark it signed → 9. Record the deposit → 10. Work the job: document, log hours, source vendors
 → 11. Midpoint invoice → 12. Final invoice → 13. Close the job
 ```
+
+> **⚠** **You run the whole job from ONE screen now — the Client Dashboard (changed 2026-09-11).** Open a client and you get a **timeline** of the job from intake to final payment, and every button you need is on the row for the step it belongs to. **Client Estimate, Agreement and Invoices are gone from the top of the screen.** Nothing they did was removed — it all moved onto the timeline. Anthony asked for this in as many words: *"we are finding ourselves having to go to too many tabs … that way, as we're going through a job, we know what to do next."* **Exactly one step is ever lit up**, and that is the one to do next. If a step is red it is blocked, and the row tells you both why and how to clear it. If you are hunting for a button, open the client and look at the lit row — it is there, on the step it belongs to. The steps below are still the order of the job; they are just no longer the order of the tabs.
+
+> **⚠** **Every document goes out the same way, and that is the whole point of the change.** Estimate, signing packet, deposit invoice, midpoint invoice, final invoice — all five: **✉ Send…** → read the draft in your Gmail and send it → **✓ I've sent it**. Each row also carries **👁 View**, **🖨 Print** and **📁 Filed copy**. Learn it once on the estimate and you know how to send an agreement and an invoice. **Why you press two buttons and not one.** The app builds the email and puts it in *your* Gmail as a draft — it deliberately cannot send it, because every client email gets read by a person first. So it cannot know when you actually sent it. **✉ Send** makes the draft; **✓ I've sent it** is you telling the app it went. Until you press the second one the row reads *"Drafted — read it, send it, then confirm"* and the step stays open. **Do not skip it** — on the estimate, that confirmation is what lets you mark the job Won.
 
 **Four points in that sequence are hard gates.** The app refuses — it does not warn, and there is no override:
 
@@ -86,7 +90,7 @@ The tab reads top to bottom in three bands. **Top card:** *Job* on the left (job
 >
 > The dropdown only offers the services on the same side of the living/deceased line, so you cannot turn a living client into an estate matter by accident. If you genuinely need to cross it, that is Client Intake or Edit Client — the estate form asks for a representative and a date of death, and this screen does not.
 >
-> It is locked once the **agreement is signed**. Before then it is open, including after the client has seen the estimate — press *Edit Estimate* on the Client Estimate tab first, exactly as you would to give a discount, then re-approve. **If the client is already holding a document that names the old service, re-send it.**
+> It is locked once the **agreement is signed**. Before then it is open, including after the client has seen the estimate — press **✎ Edit estimate** on the timeline first, exactly as you would to give a discount, then re-approve. **If the client is already holding a document that names the old service, re-send it.**
 
 ### On the walkthrough
 
@@ -154,7 +158,7 @@ Outbuildings don't count toward the bedroom and bath numbers from intake — tho
 | **Documentation scope** (estate jobs only) | *Full*, *Capture only* or *None*, under the concierge hands-on share. New 2026-09-04. It is a third to two-fifths of an estate quote, so set it before you read the total. *Capture only* means we photograph, describe and locate everything and hand counsel the *list*; they value it and book the appraisers. *None* means the attorney's office does the whole inventory and we sort, set aside and stage against their schedule. It is saved with the estimate and hidden on home editing, home transition and home-cleanout jobs. | Ask the attorney at intake: *do you want us to build the inventory, or does your paralegal?* Default to *Full* until they say otherwise. Never change it after approval without re-approving — the client estimate and the agreement both rewrite themselves from it. |
 | **Rush order** | A flat **20% expedited-delivery premium** on the Havellin services total, shown to the client as its own named line. Never on vendor costs. | When the client is buying a compressed calendar — a second concierge and a bigger crew in parallel. |
 | **Quote as a fixed price** | Replaces hourly with a firm flat fee — the hourly basis plus a **20% contingency** — prefilled and fully editable. | **Not available on Probate or Contested Probate** — the toggle is disabled. Those bill on logged hours so the expense stands up in court. |
-| **Preferred Client Discount** | Percentage off Havellin labour only, **max 15%**. Same cap on *Offer Discount* from the Client Estimate tab. | Sparingly. The cap is the guardrail — the margin panel is no longer shown on this tab. |
+| **Preferred Client Discount** | Percentage off Havellin labour only, **max 15%**. Same cap on **Offer discount** on the timeline. | Sparingly. The cap is the guardrail — the margin panel is no longer shown on this tab. |
 | **Multiple heirs** — read this once | It adds a full 20%, but to *off-site coordination* — not to total concierge hours. Coordination is about half the concierge line, so the total moves about 10%. | Nothing. It is not a bug; people report it as one. |
 | **Moving Materials Package** | Estate tier ($500 / $750 / $1,500) or Home Editing / Transition tier ($200 / $350 / $550). | Or None. |
 
@@ -204,9 +208,9 @@ Vendors are picked from **six Category Group cards**, sitting **below Notable Co
 
 Hit **Save & Preview Client Estimate**. It saves, syncs, and opens the client-facing preview. You can keep editing until it's approved.
 
-## Step 3 · Get it approved — Client Estimate tab
+## Step 3 · Get it approved — Client Dashboard
 
-Read the client-facing document for accuracy. Then **Submit for Approval** → a manager types their PIN → the estimate locks as *Approved for Release* and the PDF unlocks.
+Open the client and find the *Estimate approved* row. **👁 View** reads the client-facing document — do that first, for accuracy. Then **Submit for approval** → a manager presses **🔑 Manager approval** and types their PIN → the estimate locks as *Approved for Release*.
 
 **The document now opens with a full job plan (new 2026-08-03).** Ahead of the money there is *How We Work*, *Spaces In Scope* grouped the way the Build Estimate grid groups them, and *How The Work Runs* — every stage of the job with what you will do, what you need from the client, and what finishes it. **Read it before you submit.** It is written out of the estimate, so a room filed in the wrong section or a vendor you forgot shows up here in plain English, where a number would not have caught your eye.
 
@@ -248,15 +252,15 @@ The tagline on every client document is **"Havellin handles the work no family s
 
 No client signature is wanted on the estimate. It's informational.
 
-## Step 4 · Send it — Client Estimate tab
+## Step 4 · Send it — Client Dashboard
 
-**✉ Email to Client** builds a proper formatted email — Havellin masthead, the property, the cost summary, the stages — with the estimate PDF attached, and leaves it as a **draft in your own Gmail**. It opens the draft for you. Read it, add a line of your own, and send it yourself.
+**✉ Send estimate** on the *Estimate sent to client* row builds a proper formatted email — Havellin masthead, the property, the cost summary, the stages — with the estimate PDF attached, and leaves it as a **draft in your own Gmail**. It opens the draft for you. Read it, add a line of your own, and send it yourself.
 
 Google will ask which account the first time you use it on a device, and stay quiet after that. **The draft is yours**: it sends from your address, lands in your Sent folder, and the client's reply comes back to you. The app can create the draft and cannot send it — that is deliberate, and it is why you always get to read it first.
 
-Then come back and hit **✓ Mark as Sent** so the app records the delivery.
+Then come back and hit **✓ I've sent it** so the app records the delivery. The row will not go green until you do, and **Mark Won is waiting on it**.
 
-> **⚠** An unapproved estimate **cannot be emailed**, from this tab or from the dashboard shortcut. If the button refuses, go back to step 3.
+> **⚠** An unapproved estimate **cannot be emailed**. If the button refuses it prints the reason on the dashboard, right where you pressed it — go back to step 3.
 
 > **✉ Plain email** sits beside it as the backup, and the app drops to it on its own if Gmail is not set up on this device or the sign-in is cancelled — it will tell you which. That one is the old plain-text email in your normal mail app, and **you have to attach the PDF yourself** (Print / Save PDF first). Use it if you are in a hurry on a device that has never been signed in.
 
@@ -274,7 +278,7 @@ Open the job card and hit **✓ Client Accepted — Mark Won**. Acceptance is in
 
 *Approved* and *Won* are different things and the difference is the whole point: approved means a manager signed off on our figure; won means the client said yes. Marking Won is what unlocks staffing.
 
-## Step 6 · Agreement — Agreement tab
+## Step 6 · Agreement — Client Dashboard
 
 > **⚠** **The app will not let you approve an agreement until the job is marked Won (enforced 2026-09-08).** It used to be a rule you had to remember; now the tab reads *Awaiting Client Acceptance* and withholds Approve, Print / Save PDF and the signing packet until the acceptance is on the dashboard (step 5). A manager PIN will not get past it either.
 >
@@ -282,10 +286,12 @@ Open the job card and hit **✓ Client Accepted — Mark Won**. Acceptance is in
 
 > **⚠** **If you edit the estimate, this agreement's approval is withdrawn.** The agreement attaches the estimate as Exhibit A, so it cannot stay approved against a version you are changing. The tab tells you it happened. **Re-approve after the estimate is settled** and both the agreement and the signing packet in Drive are replaced automatically — you do not need to delete anything.
 
-1. Select the job — the agreement populates from the approved estimate.
-2. A manager enters their PIN to approve it for sending. The approved agreement files itself to the Drive **Agreement** folder at this moment.
-3. **✉ Email to Client** — builds the signing packet as a draft in your own Gmail, CC'd to agreements@, and opens it. Read it, add a line, send. (Or **Print Signing Packet** if you are handing it over in person.)
-4. Hit **✉ Mark Agreement Sent**.
+> **⚠** **You no longer need a manager to approve the agreement (changed 2026-09-10).** There used to be a second PIN here. It is gone, and it is not coming back — Anthony: *"once an estimate is approved by a manager and accepted by a client, a TC should be able to send an agreement without further manager approval … there is literally no way to amend an agreement that comes out of the system."* That is the reason it was safe to drop: **you cannot change a word of the agreement.** Its commercial terms *are* the estimate a manager already approved, attached as Exhibit A, and everything else is generated. There was nothing for a second manager to read that the first had not. **The two conditions have not changed** — the estimate must be approved and the client must be marked Won. You still cannot get past those. What changed is that meeting them approves the agreement *as you send it*, instead of being a separate thing to chase somebody for.
+
+1. Open the client and find the *Signing packet sent* row.
+2. **✉ Send signing packet**. One press: it stamps the approval, files the agreement *and* the signing packet into the client's Drive folder, and opens a draft in your own Gmail CC'd to agreements@. (Or **🖨 Print** if you are handing it over in person — that stamps and files the same way.)
+3. Read the draft, add a line, send it.
+4. Hit **✓ I've sent it**.
 
 > **⚠** **There are two agreement forms and you do not choose between them.** The app picks on the **service type**, the same way the estimate does (step 3): Estate Settlement and both probates get the **estate form**, written to a representative signing in a fiduciary capacity; Home Editing, Home Transition, Home Cleanout and Home Prep get the standard form, written to an owner contracting for their own property. **Read the first paragraph before you send it.** If it addresses the wrong kind of client the service type is wrong — fix it at intake and re-generate. Never edit the agreement text by hand.
 
@@ -297,10 +303,10 @@ Three buttons then appear one at a time, each in its own turn, each recording wh
 
 | Button | Press it when |
 | --- | --- |
-| **Print Signing Packet** | One PDF: the agreement, then the approved estimate as Exhibit A on a new page. **This is what you send for signature** — the agreement alone refers to an exhibit the client does not have. It is also filed to Drive beside the agreement when you approve. |
-| **✉ Mark Agreement Sent** | You've emailed it or handed it over. |
-| **✓ Mark Agreement Signed** | The signed copy has come back. Signing does *not* mean paid — the app keeps those separate on purpose. |
-| **✓ Record Deposit** | The money is in your hand. This is what lets work begin. |
+| **🖨 Print** (signing packet) | One PDF: the agreement, then the approved estimate as Exhibit A on a new page. **This is what you send for signature** — the agreement alone refers to an exhibit the client does not have. It is also filed to Drive beside the agreement when you approve. |
+| **✓ I've sent it** | You have emailed it or handed it over. |
+| **✓ Record the signed agreement** | The signed copy has come back. It asks **who signed it** — see step 8. Signing does *not* mean paid; the app keeps those separate on purpose. |
+| **✓ Record payment** | The money is in your hand. This is what lets work begin. |
 
 ## Step 7 · Staff the job team — Job Plan tab
 
@@ -320,9 +326,11 @@ Do this in the wait between sending the agreement and the deposit landing. You k
 
 ## Step 8 · Signed copy back
 
-**✓ Mark Agreement Signed** on the Agreement tab. That's it — but do it the day it arrives, because the deposit button won't appear until you have.
+**✓ Record the signed agreement** on the *Agreement signed* row. Do it the day it arrives — the deposit step will not open until you have.
 
-## Step 9 · Record the deposit — Agreement tab
+> **⚠** **It asks WHO SIGNED, and it means the client (new 2026-09-11).** Not you. Not the manager who approved the price. **The name of the person who signed the contract.** Until this build the app recorded the Havellin manager who approved the *estimate* and displayed that as the signer — so the dashboard read *"Agreement signed · Anthony Graziano"* over a contract Anthony had not signed, and **nowhere did the app hold the name of whoever actually signed it**. On a probate matter that is the first thing counsel asks: who bound the estate to this? It prefills the authorised representative (or the client on a living-owner job) and **will not accept a blank**. It also asks how it came back — *Signed in person* or *Signed copy returned* — the date *they* signed rather than the date you typed it, and a note (where the original is held is the useful thing to put there). **A job signed before 2026-09-11 reads as signed with no signer named**, and says so. That is correct and there is nothing to fix: we genuinely did not record it. Do not go back and type a name in from memory.
+
+## Step 9 · Record the deposit — Client Dashboard
 
 The deposit is **50% of the approved total** and it is **never waived or varied**. The same button records all three payments; a *Which payment is this?* picker at the top opens on the first unsatisfied stage, so in normal use you never touch it.
 
@@ -496,9 +504,9 @@ Why the desk cares: not every licensed dealer is licensed for NFA items, so an u
 
 > Havellin is not a firearms expert and this is not legal advice to a client. If anything about a firearm on a job is unclear, it stops and goes to the representative and counsel. That is always the correct answer and nobody will ever be criticised for it.
 
-## Step 11 & 12 · Invoices — Invoices tab
+## Step 11 & 12 · Invoices — Client Dashboard
 
-Select the job, then pick a **Stage**. The stage advances by itself as you record payments, so it's usually already on the right one.
+Open the client. **Each invoice has its own row on the timeline** — *Deposit invoice sent*, *Midpoint invoice sent*, *Final invoice sent* — so there is no stage to pick any more: the row you are on *is* the stage, and the lit one is the invoice due. Each sends exactly like the estimate did (**✉ Send…** → **✓ I've sent it**), and each is filed to Drive as it goes out.
 
 | Stage | What it bills |
 | --- | --- |
@@ -583,11 +591,10 @@ Every service bills **time-and-materials by default**. A firm fixed price is ava
 ### Manager PIN required for
 
 - Approving or denying an estimate
-- Approving an agreement for sending
 - A **final** invoice more than ±15% off the estimate (deposit and midpoint need none)
 - Deleting a client, vendor or partner
 
-**Not** required for a Change Order — that one is settled with the client, not internally. Everyone has their own PIN and the approval is recorded under whoever typed it, so use yours.
+**Not** required for the **agreement** — that second PIN was removed 2026-09-10 (step 6), and not for a Change Order — that one is settled with the client, not internally. Everyone has their own PIN and the approval is recorded under whoever typed it, so use yours.
 
 ### The margin panel
 
@@ -599,6 +606,16 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| **The Client Estimate / Agreement / Invoices tab is gone** | Retired 2026-09-11. Everything they did is on the **job timeline** — open the client on the Client Dashboard and look at the row for the step you want. Nothing was removed. |
+| You sent the email but the step has not gone green, and the row says *"Drafted — read it, send it, then confirm"* | You have not pressed **✓ I've sent it**. The app can only put a draft in your Gmail; it cannot see that you sent it. Press it. On the estimate this is what **Mark Won** is waiting for. |
+| You cannot find a button you are sure exists | Open the client and look at the **lit row**. Only one step is live at a time and its buttons are drawn in the band, once — not on every row. If nothing is lit, the job is finished or lost. |
+| The agreement is waiting for a manager PIN | It is not — that PIN was removed 2026-09-10. If **✉ Send signing packet** refuses, it is one of the two real conditions: the estimate is not approved, or the client is not marked **Won**. The row says which. |
+| *Who signed it?* — do you put your own name in | **No.** It is the **client** who signed the contract; it prefills the authorised representative. Who recorded it is captured separately, automatically. It will not accept a blank. |
+| An old job shows *"Signed before the signature record — who signed it is not on file"* | Correct, and nothing to fix. Before 2026-09-11 the app never recorded the signer. **Do not type a name in from memory** — an unknown signer is an honest record. |
+| There is no *Save to Drive* button on a document | There is nothing to press — documents file themselves. **📁 File to Drive** only appears when the automatic filing did *not* land, and it goes away once it works. **📁 Filed copy** opens what is already there. |
+| A document in a client's Drive folder names a different client | A bug fixed 2026-09-11: the estimate and agreement used to be filed by reading whatever the old tab was showing, so filing from the dashboard with another client loaded wrote *their* document into *this* folder — and reported success. Re-file it from the timeline and delete the stray. Worth a look in any folder used before that date. |
+| An invoice you emailed before 2026-09-11 had no attachment | It never did. The old invoice email was plain text and said *"Please find attached"* with nothing attached. Re-send it from the timeline; it carries the PDF now. |
+| A date on the timeline reads *Invalid Date* | A display bug fixed 2026-09-11. Reload the page to pick up the current build. The underlying date is fine — nothing was lost and nothing needs re-entering. |
 | Somebody found cash, a gun or a safe that intake never mentioned | Nothing moves. Put it on the record through **Edit Client** — tick the row, write what you found and where — and it appears on the Job Plan brief for everyone else. A firearm additionally waits for **written authority** naming who may take possession; the app will not release one without it, and neither should you. |
 | A flag on the crew brief reads *"Ticked at intake, no detail recorded"* | Somebody ticked the box on the intake call and never wrote the answer down. Ring the client and get it **before Day 1**, then fix it on Edit Client. The app prints the row rather than hiding it precisely so this is visible while it is still cheap. |
 | The Job Plan shows no Standing job flags panel at all | Either nothing was ticked and neither question was answered, or the job predates 2026-09-10, when the questions were added. Nothing is broken — an empty panel would just be noise. Fill it in on **Edit Client** and it appears. |
@@ -606,7 +623,7 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | A client asks whether you mark up the vendors | Straight answer, and it is on every document: **no — the vendor bills them at the vendor's own price and we add nothing to that invoice.** On home prep vendors we charge a separate, clearly-shown **30% general contracting and site management fee** for sourcing, scheduling, on-site oversight and quality control. Both things are true at once; do not say only the first half. |
 | The job is not the service type intake said it was | Change it in the **service type** dropdown on Build Estimate (from 2026-09-10). Everything you have scored is kept and the price re-runs. It offers living services on a living job and estate services on an estate job, and never both. |
 | The service dropdown does not offer the type you want | You are trying to cross the living/deceased line — a living client cannot become an Estate Settlement here, because nobody has been asked for a representative or a date of death. Do it on **Edit Client**, and fill those fields in while you are there. |
-| The service dropdown is greyed out | Either the estimate is out for manager approval, or it is approved, or the agreement is signed. For the first two, press **Edit Estimate** on the Client Estimate tab and it opens again (you will need to re-approve). Once the agreement is *signed* it is a **Change Order**, not an edit. |
+| The service dropdown is greyed out | Either the estimate is out for manager approval, or it is approved, or the agreement is signed. For the first two, press **✎ Edit estimate** on the timeline and it opens again (you will need to re-approve). Once the agreement is *signed* it is a **Change Order**, not an edit. |
 | You changed the service type and the total jumped | Expected — that is the point. The services price differently, and coming off Home Prep in particular switches the job from a fee on vendor spend to billed concierge and specialist hours *plus* that fee. Check the reference band before you submit. |
 | A prep vendor you entered before today is now earning a fee it did not before | Changed 2026-09-10 — bundled prep carries 30% now and books no coordination hours. If the client is holding an estimate issued before that date, it was quoted the old way and reopening it moves the total up. Re-send after re-approval rather than letting the invoice arrive higher than the quote. |
 | The *Coord hrs* box is gone from your prep vendors | Deliberate, 2026-09-10. Prep books no coordination hours on any job now, so there is no estimated figure for a recorded one to be checked against. The box is still there on every other vendor. |
@@ -617,11 +634,11 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | There used to be a *Plain email* button and now there isn't | Deliberate. It carried no attachment, and having it beside the real button invited sending the wrong one. The app still falls back to a plain email on its own if Gmail cannot be used, and tells you that is what it did. |
 | agreements@ never got a copy of an agreement you sent | Before 2026-09-08 there was no working agreement email at all — the button was in the app and did nothing. Nothing was lost on your side; the copy simply never went. From now on both the Gmail draft and the plain email CC it automatically. |
 | The worksheet in a Home Prep client's Estimate folder is blank | Fixed 2026-09-08. A prep job has no rooms and no hours, so the old worksheet rendered an empty table. Re-approve the estimate and it re-files with the vendor lines and the fee on it. (And check the folder holds the client estimate too — see the row above about a table of rooms and hours.) |
-| **Email to Client** opened a plain-text email instead of the formatted one | The app fell back, and it will have said why in the message bar. Almost always the Google sign-in window was closed before it finished — press the button again and complete it. (Gmail is set up in the app already; nothing to configure on your device.) The plain email works; you just have to attach the PDF yourself. |
+| **✉ Send…** opened a plain-text email instead of the formatted one | The app fell back, and it will have said why in the message bar. Almost always the Google sign-in window was closed before it finished — press the button again and complete it. (Gmail is set up in the app already; nothing to configure on your device.) The plain email works; you just have to attach the PDF yourself. |
 | The Gmail draft was created but the PDF is not attached | The PDF conversion failed and the app told you so rather than dropping the email. The body still carries the summary. Hit **Print / Save PDF**, attach it to the draft by hand, and send. |
 | The Gmail draft opened in the wrong Google account | Gmail opens the first account signed in on that browser. Switch account in Gmail and the draft is there — it was created in whichever account you picked in the Google window, and that is the one it will send from. |
 | Google says the Gmail API is not enabled | A one-time setup step on the Google Cloud project, not something on this device. Send it to Anthony — it is in §2 of the manual. Use **✉ Plain email** until it is done. |
-| The Agreement tab says *Awaiting Client Acceptance* and Approve is missing | The client has not been recorded as accepting. Go to the Client Dashboard and hit **✓ Client Accepted — Mark Won** (step 5). Approving is what files the agreement into their Drive folder, so it waits for the yes. The draft on screen is a preview and has not been filed anywhere. |
+| The *Signing packet sent* row will not let you send | The client has not been recorded as accepting. Go to the Client Dashboard and hit **✓ Client Accepted — Mark Won** (step 5). Approving is what files the agreement into their Drive folder, so it waits for the yes. The draft on screen is a preview and has not been filed anywhere. |
 | The agreement was approved and now says the approval was withdrawn | Somebody edited the estimate. The agreement attaches it as Exhibit A, so it cannot stay approved against a version that is changing. Settle the estimate, re-approve it, then re-approve the agreement — Drive is refreshed for you. |
 | The estimate PDF in a client's Drive folder is a table of rooms and hours | That is our internal worksheet, and before 2026-09-08 it shared a filename with the client estimate so it sometimes won. Open the estimate and press **Save to Drive** to put the client version back. They are separate files now. |
 | A Home Prep estimate talked about hours, or a 15% overrun | Fixed 2026-09-08. Home Prep bills no hours at all — the fee is 30% of what the vendors actually invoice. If you are holding a prep estimate issued before that date, re-open it and re-approve so the client gets the corrected terms. |
@@ -639,7 +656,7 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | A job's photo counts all read zero when you first open it | Fixed 2026-08-03. The cards were drawn before the photo records loaded. Everything was in Drive the whole time; switching away and back used to show the real counts. |
 | You cannot find the *Save to Drive* button any more | Because the estimate is already on Drive. Approving files it automatically; the banner's *📁 Filed to Drive · &lt;when&gt; · Open* line is the confirmation, and the button only comes back if a filing fails. |
 | A client's *Estimates* folder has the same estimate in it several times | Pressing the old *Save to Drive* button repeatedly, before 2026-09-09, added a copy each time instead of replacing one. **Approve the estimate once more and the folder collapses back to a single file** — the extras go to Drive's trash and are recoverable for 30 days. Tell Anthony if it does not, because the Apps Script may not have been redeployed. |
-| After *Email to Client*, Gmail shows an error — *"account is not available"* or *Temporary Error (404)* | Fixed 2026-09-09 (second attempt). **The draft was created every time** — only the link opening it was wrong. Check the version stamp under the Havellin title reads **2026.09.09** or later; then use the *Open Gmail* link in the box that appears under the buttons, and if Gmail opens a different account, switch with the avatar top-right. The box names the mailbox the draft is in. |
+| After **✉ Send…**, Gmail shows an error — *"account is not available"* or *Temporary Error (404)* | Fixed 2026-09-09 (second attempt). **The draft was created every time** — only the link opening it was wrong. Check the version stamp under the Havellin title reads **2026.09.09** or later; then use the *Open Gmail* link in the box that appears under the buttons, and if Gmail opens a different account, switch with the avatar top-right. The box names the mailbox the draft is in. |
 | Gmail opened, but it is the wrong Google account and there is no draft | The link can only open whichever Google account signed in first in that browser. Switch accounts with the avatar top-right — the box under the buttons names the mailbox the draft was created in, and it is in **Drafts**. |
 | The Gmail draft has no PDF attached | First check you are not looking at an **old draft** — a draft is a snapshot and never updates itself, so delete it and press *Email to Client* again. If the new one still has none, the app says so in orange under the buttons: use *Print / Save PDF* and attach it by hand before sending. |
 | The *Filed to Drive* line vanished from the banner | You edited the estimate. The copy in Drive is the previous version, so the claim is withdrawn until it's re-approved — which re-files it automatically. |
@@ -653,7 +670,7 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Intake will not take a client phone or email on an estate job | Correct — the client is deceased, so those fields are disabled and the **Authorized Representative** block below is where the contact goes. That is who every document is addressed to and where the estimate is sent. |
 | The agreement is the wrong one of the two forms | Same cause, same fix — it reads the service type, exactly like the estimate. Correct the service type at intake and re-generate. The routing changed on 2026-08-03; anything issued before then is worth re-reading. |
 | The agreement says 15% of vendor invoices, but the estimate charges no vendor fee | Fixed 2026-09-08. The fee came off on 2026-08-02 and the agreement clause was not updated with it, so every agreement generated in between promised a fee the invoice never bills. Re-generate it — §3.5 now reads *Vendor Coordination*, no fee, on the standard form, and the estate form's fee table says *at cost — no fee*. If a client has already signed one, the invoice governs and charges less, not more. |
-| The client asks where Exhibit A is | You sent the agreement on its own. Use **Print Signing Packet** on the Agreement tab — one PDF with the approved estimate attached as Exhibit A — and send that. New 2026-09-08. |
+| The client asks where Exhibit A is | You sent the agreement on its own. Use **🖨 Print** on the *Signing packet sent* row — one PDF with the approved estimate attached as Exhibit A — and send that. New 2026-09-08. |
 | The estate document reads nothing like the home editing one | Correct as of 2026-08-03. Estate and probate stages are written for the representative — catalogue first, nothing removed until authorised in writing, releases receipted. Home Editing keeps the decision-paced language because there the client really is standing in the house deciding. |
 | A vendor you entered is not named anywhere in the job plan stages | It is filed under a category the stage bucketer does not recognise. Check its Category in the Vendor Directory — valuers land in the sorting stage, removal and sale in disposition, cleaning and finishing trades in close-out, everything else in disposition. |
 | A client asks why the estimate has no dates | Deliberate, and the document does not explain it either. Answer from the overall working-day estimate and say the pace depends on how quickly they make decisions. Do not write dates onto the document. |
