@@ -342,7 +342,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Out-of-sequence actions, and the one rule that keeps them safe.
     const railDone = railFor({ approved: true, estimateSentDate: 'x' }, { estimate: EST(), approved: true });
     const intake = ctx.jobTimelineActions(railDone.rows[0], railDone.job, railDone.rec);
-    eq(intake.secondary.map((x) => x.call), ['dashEditClient(7)'], 'Edit client is always available');
+    // ⚠ THIS ASSERTED THE OLD LOCATION AND BROKE ON A TRUE CHANGE — correctly. Edit
+    // client moved to the dashboard's utility bar on 2026-09-11, and the requirement was
+    // never "it is on the intake row": it is that the button exists exactly once on the
+    // screen. The quick strip dedups by `call`, so a copy left here would render the
+    // identical button twice. `dashboard-utility-bar.test.js` holds the positive half.
+    eq(intake.secondary, [], 'Edit client is NOT on the intake row — it lives in the utility bar');
     const built = railDone.rows.filter((r) => r.key === 'estimate_built')[0];
     ok(ctx.jobTimelineActions(built, railDone.job, railDone.rec).secondary.length === 1,
       'Edit estimate is offered while the client has not signed');

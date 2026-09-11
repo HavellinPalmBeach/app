@@ -235,4 +235,114 @@ function sandbox({ fns = [], vars = [], stubs = {} } = {}) {
   return ctx;
 }
 
-module.exports = { fn, decl, sandbox, source, matchBrace, APP };
+/**
+ * A DOM stub for the functions that read a whole SCREEN rather than a record.
+ *
+ * ⚠ WHY THIS EXISTS, and it is not "for convenience". `calcAll` is the pricing engine's
+ * entry point and it reads 79 elements plus eight per room off Build Estimate, so for
+ * two years the established pattern here was to pin it at SOURCE TEXT instead of driving
+ * it. CLAUDE.md records what that cost: on 2026-09-11 the discount base was reverted to
+ * the whole defect — a constant 0 where the rush rate belongs, on the one surface a
+ * manager sets the number on — and the suite came back GREEN, because nothing in tests/
+ * had ever called the function. It was found in a browser. A stub is what turns "the
+ * line exists" into "the figure is right".
+ *
+ * Elements are MINTED ON DEMAND and remembered, because the real page has them all and
+ * a stub that returned null for anything unseeded would send the code under test down
+ * its own missing-element guards — which is a different program from the one that runs
+ * on the phone. Everything written to an element is kept, so a test reads the screen
+ * back exactly as a person would.
+ *
+ * `seed` maps an element id to its starting state: a boolean sets `.checked`, an object
+ * is assigned over the element (`{value:'3500'}`, `{textContent:'Kitchen'}`, or
+ * `{attrs:{'data-state':'in'}}`), and anything else sets `.value`.
+ */
+function domStub(seed = {}) {
+  const els = {};
+
+  function mkEl(id, tagName) {
+    const attrs = {};
+    const classes = new Set();
+    const el = {
+      id,
+      tagName: tagName || 'DIV',
+      value: '',
+      checked: false,
+      disabled: false,
+      textContent: '',
+      innerHTML: '',
+      className: '',
+      style: {},
+      dataset: {},
+      children: [],
+      parentNode: null,
+      offsetWidth: 0,
+      scrollWidth: 0,
+      clientWidth: 0,
+      classList: {
+        add(c) { classes.add(c); },
+        remove(c) { classes.delete(c); },
+        contains(c) { return classes.has(c); },
+        toggle(c, on) {
+          const want = on === undefined ? !classes.has(c) : !!on;
+          if (want) classes.add(c); else classes.delete(c);
+          return want;
+        },
+      },
+      getAttribute(k) { return Object.prototype.hasOwnProperty.call(attrs, k) ? attrs[k] : null; },
+      setAttribute(k, v) { attrs[k] = String(v); },
+      removeAttribute(k) { delete attrs[k]; },
+      hasAttribute(k) { return Object.prototype.hasOwnProperty.call(attrs, k); },
+      appendChild(c) { el.children.push(c); if (c) c.parentNode = el; return c; },
+      removeChild(c) { const i = el.children.indexOf(c); if (i >= 0) el.children.splice(i, 1); return c; },
+      insertBefore(c) { el.children.unshift(c); if (c) c.parentNode = el; return c; },
+      remove() {},
+      querySelector() { return null; },
+      querySelectorAll() { return []; },
+      closest() { return null; },
+      addEventListener() {},
+      removeEventListener() {},
+      focus() {}, blur() {}, click() {}, scrollIntoView() {},
+      getBoundingClientRect() { return { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 }; },
+      __attrs: attrs,
+      __classes: classes,
+    };
+    return el;
+  }
+
+  function applySeed(el, v) {
+    if (v === null || v === undefined) return;
+    if (typeof v === 'boolean') { el.checked = v; return; }
+    if (typeof v === 'object') {
+      const attrs = v.attrs;
+      Object.keys(v).forEach((k) => { if (k !== 'attrs') el[k] = v[k]; });
+      if (attrs) Object.keys(attrs).forEach((k) => el.setAttribute(k, attrs[k]));
+      return;
+    }
+    el.value = String(v);
+  }
+
+  const doc = {
+    getElementById(id) {
+      if (id === null || id === undefined) return null;
+      const key = String(id);
+      if (!Object.prototype.hasOwnProperty.call(els, key)) {
+        els[key] = mkEl(key);
+        if (Object.prototype.hasOwnProperty.call(seed, key)) applySeed(els[key], seed[key]);
+      }
+      return els[key];
+    },
+    createElement(tag) { return mkEl('', String(tag).toUpperCase()); },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    addEventListener() {},
+    __els: els,
+    /** Seed (or re-seed) an element after the stub is built. */
+    __seed(id, v) { seed[String(id)] = v; applySeed(doc.getElementById(id), v); return doc.getElementById(id); },
+  };
+  doc.body = mkEl('body', 'BODY');
+  doc.documentElement = mkEl('', 'HTML');
+  return doc;
+}
+
+module.exports = { fn, decl, sandbox, source, matchBrace, domStub, APP };

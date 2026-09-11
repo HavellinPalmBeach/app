@@ -1,5 +1,139 @@
 # Havellin Palm Beach — App Notes
 
+## THE DASHBOARD HEADER OFFERED FIVE BUTTONS THAT WERE ALREADY ON THE TIMELINE (FIXED 2026-09-11)
+Anthony, reading the shipped build: *"i kind of feel like the functionality on the top of the client
+dashboard should be down below … do we need the 5 boxes at the top at all? like the activate job
+button? … estimate probably doesn't need to be there if it's down below in the timeline. edit client
+is good and needed, and the link to drive is fine."* App-only, no redeploy.
+
+- **⚠⚠ THE HEADER BUBBLE CARRIED SEVEN CONTROLS AND FIVE WERE ALREADY REACHABLE ON THE SAME SCREEN.**
+  *Estimate · Submit for Approval · Client Accepted — Mark Won · Change Order · Edit Client · Drive ·
+  Activate Job*. **Four are rows on the rail with their own buttons** — `dashGoEstimate`,
+  `dashSubmitEstimate`, `openWonModal`, `activateOrCycle`, all four asserted present on the rail so
+  removing them from the bar provably lost nothing — and **Change Order has its own `+ New`** in the
+  Change Orders card, ungated, on every job, beside the count and the *never billed unaccepted*
+  sentence. Same shape as the field grid cut from above the rail on 2026-09-10.
+- **⚠⚠ AND THE TWO COPIES COULD DISAGREE, WHICH IS WHAT MAKES IT A DEFECT RATHER THAN CLUTTER.**
+  The bubble offered **Activate Job** unconditionally. The rail's own `job_active` row **withholds**
+  that button when the activation is blocked — deliberately, with the reason in a comment: the fix is
+  a phone call to the executor and *"a button that alerts the same blocker back at you is worse than
+  none"*. So a contested matter with the Letters outstanding showed **no button on the rail and a
+  button at the top**.
+- **`dashUtilityBar(job)` IS DOM-FREE and the survivors are `✎ Edit Client` + `📁 Drive`**, rendered
+  on the **Job Timeline & Payments heading line** (`.d-sec-bar`).
+  **⚠ NOT INSIDE THE TAN NEXT BAND, and Anthony asked for exactly that.** That band means *the one
+  thing to do next*; hanging standing tools in it costs it precisely that meaning, which is the rule
+  CLAUDE.md already records for the primary button. Placement is **measured on the rendered page**
+  (`d-util` index < `jt-next` index, and no `d-util` inside the band), never argued.
+- **⚠⚠ THE RULE, AND IT IS THE DELIVERABLE: THE TIMELINE HOLDS EVERY STEP, THIS BAR HOLDS ONLY WHAT
+  IS NOT ONE.** The load-bearing test is not *"the four buttons are gone"* — a label can be renamed —
+  it is that **no `call` in `dashUtilityBar` appears anywhere in `jobTimelineActions`, across every
+  row, at twelve points in the lifecycle**. **⚠ Exactly ONE exemption, and it is named, pinned BY ROW
+  and explained**: the `walkthrough` row's primary opens the same Edit Client modal under its own
+  label (*"Set the walkthrough date"*), because the missing datum genuinely lives there. It is exempt
+  for the reason the bubble's four were not — **the two copies cannot disagree**: same call, and Edit
+  Client is never gated. A second overlap, or that call arriving from any other row, fails.
+- **⚠⚠ DRIVING THE REAL `renderClientDashboard` IS WHAT FOUND THE ONE I GOT WRONG.** The first cut
+  kept Change Order, and the rendered page came back with `openChangeOrder(7)` **twice**. A source
+  assertion would not have seen it. Hence the general net: **every `onclick` on the whole rendered
+  dashboard is unique**, walked at five points in the lifecycle. *(This also means the option Anthony
+  picked when asked — keep Change Order in the strip — was answered on a premise neither of us had:
+  the card already carried it. Told to him plainly rather than quietly done.)*
+- **⚠ `estApproved` / `estExists` / `estSubmitted` WENT WITH THE BLOCK.** Only `estRec` survives, and
+  a test `lacks()` each of the three: dead locals are how a retired control comes back.
+- **⚠ THE INTAKE ROW STOPS OFFERING EDIT CLIENT.** The quick strip dedups by `call` and skips the
+  live row, so leaving it on the (always-done) intake row would render the identical button twice.
+  Revert-verified: putting it back fails **8**.
+- **⚠ AND A REVERT CAME BACK GREEN ON `<a>` → `<button onclick="window.open()">`.** The object check
+  asserted `drive.call === undefined`; nothing read the **rendered** control. An anchor is what gives
+  Drive middle-click, cmd-click and copy-link — and a scripted `window.open` on an iPad is what a
+  popup blocker eats. The markup is pinned now. Thirteenth time this file records an assertion that
+  could not fail.
+- **4103 committed checks** (`tests/dashboard-utility-bar.test.js`, 61 new, **the first test in this
+  repo that renders the dashboard at all**, plus `tests/runner.test.js`). **All nine app changes
+  revert-verified individually** — the heading-line render fails **6**, the intake row 8, the Edit
+  Client entry 4, the rendered anchor 4, `.d-sec-bar` 3, the Drive link 2, and the rest 1.
+- **Verified in headless Chromium on the real page at 1440 / 768 / 390px**: two controls, on the
+  heading line with the heading (`sameLine` true at every width), the Drive control an `<a
+  target="_blank">`, **overflow 0**, **zero duplicate onclicks**, no *Activate Job* and no *Manage
+  this client* anywhere, and the tan band still reading *Next — Agreement signed*. No page errors.
+- Manual **§9** (the bullet rewritten plus two notes, and the Drive line now answers *when does the
+  folder get created*); playbook **Step 3** a `.stop` and **four** symptom→cause rows, including the
+  two questions Anthony asked. Both `.md` copies hand-edited and **10 claims parity-checked**; tag
+  balance verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false
+  positive at 1), rendered at 1440/390 with 0 overflow and **all 14 tables full-width under `print`**.
+
+### ⚠⚠ THE ANSWER TO "SHOULD A JOB ACTIVATE ON A SIGNED AGREEMENT?" IS THAT IT CHANGES NOTHING
+Asked in the same message: *"should a job activate on receiving a signed agreement. then we can do
+the pre-job work before receiving payment and starting?"* **The pre-job work is already open before
+any money arrives**, so moving the gate would relabel rather than unlock. Written down because it is
+the obvious-looking change, and because the ladder is not obvious from the code:
+- **`won` (the client said yes) unlocks staffing, the Job Plan and photo capture.** The capture gate
+  was moved from `active` to `won` on 2026-08-03 precisely so day-one walkthrough shots stop being
+  silently discarded.
+- **`isJobFunded` (a recorded deposit) unlocks HOURS LOGGING ONLY**, and that is the one gate in the
+  app with no override — safe only because the deposit is never waived.
+- **`active` gates almost nothing.** Grepped: the status filter, the Win/Loss count, the rail's own
+  `job_active` row, the button label, and the blocker-chip guard. It is a marker, not a permission.
+- `jobActivationBlockers` is unchanged: signed agreement · deposit received · executor authorisation
+  on probate / contested probate.
+
+### The client's Drive folder fires at CLIENT CREATION, and nothing later makes one
+The other question in the same message. `createDriveJobFolder(job)` has **exactly one caller** —
+the last thing `saveIntake` does — and it creates the folder **and all six subfolders**
+(`Estate Inventory · Walkthrough Notes · Estimates · Agreement · Change Orders · Invoice`) in one
+call. Not at approval, not at activation. **So `📁 Drive` is only ever a LINK**, never a create
+action; a job with no folder recorded falls back to the Drive root, because findable beats absent
+and minting a second folder is what `createDriveJobFolder`'s own `if (job && job.driveFolder)` guard
+exists to stop. All three pinned at source.
+
+## ⚠⚠ AN ENTIRE TEST FILE RAN ZERO CHECKS AND PRINTED `ok` (FIXED 2026-09-11)
+Found while writing the section above, and it is the most important thing in this commit.
+
+- **⚠⚠ `group(name)` TOOK ONE ARGUMENT AND SILENTLY IGNORED A SECOND.** The house style calls it bare
+  as a label marker, which is fine for 44 files — but `group('x', () => { …assertions… })`, the shape
+  every other tiny runner uses and the first one anybody reaches for, was a **no-op**. The body was
+  never invoked. `dashboard-utility-bar.test.js` was written that way: ~60 assertions, a cheerful
+  `ok` beside the filename, and **not one check executed**.
+- **THE ONLY EVIDENCE WAS THE GRAND TOTAL NOT MOVING** — 3997 before the file existed and 3997 after.
+  Had the total shifted for any other reason in the same commit, a test file that could not fail
+  would have been committed as coverage. This file records a dozen individual assertions that could
+  not fail; **this is the shape that hides a whole FILE of them.**
+- **Two fixes, and they hold each other up.** `group` now invokes a function body, and **a suite
+  contributing ZERO checks is a FAILURE, not a pass** — the general net, catching an uncalled
+  callback, an early return, or a loop over an empty list alike. The runner also **prints each
+  file's check count**, so a file going quiet is visible rather than inferred from the total.
+- **⚠ NOTHING HAD EVER TESTED `run.js`, WHICH IS EXACTLY HOW THIS SURVIVED.** `tests/runner.test.js`
+  **drives the real runner as a subprocess** against fixture suites in a temp dir — a healthy suite
+  exits 0, an empty one exits 1 saying *"ran ZERO checks"*, a callback-only suite can never pass
+  silently, a throw is reported as a throw, and a failing check names its group and label. Asserting
+  this by reading the runner's source is what let the bug through in the first place.
+- **⚠ THE PROOF IS SELF-REFERENTIAL ON PURPOSE:** `runner.test.js` writes its own first group in the
+  **callback style**. If `group` stops invoking bodies, that file contributes zero checks and the
+  zero-check guard fails it. Neither fix can be quietly removed.
+- **Both revert-verified** — the `group` fix fails 2, the zero-check guard 3.
+
+## The test harness can drive a SCREEN now, not just a record (2026-09-11)
+`sandbox({stubs:{document: domStub(seed)}})`. Elements are **minted on demand and remembered**,
+because the real page has them all and a stub returning `null` for anything unseeded sends the code
+under test down its own missing-element guards — which is a different program from the one that runs
+on the phone. Everything written is kept, so a test reads the screen back the way a person would.
+`seed` maps an id to its starting state: a boolean sets `.checked`, an object is assigned over the
+element (`{value:'3500'}`, `{attrs:{'data-state':'in'}}`), anything else sets `.value`.
+- **⚠ IT EXISTS BECAUSE OF THE GREEN REVERT ON 2026-09-11.** The discount base was reverted to the
+  whole defect — a constant `0` where the rush rate belongs, on the surface a manager sets the number
+  on — and the suite came back **green**, because `calcAll` reads three dozen DOM elements and
+  **nothing in `tests/` had ever called it**. It was found in a browser. The established pattern here
+  was to pin that function at source text; a stub is what turns *"the line exists"* into *"the figure
+  is right"*.
+- **Proven on the hardest case available: it drives the real `renderClientDashboard` end to end**,
+  36 lifted functions and 8 vars, producing 12KB of real markup. `calcAll` itself resolves and runs
+  the same way — that coverage is the next piece of work and is **not written yet**.
+- **⚠ LOAD IS NOT DRIVE.** Resolving a sandbox's dependencies by catching `ReferenceError` only works
+  while the function is being **called**; merely lifting it into the context resolves nothing,
+  because the body never executes. The first resolution pass reported *"LOADED OK, fns=[calcAll]"*
+  and had proved precisely nothing.
+
 ## Always on every commit
 - **Run `tools/stamp-build.sh`. Do not edit the stamp any other way, and above all do not
   write a regex against `hdr-ver`.** It reads the ET clock itself, anchors on the span's

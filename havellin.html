@@ -225,6 +225,11 @@ input:checked+.slider:before{transform:translateX(18px);}
    column should break inside the word rather than spill over the next column. */
 .dfv{font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;}
 .d-sec-hdr{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--gray);}
+/* The Job Timeline heading and the three utility buttons share one line. The bar is
+   deliberately NOT inside the tan NEXT band below it: that band means "the one thing
+   to do next", and hanging unrelated controls in it costs it exactly that meaning. */
+.d-sec-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.d-sec-bar .d-util{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
 .fin-r{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px;}
 .fin-r:last-child{border-bottom:none;}
 .fin-l{color:var(--gray);}
@@ -938,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 2:33pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11254,6 +11259,61 @@ function dot(color) { return '<span style="display:inline-block;width:8px;height
 function field(label, val, extraStyle) {
   return '<div class="df"><div class="dfl">'+label+'</div><div class="dfv'+(extraStyle?' '+extraStyle:'')+'">'+val+'</div></div>';
 }
+// ─── THE CLIENT DASHBOARD'S UTILITY BAR ──────────────────────────────────────
+// ⚠⚠ THE RULE, AND IT IS THE ONLY REASON THIS BAR EXISTS: THE TIMELINE HOLDS EVERY
+// STEP, AND THIS BAR HOLDS ONLY WHAT IS NOT ONE.
+//
+// It replaces a five-button header bubble in which FOUR of the five were already rows
+// on the rail directly beneath it — Build/Edit Estimate, Submit for Approval, Client
+// Accepted — Mark Won, and Activate/Close Job. That is the same defect the field grid
+// above the rail was cut for on 2026-09-10: two controls for one fact, eight inches
+// apart, and the reader has to work out which one is real. Worse here, because the two
+// could disagree — the bubble offered "Activate Job" unconditionally while the rail's
+// own `job_active` row stands the button down when the activation is BLOCKED, precisely
+// so nobody presses a button that alerts a blocker back at them.
+//
+// ⚠ DOM-FREE ON PURPOSE, the same reason `jobTimelineActions` is: the test that matters
+// here is that no `call` in this bar appears anywhere in `jobTimelineActions` across
+// every row — which is a claim about behaviour, not about a label, and so cannot be
+// defeated by renaming a button. Add something here and that test is what tells you it
+// belongs on the rail instead.
+function dashUtilityBar(job) {
+  if (!job) return [];
+  var id = job.id;
+  // ⚠ CHANGE ORDER IS DELIBERATELY NOT HERE, AND IT WAS IN THE FIRST CUT. Driving the
+  // real `renderClientDashboard` is what found it: `openChangeOrder(7)` came back TWICE
+  // in one rendered page, because the Change Orders card lower down already carries a
+  // `+ New` button — ungated, on every job, sitting with the count and with the sentence
+  // that an unaccepted change order is never billed. That row is the better home by some
+  // distance: it has the context, and this bar would have had the button alone. Putting
+  // it back reintroduces exactly what retiring the header bubble removed.
+  var out = [
+    { label: '&#9998; Edit Client', call: 'dashEditClient(' + id + ')', bronze: true }
+  ];
+  // ⚠ DRIVE IS ALWAYS JUST A LINK — never a "create" action. The job folder is made
+  // ONCE, automatically, when the CLIENT IS CREATED (createDriveJobFolder, fired at the
+  // end of the intake save), with all six subfolders in the same call. Nothing later in
+  // the lifecycle creates it. If this job somehow has no folder URL, fall back to the
+  // Drive root so the button still opens Drive rather than minting a duplicate folder.
+  var href = job.driveFolder || ((typeof DRIVE_FOLDER_ID !== 'undefined' && DRIVE_FOLDER_ID)
+    ? 'https://drive.google.com/drive/folders/' + DRIVE_FOLDER_ID : '');
+  if (href) out.push({ label: '&#128193; Drive', href: href });
+  return out;
+}
+
+function _dashUtilityBarHtml(job) {
+  var items = dashUtilityBar(job);
+  if (!items.length) return '';
+  // Labels carry HTML entities and are app constants, never user input, so they go in
+  // RAW — escaping them a second time is what printed `&amp;amp;` on a client's screen.
+  return '<div class="d-util">' + items.map(function(a){
+    var st = a.bronze ? ' style="color:var(--bronze);border-color:var(--bronze);"' : '';
+    return a.href
+      ? '<a href="' + esc(a.href) + '" target="_blank" class="btn-s" style="text-decoration:none;color:var(--gray);" title="Open in Google Drive">' + a.label + '</a>'
+      : '<button class="btn-s" onclick="' + a.call + '"' + st + '>' + a.label + '</button>';
+  }).join('') + '</div>';
+}
+
 function sectionHdr(title) {
   return '<div class="d-sec-hdr">'+title+'</div>';
 }
@@ -12476,7 +12536,11 @@ function jobTimelineActions(row, job, estRec) {
 
   switch (row.key) {
     case 'intake':
-      out.secondary.push({ label: '&#9998; Edit client', call: 'dashEditClient(' + id + ')' });
+      // ⚠ Edit client is NOT offered here. It lives in the utility bar on the timeline's
+      // own heading, and the quick strip below the rail dedups by `call` — so leaving it
+      // on this row would render the identical button twice on one screen. The
+      // `walkthrough` row's primary still calls it, which is a different thing: there it
+      // is the live step's instruction ("set the walkthrough date"), not a standing tool.
       break;
 
     case 'walkthrough':
@@ -12841,48 +12905,13 @@ function renderClientDashboard(jobId) {
   // BACK BUTTON
   h += '<button onclick="closeClientDashboard()" style="font-size:12px;color:var(--gray);background:none;border:none;padding:0;cursor:pointer;margin-bottom:10px;">← Back to Clients</button>';
 
-  // ACTION TOOLBAR — its own white bubble (screenshot-template style): a heading on
-  // the left, the job actions on the right. Deliberately separate from the client-
-  // info card below so the buttons aren't tangled with the identity/status.
+  // The five-button header bubble that used to sit here is GONE — four of its five
+  // buttons were already rows on the rail below it. What survives of it is the
+  // three-button utility bar, rendered on the Job Timeline heading further down;
+  // see `dashUtilityBar` for the rule that decides what may live there.
+  // ⚠ estApproved / estExists / estSubmitted went WITH the block rather than being
+  // left declared and unread: dead locals are how a retired control comes back.
   var estRec = estimateStore[jobId];
-  var estApproved = (estRec && estRec.approved) || job.approved;
-  var estExists = estRec && estRec.estimate && (estRec.estimate.rooms||[]).length > 0;
-  // job.status==='pending' means "Pending Approval" and syncs reliably per-job, so
-  // trust it as the authoritative submitted signal even if the estimate blob's
-  // `submitted` flag drifted (the cross-device bug where a manager saw a submitted
-  // estimate still offering "Submit for Approval").
-  var estSubmitted = (estRec && estRec.submitted) || (job.status === 'pending' && !estApproved);
-  h += '<div class="card" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">';
-  h += '<div><div style="font-size:15px;font-weight:600;color:var(--gray-dk);">Client Dashboard</div>';
-  h += '<div style="font-size:11px;color:var(--gray);margin-top:1px;">Manage this client&rsquo;s estimate, agreement, and job.</div></div>';
-  h += '<div style="display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">';
-  h += estApproved
-    ? '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">&#10003; Estimate</button>'
-    : estExists
-      ? '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">&#9998; Edit Estimate</button>'
-      : '<button class="btn-s" onclick="closeClientDashboard();setTimeout(function(){editEstimateForJob('+jobId+');},100);">Build Estimate</button>';
-  if (estExists && !estSubmitted && !estApproved) {
-    h += '<button class="btn-s" onclick="dashboardSubmitForApproval('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">Submit for Approval</button>';
-  }
-  // Won is offered once the estimate is approved and before the client has answered.
-  // It is the gate on staffing and on the Job Plan, so it sits with the other primary
-  // actions rather than buried — and it disappears the moment it has been answered.
-  if (estApproved && !isJobWon(job) && job.status !== 'lost') {
-    h += '<button class="btn-p" onclick="openWonModal('+jobId+')">&#10003; Client Accepted — Mark Won</button>';
-  }
-  h += '<button class="btn-s" onclick="openChangeOrder('+jobId+')">Change Order</button>';
-  h += '<button class="btn-s" onclick="showEditClient('+jobId+')" style="color:var(--bronze);border-color:var(--bronze);">&#9998; Edit Client</button>';
-  // Drive is ALWAYS just a link — never a "create" action. The job folder is made
-  // once, automatically, when the client is created. If this job somehow has no
-  // folder URL yet, fall back to the Drive root so the button still opens Drive
-  // instead of minting a duplicate folder.
-  var _driveHref = job.driveFolder || (DRIVE_FOLDER_ID ? 'https://drive.google.com/drive/folders/' + DRIVE_FOLDER_ID : '');
-  if (_driveHref) {
-    h += '<a href="'+_driveHref+'" target="_blank" class="btn-s" style="text-decoration:none;color:var(--gray);" title="Open in Google Drive">&#128193; Drive</a>';
-  }
-  h += '<button class="btn-p" onclick="activateOrCycle('+jobId+')">'+( job.status==='active'?'Close Job': job.status==='closed'?'Re-open':'Activate Job')+'</button>';
-  h += '</div>';   // close actions
-  h += '</div>';   // close toolbar bubble
 
   // CLIENT INFO CARD — identity (avatar + name + address) and the status chips,
   // on its own now that the actions have their own bar above.
@@ -13033,7 +13062,8 @@ function renderClientDashboard(jobId) {
   // the slot under the header — see _tlStart capture / splice below.
   var _tlStart = h.length;
   h += '<div class="card" style="margin-bottom:12px;">';
-  h += sectionHdr('Job Timeline & Payments');
+  h += '<div class="d-sec-bar">' + sectionHdr('Job Timeline & Payments')
+       + _dashUtilityBarHtml(job) + '</div>';
   // ⚠ THIS GRID USED TO CARRY EIGHT FIELDS AND FIVE OF THEM WERE ALSO ROWS ON THE RAIL
   // DIRECTLY BELOW IT — Client intake, Walkthrough, Estimate sent, Agreement signed and
   // Work completed. Two statements of the same fact, and they could disagree: the grid

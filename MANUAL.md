@@ -711,7 +711,10 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 
 ## 9. Client Dashboard
 
-**Tab: Client Dashboard** → select job card. Shows full job status, the job timeline, referral source / partner, Drive folder link, and all management actions.
+**Tab: Client Dashboard** → select job card. Shows full job status, the job timeline, referral source / partner, and the standing job facts. **Every action that advances the job is on the timeline** — see §9a. The heading line above it carries the two that are not steps: **✎ Edit Client** and **📁 Drive**.
+> **⚠ THE HEADER'S BUTTON BAR IS GONE, AND WHAT REPLACED IT IS TWO BUTTONS (2026-09-11).** The dashboard used to open with a white bubble carrying seven controls — *Estimate · Submit for Approval · Client Accepted — Mark Won · Change Order · Edit Client · Drive · Activate Job*. **Five of those were already reachable further down the same screen**, which is what Anthony asked about: *"do we need the 5 boxes at the top at all? like the activate job button? estimate probably doesn't need to be there if it's down below in the timeline."* Four are rows on the timeline with their own buttons, and *Change Order* has its own **+ New** in the Change Orders card, beside the count. **⚠ And two of the copies could disagree.** The bubble offered **Activate Job** on every job; the timeline's own *Job active* row withholds that button when the activation is blocked, deliberately, because the fix is a phone call to the executor and a button that just alerts the blocker back at you is worse than none. So a contested matter with the Letters outstanding showed no button on the rail and a button at the top. What survives sits on the **Job Timeline & Payments** heading line: **✎ Edit Client** and **📁 Drive**. **The rule is: the timeline holds every step, that bar holds only what is not one** — and a test walks the whole lifecycle and fails if anything in the bar is also offered by the rail.
+
+> **It is deliberately NOT inside the tan *Next* card.** That card means *the one thing to do next*; hanging standing tools in it costs it exactly that meaning. It sits on the heading immediately above it instead.
 
 ### 9a. The job timeline — where the whole job is run
 
@@ -802,7 +805,7 @@ The **✕** button on a job card opens closeout. What it does depends on whether
 
 > The retained-deposit position **needs agreement language before the money is treated as earned**. The app models the state; the clause is a question for counsel.
 
-The **📁 Drive** button opens the job's Google Drive folder directly.
+The **📁 Drive** button on the Job Timeline heading opens the job's Google Drive folder directly. **It is only ever a link.** The folder and all six subfolders are created **once, automatically, when the client is created** — on the Client Intake save, not at approval and not at activation — so there is never anything here to press to make one. A job with no folder recorded falls back to opening the Drive root, which is findable; minting a second folder would not be.
 
 ### Change Orders
 
