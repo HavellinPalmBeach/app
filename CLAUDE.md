@@ -1,5 +1,82 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE INVOICE TOLD A CLIENT THEY HAD BEEN CALLED, AND CREDITED THEM $1 (FIXED 2026-09-11)
+Anthony, off a real final: *"we ran a job over by a few hours, not 15%, so not requiring a change
+order, and the final invoice flagged that 'Client was notified per T&Cs' which is not true nor
+needed. also there was a weird rounding error on the invoice, creating a $1 credit to client."*
+App-only, no redeploy. **Both reproduced exactly from the screenshot before anything was changed** —
+a $25,715 Estate Settlement estimated at 89 TC + 68 PS and worked at 95 TC + 70 PS, $27,075, over by
+$1,360 = 5.3%.
+
+- **⚠⚠ THE ROW ASSERTED AN EVENT NOTHING IN THE SYSTEM HAD WITNESSED, ON EVERY POSITIVE VARIANCE.**
+  `'Job ran over estimate by ' + fmt(overUnder) + ' — client was notified per T&Cs'` had **no
+  condition on it at all** beyond `overUnder > 0`. Two faults at once and the second is the worse:
+  - **The obligation is a THRESHOLD one.** The estimate's Terms and the agreement's §3.8 both promise
+    notice only *"if actual hours exceed the estimate by more than 15%"*. At 5.3% no notice was owed,
+    none was given, and the invoice said one had been.
+  - **⚠⚠ AND THE APP HAS NEVER RECORDED A NOTIFICATION AT ANY VARIANCE.** That conversation happens
+    mid-job, on the phone. What the system can evidence is an **accepted change order** — which
+    already has its own section and its own row on the same document. So the sentence was
+    unverifiable **above** the threshold too, where it looked most defensible. Deleting only the
+    under-15% case would have left the app asserting a phone call on the invoices that matter most.
+- **⚠ IT STATES THE VARIANCE AND STATES WHICH SIDE OF THE TOLERANCE IT LANDED — it does not go
+  quiet.** Withholding the overage is the silent omission this file records over and over, and the
+  percentage is the one fact on that row a reader cannot derive from the page: it is the answer to
+  *"the bill is above the estimate — why wasn't I called?"*, which is the question the old sentence
+  was trying to pre-empt and answered by inventing a call. It reads **"Job ran over estimate by
+  $1,360 (5.3%) — inside the 15% tolerance in your agreement"**, or *beyond* it past 15%.
+- **⚠ A FEE-ONLY JOB CITES NO THRESHOLD, because its contract carries none.** Home Prep bills no
+  hours, so its §3.8 re-quotes a scope change instead of naming a 15% — and printing a threshold that
+  is not in that agreement is byte-for-byte the §3.3 defect fixed on the prep contract the same day.
+  `_feeOnly` gates the clause, not the row.
+- **⚠⚠ `EST_TOLERANCE_PCT` IS THE DELIVERABLE, NOT THE SENTENCE.** The ±15% was a bare `0.15` at the
+  manager-PIN gate, another at the change order modal, a `>115` on the Job Plan and a typed *"15%"*
+  in the estimate Terms, the agreement, both dashboard notices and the email — **one rule, ten
+  copies**. It now has one definition and `estTolerancePctTxt()` renders it. That is what makes the
+  new row safe: the final can no longer print *"inside the 15% tolerance"* over an invoice the app is
+  **withholding for being outside it**, which the two independent literals permitted. Driven on both
+  sides: 5.3% prints *inside* and needs no PIN, 26.7% prints *beyond* and requires one.
+- **⚠⚠ THE $1 CREDIT: A FIFTY-CENT DIFFERENCE, AND THE GUARD MEANT TO SWALLOW IT COULD NOT SEE IT.**
+  `paymentGap = invoicedBefore - receivedAll` subtracted **two figures that had each already been
+  rounded to the dollar**, so the smallest gap `_paymentGapRow` could ever observe was **$1** and
+  `if (Math.abs(gap) < 1) return ''` was unreachable code. Its own comment claimed *"the arithmetic
+  always uses the real figure, but the NOTICE stays quiet below a dollar"* — only the second half was
+  true.
+  - **The odd total is what makes it reachable.** $25,715 puts the stage targets on part dollars:
+    50% is $12,857.50 and 75% is **$19,286.25**. The client paid the exact quarter, **$6,428.75**,
+    against the rounded $6,428 we asked for. True gap **−$0.50**; rounded first, `19,286 − 19,287 =
+    −1`, and the final printed *"Received ahead of the invoiced schedule — credited in the balance
+    below ($1)"*. **A credit line on an invoice reads as a bookkeeping error however small it is.**
+  - **⚠ THE BALANCE WAS NEVER WRONG AND IS DELIBERATELY UNTOUCHED.** `finalDue` is
+    `round(totalFinalBasis) − round(received)`, and since the basis is whole dollars that is
+    identical to rounding the true balance once — $7,788 either way. A fix that moved the money to
+    tidy a notice would be a worse defect than the one it closed. **Only the notice changed.**
+  - **The midpoint invoice had the same bug in its own words** (`_paymentGapRow(depositAmt -
+    receivedDep)`), so a wire landing sub-dollar light dunned the client for a dollar a stage
+    earlier. Both gap sites measure the real figures now; `fmt` rounds for display.
+- **⚠ AND THE MIDPOINT'S TEST CAME BACK GREEN ON THE REVERT — the fifteenth time this file records an
+  assertion that could not fail.** It used a deposit of $12,857.50 against a target of $12,858, where
+  `round(12857.50) = 12858` lands exactly on the target and **both** builds suppress. The figure is
+  $12,857.30 now — true gap $0.70 (quiet), rounded first $1 (fires). **Caught by reverting, not by
+  reading.** Re-done, it fails 1.
+- **4288 committed checks** (`tests/invoice-variance.test.js`, 25 new — the first coverage of either
+  row). **All seven app changes revert-verified individually** — the whole variance row fails **7**,
+  the PIN gate's constant 2, and the rest 1 each.
+- **⚠ A PRE-EXISTING TEST PINNED THE EXPRESSION `_variancePct > 0.15` AND BROKE ON A TRUE CHANGE**,
+  the eleventh time. Restated as the requirement: the gate is final-only, needs hours, and measures
+  against the shared constant rather than a literal of its own.
+- **Verified end to end in headless Chromium on the real page**, driving the real `invoiceHtml` on
+  the exact job from the screenshot: *Payments received to date ($19,287)* unchanged, **no gap row**,
+  the variance row reading *"Job ran over estimate by $1,360 (5.3%) — inside the 15% tolerance in
+  your agreement"*, **no `notified per` anywhere**, and no PIN required. Overflow **0** at 1440 and
+  390px, no page errors.
+- Manual **§12** (two notes — the threshold rule with the unverifiable-at-any-size reasoning, and the
+  rounding measurement with the balance-was-never-wrong note); playbook **two bullets** on the
+  invoice step and **two** symptom→cause rows. Both `.md` copies hand-edited and **26 claims
+  parity-checked**; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still
+  the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 41 tables
+  full-width under `print`**.
+
 ## ⚠⚠ "WE NEED APPRAISAL IN THERE TOO" — AND IT WAS ALREADY THERE, UNREACHABLE (BUILT 2026-09-11)
 Anthony, from a job site: *"when we're doing the room by room sorting and taking pictures for an
 estate client, the only disposition avenues are auction, consign, donate, hold, junk, keep, or sell.
@@ -410,15 +487,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/trusting-allen-iadbqe`
-  (was `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/busy-heisenberg-h24ya9`
+  (was `claude/trusting-allen-iadbqe`, then `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/trusting-allen-iadbqe:main`
+  `git push origin claude/busy-heisenberg-h24ya9:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

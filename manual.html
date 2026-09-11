@@ -979,6 +979,28 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     (§9a). Each row is its own invoice — there is no stage picker any more, because the row you are on <em>is</em> the stage.
     The Invoices tab was retired from the navigation on 2026-09-11. The three stages are unchanged: <em>Deposit</em> is the 50% estimate basis. <em>Midpoint</em> brings the cumulative collected to 75% and trues vendor &amp; home-prep fees to the actual quotes logged in the Job Plan (labor stays on estimate until hours are fully logged). <em>Final</em> trues labor to logged hours, fees to actuals, and adds any approved Change Orders.</p>
   <div class="note"><strong>Most invoices need no PIN.</strong> Deposit and midpoint are formulaic from the approved estimate — nothing to review, so they print straight out and show <em>No approval required</em>. Only the <strong>final</strong> asks for a manager PIN, and only when it lands more than <strong>±15%</strong> away from the estimate — <strong>&#128273; Manager approval</strong> appears on the <em>Final invoice sent</em> row when it does, and the banner names the percentage and the direction. Approved Change Orders are excluded from that comparison, since the client already agreed to those separately. An approval is per stage and per job — re-picking the stage asks again.</div>
+  <div class="note"><strong>&#9888; THE FINAL STATES THE VARIANCE AND NEVER ASSERTS THAT ANYBODY WAS TOLD &mdash; corrected
+    2026-09-11.</strong> The Payment Summary row read <em>&ldquo;Job ran over estimate by $1,360 &mdash; client was notified per
+    T&amp;Cs&rdquo;</em> on <strong>every</strong> positive variance, however small. Two things wrong at once, and the second is the
+    worse one. The notice is a <strong>threshold</strong> obligation &mdash; the estimate&rsquo;s Terms and the agreement&rsquo;s
+    &sect;3.8 both promise it only <em>&ldquo;if actual hours exceed the estimate by more than 15%&rdquo;</em> &mdash; so on the job
+    that surfaced this, 5.3% over, no notice was owed and none was given. And <strong>the app records no notification at any
+    variance</strong>: that conversation happens mid-job, and what the system can actually evidence is an <em>accepted change
+    order</em>, which already has its own section on the same document. So the claim was unverifiable above the threshold too. It
+    now reads <em>&ldquo;Job ran over estimate by $1,360 (5.3%) &mdash; inside the 15% tolerance in your agreement&rdquo;</em>, or
+    <em>beyond</em> it past 15%, and the same &plusmn;15% constant drives that sentence, the manager PIN and the change-order
+    screen &mdash; so a final can never print <em>inside the tolerance</em> over an invoice the app is withholding for being
+    outside it. <strong>A fee-only Home Prep job cites no threshold at all</strong>, because its &sect;3.8 states none.
+    <strong>Nothing about what is billed changed.</strong> Re-print any final issued before 2026-09-11.</div>
+  <div class="note"><strong>&#9888; A $1 CREDIT TO A CLIENT WHO PAID CORRECTLY &mdash; fixed 2026-09-11, and the balance was never
+    wrong.</strong> The summary&rsquo;s <em>&ldquo;Received ahead of the invoiced schedule &mdash; credited in the balance
+    below&rdquo;</em> line compared what the earlier invoices asked for against what arrived &mdash; with <strong>both figures
+    already rounded to the dollar</strong>, so the guard meant to swallow bank rounding (<em>below a dollar, say nothing</em>)
+    could never observe anything smaller than one. On a $25,715 estate the stage targets land on part dollars (50% is $12,857.50,
+    75% is $19,286.25); the client paid the exact quarter, $6,428.75, we had asked for the rounded $6,428, and a
+    <strong>fifty-cent</strong> difference printed as a <strong>($1) credit</strong>. Both gap comparisons now measure the real
+    figures and round once for display. <strong>The balance due is untouched</strong> &mdash; it was always correct, because the
+    basis is whole dollars. Only the notice was wrong.</div>
   <div class="note"><strong>The final invoice is blocked outright until hours are logged.</strong> On a time-and-materials labor job with no hours recorded there is no PIN, no PDF and no email — a manager cannot unlock it, because nobody can approve a total that has nothing behind it. The final bills labor at the hours actually worked, so the Job Plan timesheet <em>is</em> the invoice. This catches a dry run especially: skip the daily logging on a practice job and the final simply will not issue. Log the hours, then reprint. (Fixed-price and fee-only jobs are exempt — their labor total does not come from the log.)</div>
   <p>A softer version fires when crew hours are logged with <strong>no concierge hours</strong> against them: the invoice still issues, with a warning naming the dollar value of concierge time it is probably missing. The concierge is on site for every crew hour, so that pattern nearly always means the log is incomplete rather than that nobody supervised.</p>
   <p>That describes a <strong>time-and-materials</strong> job, which is the default. On a job quoted <strong>fixed price</strong> (§5c) the flat fee <em>is</em> the Havellin services total — the stages split that number and labor is never trued to logged hours. Vendor and home-prep fees still true up to actual quotes either way, since those stay pass-through at cost.</p>

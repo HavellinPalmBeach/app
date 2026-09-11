@@ -91,11 +91,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const at = (rate, build) => {
       const c = sandbox({
-        fns: ['prepFeeRate', 'buildPrepEstimateBody', 'proposedPlanRow', 'fmt', 'esc',
+        fns: ['estTolerancePctTxt', 'prepFeeRate', 'buildPrepEstimateBody', 'proposedPlanRow', 'fmt', 'esc',
               'paymentSplit', 'estimateIsFeeOnly', 'clientJobPlanSection', '_cePhases',
               'materialsBasisNote', 'vendorEstimateNote', 'vendorFeeNote', '_pctWords',
               'conciergePhones', 'conciergePhonesText', 'prepLineTCHrs', 'coordHrsFor'],
-        vars: ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
+        vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'COORD_TOUCHES',
                'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
       });

@@ -18,7 +18,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ENGINE_FNS = ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'svcHasDocStep',
     'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault'];
-  const ENGINE_VARS = ['JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
+  const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
     'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
     'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS'];
 
@@ -96,7 +96,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let calcs = 0;
     const ctx = sandbox({
       fns: ['activeDocScope', 'setEstimateDocScope', 'docScopeDef'],
-      vars: ['DOC_SCOPES', '_estimateDocScope'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_SCOPES', '_estimateDocScope'],
       stubs: { calcAll() { calcs++; } },
     });
     eq(ctx.activeDocScope(), 'full', 'a fresh estimate is full');
@@ -126,8 +126,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the client estimate follows the scope it priced, once, in the stage');
   {
     const ctx = sandbox({
-      fns: ['_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob'],
-      vars: ['JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES'],
+      fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob'],
+      vars: ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES'],
       stubs: { isFormalDoc: () => true },
     });
     const job = { id: 1, svc: 'probate', executor: 'PR' };
@@ -232,7 +232,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['seedDocScopeFromJob', '_docScopeIntakeNote', 'docScopeDef'],
-      vars: ['DOC_SCOPES'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_SCOPES'],
     });
     eq(ctx.seedDocScopeFromJob({ docScope: 'none' }), 'none', 'a fresh estimate opens at the intake answer');
     eq(ctx.seedDocScopeFromJob({ docScope: 'capture' }), 'capture', 'capture too');

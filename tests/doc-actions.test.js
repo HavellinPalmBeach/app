@@ -108,7 +108,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(n, "'Havellin Change Order'", 'the namer knows the kind');
     has(n, 'opt.coNo', 'and takes the change order number');
 
-    const c = sandbox({ fns: ['docNames'], vars: ['DOC_STAGE_WORD'] });
+    const c = sandbox({ fns: ['docNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD'] });
     const job = { hvlId: 'HVL-0701', addr: '69 Beach Blvd, Palm Beach, FL' };
     const co = c.docNames(job, 'changeorder', { coNo: 'CO-000001' });
     has(co.printTitle, 'Havellin Change Order CO-000001 - 69 Beach Blvd - ',
