@@ -22,11 +22,11 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const AGR_FNS = ['agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
+const AGR_FNS = ['estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
                  '_agrMidpointTrigger', '_agrProbateCompliance'];
-const AGR_VARS = ['SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved', 'HAVELLIN_OFFICE_PHONE',
+const AGR_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved', 'HAVELLIN_OFFICE_PHONE',
                   'JOB_STEPS', 'DOC_SCOPES'];
 
 const EST = {

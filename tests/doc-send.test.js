@@ -291,7 +291,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['invoiceEmailSubject', 'buildInvoiceEmailText', 'buildInvoiceEmailHtml',
             '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
-      vars: ['EMAIL_BRAND', 'DOC_STAGE_WORD', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'DOC_STAGE_WORD', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(978) 857-5374', email: 'ashley@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Mrs Butler',

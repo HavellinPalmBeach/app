@@ -98,6 +98,91 @@ answer come out of — Google has to decide *which* account is asking, and the P
 **Nothing in `havellin.html` can change that**; it is a property of the browser profile. The working answer is
 a profile (or a private window) signed into the Havellin account **only**. Written down so nobody goes looking
 for an app-side fix for it again.
+## ⚠⚠ THE VARIANCE ROW IS GONE FROM THE FINAL INVOICE, AND THE $1 CREDIT WITH IT (2026-09-11)
+Anthony, off a real final: *"we ran a job over by a few hours, not 15%, so not requiring a change
+order, and the final invoice flagged that 'Client was notified per T&Cs' which is not true nor
+needed. also there was a weird rounding error on the invoice, creating a $1 credit to client."*
+App-only, no redeploy. **Both reproduced exactly from the screenshot before anything was changed** —
+a $25,715 Estate Settlement estimated at 89 TC + 68 PS and worked at 95 TC + 70 PS, $27,075, over by
+$1,360 = 5.3%.
+
+- **⚠⚠ THE ROW ASSERTED AN EVENT NOTHING IN THE SYSTEM HAD WITNESSED, ON EVERY POSITIVE VARIANCE.**
+  `'Job ran over estimate by ' + fmt(overUnder) + ' — client was notified per T&Cs'` had **no
+  condition on it at all** beyond `overUnder > 0`. Two faults, and the second is the worse one:
+  - **The obligation is a THRESHOLD one.** The estimate's Terms and the agreement's §3.8 both promise
+    notice only *"if actual hours exceed the estimate by more than 15%"*. At 5.3% no notice was owed,
+    none was given, and the invoice said one had been.
+  - **⚠⚠ AND THE APP HAS NEVER RECORDED A NOTIFICATION AT ANY VARIANCE.** That conversation happens
+    mid-job, on the phone. What the system can evidence is an **accepted change order** — which
+    already has its own section and its own row on the same document. So the sentence was
+    unverifiable **above** the threshold too, where it looked most defensible.
+- **⚠⚠ THE FIRST FIX REWORDED IT. ANTHONY DELETED IT, THE SAME DAY, AND HE IS RIGHT — THIS IS THE
+  ENTRY THAT STANDS.** *"i don't think there is any need to flag a minor over run. and an over run of
+  15% should not happen b/c at 15% we require a change order, and if that is approved, the job will
+  not be 'over run' b/c the additional amount is flagged and agreed to. an estimate is an estimate,
+  not a guarantee of the final number."*
+  - **⚠⚠ THE SECOND HALF IS STRUCTURAL AND IT IS WHY THIS IS NOT A MATTER OF TASTE.**
+    `estHavellinTotal` is `est.havellinTotal + coShift` — **an accepted change order moves the
+    baseline**. So on a job run the way the agreement describes, authorised scope is inside the
+    estimate **by construction** and a large positive variance **cannot reach the final**. One that
+    does means the change order was skipped: a process failure to fix in the office, not a sentence
+    to print at a client who was never asked to agree to it. My reworded version would have gone on
+    narrating a number that, run properly, should not exist.
+  - **⚠ BOTH ARMS WENT, NOT JUST THE OVERAGE.** A document that narrates the favourable direction
+    and goes quiet on the other reads as selective disclosure. And the row **explained something the
+    reader could already see** — the Payment Summary prints *Original Estimate* and *Actual Havellin
+    services total* on rows inches apart, so the line was the subtraction of two numbers already on
+    the page. That is the standing client-copy rule in this file, applied to a line I had just
+    rewritten rather than questioned.
+  - **⚠⚠ `overUnder` ITSELF IS ALIVE AND MUST STAY.** `_variancePct` feeds `requiresApproval`, the
+    **±15% MANAGER PIN**. That gate is INTERNAL and is precisely the control that catches the skipped
+    change order above — withholding the final until a manager looks is the right response to that
+    state, and telling the client is not. **Do not "finish the job" by removing it**; a test drives
+    26.7% and asserts the document still stops while the client copy stays silent.
+- **⚠ `EST_TOLERANCE_PCT` SURVIVES THE DELETION AND IS WORTH KEEPING ON ITS OWN.** The ±15% was a
+  bare `0.15` at the manager-PIN gate, another at the change order modal, a `>115` on the Job Plan
+  and a typed *"15%"* in the estimate Terms, the agreement, both dashboard notices and the email —
+  **one rule, ten copies**. One definition now, with `estTolerancePctTxt()` rendering it.
+- **⚠⚠ THE $1 CREDIT: A FIFTY-CENT DIFFERENCE, AND THE GUARD MEANT TO SWALLOW IT COULD NOT SEE IT.**
+  `paymentGap = invoicedBefore - receivedAll` subtracted **two figures that had each already been
+  rounded to the dollar**, so the smallest gap `_paymentGapRow` could ever observe was **$1** and
+  `if (Math.abs(gap) < 1) return ''` was unreachable code. Its own comment claimed *"the arithmetic
+  always uses the real figure, but the NOTICE stays quiet below a dollar"* — only the second half was
+  true.
+  - **The odd total is what makes it reachable.** $25,715 puts the stage targets on part dollars:
+    50% is $12,857.50 and 75% is **$19,286.25**. The client paid the exact quarter, **$6,428.75**,
+    against the rounded $6,428 we asked for. True gap **−$0.50**; rounded first, `19,286 − 19,287 =
+    −1`, and the final printed *"Received ahead of the invoiced schedule — credited in the balance
+    below ($1)"*. **A credit line on an invoice reads as a bookkeeping error however small it is.**
+  - **⚠ THE BALANCE WAS NEVER WRONG AND IS DELIBERATELY UNTOUCHED.** `finalDue` is
+    `round(totalFinalBasis) − round(received)`, and since the basis is whole dollars that is
+    identical to rounding the true balance once — $7,788 either way. A fix that moved the money to
+    tidy a notice would be a worse defect than the one it closed. **Only the notice changed.**
+  - **The midpoint invoice had the same bug in its own words** (`_paymentGapRow(depositAmt -
+    receivedDep)`), so a wire landing sub-dollar light dunned the client for a dollar a stage
+    earlier. Both gap sites measure the real figures now; `fmt` rounds for display.
+- **⚠ AND THE MIDPOINT'S TEST CAME BACK GREEN ON THE REVERT — the fifteenth time this file records an
+  assertion that could not fail.** It used a deposit of $12,857.50 against a target of $12,858, where
+  `round(12857.50) = 12858` lands exactly on the target and **both** builds suppress. The figure is
+  $12,857.30 now — true gap $0.70 (quiet), rounded first $1 (fires). **Caught by reverting, not by
+  reading.** Re-done, it fails 1.
+- **4354 committed checks** (`tests/invoice-variance.test.js`, 23 new — the first coverage of either
+  row). **Every change revert-verified individually** — putting the variance row back fails **2**,
+  removing the internal PIN gate with it fails **6**, the gap sites 1 each.
+- **⚠ A PRE-EXISTING TEST PINNED THE EXPRESSION `_variancePct > 0.15` AND BROKE ON A TRUE CHANGE**,
+  the eleventh time. Restated as the requirement: the gate is final-only, needs hours, and measures
+  against the shared constant rather than a literal of its own.
+- **Verified end to end in headless Chromium on the real page**, driving the real `invoiceHtml` on
+  the exact job from the screenshot: *Payments received to date ($19,287)* unchanged, **no gap row**,
+  **no variance row in either direction**, **no `notified per` anywhere**, *Original Estimate
+  $25,715* and *Actual Havellin services total $27,075* both still printed, and no PIN required.
+  Overflow **0** at 1440 and 390px, no page errors.
+- Manual **§12** (three notes — why the row is gone, that the ±15% PIN is internal and stays, and the
+  rounding measurement with the balance-was-never-wrong note); playbook **three bullets** on the
+  invoice step and **two** symptom→cause rows. Both `.md` copies hand-edited and **23 claims
+  parity-checked**; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still
+  the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 41 tables
+  full-width under `print`**.
 
 ## ⚠⚠ "APPS SCRIPT NEEDS REDEPLOYING" OVER A SCRIPT THAT HAD JUST RUN (FIXED 2026-09-11)
 Anthony, minutes after the fix above shipped, on a second photograph: **1 change not saved — Apps Script needs
@@ -663,7 +748,9 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/festive-noether-ggr0fn`
+- Active feature branch: `claude/busy-heisenberg-h24ya9`
+  (`claude/festive-noether-ggr0fn` shipped alongside it on 2026-09-11 — two sessions ran
+  concurrently and both are on `main`; neither is stale.)
   (was `claude/trusting-allen-iadbqe`, then `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
@@ -671,7 +758,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/festive-noether-ggr0fn:main`
+  `git push origin claude/busy-heisenberg-h24ya9:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

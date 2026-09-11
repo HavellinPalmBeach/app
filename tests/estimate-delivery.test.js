@@ -35,7 +35,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // because `uploadHtmlToDrive` overwrites by filename: a changed name would orphan
     // every estimate already in Drive rather than replacing it.
     has(client, "docAction(jobId, 'estimate', 'file'", 'the client copy files through the one action');
-    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['DOC_STAGE_WORD'] });
+    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD'] });
     const j = { hvlId: 'HVL-0007', addr: '69 Beach Blvd, Palm Beach FL', name: 'Butler' };
     eq(nm.docNames(j, 'estimate', {}).drive, nm.estimateDocNames(j).driveClient,
       'and lands on the same filename, so a re-file replaces rather than accumulates');
@@ -287,11 +287,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('it states the same numbers as the document, from the same fields');
   {
     const ctx = sandbox({
-      fns: ['buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
+      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
             'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             // Both emails state the vendor-fee rule through the one shared sentence (2026-09-10).
             'vendorFeeNote', 'prepFeeRate'],
-      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
       stubs: {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(561) 370-4700', email: 'ashley@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -352,9 +352,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A phase list that throws must not take the email down with it.
     const ctx2 = sandbox({
-      fns: ['buildEstimateEmailHtml', 'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
+      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             'vendorFeeNote', 'prepFeeRate'],
-      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',
@@ -479,7 +479,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // true is that the URL RESOLVES — the browser's Google session is invisible from the
     // app, so any account identifier we put in the path is a guess, and a wrong guess is
     // an error page with nowhere to go.
-    const ctx = sandbox({ fns: ['gmailDraftUrl'], vars: ['GMAIL_SCOPE'] });
+    const ctx = sandbox({ fns: ['gmailDraftUrl'], vars: ['EST_TOLERANCE_PCT', 'GMAIL_SCOPE'] });
 
     // Whatever we know or do not know about the mailbox, the URL is the same.
     ['', 'ashley@havellinpalmbeach.com', 'not an email', 'a@b/../evil', 'x@y@z'].forEach(function (who) {
@@ -631,7 +631,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(contractors, "phone:'(978) 857-5374'", "and Ashley's on hers");
 
     const ctx = sandbox({ fns: ['conciergePhones', 'conciergePhonesText'],
-                          vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'] });
+                          vars: ['EST_TOLERANCE_PCT', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'] });
     const both = ctx.conciergePhonesText({ phone: '(978) 857-5374' });
     has(both, 'Office (561) 652-5522', 'the office line always shows');
     has(both, 'Mobile (978) 857-5374', 'with the mobile beside it');
@@ -663,7 +663,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(a, 'tc.email || fallback.email', 'both of them');
 
     const ctx = sandbox({ fns: ['assignedTCContact', 'conciergePhones', 'conciergePhonesText', 'canonPersonName', 'samePerson'],
-                          vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES'] });
+                          vars: ['EST_TOLERANCE_PCT', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES'] });
     ctx.contractors = [{ id: 'c1', name: 'New Concierge', role: 'TC', phone: '', email: 'new@havellinpalmbeach.com' }];
     const bare = ctx.assignedTCContact({ tc: 'New Concierge' });
     eq(bare.phone, '', 'a concierge with no mobile resolves to an empty one');
@@ -678,7 +678,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // two HTML signatures; those are gone, so it lives in `mailtoSignoff` — the one
     // signature left in the app — and is DRIVEN rather than grepped.
     const so = sandbox({ fns: ['mailtoSignoff', 'conciergePhones', 'conciergePhonesText'],
-                         vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'] });
+                         vars: ['EST_TOLERANCE_PCT', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'] });
     const full = so.mailtoSignoff({ name: 'Ashley Graziano', phone: '(978) 857-5374', email: 'ashley@havellinpalmbeach.com' });
     has(full.join('\n'), 'Mobile (978) 857-5374', 'a full record signs with both numbers');
     has(full.join('\n'), 'ashley@havellinpalmbeach.com', 'and the address');
@@ -803,7 +803,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['buildAgreementEmailHtml', 'buildAgreementEmailText', 'agreementEmailSubject',
             'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
-      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'Anthony Graziano', phone: '(561) 370-4700', email: 'anthony@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -830,7 +830,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A job with no approved estimate must not print a $0 schedule.
     const ctx2 = sandbox({
       fns: ['buildAgreementEmailHtml', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
-      vars: ['EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',

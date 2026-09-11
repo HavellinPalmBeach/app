@@ -37,7 +37,7 @@ function ctx(extraFns) {
   return sandbox({
     fns: ['_srcLid', '_srcLineKey', '_srcAdoptLineIds', 'getVendorActuals',
           'prepFeeRate', 'logisticsCatsFor'].concat(extraFns || []),
-    vars: ['SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq'],
+    vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq'],
   });
 }
 
@@ -132,7 +132,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // whole suite passing. It is the concierge's own fee readout, in the field, on money.
     const plan = (est, job) => sandbox({
       fns: ['renderPrepJobPlan', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid'],
-      vars: ['PREP_FEE_RATE'],
+      vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
                standingFlagsBlock: () => '', planChk: () => '', renderVendorSourcing: () => '',
                vendorDirectory: [] },

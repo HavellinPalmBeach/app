@@ -62,7 +62,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // `uploadHtmlToDrive` overwrites BY FILENAME — that asymmetry is load-bearing and
     // CLAUDE.md records it: the client-facing name is dated, the Drive name is not,
     // precisely so a re-file REPLACES. A changed name orphans every copy already there.
-    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['DOC_STAGE_WORD'] });
+    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD'] });
     const job = { hvlId: 'HVL-0007', addr: '69 Beach Blvd, Palm Beach FL', name: 'Butler' };
     eq(nm.docNames(job, 'estimate', {}).drive, nm.estimateDocNames(job).driveClient,
       'the estimate keeps the exact name it already files under');
@@ -128,7 +128,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', 'docSentAt', 'docFiledAt',
             'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
-      vars: ['DOC_ACTIONS', 'DOC_STAGE_WORD'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {},
         _exportDoc: (title, body) => '<doc>' + title + '|' + body + '</doc>',
@@ -200,7 +200,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // An unresolved subfolder falls back to the job root rather than dropping the document.
     const fb = sandbox({
       fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
-      vars: ['DOC_ACTIONS', 'DOC_STAGE_WORD'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
       stubs: Object.assign({}, {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, _docNotice() {},
         _exportDoc: (t, b) => b, resolveSubfolderId: (j, n, cb) => cb(null),
@@ -329,7 +329,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['ensureAgreementApproved', 'exportSigningPacketToDrive', 'docAction', 'docFile',
             'docRecordFiled', 'docState', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec',
             'approvedEstimateFor', 'agreementReady'],
-      vars: ['DOC_ACTIONS', 'DOC_STAGE_WORD'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
       stubs: {
         setTimeout: (f) => f(),
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, _docNotice() {},

@@ -52,16 +52,16 @@ const EST = {
 };
 const est = (over) => Object.assign({}, EST, over || {});
 
-const DISCOUNT_FNS = ['discountPreview', 'estPreDiscountTotal', 'discountOnLabor'];
-const DISCOUNT_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT'];
+const DISCOUNT_FNS = ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor'];
+const DISCOUNT_VARS = ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT'];
 
 // ── the real client estimate, so the document a client reads is what is asserted ─────
-const CE_FNS = ['clientEstimateHtml', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
+const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection',
                 'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'discountOnLabor',
                 // proposedPlanRow's prep narrative reads the rate rather than printing a 30.
                 'prepFeeRate'];
-const CE_VARS = ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
+const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
 function ceDoc(e) {
@@ -80,8 +80,8 @@ function invCtx(e, logs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor'],
-    vars: ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt'],
+    vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
            'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'],

@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5196,6 +5196,17 @@ var SMF_PCT = 0;
 // (§16), which is not a floor and is not related — do not collapse the two.
 var MAX_DISCOUNT_PCT = 15;
 
+// ⚠ THE ±15% IS ONE NUMBER AND IT IS A PROMISE TO THE CLIENT, NOT AN INTERNAL PREFERENCE.
+// The estimate's Terms say "if actual hours exceed the estimate by more than 15%, Havellin
+// will notify the client before proceeding", the agreement's §3.8 repeats it, the change
+// order modal measures against it, the Job Plan warns on it and the final invoice's manager
+// PIN fires on it. Six surfaces, one rule — and it was a bare 0.15 (or a typed "15%", or a
+// ">115") at every one of them, which is the two-copies-drift shape this file records more
+// often than anything else. Move it here and every surface follows, including the sentence
+// printed on the client's invoice saying which side of it their job landed on.
+var EST_TOLERANCE_PCT = 0.15;
+function estTolerancePctTxt(){ return Math.round(EST_TOLERANCE_PCT * 100) + '%'; }
+
 // ⚠⚠ THE PREFERRED-CLIENT DISCOUNT COMES OFF THE LABOUR **INCLUDING THE EXPEDITED-DELIVERY
 // PREMIUM CHARGED ON THAT LABOUR**, and that is Anthony's arithmetic verbatim rather than an
 // interpretation of it: "If it's a hundred thousand dollar job on labor, and we apply a
@@ -8816,7 +8827,7 @@ function clientEstimateHtml(e, job) {
           var isCourt = (e.svc === 'cleanout' || e.svc === 'probate' || e.svc === 'contested_probate');
           return '<div class="ce-note">This estimate is based on the initial property walkthrough. '
             + 'Final charges reflect the Transition Concierge and Property Specialist hours actually worked and logged; '
-            + 'if those exceed this estimate by more than 15%, we will tell you before continuing.'
+            + 'if those exceed this estimate by more than ' + estTolerancePctTxt() + ', we will tell you before continuing.'
             + (isCourt ? ' An itemized, hour-by-hour record is maintained throughout and provided to the Personal Representative and, where the court requires it, to the court.' : '')
             + '</div>';
         })()) +
@@ -8989,7 +9000,7 @@ function clientEstimateHtml(e, job) {
              ? ' Home preparation vendors are the exception: those carry the separate ' + Math.round(prepFeeRate()*100) + '% general contracting and site management fee shown above, which is not part of the fixed fee.'
              : '') + '</li>'
       : '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
-        '<li>If actual hours exceed the estimate by more than 15%, Havellin will notify the client before proceeding.</li>' +
+        '<li>If actual hours exceed the estimate by more than ' + estTolerancePctTxt() + ', Havellin will notify the client before proceeding.</li>' +
         '<li>Third-party vendor costs are estimated and billed at cost via direct vendor invoices.'
           + ((e.prepEnabled && (e.prepCost||0) > 0)
              ? ' Havellin adds no markup to any vendor\'s invoice; on home preparation vendors Havellin\'s own fee is the separate ' + Math.round(prepFeeRate()*100) + '% general contracting and site management fee shown above.'
@@ -10525,12 +10536,12 @@ function updateCOHours() {
   }
   var pct = addHrs / baseHrs;
   var pctTxt = (pct > 0 ? '+' : '\u2212') + Math.abs(Math.round(pct * 1000) / 10).toFixed(1) + '%';
-  note.innerHTML = '<div class="alert ' + (Math.abs(pct) >= 0.15 ? 'a-warn' : 'a-info') + '">' +
+  note.innerHTML = '<div class="alert ' + (Math.abs(pct) >= EST_TOLERANCE_PCT ? 'a-warn' : 'a-info') + '">' +
     coHoursLabel({tc:tc, ps:ps}) + ' — ' + baseHrs.toFixed(1) + ' hrs on the estimate becomes ' +
     newHrs.toFixed(1) + ' (' + pctTxt + ').' +
-    (Math.abs(pct) >= 0.15
-      ? ' <strong>Past the 15% threshold</strong> — this is exactly the change the client has to agree to in writing before the hours are worked.'
-      : ' Inside the 15% the client already agreed to, so this records the scope rather than changing what they owe.') +
+    (Math.abs(pct) >= EST_TOLERANCE_PCT
+      ? ' <strong>Past the ' + estTolerancePctTxt() + ' threshold</strong> — this is exactly the change the client has to agree to in writing before the hours are worked.'
+      : ' Inside the ' + estTolerancePctTxt() + ' the client already agreed to, so this records the scope rather than changing what they owe.') +
     '</div>';
 }
 
@@ -12308,7 +12319,7 @@ var DOC_ACTIONS = {
       // ⚠ TWO DIFFERENT ANSWERS AND THEY MUST STAY APART. `blocked` cannot be unlocked by
       // anyone — nobody can unlock a missing timesheet. `requiresApproval` can, by a PIN.
       if (d.blocked) return 'No hours have been logged for this job, so the final cannot be issued. Log them on the Job Plan tab first.';
-      if (d.requiresApproval && !invApproved) return 'This final is ' + Math.round(d.variancePct * 100) + '% off the estimate, outside the ±15% tolerance, so it needs a manager PIN before it can be issued.';
+      if (d.requiresApproval && !invApproved) return 'This final is ' + Math.round(d.variancePct * 100) + '% off the estimate, outside the ±' + estTolerancePctTxt() + ' tolerance, so it needs a manager PIN before it can be issued.';
       return '';
     }
   }
@@ -12801,7 +12812,7 @@ function dashApproveInvoice(jobId, stage) {
   currentInvStage = stage || 'final';
   var d = invoiceHtml(job, currentInvStage);
   if (!d) { dashNotice('warn', 'This invoice could not be built.'); _dashRedraw(jobId); return; }
-  if (!d.requiresApproval) { dashNotice('ok', 'This invoice is inside the \u00b115% tolerance \u2014 no approval needed.'); _dashRedraw(jobId); return; }
+  if (!d.requiresApproval) { dashNotice('ok', 'This invoice is inside the \u00b1' + estTolerancePctTxt() + ' tolerance \u2014 no approval needed.'); _dashRedraw(jobId); return; }
   invRequiresApproval = true;
   openInvPinModal();
 }
@@ -13322,7 +13333,7 @@ function renderClientDashboard(jobId) {
   if (tcPct > 90 || psPct > 90) {
     var overageColor = (tcPct>115||psPct>115) ? '#FCEBEB' : '#FAEEDA';
     var overageTextColor = (tcPct>115||psPct>115) ? '#A32D2D' : '#854F0B';
-    var overageMsg = (tcPct>115||psPct>115) ? 'Hours exceed estimate by more than 15%. Client must be notified in writing before continuing work — per agreement terms.' : 'Approaching estimate limit. Review scope and consider a change order if additional hours are required.';
+    var overageMsg = (tcPct > 100 + EST_TOLERANCE_PCT * 100 || psPct > 100 + EST_TOLERANCE_PCT * 100) ? 'Hours exceed estimate by more than ' + estTolerancePctTxt() + '. Client must be notified in writing before continuing work — per agreement terms.' : 'Approaching estimate limit. Review scope and consider a change order if additional hours are required.';
     h += '<div style="background:'+overageColor+';border-radius:var(--br);padding:8px 12px;font-size:12px;color:'+overageTextColor+';margin-bottom:12px;display:flex;align-items:flex-start;gap:6px;">'+dot(overageTextColor)+'<span>'+overageMsg+'</span></div>';
   }
   // Log entries
@@ -14855,7 +14866,7 @@ function buildEstimateEmailHtml(e, job) {
     ? 'Our fee is ' + Math.round(prepFeeRate()*100) + '% of what the vendors actually invoice. Every quote is reviewed with you before anyone is booked.'
     : (e.fixedPrice
         ? 'The Havellin fee above is firm for the scope described. It does not move with the hours worked.'
-        : 'Final charges reflect the hours actually worked and logged. If they look like exceeding this estimate by more than 15%, we will tell you before continuing.');
+        : 'Final charges reflect the hours actually worked and logged. If they look like exceeding this estimate by more than ' + estTolerancePctTxt() + ', we will tell you before continuing.');
 
   return '' +
   '<div style="margin:0;padding:0;background:#f4f1ea;">' +
@@ -20831,8 +20842,25 @@ function invoiceHtml(job, stage) {
   // still outstanding and the balance below carries them; negative means the client is ahead.
   // ⚠ Sub-dollar differences are bank rounding, not a debt — the arithmetic always uses the
   // real figure, but the NOTICE stays quiet below a dollar or it fires on fifty cents.
+  // ⚠⚠ THE GAP IS MEASURED ON THE REAL FIGURES, NOT ON TWO SEPARATELY-ROUNDED ONES, AND
+  // THAT IS WHAT THE GUARD BELOW HAS ALWAYS MEANT TO SAY. It was `invoicedBefore -
+  // receivedAll`, where BOTH sides had already been rounded to whole dollars — so the
+  // smallest gap it could ever observe was $1, and `Math.abs(gap) < 1` could not suppress
+  // anything. The comment on `_paymentGapRow` claimed "the arithmetic always uses the real
+  // figure"; only the notice did.
+  //
+  // Measured on the real invoice, a $25,715 estate whose stage targets both land on a part
+  // dollar: invoiced 0.75 × 25,715 = 19,286.25, received 12,858.00 + 6,428.75 = 19,286.75.
+  // A true gap of 50 cents — the client paid the exact quarter, we asked for the rounded one
+  // — and the two roundings turned it into 19,286 − 19,287 = −$1, printing "Received ahead
+  // of the invoiced schedule — credited in the balance below ($1)" on a client's final.
+  // A credit line on an invoice reads as a bookkeeping error however small it is.
+  //
+  // ⚠ THE BALANCE WAS NEVER WRONG and is deliberately untouched: `finalDue` is
+  // `round(totalFinalBasis) - round(received)`, and since the basis is whole dollars that is
+  // identical to rounding the true balance once. Only the NOTICE about the gap was wrong.
   var invoicedBefore = midCumTarget;
-  var paymentGap     = invoicedBefore - receivedAll;
+  var paymentGap     = invoicedBefore - jobPaidTotal(job);
 
   // Aliases consumed by the final-invoice body below.
   var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;
@@ -20905,11 +20933,38 @@ function invoiceHtml(job, stage) {
   // than the 25% they expect and has no way to see why; and a client who is AHEAD must be told
   // they are, or the credit looks like an error. Both directions render.
   function _paymentGapRow(gap){
+    // ⚠ THE CALLER MUST HAND THIS AN UNROUNDED GAP, or the test below cannot fire: two
+    // figures each rounded to the dollar can never differ by less than one. See the note at
+    // `paymentGap`, where that is exactly what printed a spurious $1 credit to a client.
     if (Math.abs(gap) < 1) return '';                 // bank rounding is not a debt
     return gap > 0
       ? '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Outstanding from the deposit and midpoint invoices — carried into the balance below</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(gap) + '</td></tr>'
       : '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Received ahead of the invoiced schedule — credited in the balance below</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(gap)) + ')</td></tr>';
   }
+
+  // ⚠⚠ THERE IS NO VARIANCE ROW ON THIS DOCUMENT, AND ITS ABSENCE IS THE DECISION.
+  // Anthony, on the row that used to sit here: *"i don't think there is any need to flag a minor
+  // over run. and an over run of 15% should not happen b/c at 15% we require a change order, and
+  // if that is approved, the job will not be 'over run' b/c the additional amount is flagged and
+  // agreed to. an estimate is an estimate, not a guarantee of the final number."*
+  //
+  // ⚠⚠ THE SECOND HALF IS THE STRUCTURAL ARGUMENT AND IT IS WHY THIS IS NOT MERELY TASTE.
+  // `estHavellinTotal` is `est.havellinTotal + coShift` — AN ACCEPTED CHANGE ORDER MOVES THE
+  // BASELINE. So on a job run the way the agreement describes, authorised scope is inside the
+  // estimate by construction and a large positive variance CANNOT reach the final. One that does
+  // means the change order was skipped, which is a process failure to fix in the office — not a
+  // sentence to print at a client who was never asked to agree to it.
+  //
+  // ⚠ AND THE ROW EXPLAINED SOMETHING THE READER COULD ALREADY SEE, which is the standing
+  // client-copy rule in this file: the Payment Summary prints "Original Estimate" and "Actual
+  // Havellin services total" on rows INCHES APART, so the variance line was the subtraction of two
+  // numbers already on the page, in both directions. Both arms went, not just the overage — a
+  // document that narrates the favourable direction and goes quiet on the other reads as selective.
+  //
+  // ⚠⚠ `overUnder` ITSELF IS ALIVE AND MUST STAY: `_variancePct` feeds `requiresApproval`,
+  // the ±15% MANAGER PIN. That gate is INTERNAL and is exactly the control that catches the
+  // skipped change order above — withholding the final until a manager looks is the right response
+  // to that state, and telling the client about it is not. Do not "finish the job" by removing it.
 
   function _amtDueBox(label, amt){
     // Set the dark background on every cell (not just the row) so the box renders solid
@@ -20960,11 +21015,6 @@ function invoiceHtml(job, stage) {
     '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
     _paymentGapRow(paymentGap) +
     '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
-    (overUnder > 0 ?
-      '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Job ran over estimate by ' + fmt(overUnder) + ' — client was notified per T&amp;Cs</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(overUnder) + '</td></tr>' :
-      (overUnder < 0 ?
-        '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Job came in under estimate by ' + fmt(Math.abs(overUnder)) + ' — credit applied</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(overUnder)) + ')</td></tr>' :
-        '')) +
     (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
@@ -21003,7 +21053,7 @@ function invoiceHtml(job, stage) {
     : '<div style="margin-top:1rem;"><table class="pay-tbl">' +
         '<tr><td colspan="2" style="color:var(--gray);">50% deposit — invoiced on acceptance</td><td class="r" style="color:var(--gray);">' + fmt(depositAmt) + '</td></tr>' +
         '<tr><td colspan="2" style="color:var(--ok-tx);">Received to date</td><td class="r" style="color:var(--ok-tx);">(' + fmt(receivedDep) + ')</td></tr>' +
-        _paymentGapRow(depositAmt - receivedDep) +
+        _paymentGapRow(depositAmt - stagePaidTotal(job, 'deposit')) +
         _amtDueBox('Midpoint Payment Due Now (25%)', stageAmtDue) +
       '</table>' +
       '<div class="ce-note" style="margin-top:.5rem;">Remaining 25% due upon completion.</div>' +
@@ -21137,7 +21187,7 @@ function invoiceHtml(job, stage) {
     html: html,
     stage: stage,
     blocked: _noHours,
-    requiresApproval: !_noHours && (stage === 'final') && (_variancePct > 0.15),
+    requiresApproval: !_noHours && (stage === 'final') && (_variancePct > EST_TOLERANCE_PCT),
     variancePct: _variancePct,
     overUnder: overUnder,
     amtDue: stageAmtDue,

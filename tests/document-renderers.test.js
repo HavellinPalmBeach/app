@@ -93,7 +93,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // defect to guard: `requiresApproval` means "a manager can unlock this", and nobody
     // can unlock a missing timesheet.
     has(inv, 'blocked: _noHours', 'a final with no hours logged is blocked');
-    has(inv, "requiresApproval: !_noHours && (stage === 'final') && (_variancePct > 0.15)",
+    // ⚠ THIS PINNED THE EXPRESSION AND BROKE ON A TRUE CHANGE — the ±15% moved into
+    // EST_TOLERANCE_PCT so the invoice row, the change order modal and this gate cannot
+    // drift apart. State the REQUIREMENT: the gate is final-only, needs hours, and measures
+    // against the shared constant rather than a literal of its own.
+    has(inv, "requiresApproval: !_noHours && (stage === 'final') && (_variancePct > EST_TOLERANCE_PCT)",
       'and approval is a separate question, final-only, outside ±15%');
     has(inv, "var _noHours = (stage === 'final') && !_fixed && !_feeOnly && (actTC + actPS) === 0",
       'the no-hours test excludes fixed-price and fee-only, which bill no hours at all');
