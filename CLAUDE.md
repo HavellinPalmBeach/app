@@ -1,5 +1,104 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ ASHLEY LOCKED EVERY ROOM AND NONE OF IT REACHED ANTHONY (FIXED 2026-09-11)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-11b`. Reported in the
+same message as the two photo defects below: *"ashley locked all of the rooms on this job plan, and those are
+not showing up on my computer when i open the same job plan."*
+
+- **⚠⚠ THE JOB PLAN MERGED AS ONE RECORD, ON THE ONE SURFACE TWO PEOPLE GENUINELY WORK AT ONCE.**
+  `saveJobPlanStore` used `_mergeStoreByKey` — newer whole record per jobId wins. Right for a scalar,
+  categorically wrong here: one person is in the house and one is at the desk, and **the last device to save
+  any part of a plan overwrote all of it.** Her eight locked rooms lost to his one changed checkbox, silently,
+  with both of them believing it had synced. Byte-for-byte the custody-log defect, in the store that could
+  least afford it — and the inventory got the per-item treatment months ago while this one never did.
+- **⚠⚠ UNION BY KEY ALONE WOULD NOT HAVE FIXED IT, AND THAT IS THE PART TO KEEP.** Every device posts the
+  **whole** store, so his payload carries a value for every room she locked — the stale one he loaded before
+  she did it. Union still has to choose, and with only a record-level `savedAt` **his stale `pending` looks
+  exactly as fresh as her real `locked`**. A key has to record its OWN last write. `plan.at['rooms:3']`, one
+  flat map keyed `<kind>:<key>` so `rooms` / `collections` / `notes` / `tasks` share one mechanism — and the
+  **leaves are untouched**, so nothing that reads `plan.rooms[i]` learns a new shape.
+- **⚠⚠ AN UNSTAMPED KEY IS THE WEAKEST CLAIM, NOT THE FRESHEST.** It means *this device never touched it*,
+  so it must lose to a stamped one however recently the record was saved. **Falling back to `savedAt` here
+  hands every untouched room back to whoever saved last, which IS the defect** — reverting just that arm
+  fails **14**. Only when NEITHER side carries a stamp does `savedAt` decide, which is exactly how a plan
+  written before today already behaved, so **nothing legacy changes meaning**.
+- **⚠ THE STAMPS THEMSELVES UNION, NEWEST PER KEY.** A device that did not touch a room would otherwise drop
+  the proof that the other one did, and the room would go back to being contested on the next save.
+- **⚠ `_mergeStoreByKey` STAYS ON THE ESTIMATE STORE AND A TEST PINS THAT.** A saved estimate is a single
+  priced snapshot, not a thing two people edit half of each. **Do not apply this wholesale.**
+- **⚠ ORDER MUST NOT MATTER, and the test asserts both directions.** Whichever device happens to save second
+  gets the same answer, or two laptops would flip a room back and forth forever.
+- **4373 committed checks** at this point (`tests/job-plan-merge.test.js`, 42 new — the first coverage of this
+  merge at all, which is why it was wrong from the day it was written). It drives the **real `.gs` functions**
+  in a vm and then hands the **real app's `_planTouch` output** to them, so the two ends are tested against
+  each other rather than each against a fixture.
+- **Verified in headless Chromium on the real page**: `setRoomStatus` / `savePlanNote` / `togglePlanTask`
+  produce `at = {rooms:3, notes:phase0, tasks:flags-read}` and it rides the `saveAllJobPlans` payload; the old
+  build produced **`null`**. Overflow 0 at 1440 and 390px, no page errors.
+- **⚠⚠ A LOCK MADE BEFORE THE REDEPLOY IS GONE, NOT HIDDEN.** The app stamps correctly the moment it loads,
+  but the sheet keeps merging the old way until the script is redeployed. Both documents say to re-check and
+  re-lock.
+
+### ⚠⚠ "Uploading…" WAS A TERMINAL STATE — a fetch has no timeout (FIXED 2026-09-11)
+*"one says 'uploading' but never does."* App-only.
+- **Every failure path in `_doPhotoUpload` resolves** — `uploadToDrive` catches, `fetchSubfolderIds` catches
+  — **but a request that never settles reaches none of them**, and a stalled auth redirect is exactly that.
+  The ref then sits at `'uploading'` for the rest of the job: no count, no error, no Retry button, **nothing
+  on screen to press**. A state with no exit is worse than a failure, because a failure at least offers the fix.
+- **The app had already learned this once and the photo path never got it.** CLAUDE.md records the vendor
+  form's *"45-second watchdog re-enables the button rather than leaving the form stuck (a `fetch` has no
+  timeout)"*. **The surface used standing in somebody's house was the one without one.** 90 seconds here — a
+  cold Apps Script start plus a large image.
+- **⚠ `_finish` IS IDEMPOTENT, and that half is not tidiness.** The dangerous ordering is the watchdog firing
+  and the slow upload succeeding afterwards: without the guard the late answer re-writes the verdict, and a
+  shot that DID land turns back into a failure. Driven in that order; reverting the guard fails 2.
+- **⚠ A SUCCESSFUL UPLOAD CLEARS THE WATCHDOG**, or it fires 90 seconds later onto a landed photo.
+
+### ⚠⚠ A FAILED SHOT COULD NEVER BE CLEARED OFF THE CARD (FIXED 2026-09-11)
+*"those 'retrys' should clear or something once you do retry, or upload a new image or whatever."* App-only.
+- **Retry clears a shot that LANDS.** A shot that **cannot** land had no exit at all, so three red *"shot N
+  not saved"* flags stood on a room card whose Before photo had since gone up perfectly well. **A red warning
+  that cannot be acted on is the fastest way to train people past every other red warning** — and this app
+  puts a firearm rule behind a red warning.
+- **`dismissFailedPhoto` TOMBSTONES, NEVER SPLICES**, the rule the inventory already follows: absence reads as
+  *"the other device has not seen it yet"*, so a splice is undone by the next merge from the other laptop.
+- **⚠ IT SAYS PLAINLY THAT THE IMAGE GOES, and confirms.** It is the one control here that destroys
+  something — Retry is free, this is not.
+- **⚠ AND IT ONLY WORKS BECAUSE `_slotRefs` NOW TESTS THE TOMBSTONE.** It filtered on roomIdx / label /
+  collId and **not** `deletedAt`, so a removed photo would have gone on counting in the badge and gone on
+  drawing its own Retry. Latent only because room photos were never removable.
+- **⚠ AN UPLOADED PHOTO IS NOT DISMISSABLE, and that is not an oversight.** This clears a DEAD shot;
+  deleting a filed photograph is a different act with a different blast radius.
+- **4404 committed checks** (`tests/photo-recovery.test.js`, 27 new). **All eleven changes across the three
+  fixes revert-verified individually** — the unstamped-is-weak arm fails **14**, the watchdog 10, the
+  tombstone filter 3, and the rest 2 each.
+- **⚠ AND A REVERT CAME BACK GREEN — the thirteenth time this file records an assertion that could not
+  fail.** `has(html, 'dismissFailedPhoto(1')` matched a button rendered `hidden`: the onclick is still in the
+  markup, so the check was green over a control nobody can press. It reads the **rendered element** now and
+  fails on `hidden`, `disabled` or `display:none`. Re-done, it fails 2.
+- **Verified in headless Chromium on the real page**, with `fetch` hanging exactly as reported:
+
+  | | old build | new build |
+  |---|---|---|
+  | a stalled upload, after the timeout | **"Uploading…" forever**, ref `uploading` | *"⚠ shot 1 not saved  Retry  ✕"*, ref `failed` |
+  | discard a dead shot | **the function does not exist** | offered; card goes clean; the row stays as a tombstone |
+  | job plan stamps | **`null`** | `notes:phase0, rooms:3, tasks:flags-read` |
+
+  Overflow **0** at 1440 and 390px, no page errors.
+- Manual **§2** (the plan merge, with the redeploy and the re-lock instruction) and **§10** (the watchdog and
+  the discard); playbook **three** symptom→cause rows. Both `.md` copies hand-edited and **12 claims
+  parity-checked**; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still the
+  documented false positive at 1), rendered at 1440/390 with **0 overflow** and all tables full-width under
+  `print`.
+
+### ⚠ The multi-account browser is the cause of the two sync reports, and the app cannot fix it
+Anthony, confirming: *"URL ends in /exec and deployment was set to anyone. but we were logged into multiple
+google accounts in the browser."* That is the session hop both the login/HTML page and the `Unknown action`
+answer come out of — Google has to decide *which* account is asking, and the POST is redirected to find out.
+**Nothing in `havellin.html` can change that**; it is a property of the browser profile. The working answer is
+a profile (or a private window) signed into the Havellin account **only**. Written down so nobody goes looking
+for an app-side fix for it again.
+
 ## ⚠⚠ "APPS SCRIPT NEEDS REDEPLOYING" OVER A SCRIPT THAT HAD JUST RUN (FIXED 2026-09-11)
 Anthony, minutes after the fix above shipped, on a second photograph: **1 change not saved — Apps Script needs
 redeploying**, `saveAllJobPlans → main sheet`, reason **`Unknown action`**. App-only, no redeploy — which is

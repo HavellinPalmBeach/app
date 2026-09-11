@@ -118,10 +118,12 @@ function server(opts = {}) {
     'getJobLedger', '_ledgerMarkSeen', '_jobRefusal', '_presentJobIds', '_deletedJobIds',
     '_stripRefusedJobKeys', '_jobRefusalCtx', '_sweepDeletedJobKeys', '_purgeJobFromStores',
     '_okWithDrops', '_mergeStoreByKey', 'saveEstimateStore', 'getEstimateStore',
+    // A job plan merges PER KEY now (see _mergePlanRecord) — two people work one plan.
+    '_planStamp', '_mergePlanRecord', '_mergePlanStore',
     'saveJobPlanStore', 'getJobPlanStore', 'saveLogStore', 'getLogStore', 'saveChangeOrderStore',
     'getChangeOrderStore', 'resetAllJobDataConfirm', 'allowJobRestoreConfirm', 'previewDeletedJobs'];
   const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),
-    gsVar(GS, 'JOB_LEDGER_STORE'), ...names.map((n) => gsFn(GS, n)),
+    gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'), ...names.map((n) => gsFn(GS, n)),
     // saveMediaStore lives in the other file and leans on getMediaStore + _mergeMediaItems.
     gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');
   vm.runInContext(code, ctx, { filename: 'main-sync.gs (extracted)' });

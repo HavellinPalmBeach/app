@@ -60,11 +60,17 @@ function run(resp, opts) {
   opts = opts || {};
   const badges = [];
   const warns = [];
+  const timers = [];
   const ctx = sandbox({
+    vars: ['PHOTO_UPLOAD_TIMEOUT_MS'],
     fns: ['createDriveJobFolder', '_driveFolderFailed', 'createDriveFolderNow',
           '_backendErrorKind', 'resolveSubfolderId', '_subfolderId', 'fetchSubfolderIds',
           '_normalizeSubfolders', 'uploadToDrive', '_doPhotoUpload', '_getPhotoRef', '_setPhotoRef'],
     stubs: {
+      // _doPhotoUpload arms a watchdog now — "Uploading…" used to have no exit at all.
+      // Captured rather than run, so a test can fire it deliberately.
+      setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+      clearTimeout: (id) => { if (id) timers[id - 1] = null; },
       SHEETS_SYNC_URL: opts.noUrl ? '' : 'https://script.google.com/macros/s/AAA/exec',
       DRIVE_FOLDER_ID: '',
       showSyncBadge: (m) => badges.push(String(m)),

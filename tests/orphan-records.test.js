@@ -123,10 +123,12 @@ function server(opts = {}) {
     '_stripRefusedJobKeys', '_jobRefusalCtx', '_sweepDeletedJobKeys', '_purgeJobFromStores',
     '_orphanJobRecords', 'previewOrphanRecords', 'pruneOrphanRecordsConfirm',
     '_okWithDrops', '_mergeStoreByKey', 'saveEstimateStore', 'getEstimateStore',
+    // A job plan merges PER KEY now (see _mergePlanRecord) — two people work one plan.
+    '_planStamp', '_mergePlanRecord', '_mergePlanStore',
     'saveJobPlanStore', 'getJobPlanStore', 'saveLogStore', 'getLogStore',
     'saveChangeOrderStore', 'getChangeOrderStore', 'resetAllJobDataConfirm'];
   let code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),
-    gsVar(GS, 'JOB_LEDGER_STORE'), ...names.map((n) => gsFn(GS, n)),
+    gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'), ...names.map((n) => gsFn(GS, n)),
     gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_mergeMediaItems'),
     gsFn(GS_INV, '_mergeCustodyLogs'), gsFn(GS_INV, '_custodyEventId'),
     gsFn(GS_INV, '_invHasVal'), gsFn(GS_INV, '_invStickyValue'),

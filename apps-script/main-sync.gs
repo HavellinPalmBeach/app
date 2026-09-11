@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-11a';
+var BACKEND_VERSION = '2026-09-11b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder'
@@ -814,6 +814,84 @@ function getEstimateStore() {
 
 // ══ JOB PLAN STORE (merge by jobId) ══════════════════════════════════════════════
 
+// ⚠⚠ A JOB PLAN MERGES PER KEY, NOT AS ONE RECORD. Reported 2026-09-11: Ashley locked
+// every room on a job from the desk and none of it reached Anthony's machine. This store
+// used _mergeStoreByKey, which keeps the newer WHOLE record for a jobId — right for a
+// scalar, categorically wrong for the one surface two people work at the same time, one in
+// the house and one at the desk. The last device to save any part of a plan overwrote all
+// of it: her eight locked rooms lost to his one changed checkbox.
+//
+// ⚠ UNION BY KEY IS NOT ENOUGH ON ITS OWN. Every device posts the WHOLE store, so the
+// loser's payload carries a value for every room the winner locked — the stale one it
+// loaded beforehand. The choice per key therefore needs each key's OWN last-write time,
+// which the app now stamps into `plan.at` as `'<kind>:<key>'`.
+//
+// ⚠ AN UNSTAMPED KEY IS THE WEAKEST CLAIM, NOT THE FRESHEST: it means that device never
+// touched it, so it loses to a stamped one whatever the record's savedAt says. Falling back
+// to savedAt would hand every untouched room to whoever saved last, which IS the defect.
+// Only when NEITHER side carries a stamp does savedAt decide — exactly how a plan written
+// before this deployment already behaved, so nothing legacy changes meaning.
+var PLAN_KEYED_MAPS = ['rooms', 'collections', 'notes', 'tasks'];
+
+function _planStamp(plan, kind, key) {
+  var at = plan && plan.at;
+  var v = at && at[kind + ':' + key];
+  return (v === undefined || v === null || v === '') ? null : Number(v);
+}
+
+function _mergePlanRecord(cur, inc) {
+  if (!cur) return inc;
+  if (!inc) return cur;
+  var curT = cur.savedAt ? Number(cur.savedAt) : 0;
+  var incT = inc.savedAt ? Number(inc.savedAt) : 0;
+  var newer = incT >= curT ? inc : cur;
+  var older = newer === inc ? cur : inc;
+
+  // Scalars follow the newer record; the keyed maps are resolved key by key below.
+  var out = {};
+  for (var k in newer) out[k] = newer[k];
+
+  PLAN_KEYED_MAPS.forEach(function(kind) {
+    var a = (cur && cur[kind]) || {}, b = (inc && inc[kind]) || {};
+    var map = {}, key;
+    for (key in a) map[key] = 1;
+    for (key in b) map[key] = 1;
+    var merged = {}, any = false;
+    for (key in map) {
+      any = true;
+      var inA = Object.prototype.hasOwnProperty.call(a, key);
+      var inB = Object.prototype.hasOwnProperty.call(b, key);
+      if (!inA) { merged[key] = b[key]; continue; }
+      if (!inB) { merged[key] = a[key]; continue; }
+      var sA = _planStamp(cur, kind, key), sB = _planStamp(inc, kind, key);
+      if (sA !== null && sB !== null) merged[key] = sB >= sA ? b[key] : a[key];
+      else if (sA !== null)           merged[key] = a[key];
+      else if (sB !== null)           merged[key] = b[key];
+      else                            merged[key] = newer[kind] ? newer[kind][key] : b[key];
+    }
+    if (any) out[kind] = merged;
+  });
+
+  // The stamps themselves union, newest per key, or a device that did not touch a room
+  // would drop the proof that the other one did.
+  var at = {};
+  [cur.at || {}, inc.at || {}].forEach(function(src) {
+    for (var k in src) {
+      var v = Number(src[k]);
+      if (!(k in at) || v > at[k]) at[k] = v;
+    }
+  });
+  for (var _k in at) { out.at = at; break; }
+  return out;
+}
+
+function _mergePlanStore(existing, incoming) {
+  var out = {};
+  for (var k in existing) out[k] = existing[k];
+  for (var k in incoming) out[k] = _mergePlanRecord(out[k], incoming[k]);
+  return out;
+}
+
 function saveJobPlanStore(incoming) {
   if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
@@ -821,7 +899,7 @@ function saveJobPlanStore(incoming) {
   try {
     var ctx = _jobRefusalCtx();
     var dropped = _stripRefusedJobKeys(incoming, ctx);
-    var merged = _mergeStoreByKey(getJobPlanStore(), incoming);
+    var merged = _mergePlanStore(getJobPlanStore(), incoming);
     _sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);
     _writeStoreBlob('JobPlanStore', merged);
     return { dropped: dropped };

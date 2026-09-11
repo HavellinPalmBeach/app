@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15211,10 +15211,40 @@ function _setPhotoRef(jobId, ref) {
   else _photoRefs[jobId].push(ref);
 }
 
+// ⚠ A DISCARDED SHOT MUST DROP OUT OF EVERY READING OF THE SLOT, and this filter did not
+// test the tombstone — so a removed photo went on counting in the badge and went on drawing
+// its own Retry button. Room photos were simply never removable before, which is what left
+// that latent.
 function _slotRefs(jobId, roomIdx, label) {
   return (_photoRefs[jobId] || []).filter(function(r){
-    return r.roomIdx === roomIdx && r.label === label && !r.collId;
+    return r.roomIdx === roomIdx && r.label === label && !r.collId && !r.deletedAt;
   });
+}
+
+// ⚠⚠ A FAILED SHOT YOU HAVE ALREADY RE-TAKEN COULD NEVER BE CLEARED. Reported 2026-09-11:
+// three "⚠ shot N not saved — Retry" flags standing on a room card whose Before photo had
+// since gone up perfectly well. Retrying does clear a shot that LANDS — but a shot that
+// cannot land (the bytes are there, the backend is refusing) had no exit at all, so the
+// warning sat on the crew's field screen for the rest of the job. A red warning that cannot
+// be acted on is the fastest way to train people past every other red warning.
+// ⚠ IT TOMBSTONES RATHER THAN SPLICING, the same rule the inventory follows: absence is
+// indistinguishable from "the other device has not seen it yet", so a splice would be
+// undone by the next merge from Ashley's laptop.
+// ⚠ AND IT SAYS PLAINLY THAT THE IMAGE GOES. This is the one control here that destroys
+// something — Retry is free, this is not — so it never happens on a single tap.
+function dismissFailedPhoto(jobId, stableId) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref || ref.status === 'uploaded') return;
+  if (!confirm('Discard this shot?\n\nIt never reached Google Drive, and the image itself is '
+      + 'thrown away with it \u2014 this cannot be undone. Re-shoot the room if you still need it.\n\n'
+      + 'Press Cancel to keep it and try again later instead.')) return;
+  ref.deletedAt = Date.now();
+  _invTouch(ref);
+  _setPhotoRef(jobId, ref);
+  delete _photoRetryData[stableId];
+  savePhotoRefs(jobId);
+  _savePendingPhotoData(jobId);
+  _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
 }
 
 function _slotStatusHtml(jobId, roomIdx, label) {
@@ -15226,7 +15256,9 @@ function _slotStatusHtml(jobId, roomIdx, label) {
   failedRefs.forEach(function(r) {
     html += '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; shot ' + r.seq + ' not saved</span>'
       + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')"'
-      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;margin-left:3px;">Retry</button> ';
+      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;margin-left:3px;">Retry</button>'
+      + ' <button onclick="dismissFailedPhoto(' + jobId + ',\'' + r.stableId + '\')" title="Discard this shot"'
+      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:none;color:#c0392b;border:1px solid #c0392b;border-radius:3px;font-family:inherit;margin-left:2px;">&#10005;</button> ';
   });
   return html;
 }
@@ -18994,9 +19026,26 @@ function attachJobPlanCollectionPhoto(input, jobId, collId) {
   input.value = '';
 }
 
+// ⚠⚠ A `fetch` HAS NO TIMEOUT, SO "Uploading…" COULD NEVER END. Reported 2026-09-11
+// alongside the sync failures: a room card that read *Uploading…* and stayed there. Every
+// failure path here resolves — uploadToDrive catches, fetchSubfolderIds catches — but a
+// request that simply never settles reaches none of them, and an auth redirect that stalls
+// is exactly that. The ref then sits at 'uploading' forever: no count, no error, no Retry
+// button, and nothing on screen to press. A state with no exit is worse than a failure,
+// because a failure at least offers the fix. The app already learned this on the vendor
+// form ("a 45-second watchdog re-enables the button rather than leaving it stuck"); the
+// photo path, which is the one used standing in somebody's house, never got one.
+var PHOTO_UPLOAD_TIMEOUT_MS = 90000;   // generous: a cold Apps Script start plus a big image
+
 function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpdate) {
   var job = jobs.find(function(j){ return j.id === jobId; });
+  var _settled = false, _watchdog = null;
   function _finish(status, fileUrl, fileId) {
+    // ⚠ Idempotent, or the watchdog and a late-arriving response both write a verdict and
+    // the second one wins — which would turn a shot that DID land back into a failure.
+    if (_settled) return;
+    _settled = true;
+    if (_watchdog) { clearTimeout(_watchdog); _watchdog = null; }
     var ref = _getPhotoRef(jobId, stableId);
     if (ref) {
       ref.status = status;
@@ -19011,6 +19060,12 @@ function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpd
     if (onUpdate) onUpdate();
   }
   if (!job) { _finish('failed'); return; }
+  _watchdog = setTimeout(function(){
+    if (_settled) return;
+    _finish('failed');
+    showSyncBadge('That photo did not finish uploading \u2014 the Apps Script never answered. '
+      + 'The image is still held on this device: press Retry.', true);
+  }, PHOTO_UPLOAD_TIMEOUT_MS);
   // Resolve through the SHARED resolver instead of reading driveSubfolders by hand.
   // The hand-rolled lookup this replaces knew nothing of resolveSubfolderId's alias
   // map, and 'Estate Inventory' aliases to ['Photos','Asset Documentation'] — the two
@@ -21236,6 +21291,32 @@ function getJobPlan(jobId) {
   if (!jobPlanStore[jobId]) jobPlanStore[jobId] = { rooms: {} };
   return jobPlanStore[jobId];
 }
+// ⚠⚠ WHO TOUCHED THIS, AND WHEN — without it two people on one job plan delete each
+// other's work. Reported 2026-09-11: Ashley locked every room on a job from the desk and
+// none of it was on Anthony's machine. The store merges a job plan as ONE RECORD, newest
+// `savedAt` wins, so the last device to save any part of a plan overwrote the whole of it.
+// The Job Plan is the one surface two people genuinely use at once — one in the house, one
+// at the desk — which is exactly why it is the store that could least afford this.
+//
+// ⚠ A PER-KEY MERGE ALONE DOES NOT FIX IT, and that is the part worth understanding. Every
+// device posts the WHOLE store, so Anthony's copy carries a value for every room Ashley
+// locked — the stale one he loaded before she did it. Union by key still has to choose, and
+// with only a record-level timestamp his stale room looks exactly as fresh as her real edit.
+// So a key has to record its OWN last write. `plan.at['rooms:3']` is that, in one flat map
+// keyed `<kind>:<key>` so rooms, collections, notes and tasks share one mechanism and the
+// leaves themselves are untouched — nothing that reads plan.rooms[i] changes.
+//
+// ⚠ AN UNSTAMPED KEY IS THE WEAKEST POSSIBLE CLAIM, NOT THE FRESHEST. It means this device
+// never touched it, so it must lose to a stamped one however recently the record was saved
+// — falling back to `savedAt` here would hand every untouched room back to whoever saved
+// last, which IS the defect. Only when NEITHER side has a stamp does the record's savedAt
+// decide, which is exactly how a plan written before today already behaved.
+function _planTouch(plan, kind, key) {
+  if (!plan) return;
+  if (!plan.at) plan.at = {};
+  plan.at[kind + ':' + key] = Date.now();
+}
+
 function saveJobPlan(jobId) {
   if (jobId && jobPlanStore[jobId]) jobPlanStore[jobId].savedAt = Date.now();  // recency for the by-job merge
   try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
@@ -21247,6 +21328,7 @@ function savePlanNote(jobId, key, val) {
   var plan = getJobPlan(jobId);
   if (!plan.notes) plan.notes = {};
   plan.notes[key] = val;
+  _planTouch(plan, 'notes', key);
   saveJobPlan(jobId);
 }
 function getPlanNote(jobId, key) {
@@ -21426,6 +21508,7 @@ function setRoomStatus(jobId, roomIdx, status) {
   var plan = getJobPlan(jobId);
   if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
   plan.rooms[roomIdx].status = status;
+  _planTouch(plan, 'rooms', roomIdx);
   saveJobPlan(jobId);
   renderProjection(jobId);
 }
@@ -21435,6 +21518,7 @@ function setCollStatus(jobId, collId, status) {
   if (!plan.collections) plan.collections = {};
   if (!plan.collections[collId]) plan.collections[collId] = {};
   plan.collections[collId].status = status;
+  _planTouch(plan, 'collections', collId);
   saveJobPlan(jobId);
   var btns = document.getElementById('coll-status-btns-' + collId);
   if (btns) btns.innerHTML = planCollectionStatusBtns(jobId, collId, status);
@@ -24851,6 +24935,7 @@ function togglePlanTask(jobId, key, checked, el) {
   var plan = getJobPlan(jobId);
   if (!plan.tasks) plan.tasks = {};
   plan.tasks[key] = checked;
+  _planTouch(plan, 'tasks', key);
   saveJobPlan(jobId);
   var label = el ? el.parentElement : null;
   while (label && label.tagName !== 'LABEL') label = label.parentElement;
