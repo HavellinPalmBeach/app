@@ -70,6 +70,79 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## A DELETED ESTIMATE LINE MOVED EVERY QUOTE BELOW IT ONTO THE WRONG TRADE (FIXED 2026-09-11)
+Next off the audit list. App-only, no redeploy. **This reaches the invoice the client pays and the
+plan the crew works from.**
+
+- **⚠⚠ `vendorSourcing` AND `prepSourcing` WERE PLAIN `src[i]` MAPS — the line's POSITION, not its
+  identity** — over `est.vendors` and `est.prepItems`, and `removeVendor` / `removePrepItem`
+  **SPLICE**. So dropping one line from an estimate shifted every recorded quote below it up one,
+  silently, on a job whose vendors were already booked. Reachable through the ordinary flow:
+  approve → won → Job Plan → quote the vendors → *Edit Estimate* (which un-approves) → the client
+  drops a trade → re-approve.
+- **Measured by driving the real `getVendorActuals`, not argued.** Three prep trades and three
+  vendors, all quoted, then the client drops the landscaping and the auction:
+
+  | | before | after (old build) | true |
+  |---|---|---|---|
+  | prep row 2 | Landscaping · Green Thumb · $9,000 | **Cleaning = Green Thumb $9,000** | Cleaning · Sparkle · $4,000 |
+  | vendor row 2 | Auction House · Sothebys · $0 | **Junk Removal = Sothebys $0** | Junk Removal · Junk Kings · $3,000 |
+  | prep total / fee | $31,000 / $9,300 | **$27,000 / $8,100** | $22,000 / $6,600 |
+  | third-party total | $15,000 | **$12,000** | $15,000 |
+
+  **A vendor's NAME on another vendor's line**, the fee **$1,500 over-billed**, and **$3,000 of the
+  client's pass-through vendor cost gone off the invoice entirely.**
+- **`_srcLineKey(line, i)` IS THE ONE DEFINITION** — `'L' + line.lid` when the line carries an id,
+  the index otherwise. **⚠ THE INDEX FALLBACK IS WHAT MAKES THIS INVISIBLE ON A LEGACY RECORD**: a
+  line written before ids existed has no other key, and inventing one would orphan its quote.
+  `collSourcing` has keyed by `collId` since it was written and `logisticsSourcing` by the category
+  key; **both are deliberately untouched and a test pins that** — applying this wholesale to them
+  would break two maps that were already right.
+- **⚠⚠ THE STAMP AND THE RE-KEY ARE ONE OPERATION.** `_srcAdoptLineIds` stamps the id **and** moves
+  `src[i]` → `src['L'+lid]` in the same pass. Stamping without moving is **strictly worse than the
+  defect** — the money disappears rather than landing on the wrong row. Reverting just that half
+  fails the suite.
+- **⚠ IT ADOPTS LAZILY, ON THE FIRST WRITE, AND NOT IN A RENDERER.** Two reasons, each load-bearing:
+  the stamping **must be persisted** or the ids are re-minted next session and every record written
+  under the old ones is orphaned; and a renderer that saved would be writing to the estimate store
+  as a side effect of drawing a screen, which is the wrong-job hazard this file already records.
+  At the moment of the write the arrays are still aligned with what the reader just drew.
+- **⚠ IT CANNOT REPAIR A SHIFT THAT ALREADY HAPPENED — nothing can, the information is gone.** It
+  adopts the mapping as it stands, which is the only mapping there is, and stops the NEXT one.
+  Prelaunch, so no real job carries a shift to repair.
+- **⚠ `_srcPersistEstimates` MUST NOT GO THROUGH `saveEstimateState`.** That function rebuilds the
+  record from **`currentEstimate`** — a global the Job Plan never sets — so calling it from here
+  would file whichever estimate was last open against this job. It is exactly the two lines
+  `saveEstimateState` ends with and nothing else, and a test `lacks()` the global. Its success
+  badge is **empty on purpose** (`_flushOutbox` skips a falsy one): a schema backfill the concierge
+  did not ask for should announce nothing. **A failure still speaks.**
+- **⚠ `_srcSlot` IS THE ONE PLACE A SLOT IS ADDRESSED FOR WRITING**, and all eight setters go
+  through it — so none of them can hold its own opinion of what a slot is called, which is how the
+  readers and the writers would come to key one record two ways. The markup is unchanged: the
+  onclicks still pass a position and `_srcSlot` resolves it.
+- **A NEW LINE IS BORN WITH AN ID** (the three push sites), so a fresh estimate never needs adopting.
+- **The dropped line's record STAYS on the job, orphaned rather than reassigned** — it is the record
+  that a quote was obtained, it is never read again, and a re-added line mints a new id.
+- **3946 committed checks** (`tests/sourcing-keys.test.js`, 65 new — the first coverage of this
+  mapping at all). **All thirteen changes revert-verified individually** — `_srcLineKey` preferring
+  the id and `_srcLid`'s collision counter fail **12** each, `getVendorActuals` 7, the prep plan's
+  rollup 5, and the rest 1–3.
+- **⚠ ONE REVERT CAME BACK GREEN AND THE TEST WAS THE PROBLEM.** `renderPrepJobPlan`'s quoted-total
+  rollup is `psrc[...]` in a shape my source needle did not match, and nothing drove it — so the
+  Budget & Fee card could go back to summing by position with the whole suite passing. **It is the
+  concierge's own fee readout, in the field, on money.** There is a group that drives the real
+  renderer now: three quotes sum to $31,000 / fee $9,300, and after the deletion **$22,000 /
+  $6,600** where the old code read $27,000 / $8,100. Twelfth time this file records an assertion
+  that could not fail.
+- **Verified end to end in headless Chromium on the real page**, driving the real Job Plan: four
+  quotes typed into the **real inputs** produce four records keyed `Lmtx…`, the ids are stamped on
+  the estimate **and persisted to localStorage**, and after the client drops the landscaping and
+  the auction the cleaner keeps *Sparkle Cleaning $4,000* and the hauler *Junk Kings $3,000* —
+  prep **$22,000** (fee **$6,600**), third-party **$15,000**. Overflow 0 at 1440 **and 390px**,
+  no page errors.
+- No document pass: nothing user-facing changed wording, and neither the manual nor the playbook
+  describes how a quote is matched to its estimate line.
+
 ## THE PREP FEE WAS 30% IN EIGHTEEN PLACES AND A RATE IN THIRTEEN (FIXED 2026-09-11)
 Next off the audit list after Win/Loss. App-only, no redeploy. `prepFeeRate()` has been the one
 definition since 2026-09-10 and thirteen surfaces already read it; **eighteen others printed the

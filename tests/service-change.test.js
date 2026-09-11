@@ -29,7 +29,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: ['svcLabelOf', 'isDecedentJob', 'svcFamily', 'svcFamilyOptions', 'sameSvcFamily',
-          'isTMOnly', '_svcChangeConsequences', 'prepFeeRate', 'getVendorActuals',
+          'isTMOnly', '_svcChangeConsequences', 'prepFeeRate', 'getVendorActuals', '_srcLineKey',
           'vendorFeeNote', '_invVendorFeeSentence',
           '_agrHasPrepVendors', '_pctWords', 'ecIsProbateSvc', 'ecIsEstateSvc'],
     vars: ['SVC_LABELS', 'DECEDENT_SERVICES', 'SVC_ORDER', 'PREP_FEE_RATE', 'SMF_PCT', '_PCT_WORDS'],

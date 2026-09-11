@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:08pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6484,7 +6484,7 @@ function addVendor() {
   var t = document.getElementById('new-vendor-type');
   if (!t || !t.value) return;
   var c = document.getElementById('new-vendor-cost');
-  vendors.push({type:t.value, cost: parseFloat(c && c.value) || 0});
+  vendors.push({type:t.value, cost: parseFloat(c && c.value) || 0, lid: _srcLid()});
   t.value = ''; if (c) c.value = '';
   var ns = document.getElementById('new-smf'); if (ns) ns.textContent = '$0';
   renderVendors(); calcAll();
@@ -6629,8 +6629,10 @@ function addFromVendorGroup(gi) {
   var cst  = document.getElementById('vgrp-cost-' + gi);
   if (!card || !sel || !sel.value) return;
   var cost = moneyToNumber(cst && cst.value);
-  if (card.target === 'prep') { prepItems.push({type: sel.value, cost: cost}); renderPrepItems(); }
-  else                        { vendors.push({type: sel.value, cost: cost});   renderVendors();   }
+  // Stamped at birth so a quote recorded against this line survives another line being
+  // removed from the estimate later. See _srcLineKey.
+  if (card.target === 'prep') { prepItems.push({type: sel.value, cost: cost, lid: _srcLid()}); renderPrepItems(); }
+  else                        { vendors.push({type: sel.value, cost: cost, lid: _srcLid()});   renderVendors();   }
   sel.value = ''; if (cst) cst.value = '';
   calcAll();
 }
@@ -19398,6 +19400,74 @@ var currentInvStage = 'final'; // 'deposit' | 'midpoint' | 'final'
 var invRequiresApproval = false; // set per-render: only a final outside ±15% needs PIN
 var invBlocked = false;          // set per-render: an hourly final with no hours logged
 
+// ⚠⚠ A SOURCING RECORD IS KEYED BY THE ESTIMATE LINE, NOT BY ITS POSITION.
+// `vendorSourcing` and `prepSourcing` were plain `src[i]` maps over `est.vendors` and
+// `est.prepItems`, and `removeVendor` / `removePrepItem` SPLICE — so dropping one line
+// shifted every quote below it onto the wrong trade, silently, on a job whose vendors
+// were already booked. Measured by driving the real getVendorActuals: a job with three
+// prep trades and three vendors, all quoted, then the client drops the landscaping and
+// the auction. Before: Painting/Ace $18,000 · Landscaping/Green Thumb $9,000 ·
+// Cleaning/Sparkle $4,000. After: **Cleaning = Green Thumb $9,000** — the cleaner's line
+// carrying the landscaper's name and price — and **Junk Removal = Sothebys $0**. Prep
+// $31,000 → $27,000 against a true $22,000, and $3,000 of the client's pass-through
+// vendor cost gone off the invoice entirely. A vendor's NAME on another vendor's line,
+// on the document the client pays and the plan the crew works from.
+//
+// `collSourcing` has always keyed by collId; this is the same rule for the other two.
+var _srcLidSeq = 0;
+function _srcLid() { return Date.now().toString(36) + '-' + (++_srcLidSeq); }
+
+// A line that carries an id is addressed by it. A line that does not is a record written
+// before ids existed, and its index IS the only key it has ever had — keeping that is
+// what makes this change invisible until _srcAdoptLineIds runs.
+function _srcLineKey(line, i) { return (line && line.lid) ? 'L' + line.lid : String(i); }
+
+// Stamp ids onto an estimate's vendor and prep lines and move the job's sourcing records
+// onto them. Idempotent, and it does nothing at all once every line has an id.
+//
+// ⚠ IT ADOPTS THE MAPPING AS IT STANDS, which is the only mapping there is: at the moment
+// it runs, index i IS what src[i] has always meant. It cannot repair a shift that already
+// happened on an older build — nothing can, the information is gone — it stops the NEXT
+// one. Prelaunch, so no real job carries a shift to repair.
+//
+// ⚠ IT WRITES, and that is deliberate: an identity has to be permanent to be worth
+// anything, the same reason _invAssignItemNos persists its numbers rather than deriving
+// them each render. Returns true when something changed, so the caller saves once.
+function _srcAdoptLineIds(job, est) {
+  if (!job || !est) return false;
+  var moved = false;
+  [['vendors', 'vendorSourcing'], ['prepItems', 'prepSourcing']].forEach(function(pair){
+    var lines = est[pair[0]] || [];
+    if (!lines.length) return;
+    var src = job[pair[1]];
+    lines.forEach(function(line, i){
+      if (!line || line.lid) return;
+      line.lid = _srcLid();
+      moved = true;
+      if (!src) return;
+      var rec = src[String(i)];
+      if (rec === undefined) return;
+      src['L' + line.lid] = rec;
+      delete src[String(i)];
+    });
+  });
+  return moved;
+}
+
+// Persist the estimate store WITHOUT going through saveEstimateState, which rebuilds the
+// record from `currentEstimate` — a global the Job Plan never sets, so calling it from here
+// would file whichever estimate was last open against this job. Exactly the two lines
+// saveEstimateState ends with, and nothing else.
+function _srcPersistEstimates() {
+  try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
+  // ⚠ THE SUCCESS MESSAGE IS EMPTY ON PURPOSE and _flushOutbox skips a falsy one. This
+  // runs once, silently, behind a concierge typing a quote; a "synced ✓" badge for a
+  // schema backfill they did not ask for is noise. A FAILURE still speaks.
+  if (typeof postSyncBadge === 'function') {
+    postSyncBadge({ type: 'saveAllEstimates', payload: estimateStore }, '', 'Cloud sync failed — saved locally only');
+  }
+}
+
 // Resolve actual vendor / prep costs from the Job Plan sourcing (vendorSourcing /
 // prepSourcing), falling back to the estimate amount per line when no actual quote
 // has been logged yet. Each line carries isEstimate so the invoice can tag stale
@@ -19413,7 +19483,7 @@ function getVendorActuals(job, est) {
   function resolve(lines, src) {
     var out = [], total = 0, anyEst = false;
     lines.forEach(function(line, i) {
-      var rec = src[i] || {};
+      var rec = src[_srcLineKey(line, i)] || {};
       var hasActual = (rec.quote != null && rec.quote !== '');
       var budget = line.cost || 0;
       if (!hasActual && !(budget > 0)) return; // skip empty rows
@@ -21609,7 +21679,7 @@ function renderVendorSourcing(jobId, job, est) {
   if (svcLines.length) {
     html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:2px 0 6px;">Service Vendors</div>';
     html += svcLines.map(function(v, i){
-      var rec = src[i] || {};
+      var rec = src[_srcLineKey(v, i)] || {};
       var budget = v.cost || 0;
       var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
       var over = quote !== '' && budget > 0 && Number(quote) > budget;
@@ -21658,7 +21728,7 @@ function renderVendorSourcing(jobId, job, est) {
     html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">Home Prep for Sale</div>';
     html += prepLines.map(function(p, i){
       if (!(p.cost > 0)) return '';
-      var rec = psrc[i] || {};
+      var rec = psrc[_srcLineKey(p, i)] || {};
       var budget = p.cost || 0;
       var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
       var over = quote !== '' && budget > 0 && Number(quote) > budget;
@@ -21753,49 +21823,59 @@ function refreshVendorSourcing(jobId) {
   var el = document.getElementById('vendor-sourcing-' + jobId);
   if (el) el.innerHTML = renderVendorSourcing(jobId, job, est);
 }
-function _svcJob(jobId, i) {
+// The ONE place a sourcing slot is addressed for writing. Every setter below goes through
+// it, so none of them has to know whether the estimate line carries an id — and none of
+// them can hold its own opinion of what a slot is called, which is how the readers and the
+// writers would come to key the same record two ways. Returns {job, rec} or null.
+function _srcSlot(jobId, bucket, listKey, i) {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return null;
-  if (!job.vendorSourcing) job.vendorSourcing = {};
-  if (!job.vendorSourcing[i]) job.vendorSourcing[i] = {};
-  return job;
+  var stored = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
+  var est = stored && stored.estimate;
+  // ⚠ ADOPT LAZILY, ON THE FIRST WRITE, AND NOT IN A RENDERER. The stamping has to be
+  // persisted or the ids are re-minted next session and the records written under the old
+  // ones are orphaned — which is worse than the defect. A renderer that saved would also
+  // be writing to the estimate store as a side effect of drawing a screen, which is the
+  // wrong-job hazard this file records. Here the arrays are still aligned with what the
+  // reader just drew, and the write that follows lands on the stable key.
+  if (est && _srcAdoptLineIds(job, est)) { stored.savedAt = Date.now(); _srcPersistEstimates(); }
+  var line = ((est && est[listKey]) || [])[i];
+  var key = _srcLineKey(line, i);
+  if (!job[bucket]) job[bucket] = {};
+  if (!job[bucket][key]) job[bucket][key] = {};
+  return { job: job, rec: job[bucket][key] };
+}
+function _svcJob(jobId, i)  { return _srcSlot(jobId, 'vendorSourcing', 'vendors',   i); }
+function _prepJob(jobId, i) { return _srcSlot(jobId, 'prepSourcing',   'prepItems', i); }
+function _srcSetVendor(slot, val) {
+  var rec = slot.rec, v = lookupVendorById(val);
+  rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
+  rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
+  saveJobs();
 }
 function setJobVendor(jobId, i, val) {
-  var job = _svcJob(jobId, i); if (!job) return;
-  var rec = job.vendorSourcing[i], v = lookupVendorById(val);
-  rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
-  rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs(); refreshVendorSourcing(jobId);
+  var slot = _svcJob(jobId, i); if (!slot) return;
+  _srcSetVendor(slot, val); refreshVendorSourcing(jobId);
 }
 function setJobVendorQuote(jobId, i, val) {
-  var job = _svcJob(jobId, i); if (!job) return;
-  job.vendorSourcing[i].quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  var slot = _svcJob(jobId, i); if (!slot) return;
+  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
 }
 function setJobVendorStatus(jobId, i, val) {
-  var job = _svcJob(jobId, i); if (!job) return;
-  job.vendorSourcing[i].status = val; saveJobs(); refreshVendorSourcing(jobId);
-}
-function _prepJob(jobId, i) {
-  var job = jobs.find(function(j){ return j.id===jobId; });
-  if (!job) return null;
-  if (!job.prepSourcing) job.prepSourcing = {};
-  if (!job.prepSourcing[i]) job.prepSourcing[i] = {};
-  return job;
+  var slot = _svcJob(jobId, i); if (!slot) return;
+  slot.rec.status = val; saveJobs(); refreshVendorSourcing(jobId);
 }
 function setPrepVendor(jobId, i, val) {
-  var job = _prepJob(jobId, i); if (!job) return;
-  var rec = job.prepSourcing[i], v = lookupVendorById(val);
-  rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
-  rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs(); refreshVendorSourcing(jobId);
+  var slot = _prepJob(jobId, i); if (!slot) return;
+  _srcSetVendor(slot, val); refreshVendorSourcing(jobId);
 }
 function setPrepVendorQuote(jobId, i, val) {
-  var job = _prepJob(jobId, i); if (!job) return;
-  job.prepSourcing[i].quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  var slot = _prepJob(jobId, i); if (!slot) return;
+  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
 }
 function setPrepVendorStatus(jobId, i, val) {
-  var job = _prepJob(jobId, i); if (!job) return;
-  job.prepSourcing[i].status = val; saveJobs(); refreshVendorSourcing(jobId);
+  var slot = _prepJob(jobId, i); if (!slot) return;
+  slot.rec.status = val; saveJobs(); refreshVendorSourcing(jobId);
 }
 function _collJob(jobId, collId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -21854,12 +21934,12 @@ function setLogisticsStatus(jobId, key, val) {
 // Never required, never gates anything, and if nobody ever fills it in the app behaves
 // exactly as it does today. That is deliberate — it is the disposable half of this change.
 function setJobVendorCoordHrs(jobId, i, val) {
-  var job = _svcJob(jobId, i); if (!job) return;
-  job.vendorSourcing[i].coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  var slot = _svcJob(jobId, i); if (!slot) return;
+  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
 }
 function setPrepVendorCoordHrs(jobId, i, val) {
-  var job = _prepJob(jobId, i); if (!job) return;
-  job.prepSourcing[i].coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  var slot = _prepJob(jobId, i); if (!slot) return;
+  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
 }
 function setLogisticsCoordHrs(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
@@ -23800,7 +23880,8 @@ function renderPrepJobPlan(jobId, job, est) {
   var totalBudget = prepLines.reduce(function(a,p){ return a + (p.cost||0); }, 0);
   var totalQuoted = 0, quotedCount = 0;
   prepLines.forEach(function(p, i){
-    var q = psrc[i] && psrc[i].quote;
+    var _r = psrc[_srcLineKey(p, i)];
+    var q = _r && _r.quote;
     if (q != null && q !== '') { totalQuoted += Number(q) || 0; quotedCount++; }
   });
   // ⚠⚠ THIS WAS `totalQuoted * 0.30` — a second copy of the rate, in ARITHMETIC rather
