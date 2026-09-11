@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 9:30pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 10:02pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -962,11 +962,22 @@ body.no-smf .smf-col{display:none;}
   <button class="nb active" onclick="showPanel('jobs',this)">Client Dashboard</button>
   <button class="nb" data-field="1" data-field-label="Intake" onclick="showPanel('intake',this)">Client Intake</button>
   <button class="nb" data-field="1" data-field-default="1" data-field-label="Estimate" onclick="showPanel('estimate',this)">Build Estimate</button>
-  <button class="nb" onclick="showPanel('client-estimate',this)">Client Estimate</button>
-  <button class="nb" onclick="showPanel('agreement',this)">Agreement</button>
+  <!-- ⚠⚠ CLIENT ESTIMATE, AGREEMENT AND INVOICES ARE RETIRED FROM THE NAV (Slice 7).
+       Anthony: *"we are finding ourselves having to go to too many tabs in the app …
+       all of the functionality that we currently have in client estimate agreement and
+       invoices needs to go into the client dashboard."* Every control they carried is on
+       the job timeline now — Slices 3-6 gave the five documents one way to be viewed,
+       printed, sent, filed and signed, and this slice closed the last three doors that
+       existed only here: editing an APPROVED estimate (which has to un-approve it first,
+       or the form it lands on is locked), the ±15% final-invoice manager PIN, and the
+       Stripe deposit link.
+       ⚠ THE PANELS THEMSELVES STAY IN THE DOM AND MUST NOT BE DELETED YET. The priming
+       that makes the rail safe (`_primeEstimateFor` / `_primeAgreementFor`, Slice 1) runs
+       the real loaders, which render into them; `renderAgreement` writes
+       `#agr-page-content` and `ensureAgreementApproved` primes before it stamps. Removing
+       the markup and repointing all of that in one commit is how one gets missed. -->
   <button class="nb" data-field="1" data-field-label="Job Plan" onclick="showPanel('job-plan',this)">Job Plan</button>
   <button class="nb" onclick="showPanel('inventory',this)">Inventory</button>
-  <button class="nb" onclick="showPanel('invoice',this)">Invoices</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
   <button class="nb" data-field="1" data-field-label="Vendors" onclick="showPanel('vendors',this)">Vendors</button>
   <button class="nb" onclick="showPanel('referrals',this)">Referral Partners</button>
@@ -2075,41 +2086,17 @@ body.no-smf .smf-col{display:none;}
   </div>
 
   <!-- Payment method selector -->
-  <div class="card" style="margin-bottom:1rem;" id="agr-payment-card" style="display:none;">
-    <div class="sec">Payment Method</div>
-    <div class="grid2" style="gap:1rem;">
-      <div>
-        <label>Payment track</label>
-        <select id="agr-pay-track" onchange="updateAgrPayTrack()">
-          <option value="card">Card on File (Stripe) — standard</option>
-          <option value="invoice">Estate / Probate Invoice — 7-day terms</option>
-        </select>
-        <div id="agr-card-fields" style="margin-top:10px;">
-          <label>Card reference (last 4 digits only — for internal record)</label>
-          <input type="text" id="agr-card-last4" maxlength="4" placeholder="e.g. 4242" style="width:100px;">
-          <div style="margin-top:8px;font-size:11px;color:var(--gray);">Full card details are entered by the client via the Stripe payment link — never stored here.</div>
-        </div>
-        <div id="agr-invoice-fields" style="display:none;margin-top:10px;">
-          <label>Estate / attorney contact name</label>
-          <input type="text" id="agr-estate-contact" placeholder="e.g. John Smith, Estate of...">
-          <label>Billing email</label>
-          <input type="email" id="agr-estate-email" placeholder="attorney@lawfirm.com">
-        </div>
-      </div>
-      <div id="agr-stripe-wrap">
-        <label>Stripe payment links</label>
-        <div style="background:var(--tan);border-radius:5px;padding:10px 12px;font-size:12px;">
-          <div style="margin-bottom:8px;"><strong>Deposit (50%): </strong><span id="agr-deposit-amt" style="color:var(--bronze);font-weight:600;">—</span>
-          <button class="icon-btn" onclick="copyStripeLink('deposit')" style="margin-left:8px;font-size:10px;">Copy Link</button></div>
-          <div style="margin-bottom:8px;"><strong>Midpoint (25%): </strong><span id="agr-mid-amt" style="color:var(--bronze);font-weight:600;">—</span>
-          <button class="icon-btn" onclick="copyStripeLink('midpoint')" style="margin-left:8px;font-size:10px;">Copy Link</button></div>
-          <div><strong>Final (25%): </strong><span id="agr-final-amt" style="color:var(--bronze);font-weight:600;">—</span>
-          <button class="icon-btn" onclick="copyStripeLink('final')" style="margin-left:8px;font-size:10px;">Copy Link</button></div>
-          <div style="margin-top:8px;font-size:10px;color:var(--gray);">Connect Stripe in Settings to activate payment links.</div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- ⚠ THE PAYMENT METHOD CARD IS DELETED (Slice 7), AND IT NEVER STORED ANYTHING.
+     `agr-card-last4`, `agr-estate-contact` and `agr-estate-email` each appeared EXACTLY
+     ONCE in the whole file — this markup. Nothing read them, nothing saved them: somebody
+     typed a card's last four digits into a box and the value died with the page. The three
+     "copy payment link" buttons went with it; the function behind them printed a sentence
+     ("Stripe not yet connected. When connected, this will…") and did nothing else.
+     Retiring dead UI is not the same as moving a control, and neither belonged on the
+     timeline. Generating a real Stripe link survives, on the rail's deposit row.
+     (Its function name is left out of this note on purpose: a `lacks()` over the file sees
+     comments, and writing it here is what makes the test guarding it unable to fail.) -->
+
 
   <div id="agr-banner-wrap"></div>
   <div id="agr-fb"></div>
@@ -9075,7 +9062,7 @@ function applyEstimateLock() {
       } else if (estimateApproved && !_signedLk) {
         _bIcon = '&#9998;'; // pencil
         _bTitle = 'Approved — Locked for Direct Edits';
-        _bText = 'Still negotiable: to revise price or scope, use <strong>Edit Estimate</strong> or <strong>Offer Discount</strong> on the Client Estimate tab (manager re-approval required). A Change Order is only needed once the agreement is signed.';
+        _bText = 'Still negotiable: to revise price or scope, use <strong>Edit Estimate</strong> or <strong>Offer Discount</strong> on the client&rsquo;s timeline (manager re-approval required). A Change Order is only needed once the agreement is signed.';
       } else {
         _bIcon = '&#128274;'; // lock
         _bTitle = 'Estimate Locked — Under Signed Agreement';
@@ -9298,7 +9285,7 @@ function notifyManagerForApproval(est, disc) {
     lines.push('Havellin total: ' + total);
   }
   lines.push('');
-  lines.push('Open the Havellin app, go to the Client Estimate tab, select this job, and enter your manager PIN to approve.');
+  lines.push('Open the Havellin app, open this client from the Client Dashboard, and enter your manager PIN on the job timeline to approve.');
   lines.push('');
   lines.push(tc.name);
   lines.push('Havellin Palm Beach');
@@ -9418,6 +9405,37 @@ function applyDiscountRevision() {
   showFB('ce-fb', 'ok', 'Discount applied. Manager notified by email — they will re-approve from their device with their PIN.');
 }
 
+// ⚠⚠ EXTRACTED IN SLICE 7, BECAUSE THE RAIL'S "EDIT ESTIMATE" DID NOT DO IT AND WAS A DEAD
+// END. `dashGoEstimate` called `editEstimateForJob` — which navigates and nothing else — so
+// pressing Edit Estimate on the timeline landed on Build Estimate with the estimate STILL
+// APPROVED, and `applyEstimateLock` therefore disabled the whole build form. Measured in a
+// browser: `storeApproved:true, agrApproved:true, firstInputDisabled:true`. The button
+// worked only from the Client Estimate tab, which is the tab this slice retires.
+//
+// Un-approving is not navigation. It revokes the estimate, clears the frozen walkthrough
+// lock so re-approval rebuilds provenance against the edited scope, drops the Drive stamp
+// (the filed copy is the previous version the moment you edit) and revokes the AGREEMENT,
+// whose Exhibit A is about to change underneath it.
+function revokeEstimateApproval(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var rec = estimateStore[jobId];
+  if (rec) { rec.approved = false; rec.submitted = false; rec.approvedBy = ''; rec.approvedAt = ''; }
+  if (job) {
+    job.approved = false;
+    delete job.estimateDriveAt; delete job.estimateDriveUrl;
+    if (job.agrApproved) {
+      job.agrApproved = false;
+      job.agrApprovedBy = ''; job.agrApprovedAt = '';
+      job.agrRevokedBy = 'estimate-edited';
+      job.agrRevokedAt = new Date().toISOString();
+      if (currentAgrJobId === job.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
+      showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
+    }
+    saveJobs(); syncJobToSheets(job);
+  }
+  return job;
+}
+
 function editEstimateFromCE() {
   // Reset submitted state so TC can edit freely
   estimateSubmitted = false;
@@ -9435,30 +9453,12 @@ function editEstimateFromCE() {
   // Editing pulls the estimate back to draft. Drop the job out of "Pending
   // Approval" AND out of "Approved" — editing an approved estimate un-approves it
   // so there can never be an approved version sitting alongside an in-flight edit.
+  // ⚠ ONE REVOKE, READ HERE AND BY THE RAIL. It used to live inline in this function only,
+  // which is exactly why the rail's Edit Estimate did none of it. See `revokeEstimateApproval`
+  // for what un-approving actually entails — it is not navigation.
   if (currentEstimate && currentEstimate.jobId) {
-    var edJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
-    // The copy in Drive is now the PREVIOUS version, so the "Filed to Drive" stamp
-    // stops applying. Re-approval re-files automatically and re-stamps it.
-    if (edJob && edJob.estimateDriveAt) { delete edJob.estimateDriveAt; delete edJob.estimateDriveUrl; saveJobs(); }
-    if (edJob && (edJob.status === 'pending' || edJob.approved)) { edJob.status = 'new'; edJob.approved = false; saveJobs(); syncJobToSheets(edJob); }
-    // ⚠ AND THE AGREEMENT'S APPROVAL GOES WITH IT. Both forms incorporate this estimate as
-    // Exhibit A, and the estate form says the agreement is not valid without it — so an
-    // agreement approved against a version now being edited is approved against nothing.
-    // Until 2026-09-08 this function cleared the estimate's approval, the job's approved
-    // flag and even the estimate's Drive stamp, and left job.agrApproved alone: the
-    // Agreement tab went on reading "Approved for Sending" with Print/Save PDF live, and
-    // the agreement plus signing packet already filed to Drive kept a stale Exhibit A.
-    // Re-approving after the edit re-files both (see _agrExportKey).
-    if (edJob && edJob.agrApproved) {
-      edJob.agrApproved = false;
-      edJob.agrApprovedBy = ''; edJob.agrApprovedAt = '';
-      edJob.agrRevokedBy = 'estimate-edited';
-      edJob.agrRevokedAt = new Date().toISOString();
-      saveJobs(); syncJobToSheets(edJob);
-      // The tab may be showing this job right now.
-      if (currentAgrJobId === edJob.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
-      showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
-    }
+    var edJob = revokeEstimateApproval(currentEstimate.jobId);
+    if (edJob && edJob.status === 'pending') { edJob.status = 'new'; saveJobs(); syncJobToSheets(edJob); }
   }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -9493,7 +9493,7 @@ function notifyTCOfDecision(job, est, decision, reason) {
     'Hi ' + firstName(tc.name) + ',',
     '',
     approved
-      ? ('Your estimate for ' + client + ' has been approved (' + total + '). You can send it to the client from the Client Estimate tab.')
+      ? ('Your estimate for ' + client + ' has been approved (' + total + '). You can send it to the client from the job timeline.')
       : ('Your estimate for ' + client + ' was denied and sent back for revision.')
   ];
   if (!approved && reason) { lines.push(''); lines.push('Reason: ' + reason); }
@@ -10955,9 +10955,30 @@ function calcRECommission(propVal) {
 }
 
 function fmtMoney(n) { return '$' + Math.round(n).toLocaleString(); }
+// ⚠ THE `catch` HERE COULD NEVER FIRE, AND IT PRINTED "Invalid Date" ON A COURT DOCUMENT.
+// `new Date(<rubbish>)` does not THROW — it returns an Invalid Date object, and
+// `toLocaleDateString` on that returns the literal string "Invalid Date". So the passthrough
+// this function has always meant to have was dead code, and every one of its 27 call sites
+// — the dashboard, the Court Inventory, the Appraisal Worklist — rendered those twelve
+// characters instead of the value whenever it was handed anything but `yyyy-mm-dd`. Found on
+// the rail's *Agreement signed* row, which reads `job.agrSignedAt`: the pre-2026-09-11 writer
+// is `_stamp()`, i.e. `toLocaleDateString('en-US',{month:'long'…})`, so EVERY legacy signed
+// job in the wild carries "September 10, 2026" there. `9/10/2026` and any ISO stamp failed
+// the same way. Test the parse; never trust a try/catch to notice a bad date.
+//
+// ⚠⚠ THE ORDER OF THE TWO ATTEMPTS IS A CORRECTNESS CONSTRAINT — do not "simplify" this to
+// a bare `new Date(d)`. A plain `yyyy-mm-dd` is parsed as UTC MIDNIGHT, which in Eastern is
+// the previous evening, so it renders a DAY EARLY (measured: `2026-09-10` → "Sep 9, 2026").
+// That is the whole reason for the `T12:00:00` suffix, and it must stay the first attempt.
+// The bare parse is the FALLBACK only, for the formats the suffix turns into rubbish.
 function fmtDate2(d) {
   if (!d) return '—';
-  try { return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch(e) { return d; }
+  var fmt = { month: 'short', day: 'numeric', year: 'numeric' };
+  var noon = new Date(d + 'T12:00:00');
+  if (!isNaN(noon.getTime())) return noon.toLocaleDateString('en-US', fmt);
+  var bare = new Date(d);
+  if (!isNaN(bare.getTime())) return bare.toLocaleDateString('en-US', fmt);
+  return String(d);
 }
 function dot(color) { return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+color+';margin-right:4px;flex-shrink:0;"></span>'; }
 function field(label, val, extraStyle) {
@@ -11100,8 +11121,12 @@ function jobTimeline(job, estRec, logs, cos) {
         ? 'Score them on Build Estimate, or mark a room ✕ (out of scope) if Havellin is not touching it.'
         : '' }),
 
+    // ⚠ `atKind:'date'` BECAUSE `markEstimateSent` STAMPS LONG FORM (`_stamp()`-shaped,
+    // "September 10, 2026"). Printed raw it sat two rows above *Agreement signed* rendering
+    // the SAME DAY as "Sep 10, 2026" — one rail, one kind of fact, two formats. The
+    // renderer owns how a date looks; the derivation never formats one.
     row({ key: 'estimate_sent', group: 'Estimate', label: 'Estimate sent to client',
-      done: !!job.estimateSentDate, at: job.estimateSentDate,
+      done: !!job.estimateSentDate, at: job.estimateSentDate, atKind: 'date',
       sub: (!job.estimateSentDate && docDraftedAt(job, 'estimate'))
         ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
 
@@ -11117,8 +11142,9 @@ function jobTimeline(job, estRec, logs, cos) {
     // free-text field a manager could read differently. It is stamped as a side effect
     // of the first print or send now (`ensureAgreementApproved`), so it is a consequence
     // rather than a step, and a rail step nobody decides is a step that should not exist.
+    // ⚠ Long form here too — `agrSentAt` is written by `_stamp()`. Same reason as above.
     row({ key: 'agreement_sent', group: 'Agreement', label: 'Signing packet sent',
-      done: !!job.agrSent, at: job.agrSentAt || '', by: job.agrSentBy || '',
+      done: !!job.agrSent, at: job.agrSentAt || '', atKind: 'date', by: job.agrSentBy || '',
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
       sub: (!job.agrSent && job.agrRevokedBy === 'estimate-edited')
@@ -12184,7 +12210,9 @@ function jobTimelineActions(row, job, estRec) {
       // ⚠ Offered only while the client has NOT signed. `updateApprovalUI` hides Edit
       // Estimate on `agrSigned` because the signature is the lock, and a second door
       // into the same edit that ignored that rule would be a way around it.
-      else if (row.state === 'done' && !job.agrSigned) out.secondary.push({ label: '&#9998; Edit estimate', call: 'dashGoEstimate(' + id + ')' });
+      // ⚠ `dashEditEstimate`, NOT `dashGoEstimate` — editing an APPROVED estimate has to
+      // un-approve it first or the form it lands on is locked. See `revokeEstimateApproval`.
+      else if (row.state === 'done' && !job.agrSigned) out.secondary.push({ label: '&#9998; Edit estimate', call: 'dashEditEstimate(' + id + ')' });
       break;
 
     case 'estimate_approved':
@@ -12232,6 +12260,11 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'deposit_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'deposit', 'deposit invoice');
+      // ⚠ Stripe is ONE-WAY — nothing reads back and `clearedOn` is never written — so it
+      // sends a link and records nothing. Beside the deposit, never as the primary.
+      if (live && typeof STRIPE_SCRIPT_URL !== 'undefined' && STRIPE_SCRIPT_URL) {
+        out.secondary.push({ label: '&#128179; Stripe link', call: 'dashStripeLink(' + id + ')' });
+      }
       out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'deposit', 'deposit invoice'), _jtDocViews(id, 'invoice', 'deposit', 'deposit invoice'), _jtDriveLink(id, job, 'invoice', 'deposit'));
       break;
 
@@ -12267,6 +12300,10 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'final_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'final', 'final invoice');
+      // ⚠ THE ±15% MANAGER PIN. The registry refuses a final outside tolerance and says it
+      // "needs a manager PIN" — and until Slice 7 the only place to give one was a button
+      // on the Invoices tab. A refusal with no door is worse than no gate at all.
+      if (live) out.secondary.push({ label: '&#128273; Manager approval', call: "dashApproveInvoice(" + id + ",'final')" });
       out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'final', 'final invoice'), _jtDocViews(id, 'invoice', 'final', 'final invoice'), _jtDriveLink(id, job, 'invoice', 'final'));
       break;
 
@@ -12365,6 +12402,52 @@ function dashEditClient(jobId) { showEditClient(jobId); }
 function dashGoEstimate(jobId) {
   closeClientDashboard();
   setTimeout(function(){ editEstimateForJob(jobId); }, 100);
+}
+
+// ⚠⚠ EDITING AN APPROVED ESTIMATE IS NOT NAVIGATION, AND THE RAIL USED TO TREAT IT AS IF IT
+// WERE. `dashGoEstimate` opens Build Estimate and nothing else, so on an APPROVED estimate
+// it landed on a form `applyEstimateLock` had disabled — a dead end, with the agreement
+// still approved over an Exhibit A about to change. This is what the Client Estimate tab's
+// own Edit Estimate button always did, which is why nobody noticed: the working door was on
+// the tab this slice retires.
+function dashEditEstimate(jobId) {
+  if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
+  if (estimateStore[jobId] && estimateStore[jobId].approved) {
+    revokeEstimateApproval(jobId);
+    // The globals the lock reads, for the tab we are about to land on.
+    estimateApproved = false; estimateSubmitted = false; discountRevision = false;
+    approvedBy = ''; approvedAt = '';
+    if (currentEstimate) {
+      delete currentEstimate.lockedRooms; delete currentEstimate.lockedCollections;
+      delete currentEstimate.lockedAt; delete currentEstimate.lockedBy;
+    }
+    saveEstimateState();
+  }
+  dashGoEstimate(jobId);
+}
+
+// ⚠ THE ±15% FINAL-INVOICE PIN WAS REACHABLE FROM ONE BUTTON ON THE INVOICES TAB. The
+// registry's blocker refuses a final outside tolerance and says it "needs a manager PIN",
+// and with that tab retired there was nowhere left to give one — a refusal with no door is
+// worse than no gate at all.
+function dashApproveInvoice(jobId, stage) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
+  currentInvJobId = jobId;
+  currentInvStage = stage || 'final';
+  var d = invoiceHtml(job, currentInvStage);
+  if (!d) { dashNotice('warn', 'This invoice could not be built.'); _dashRedraw(jobId); return; }
+  if (!d.requiresApproval) { dashNotice('ok', 'This invoice is inside the \u00b115% tolerance \u2014 no approval needed.'); _dashRedraw(jobId); return; }
+  invRequiresApproval = true;
+  openInvPinModal();
+}
+
+// The deposit link. ⚠ Stripe is ONE-WAY — nothing reads back, no webhook, and `clearedOn`
+// is never written — so this sends a link and records nothing. It sits beside the deposit
+// rather than as the primary, which is the payment RECORDER.
+function dashStripeLink(jobId) {
+  if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open this job.'); _dashRedraw(jobId); return; }
+  generateStripeLink();
 }
 
 function dashSubmitEstimate(jobId) {
@@ -19080,7 +19163,7 @@ function buildLogTeamRows() {
             ? fmt(_got) + ' of the ' + fmt(_tgt) + ' deposit is recorded — '
               + fmt(Math.max(0, _tgt - _got)) + ' still outstanding.'
             : (_tgt ? 'Deposit due is ' + fmt(_tgt) + ' (50% of the approved total).' : ''))
-        + ' Record it on the Agreement tab. The team above stays confirmed in the meantime —'
+        + ' Record it on the client\u2019s timeline. The team above stays confirmed in the meantime \u2014'
         + ' staffing ahead of payment is deliberate, starting work is not.</div></div>';
     }
     if (teamOK) {
@@ -19122,7 +19205,7 @@ function buildLogTeamRows() {
     saveBtn.style.opacity = canLogHours ? '' : '0.45';
     saveBtn.style.cursor = canLogHours ? '' : 'not-allowed';
     saveBtn.title = canLogHours ? ''
-      : (!teamOK ? 'Confirm the job team first' : 'Deposit not received — record it on the Agreement tab');
+      : (!teamOK ? 'Confirm the job team first' : 'Deposit not received \u2014 record it on the client\u2019s timeline');
   }
 }
 
@@ -19148,7 +19231,7 @@ function saveLogEntry() {
     showFB('log-fb','err','The deposit has not been received, so hours cannot be logged against this job.'
       + (_p > 0 ? ' ' + fmt(_p) + ' of ' + fmt(_t) + ' is recorded; ' + fmt(Math.max(0, _t - _p)) + ' outstanding.'
                 : (_t ? ' ' + fmt(_t) + ' is due.' : ''))
-      + ' Record it on the Agreement tab.');
+      + ' Record it on the client\u2019s timeline.');
     buildLogTeamRows();
     return;
   }
@@ -19901,7 +19984,7 @@ function checkInvPin() {
           'Service: ' + svcLabelOf(invJob),
           'Approved by: ' + invApprovedBy + ' on ' + invApprovedAt,
           '',
-          'Open the Havellin app, go to the Final Invoice tab, and use Print / Save PDF or Email to Client to send it.',
+          'Open the Havellin app, open this client from the Client Dashboard, and send the final invoice from the job timeline.',
           '',
           invTc.name,
           'Havellin Palm Beach'
@@ -22889,18 +22972,18 @@ function populateReferralPicker(){
   if (cur) sel.value = cur;
 }
 
-// Deep-link from the Job Plan into the Invoices tab, preset to a job + stage so the
-// TC doesn't have to hunt for it.
+// ⚠ THIS WOULD HAVE BECOME A DEAD BUTTON IN SLICE 7. It deep-linked into the Invoices tab
+// by finding that tab's NAV BUTTON — `querySelector('.nb[onclick*="invoice"]')` — and with
+// the tab retired that returns null, so `showPanel` never ran and the three Job Plan
+// buttons calling this would have silently set two selects on a hidden panel and shown
+// nothing at all. A control that looks live and does nothing is the exact shape this whole
+// rebuild keeps finding (`markDepositReceived`, `btn-mailto-agr`).
+//
+// It opens the document itself now, through the one action every other surface uses — which
+// is also a better answer than it was: the TC wanted to LOOK at the midpoint invoice, and
+// they now get it without leaving the Job Plan.
 function openInvoiceFor(jobId, stage) {
-  stage = stage || 'midpoint';
-  var navBtn = document.querySelector('.nb[onclick*="\'invoice\'"]');
-  if (navBtn) showPanel('invoice', navBtn);
-  var jobSel = document.getElementById('invoice-job');
-  if (jobSel) jobSel.value = String(jobId);
-  loadInvoice();
-  var stageSel = document.getElementById('inv-stage');
-  if (stageSel) stageSel.value = stage;
-  setInvStage(stage);
+  docAction(jobId, 'invoice', 'view', { stage: stage || 'midpoint' });
 }
 function setMidpointSent(jobId, checked) {
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -24394,30 +24477,12 @@ function loadAgreement() {
   agrApprovedAt = job ? (job.agrApprovedAt || '') : '';
   if (!job) {
     document.getElementById('agr-page-content').innerHTML = '<div class="tab-empty">Select a job with an approved estimate to generate the agreement.</div>';
-    document.getElementById('agr-payment-card').style.display = 'none';
     updateAgrUI();
     return;
   }
-  document.getElementById('agr-payment-card').style.display = 'block';
-  updateAgrAmounts(job);
   renderAgreement();
 }
 
-function updateAgrAmounts(job) {
-  var est = (currentEstimate && currentEstimate.jobId === job.id) ? currentEstimate : null;
-  var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
-  var _split = paymentSplit(havTotal);
-  document.getElementById('agr-deposit-amt').textContent = '$' + _split.deposit.toLocaleString();
-  document.getElementById('agr-mid-amt').textContent = '$' + _split.midpoint.toLocaleString();
-  document.getElementById('agr-final-amt').textContent = '$' + _split.final.toLocaleString();
-}
-
-function updateAgrPayTrack() {
-  var track = document.getElementById('agr-pay-track').value;
-  document.getElementById('agr-card-fields').style.display = track === 'card' ? 'block' : 'none';
-  document.getElementById('agr-invoice-fields').style.display = track === 'invoice' ? 'block' : 'none';
-  document.getElementById('agr-stripe-wrap').style.display = track === 'card' ? 'block' : 'none';
-}
 
 // ─── Estate agreement copy that follows the documentation scope ──────────────
 // Three pieces of the estate-form agreement describe the inventory as a Havellin
@@ -25285,7 +25350,7 @@ function updateAgrUI() {
         + (_rev ? 'The estimate is being revised, so this agreement\'s approval was withdrawn.' : 'The estimate for this job must be approved first.')
         + '</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">'
         + (_rev ? 'The agreement attaches the estimate as Exhibit A, so it cannot stay approved against a version that is changing. Re-approve the estimate, then re-approve here — Drive is refreshed automatically.'
-                : 'Approve the estimate on the Client Estimate tab before approving and sending the agreement.')
+                : 'Approve the estimate on the job timeline before approving and sending the agreement.')
         + '</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">The draft below is a preview and has not been filed anywhere.</div></div>';
     } else {
       badge.innerHTML = '<span class="badge b-pending">Awaiting Client Acceptance</span>';
@@ -25455,18 +25520,6 @@ function generateStripeLink() {
     });
 }
 
-function copyStripeLink(type) {
-  var job = jobs.find(function(j){ return j.id===currentAgrJobId; });
-  var est = (currentEstimate && currentEstimate.jobId === (job&&job.id)) ? currentEstimate : null;
-  var havTotal = est ? est.havellinTotal : ((job&&job.havellinEst) || 0);
-  var _split = paymentSplit(havTotal);
-  var amounts = {deposit:_split.deposit, midpoint:_split.midpoint, final:_split.final};
-  var msg = 'Stripe not yet connected. When connected, this will copy a $'+amounts[type].toLocaleString()+' payment link to your clipboard.';
-  if (STRIPE_SCRIPT_URL) {
-    msg = 'Payment link for $'+amounts[type].toLocaleString()+' — connect Stripe API to auto-generate.';
-  }
-  showFB('agr-fb','info',msg);
-}
 
 // ⚠ THIS PRINTED WITH NO TITLE SET, so the client's PDF was named after the browser tab.
 // It also hand-rolled the panel-hiding sequence that `_printDocument` exists to own.

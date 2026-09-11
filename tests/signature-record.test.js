@@ -292,6 +292,61 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  // ⚠ FOUND IN A BROWSER ON THE SHIPPED SLICE 6 BUILD, NOT BY THIS SUITE: the rail's
+  // *Agreement signed* row rendered the literal string "Invalid Date". The row gained
+  // `atKind:'date'` in Slice 6, which sends `sig.signedOn` through `fmtDate2` — and on a
+  // LEGACY job `signedOn` is `job.agrSignedAt`, written by `_stamp()` as "September 10,
+  // 2026". `fmtDate2` only ever handled `yyyy-mm-dd`.
+  //
+  // ⚠⚠ AND THE REASON 3278 CHECKS WERE GREEN THROUGH IT: THE HARNESS STUBS `fmtDate2` AS A
+  // PASSTHROUGH (`harness.js`, `fmtDate2: (d) => String(d || '')`). Every test that has ever
+  // rendered a date in this app rendered it through a stub that cannot fail. So this group
+  // lifts the REAL one. A stub that does not match the real source is worse than no stub —
+  // this file already records that costing the `&amp;amp;` defect a whole round.
+  group('⚠ fmtDate2 printed "Invalid Date" on anything but yyyy-mm-dd');
+  {
+    const ctx = sandbox({ fns: ['fmtDate2', 'agreementSignature'], vars: [] });
+
+    // The four shapes that were broken. `new Date(<rubbish>)` does not THROW, so the
+    // function's own `catch(e) { return d; }` passthrough was unreachable code.
+    eq(ctx.fmtDate2('September 10, 2026'), 'Sep 10, 2026',
+      '⚠⚠ THE LEGACY `_stamp()` FORM — what EVERY job signed before 2026-09-11 carries');
+    eq(ctx.fmtDate2('2026-09-10T00:00:00Z'), 'Sep 10, 2026', 'an ISO stamp');
+    eq(ctx.fmtDate2('9/10/2026'), 'Sep 10, 2026', 'and a date somebody typed');
+    eq(ctx.fmtDate2('2026-09-10'), 'Sep 10, 2026', 'with the yyyy-mm-dd path unchanged');
+
+    // ⚠ AN UNPARSEABLE VALUE PASSES THROUGH, which is what the dead `catch` always meant to
+    // do. It must never render as those twelve characters: 27 call sites reach this, and
+    // the Court Inventory and the Appraisal Worklist are two of them.
+    eq(ctx.fmtDate2('not a date'), 'not a date', 'rubbish passes through unchanged');
+    eq(ctx.fmtDate2(''), '—', 'and empty is still the em-dash, not a date');
+    ok(!['September 10, 2026', '9/10/2026', 'not a date', '2026-09-10T00:00:00Z']
+      .some((v) => ctx.fmtDate2(v).indexOf('Invalid Date') >= 0),
+      '⚠ and nothing anywhere renders the string "Invalid Date"');
+
+    // ⚠⚠ THE ORDER OF THE TWO PARSE ATTEMPTS IS A CORRECTNESS CONSTRAINT, AND THE CONTAINER
+    // RUNS UTC — which is the only reason this reads as trivially true here. A plain
+    // `yyyy-mm-dd` parses as UTC MIDNIGHT, so in any negative-offset zone a bare
+    // `new Date(d)` renders the PREVIOUS DAY. Palm Beach is America/New_York, so
+    // "simplifying" the noon attempt away would move every date on the dashboard back one.
+    // Driven under the real zone rather than asserted on source text.
+    const tz = process.env.TZ;
+    try {
+      process.env.TZ = 'America/New_York';
+      eq(ctx.fmtDate2('2026-09-10'), 'Sep 10, 2026',
+        '⚠⚠ IN EASTERN TOO — the T12:00:00 attempt must stay FIRST or this reads Sep 9');
+      eq(ctx.fmtDate2('September 10, 2026'), 'Sep 10, 2026', 'and the legacy form holds there');
+    } finally { process.env.TZ = tz; }
+
+    // The row that surfaced it, end to end: a legacy signed job with no record.
+    const legacy = ctx.agreementSignature({ agrSigned: true, agrSignedAt: 'September 10, 2026',
+                                            agrSignedBy: 'Anthony Graziano' });
+    eq(ctx.fmtDate2(legacy.signedOn), 'Sep 10, 2026',
+      'so the rail\'s *Agreement signed* row reads a date rather than "Invalid Date"');
+    eq(legacy.signedBy, '', '⚠ while the SIGNER stays unknown — the date being legible does not invent one');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   group('what the poll would ask about');
   {
     const ctx = box();

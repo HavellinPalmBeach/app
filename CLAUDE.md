@@ -70,6 +70,86 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## SLICE 7 — THE THREE TABS ARE RETIRED FROM THE NAV (2026-09-11)
+*"we are finding ourselves having to go to too many tabs in the app … all of the functionality
+that we currently have in client estimate agreement and invoices needs to go into the client
+dashboard … on the job timeline … that way, as we're going through a job, we know what to do
+next."* The last slice of the consolidation. **Nav goes 12 → 9.** App-only, no redeploy.
+
+- **⚠ THE PANELS THEMSELVES STAY IN THE DOM AND MUST NOT BE DELETED — only the nav buttons went.**
+  The priming that makes the rail safe (`_primeEstimateFor` / `_primeAgreementFor`, Slice 1) runs
+  the **real loaders**, which render into those panels; `renderAgreement` writes
+  `#agr-page-content` and `ensureAgreementApproved` primes before it stamps. Removing the markup
+  and repointing all of that in one commit is how one gets missed — and the blast radius is a
+  document filed into the wrong client's Drive folder, which this file already records.
+- **THREE DOORS EXISTED ONLY ON THOSE TABS AND HAD TO MOVE FIRST, or retiring the nav would have
+  made them unreachable.** Each is a real capability, not a convenience:
+  - **Editing an APPROVED estimate.** `dashGoEstimate` navigated to a form `applyEstimateLock`
+    had **disabled**, so the button landed you on a locked screen with no way forward.
+    `dashEditEstimate` → `revokeEstimateApproval` un-approves first, then navigates.
+  - **The ±15% final-invoice manager PIN** (`dashApproveInvoice`) — the gate that is
+    `requiresApproval` rather than `blocked`, i.e. the one a manager genuinely can unlock.
+  - **The Stripe deposit link** (`dashStripeLink`).
+- **⚠ I OVER-DELETED ~269 LINES ON THE FIRST PASS, AND THE TESTS CAUGHT IT.** My boundary search
+  anchored on `<div class="card"` and ran to the next one, which swallowed the **deposit modal,
+  the settings modal, `agr-page-content` and the contractors panel**. Recovered with
+  `git checkout`, redone with real `<div>`/`</div>` tag matching **plus assertions that the
+  deleted span does not contain `deposit-modal`, `settings-modal`, `agr-page-content`,
+  `panel-contractors` or `set-sheets-url`**. Same shape as the stamp regex that ate 368 lines of
+  CSS: a scripted edit to a 1.2 MB file needs a diff read and a named-survivor check, not a
+  passing suite.
+- **⚠ AND THREE ORPHANED DOM WRITES SURVIVED THE DELETE WITH THE SUITE GREEN** —
+  `agr-deposit-amt` / `agr-mid-amt` / `agr-final-amt`, written by `updateAgrAmounts`, a
+  **TypeError inside `updateAgrUI`** on every agreement path. `tests/doc-send.test.js` gained an
+  **orphaned-DOM-id tripwire** beside the orphaned-`_private(`-call one from Slice 4: every
+  unguarded `getElementById('x').…` must name an element the page actually has.
+- **Dead UI is DELETED, not moved** — the Payment Method card (`agr-payment-card`, which had
+  `display:none` twice and no shower) and `copyStripeLink` (a message stub). Dead code that still
+  compiles is how a retired control comes back "as a precaution".
+- **3278 committed checks** (`tests/tabs-retired.test.js`, 59 new). **All changes revert-verified
+  individually.** ⚠ One came back green for the fifth time in this file for the same reason — a
+  **source-index ordering** assertion (`d.indexOf('revokeEstimateApproval') < d.indexOf(
+  'dashGoEstimate(')`), which wrapping the navigate call inside the if-block defeats. Replaced by
+  a driven check that stubs `dashGoEstimate` and snapshots the state at hand-off. **An assertion
+  about ordering has to observe the order, not measure two string positions.**
+- ⚠ And my "correction" of the nav count from 9 to 8 was wrong: Client Dashboard is
+  `class="nb active"`, so the count regex has to be `/<button class="nb[" ]/`.
+
+### The rail printed "Invalid Date", and `fmtDate2`'s guard could never fire
+Found in a browser on the shipped Slice 6 build — *Agreement signed* read **"Invalid Date"**.
+
+- **⚠⚠ `new Date(<rubbish>)` DOES NOT THROW.** It returns an Invalid Date object, and
+  `toLocaleDateString` on that returns the literal string `"Invalid Date"`. So
+  `catch(e) { return d; }` — the passthrough `fmtDate2` has always *meant* to have — was
+  **unreachable code**, and all **27 call sites** printed those twelve characters for anything
+  that was not `yyyy-mm-dd`. **The Court Inventory and the Appraisal Worklist are two of them**,
+  and those go to an attorney. Parse and test; never trust a try/catch to notice a bad date.
+- **The trigger: Slice 6 gave the row `atKind:'date'`, and on a legacy job `signedOn` is
+  `job.agrSignedAt` — written by `_stamp()`, i.e. long form.** So **every job signed before
+  2026-09-11 carries "September 10, 2026" there.** `9/10/2026` and any ISO stamp failed alike.
+- **⚠⚠ THE ORDER OF THE TWO PARSE ATTEMPTS IS A CORRECTNESS CONSTRAINT — do not "simplify" it
+  to a bare `new Date(d)`.** A plain `yyyy-mm-dd` parses as **UTC midnight**, which in Eastern is
+  the previous evening, so it renders a **DAY EARLY** (measured: `2026-09-10` → *"Sep 9, 2026"*).
+  That is the entire reason for the `T12:00:00` suffix and it must stay the **first** attempt;
+  the bare parse is the fallback only. Revert-verified by swapping them — fails with *Sep 9*.
+- **⚠ AND THE REASON 3278 CHECKS WERE GREEN THROUGH IT: THE HARNESS STUBS `fmtDate2` AS A
+  PASSTHROUGH** (`harness.js` — `fmtDate2: (d) => String(d || '')`). Every date this app has
+  ever rendered in a test rendered through a stub that cannot fail. The new group lifts the
+  **real** one. A stub that does not match the real source is worse than no stub — this file
+  already records that costing the `&amp;amp;` defect a whole round.
+- **The container runs UTC, which is why the day-slip is invisible here.** The test sets
+  `process.env.TZ = 'America/New_York'` (it takes effect mid-process on node 22) and restores it,
+  so the constraint is **driven under the real zone rather than asserted on source text**.
+- **Every row carrying a date now declares its kind.** `estimateSentDate` and `agrSentAt` are
+  **both** stamped long form and both printed **raw**, so the rail read *"September 10, 2026"*
+  two rows above *Agreement signed* rendering the same day as *"Sep 10, 2026"* — one rail, one
+  kind of fact, two formats. A row with an `at` and no `atKind` is the defect; the derivation
+  never formats, the renderer owns how a date looks.
+- **3293 committed checks.** Verified in headless Chromium **at `America/New_York`**, on a legacy
+  job and a modern signature record side by side: every date on the rail reads `Sep 10, 2026`,
+  the legacy row still shows **no signer** (unknown, not invented), and `"Invalid Date"` appears
+  on **none** of the nine tabs at 1440px or 390px. Overflow 0, no page errors.
+
 ## SLICE 6 — THE SIGNATURE RECORD, SHAPED FOR A PROVIDER BEFORE THERE IS ONE (2026-09-11)
 *"we need to, at some point, integrate DocuSign. So think about how we do that and how we get
 signatures back on agreements. Prior to building anything that might not work in a DocuSign

@@ -411,6 +411,36 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([...orphans.keys()].sort().join(', '), '',
       'every _private( call in the file resolves to a definition in the file');
 
+    // ⚠⚠ AND THE SAME DEFECT IN MARKUP, WHICH BIT AGAIN IN SLICE 7. Deleting the dead
+    // Payment Method card left three writes behind —
+    // `getElementById('agr-deposit-amt').textContent = …` and two more — on elements that
+    // no longer existed. That is a TypeError inside `updateAgrUI`, i.e. the agreement panel
+    // throwing on every render, and **the suite was green through it**: the harness drives
+    // extracted functions and reads source text, and neither notices a DOM id that stopped
+    // existing. Found by grepping the diff, not by a test. Now it is a test.
+    //
+    // ⚠ THE CHECK IS NARROW ON PURPOSE — unguarded CHAINED access only. `var el =
+    // getElementById(x); if (!el) return;` is safe whether the element exists or not, and
+    // flagging it would bury the real ones in noise. What throws is
+    // `getElementById('gone').something`.
+    const domIds = new Set();
+    for (const m of src.matchAll(/\bid=["']([A-Za-z][\w:-]*)["']/g)) domIds.add(m[1]);
+    for (const m of src.matchAll(/\.id\s*=\s*'([^']+)'/g)) domIds.add(m[1]);   // built at runtime
+    // The Edit Client modal is assembled by `showEditClient` through a prefixing helper, so
+    // its ids never appear literally anywhere; `i-executor-auth` is ternary-guarded on its
+    // own line. Both are reachable and real — everything else must be in the markup.
+    const ALLOW = [/^ec-/, /^i-executor-auth$/];
+    const orphanIds = new Set();
+    for (const m of src.matchAll(/getElementById\(\s*'([^']+)'\s*\)\s*\./g)) {
+      const id = m[1];
+      if (domIds.has(id) || ALLOW.some((r) => r.test(id))) continue;
+      const line = src.slice(src.lastIndexOf('\n', m.index) + 1, src.indexOf('\n', m.index));
+      if (line.includes("getElementById('" + id + "') ?")) continue;
+      orphanIds.add(id);
+    }
+    eq([...orphanIds].sort().join(', '), '',
+      'every unguarded getElementById(...).x names an element the page actually has');
+
     // And the names this slice actually removed, stated outright — so a later pass that
     // reintroduces one of these duplicate paths has to argue with a test rather than a
     // comment. Each was a SECOND copy of something that now exists once.

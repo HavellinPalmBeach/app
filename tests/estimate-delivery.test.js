@@ -190,14 +190,46 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('editing the estimate revokes the agreement it is Exhibit A to');
   {
+    // ⚠ SLICE 7 EXTRACTED THIS, BECAUSE THE RAIL'S "EDIT ESTIMATE" DID NONE OF IT. The
+    // revoke lived inline in `editEstimateFromCE` and nowhere else, so `dashGoEstimate`
+    // just navigated — landing on an APPROVED estimate whose form `applyEstimateLock` had
+    // disabled, with the agreement still approved over an Exhibit A about to change. The
+    // working door was on the tab this slice retires. Every requirement below is unchanged;
+    // it is asserted where it moved to, which means the rail gets it too.
+    const rev = fn('revokeEstimateApproval');
+    has(rev, 'job.agrApproved = false', 'approval is withdrawn');
+    has(rev, "job.agrRevokedBy = 'estimate-edited'", 'and why is recorded on the job');
+    has(rev, 'syncJobToSheets(job)', 'and it reaches the sheet, so the other device agrees');
+    has(rev, 'if (currentAgrJobId === job.id)', 'the live globals are cleared when the tab is showing that job');
+    has(rev, 'Agreement approval revoked', 'and the person is told, rather than finding out later');
+    has(rev, 'delete job.estimateDriveAt', "the estimate's Drive stamp still clears too");
+    has(rev, 'rec.approved = false', 'and the estimate record itself is un-approved');
+
+    // ⚠ ONE COPY. Two is how the rail came to have none.
     const edit = fn('editEstimateFromCE');
-    has(edit, 'edJob.agrApproved = false', 'approval is withdrawn');
-    has(edit, "edJob.agrRevokedBy = 'estimate-edited'", 'and why is recorded on the job');
-    has(edit, 'syncJobToSheets(edJob)', 'and it reaches the sheet, so the other device agrees');
-    has(edit, 'if (currentAgrJobId === edJob.id)', 'the live globals are cleared when the tab is showing that job');
-    has(edit, 'Agreement approval revoked', 'and the person is told, rather than finding out later');
-    // The estimate's own Drive stamp was already cleared here; that must not regress.
-    has(edit, 'delete edJob.estimateDriveAt', "the estimate's Drive stamp still clears too");
+    has(edit, 'revokeEstimateApproval(currentEstimate.jobId)', 'the tab button reads it');
+    has(fn('dashEditEstimate'), 'revokeEstimateApproval(jobId)', 'and so does the rail');
+    lacks(edit, 'edJob.agrApproved = false', 'the tab keeps no inline copy');
+    lacks(edit, 'delete edJob.estimateDriveAt', 'nor of the Drive stamp');
+
+    // Driven: an approved estimate really comes back editable.
+    const ctx = sandbox({
+      fns: ['revokeEstimateApproval'],
+      stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, currentAgrJobId: 0 },
+    });
+    const job = { id: 7, approved: true, agrApproved: true, agrApprovedBy: 'Anthony Graziano',
+                  estimateDriveAt: 'T', estimateDriveUrl: 'https://drive/x' };
+    ctx.jobs = [job];
+    ctx.estimateStore = { 7: { approved: true, submitted: false, approvedBy: 'Anthony Graziano' } };
+    ctx.revokeEstimateApproval(7);
+    eq(ctx.estimateStore[7].approved, false, 'the estimate is un-approved');
+    eq(job.approved, false, 'the job flag with it');
+    eq(job.agrApproved, false, 'the agreement too');
+    eq(job.agrRevokedBy, 'estimate-edited', 'naming why');
+    eq(job.estimateDriveAt, undefined, 'and the Drive stamp is gone, since the filed copy is now the previous version');
+    // A job with nothing approved is a no-op rather than a throw.
+    ctx.jobs.push({ id: 8 });
+    ok(!!ctx.revokeEstimateApproval(8), 'an unapproved job revokes harmlessly');
   }
 
   group('re-approving after a revoke re-files, rather than leaving the stale copy in Drive');

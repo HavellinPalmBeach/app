@@ -251,6 +251,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // read "$25,715 · 1789067253747" beside the money on Estimate built.
     const built = byKey(run('built'), 'estimate_built');
     eq(built.atKind, 'epoch', 'the estimate-built date declares itself an epoch');
+
+    // ⚠ EVERY ROW CARRYING A DATE DECLARES ITS KIND — the rail prints one kind of fact
+    // one way. `estimateSentDate` and `agrSentAt` are both stamped LONG FORM
+    // (`toLocaleDateString('en-US',{month:'long'…})`), and both printed RAW, so the live
+    // build read "September 10, 2026" two rows above *Agreement signed* rendering the same
+    // day as "Sep 10, 2026". A row that carries an `at` and no `atKind` is the defect.
+    const full = run('delivered');
+    ['estimate_sent', 'agreement_sent', 'agreement_signed', 'client_accepted']
+      .forEach(function (k) {
+        const r = byKey(full, k);
+        if (!r || !r.at) return;
+        eq(r.atKind, 'date', k + ' declares its date so the renderer formats it');
+      });
     lacks(jtBody, 'toLocaleDateString', 'and the derivation still does no formatting itself');
     has(body('renderClientDashboard(jobId)'), "r.atKind === 'epoch'", 'the renderer knows how to print one');
     lacks(jtBody, 'completionDate', 'jobTimeline never reads completionDate');
