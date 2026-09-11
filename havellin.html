@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 2:33pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 3:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4725,7 +4725,12 @@ var CONTRACTOR_TC_NAME = 'Contractor — TC';
 // old one answers "Unknown action", which is itself the answer. This is a READ — it changes
 // nothing and cannot make anything worse — and it fails quiet: no Sheets URL, no network,
 // no complaint.
-var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails'];      // actions this build calls
+// ⚠ `createFolder` AND `uploadFile` WERE MISSING FROM THIS LIST, and they are the two
+// the whole Drive path stands on. So a deployment too old to make a client folder drew
+// NO banner, the folder was never created, and the first symptom was a crew in the
+// entryway watching every photograph fail. List what the app CALLS, not what was most
+// recently added.
+var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile'];  // actions this build calls
 var BACKEND_NEEDS_TYPES = ['saveMedia'];                  // and post types
 var _backendVersion = null;
 
@@ -4753,7 +4758,9 @@ var BACKEND_FEATURE_COST = {
   htmlToPdf:     'client emails go out with no PDF attached',
   getThumbnails: 'no photographs on the Inventory tab',
   saveMedia:     'the inventory manifest never leaves this device',
-  uploadHtml:    'estimates filed to Drive pile up instead of replacing'
+  uploadHtml:    'estimates filed to Drive pile up instead of replacing',
+  createFolder:  'new clients get no Google Drive folder at all',
+  uploadFile:    'photographs taken on a job cannot be filed to Drive'
 };
 
 function _showBackendStaleBanner(version, missing) {
@@ -11290,14 +11297,28 @@ function dashUtilityBar(job) {
   var out = [
     { label: '&#9998; Edit Client', call: 'dashEditClient(' + id + ')', bronze: true }
   ];
-  // ⚠ DRIVE IS ALWAYS JUST A LINK — never a "create" action. The job folder is made
-  // ONCE, automatically, when the CLIENT IS CREATED (createDriveJobFolder, fired at the
-  // end of the intake save), with all six subfolders in the same call. Nothing later in
-  // the lifecycle creates it. If this job somehow has no folder URL, fall back to the
-  // Drive root so the button still opens Drive rather than minting a duplicate folder.
-  var href = job.driveFolder || ((typeof DRIVE_FOLDER_ID !== 'undefined' && DRIVE_FOLDER_ID)
-    ? 'https://drive.google.com/drive/folders/' + DRIVE_FOLDER_ID : '');
-  if (href) out.push({ label: '&#128193; Drive', href: href });
+  // The job folder is made ONCE, automatically, when the CLIENT IS CREATED
+  // (createDriveJobFolder, at the end of the intake save), with all six subfolders in
+  // the same call. A job that HAS one gets a link, and it must stay an <a>: that is
+  // what gives Drive middle-click, cmd-click and copy-link, and a scripted window.open
+  // on an iPad is what a popup blocker eats.
+  //
+  // ⚠⚠ BUT A JOB WITH NO FOLDER NOW GETS A BUTTON THAT MAKES ONE, AND THE ROOT-FOLDER
+  // FALLBACK IS GONE. That fallback was written as "findable beats absent" on the
+  // assumption the only folderless job is a legacy one. It is not: when the single
+  // automatic attempt at intake fails — silently, as it did until today — the fallback
+  // opened the Drive ROOT, which looks exactly like a working button and is why a
+  // folderless client got all the way to a crew photographing the entryway before
+  // anybody noticed. Nothing else in the lifecycle creates a folder, so without this
+  // door that client could never have one at all.
+  //
+  // ⚠ The old rule here read "never a create action — rather than minting a duplicate
+  // folder". That reason no longer holds: the server's createJobFolder has REUSED a
+  // folder of the same name since the 2026-09-09 backend. On an older deployment a
+  // second press could still duplicate, so the button withdraws itself the instant a
+  // folder lands.
+  if (job.driveFolder) out.push({ label: '&#128193; Drive', href: job.driveFolder });
+  else out.push({ label: '&#128193; Create Drive folder', call: 'createDriveFolderNow(' + id + ')' });
   return out;
 }
 
@@ -18829,7 +18850,22 @@ function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpd
   // agreements, walkthrough notes) went through the resolver and filed correctly.
   // It also missed the { name: "id" } stored shape that _subfolderId handles.
   resolveSubfolderId(job, subfolderName, function(folderId) {
-    if (!folderId) { _finish('failed'); return; }
+    // ⚠ "NO FOLDER" AND "THE UPLOAD FAILED" ARE DIFFERENT ANSWERS AND THE FIX IS
+    // DIFFERENT. Both used to render as a bare "⚠ shot 1 not saved" with a Retry that
+    // re-ran the identical path and failed identically, forever — the shot can never
+    // land, because nothing after intake creates a folder. Say which one it is, and
+    // where the fix is; the bytes are still held, so Retry works once it exists.
+    if (!folderId) {
+      _finish('failed');
+      if (!job.driveFolder) {
+        showSyncBadge('This client has no Google Drive folder, so photos cannot be filed. '
+          + 'Open the client and press "Create Drive folder", then press Retry.', true);
+      } else {
+        showSyncBadge('The "' + subfolderName + '" subfolder could not be found in this '
+          + 'client\u2019s Drive folder \u2014 photos cannot be filed until it is.', true);
+      }
+      return;
+    }
     uploadToDrive(folderId, filename, dataUrl, function(ok, fileUrl, fileId) {
       _finish(ok ? 'uploaded' : 'failed', fileUrl, fileId);
     });
@@ -25144,12 +25180,35 @@ function startRoomTranscription(roomId) {
 }
 
 
+function _driveFolderFailed(job, why, serverErr) {
+  // ⚠⚠ THE WHOLE POINT OF THIS FUNCTION. Every failure arm below used to return in
+  // SILENCE: no badge, no console line, nothing written to the job. So a client could
+  // be taken through intake, estimate, agreement and deposit with no Drive folder
+  // anywhere, and the first thing anybody noticed was a crew standing in the entryway
+  // watching every photograph fail. Measured on the real function: three distinct
+  // failures (backend error, unknown action, no Sheets URL) each produced ZERO output
+  // of any kind and then failed every photo on that job forever.
+  var msg = 'Drive folder NOT created for ' + (job && job.name ? job.name : 'this client')
+    + ' — ' + why + (serverErr ? ' (' + serverErr + ')' : '');
+  if (job) {
+    job.driveFolderError = { at: Date.now(), why: why, serverError: serverErr || '' };
+    saveJobs();
+  }
+  console.warn('[Drive] ' + msg);
+  showSyncBadge(msg + '. Open the client and press "Create Drive folder".', true);
+}
+
+// Create the job folder. Fired automatically at the end of the intake save, and again
+// by hand from the Client Dashboard when that first attempt failed — see
+// createDriveFolderNow. Safe to press twice: the server reuses a folder of the same
+// name rather than minting another (createJobFolder, idempotent by name since the
+// 2026-09-09 backend).
 function createDriveJobFolder(job) {
-  if (!SHEETS_SYNC_URL) return;
+  if (!SHEETS_SYNC_URL) { _driveFolderFailed(job, 'no Google Sheets URL is configured on this device (Settings \u2192 Cloud)'); return; }
   // Guard: never create a second folder for a job that already has one. The server
   // now also dedups by name, but skipping the call avoids the round-trip and the
   // race that let auto-create (on client creation) and the manual button both fire.
-  if (job && job.driveFolder) { showSyncBadge('Drive folder already exists ✓'); return; }
+  if (job && job.driveFolder) { showSyncBadge('Drive folder already exists \u2713'); return; }
   fetch(SHEETS_SYNC_URL, {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'},
@@ -25165,13 +25224,29 @@ function createDriveJobFolder(job) {
   .then(function(r){ return r.json(); })
   .then(function(data){
     var j = jobs.find(function(x){ return x.id === job.id; });
-    if (j && data.folderUrl) {
+    if (j && data && data.folderUrl) {
       j.driveFolder = data.folderUrl;
       if (data.subfolders) j.driveSubfolders = data.subfolders;
-      saveJobs();
+      delete j.driveFolderError;
+      // saveJobs() posts the whole list, but only stamps updatedAt when it is MISSING.
+      // syncJobToSheets bumps it, which is what makes this device's copy win the
+      // newest-wins merge — without it another device's untouched copy can overwrite
+      // the folder URL that was just created. Same pairing as every other job edit.
+      saveJobs(); syncJobToSheets(j);
       showSyncBadge('Drive folders created \u2713');
       openClientDashboard(job.id);
+      return;
     }
+    // ⚠ A WELL-FORMED {ok:false} IS NOT A NETWORK ERROR AND NEVER REACHED THE .catch.
+    // A stale deployment answers "Unknown action: createFolder"; a root folder id the
+    // script account cannot open answers a DriveApp exception. Both used to land here
+    // and do nothing at all. The server's own words are passed through, because a
+    // sentence with no cause in it is what made "still no PDF" take three rounds.
+    var err = (data && (data.error || data.message)) || 'the server returned no folder';
+    _driveFolderFailed(job, _backendErrorKind(err, true) === 'stale'
+      ? 'the Apps Script deployment does not know this action \u2014 redeploy it (Deploy \u2192 Manage deployments \u2192 New version)'
+      : 'the server refused', err);
+    openClientDashboard(job.id);
   })
   .catch(function(){
     // Fallback to legacy GET for older Apps Script deployments
@@ -25182,13 +25257,33 @@ function createDriveJobFolder(job) {
     fetch(SHEETS_SYNC_URL + params)
       .then(function(r){ return r.json(); })
       .then(function(data){
-        if (data.folderUrl) {
-          var j = jobs.find(function(x){ return x.id === job.id; });
-          if (j) { j.driveFolder = data.folderUrl; saveJobs(); showSyncBadge('Drive folder created \u2713'); openClientDashboard(job.id); }
+        var j = jobs.find(function(x){ return x.id === job.id; });
+        if (j && data && data.folderUrl) {
+          j.driveFolder = data.folderUrl;
+          delete j.driveFolderError;
+          saveJobs(); syncJobToSheets(j);
+          showSyncBadge('Drive folder created \u2713');
+        } else {
+          _driveFolderFailed(job, 'the server refused', (data && data.error) || '');
         }
+        openClientDashboard(job.id);
       })
-      .catch(function(){ showSyncBadge('Could not create folder'); openClientDashboard(job.id); });
+      .catch(function(){
+        _driveFolderFailed(job, 'the Apps Script could not be reached');
+        openClientDashboard(job.id);
+      });
   });
+}
+
+// The repair door. Nothing in the lifecycle after intake ever created a folder, so a
+// job whose one automatic attempt failed could NEVER get one — which is the state the
+// client this was found on was left in. Safe to press: the server reuses by name.
+function createDriveFolderNow(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  if (job.driveFolder) { showSyncBadge('Drive folder already exists \u2713'); return; }
+  showSyncBadge('Creating the Drive folder\u2026');
+  createDriveJobFolder(job);
 }
 
 // ─── POPULATE SELECTS FOR NEW PANELS ─────────────────────────────────────────

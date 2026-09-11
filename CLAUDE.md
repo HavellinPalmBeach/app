@@ -1,5 +1,109 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A CLIENT HAD NO DRIVE FOLDER AT ALL, AND THE APP NEVER SAID SO (FIXED 2026-09-11)
+Anthony, from a job site: *"We have a client that we ran through the intake estimate, approval of an
+estimate, sending an agreement, and receiving payment, and there are still no files in Google Drive.
+So when we go to do a job and photograph the first room, which is the entryway, the photos fail."*
+App-only, no redeploy. **He was right about the causal chain and it points one step further back.**
+
+- **⚠⚠ THE PHOTOS ARE THE SYMPTOM. `createDriveJobFolder` HAD THREE SILENT RETURN PATHS.** Driven on
+  the real function against a fake backend, each of these produced **NO badge, NO console line and
+  nothing written to the job** — and then failed every photograph on that job forever:
+
+  | what the backend answered | what the person saw |
+  |---|---|
+  | `{ok:false, error:'Exception: No item with the given ID…'}` | **nothing** |
+  | `{ok:false, error:'Unknown action: createFolder'}` (stale deploy) | **nothing** |
+  | no `SHEETS_SYNC_URL` on this device | **nothing** |
+
+  **⚠ A WELL-FORMED `{ok:false}` IS NOT A NETWORK ERROR AND NEVER REACHED THE `.catch`.** The success
+  arm simply required `data.folderUrl` and did nothing at all when it was absent. Same shape as the
+  `generateStripeLink` defect this file already records: a failure that reports success by saying
+  nothing.
+- **⚠⚠ AND IT WAS UNRECOVERABLE, WHICH IS WHY IT REACHED A CREW IN SOMEBODY'S HOUSE.**
+  `createDriveJobFolder` has **exactly one automatic caller** — the end of `saveIntake`. Nothing later
+  in the lifecycle creates a folder. So the single attempt at client creation was the only attempt
+  there would ever be, and a job that missed it could never have one.
+- **⚠⚠ THE DASHBOARD'S DRIVE BUTTON ACTIVELY DISGUISED IT.** A folderless job fell back to the Drive
+  **ROOT** — *"findable beats absent"*, written on the assumption that the only folderless job is a
+  legacy one. It is not. Pressing 📁 Drive opened Drive, looked exactly like a working button, and
+  showed a folder with none of this client's files in it, which is precisely the reading Anthony
+  arrived at. **The root fallback is GONE**; a folderless job now offers **Create Drive folder**
+  (`createDriveFolderNow`) and a test pins that the root link does not come back.
+  - **⚠ The old rule here read *"DRIVE IS ALWAYS JUST A LINK — never a create action"*, and its stated
+    reason was duplicate folders. That reason no longer holds:** the server's `createJobFolder` has
+    **reused a folder of the same name since the 2026-09-09 backend**. On an older deployment a second
+    press could still duplicate, so the button **withdraws itself the instant a folder lands**.
+  - **⚠ A job that HAS a folder still gets an `<a>`**, and a test still pins the rendered markup —
+    that is what gives Drive middle-click, cmd-click and copy-link, and CLAUDE.md already records a
+    revert coming back green on `<a>` → `<button onclick="window.open()">`.
+- **⚠ "NO FOLDER" AND "THE UPLOAD FAILED" ARE DIFFERENT ANSWERS AND THE FIX IS DIFFERENT.** Both
+  rendered as a bare **"⚠ shot 1 not saved"** with a Retry that re-ran the identical path and failed
+  identically, forever. `_doPhotoUpload` names which one it is now and where the fix is; the bytes are
+  still held, so Retry works the moment the folder exists.
+- **⚠ THE STALE-DEPLOYMENT BANNER COULD NOT SEE THIS.** `BACKEND_NEEDS` was `['htmlToPdf',
+  'getThumbnails']` — **`createFolder` and `uploadFile`, the two actions the whole Drive path stands
+  on, were not on it**, so a deployment too old to make a client folder drew no banner. Both are on it
+  now, with their consequences in `BACKEND_FEATURE_COST` (*"new clients get no Google Drive folder at
+  all"*). **List what the app CALLS, not what was most recently added.**
+- **⚠⚠ RECORDING THE PAYMENT HAS NOTHING TO DO WITH IT, and it was asked outright.** The folder is
+  made at **client creation**. The deposit gates **hours logging** and nothing else; photo capture
+  gates on **`won`** (moved there on 2026-08-03). No lifecycle step after intake has ever created a
+  folder, and a test counts `createDriveJobFolder(` at exactly **3** — the definition, the intake save
+  and the repair door — so a fourth cannot appear unnoticed.
+- **⚠ THE FAILURE IS RECORDED ON THE JOB (`driveFolderError`), not only flashed in a badge.** A sync
+  badge is gone in four seconds; this one had to survive until somebody opened the client. The
+  server's own words ride with it, because *"a sentence with no cause in it"* is what made **"still no
+  PDF"** take three rounds.
+- **4140 committed checks** (`tests/drive-folder.test.js`, 29 new — **the first coverage of this
+  function at all**, which is why it ran silent for so long; plus 4 from the two new `BACKEND_NEEDS`
+  entries). **All four app changes revert-verified individually** — the `{ok:false}` arm fails **6**,
+  the repair door and the dropped root fallback **7**, the photo message 1, the no-URL arm 1.
+  **⚠ Two pre-existing assertions pinned the old decision and broke correctly** (*"no job folder falls
+  back to the Drive root"*, *"no folder and no root: the button is withheld"*); both restated as the
+  new requirement rather than deleted.
+  - **⚠ The suite is driven through a hand-rolled SYNCHRONOUS thenable**, because the runner's
+    assertions are flat and synchronous — a real Promise resolves on a later microtask and every check
+    would run before the code under test did, green, proving nothing. **It must unwrap**, as a real
+    promise does, or `.then(r => r.json())` hands the next `.then` the thenable instead of the body.
+- **⚠ AND I REMOVED A `syncJobToSheets` I HAD ADDED, THEN PUT IT BACK — the second call was right.**
+  `saveJobs()` does post the whole list, so it reads as a duplicate write; but it stamps `updatedAt`
+  **only when missing** (*"so we never bump a job this device didn't actually touch"*), while
+  `syncJobToSheets` bumps it. Without the bump the folder URL can lose the newest-wins merge to
+  another device's untouched copy. `saveJobs(); syncJobToSheets(j);` is the house pairing at four
+  other job-edit sites for exactly this reason.
+- **Verified end to end in headless Chromium on the real page**, driving the real dashboard and the
+  real capture path: a folderless client renders **Create Drive folder** with **no href**; pressing it
+  against a refusing backend prints *"Drive folder NOT created for Butler — the server refused
+  (Exception: No item with the given ID could be found)"* and records it on the job; the entryway
+  photograph fails with *"This client has no Google Drive folder… press Create Drive folder, then
+  press Retry"* where it used to say only *"⚠ shot 1 not saved"*; and once the folder lands the shot
+  **uploads**, the room card goes clean, the error clears and the control is an `<a target="_blank">`
+  again. Overflow **0** at 1440 and 390px, **no page errors**.
+- **⚠⚠ A NEW CLIENT CREATED MINUTES LATER GOT ITS FOLDERS, AND THAT IS THE DIAGNOSIS, NOT A PUZZLE.**
+  Anthony, mid-fix: *"i just added a new 'dummy' client and the folders were created."* So the
+  deployment, the Drive folder ID and the Sheets URL are all **fine** — this was never a
+  misconfiguration. It was a **transient** failure at the one moment that one client was created.
+- **⚠⚠ AND THAT IS THE REAL ROOT CAUSE: THIS IS THE ONLY WRITE IN THE APP WITH NO RETRY.** Every other
+  write goes through the outbox (`_enqueueWrite` / `_flushOutbox`), which holds a failure, backs off
+  and re-sends. `createDriveJobFolder` is a **raw `fetch`, fired once, never queued**. Apps Script cold
+  starts take seconds and can time out; a phone changing networks mid-walkthrough drops the request;
+  closing the tab while it is in flight loses it. **Any of those is PERMANENT for that client**,
+  because nothing after intake ever tries again. One unlucky second at intake against a folder that
+  can never be created afterwards is the whole bug, and it is why it looked like Drive was broken when
+  Drive was fine.
+  - **⚠ IT IS DELIBERATELY STILL NOT QUEUED, and that is not laziness.** The outbox re-sends
+    automatically, and a folder create is **not idempotent on a deployment older than 2026-09-09** —
+    an automatic re-send against one of those mints duplicate client folders with nobody to attribute
+    them to, which is the failure `createJobFolder`'s reuse-by-name guard exists to stop and which
+    CLAUDE.md already records happening once (*"one client ended up with 4 folders"*). A loud notice
+    plus a one-press repair door is the safe shape: it recovers the client without ever re-sending a
+    write on its own.
+- No document pass: nothing client-facing changed wording, and neither the manual nor the playbook
+  describes when the Drive folder is created. **⚠ The playbook's symptom→cause table should gain a row
+  for *"photos fail on site"* → *the client has no Drive folder; open the client and press Create
+  Drive folder* on the next documentation pass.**
+
 ## THE DASHBOARD HEADER OFFERED FIVE BUTTONS THAT WERE ALREADY ON THE TIMELINE (FIXED 2026-09-11)
 Anthony, reading the shipped build: *"i kind of feel like the functionality on the top of the client
 dashboard should be down below … do we need the 5 boxes at the top at all? like the activate job

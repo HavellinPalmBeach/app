@@ -216,13 +216,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // The converse: Edit Client IS a button, because it opens a modal in place.
   has(driveHtml, '<button class="btn-s" onclick="dashEditClient(7)"', 'Edit Client stays a button');
 
-  // ⚠ A job with no folder yet falls back to the Drive ROOT rather than disappearing or
-  // offering to create one. Findable beats absent.
+  // ⚠⚠ A JOB WITH NO FOLDER OFFERS TO MAKE ONE, AND NEVER LINKS TO THE DRIVE ROOT.
+  // This assertion used to pin the opposite ("findable beats absent"), and that
+  // fallback is what disguised a real failure: the single automatic attempt at intake
+  // failed SILENTLY, the button went on opening the Drive root exactly as if it had
+  // worked, and the first symptom was a crew in the entryway watching every photograph
+  // fail. Nothing else in the lifecycle creates a folder, so the link was also a dead
+  // end — the client could never get one. The requirement is the repair door, not the
+  // root link, and the root link must not come back.
   const fbDrive = bar({}, 'ROOTID').filter((x) => /Drive/.test(x.label))[0];
-  eq(fbDrive.href, 'https://drive.google.com/drive/folders/ROOTID', 'no job folder falls back to the Drive root');
-  // And with no root configured either the button is withheld — a link to nowhere is
-  // worse than no link.
-  eq(bar({}, '').length, 1, 'no folder and no root: the Drive button is withheld');
+  eq(fbDrive.href, undefined, 'a folderless job never links to the Drive root');
+  eq(fbDrive.call, 'createDriveFolderNow(7)', 'it offers to create the folder instead');
+  has(fbDrive.label, 'Create Drive folder', 'and the label says so, rather than reading as a link to the folder');
+  // The door exists and is reachable by that exact name.
+  has(src, 'function createDriveFolderNow(', 'createDriveFolderNow is defined');
+  // It is offered whether or not a root folder id happens to be configured — the root
+  // was never what made the folder, so it has no bearing on whether one can be made.
+  eq(bar({}, '').length, 2, 'and it is offered with no root configured too');
+  has(ctx._dashUtilityBarHtml({ id: 7 }), 'onclick="createDriveFolderNow(7)"',
+    'the rendered folderless control is a real button');
 
   // ───────────────────────────────────────────────────────────────────────────
   group('dashUtilityBar is DOM-free, and guards a missing job');
