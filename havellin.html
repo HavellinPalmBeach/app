@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:39am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15380,6 +15380,41 @@ function setValBasis(jobId, v) {
 var INV_ASSET_TRACKS = ['Probate','Trust','Non-probate','Homestead','Exempt'];
 function _invTrack(ref) { return (ref && ref.assetTrack) || 'Probate'; }
 function _invIsProbateAsset(ref) { var t = _invTrack(ref); return t === 'Probate'; }
+
+// ⚠⚠ EXEMPT IS A CLAIM AGAINST THE PROBATE ESTATE, NOT A POT OUTSIDE IT — and until
+// 2026-09-11 the app had it both ways, which deleted property off a court filing.
+//
+// There are TWO controls saying the same thing: the `flagExempt` tick and `Asset Track =
+// Exempt`. The court inventory read only the tick, and tested probate membership with
+// `_invTrack(ref) === 'Probate'` — so an item whose TRACK was set to Exempt was in neither
+// schedule and in neither total: not in Tangible Personal Property (not Probate track), not
+// in Exempt Property (that required the Probate track too), and therefore not in the
+// §732.402 cap test either. It fell into the "excluded" count, whose own footnote says
+// "tagged Trust / Non-probate / Homestead" — so the document misdescribed it on the way out.
+// Driven on a seeded estate: tangible personal property understated by 46%.
+//
+// ⚠ THE LAW IS WHY THIS IS THE FIX RATHER THAN A DISPLAY TWEAK. §732.402 property is
+// LISTED on the §733.604 inventory and then CLAIMED against it — the claim is what the
+// schedule and its subtotal exist to let counsel and the court test. Property carved out
+// of the filing entirely cannot be claimed from it.
+//
+// So: exempt is answered in ONE place whichever control was used, and the two genuinely
+// separate pots — Trust / Non-probate / Homestead — are what stays off the schedule.
+function _invIsExempt(ref) { return !!(ref && ref.flagExempt) || _invTrack(ref) === 'Exempt'; }
+// Names the tracks a set of excluded rows actually carries, rather than reciting a fixed
+// list — the court inventory's footnote used to claim "Trust / Non-probate / Homestead"
+// over a count that could contain none of them.
+function _invExcludedTracks(rows) {
+  var seen = [];
+  (rows || []).forEach(function(r){ var t = _invTrack(r); if (seen.indexOf(t) < 0) seen.push(t); });
+  if (!seen.length) return 'Trust / Non-probate / Homestead';
+  return seen.sort().join(' / ');
+}
+
+function _invOnProbateSchedule(ref) {
+  var t = _invTrack(ref);
+  return t === 'Probate' || t === 'Exempt';
+}
 // §732.402 protects household furniture, furnishings and appliances up to this value
 // (motor vehicles and the education-savings items are separate allowances and are NOT
 // counted against it). The app cannot tell on its own which flagged items fall inside
@@ -16389,7 +16424,7 @@ function printEstateInventoryReport(jobId) {
   // Carved out, not omitted: exempt, homestead and non-probate property is reported in
   // its own schedule so a reader can see both that it exists and that it sits outside
   // the probate estate.
-  var carved = all.filter(function(r){ return r.flagExempt || !_invIsProbateAsset(r); });
+  var carved = all.filter(function(r){ return _invIsExempt(r) || !_invIsProbateAsset(r); });
   var main   = all.filter(function(r){ return carved.indexOf(r) < 0; });
 
   function itemRow(r) {
@@ -16630,7 +16665,7 @@ function printCourtInventory(jobId) {
   // fell between the two tests: it rendered inside the Exempt section — on the probate
   // schedule it is excluded from — and was left out of the "excluded" count as well, so
   // nothing on the page said it was there.
-  var excluded = items.filter(function(r){ return !_invIsProbateAsset(r); });
+  var excluded = items.filter(function(r){ return !_invOnProbateSchedule(r); });
   function section(title, list) {
     if (!list.length) return { html: '', total: 0 };
     var total = 0;
@@ -16659,8 +16694,8 @@ function printCourtInventory(jobId) {
   // exempt property was folded silently into "Total tangible personal property" and
   // there was no exempt figure anywhere on the document — which is the one number a
   // reader needs in order to test the §732.402 claim at all.
-  var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invIsProbateAsset(r) && !r.flagExempt; }));
-  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invIsProbateAsset(r) && r.flagExempt; }));
+  var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invOnProbateSchedule(r) && !_invIsExempt(r); }));
+  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invOnProbateSchedule(r) && _invIsExempt(r); }));
   var exemptTotal = exemptSec.total;
   var overCap = exemptTotal > EXEMPT_CAP_732_402;
   var body = estateSec.html
@@ -16680,7 +16715,7 @@ function printCourtInventory(jobId) {
     + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
     + body
     + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">Total tangible personal property (' + esc(basis) + '): &nbsp;' + _invMoney(total) + '</div>'
-    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged Trust / Non-probate / Homestead ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule.</div>' : '')
+    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>'
     + '</div>';

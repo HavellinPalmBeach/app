@@ -70,6 +70,49 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## ASSET TRACK "EXEMPT" DELETED PROPERTY OFF THE COURT INVENTORY (FIXED 2026-09-11)
+Found by the code audit. App-only, no redeploy. **This document is signed by the personal
+representative and filed.**
+
+- **⚠⚠ THE APP HAD TWO CONTROLS SAYING "EXEMPT" AND THEY DISAGREED.** The `flagExempt` tick and
+  `Asset Track = Exempt`. `printCourtInventory` read only the tick and tested membership with
+  `_invTrack(ref) === 'Probate'`, so an item whose **TRACK** was Exempt was in **neither**
+  section and **neither total** — not in *Tangible Personal Property* (not Probate track), not in
+  *Exempt Property* (that required the Probate track too), and therefore **not in the §732.402
+  cap test** either. **The comment above `INV_ASSET_TRACKS` has said *"Exempt overlaps the
+  §732.402 flag"* since it was written**; nobody resolved it.
+- **⚠ AND THE DOCUMENT MISDESCRIBED WHAT IT HAD DONE.** The item fell into the "excluded" count,
+  whose footnote reads *"tagged Trust / Non-probate / Homestead"* — three things it was not.
+- **⚠⚠ THE LAW IS WHY THIS IS A DELETION RATHER THAN A DISPLAY BUG.** §732.402 property is
+  **LISTED** on the §733.604 inventory and then **CLAIMED against it** — the schedule and its
+  subtotal exist so counsel and the court can test the claim. **Property carved out of the filing
+  cannot be claimed from it.** Measured in a browser on a three-item estate: the schedule read
+  **$9,000** against a true **$15,000**.
+- **`_invIsExempt` is the ONE definition** — the tick or the track, answered in one place —
+  and `_invOnProbateSchedule` is membership: **Probate or Exempt**. Trust / Non-probate /
+  Homestead are the genuinely separate pots and are what stays off. `printEstateInventoryReport`'s
+  carve-out reads the same predicate, so the two documents cannot drift on the word *exempt*.
+  **⚠ `_invIsProbateAsset` is UNCHANGED and still means "track is Probate"** — other readers
+  depend on that, and widening it would have dropped Exempt-track items out of the estate
+  report's carve-out instead.
+- **⚠ `_invExcludedTracks` names the tracks actually present** rather than reciting a fixed list,
+  and the footnote now says outright that exempt property is **not** in that count.
+- **3398 committed checks** (9 new, driven on the real `printCourtInventory`). **All three
+  changes revert-verified** — restoring the Probate-only membership fails **6**, reading the tick
+  alone fails 2, reciting the fixed list fails 1.
+- **⚠ A PRE-EXISTING TEST PINNED THE EXPRESSION RATHER THAN THE REQUIREMENT** and broke on a true
+  change — the seventh time this file records it. `has(body, 'r.flagExempt ||
+  !_invIsProbateAsset(r)')` is a byte sequence; rewritten to state that the carve-out asks the
+  shared definition and takes everything off the probate track with it.
+- **Verified in headless Chromium** on a seeded probate estate: the Exempt-**track** dining suite
+  renders inside *Exempt Property (Fla. Stat. §732.402)*, the exempt subtotal reads **$7,000**
+  with the ticked chair, the grand total reads **$15,000**, and nothing is reported as excluded.
+  A separate case drives the cap: $18,000 of Exempt-track furniture plus a $4,000 ticked rug
+  trips the $20,000 allowance notice at **$22,000**, which it could not see at all before. No
+  page errors.
+- No document pass: the manual and playbook describe the exempt flag and do not state this
+  interaction either way.
+
 ## "+ Add Contractor" OVERWROTE THE LAST PERSON YOU EDITED (FIXED 2026-09-11)
 Found by the code audit. App-only, no redeploy. **Real roster data, on both devices.**
 

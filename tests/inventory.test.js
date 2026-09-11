@@ -16,7 +16,7 @@ const INV_FNS = [
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
   '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
   '_apprGroups', '_apprWithheld', '_apprNFA',
-  '_invTrack', '_invIsProbateAsset',
+  '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks',
   'savePhotoRefs', '_warnPhotoStoreFull',
 ];
 const INV_VARS = [
@@ -268,6 +268,53 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(out3, 'excluded from this probate schedule', 'and it is disclosed in the excluded note');
     has(out3, '1 item', 'the excluded count includes it');
     lacks(out3, '$8,100', 'its value is not folded into the probate total');
+
+    // ⚠⚠ THE OTHER HALF OF THE SAME OVERLAP, AND IT DELETED PROPERTY OFF A COURT FILING.
+    // There are TWO controls saying "exempt": the `flagExempt` tick and `Asset Track =
+    // Exempt`. Until 2026-09-11 the schedule read only the tick and tested membership with
+    // `_invTrack(ref) === 'Probate'`, so an item whose TRACK was Exempt was in NEITHER
+    // section and NEITHER total — and fell into the "excluded" count, whose footnote then
+    // described it as Trust / Non-probate / Homestead. Understated by 46% in the run below.
+    //
+    // §732.402 property is LISTED on the §733.604 inventory and then CLAIMED against it.
+    // Property carved out of the filing cannot be claimed from it.
+    const ctx4 = courtCtx([
+      item({ objectName: 'Dining suite', fmv: '6000', assetTrack: 'Exempt' }),
+      item({ objectName: 'Wing chair',   fmv: '1000', flagExempt: true }),
+      item({ objectName: 'Bronze',       fmv: '8000' }),
+    ]);
+    ctx4.printCourtInventory(1);
+    const out4 = ctx4.__printed;
+    has(out4, 'Dining suite', '⚠⚠ an Exempt-TRACK item is on the schedule at all');
+    has(out4, 'Exempt Property (Fla. Stat. §732.402)', 'in the exempt section');
+    has(out4, '$7,000', '⚠ and inside the exempt subtotal, with the ticked one');
+    has(out4, '$15,000', '⚠⚠ the grand total carries it — it read $9,000 before, 40% short');
+    lacks(out4, 'excluded from this probate schedule',
+          '⚠ and it is no longer reported as carved out of the estate');
+
+    // ⚠ IT MUST ALSO REACH THE CAP TEST — that is the one check the document offers on the
+    // claim, and an exempt item the schedule cannot see is an exempt item the cap cannot
+    // weigh. $18,000 of Exempt-track furniture is over the $20,000 allowance only once the
+    // ticked item joins it, which is exactly the case a fixed cap test exists to catch.
+    const ctx5 = courtCtx([
+      item({ objectName: 'Bedroom suite', fmv: '18000', assetTrack: 'Exempt' }),
+      item({ objectName: 'Rug',           fmv: '4000',  flagExempt: true }),
+    ]);
+    ctx5.printCourtInventory(1);
+    has(ctx5.__printed, '§732.402 allowance for household',
+        '⚠⚠ the cap test sees Exempt-track property too');
+    has(ctx5.__printed, '$22,000', 'and weighs it at the full claimed total');
+
+    // The excluded footnote names the tracks actually present rather than reciting a list.
+    const ctx6 = courtCtx([
+      item({ objectName: 'Chair', fmv: '100' }),
+      item({ objectName: 'Deed',  fmv: '500000', assetTrack: 'Homestead' }),
+    ]);
+    ctx6.printCourtInventory(1);
+    has(ctx6.__printed, 'tagged Homestead is excluded',
+        '⚠ the note names the track that is really there, not three that are not');
+    has(ctx6.__printed, 'Exempt property is not excluded',
+        'and says plainly that exempt property is not in this count');
   }
 
   // ── Guard: the appraisal threshold has not silently moved ──────────────────

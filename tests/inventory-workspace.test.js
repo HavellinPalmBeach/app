@@ -331,7 +331,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = src.indexOf('function printEstateInventoryReport(');
     const body = src.slice(at, src.indexOf('\n// ── CSV', at));
     // "Homestead, exempt, and non-probate property identified and carved out."
-    has(body, 'r.flagExempt || !_invIsProbateAsset(r)', 'exempt and non-probate are separated out');
+    // ⚠ THIS PINNED THE EXPRESSION RATHER THAN THE REQUIREMENT and broke on a true change
+    // (2026-09-11), when "exempt" became one shared predicate instead of two controls that
+    // disagreed. The requirement was never "this line reads exactly so" — it is that the
+    // carve-out covers exempt property AND everything off the probate track, and that it
+    // asks the shared definition rather than keeping its own copy of what exempt means.
+    has(body, '_invIsExempt(r)', 'the carve-out asks the one definition of exempt');
+    has(body, '!_invIsProbateAsset(r)', 'and takes everything off the probate track with it');
     has(body, 'carved out of the probate estate', 'and the section says so plainly');
     // A value with no stated source is what the published promise exists to prevent.
     has(body, 'not stated', 'a missing valuation source is called out, not left blank');
