@@ -441,6 +441,43 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([...orphanIds].sort().join(', '), '',
       'every unguarded getElementById(...).x names an element the page actually has');
 
+    // ⚠⚠ AND A THIRD SHAPE THE TWO ABOVE COULD NOT SEE, which cost a roster row on
+    // 2026-09-11: a LIST of ids swept into `getElementById(<variable>)`.
+    // `showAddContractor` did `['c-name','c-phone',…].forEach(function(id){
+    // document.getElementById(id).value=''; })` and `c-name` has never existed — the form is
+    // `c-firstname` + `c-lastname`. The id is a variable at the call site, so neither the
+    // literal-chain check above nor any grep for `getElementById('c-name')` matches it.
+    //
+    // ⚠ AND THE COST WAS NOT THE UNRESET FIELD. The throw landed on the FIRST id, so every
+    // line below it was skipped — including `card.dataset.editId = ''`. Pressing
+    // "+ Add Contractor" after editing somebody left the edit target pointing at them, and
+    // the next save overwrote that person with the new one's details. A name is this app's
+    // only person key, and `saveContractors()` pushes the roster to the sheet, so it
+    // propagated to the other device.
+    const sweepOrphans = new Set();
+    // ⚠ THE SEARCH IS INVERTED — find the variable-id lookup, then look BACK for the list.
+    // Matching the array first needs a nested quantifier over quoted strings, and on a 1.7MB
+    // source that backtracks until the run times out. It did, once, writing this.
+    // Unguarded chained access only, the same rule the literal check above states: a swept
+    // `var el = getElementById(id); if (el) …` is safe whether the element exists or not.
+    // What destroyed a roster row was `getElementById(id).value = ''` with nothing in front.
+    for (const m of src.matchAll(/getElementById\(\s*([A-Za-z_$][\w$]*)\s*\)\s*\./g)) {
+      const before = src.slice(Math.max(0, m.index - 400), m.index);
+      const arr = before.lastIndexOf('[');
+      if (arr < 0) continue;
+      const close = before.indexOf(']', arr);
+      if (close < 0) continue;
+      const body = before.slice(arr + 1, close);
+      if (body.indexOf("'") < 0 || !/^[\s'",\w:.-]*$/.test(body)) continue;   // literals only
+      for (const lit of body.matchAll(/'([^']+)'/g)) {
+        const id = lit[1];
+        if (domIds.has(id) || ALLOW.some((r) => r.test(id))) continue;
+        sweepOrphans.add(id);
+      }
+    }
+    eq([...sweepOrphans].sort().join(', '), '',
+      '\u26a0 every id swept through getElementById(<var>) names a real element too');
+
     // And the names this slice actually removed, stated outright — so a later pass that
     // reintroduces one of these duplicate paths has to argue with a test rather than a
     // comment. Each was a SECOND copy of something that now exists once.

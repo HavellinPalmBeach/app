@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:22am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:39am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7650,7 +7650,10 @@ function clearEstimateTab() {
   // loadJobIntoEstimate never showed this because it overwrites sqft from the job it is
   // opening one line later. Only the Clear path — the button, and the automatic clear
   // after a save — was exposed.
-  ['e-sqft', 'e-years-in-home'].forEach(function(id) {
+  // ('e-years-in-home' was here and has never existed — years in home is an INTAKE field
+  //  (`i-years-in-home`); the estimate tab only displays it, and that display is cleared on
+  //  the next sweep down. Guarded, so it never threw; removed so the list means something.)
+  ['e-sqft'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   ['e-sqft-display', 'e-years-in-home-display'].forEach(function(id) {
@@ -25882,23 +25885,44 @@ var DEFAULT_CONTRACTORS = [
   {id:'default-3', name:'Anthony Graziano Jr', role:'PS', phone:'', email:'anthonyjr@havellinpalmbeach.com', rate:60, status:'active', notes:'Operations — part-time through Dec 2026', bio:''},
 ];
 
+// ⚠⚠ THIS THREW ON EVERY OPEN AND THE THROW IS WHAT OVERWROTE PEOPLE (fixed 2026-09-11).
+// The reset listed `c-name`, an element that HAS NEVER EXISTED — the form is `c-firstname`
+// + `c-lastname`, which is what `saveContractor` reads back. So `getElementById('c-name')
+// .value=''` was a TypeError on the FIRST id in the list, and everything below it never
+// ran: the rate, role, status and bio kept the last person's values, the button kept
+// saying "Update Contractor", and — the one that costs real data — `card.dataset.editId`
+// kept pointing at whoever was last EDITED.
+//
+// So: edit Ashley, close, press "+ Add Contractor", type a new person, Save → the new
+// details are written over ASHLEY, because `saveContractor` still sees an editId. A name
+// is this app's only person key, so there is no lookup that recovers her row; and
+// `saveContractors()` writes `havellin_defaults_v3` AND posts the roster to the sheet as
+// `defaults`, so the overwrite reaches the other device on its next load.
+//
+// ⚠ THE EDIT TARGET IS CLEARED FIRST, BEFORE ANYTHING THAT CAN THROW, and that ordering is
+// the fix rather than the corrected id. Resetting a field is cosmetic; failing to clear the
+// edit target destroys a record. A later renamed field must not be able to resurrect this.
 function showAddContractor() {
   var card = document.getElementById('add-contractor-card');
   card.style.display = card.style.display === 'none' ? 'block' : 'none';
-  if (card.style.display === 'block') {
-    // Full reset every time it opens for a new entry
-    ['c-name','c-phone','c-email','c-notes'].forEach(function(id){ document.getElementById(id).value=''; });
-    document.getElementById('c-rate').value='';
-    document.getElementById('c-role').value='TC';
-    document.getElementById('c-status').value='active';
-    var bioEl = document.getElementById('c-bio');
-    if (bioEl) bioEl.value = '';
-    var bioWrap = document.getElementById('bio-field-wrap');
-    if (bioWrap) bioWrap.style.display = 'block'; // TC is default
-    card.dataset.editId = ''; // clear any lingering edit target
-    var saveBtn = card.querySelector('.btn-p');
-    if (saveBtn) saveBtn.textContent = 'Save Contractor';
-  }
+  if (card.style.display !== 'block') return;
+
+  // Destructive state first.
+  card.dataset.editId = '';
+  var saveBtn = card.querySelector('.btn-p');
+  if (saveBtn) saveBtn.textContent = 'Save Contractor';
+
+  // Then the cosmetic reset, guarded so a missing field clears the rest rather than
+  // aborting the sweep the way the bare lookup above used to.
+  function _set(id, v) { var el = document.getElementById(id); if (el) el.value = v; }
+  ['c-firstname','c-lastname','c-phone','c-email','c-notes','c-rate','c-bio']
+    .forEach(function(id){ _set(id, ''); });
+  _set('c-role', 'TC');
+  _set('c-status', 'active');
+  var bioWrap = document.getElementById('bio-field-wrap');
+  if (bioWrap) bioWrap.style.display = 'block'; // TC is default
+  var fb = document.getElementById('c-fb');
+  if (fb) fb.innerHTML = '';
 }
 
 function saveContractor() {
@@ -25919,7 +25943,19 @@ function saveContractor() {
     updatedAt: Date.now(),  // recency stamp so the cross-device Sheet merge resolves newest-wins
   };
 
+  // ⚠ AN EDIT MUST NOT SILENTLY RENAME SOMEBODY. `editId` is set by `editContractor` and
+  // cleared by `showAddContractor`; if that clear is ever defeated again, this is what
+  // stands between a stale target and a destroyed roster row. A name is this app's only
+  // person key, so an overwrite is not recoverable by lookup.
   if (editId) {
+    var _prev = DEFAULT_CONTRACTORS.find(function(c){ return c.id === editId; })
+             || contractors.find(function(c){ return c.id === editId; });
+    if (_prev && !samePerson(_prev.name, name)) {
+      if (!confirm('This will rename ' + _prev.name + ' to ' + name + ' and overwrite their rate, contact details and notes.\n\nPress Cancel if you meant to add ' + name + ' as a new person.')) {
+        showFB('c-fb','warn','Nothing saved. Close this card and press + Add Contractor to enter ' + name + ' as a new person.');
+        return;
+      }
+    }
     // Check if it's a default contractor
     var defIdx = DEFAULT_CONTRACTORS.findIndex(function(c){ return c.id === editId; });
     if (defIdx >= 0) {

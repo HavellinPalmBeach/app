@@ -70,6 +70,52 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## "+ Add Contractor" OVERWROTE THE LAST PERSON YOU EDITED (FIXED 2026-09-11)
+Found by the code audit. App-only, no redeploy. **Real roster data, on both devices.**
+
+- **⚠⚠ THE THROW IS WHAT DESTROYED THE RECORD, NOT THE FIELD IT NAMED.** `showAddContractor`
+  reset `['c-name','c-phone','c-email','c-notes']` through an unguarded
+  `document.getElementById(id).value=''`, and **`c-name` has never existed** — the form is
+  `c-firstname` + `c-lastname`, which is what `saveContractor` reads back. So the sweep threw on
+  its **first** id and every line below it was skipped, including `card.dataset.editId = ''`.
+  Edit Ashley → close → press **+ Add Contractor** → type a new person → Save, and
+  `saveContractor` still sees an editId, so the new details are written **over Ashley**.
+- **A name is this app's only person key**, so nothing recovers her row by lookup — and
+  `saveContractors()` writes `havellin_defaults_v3` **and** posts the roster to the sheet as
+  `defaults`, so the overwrite reaches the other device on its next load.
+- **⚠ THE FIX IS THE ORDERING, NOT THE CORRECTED ID.** Destructive state is released before
+  anything that can throw. Resetting a field is cosmetic; failing to clear an edit target
+  destroys a record, and a field renamed in six months must not bring this back.
+- **⚠ AND A CHALLENGE AT THE WRITE END, belt and braces:** an edit that changes the NAME is a
+  different person, so `saveContractor` names who it is about to overwrite and offers the
+  alternative (*"press Cancel if you meant to add them as a new person"*). It reads
+  **both** rosters — the founders live in `DEFAULT_CONTRACTORS`, and theirs are exactly the rows
+  whose loss propagates.
+- **⚠⚠ THE TRIPWIRE COULD NOT SEE THIS SHAPE, AND NOW CAN.** `doc-send.test.js` already checked
+  every unguarded `getElementById('literal').x` against the markup — but here the id is a
+  **variable** swept out of an array, so neither that check nor any grep for
+  `getElementById('c-name')` matched. The check now also walks a LIST of literals swept into
+  `getElementById(<var>)`. ⚠ **The search is INVERTED — find the lookup, then look back for the
+  list.** Matching the array first needs a nested quantifier over quoted strings and backtracks
+  until the run times out on a 1.7MB file; it did, once, writing this.
+  - It immediately found a second one, **`e-years-in-home`** in `resetEstimate`'s clear sweep.
+    **Not a bug** — guarded, and years-in-home is an INTAKE field (`i-years-in-home`) the
+    estimate only displays, with that display cleared on the next line. The dead string is
+    removed so the list means something; the tripwire is scoped to **unguarded** access, the
+    same rule the literal check beside it already states, or it buries the real ones in noise.
+- **3388 committed checks** (`tests/contractor-roster.test.js`, 26 new). **All three changes
+  revert-verified.** ⚠ **The ordering revert came back GREEN on the first pass and the TEST was
+  the problem** — with the ids corrected and the lookups guarded nothing throws, so moving the
+  clear back to the end broke nothing the suite watched. **The requirement is not "the ids are
+  right", it is "whatever goes wrong in the reset, the edit target is already released"**, so the
+  test now stages a `getElementById` that throws mid-sweep and checks the far side of it. Re-done,
+  it fails 2. Sixth time this file has recorded an assertion that could not fail.
+- **Verified in headless Chromium on the real roster:** edit **Ashley Jerome**, press
+  **+ Add Contractor** (no throw, edit target released, button back to *Save Contractor*), enter
+  **Maria Delgado** at $35 and save — Ashley is **untouched** at $100 and Maria is added as a new
+  person. On the old build Ashley's row became Maria's. No page errors.
+- No document pass: nothing client-facing, and neither document describes this form's internals.
+
 ## A CHANGE ORDER CARRIES HOURS, NOT A PRICE (REBUILT 2026-09-11)
 Anthony, settling the question the section below opened: *"the change order is supposed to trigger
 when we're gonna run fifteen percent over a job, and that's on the transition concierge and property
