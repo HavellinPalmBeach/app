@@ -1,5 +1,91 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ "2 UNSAVED CHANGES — RETRYING…" THAT NEVER CLEARED — THE RETRY WAS CAUSING IT (FIXED 2026-09-11)
+Anthony, from a job site, on a photograph of the chip: **`saveAllJobPlans` and `saveAllJobs`**, both held,
+both reading *"the web app returned a login/HTML page, not data"*. App-only, no redeploy.
+
+- **⚠⚠ THE CLASSIFICATION WAS RIGHT AND THE SENDING WAS WRONG, WHICH IS WHY NOTHING ABOVE IT LOOKED
+  BROKEN.** `_backendErrorKind` calls that interstitial retryable and that is correct — it really does clear.
+  But **`flushPendingWrites` `Promise.all`-ed the whole queue**, firing every held write SIMULTANEOUSLY. Every
+  store write on the server takes `LockService.getScriptLock()`, and **that lock is GLOBAL to the deployment**,
+  so two whole-store writes going out together make one of them wait on a lock *we are holding ourselves* —
+  and a long enough wait is what fails it again. **The retry manufactured the condition it was retrying.**
+- **⚠⚠ IT IS THE EXACT DEFECT THE OUTBOUND COALESCER WAS BUILT TO REMOVE, REINTRODUCED ON THE ONE PATH
+  THAT ONLY RUNS WHEN WRITES ARE ALREADY FAILING.** `_flushOutbox`'s own comment has said *"sending
+  sequentially means nothing ever waits on a lock we are holding ourselves"* since it was written; the queue
+  three functions above it fanned out. **Measured on the real page, not argued** — the outbox's first pass is
+  `start/end/start/end` and the **first retry** is `start saveAllJobs → start saveAllJobPlans (inFlight=2)`.
+- **⚠ SERIALISING INSIDE EACH SENDER IS ONLY HALF THE RULE — the two senders must not overlap EACH OTHER.**
+  They post to the same deployment and take the same lock, so a retry landing mid-batch is the same collision
+  by another route. `flushPendingWrites` stands down on `_outboxSending` and re-checks within one batch window
+  (**not** the 60s backoff, or a queue would stall behind a 250ms condition); `_flushOutbox` stands down on
+  `_flushing`. Both directions driven.
+- **⚠⚠ AND THE CHIP SAID THE SAME REASSURING THING AFTER AN HOUR THAT IT SAID AFTER TWO SECONDS.** Only
+  SOME of what `_backendErrorKind` calls retryable really clears: a dropped connection and Google's transient
+  interstitial are gone within a few attempts, while **a stale `/exec` URL, a deployment whose access is not
+  "Anyone", and a quota wall look identical to them and NEVER clear.** Writes now carry `tries`, and past
+  `SYNC_STUCK_TRIES` (6 — just under three minutes on the existing backoff) the head reads *"N changes not
+  saved — still failing after N attempts"* and the note names those two causes.
+  - **⚠ IT NEVER STOPS RETRYING, deliberately, and a test pins that.** The app cannot tell a wrong URL from
+    a slow network, and giving up on the second would strand a queue that was about to drain. It stops
+    *implying the next attempt will work*; it does not stop working.
+  - **⚠ A DEFINITIVE VERDICT STILL OUTRANKS THE COUNT.** `stale` and `crash` name a specific fix; the count
+    only says "this is not a blip". Both pinned at 40 attempts.
+  - **⚠ THE FAILURE COUNT CARRIES OVER WHEN A NEWER SNAPSHOT SUPERSEDES THE PAYLOAD.** The key is the
+    logical target, so *"saveAllJobs has now failed six times"* stays true when the body underneath is
+    replaced. Resetting it is how a permanently stuck queue on a store somebody is actively editing would
+    look brand new on every save, forever.
+- **⚠⚠ THE THING NOTHING ON SCREEN SAID AT ALL: CLOSING THE TAB DESTROYS THE WORK, NOT JUST THE WRITE.**
+  `_pendingWrites` is memory-only, and `loadJobs` **overwrites the local cache from the sheet** on the next
+  load (*"Sheets is the source of truth — always overwrite local"*) — so an edit that never synced is gone on
+  the reload rather than merely delayed, while the chip read *"retrying…"*. A `beforeunload` guard challenges
+  it, **and only while writes are outstanding**: a prompt on every close is trained past within a day, on an
+  app people close all day.
+  - **⚠ IT IS DELIBERATELY NOT PERSISTED TO localStorage INSTEAD, and a test pins that the queue never
+    touches it.** These are whole-store snapshots — hundreds of KB — against a ~5MB origin quota **shared
+    with the inventory manifest**, and starving the one write that must never fail is a worse defect than
+    this one.
+  - **⚠ A CLIENT-SIDE MERGE IN `loadJobs` WAS CONSIDERED AND REJECTED.** Not clobbering a locally-newer job
+    is exactly how deleted clients came back from a stale laptop on 2026-09-08, which the job ledger exists
+    to stop. The server owns the merge.
+- **4318 committed checks** (`tests/sync-retry.test.js`, 54 new — the first coverage of how the queue SENDS
+  rather than how it classifies). **All eight app changes revert-verified individually** — and the true
+  revert of `flushPendingWrites` to its old `Promise.all` body fails **19**; the chip escalation 7, the
+  outbox interlock and the `tries` increment and the unload guard 3 each, the outbox-side interlock 2, and
+  the carry-over and the mid-sweep guard 1 each.
+  - **⚠ AN IMMEDIATELY-RESOLVING SYNCHRONOUS THENABLE CANNOT MEASURE THIS AND WOULD HAVE PASSED ON THE
+    DEFECT.** The house pattern (`drive-folder.test.js`) resolves inline, so each response runs before the
+    next request starts and **no two requests can overlap in either build** — the very thing under test
+    becomes unobservable. This suite's thenable stays **pending until the test answers it**, so "how many are
+    on the wire" is a real question. A sequential sender starts its next request inside one of those
+    resolutions, which is the behaviour, not a trick.
+  - **⚠ TWO OF MY OWN ASSERTIONS COULD NOT FAIL AT FIRST, AND `_retrySoon`'S ONE-TIMER GUARD IS WHY.** Both
+    arrived with a backoff timer already armed by `_enqueueWrite`, so the guard correctly declined to arm a
+    second and the test counted zero either way. They now null `_retryTimer` first — the state the real timer
+    callback leaves behind — so the check is falsifiable.
+- **⚠ A PRE-EXISTING ASSERTION PINNED A BYTE SEQUENCE AND BROKE CORRECTLY**, the eleventh time this file
+  records it: `_pendingWrites[_writeKey(body, target)] =` moved when the key was hoisted into a local so the
+  previous entry's count could carry over. Restated as the requirement rather than deleted.
+- **Verified end to end in headless Chromium on the real page**, driving the real queue against a backend
+  that answers exactly as Google does when it serves a login page:
+
+  | | old build | new build |
+  |---|---|---|
+  | peak concurrent POSTs on retry | **2** (one per queued write) | **1** |
+  | peak on the recovery sweep | **2** | **1** |
+  | attempts recorded per write | **null** — never counted | 2 |
+  | chip after six failures | *"2 unsaved changes — retrying…"* | *"2 changes not saved — still failing after 6 attempts"* |
+  | closing the tab over an unsent queue | **closes silently** | challenged |
+
+  Once the backend answers normally the queue drains one at a time and the chip goes. Overflow **0** at 1440
+  and 390px, no page errors.
+- Manual **§2** (a note under the existing chip note); playbook **four** symptom→cause rows — the chip
+  retrying, the chip stuck, the browser asking whether you really want to leave, **and the standing
+  *"photos fail on site → the client has no Drive folder"* row this file has been asking for since
+  2026-09-11.** Both `.md` copies hand-edited and **13 claims parity-checked**; tag balance verified on both
+  HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
+  1440/390 with **0 overflow** and **all 41 tables full-width under `print`**.
+
 ## ⚠⚠ "WE NEED APPRAISAL IN THERE TOO" — AND IT WAS ALREADY THERE, UNREACHABLE (BUILT 2026-09-11)
 Anthony, from a job site: *"when we're doing the room by room sorting and taking pictures for an
 estate client, the only disposition avenues are auction, consign, donate, hold, junk, keep, or sell.
@@ -223,9 +309,11 @@ App-only, no redeploy. **He was right about the causal chain and it points one s
     plus a one-press repair door is the safe shape: it recovers the client without ever re-sending a
     write on its own.
 - No document pass: nothing client-facing changed wording, and neither the manual nor the playbook
-  describes when the Drive folder is created. **⚠ The playbook's symptom→cause table should gain a row
+  describes when the Drive folder is created. ~~**⚠ The playbook's symptom→cause table should gain a row
   for *"photos fail on site"* → *the client has no Drive folder; open the client and press Create
-  Drive folder* on the next documentation pass.**
+  Drive folder* on the next documentation pass.**~~ **DONE 2026-09-11**, in the sync-queue pass at the top
+  of this file. *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
+  outstanding work.*
 
 ## THE DASHBOARD HEADER OFFERED FIVE BUTTONS THAT WERE ALREADY ON THE TIMELINE (FIXED 2026-09-11)
 Anthony, reading the shipped build: *"i kind of feel like the functionality on the top of the client
@@ -410,15 +498,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/trusting-allen-iadbqe`
-  (was `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/festive-noether-ggr0fn`
+  (was `claude/trusting-allen-iadbqe`, then `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/trusting-allen-iadbqe:main`
+  `git push origin claude/festive-noether-ggr0fn:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

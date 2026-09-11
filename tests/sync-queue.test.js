@@ -63,8 +63,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body, 'if (!stale) _scheduleRetry();',
         'a permanent error does NOT schedule another attempt');
     // It must still be queued — the work is not lost, it is waiting for a redeploy.
-    has(body, '_pendingWrites[_writeKey(body, target)] =',
-        'but it stays in the queue so a later redeploy picks it up');
+    // ⚠ This used to pin the exact expression `_pendingWrites[_writeKey(body, target)] =`
+    // and broke on a true change (the key was hoisted into a local so the previous
+    // entry's failure count could be carried over). State the requirement instead.
+    has(body, 'var key = _writeKey(body, target);', 'it keys off the logical target');
+    has(body, '_pendingWrites[key] = {',
+        'and stays in the queue so a later redeploy picks it up');
 
     // A bare _enqueueWrite call would default fromServer to undefined — falsy, so it
     // fails safe (retryable) — but leaving one is how the misdiagnosis creeps back.
@@ -108,7 +112,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const scheduled = [];
     const ctx = sandbox({
       fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_enqueueWrite', '_pendingChipCopy'],
-      vars: ['_pendingWrites'],
+      vars: ['_pendingWrites', 'SYNC_STUCK_TRIES'],
       stubs: {
         showSyncBadge() {},
         updatePendingIndicator() {},
