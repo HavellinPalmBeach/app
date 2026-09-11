@@ -111,12 +111,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ AND printInvoice MUST RE-COMPUTE. The globals are whatever the last render left
     // behind, for whatever job and stage that was — so a final blocked for no hours on
     // one job could be printed the moment another job's deposit invoice had cleared them.
+    // ⚠ SLICE 5 MOVED THE RE-COMPUTATION, IT DID NOT DROP IT — and moving it is what
+    // makes it cover every verb rather than only Print. `printInvoice` is finally the
+    // one-line shim Slice 3 claimed it already was (CLAUDE.md says "all three are
+    // five-line wrappers on docAction now"; it was two plus the packet), and the gate
+    // lives in the registry's blocker, which `docAction` runs before building anything.
     const p = noComments(fn('printInvoice'));
-    has(p, 'invoiceHtml(_pj, currentInvStage)', 'printInvoice computes the gate fresh');
-    has(p, '_pDoc.blocked', 'and reads the blocked verdict off that');
-    has(p, '_pDoc.requiresApproval', 'and the approval verdict too');
-    lacks(p, 'if (invBlocked)', 'never off the global the last render left behind');
-    lacks(p, 'if (invRequiresApproval', 'nor that one');
+    has(p, "docAction(currentInvJobId, 'invoice', 'print'", 'printInvoice routes through the one action');
+    has(p, 'stage: currentInvStage', 'carrying its stage, so a midpoint prints as a midpoint');
+    lacks(p, 'window.print()', 'and hand-rolls no print sequence');
+    lacks(p, 'document.title =', 'nor names the client’s PDF after the browser tab');
+    // The gate itself, where it moved to — computed fresh from the job and stage, never
+    // read off the globals the last render left behind.
+    const blk = noComments(src.slice(src.indexOf('  invoice: {'), src.indexOf('var DOC_STAGE_WORD')));
+    has(blk, 'var d = invoiceHtml(spec.job, spec.stage);', 'the blocker computes the verdict fresh');
+    has(blk, 'if (d.blocked)', 'and reads the blocked verdict off that');
+    has(blk, 'if (d.requiresApproval', 'and the approval verdict too');
+    lacks(blk, 'if (invBlocked)', 'never off the global the last render left behind');
+    lacks(blk, 'if (invRequiresApproval', 'nor that one');
+    has(noComments(fn('docAction')), 'var blk = spec.cfg.blocker(spec);', 'and docAction runs it');
+    ok(noComments(fn('docAction')).indexOf('spec.cfg.blocker(spec)') <
+       noComments(fn('docAction')).indexOf("verb === 'print'"),
+       'before any verb acts — so print, view, send and file all read one gate');
 
     // The shim may mirror them for its own controls; nothing that DECIDES may read them.
     const rs = noComments(fn('renderInvoice'));

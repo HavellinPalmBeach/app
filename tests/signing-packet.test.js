@@ -7,6 +7,7 @@
 const { sandbox, fn, source } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
+  const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
   const ctx = sandbox({ fns: ['buildSigningPacketHtml', 'approvedEstimateFor'] });
   const src = source();
 
@@ -65,9 +66,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(print, 'window.print()', 'and does not call window.print itself');
     lacks(print, 'document.title =', 'nor juggles the page title by hand');
     has(fn('docNames'), 'Havellin Services Agreement', 'the PDF is named for the client, not keyed');
-    const exp = fn('exportSigningPacketToDrive');
-    has(exp, "resolveSubfolderId(job, 'Agreement'", 'filed to the Agreement subfolder beside the agreement');
-    has(exp, "'_Signing_Packet.html'", 'under the packet name');
+    // ⚠ SLICE 5: it files through `docFile` like every other document. The packet IS the
+    // agreement kind's document (Slice 3), so the registry's `driveSub` puts it in the
+    // Agreement folder and `docNames` names it — one subfolder rule, one naming rule.
+    const exp = noComments(fn('exportSigningPacketToDrive'));
+    has(exp, "docAction(jobId, 'agreement', 'file'", 'filed through the one action');
+    has(exp, '{ auto: true }', 'and silently — a filing nobody pressed reports only failures');
+    has(src, "driveSub: 'Agreement',", 'the registry puts the agreement kind in that folder');
+    lacks(exp, 'uploadHtmlToDrive', 'it uploads nothing itself');
+    lacks(exp, 'signingPacketHtml', 'nor builds the document a second way');
+    // ⚠ THE ONCE-PER-APPROVAL GUARD SURVIVES, AND IT IS NOT REDUNDANT. A redraw must not
+    // re-file, but a NEW approval carrying a correction must — which is why it keys on the
+    // approval stamp rather than on "already done this session".
+    has(exp, '_packetExported[jobId] === _agrExportKey(job)', 'a redraw does not re-file');
+    has(exp, '_packetExported[jobId] = _agrExportKey(job)', 'but a fresh approval does');
+    ok(exp.indexOf('_packetExported[jobId] =') < exp.indexOf('docAction('),
+      'and the guard is claimed BEFORE the async filing, or two calls race past it');
     // ⚠ It used to fire inside the agreement's PIN handler. The PIN is gone, so the
     // filing moved to `ensureAgreementApproved` — the one place the approval is stamped.
     has(fn('ensureAgreementApproved'), 'exportSigningPacketToDrive(jobId)', 'and it fires when the approval is stamped');

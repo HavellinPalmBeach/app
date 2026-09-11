@@ -30,7 +30,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const client = fn('saveFolderEstimate');
 
     has(internal, 'estimateDocNames(job).driveInternal', 'the worksheet asks for the internal name');
-    has(client, 'estimateDocNames(job).driveClient', 'the client copy asks for the client name');
+    // ⚠ SLICE 5: the client copy files through `docFile`, which names from `docNames`.
+    // The two names are BYTE-IDENTICAL — verified below, not assumed — which matters
+    // because `uploadHtmlToDrive` overwrites by filename: a changed name would orphan
+    // every estimate already in Drive rather than replacing it.
+    has(client, "docAction(jobId, 'estimate', 'file'", 'the client copy files through the one action');
+    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['DOC_STAGE_WORD'] });
+    const j = { hvlId: 'HVL-0007', addr: '69 Beach Blvd, Palm Beach FL', name: 'Butler' };
+    eq(nm.docNames(j, 'estimate', {}).drive, nm.estimateDocNames(j).driveClient,
+      'and lands on the same filename, so a re-file replaces rather than accumulates');
+    // ⚠ The INTERNAL worksheet is not one of the five client documents and keeps its own
+    // path — it is the working paper (room scores, per-room dollars, walkthrough notes)
+    // and carries a red "not a client document" line on its face.
+    ok(nm.docNames(j, 'estimate', {}).drive !== nm.estimateDocNames(j).driveInternal,
+      'the worksheet still files under a different name, which is what stops the race');
 
     // The bug in its exact original shape: both built the name inline and identically.
     const collide = (src.match(/\(job\.hvlId\|\|'EST'\)\+'_Estimate\.html'/g) || []).length;

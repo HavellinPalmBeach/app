@@ -40,7 +40,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
       'depositTargetFor', 'agreementReady',
-      'docSentAt', 'docDraftedAt', 'docKeyFor', '_jtSendAction', '_jtDocViews', '_jtDraftLink'],
+      'docSentAt', 'docDraftedAt', 'docKeyFor', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'],
     vars: ['JT_SHORT'],
     stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
   });

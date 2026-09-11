@@ -70,6 +70,90 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## SLICE 5 — ONE WAY TO FILE ANY CLIENT DOCUMENT TO DRIVE (2026-09-11)
+The last verb: `docAction(jobId, kind, 'file', opt)`. App-only, no redeploy.
+
+- **⚠⚠ TWO OF THE FOUR WRITERS SCRAPED A RENDERED PANEL, AND IT IS THE WORST BLAST RADIUS IN
+  THE APP — REPRODUCED IN A BROWSER, NOT ARGUED.** `saveFolderEstimate` read
+  `#ce-page-content` and `exportAgreementToDrive` read `#agr-page-content`: whatever those
+  TABS happened to be showing. Fired from the drilldown, which never opens either, that is
+  the previously-loaded client's document filed into THIS client's estate folder, under this
+  client's job id and filename. **Driven on the pre-slice build with two jobs: filing
+  Butler's estimate and agreement while the tabs held Ellsworth wrote ELLSWORTH'S DOCUMENTS
+  into `sub-est-1` and `sub-agr-1` as `HVL-0001 - Havellin Service Estimate.html` and
+  `HVL-0001_Agreement.html`.** Nothing downstream can notice: the upload succeeds and the
+  badge reads *saved to Drive ✓*. CLAUDE.md flagged this on the agreement on 2026-09-10 and
+  it stayed live until now. The same run on the new build files Butler both times.
+- **⚠ AND THE INVOICE WAS FILED BY EXACTLY ONE BUTTON ON ONE TAB.** `saveInvoiceToDrive` was
+  reachable from `printInvoice` and nowhere else, so an invoice **sent** from the rail was
+  retained nowhere at all — the precise failure that function's own comment says it exists to
+  prevent: *"the firm could not produce what it had billed."* **Sending files it now**, with
+  `auto:true` so a Drive error never buries the notice the person is actually waiting on.
+- **⚠ `printInvoice` WAS THE ONE SLICE 3 MISSED.** That entry claims *"all three are five-line
+  wrappers on `docAction` now"* — it was two plus the packet. So the defect Slice 3 records
+  fixing was still live here: the client's invoice PDF was named `<Surname>-<hvlId>-Final`, a
+  database key on a document going to a client, and the panel-hiding print sequence was
+  hand-rolled a fourth time. It is one line now; verified in a browser that the print title
+  reads *Havellin Deposit Invoice - 69 Beach Blvd - Sep 11 2026*.
+- **⚠ THE FILENAME MUST NOT MOVE, AND THE ESTIMATE'S DOES NOT — CHECKED, NOT ASSUMED.**
+  `uploadHtmlToDrive` overwrites BY FILENAME, which is why `docNames`' Drive name is undated
+  while the client name is dated. `docNames(job,'estimate').drive` is **byte-identical** to
+  `estimateDocNames(job).driveClient`, so a re-file replaces. The agreement and invoice names
+  DO change (`HVL-0007_Invoice_Deposit.html` → `HVL-0007 - Havellin Invoice - Deposit.html`);
+  prelaunch, so there is nothing to orphan. A test asserts no Drive name carries a date.
+- **⚠ THE THREE INVOICES ARE THREE FILES AND THREE RECORDS.** Keying on kind alone would have
+  each stage overwrite the last, leaving one invoice in the folder for a job that issued
+  three — the same collision `printInvoice` already had for a different reason.
+- **`docState[key].filedAt/.filedUrl` — "is this in Drive?" is answerable for all five now.**
+  `estimateDriveAt` was built on 2026-08-03 because *"there was no record anywhere that an
+  estimate had ever been filed"*; the agreement, the packet and all three invoices still had
+  none. **⚠ The estimate keeps its legacy pair as a mirror** — `updateApprovalUI` hides the
+  retry button on `estimateDriveAt` and the banner links `estimateDriveUrl`, so writing
+  `docState` alone would leave a filed estimate showing its retry forever.
+- **The rail answers it.** A filed document offers its Drive copy; **a document that was SENT
+  and never filed offers the retry**, which is the case that matters — it is the one the firm
+  cannot produce later. An unsent draft offers neither: it has not gone anywhere yet.
+- **⚠ AN UNRESOLVED SUBFOLDER FALLS BACK TO THE JOB ROOT.** `saveInvoiceToDrive` already did
+  this and the other three just `return`ed, so on an older job predating a subfolder the
+  estimate, agreement and packet were **silently never retained**. A document filed a level
+  up is findable; one never written is not.
+
+### ⚠⚠ The commit hook now re-enters itself, and TWO guards bound it
+- `exportSigningPacketToDrive` files through `docAction(…,'file')`; `docAction` runs
+  `DOC_ACTIONS.agreement.commit`, which **is** `ensureAgreementApproved` — the function that
+  called the filer. The stamp calls the filer and the filer calls the stamp.
+- **⚠ THE FIRST WRITE-UP OF THIS NAMED THE WRONG GUARD, and reverting each in turn is what
+  corrected it.** Dropping `ensureAgreementApproved`'s `if (job.agrApproved) return ''` alone
+  leaves the loop bounded and the suite **green**; dropping `exportSigningPacketToDrive`'s
+  `_packetExported` stamp guard alone turns it **red**; dropping **both** runs away. So the
+  packet guard is load-bearing and the early return is the second line of defence. Worth
+  knowing before anyone removes either as redundant.
+- **⚠ AND THE TEST THAT GUARDS IT COULD NOT FAIL AT FIRST.** It asserted that
+  `job.agrApproved = true` appears at a lower SOURCE INDEX than the filing — and wrapping the
+  assignment in a `setTimeout` leaves that index exactly where it was while destroying the
+  ordering. Green. **A source index is not an ordering.** It drives the real loop in the
+  sandbox now, with a synchronous `setTimeout` stub so an unbounded version blows the stack
+  in the test rather than in somebody's browser.
+
+- **3100 committed checks** (`tests/doc-file.test.js`, 95 new). **All 19 changes
+  revert-verified individually.** ⚠ Two came back green on the first pass and both were the
+  same gap — every check drove a PIECE (`docRecordFiled` alone, `docNames` alone) and nothing
+  drove the WIRING, so dropping `docFile`'s call to `docRecordFiled` and dropping the `'file'`
+  verb out of `docAction` were each invisible. There is a group that drives the real
+  `docAction` against a fake Drive now.
+- **⚠ A FALSE ALARM WORTH RECORDING: the `@media print` count went 3 → 2 on the diff check.**
+  The third was a COMMENT inside the deleted `printInvoice` body, not a CSS block. Both real
+  print blocks are intact and the rule count is unchanged at 471. The check is still the right
+  one to run — it is the 368-line-deletion tripwire — but count the stylesheet, not the file.
+- **⚠ OPEN, FOR ANTHONY: the bare agreement AND the packet are both retained**, in the same
+  Agreement folder. The packet is what the client signs; the agreement alone is the terms
+  without Exhibit A. Keeping both means a folder holding a document the client did not sign,
+  which is one way to send the wrong one. Kept as-is because removing a retained document is a
+  records decision, not a refactor.
+- ⚠️ **`manual.html` / `concierge-guide.html` still need the Slice 4 + 5 pass** — how every
+  client document is sent, the confirming tap, the retired Documents card, the invoice
+  documents on the timeline, and now where each document is filed and how to tell.
+
 ## SLICE 4 — ONE WAY TO SEND ANY CLIENT DOCUMENT (2026-09-11)
 *"when we are sending documents to a client, whether it's the estimate, the agreement, or an
 invoice, it should all follow the same process and be one button to generate the HTML email as

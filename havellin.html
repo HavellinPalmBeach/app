@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 9:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 9:13pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11394,12 +11394,98 @@ function docSend(spec) {
               : ' — a plain email carries NO attachment, so attach a printed copy before sending'))
         + '. ' + (needsTap ? 'Read it, send it, then tap “I’ve sent it”.' : '');
       docRecordSent(spec, { provider: provider, draftUrl: draftUrl || '', pdfOk: attached });
+      // ⚠ SENDING FILES IT. A document that has gone to a client is one the firm must be
+      // able to produce afterwards, and until Slice 5 only the estimate managed that: the
+      // agreement and packet filed on approval, and the INVOICE filed nowhere unless
+      // somebody happened to press Print on the Invoices tab. `saveInvoiceToDrive`'s own
+      // comment named the failure — *"the firm could not produce what it had billed"* —
+      // while being reachable from exactly one button.
+      //
+      // ⚠ `auto: true`, SO A FAILED FILING NEVER BURIES THE THING THAT MATTERED. The
+      // notice already says the draft was created; a Drive error printed over it would
+      // replace "your draft is ready" with a problem about a copy nobody is waiting on.
+      // It still shows in the sync badge, and the rail says which documents are filed.
+      docAction(spec.job.id, spec.kind, 'file',
+                spec.stage ? { stage: spec.stage, auto: true } : { auto: true });
       _docNotice(attached ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
       showSyncBadge(provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
     });
   });
   return true;
+}
+
+// ─── FILING TO DRIVE ─────────────────────────────────────────────────────────
+// SLICE 5. One filing path for all five documents, replacing four separate writers that
+// disagreed about where the document came from, what it is called and whether the filing
+// is recorded anywhere.
+//
+// ⚠⚠ TWO OF THE FOUR SCRAPED A RENDERED PANEL, AND THAT IS THE WORST BLAST RADIUS IN THE
+// APP. `saveFolderEstimate` read `#ce-page-content` and `exportAgreementToDrive` read
+// `#agr-page-content` — whatever those TABS happened to be showing. Fired from the
+// drilldown, which never opens them, that is the PREVIOUS client's document filed into
+// THIS client's estate folder, under this client's job id. Nothing downstream can notice:
+// the upload succeeds, the badge says "saved to Drive ✓", and counsel opens a folder
+// holding somebody else's agreement. CLAUDE.md already flagged this on the agreement;
+// `docFile` builds from the spec, like every other verb since Slice 2.
+//
+// ⚠ AND THE INVOICE WAS FILED BY EXACTLY ONE BUTTON ON ONE TAB. `saveInvoiceToDrive` was
+// called from `printInvoice` and nowhere else — so an invoice SENT from the rail was
+// retained nowhere at all, which is the precise failure that function's own comment says
+// it exists to prevent: *"the firm could not produce what it had billed."*
+function docFile(spec, opt) {
+  var html = spec.cfg.html(spec);
+  if (!html) { _docNotice('warn', 'There is nothing to file on this document yet.', spec.job.id); return false; }
+  var auto = !!(opt && opt.auto);   // a filing nobody pressed reports only its failures
+  var doc = _exportDoc(spec.cfg.label + ' – ' + (spec.job.hvlId || ''), html, spec.cfg.pdfCss || '');
+
+  resolveSubfolderId(spec.job, spec.cfg.driveSub, function (folderId) {
+    // ⚠ FALL BACK TO THE JOB ROOT RATHER THAN DROPPING THE DOCUMENT. Older jobs predate
+    // some of these subfolders, and a silently unretained client document is worse than
+    // one filed a level up where somebody can find it. `saveInvoiceToDrive` already did
+    // this; the other three just returned.
+    var target = folderId || _jobRootFolderId(spec.job);
+    if (!target) {
+      if (!auto) _docNotice('warn', spec.job.driveFolder
+        ? 'Could not find the ' + spec.cfg.driveSub + ' folder in Drive for this job.'
+        : 'This job has no Drive folder yet — create it from the Client Dashboard first.', spec.job.id);
+      return;
+    }
+    uploadHtmlToDrive(target, spec.names.drive, doc, function (ok, fileUrl, meta) {
+      if (ok) docRecordFiled(spec, fileUrl);
+      var dropped = (meta && meta.duplicatesRemoved) || 0;
+      if (ok) showSyncBadge(spec.cfg.label + ' filed to Drive ✓'
+        + (dropped ? ' — ' + dropped + ' duplicate' + (dropped === 1 ? '' : 's') + ' cleared' : ''));
+      else if (!auto) _docNotice('err', 'Could not file the ' + spec.cfg.label.toLowerCase() + ' to Drive.', spec.job.id);
+    });
+  });
+  return true;
+}
+
+// ⚠ A FILING NOBODY CAN SEE IS A FILING NOBODY TRUSTS. `job.estimateDriveAt` was built on
+// 2026-08-03 for exactly this — *"there was no record anywhere that an estimate had ever
+// been filed"* — and the agreement, the packet and all three invoices still had none, so
+// "is this in Drive?" was unanswerable for four of the five. It rides `docState` beside
+// the send record, keyed the same way, so an invoice's filing is its OWN stage's.
+function docRecordFiled(spec, fileUrl) {
+  var st = docState(spec.job, spec.key);
+  st.filedAt = new Date().toISOString();
+  st.filedUrl = fileUrl || st.filedUrl || '';
+  // ⚠ THE ESTIMATE KEEPS ITS LEGACY PAIR: `updateApprovalUI` hides the retry button on
+  // `estimateDriveAt` and the approval banner links `estimateDriveUrl`. Writing docState
+  // alone would leave that button showing forever on a filed estimate.
+  if (spec.kind === 'estimate') {
+    spec.job.estimateDriveAt = st.filedAt;
+    spec.job.estimateDriveUrl = st.filedUrl;
+  }
+  saveJobs(); syncJobToSheets(spec.job);
+  if (typeof updateApprovalUI === 'function') updateApprovalUI();
+}
+
+function docFiledAt(job, kind, stage) {
+  if (!job || !job.docState) return '';
+  var st = job.docState[docKeyFor(kind, { stage: stage })];
+  return (st && st.filedAt) || '';
 }
 
 // ⚠ THE RECORD IS WRITTEN BEFORE ANYTHING ELSE CAN FAIL, and it writes `draftedAt`, never
@@ -11460,6 +11546,14 @@ function openDocDraft(jobId, docKey) {
   var st = (job && job.docState && job.docState[docKey]) || {};
   if (!st.draftUrl) { dashNotice('warn', 'No draft link was recorded for this document.'); _dashRedraw(jobId); return; }
   try { window.open(st.draftUrl, '_blank'); } catch (e) {}
+}
+
+// The copy in the client's Drive folder — the one counsel may already hold a link to.
+function openDocFiled(jobId, docKey) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var st = (job && job.docState && job.docState[docKey]) || {};
+  if (!st.filedUrl) { dashNotice('warn', 'No Drive link was recorded for this document.'); _dashRedraw(jobId); return; }
+  try { window.open(st.filedUrl, '_blank'); } catch (e) {}
 }
 
 function _dashSendState(docKey, label) {
@@ -11656,6 +11750,7 @@ function docAction(jobId, kind, verb, opt) {
   if (verb === 'view') return openDocViewer(spec, html);
   if (verb === 'print') return _printDocument('<div class="ce-page">' + html + '</div>', spec.names.printTitle);
   if (verb === 'send') return docSend(spec);
+  if (verb === 'file') return docFile(spec, opt);
   _docNotice('warn', 'Unknown document action.', jobId);
   return false;
 }
@@ -11754,6 +11849,27 @@ function _jtDocViews(id, kind, stage, what) {
   ];
 }
 
+// ⚠ "IS THIS IN DRIVE?" WAS UNANSWERABLE FOR FOUR OF THE FIVE DOCUMENTS. `estimateDriveAt`
+// was built on 2026-08-03 precisely because *"there was no record anywhere that an
+// estimate had ever been filed"* — and the agreement, the packet and all three invoices
+// still had none. `docState[key].filedAt` is that record for every one of them, so the
+// rail can answer it and offer the copy counsel may already hold a link to.
+//
+// ⚠ AND A DOCUMENT THAT WENT OUT AND WAS NOT FILED IS THE CASE THAT MATTERS. It is the
+// one the firm cannot produce later, so it gets a button rather than silence.
+function _jtDriveLink(id, job, kind, stage, what) {
+  var key = docKeyFor(kind, stage ? { stage: stage } : null);
+  var st = (job.docState && job.docState[key]) || {};
+  var opt = stage ? (",{stage:'" + stage + "'}") : '';
+  if (st.filedAt && st.filedUrl) {
+    return [{ label: '&#128193; Filed copy', call: "openDocFiled(" + id + ",'" + key + "')" }];
+  }
+  if (st.sentAt && !st.filedAt) {
+    return [{ label: '&#128193; File to Drive', call: 'docAction(' + id + ",'" + kind + "','file'" + opt + ')' }];
+  }
+  return [];
+}
+
 // Offered only while a draft is outstanding — once the send is confirmed the link is
 // history, and a button reopening a sent draft invites sending it twice.
 function _jtDraftLink(id, job, kind, stage, what) {
@@ -11802,7 +11918,7 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'estimate_sent':
       if (live && estApproved) out.primary = _jtSendAction(id, job, 'estimate', '', 'estimate');
-      if (estApproved) out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'estimate', '', 'estimate'), _jtDocViews(id, 'estimate', '', 'estimate'));
+      if (estApproved) out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'estimate', '', 'estimate'), _jtDocViews(id, 'estimate', '', 'estimate'), _jtDriveLink(id, job, 'estimate', ''));
       // A discount is a re-approval, so it is only offered on an approved estimate the
       // client has not yet signed against.
       if (estApproved && !job.agrSigned) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
@@ -11817,7 +11933,7 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'agreement_sent':
       if (live) out.primary = _jtSendAction(id, job, 'agreement', '', 'signing packet');
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'agreement', '', 'packet'), _jtDocViews(id, 'agreement', '', 'packet'));
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'agreement', '', 'packet'), _jtDocViews(id, 'agreement', '', 'packet'), _jtDriveLink(id, job, 'agreement', ''));
       break;
 
     case 'agreement_signed':
@@ -11831,7 +11947,7 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'deposit_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'deposit', 'deposit invoice');
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'deposit', 'deposit invoice'), _jtDocViews(id, 'invoice', 'deposit', 'deposit invoice'));
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'deposit', 'deposit invoice'), _jtDocViews(id, 'invoice', 'deposit', 'deposit invoice'), _jtDriveLink(id, job, 'invoice', 'deposit'));
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -11850,7 +11966,7 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'midpoint_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'midpoint', 'midpoint invoice'), _jtDocViews(id, 'invoice', 'midpoint', 'midpoint invoice'));
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'midpoint', 'midpoint invoice'), _jtDocViews(id, 'invoice', 'midpoint', 'midpoint invoice'), _jtDriveLink(id, job, 'invoice', 'midpoint'));
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -11866,7 +11982,7 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'final_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'final', 'final invoice');
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'final', 'final invoice'), _jtDocViews(id, 'invoice', 'final', 'final invoice'));
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'final', 'final invoice'), _jtDocViews(id, 'invoice', 'final', 'final invoice'), _jtDriveLink(id, job, 'invoice', 'final'));
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -19512,46 +19628,13 @@ function checkInvPin() {
   }
 }
 
-function printInvoice() {
-  // ⚠ THE GATE IS RE-COMPUTED, NOT READ OFF THE GLOBALS. `invBlocked` and
-  // `invRequiresApproval` are whatever the LAST `renderInvoice()` left behind — for
-  // whatever job and whatever stage that was. Printing while trusting them is printing
-  // against another document's verdict: a final blocked for no hours on one job could be
-  // printed the moment a different job's deposit invoice had rendered and cleared them.
-  var _pj = jobs.find(function(j){ return j.id === currentInvJobId; });
-  var _pDoc = invoiceHtml(_pj, currentInvStage);
-  if (!_pDoc) { alert('Select a job and stage first.'); return; }
-  if (_pDoc.blocked) { alert('No hours have been logged for this job, so the final invoice cannot be issued. Log the hours worked on the Job Plan tab first.'); return; }
-  if (_pDoc.requiresApproval && !invApproved) { alert('This final invoice is outside the ±15% tolerance and needs manager approval before printing.'); return; }
-  // @media print hides every .panel and shows only #print-target, so the invoice has
-  // to be rendered into #print-target (same approach as the estimate/agreement) —
-  // otherwise the printout is a blank page.
-  var job = jobs.find(function(j){ return j.id === currentInvJobId; }) || {};
-  var stageWord = currentInvStage === 'deposit' ? 'Deposit' : (currentInvStage === 'midpoint' ? 'Midpoint' : 'Final');
-  var filename = (job.name ? job.name.split(' ').pop() : 'Client') + '-' + (job.hvlId || 'Invoice') + '-' + stageWord;
-  var originalTitle = document.title;
-  document.title = filename;
-  var content = document.getElementById('inv-page-content').innerHTML;
-  // File a copy to Drive. Printing is the moment an invoice is actually issued, and it
-  // happens at every stage — deposit and midpoint invoices need no approval, so hanging
-  // retention off approval would have retained only some finals. Until now no invoice
-  // was retained anywhere, in any form: the firm could not produce what it had billed.
-  saveInvoiceToDrive(job, currentInvStage, content);
-  var printTarget = document.getElementById('print-target');
-  printTarget.innerHTML = '<div class="ce-page">' + content + '</div>';
-  var allPanels = document.querySelectorAll('.panel');
-  allPanels.forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
-  printTarget.style.display = 'block';
-  setTimeout(function(){
-    window.print();
-    setTimeout(function(){
-      printTarget.style.display = 'none';
-      printTarget.innerHTML = '';
-      allPanels.forEach(function(p){ if(p.dataset.wasActive==='1') p.classList.add('active'); });
-      document.title = originalTitle;
-    }, 500);
-  }, 300);
-}
+// ⚠ SLICE 3 CONVERTED THE OTHER THREE PRINTERS AND MISSED THIS ONE — CLAUDE.md says
+// "all three are five-line wrappers on docAction now" and it was two plus the packet. So
+// the defect Slice 3 records fixing was still live here: the client's invoice PDF was
+// named `<Surname>-<hvlId>-Final`, a database key on a document going to a client, and the
+// panel-hiding print sequence was hand-rolled a fourth time. The gate re-computation
+// (Slice 2) moved into the registry's blocker, where every verb reads it.
+function printInvoice() { docAction(currentInvJobId, 'invoice', 'print', { stage: currentInvStage }); }
 
 // ─── LOG PERSISTENCE ──────────────────────────────────────────────────────────
 function saveLogData() {
@@ -23541,55 +23624,21 @@ function _exportDoc(title, innerHtml, extraCss) {
 // auto=true when called on approval rather than from the button (see checkPin). An
 // automatic run must not hijack the button's label or shout failures at someone who
 // did not ask for it — but it files the same document to the same place.
+// ⚠ RETIRED TO A SHIM. It read `#ce-page-content` — whatever the Client Estimate TAB was
+// showing — so fired from the drilldown, which never opens that tab, it filed the
+// previously-loaded client's estimate into THIS client's estate folder. The upload
+// succeeds either way and the badge says "saved to Drive ✓", so nothing downstream can
+// notice. `docFile` builds from the spec.
 function saveFolderEstimate(auto) {
-  if (!currentEstimate || !currentEstimate.jobId) {
-    if (!auto) showSyncBadge('No estimate loaded', true);
-    return;
-  }
+  var jobId = currentEstimate && currentEstimate.jobId;
+  if (!jobId) { if (!auto) showSyncBadge('No estimate loaded', true); return; }
   var btn = auto ? null : document.getElementById('btn-drive-est');
-  function _reset(){ if (btn) { btn.disabled = false; _paintDriveEstBtn(); } }
   if (btn) { btn.disabled = true; btn.textContent = '↻ Saving…'; }
-  var jobId = currentEstimate.jobId;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) { if (!auto) showSyncBadge('Job not found', true); _reset(); return; }
-  if (!auto) showSyncBadge('Locating Drive folder…');
-  resolveSubfolderId(job, 'Estimates', function(folderId) {
-    if (!folderId) {
-      var found = job.driveSubfolders ? Object.keys(job.driveSubfolders) : [];
-      console.warn('[Drive] Estimate subfolder unresolved. driveFolder=', job.driveFolder, ' subfolders=', job.driveSubfolders);
-      if (!auto) showSyncBadge(!job.driveFolder
-        ? 'No Drive folder — create it from Client Dashboard first'
-        : (found.length
-            ? 'No “Estimate” subfolder in Drive (found: ' + found.join(', ') + ')'
-            : 'Drive returned no subfolders for this job'), true);
-      _reset();
-      return;
-    }
-    var el = document.getElementById('ce-page-content');
-    if (!el) { _reset(); return; }
-    var html = _exportDoc('Estimate – '+(job.hvlId||''), el.innerHTML, '');
-    uploadHtmlToDrive(folderId, estimateDocNames(job).driveClient, html, function(ok, fileUrl, meta) {
-      // Record the filing on the JOB, the way markEstimateSent records delivery.
-      // The 4-second toast was the only acknowledgement this had, and a toast in the
-      // corner of a long scrolled page is missed by anyone watching the button they
-      // just pressed — and says nothing at all a day later, when the question is
-      // "was this estimate ever filed?". Not on the estimate record: saveEstimateState
-      // rebuilds that object from scratch, so a stamp parked there is dropped on the
-      // next save.
-      if (ok) {
-        job.estimateDriveAt = new Date().toISOString();
-        job.estimateDriveUrl = fileUrl || job.estimateDriveUrl || '';
-        saveJobs();
-        syncJobToSheets(job);
-      }
-      _reset();
-      if (typeof updateApprovalUI === 'function') updateApprovalUI();
-      var dropped = (meta && meta.duplicatesRemoved) || 0;
-      if (ok) showSyncBadge((auto ? 'Client estimate filed to Drive ✓' : 'Estimate saved to Drive ✓')
-        + (dropped ? ' — ' + dropped + ' duplicate' + (dropped === 1 ? '' : 's') + ' cleared' : ''));
-      else if (!auto) showSyncBadge('Drive save failed', true);
-    });
-  });
+  // The button repaints from the STAMP, so the redraw has to follow the write rather than
+  // the call. `docRecordFiled` calls `updateApprovalUI`, which hides it outright once
+  // filed; this covers the failure path, where the button has to come back.
+  setTimeout(function(){ if (btn) { btn.disabled = false; _paintDriveEstBtn(); } }, 2500);
+  return docAction(jobId, 'estimate', 'file', { auto: !!auto });
 }
 
 // The button is the RETRY for a filing that did not happen — updateApprovalUI hides it
@@ -23625,22 +23674,6 @@ function _driveStampText(iso) {
 // their own file rather than overwriting one another — the Apps Script overwrites by
 // filename, so a reprint of the same stage replaces its own copy in place, which is what
 // you want when a figure is corrected and reissued.
-function saveInvoiceToDrive(job, stage, innerHtml) {
-  if (!job || !job.id || !innerHtml) return;
-  var stageWord = stage === 'deposit' ? 'Deposit' : (stage === 'midpoint' ? 'Midpoint' : 'Final');
-  var html = _exportDoc('Invoice – ' + (job.hvlId || '') + ' – ' + stageWord, innerHtml,
-                        '.ce-page{max-width:800px;margin:0 auto;}');
-  resolveSubfolderId(job, 'Invoice', function(folderId) {
-    // Fall back to the job's root folder rather than dropping the document. Older jobs
-    // predate the Invoice subfolder, and a silently-unretained invoice is the exact
-    // failure this exists to fix.
-    var target = folderId || _jobRootFolderId(job);
-    if (!target) return;
-    uploadHtmlToDrive(target, (job.hvlId || 'INV') + '_Invoice_' + stageWord + '.html', html,
-      function(ok){ if (ok) showSyncBadge(stageWord + ' invoice filed to Drive ✓'); });
-  });
-}
-
 // The job folder's own id, parsed from the stored folder URL. Used only as the fallback
 // above; every normal path resolves a named subfolder.
 function _jobRootFolderId(job) {
@@ -23657,17 +23690,28 @@ function _jobRootFolderId(job) {
 // suppressed, so a redraw cannot spam Drive.
 var _agrExported = {};
 function _agrExportKey(job) { return String(job.agrApprovedAt || '') + '|' + String(job.agrApprovedBy || ''); }
+// ⚠ SAME DEFECT AS THE ESTIMATE'S, AND WITH THE WORSE CONSEQUENCE. It read
+// `#agr-page-content`, and CLAUDE.md has flagged it since 2026-09-10: *"firing this from
+// the dashboard with another job loaded would file THAT client's agreement into THIS
+// client's estate folder … not something the app can notice afterwards."* It builds from
+// `agreementHtml(job, est)` now — the pure function Slice 2 extracted for this.
+//
+// ⚠ THIS FILES THE BARE AGREEMENT; the packet is a SEPARATE document and files below.
+// Both are kept: the packet is what the client signs, and the agreement alone is what the
+// terms are without the exhibit. Open question for Anthony — retaining both means a folder
+// holding a document the client did not sign, which is one way to send the wrong one.
 function exportAgreementToDrive(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   if (_agrExported[jobId] === _agrExportKey(job)) return;
-  var el = document.getElementById('agr-page-content');
-  if (!el || !el.innerHTML.trim()) return;
-  var html = _exportDoc('Agreement – '+(job.hvlId||''), el.innerHTML, '.ce-page{max-width:800px;margin:0 auto;}');
+  var body = agreementHtml(job, approvedEstimateFor(jobId));
+  if (!body) return;
+  var html = _exportDoc('Agreement – '+(job.hvlId||''), body, '.ce-page{max-width:800px;margin:0 auto;}');
   resolveSubfolderId(job, 'Agreement', function(folderId) {
-    if (!folderId) return;
+    var target = folderId || _jobRootFolderId(job);
+    if (!target) return;
     _agrExported[jobId] = _agrExportKey(job);
-    uploadHtmlToDrive(folderId, (job.hvlId||'AGR')+'_Agreement.html', html, function(ok) {
+    uploadHtmlToDrive(target, (job.hvlId||'AGR')+'_Agreement.html', html, function(ok) {
       if (ok) showSyncBadge('Agreement saved to Drive ✓');
     });
   });
@@ -23727,20 +23771,15 @@ function printSigningPacket() { docAction(currentAgrJobId, 'agreement', 'print')
 
 // Filed beside the agreement on approval, into the same Agreement subfolder.
 var _packetExported = {};
+// The packet IS the agreement kind's document (Slice 3), so this is `docFile` with the
+// once-per-approval guard the tab paths need — a redraw must not re-file, but a NEW
+// approval carrying a correction must.
 function exportSigningPacketToDrive(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   if (_packetExported[jobId] === _agrExportKey(job)) return;
-  var body = signingPacketHtml(jobId);
-  if (!body) return;
-  var html = _exportDoc('Signing Packet – ' + (job.hvlId || ''), body, '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}');
-  resolveSubfolderId(job, 'Agreement', function(folderId) {
-    if (!folderId) return;
-    _packetExported[jobId] = _agrExportKey(job);
-    uploadHtmlToDrive(folderId, (job.hvlId || 'AGR') + '_Signing_Packet.html', html, function(ok) {
-      if (ok) showSyncBadge('Signing packet saved to Drive ✓');
-    });
-  });
+  _packetExported[jobId] = _agrExportKey(job);
+  docAction(jobId, 'agreement', 'file', { auto: true });
 }
 
 // ─── VOICE TRANSCRIPTION ─────────────────────────────────────────────────────
@@ -25030,6 +25069,19 @@ function ensureAgreementApproved(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var blk = agreementReady(job, null);
   if (blk) return blk;
+  // ⚠⚠ SINCE SLICE 5 THIS FUNCTION RE-ENTERS ITSELF, AND TWO SEPARATE GUARDS BOUND IT.
+  // `exportSigningPacketToDrive` files through `docAction(…,'file')`; `docAction` runs
+  // `DOC_ACTIONS.agreement.commit`, which IS this function. So the stamp calls the filer
+  // and the filer calls the stamp.
+  //
+  // ⚠ THE LOAD-BEARING ONE IS `_packetExported` in `exportSigningPacketToDrive`, not this
+  // line — measured, not assumed: removing THIS early return alone leaves the loop bounded
+  // and the suite green, removing the packet guard alone turns it red, and removing BOTH
+  // runs away. So this is the second of two and the packet guard is the first; a test
+  // drives all three cases rather than trusting either comment.
+  //
+  // Either way `job.agrApproved = true` below wants to stay ahead of the filing calls, so
+  // a re-entry finds the flag already set. Measured in a browser: 2 calls, no page errors.
   if (job.agrApproved) return '';
   if (currentAgrJobId !== jobId && !_primeAgreementFor(jobId)) return 'nojob';
   var rec = estimateStore[jobId];
