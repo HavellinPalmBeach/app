@@ -256,7 +256,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, 'HVL-0007', 'the reference');
     has(html, '1234 Ocean Blvd', 'the property');
     has(html, 'Margaret', 'and it greets the person the email is actually going to');
-    has(html, 'Ashley Graziano', 'signed by the assigned concierge');
+    // ⚠ NOT SIGNED ANY MORE — Gmail appends the sender's own. The concierge is still
+    // RESOLVED (the greeting, the subject and the PDF all depend on it); what is gone is
+    // this email printing a second signature under the one Gmail is about to add.
+    lacks(html, 'Warm regards', 'and carries no signature of its own');
+    lacks(html, 'Office (561) 652-5522', 'nor a phone block under it');
     has(html, 'Havellin adds no markup', 'the at-cost rule appears where vendors do');
     // ⚠ NOT double-escaped. _cePhases writes HTML literals that already carry entities, so
     // running them through _emHtml again printed a literal "&amp;" to the client.
@@ -616,37 +620,70 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const none = ctx.assignedTCContact({});
     has(ctx.conciergePhonesText(none), 'Mobile (617) 650-6588', 'an unassigned job falls back to the managing partner in full');
 
-    // A blank email must not render an empty mailto link either. Assert the GUARD, not the
-    // link: a pattern matching inside the guard counts the same with or without it.
-    eq((src.match(/\(tc\.email \? '<a href="mailto:'/g) || []).length, 2,
-       'both signatures guard the mailto against a blank address');
+    // ⚠ A BLANK EMAIL MUST NOT RENDER AN EMPTY LINE. The guard used to live inline in the
+    // two HTML signatures; those are gone, so it lives in `mailtoSignoff` — the one
+    // signature left in the app — and is DRIVEN rather than grepped.
+    const so = sandbox({ fns: ['mailtoSignoff', 'conciergePhones', 'conciergePhonesText'],
+                         vars: ['HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'] });
+    const full = so.mailtoSignoff({ name: 'Ashley Graziano', phone: '(978) 857-5374', email: 'ashley@havellinpalmbeach.com' });
+    has(full.join('\n'), 'Mobile (978) 857-5374', 'a full record signs with both numbers');
+    has(full.join('\n'), 'ashley@havellinpalmbeach.com', 'and the address');
+    const bare2 = so.mailtoSignoff({ name: 'Anthony Graziano Jr', phone: '', email: '' });
+    eq(bare2.filter((l) => l === '').length, 1, 'a blank mobile and address leave no empty lines behind');
+    has(bare2.join('\n'), 'Office (561) 652-5522', 'and the office line still gets them a person');
+    ok(bare2.indexOf('Anthony Graziano Jr') >= 0, 'with the name intact');
   }
 
-  group('every client-facing signature carries both numbers');
+  // ⚠⚠ THE THREE EMAILS NO LONGER SIGN THEMSELVES (2026-09-11). Anthony: *"we can remove
+  // email signatures bc our Gmail inserts one anyway."* Two signatures stacked — ours and
+  // the sender's own — is worse than either alone, and Gmail's is the one that is actually
+  // current for that person.
+  group('the emails carry NO signature, because Gmail appends the sender\'s own');
   {
-    // ⚠ THE COUNT MOVED BECAUSE SLICE 4 GAVE THE INVOICE ITS FIRST HTML EMAIL. It is not
-    // a regression — it is a third client-facing signature that must carry the numbers
-    // like the other two, so the requirement is stated by NAME rather than by a total
-    // that has to be edited every time a surface is added.
-    [['buildEstimateEmailHtml', 'the estimate email'],
-     ['buildAgreementEmailHtml', 'the agreement email'],
-     ['buildInvoiceEmailHtml', 'the invoice email']].forEach(([f, what]) => {
-      has(fn(f), '_emPhoneLines(tc)', `${what} renders the phone block`);
+    ['buildEstimateEmailHtml', 'buildAgreementEmailHtml', 'buildInvoiceEmailHtml',
+     'buildEstimateEmailText', 'buildAgreementEmailText', 'buildInvoiceEmailText'].forEach((f) => {
+      lacks(fn(f), 'Warm regards', f + ' signs off nothing');
+      lacks(fn(f), '_emPhoneLines(tc)', f + ' renders no phone block');
+      lacks(fn(f), 'conciergePhonesText(tc)', f + ' renders no phone line');
+      lacks(fn(f), 'tc.email', f + ' prints no sender address');
     });
-    [['buildEstimateEmailText', 'the estimate text part'],
-     ['buildAgreementEmailText', 'the agreement text part'],
-     ['buildInvoiceEmailText', 'the invoice text part'],
-     ['buildInvoiceMailto', 'the invoice mailto']].forEach(([f, what]) => {
-      has(fn(f), 'conciergePhonesText(tc)', `${what} carries both numbers`);
-    });
-    eq((src.match(/\+ _emHtml\(tc\.phone\) \+/g) || []).length, 0, 'no bare single-number signature survives');
-    has(fn('_emPhoneLines'), 'href="tel:', 'the email numbers are dialable');
-    has(fn('_emPhoneLines'), "replace(/[^0-9+]/g, '')", 'with punctuation stripped from the tel: target');
+    // ⚠ THE PLAIN-TEXT PARTS LOSE IT TOO, AND THAT IS NOT A SEPARATE DECISION. Each pair
+    // is ONE `multipart/alternative` message and the client picks a half — so cutting only
+    // the HTML would give a plain-text reader our signature and everyone else Gmail's, off
+    // the same send. The assertion above covers both halves for exactly that reason.
+    eq((src.match(/Warm regards/g) || []).length, 1,
+      'exactly ONE survives in the whole file — `mailtoSignoff`, which only the fallbacks read');
 
-    // The estimate and invoice "Questions about this?" line takes the same block, and no
-    // longer hides the number when the roster has none — the office is always reachable.
-    eq((src.match(/conciergePhonesText\(preparer/g) || []).length, 2, 'the estimate and the invoice both use it');
-    eq((src.match(/var prepPhone =/g) || []).length, 0, 'the single-number variable is gone');
+    // ⚠ AND THE `mailto:` FALLBACKS KEEP THEIRS, DELIBERATELY. They fire precisely when
+    // Gmail is NOT in play — unconfigured client id, cancelled popup, failed draft — so
+    // nothing there would append the signature that replaces ours.
+    // ⚠ ONE DEFINITION, THREE READERS — and the agreement is why that matters. It derives
+    // its body from `buildAgreementEmailText`, so cutting the Gmail signature took the
+    // FALLBACK'S with it, silently. Not drift: one copy simply disappeared.
+    [['buildEstimateMailto', 'the estimate fallback'],
+     ['buildAgreementMailto', 'the agreement fallback'],
+     ['buildInvoiceMailto', 'the invoice fallback']].forEach(([f, what]) => {
+      has(fn(f), 'mailtoSignoff(', what + ' still signs off');
+    });
+    has(fn('mailtoSignoff'), 'conciergePhonesText(tc)', 'through one signoff that carries both numbers');
+    eq((src.match(/'Warm regards,'/g) || []).length, 1, 'written once, nowhere else');
+  }
+
+  group('⚠ the two numbers still reach the client — on the DOCUMENT, not the email');
+  {
+    // This is the half worth guarding. The office line and the concierge's mobile were
+    // split apart on 2026-09-09 so a client document carries both, and the email
+    // signature was one of six surfaces reading that. Dropping it is only safe because
+    // the numbers are on the attached PDF, which is where a client looks for them weeks
+    // later anyway — an email scrolls away, a filed estimate does not.
+    eq((src.match(/conciergePhonesText\(preparer/g) || []).length, 2,
+      'the estimate and the invoice both print the contact line');
+    has(src, 'Insured &amp; Bonded', 'and the document footers still carry the firm block');
+    ok((src.match(/HAVELLIN_OFFICE_PHONE/g) || []).length > 1,
+      'the office line is a constant the documents read');
+    eq((src.match(/var prepPhone =/g) || []).length, 0, 'the single-number variable is still gone');
+    has(fn('_emPhoneLines'), 'href="tel:', 'the phone renderer survives for any surface that wants it');
+    has(fn('_emPhoneLines'), "replace(/[^0-9+]/g, '')", 'with punctuation stripped from the tel: target');
   }
 
   // ── 6. THE AGREEMENT EMAIL, AND THE CC THAT NEVER EXISTED ──────────────────
@@ -726,7 +763,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, '$9,325', 'the 50% deposit');
     has(html, '$4,663', 'and a 25% instalment');
     has(html, 'HVL-0007', 'the reference');
-    has(html, 'Anthony Graziano', 'signed by the concierge on the job');
+    lacks(html, 'Warm regards', 'and carries no signature of its own — Gmail adds the sender\'s');
     lacks(html, 'var(--', 'no CSS variables, which no mail client resolves');
     lacks(html, 'class="ce-', 'and no app stylesheet classes');
     has(html, 'max-width:600px', 'fluid up to 600px, like the estimate email');

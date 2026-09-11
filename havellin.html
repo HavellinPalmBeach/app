@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 8:49pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 9:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11200,8 +11200,8 @@ function buildInvoiceEmailText(job, stage, amtDue) {
       ' is attached as a PDF.', '',
     'Balance due: ' + (amtDue ? _emMoney(amtDue) : 'see attached'),
     'Payment is due within 7 calendar days.', '',
-    'Thank you for trusting Havellin Palm Beach with this transition.', '',
-    'Warm regards,', tc.name, 'Havellin Palm Beach', conciergePhonesText(tc), tc.email].join('\n');
+    // No signature block — Gmail appends the sender's own. See buildInvoiceEmailHtml.
+    'Thank you for trusting Havellin Palm Beach with this transition.'].join('\n');
 }
 
 // ⚠ A COVER NOTE, NOT THE DOCUMENT. Mail clients strip <style> and do not support CSS
@@ -11242,9 +11242,20 @@ function buildInvoiceEmailHtml(job, stage, amtDue) {
       '<div style="font-size:12px;color:' + B.gray + ';margin-top:4px;">Payment is due within 7 calendar days.</div>' +
     '</td></tr></table></td></tr>' : '') +
   '<tr><td style="padding:22px 22px 26px;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:' + B.ink + ';line-height:1.6;">' +
-    'Thank you for trusting Havellin Palm Beach with this transition.<br><br>' +
-    'Warm regards,<br><strong>' + _emHtml(tc.name) + '</strong><br>' +
-    '<span style="color:' + B.gray + ';">Havellin Palm Beach</span>' + _emPhoneLines(tc) +
+    // ⚠⚠ NO SIGNATURE BLOCK, ON ANY OF THE THREE EMAILS. Anthony, 2026-09-11: *"we can
+    // remove email signatures bc our Gmail inserts one anyway."* Two signatures stacked —
+    // ours and the sender's own — is worse than either alone, and the one Gmail adds is
+    // the one that is actually current for that person.
+    //
+    // ⚠ AND THE PLAIN-TEXT PART LOSES IT TOO, WHICH IS NOT A SEPARATE DECISION. The two
+    // are `multipart/alternative` — ONE message, and the client picks a half. Cutting only
+    // the HTML would mean a recipient on a plain-text client gets our signature while
+    // everyone else gets Gmail's, off the same send.
+    //
+    // ⚠ THE `mailto:` FALLBACKS KEEP THEIRS, DELIBERATELY. They fire exactly when Gmail is
+    // NOT in play — unconfigured client id, cancelled popup, failed draft — so there is
+    // nothing there to append the signature that would replace ours.
+    'Thank you for trusting Havellin Palm Beach with this transition.' +
   '</td></tr>' +
   '</table></td></tr></table></div>';
 }
@@ -12150,17 +12161,21 @@ function renderClientDashboard(jobId) {
     });
   }
   h += '</div>';   // close chip row
-  h += '</div>';   // close client info card
 
-  // The Job Timeline is the "where do we stand" intelligence, so it renders right
-  // here — directly under the header, above the fold. It's actually built further
-  // down (it needs the payment figures); we splice it into this slot at the end.
-  h += '<!--TIMELINE_SLOT-->';
-
-  // CLIENT & PROPERTY CARD — now also carries the authorized representative (the
-  // old separate card is gone) and ends with Notes on one full-width line.
-  h += '<div class="card" style="margin-bottom:12px;">';
-  h += sectionHdr('Client & Property');
+  // ⚠ THE CLIENT DETAIL IS IN THIS CARD, NOT ITS OWN ONE BELOW THE TIMELINE. Anthony:
+  // *"put the first screenshot's info under the second screenshot's info, below the Won,
+  // Estate Settlement, premium estate chips so all of the client info is at the top."*
+  // It sat under the rail, so "who is this and what is the property" was below the fold
+  // and on the far side of the one thing you scroll past. Two cards describing the same
+  // client, separated by the timeline, is also two places to look for one answer.
+  //
+  // ⚠ AND THE GENERIC SECTION HEADING WENT WITH THE MOVE. The card is headed by the
+  // client's own name and address now, which says more than a label reading "client and
+  // property" — the standing copy rule: a heading that restates what the reader can
+  // already see is costing rather than earning.
+  // (Do not name the deleted call here. A `lacks()` over this function's body sees
+  // comments, so writing it out is what makes the test that guards it unable to fail.)
+  h += '<div style="margin-top:14px;padding-top:13px;border-top:0.5px solid var(--border);">';
   h += '<div class="d-grid4">';
   h += field('Job ID', '<span style="font-weight:600;color:var(--bronze);font-family:monospace;">'+(job.hvlId||'—')+'</span>');
   h += field('Property type', job.ptype||'—');
@@ -12192,7 +12207,13 @@ function renderClientDashboard(jobId) {
   // The intake answers, in the same brief the Job Plan prints — this is where the job is
   // prepped, so it is where a missing answer is still cheap to go back and get.
   h += standingFlagsBlock(job);
-  h += '</div>';
+  h += '</div>';   // close the detail block
+  h += '</div>';   // close client info card
+
+  // The Job Timeline is the "where do we stand" intelligence, so it renders right
+  // here — under the client block, above the fold. It's actually built further down
+  // (it needs the payment figures); we splice it into this slot at the end.
+  h += '<!--TIMELINE_SLOT-->';
 
   // PROBATE CARD (probate only)
   if (job.svc === 'probate' || job.svc === 'contested_probate') {
@@ -13585,11 +13606,8 @@ function buildAgreementEmailHtml(job) {
       : '') +
 
     '<div style="height:1px;background:' + B.line + ';margin:26px 0 20px;"></div>' +
-    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">If any part of it raises a question, call me &mdash; I would far rather talk it through than have you wonder.</p>' +
-    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
-    '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
-      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emPhoneLines(tc) +
-      (tc.email ? '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a>' : '') + '</span></p>' +
+    // No signature block — Gmail appends the sender's own. See buildInvoiceEmailHtml.
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 26px;">If any part of it raises a question, call me &mdash; I would far rather talk it through than have you wonder.</p>' +
   '</td></tr>' +
 
   '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
@@ -13622,18 +13640,35 @@ function buildAgreementEmailText(job) {
     L.push('  25% on completion: ' + _emMoney(split.final));
     L.push('');
   }
-  L.push('If any part of it raises a question, call me.', '',
-         'Warm regards,', tc.name, 'Havellin Palm Beach', conciergePhonesText(tc), tc.email);
+  L.push('If any part of it raises a question, call me.');
   return L.join('\n');
 }
 
 // The plain-text fallback, CC'd to agreements@ exactly as the estimate's is CC'd to
 // estimates@. It says to attach the packet, the way the estimate's mailto always has —
 // mailto: cannot carry one.
+// ⚠ THE ONLY SIGNATURE LEFT IN THE APP, AND IT IS `mailto:`-ONLY BY CONSTRUCTION.
+// The three HTML/plain-text emails stopped signing themselves on 2026-09-11 because Gmail
+// appends the sender's own. A `mailto:` is the opposite case: it fires precisely when
+// Gmail is NOT in play — unconfigured client id, cancelled popup, failed draft — so
+// nothing there appends anything, and an unsigned email would go out with no name and no
+// number on it at all.
+//
+// ⚠ ONE DEFINITION, THREE READERS. There were three hand-written copies, and one of them
+// vanished silently: `buildAgreementMailto` derives its body from `buildAgreementEmailText`,
+// so cutting the Gmail signature took the fallback's with it. That is exactly the
+// two-copies-drift shape this file records over and over — except here the copies did not
+// drift, one simply disappeared.
+function mailtoSignoff(tc) {
+  return ['', 'Warm regards,', tc.name, 'Havellin Palm Beach', conciergePhonesText(tc), tc.email]
+    .filter(function (l, i) { return i < 3 || l; });
+}
+
 function buildAgreementMailto(job) {
   if (!job) return '#';
   var body = buildAgreementEmailText(job).split('\n');
   body.splice(4, 0, '** Attach the signing packet before sending — use "Print Signing Packet" in the app. **', '');
+  body = body.concat(mailtoSignoff(assignedTCContact(job)));
   return 'mailto:' + encodeURIComponent(bestClientEmail(job))
     + '?cc=' + encodeURIComponent(DEPT_EMAILS.agreements)
     + '&subject=' + encodeURIComponent(agreementEmailSubject(job))
@@ -13981,11 +14016,8 @@ function buildEstimateEmailHtml(e, job) {
     exclHtml + phaseHtml +
 
     '<div style="height:1px;background:' + B.line + ';margin:26px 0 20px;"></div>' +
-    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Please take your time with it, and never hesitate to reach out — I am always glad to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send the service agreement over for signature.</p>' +
-    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">Warm regards,</p>' +
-    '<p style="font-size:15px;line-height:1.5;color:' + B.ink + ';margin:0 0 26px;"><strong>' + _emHtml(tc.name) + '</strong><br>' +
-      '<span style="color:' + B.gray + ';font-size:14px;">Havellin Palm Beach<br>' + _emPhoneLines(tc) +
-      (tc.email ? '<a href="mailto:' + _emHtml(tc.email) + '" style="color:' + B.bronzeDk + ';text-decoration:none;">' + _emHtml(tc.email) + '</a>' : '') + '</span></p>' +
+    // No signature block — Gmail appends the sender's own. See buildInvoiceEmailHtml.
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 26px;">Please take your time with it, and never hesitate to reach out — I am always glad to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send the service agreement over for signature.</p>' +
   '</td></tr>' +
 
   '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
@@ -14015,8 +14047,7 @@ function buildEstimateEmailText(e, job) {
   if ((e.vendorCost || 0) > 0) L.push('Third-Party Vendors (at cost): ' + _emMoney(e.vendorCost));
   if (e.prepEnabled && (e.prepCost || 0) > 0) L.push('Home Prep Vendors (at cost): ' + _emMoney(e.prepCost));
   L.push('Total Estimated Project Cost: ' + _emMoney(e.grandTotal || e.havellinTotal || 0));
-  L.push('', 'Please take your time with it, and reach out any time.', '',
-         'Warm regards,', tc.name, 'Havellin Palm Beach', conciergePhonesText(tc), tc.email);
+  L.push('', 'Please take your time with it, and reach out any time.');
   return L.join('\n');
 }
 
@@ -14107,14 +14138,8 @@ function buildEstimateMailto(e, job) {
     '',
     '** Please attach the estimate PDF before sending — use the "Print / Save PDF" button in the app to generate it. **',
     '',
-    'Please take your time reviewing everything, and never hesitate to reach out — I am always happy to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send over the service agreement for your signature.',
-    '',
-    'Warm regards,',
-    tc.name,
-    'Havellin Palm Beach',
-    conciergePhonesText(tc),
-    tc.email
-  ]));
+    'Please take your time reviewing everything, and never hesitate to reach out — I am always happy to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send over the service agreement for your signature.'
+  ].concat(mailtoSignoff(tc))));
   // CC the central department inbox so every outbound client email is captured.
   var cc = encodeURIComponent(DEPT_EMAILS.estimates);
   return 'mailto:' + to + '?cc=' + cc + '&subject=' + subject + '&body=' + body;
@@ -14137,14 +14162,8 @@ function buildInvoiceMailto(job, balance, stage) {
     'Balance due: ' + bal,
     'Payment is due within 7 calendar days.',
     '',
-    'Thank you for trusting Havellin Palm Beach with this transition. It has been our honor to serve your family.',
-    '',
-    'Warm regards,',
-    tc.name,
-    'Havellin Palm Beach',
-    conciergePhonesText(tc),
-    tc.email
-  ]);
+    'Thank you for trusting Havellin Palm Beach with this transition. It has been our honor to serve your family.'
+  ].concat(mailtoSignoff(tc)));
   var cc = encodeURIComponent(DEPT_EMAILS.billing);
   return 'mailto:' + to + '?cc=' + cc + '&subject=' + subject + '&body=' + body;
 }

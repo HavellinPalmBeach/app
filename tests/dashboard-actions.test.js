@@ -369,6 +369,36 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  group('all the client information is in ONE block, above the timeline');
+  {
+    // Anthony: *"put the first screenshot's info under the second screenshot's info,
+    // below the Won, Estate Settlement, premium estate chips so all of the client info is
+    // at the top."* It sat in its own card UNDER the rail, so "who is this and what is the
+    // property" was below the fold and on the far side of the one thing you scroll past —
+    // and two cards describing one client is two places to look for one answer.
+    const rc = body('renderClientDashboard(jobId)');
+    const chips = rc.indexOf("close chip row");
+    const grid = rc.indexOf("h += '<div class=\"d-grid4\">';");
+    const slot = rc.indexOf('<!--TIMELINE_SLOT-->');
+    ok(chips > -1 && grid > -1 && slot > -1, 'the three landmarks exist');
+    ok(chips < grid, 'the detail grid comes after the chips');
+    ok(grid < slot, 'and BEFORE the timeline, which is the whole point');
+    // One card, so one `</div>` closes it after the detail rather than before.
+    has(rc, "h += '</div>';   // close the detail block", 'the detail is inside the card');
+    has(rc, "h += '</div>';   // close client info card", 'which closes after it');
+    // ⚠ The generic heading went with the move — the client's own name heads the card
+    // now, and a heading that restates what the reader can already see is the standing
+    // copy rule this file keeps.
+    lacks(rc, "sectionHdr('Client & Property')", 'no generic heading over the client’s own name');
+    // The intake answers stay at the foot of that block: this is where the job is prepped,
+    // so it is where a missing answer is still cheap to go back and get.
+    ok(rc.indexOf('standingFlagsBlock(job)') > grid, 'the intake brief stays with the client block');
+    ok(rc.indexOf('standingFlagsBlock(job)') < slot, 'and above the timeline with it');
+    // One slot, emitted once and replaced once.
+    eq((rc.match(/<!--TIMELINE_SLOT-->/g) || []).length, 2, 'one slot: emitted, then replaced');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   group('the primary button is drawn in the band and nowhere else');
   {
     // The lit row and the band are the SAME step, so drawing the button on both puts the

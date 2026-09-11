@@ -311,7 +311,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const text = ctx.buildInvoiceEmailText(job, stage, 12050);
       has(text, word.toLowerCase() + ' invoice', stage + ': the plain part says it too');
       has(text, '$12,050', stage + ': with the same number');
-      has(text, 'Office (561) 652-5522', stage + ': and the office line');
+      // ⚠ NO SIGNATURE (2026-09-11) — Gmail appends the sender's own, so this one does not.
+      lacks(text, 'Warm regards', stage + ': and signs off nothing');
+      lacks(text, 'Office (561) 652-5522', stage + ': nor prints a phone block Gmail is about to duplicate');
     });
 
     // ⚠ A ZERO OR UNKNOWN BALANCE MUST NOT PRINT "$0". A final invoice can legitimately be
