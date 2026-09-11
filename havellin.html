@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:07am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:27am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5835,16 +5835,28 @@ function calcAll() {
   var discountPct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('e-discount') ? document.getElementById('e-discount').value : 0) || 0));
   var laborBase = tcFee + psFee;  // discount applies to labor only
   var discountAmt = Math.round(laborBase * discountPct / 100);
-  // Expedited delivery premium (see RUSH_PCT). Charged on the Havellin services total
-  // AFTER the preferred-client discount, so the discount is never computed on the premium
-  // and the client reads "your service total, then expedited delivery". Vendor costs are
-  // outside it — pass-through at cost doesn't get more expensive because we compressed
-  // the calendar. Home Prep is excluded for the same reason fixed price is: its whole
-  // staffing column is hidden, so the toggle isn't reachable on those jobs.
+  // ⚠⚠ THE ORDER IS THE PREMIUM FIRST, THE DISCOUNT SECOND, AND IT IS ANTHONY'S RULE
+  // RATHER THAN A TIDY-UP: "If it's a Rush job, we charge the 20%. If we then have to
+  // discount the job by a little bit, it comes off of the total — the total of services
+  // plus the 20% for the Rush job." So RUSH_PCT is charged on the FULL services total and
+  // the preferred-client discount is deducted from the result. It used to be the other way
+  // round — `(havellinTotal - discountAmt) * RUSH_PCT` — which made a discount shrink the
+  // premium as well as the fee, charging less for the compressed calendar because the
+  // client got a break on the labour. Two separate decisions; one must not move the other.
+  //
+  // ⚠ THE DISCOUNT BASE IS STILL LABOUR ONLY (`laborBase`), asked and answered: the premium,
+  // the materials and the coordination fees are NOT discounted. That is what the client
+  // estimate has always said on its face ("Applied to Havellin labor fees"), what the modal
+  // names, and what renderInvoice bills. Widening it to the whole total is a bigger giveaway
+  // and a different promise — do not "simplify" the two into one percentage.
+  //
+  // Vendor costs stay outside it either way — pass-through at cost doesn't get more
+  // expensive because we compressed the calendar. Home Prep is excluded for the same reason
+  // fixed price is: its whole staffing column is hidden, so the toggle isn't reachable there.
   var isRush = document.getElementById('e-rush') ? document.getElementById('e-rush').checked : false;
   if (isPrep) isRush = false;
-  var rushAmt = isRush ? Math.round((havellinTotal - discountAmt) * RUSH_PCT) : 0;
-  var havellinTotalDiscounted = havellinTotal - discountAmt + rushAmt;
+  var rushAmt = isRush ? Math.round(havellinTotal * RUSH_PCT) : 0;
+  var havellinTotalDiscounted = havellinTotal + rushAmt - discountAmt;
   var grandTotal = havellinTotalDiscounted + vendorCost + (prepEnabled ? prepCost : 0);
 
   // Update discount badge
@@ -8702,15 +8714,23 @@ function clientEstimateHtml(e, job) {
     )) +
     '</tbody>' +
     (!e.fixedPrice && e.discountPct > 0 ?
-      '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt)) + '</td></tr>' +
-      '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
+      '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt - (e.rushAmt || 0))) + '</td></tr>'
       : '') +
     // Expedited delivery, itemized so the client can see exactly what the premium is and
     // what it buys. Suppressed on a fixed-price quote, where the flat fee is presented as
     // a single figure and the premium is already inside it — itemizing there would read as
     // an addition on top of a number described as firm.
+    //
+    // ⚠ IT PRINTS ABOVE THE DISCOUNT, AND THAT IS THE ARITHMETIC RATHER THAN THE TYPOGRAPHY.
+    // The premium is charged on the services subtotal and the discount is taken off the
+    // result. Printed the other way round — subtotal, discount, then premium — a client
+    // reads the 20% as having been applied to the already-discounted figure, which is the
+    // rule the app followed until 2026-09-11 and no longer does.
     (!e.fixedPrice && e.rushAmt > 0
       ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
+      : '') +
+    (!e.fixedPrice && e.discountPct > 0
+      ? '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
       : '') +
     '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (!e.fixedPrice && e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
@@ -9343,6 +9363,25 @@ function markEstimateSent() {
 // them. So the discount is baked straight into the fee rather than carried as a
 // percentage — which also keeps calcAll() from dropping it, since it ignores
 // discountPct in fixed mode and just echoes fixedAmount.
+// ⚠⚠ THE HAVELLIN SERVICES TOTAL BEFORE THE PREFERRED-CLIENT DISCOUNT, **PREMIUM INCLUDED**
+// — and the second half is the whole reason this exists. `havellinTotalFull` is the services
+// subtotal before BOTH the discount and the expedited-delivery premium, so reading it alone
+// as "the figure a discount comes off" silently threw the premium away: on a $100,000 job
+// with the 20% premium the client had agreed $120,000, the modal showed a manager $100,000,
+// and the revised total written back was $92,000 — **the entire $20,000 premium gone**, with
+// the deposit then taken at half of a total the client never agreed to and the ±15% variance
+// gate reading the difference as an overrun on the final invoice.
+//
+// ⚠ A RECORD WITH NO `havellinTotalFull` MUST NOT HAVE THE PREMIUM ADDED BACK — its
+// `havellinTotal` already carries it, so the two arms are genuinely different arithmetic and
+// collapsing them double-counts. Tested in both directions.
+function estPreDiscountTotal(est) {
+  if (!est) return 0;
+  if (est.fixedPrice) return Math.round(est.fixedAmount || est.havellinTotal || 0);
+  if (est.havellinTotalFull) return Math.round(est.havellinTotalFull) + Math.round(est.rushAmt || 0);
+  return Math.round((est.havellinTotal || 0) + (est.discountAmt || 0));
+}
+
 function discountPreview(est, pct) {
   if (!est) return { original: 0, discount: 0, revised: 0, fixed: false };
   pct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, pct || 0));
@@ -9351,7 +9390,7 @@ function discountPreview(est, pct) {
     var dFixed = Math.round(baseFixed * pct / 100);
     return { original: baseFixed, discount: dFixed, revised: baseFixed - dFixed, fixed: true };
   }
-  var fullTotal = Math.round(est.havellinTotalFull || (est.havellinTotal + (est.discountAmt || 0)));
+  var fullTotal = estPreDiscountTotal(est);
   var laborBase = Math.round((est.tcFee || 0) + (est.psFee || 0));
   var d = Math.round(laborBase * pct / 100);
   return { original: fullTotal, discount: d, revised: fullTotal - d, fixed: false };
@@ -9403,7 +9442,15 @@ function applyDiscountRevision() {
   } else {
     currentEstimate.discountPct = pct;
     currentEstimate.discountAmt = newDiscountAmt;
-    currentEstimate.havellinTotalFull = baseTotal;
+    // ⚠ `baseTotal` NOW CARRIES THE PREMIUM and `havellinTotalFull` deliberately does not —
+    // it is the services subtotal before both. Writing baseTotal into it would make the next
+    // discount revision add the premium a SECOND time (estPreDiscountTotal adds rushAmt on
+    // top of it), compounding on every revision. A discount changes neither services nor the
+    // premium, so the field simply does not need rewriting; it is only filled in when a
+    // legacy record never had one. A test drives two revisions in a row.
+    if (!currentEstimate.havellinTotalFull) {
+      currentEstimate.havellinTotalFull = baseTotal - Math.round(currentEstimate.rushAmt || 0);
+    }
   }
   currentEstimate.havellinTotal = newHavellinTotal;
   // Recalculate grandTotal (havellinTotal + non-labor costs unchanged)
@@ -19864,8 +19911,14 @@ function invoiceHtml(job, stage) {
   var _rushRate      = (!_fixed && est && est.rush) ? (est.rushPct || RUSH_PCT) : 0;
   var _midServices   = _fixed ? _fixedTotal : (estLaborNet + materials + smf + prepFee);
   var _finalServices = _fixed ? _fixedTotal : (actLaborNet + materials + smf + prepFee);
-  var midRushAmt     = Math.round(_midServices * _rushRate);
-  var finalRushAmt   = Math.round(_finalServices * _rushRate);
+  // ⚠ THE PREMIUM IS LEVIED ON THE GROSS SERVICES AND THE DISCOUNT COMES OFF AFTERWARDS,
+  // matching calcAll — see the ordering note there. Charging it on the NET figure, which is
+  // what these two lines used to do, makes a preferred-client discount quietly reduce the
+  // expedited-delivery charge as well as the fee.
+  var _midGross      = _fixed ? _fixedTotal : ((est ? ((est.tcFee || 0) + (est.psFee || 0)) : (tcFee + psFee)) + materials + smf + prepFee);
+  var _finalGross    = _fixed ? _fixedTotal : (tcFee + psFee + materials + smf + prepFee);
+  var midRushAmt     = Math.round(_midGross * _rushRate);
+  var finalRushAmt   = Math.round(_finalGross * _rushRate);
 
   var totalDepositBasis = _fixed ? _fixedTotal
                         : ((est && est.havellinTotal) ? est.havellinTotal
@@ -19957,8 +20010,8 @@ function invoiceHtml(job, stage) {
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
-    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
+    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>';

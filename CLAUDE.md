@@ -70,6 +70,75 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## A DISCOUNT DELETED THE EXPEDITED-DELIVERY PREMIUM, AND THE ORDER WAS BACKWARDS (FIXED 2026-09-11)
+Two things at once. The ordering is Anthony's call, asked and answered: *"If it's a Rush job, we
+charge the 20%. If we then have to discount the job by a little bit, it comes off of the total —
+which is the total of services plus the 20% for the Rush job."* The deletion is a live money
+defect the question uncovered. App-only, no redeploy.
+
+- **⚠⚠ OFFERING A DISCOUNT THREW THE WHOLE PREMIUM AWAY.** `discountPreview` started from
+  `havellinTotalFull`, which is the services subtotal before **both** the discount and the
+  premium — so `revised = fullTotal - d` silently dropped the premium out of the revised total.
+  Driven on the real function: a job agreed at **$120,000** (services $100,000 + 20%) offered a
+  10% discount showed the manager an "original" of **$100,000** and wrote back **$92,000**. The
+  discount was $8,000; the client lost **$20,000 of charge**.
+- **⚠ AND IT POISONED THREE THINGS DOWNSTREAM, not just the total.** `totalDepositBasis` reads
+  `est.havellinTotal`, so the **deposit was taken at half of a figure the client never agreed
+  to**; `est.rush` stayed true so the mid and final bases still carried a premium the deposit
+  basis did not, and the two disagreed; and `overUnder` compared them, so **the ±15% variance
+  gate read the missing premium as an overrun** and demanded a manager PIN on a job that had
+  done nothing wrong.
+- **`estPreDiscountTotal(est)` IS THE ONE DEFINITION** — *the Havellin services total before the
+  preferred-client discount, premium included*. **⚠ ITS TWO ARMS ARE GENUINELY DIFFERENT
+  ARITHMETIC and collapsing them double-counts:** a record WITH `havellinTotalFull` needs
+  `rushAmt` added; a record WITHOUT it has the premium inside `havellinTotal` already and must
+  only have the discount added back. Both directions tested, plus the fixed-price arm, where the
+  flat fee already contains everything and nothing is added to it.
+- **⚠ THE ORDER: the premium is charged on the FULL services total and the discount comes off the
+  result.** `Math.round(havellinTotal * RUSH_PCT)`, then `havellinTotal + rushAmt - discountAmt`.
+  It was `(havellinTotal - discountAmt) * RUSH_PCT` — which made a preferred-client discount
+  **shrink the expedited-delivery charge as well as the fee**. Two separate decisions; one must
+  not move the other. Measured on a real walkthrough: the premium went **$3,294 → $3,660**.
+- **⚠ THE DISCOUNT BASE IS STILL LABOUR ONLY, and that was a question put to Anthony rather than
+  assumed.** The alternative — a flat % of everything — is $12,000 off instead of $8,000 on the
+  worked example, and would discount the premium, the materials and the coordination fees. He
+  chose labour-only, which is also what the client estimate has always said on its face
+  (*"Applied to Havellin labor fees"*). **Do not collapse the two into one percentage.**
+- **⚠ THE INVOICE HAD THE SAME ORDERING BUG IN ITS OWN WORDS.** `midRushAmt` / `finalRushAmt`
+  were `_midServices * _rushRate` and `_finalServices * _rushRate` — both **net** of the
+  discount. `_midGross` / `_finalGross` are the gross basis now, and a test `lacks()` the two old
+  expressions, because two surfaces each holding their own opinion of the order is the drift this
+  file records more often than anything else.
+- **⚠ `applyDiscountRevision` WOULD HAVE COMPOUNDED ON THE SECOND REVISION.** It wrote the
+  pre-discount total into `havellinTotalFull` — which now carries the premium, so the next
+  revision's `estPreDiscountTotal` added the premium **on top of it again**. A discount changes
+  neither services nor the premium, so the field simply is not rewritten; it is filled in only
+  when a legacy record never had one. A test drives **three revisions in a row**.
+- **⚠ BOTH DOCUMENTS PRINT THE PREMIUM ABOVE THE DISCOUNT, and that is arithmetic rather than
+  typography.** Printed the old way — subtotal, discount, then premium — a client reads the 20%
+  as having been applied to the already-discounted figure, which is the rule the app followed
+  until today. Measured on the rendered estimate: *Subtotal $19,940 · Expedited Delivery (20%)
+  **+ $3,988** · Preferred Client Discount (10%) **− $1,800** · Havellin Services Total
+  **$22,128*** — the column adds up on the page.
+- **⚠ THERE WAS NO COMMITTED COVERAGE OF THIS INTERACTION ANYWHERE.** 3432 checks and not one had
+  ever put a discount on a rush job — the same reason the change-order defect survived.
+  **3495 committed checks** (`tests/rush-discount.test.js`, 63 new). **All seven changes
+  revert-verified individually** — restoring `discountPreview`'s raw field read fails **22**,
+  the invoice's net basis fails 11, the compounding guard fails 4, the estimator's basis 2, and
+  the ordering and both row orders 1 each.
+- **⚠ AND ONE OF MY OWN ASSERTIONS WAS A TAUTOLOGY** — `variancePct > 0.15 === requiresApproval`
+  is how that flag is *defined*, so it could not fail. Replaced with the real figures. That is
+  the seventh time this file records an assertion that could not fail.
+- **Verified end to end in headless Chromium on the real page**, driving the real form: ticking
+  six rooms and setting rush + 10% gives `services 18300 + rush 3660 − discount 1830 = 20130` on
+  the live snapshot (the premium on the **gross**; it was 3294), the client estimate renders the
+  four rows in order and reconciling, and the three invoices collect **11,064 + 5,532 + 5,532 =
+  22,128** against an agreed 22,128 — **variance 0.0%, no manager PIN**, the final printing
+  **+ $3,988** and not the old + $3,628. Overflow 0 at 1440 and 390px, no page errors.
+- Prelaunch, so nothing real was ever billed this way. **No document pass needed** — the manual
+  and playbook describe the premium and the discount separately and state neither the order nor
+  the arithmetic.
+
 ## THE APPRAISAL WORKLIST NUMBERED BY POSITION, SO FOUR ITEMS PRINTED AS "#1" (FIXED 2026-09-11)
 Found by the code audit. App-only, no redeploy. **This document is handed to an outside specialist
 and the values come back quoted against these numbers.**
