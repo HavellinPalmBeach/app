@@ -414,11 +414,17 @@ Only **Active** vendors appear in the picker. An assigned vendor's phone is a ta
 
 ### d. Change Orders — Client Dashboard
 
-Scope changed after approval? Do *not* edit the estimate — it's locked. From the job card: **Create Change Order** → description, the dollar impact (positive to add, negative to reduce), and a reason. **No manager PIN is involved** — a change order is priced with the client, not approved internally.
+Scope changed after approval? Do *not* edit the estimate — it's locked. From the job card: **Create Change Order** → description, a reason, and **the extra concierge and specialist hours**. **No manager PIN is involved** — a change order is agreed with the client, not approved internally.
+
+> **⚠** **A change order carries HOURS. There is no dollar box, and there is no price on the client's copy.** (Changed 2026-09-11 — it used to ask for a dollar impact.) Type the extra concierge and specialist hours you expect; the screen tells you what that does to the job as you type — *“140.0 hrs on the estimate becomes 180.0 (+28.6%) — Past the 15% threshold”* in amber, or *“+2.9% — inside the 15% the client already agreed to”* in blue. **It will not save with no hours on it.**
+>
+> **You are not billing them for the change order itself.** On an ordinary job you work the extra scope, log the hours like any other hours, and the final invoice picks them up. The change order is the client’s written authority, not a second charge. On a *fixed-price* job it is the other way round — a flat fee never looks at your timesheet, so there the hours are converted at the estimate’s rates and added to the fee. The invoice says which.
+>
+> **Holding a printed change order from before 11 Sep? Throw it away and print it again** — the old ones carried a dollar figure that is no longer how any of this works.
 
 Then two buttons appear on it:
 
-1. **PDF** — the printable change order showing the original total, the change and the revised total.
+1. **PDF** — the printable change order: hours on the approved estimate, the scope change, revised estimated hours. **No dollar figure on it anywhere.**
 2. **Get Acceptance** — the client types their name against *✓ I Accept This Change Order.* Hand them the iPad, or record it yourself off their email or call.
 
 > **⚠** **An unaccepted Change Order is never billed.** The final invoice counts accepted change orders and silently ignores the rest. A change order created, printed, agreed on the phone and never marked accepted is work you will do and not charge for. **Take the acceptance at the moment the client agrees.**
@@ -592,8 +598,8 @@ A sell-side, show-ready service, mostly through Douglas Elliman referral agents.
 | Service Management Fee (third-party vendors) | **None — billed at cost** | **None** |
 | Vendor coordination, per line you add | **touches × 0.5** — estate sale 4 hrs · mover 3 · auction 3 · appraiser / staging / GC 2 · painting 1.5 · hauler / dumpster / cleaning 1 · shredding 0.5 | Same hours, premium rate |
 | Home Prep GC / Site Management Fee | **30%** of prep vendor spend — standalone *or* bundled | 30% |
-| Home Prep bundled onto a labour job | **None — at cost**, plus 0.5–2 coordination hrs per trade | **None**, same hours |
-| Moving Materials | Cost + 25% | Cost + 25% |
+| Home Prep coordination hours | **None** — they are inside the 30% *(changed 2026-09-10; this row used to say “None — at cost, plus 0.5–2 coordination hrs per trade”, which contradicted the row above it)* | **None** |
+| Moving Materials | **Fixed package price** — you pick a tier on the estimate ($200–$1,500). *Not* cost-plus, no handling fee, no receipts *(corrected 2026-09-11)* | Same packages |
 | Preferred Client Discount | Havellin labour only · **max 15%** | max 15% |
 | Expedited delivery (rush) | +20% of Havellin services | +20% |
 | Fixed-price contingency | +20% on the hourly basis | +20% |
@@ -698,6 +704,13 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Save Hours Entry is greyed out | Either the team isn't confirmed, or the deposit isn't in — the bar says which. |
 | Final invoice won't print, and no PIN is offered | No hours are logged. Go and log them. |
 | A change order isn't on the final invoice | It was never marked accepted. Get Acceptance. |
+| The change order form has no box for a dollar amount | Correct — it carries **hours** now (changed 2026-09-11). Type the extra concierge and specialist hours. You are not billing the client for the change order; you are recording their authority for the extra work, and the hours are billed through your timesheet on the final invoice like every other hour. On a fixed-price job they are converted at the estimate’s rates and added to the fee instead. |
+| A change order won’t save | It has no hours on it. A change order with no hours would sit on the timeline and the invoice reading as an agreed change while agreeing to nothing, so the app refuses it. |
+| A client asks for the *receipts* for the moving materials | There are none, and the documents no longer promise any. Materials are a **fixed package price** you picked on the estimate — not cost-plus, no handling fee. Four client surfaces said otherwise until 2026-09-11, two of them contracts. If they are holding one of those, re-send the current estimate and agreement; the price has not changed. |
+| A prep client’s agreement quotes $150/hour | It was generated before 2026-09-11. A Home Prep engagement bills **no hours at all** — the fee is 30% of vendor spend — and the contract said both things at once. Re-generate and re-send it; nothing about the price changed. |
+| A vendor’s quote is on the wrong trade’s line | Fixed 2026-09-11. Removing a line from an estimate used to shift every quote below it up one, so the cleaner’s row could come back carrying the landscaper’s name and price. If you are looking at a job where that already happened, re-enter the quotes on the Job Plan — they will stay put now. |
+| Win / Loss reads all zeros, or the referral leaderboard is empty | The clients had not finished loading when you opened the tab. It corrects itself now (fixed 2026-09-11) — if you are on an older build, press **↺ Refresh**. When the app genuinely cannot reach the sheet it says so and shows em dashes rather than zeros, because “0 won, 0 lost” is a claim and it has not read anything yet. |
+| Two tabs are showing on top of each other | You printed a change order on a build older than 2026-09-11. Reload the page. It is fixed, along with the PDF being named after the app instead of the client. |
 | A firm does two things and you want it under both | Press **Edit** on its card in the Vendors tab and add the second trade to the Category field after a semicolon — *Art Appraiser; Antiques & Furniture Appraiser*. Do not add a second row for the same firm. |
 | Saving a vendor says the name is already in the directory | It is, and that is the guard working. A job remembers its vendor by *name*, so two rows under one name make every later lookup pick between them at random. Edit the existing card instead. |
 | The category suggestions go quiet once you type a semicolon | They shouldn't any more (fixed 2026-09-09). If they do, you are on a stale build — reload the page. Note the suggestion list carries what you already typed, so the whole line stays in the box. |

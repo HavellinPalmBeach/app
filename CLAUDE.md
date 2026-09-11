@@ -5186,7 +5186,38 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-11 (twenty-third pass)** — both documents, against Slices 4–7 and the
+- Last reconciled against the app: **2026-09-11 (twenty-fourth pass)** — both documents, and **this pass CORRECTS three
+  standing claims rather than adding to them**. Each would have had somebody do the wrong thing.
+  - **⚠⚠ A CHANGE ORDER CARRIES HOURS, NOT A DOLLAR AMOUNT** (rebuilt in the app this morning). Manual **§9** and playbook
+    **Step 10d** both told the reader to enter *&ldquo;the dollar impact (positive to add, negative to reduce)&rdquo;* into a
+    field that **no longer exists**, and described a printed copy *&ldquo;showing original total, the change, and the revised
+    total&rdquo;* when the client&rsquo;s copy now carries **no `$` anywhere**. Both now carry the rule, the T&amp;M-versus-fixed
+    split (the timesheet bills it on one, the rate card on the other), the 15% readout the modal prints as you type, the
+    refusal on a no-hours order, and the instruction to bin any printed copy from before today.
+  - **⚠⚠ MOVING MATERIALS ARE A FIXED PACKAGE PRICE, NOT COST-PLUS.** Both fee tables said **&ldquo;Cost + 25%&rdquo;**, which
+    was the claim four client surfaces — **two of them contracts** — made until 2026-09-11, complete with *&ldquo;receipts
+    available on request&rdquo;* against a store that holds none. They name the seven package prices now, and the manual
+    carries the reasoning beside the Build Estimate control.
+  - **⚠ THE RUSH PREMIUM *IS* CHARGED ON CHANGE-ORDER HOURS ON T&amp;M**, and manual §12 said it never is. That was true
+    while a change order carried a dollar amount and is false now: the hours go into the log, the log trues the labour, and
+    the premium falls on the result. **Driven on the real invoice** rather than reasoned about — 80 TC + 60 PS plus a
+    +20/+20 change order, all logged, prints an expedited line of **$4,600** against the **$3,600** the estimate quoted;
+    on fixed price the change order&rsquo;s value sits outside the premium basis and there is no premium line at all.
+  - **Found in passing and corrected:** the playbook&rsquo;s quick reference still carried *&ldquo;Home Prep bundled onto a
+    labour job — None at cost, plus 0.5–2 coordination hrs per trade&rdquo;* **directly under the row saying 30% applies to
+    every engagement**. Two rows of one table contradicting each other, stale since 2026-09-10; the manual&rsquo;s equivalent
+    row had been corrected and the playbook&rsquo;s had not.
+  - **Seven new symptom→cause rows**, each answering a question this week&rsquo;s builds create: no dollar box on the change
+    order form · a change order that will not save · a client asking for materials receipts · a prep agreement quoting
+    $150/hour · a quote sitting on the wrong trade&rsquo;s line · Win/Loss reading all zeros · two tabs on screen at once.
+  - **29 claims parity-checked** across the four files, 0 mismatches. Tag balance verified on both HTML files
+    (`manual.html`&rsquo;s `<code>` delta is still the documented false positive at 1). Rendered in Chromium at 1440 and
+    390px — **overflow 0, no page errors** — and **under `print` media all 40 tables keep their full width**, so the phone
+    block is still correctly scoped to `screen`.
+  - ⚠ A grep for the old wordings comes back with **two hits and both are the sentence explaining the change** (*&ldquo;it
+    used to ask for a dollar impact&rdquo;*), matched in both the HTML and the `.md`. Sixth time this file records a needle
+    tripping on the text that explains the fix.
+- Prior pass **2026-09-11 (twenty-third pass)** — both documents, against Slices 4–7 and the
   agreement PIN removal. **This is the pass that corrects the STRUCTURE of both documents rather than adding to it.**
   Three tabs were retired from the nav, and the playbook’s whole spine was organised around them: **five of its thirteen step
   headings named a tab that no longer exists** (Steps 3, 4, 6, 9, 11&12), so a reader following it went looking for a tab that is

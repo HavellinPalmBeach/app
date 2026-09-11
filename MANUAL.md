@@ -286,6 +286,8 @@ Each weight is the **sum of the sub-rooms it replaces**, so a fully-ticked build
 - **Preferred Client Discount** — percentage off Havellin labor fees only, **capped at 15%**. The same cap applies to *Offer Discount* on the timeline's *Estimate approved* row (§9a), which is the route to use once the estimate has already gone out.
 - **Moving Materials Package** — None, or an Estate tier (Basic $500 · Standard $750 · Premium $1,500) or Home Editing / Transition tier (Basic $200 · Standard $350 · Premium $550)
 
+  > **⚠ IT IS A FIXED PACKAGE PRICE, NOT COST-PLUS — and four client surfaces said otherwise until 2026-09-11.** Two of them were **contracts**. They read *“billed at cost plus a 25% materials handling fee, itemized separately on the invoice. Receipts available on request.”* **There is no cost input anywhere in the app, no markup arithmetic and no receipt store** — the price is the dropdown you picked, and the invoice prints one line for it. The promise of *receipts* is the half that mattered: on a probate matter the representative may well ask, and the firm could not produce any. Every surface now states the same sentence and names the package the estimate quoted. **Nothing about what the client pays changed** — there was never a cost basis to mark up, so describing what is actually billed was the only available fix. If the package price internally embeds a markup, that is Havellin’s business and does not belong in the client’s contract.
+
 ### 5d. Third-Party Vendors & Moving Materials
 
 Add third-party vendors with estimated costs. Vendor costs are estimates only — actual invoices are billed directly to the client at cost. **Havellin adds no fee to them.**
@@ -804,11 +806,21 @@ The **📁 Drive** button opens the job's Google Drive folder directly.
 
 ### Change Orders
 
-If scope changes after estimate approval, the approved estimate is not edited — a Change Order carries the difference. From the job card: **Create Change Order** → description, the dollar impact (*positive to add, negative to reduce*) and a reason. **No manager PIN is involved** — a Change Order is priced with the client, not approved internally.
+If scope changes after estimate approval, the approved estimate is not edited — a Change Order records the change. From the job card: **Create Change Order** → description, a reason, and **the additional Transition Concierge and Property Specialist hours**. **No manager PIN is involved** — a Change Order is agreed with the client, not approved internally.
+
+> **⚠ A CHANGE ORDER CARRIES HOURS, NOT A PRICE (rebuilt 2026-09-11).** Anthony: *“the change order is supposed to trigger when we’re gonna run fifteen percent over a job, and that’s on the transition concierge and property specialist hours … I don’t think the change order should have a dollar amount, and we certainly shouldn’t bill a client for it on the change order. It should be an estimate of the additional hours … added to the final invoice once those hours are actually billed.”* There is **no dollar field on the form any more** and the printed copy carries no `$` anywhere — it states the hours on the approved estimate, the change, and the revised hours, and says outright that it does not itself create a charge.
+>
+> **On a time-and-materials job — which is every service by default — the change order is billed by the TIMESHEET.** The crew works the added scope, logs the hours, and the final invoice trues labour to the log. The change is already in the bill; the change order is the client’s written authority for it, not a second charge. **On a fixed-price job it is the other way round:** a flat fee never consults the timesheet, so there the hours are converted at the estimate’s rates and added to the fixed fee. The invoice says which: *“billed in the hours above”* or *“added to the fixed project fee above”*.
+>
+> **⚠ The 15% is why the screen exists, so it says so as you type.** The modal reads *“140.0 hrs on the estimate becomes 180.0 (+28.6%) — Past the 15% threshold”* in amber, or *“+2.9% — inside the 15% the client already agreed to”* in blue. **A change order with no hours on it is refused** — it would put a row on the timeline and the invoice reading as an agreed change while agreeing to nothing.
+>
+> **⚠ Accepting one moves the baseline, so the ±15% variance gate stops firing on scope the client signed for** — but hours *beyond* the authorised scope still trip it, and an *unaccepted* change order moves nothing. Unsigned scope cannot excuse an overrun.
+>
+> **Anything raised before 2026-09-11 carried a dollar amount and those fields are gone.** Prelaunch, so there is nothing to migrate; if you are looking at a printed copy from before that date, throw it away and print it again.
 
 The change order then appears on the job with two buttons:
 
-1. **PDF** — the printable Change Order showing original total, the change, and the revised total.
+1. **PDF** — the printable Change Order showing the hours on the approved estimate, the scope change, and the revised estimated hours. **No dollar figure appears on it.**
 2. **Get Acceptance** — the client types their name against *✓ I Accept This Change Order*. Hand them the iPad, or record it yourself off their email or call. Name and date are stored on the change order.
 
 > **An unaccepted Change Order is never billed.** Acceptance is what updates the project total and what puts the change on the final invoice — the invoice counts client-approved change orders and silently ignores the rest. A change order created, printed, agreed on the phone and never marked accepted is work you will do and not charge for. Take the acceptance at the moment the client agrees.
@@ -1065,7 +1077,7 @@ That describes a **time-and-materials** job, which is the default. On a job quot
 
 > **The expedited-delivery premium now appears on the midpoint and final invoices.** On a rush job (§5, §16) the 20% premium shows as its own line on all three stages. It previously appeared on the quote, the client estimate and the deposit invoice, but was dropped from the midpoint and final — so a rush client was asked for a deposit that included the premium and then billed a total that didn't, and a job that landed exactly on its estimate printed a phantom *"came in under estimate — credit applied"* line for the premium amount. If you have invoiced a rush job before now, re-print its midpoint and final stages and check the totals against what the client agreed.
 
-The premium's *rate* is pinned to the estimate the client accepted, so changing the standard 20% later never reprices a live job. The *amount* trues up with each stage like every other fee, so the final invoice charges the premium on the services actually delivered. It is never charged on an approved Change Order — those are priced when they're agreed — and on a fixed-price quote it is already inside the flat fee.
+The premium's *rate* is pinned to the estimate the client accepted, so changing the standard 20% later never reprices a live job. The *amount* trues up with each stage like every other fee, so the final invoice charges the premium on the services actually delivered. **On time and materials a change order adds no separate charge at all** — its hours are billed through the timesheet like every other hour, so the premium falls on them exactly as it falls on the rest. Driven on the real invoice: a rush job whose estimate carried 80 TC + 60 PS hours, plus a +20/+20 change order all logged, prints an expedited line of **$4,600** against the $3,600 the estimate quoted. On a *fixed-price* job the change order’s value is added outside the premium basis, and there the premium is already inside the flat fee anyway. *(Corrected 2026-09-11 — this said the premium is never charged on a change order, which was true while a change order carried a dollar amount and is not true now that it carries hours.)*
 
 ## 12a. Contractors (Crew Directory)
 
@@ -1158,7 +1170,7 @@ The sixth estimate card, *End-of-Job Logistics*, is not a Category Group — it 
 | Vendor coordination (per vendor line) | **touches × 0.5** = 0.5–4.0 concierge hrs, billed at the rate above (§5d-i) | Same hours, premium rate |
 | Home Prep GC / Site Management Fee | **30%** of prep vendor spend — **every** engagement | 30% |
 | Home Prep coordination hours | **None** — inside the 30% (changed 2026-09-10; was 0.5–2.0 hrs per trade with no fee) | **None** — inside the 30% |
-| Moving Materials | Cost + 25% | Cost + 25% |
+| Moving Materials | **Fixed package price** — None / $200 / $350 / $500 / $550 / $750 / $1,500, picked on the estimate | Same packages |
 | Preferred Client Discount | Havellin labor only · **max 15%** | Havellin labor only · **max 15%** |
 | Expedited delivery (rush order) | +20% of Havellin services | +20% of Havellin services |
 | Fixed-price contingency | +20% on the hourly basis | +20% on the hourly basis |
