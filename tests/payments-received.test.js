@@ -26,7 +26,7 @@ const FNS = ['invoiceHtml', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHou
              'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
              'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
              'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-             'stagePaidTotal', 'jobPaidTotal', 'jobPayments'];
+             'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor'];
 const VARS = ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
               'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
               'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',

@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:59am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 11:15am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5177,6 +5177,45 @@ var SMF_PCT = 0;
 // (§16), which is not a floor and is not related — do not collapse the two.
 var MAX_DISCOUNT_PCT = 15;
 
+// ⚠⚠ THE PREFERRED-CLIENT DISCOUNT COMES OFF THE LABOUR **INCLUDING THE EXPEDITED-DELIVERY
+// PREMIUM CHARGED ON THAT LABOUR**, and that is Anthony's arithmetic verbatim rather than an
+// interpretation of it: "If it's a hundred thousand dollar job on labor, and we apply a
+// twenty percent premium because it's a rush job, that's $120k. A 10% discount is $12k."
+//
+// So the base is the labour charge GROSSED UP by the rush rate — $120,000 — and the discount
+// is $12,000, not the $10,000 that taking 10% of the bare labour gives. A client offered a
+// break on what they are charged for our people is being offered it on what they are actually
+// charged, and on a rush job the premium is part of that charge.
+//
+// ⚠ THE MATERIALS PACKAGE, THE VENDOR COORDINATION FEE AND THE PREP FEE STAY OUT. That half is
+// unchanged and equally deliberate: it is what the client estimate says on its face ("Applied
+// to Havellin labor fees"), what the modal names, and what the invoice bills. Do not collapse
+// this into one percentage of the whole services total — on the worked example the two agree
+// only because labour IS the entire services total there; on a real job carrying materials and
+// coordination fees it is a materially bigger giveaway and a different promise.
+//
+// ⚠ THE GROSS-UP IS BUILT THE SAME WAY THE PREMIUM IS BILLED — `labour + round(labour × rate)`,
+// not `round(labour × (1 + rate))`. The premium is rounded per component where it is charged,
+// so re-deriving it any other way lets the discount base drift a dollar off the figure the
+// client is actually being charged.
+//
+// ONE DEFINITION, read by calcAll, discountPreview and invoiceHtml. Two of those three used to
+// hold their own copy of `labor * pct / 100`, which is exactly how the estimator and the
+// invoice come to disagree about what a client was offered.
+//
+// ⚠ IT DOES NOT CLAMP TO `MAX_DISCOUNT_PCT`, AND THAT IS DELIBERATE. The cap belongs on the
+// two places a percentage is ENTERED — the estimator field and the modal — which both already
+// apply it. Clamping here as well would make the INVOICE credit 15% against an estimate a
+// client accepted at 20%, so a cap lowered after a job was quoted would silently bill above
+// the approved total. Bill what was agreed.
+function discountOnLabor(laborGross, rushRate, pct) {
+  pct = Math.max(0, pct || 0);
+  if (!pct) return 0;
+  var g = laborGross || 0;
+  var base = Math.round(g) + Math.round(g * (rushRate || 0));
+  return Math.round(base * pct / 100);
+}
+
 // True once the estimator picks a crew size by hand. Until then the dropdown tracks the
 // engine's recommendation up and down; afterwards it is left alone and the crew badge
 // warns if it sits above what the scope needs.
@@ -5833,8 +5872,6 @@ function calcAll() {
 
   // Apply preferred client discount to Havellin labor fees
   var discountPct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('e-discount') ? document.getElementById('e-discount').value : 0) || 0));
-  var laborBase = tcFee + psFee;  // discount applies to labor only
-  var discountAmt = Math.round(laborBase * discountPct / 100);
   // ⚠⚠ THE ORDER IS THE PREMIUM FIRST, THE DISCOUNT SECOND, AND IT IS ANTHONY'S RULE
   // RATHER THAN A TIDY-UP: "If it's a Rush job, we charge the 20%. If we then have to
   // discount the job by a little bit, it comes off of the total — the total of services
@@ -5844,11 +5881,9 @@ function calcAll() {
   // premium as well as the fee, charging less for the compressed calendar because the
   // client got a break on the labour. Two separate decisions; one must not move the other.
   //
-  // ⚠ THE DISCOUNT BASE IS STILL LABOUR ONLY (`laborBase`), asked and answered: the premium,
-  // the materials and the coordination fees are NOT discounted. That is what the client
-  // estimate has always said on its face ("Applied to Havellin labor fees"), what the modal
-  // names, and what renderInvoice bills. Widening it to the whole total is a bigger giveaway
-  // and a different promise — do not "simplify" the two into one percentage.
+  // ⚠ AND THE DISCOUNT IS TAKEN ON THE LABOUR **GROSSED UP BY THE PREMIUM** — the rule and
+  // the worked example are on `discountOnLabor`, which is the one definition all three
+  // surfaces read. Which is why `isRush` has to be resolved ABOVE this line and not below it.
   //
   // Vendor costs stay outside it either way — pass-through at cost doesn't get more
   // expensive because we compressed the calendar. Home Prep is excluded for the same reason
@@ -5856,6 +5891,14 @@ function calcAll() {
   var isRush = document.getElementById('e-rush') ? document.getElementById('e-rush').checked : false;
   if (isPrep) isRush = false;
   var rushAmt = isRush ? Math.round(havellinTotal * RUSH_PCT) : 0;
+  var laborBase = tcFee + psFee;  // the discount base is labour, premium included — never materials, SMF or the prep fee
+  var discountAmt = discountOnLabor(laborBase, isRush ? RUSH_PCT : 0, discountPct);
+  // The same discount with the premium held out, for the two INTERNAL benchmark readouts
+  // below — the pricing reference band and the blended-rate badge. Both answer "what is this
+  // job costing for a house this size / an hour of our time", and an expedited-delivery
+  // surcharge is neither; holding the premium out of the total while leaving its share of the
+  // discount in would understate both. Never shown to a client and never billed.
+  var discountExRush = discountOnLabor(laborBase, 0, discountPct);
   var havellinTotalDiscounted = havellinTotal + rushAmt - discountAmt;
   var grandTotal = havellinTotalDiscounted + vendorCost + (prepEnabled ? prepCost : 0);
 
@@ -6151,7 +6194,7 @@ function calcAll() {
   var blendedBadgeEl = document.getElementById('blended-rate-badge');
   if (blendedBadgeEl) {
     var totalHrs = totTC + totPS;
-    var laborFees = tcFee + psFee - discountAmt;
+    var laborFees = tcFee + psFee - discountExRush;
     if (totalHrs > 0 && laborFees > 0) {
       var blendedRate = Math.round(laborFees / totalHrs);
       var blendedColor = (blendedRate >= 95 && blendedRate <= 150) ? 'a-ok' : (blendedRate > 150 ? 'a-warn' : 'a-err');
@@ -6177,7 +6220,7 @@ function calcAll() {
     // Compared against typical fee ranges for the property size, so the expedited premium
     // is held out — it is a delivery-speed surcharge, not evidence the job is overpriced
     // for the house, and including it would flag every rush job as above range.
-    updateRefBox(havellinTotalDiscounted - rushAmt);
+    updateRefBox(havellinTotal - discountExRush);
     updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct, crewSize);
   }
 
@@ -8730,7 +8773,7 @@ function clientEstimateHtml(e, job) {
       ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
       : '') +
     (!e.fixedPrice && e.discountPct > 0
-      ? '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
+      ? '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees' + (e.rushAmt > 0 ? ', including the expedited-delivery premium charged on them,' : '') + ' as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
       : '') +
     '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (!e.fixedPrice && e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
@@ -9351,12 +9394,13 @@ function markEstimateSent() {
 // base the estimator and the invoice use, so the modal's preview and the figure that
 // actually gets applied can never diverge.
 //
-// HOURLY JOBS discount the LABOR fees only. That is what calcAll() does
-// (laborBase = tcFee + psFee), what renderInvoice() bills against (_netLabor), and
-// what the client estimate tells the client ("Applied to Havellin labor fees"). This
-// modal used to discount the full Havellin total — labor PLUS moving materials, the
-// 15% vendor SMF and any prep fee — so a 10% offer took more off the approved total
-// than the invoice later credited, and the client was billed above what they accepted.
+// HOURLY JOBS discount the LABOR fees — and, on a rush job, the expedited-delivery premium
+// charged on that labour. `discountOnLabor` is the one definition of that base and carries the
+// worked example; calcAll() and invoiceHtml() read the same function, so the modal's preview
+// and the figure the client is actually billed cannot diverge. Materials, the vendor SMF and
+// the prep fee stay out. This modal used to discount the full Havellin total — labor PLUS all
+// three of those — so a 10% offer took more off the approved total than the invoice later
+// credited, and the client was billed above what they accepted.
 //
 // FIXED-PRICE JOBS have no client-facing labor lines: the flat fee IS the whole
 // Havellin charge, and the client estimate suppresses the discount rows entirely for
@@ -9388,12 +9432,18 @@ function discountPreview(est, pct) {
   if (est.fixedPrice) {
     var baseFixed = Math.round(est.fixedAmount || est.havellinTotal || 0);
     var dFixed = Math.round(baseFixed * pct / 100);
-    return { original: baseFixed, discount: dFixed, revised: baseFixed - dFixed, fixed: true };
+    return { original: baseFixed, discount: dFixed, revised: baseFixed - dFixed, fixed: true,
+             basis: 'Discount (fixed fee)' };
   }
   var fullTotal = estPreDiscountTotal(est);
   var laborBase = Math.round((est.tcFee || 0) + (est.psFee || 0));
-  var d = Math.round(laborBase * pct / 100);
-  return { original: fullTotal, discount: d, revised: fullTotal - d, fixed: false };
+  var rushRate = est.rush ? (est.rushPct || RUSH_PCT) : 0;
+  var d = discountOnLabor(laborBase, rushRate, pct);
+  // The basis is NAMED here rather than in the modal, because a manager approving this has to
+  // see which figure the percentage came off — and on a rush job that is not the same answer
+  // as on an ordinary one. A label built at the render site is a second opinion of the rule.
+  return { original: fullTotal, discount: d, revised: fullTotal - d, fixed: false,
+           basis: rushRate ? 'Discount (labor fees + expedited premium)' : 'Discount (labor fees only)' };
 }
 
 function openDiscountModal() {
@@ -9410,9 +9460,10 @@ function updateDiscountModal() {
   var pct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('dm-pct').value) || 0));
   var p = discountPreview(currentEstimate, pct);
   // Name the base explicitly — a manager approving this needs to see that on an
-  // hourly job the % comes off labor, not off materials and vendor fees too.
+  // hourly job the % comes off labor, not off materials and vendor fees too. The wording
+  // comes back from discountPreview so it cannot describe a base the preview did not use.
   var basisEl = document.getElementById('dm-basis-label');
-  if (basisEl) basisEl.textContent = p.fixed ? 'Discount (fixed fee)' : 'Discount (labor fees only)';
+  if (basisEl) basisEl.textContent = p.basis || 'Discount';
   var amtEl = document.getElementById('dm-amount');
   if (amtEl) amtEl.textContent = p.discount > 0 ? '- $' + p.discount.toLocaleString() : '—';
   document.getElementById('dm-revised').textContent = '$' + p.revised.toLocaleString();
@@ -19832,19 +19883,27 @@ function invoiceHtml(job, stage) {
   var tcFee = Math.round(actTC * tcRate);
   var psFee = Math.round(actPS * psRate);
 
-  // Discount from saved estimate only — never from live estimator form fields
-  var discountPct = est ? (est.discountPct || 0) : 0;
-  function _netLabor(g){ return g - Math.round(g * discountPct / 100); }
-  var materials  = pkgCost;
-  var estLaborNet = _netLabor(est ? ((est.tcFee||0)+(est.psFee||0)) : (tcFee + psFee));
-  var actLaborNet = _netLabor(tcFee + psFee);
-  var laborBase = tcFee + psFee;
-  var discountAmt = Math.round(laborBase * discountPct / 100);
-
   // Read before the change-order block, which needs to know the billing basis: a
   // fixed-price job charges a change order's hours at the rate card because its flat fee
   // never consults the timesheet, and a T&M job must not, because the timesheet already has.
   var _fixedBasis = !!(est && est.fixedPrice);
+
+  // Discount from saved estimate only — never from live estimator form fields
+  var discountPct = est ? (est.discountPct || 0) : 0;
+  // ⚠ THE RUSH RATE IS RESOLVED HERE, ABOVE THE DISCOUNT, AND THE ORDER IS LOAD-BEARING.
+  // `discountOnLabor` grosses the labour up by this rate before taking the percentage, so a
+  // `_rushRate` still holding `undefined` at this point would silently discount the bare
+  // labour and under-credit a rush client by the premium's share. It was declared seventy
+  // lines below until the base changed. The RATE is pinned to the saved estimate the way
+  // α is, so moving RUSH_PCT can never reprice a live job; fixed price carries the premium
+  // inside the flat fee already, hence the guard.
+  var _rushRate = (!_fixedBasis && est && est.rush) ? (est.rushPct || RUSH_PCT) : 0;
+  function _netLabor(g){ return g - discountOnLabor(g, _rushRate, discountPct); }
+  var materials  = pkgCost;
+  var estLaborNet = _netLabor(est ? ((est.tcFee||0)+(est.psFee||0)) : (tcFee + psFee));
+  var actLaborNet = _netLabor(tcFee + psFee);
+  var laborBase = tcFee + psFee;
+  var discountAmt = discountOnLabor(laborBase, _rushRate, discountPct);
 
   // Accepted change orders. ⚠ THEY CARRY HOURS, NOT A PRICE — see `coHours` for why, and
   // for the one rule that must not be applied twice: on a T&M job the crew logs those hours
@@ -19908,7 +19967,8 @@ function invoiceHtml(job, stage) {
   // premium on the services actually delivered. Fixed-price already has it inside the
   // flat fee, hence the !_fixed guard. Change orders are priced when they are agreed, so
   // the premium is computed BEFORE coTotal is added rather than levied on top of it.
-  var _rushRate      = (!_fixed && est && est.rush) ? (est.rushPct || RUSH_PCT) : 0;
+  // (_rushRate is resolved at the top of this function, above the discount — see the note
+  // there for why it cannot be declared here any more.)
   var _midServices   = _fixed ? _fixedTotal : (estLaborNet + materials + smf + prepFee);
   var _finalServices = _fixed ? _fixedTotal : (actLaborNet + materials + smf + prepFee);
   // ⚠ THE PREMIUM IS LEVIED ON THE GROSS SERVICES AND THE DISCOUNT COMES OFF AFTERWARDS,
@@ -20053,7 +20113,7 @@ function invoiceHtml(job, stage) {
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
     (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
-    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor)</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
+    (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor' + (_rushRate > 0 ? ' and the expedited-delivery premium charged on it' : '') + ')</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>';

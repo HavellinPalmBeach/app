@@ -213,6 +213,73 @@ they owe.**
   and playbook describe recording payments and the three stages, and state neither what the final
   reconciles against nor the Payment Summary's rows.
 
+## ⚠⚠ THE DISCOUNT BASE WAS CORRECTED THE SAME DAY — IT INCLUDES THE PREMIUM (FIXED 2026-09-11)
+Anthony, reading the build that had just shipped: *"If it's a hundred thousand dollar job on labor,
+and we apply a twenty percent premium because it's a rush job, that's $120k. A 10% discount is
+$12k."* App-only, no redeploy. **Read this section before the one below it — that one records the
+ordering fix and states a discount base this section overturns.**
+
+- **⚠⚠ THE SHIPPED BUILD GAVE $10,000 AND HE IS ASKING FOR $12,000.** The section below records
+  asking him whether the discount base should be labour only or the whole total; he answered
+  *"keep labour-only"*, and I read that as excluding the **premium** as well as the materials. It
+  does not. The two answers are consistent and the reconciliation is the rule: **the discount comes
+  off the LABOUR GROSSED UP BY THE PREMIUM CHARGED ON IT, and materials, the vendor SMF and the prep
+  fee stay out.** His own example cannot tell the two readings apart — there labour IS the entire
+  services total — which is exactly why it needed asking again.
+- **`discountOnLabor(laborGross, rushRate, pct)` IS THE ONE DEFINITION**, read by `calcAll`,
+  `discountPreview` and `invoiceHtml`. Two of those three held their own copy of
+  `labor * pct / 100` before this; that is how the modal a manager approves and the invoice a
+  client pays come to disagree about what was offered.
+- **⚠ THE GROSS-UP IS BUILT THE WAY THE PREMIUM IS BILLED** — `labour + round(labour × rate)`, not
+  `round(labour × (1 + rate))`. The premium is rounded per component where it is charged, so
+  re-deriving it any other way drifts the base a dollar off the figure the client is charged.
+- **⚠ IT DOES NOT CLAMP TO `MAX_DISCOUNT_PCT`, DELIBERATELY.** The cap belongs on the two places a
+  percentage is ENTERED, which both already apply it. Clamping in the helper would make the INVOICE
+  credit 15% against an estimate a client accepted at 20% — and the cap really was lowered from 30%
+  to 15% on 2026-08-01, so a job quoted before that is the live case. **Bill what was agreed.**
+- **⚠⚠ THE `_rushRate` HOIST IN `invoiceHtml` IS A CORRECTNESS CONSTRAINT, NOT TIDYING.** `_netLabor`
+  reads it, and it was declared **seventy lines below** the discount block. `var` hoists as
+  `undefined`, so leaving it there grosses the labour up by nothing and silently under-credits a
+  rush client by the premium's share — no error, no symptom, on the document they pay. It is
+  resolved at the top of the function now, off `_fixedBasis`, which moved up with it.
+  **Revert-verified: putting it back fails 7.**
+- **⚠ BOTH CLIENT DOCUMENTS NAME THE BASE, because on a rush job it is not the base an ordinary job
+  uses and the two readings differ by real money.** The estimate row reads *"Applied to Havellin
+  labor fees, including the expedited-delivery premium charged on them"*; the invoice row reads
+  *"(10% on labor and the expedited-delivery premium charged on it)"*; and the modal's label comes
+  back **from `discountPreview`** rather than being built at the render site — a label assembled
+  beside the control is a second opinion of the rule.
+- **⚠ THE TWO INTERNAL BENCHMARKS HOLD THE PREMIUM OUT, AND THAT MEANS HOLDING ITS SHARE OF THE
+  DISCOUNT OUT TOO.** The pricing reference band and the blended-rate badge both ask *what is this
+  job costing for a house this size / for an hour of our time*, and an expedited-delivery surcharge
+  is neither. `discountExRush` is the same helper at a rate of zero. Measured on the real page: the
+  blended rate reads **$108/hr identically with rush on and off**, where subtracting the premium
+  back out of the discounted total (the old `updateRefBox(havellinTotalDiscounted - rushAmt)`) left
+  the premium's share of the discount in and understated both. Never shown to a client, never billed.
+- **3618 committed checks** (27 new in `tests/rush-discount.test.js`, whose constants encoded the
+  old base and were re-derived). **All twelve changes revert-verified individually** — the helper's
+  gross-up fails **32**, the modal's rate 24, the invoice's `_netLabor` 7, the `_rushRate` hoist 7,
+  the no-clamp 3, and the rest 1–2 each.
+- **⚠ AND ONE REVERT CAME BACK GREEN: the estimator's own rate argument.** Backing
+  `discountOnLabor(laborBase, isRush ? RUSH_PCT : 0, discountPct)` down to a constant `0` — the
+  whole defect, on the surface a manager sets the number on — broke **nothing**, because nothing in
+  `tests/` drives `calcAll` (it reads three dozen DOM elements; the established pattern here is to
+  pin it at source). That exact call is pinned now, with the reason beside it, and the driven proof
+  is the browser run. Eighth time this file records an assertion that could not fail.
+- **Verified end to end in headless Chromium on the real page**, driving the real form: ticking a
+  3,500 sqft estate with rush + 10% gives `labour 18,300 + rush 3,660 − discount **2,196** = 19,764`
+  (it was 1,830 / 20,130 on the shipped build); unticking rush returns the discount to **$1,830**,
+  so the ordinary job has not moved. The modal reads *original $21,960 · **Discount (labor fees +
+  expedited premium)** · − $2,196 · revised $19,764*; the client estimate prints the four rows in
+  order and reconciling, naming the base; and the three invoices collect **9,882 + 4,941 + 4,941 =
+  19,764** against an agreed 19,764 — **variance 0.0%, no manager PIN**. `discountOnLabor(100000,
+  0.20, 10)` returns **12000** and `discountPreview` on a $100k-labour rush job returns
+  *original 120,000 · discount 12,000 · revised **108,000***, which is Anthony's sentence exactly.
+  Overflow 0 at 1440 and 390px, no page errors.
+- Prelaunch, so nothing real was ever billed either way. **No document pass needed** — the manual
+  and the playbook describe the premium and the discount separately and state neither the order nor
+  the arithmetic.
+
 ## A DISCOUNT DELETED THE EXPEDITED-DELIVERY PREMIUM, AND THE ORDER WAS BACKWARDS (FIXED 2026-09-11)
 Two things at once. The ordering is Anthony's call, asked and answered: *"If it's a Rush job, we
 charge the 20%. If we then have to discount the job by a little bit, it comes off of the total —
