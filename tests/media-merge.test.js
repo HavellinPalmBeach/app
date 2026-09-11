@@ -21,7 +21,9 @@ const ids = (list) => list.map((r) => r.stableId);
 function _letter(n) { let out = ''; while (n > 0) { out = String.fromCharCode(65 + ((n - 1) % 26)) + out; n = Math.floor((n - 1) / 26); } return out; }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
-  const ctx = sandbox({ fns: ['mergeMediaItems', 'mergeCustodyLogs', '_custodyEventId'] });
+  const ctx = sandbox({ fns: ['mergeMediaItems', 'mergeCustodyLogs', '_custodyEventId',
+                              'invStickyValue', '_invHasVal'],
+                       vars: ['INV_STICKY_FIELDS'] });
   const merge = ctx.mergeMediaItems;
 
   group('merge: union, never loss');
@@ -188,6 +190,67 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.mergeCustodyLogs(null, null), [], 'two empty logs merge to empty');
   }
 
+  // ── The sticky scalars ────────────────────────────────────────────────────
+  group('⚠⚠ A SCALAR THE WINNER NEVER SAW is not the same as one it cleared');
+  {
+    // THE MEASURED DEFECT. Ashley records the signed release; Anthony sets the same item's
+    // Condition on an iPad that never saw it; his record is newer, so it won whole and the
+    // merge returned JUST the condition. The representative's written authority — gone — and
+    // _invAwaitingApproval filters on !approvalDate, so the item walks back onto the next
+    // release approval request as though nobody had signed for it.
+    const signed = it('c', { updatedAt: 10, authBy: 'Tripp Butler', approvalDate: '2026-09-10',
+                             receiptDoc: 'REC-88', dispDate: '2026-09-12' });
+    const edited = it('c', { updatedAt: 20, condition: 'Good' });
+    const out = merge([signed], [edited])[0];
+    eq(out.condition, 'Good', 'the newer edit still stands');
+    eq(out.authBy, 'Tripp Butler', '⚠⚠ and the release authority survives it');
+    eq(out.approvalDate, '2026-09-10', 'with its date');
+    eq(out.receiptDoc, 'REC-88', 'and the receipt');
+    eq(out.dispDate, '2026-09-12', 'and the date it went');
+
+    // The photo's provenance and the import guards travel too.
+    const provenance = it('c', { updatedAt: 10, driveFileId: 'f1', driveFileUrl: 'u1',
+                                 filename: 'IMG_1.jpg', sourceVehId: 'v7', sourceCollId: 'k2' });
+    const bare = it('c', { updatedAt: 20 });
+    const p = merge([provenance], [bare])[0];
+    eq(p.driveFileId, 'f1', '⚠ without the Drive file id the thumbnail cannot be refetched');
+    eq(p.filename + '|' + p.driveFileUrl, 'IMG_1.jpg|u1', 'and the rest of the provenance');
+    eq(p.sourceVehId + '|' + p.sourceCollId, 'v7|k2',
+       '⚠ and the import guards — losing these lets the same vehicle be materialised twice, '
+       + 'which is how six rows ended up numbered 1,2,1,2,3,1');
+
+    // ⚠ A NEWER JUDGEMENT STILL WINS. `fmv` is deliberately NOT sticky: a value is something
+    // somebody revises, and a revision is the whole point of editing it.
+    eq(merge([it('c', { updatedAt: 10, fmv: 48000 })],
+             [it('c', { updatedAt: 20, fmv: 52000 })])[0].fmv, 52000, 'a revised value wins');
+    eq(merge([it('c', { updatedAt: 10, authBy: 'Ashley Jerome' })],
+             [it('c', { updatedAt: 20, authBy: 'Tripp Butler' })])[0].authBy, 'Tripp Butler',
+       '⚠ and a sticky field the winner DOES have is not overwritten by the older one — '
+       + 'correcting a mis-typed approver has to work');
+
+    // ⚠⚠ AND A DELIBERATE CLEAR HAS TO STICK, or the field could never be emptied at all:
+    // you would blank a mis-recorded approver on one device and the other would restore it on
+    // the next sync, forever. `clearedAt` is the one bit of extra state that distinguishes
+    // "never saw a value" from "emptied it on purpose".
+    const cleared = it('c', { updatedAt: 20, authBy: '', clearedAt: { authBy: 1757000000000 } });
+    eq(merge([signed], [cleared])[0].authBy, '',
+       '⚠⚠ an approver emptied on purpose stays empty');
+    eq(merge([signed], [cleared])[0].approvalDate, '2026-09-10',
+       '⚠ and clearing one field does not clear its neighbours');
+    eq(merge([cleared], [signed])[0].authBy, '',
+       'whichever order they arrive in');
+
+    // An item neither side has anything for stays absent rather than gaining a key.
+    const blankOut = merge([it('c', { updatedAt: 1 })], [it('c', { updatedAt: 2 })])[0];
+    ok(!('authBy' in blankOut), 'no sticky key is invented on an item that never had one');
+
+    // The predicate itself, since "has a value" is where this kind of rule goes wrong.
+    ok(!ctx._invHasVal(''), 'an empty string is not a value');
+    ok(!ctx._invHasVal(null) && !ctx._invHasVal(undefined), 'nor null or undefined');
+    ok(ctx._invHasVal(0) && ctx._invHasVal(false),
+       '⚠ but 0 and false ARE values — a truthiness test would drop a legitimate zero');
+  }
+
   // ── The two implementations must agree ──────────────────────────────────────
   group('merge: app and Apps Script agree');
   {
@@ -203,7 +266,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ THE CUSTODY UNION IS PART OF THE MERGE NOW, so the server copy cannot be driven
     // without it — and that is the point of this group: the two implementations are the same
     // rule written twice, and a union written on one side only loses events on the other.
-    vm.runInContext([grab('_custodyEventId'), grab('_mergeCustodyLogs'), grab('_mergeMediaItems')].join('\n\n'),
+    const gsVar = (name) => (gs.match(new RegExp('var ' + name + ' = \\[[\\s\\S]*?\\];')) || [''])[0];
+    vm.runInContext([gsVar('INV_STICKY_FIELDS'), grab('_invHasVal'), grab('_invStickyValue'),
+                     grab('_custodyEventId'), grab('_mergeCustodyLogs'), grab('_mergeMediaItems')].join('\n\n'),
                     gctx, { filename: 'saveInventory.gs (extracted)' });
     const gmerge = gctx._mergeMediaItems;
 
@@ -228,6 +293,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // takes it first anyway and the tombstone rule is never exercised.
       [[it('a', { updatedAt: 3, custodyLog: [{ cid: 'e1', action: 'Released', deletedAt: 5 }] })],
        [it('a', { updatedAt: 4, custodyLog: [{ cid: 'e1', action: 'Released' }] })]],
+      // The sticky scalars, and a deliberate clear, on both copies of the rule.
+      [[it('a', { updatedAt: 1, authBy: 'Tripp Butler', approvalDate: '2026-09-10' })],
+       [it('a', { updatedAt: 2, condition: 'Good' })]],
+      [[it('a', { updatedAt: 1, authBy: 'Tripp Butler' })],
+       [it('a', { updatedAt: 2, authBy: '', clearedAt: { authBy: 9 } })]],
+      [[it('a', { updatedAt: 1, driveFileId: 'f1', sourceVehId: 'v7' })],
+       [it('a', { updatedAt: 2 })]],
     ];
     let agree = 0;
     cases.forEach((pair, i) => {
@@ -254,6 +326,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'and a removal on the older side still wins on the server');
     eq(gmerge([it('a', { updatedAt: 1, itemNo: 14 })], [it('a', { updatedAt: 2 })])[0].itemNo, 14,
        'and the permanent item number survives there as well');
+    eq(gmerge([it('a', { updatedAt: 1, authBy: 'Tripp Butler', approvalDate: '2026-09-10' })],
+              [it('a', { updatedAt: 2, condition: 'Good' })])[0].authBy, 'Tripp Butler',
+       '⚠ the server keeps the release authority too — it is the durable store, so fixing '
+       + 'only the app would leave the approval alive on one device and gone from the sheet');
+    eq(gmerge([it('a', { updatedAt: 1, authBy: 'Tripp Butler' })],
+              [it('a', { updatedAt: 2, authBy: '', clearedAt: { authBy: 9 } })])[0].authBy, '',
+       'and honours a deliberate clear');
   }
 
   // ── The payload the server is actually given ────────────────────────────────

@@ -199,6 +199,46 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'and so does one whose only event was removed');
   }
 
+  group('⚠ EMPTYING A STICKY FIELD IS STAMPED, so the merge can tell it from never having one');
+  {
+    const m = sandbox({
+      fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull',
+            '_invTouch', 'moneyToNumber', '_invHasVal', 'invStickyValue'],
+      vars: ['INV_STICKY_FIELDS'],
+      stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _scheduleInventorySync() {},
+               _invNetDisplay: () => '', renderInventoryTab() {} },
+    });
+    m._photoRefs[3] = [{ stableId: 'a', label: 'inventory', collId: null }];
+    const ref = () => m._photoRefs[3][0];
+
+    m._invEdit(3, 'a', 'authBy', { value: 'Tripp Butler' });
+    eq(ref().authBy, 'Tripp Butler', 'recording an approver writes it');
+    ok(!(ref().clearedAt && ref().clearedAt.authBy), 'and stamps nothing');
+
+    m._invEdit(3, 'a', 'authBy', { value: '' });
+    eq(ref().authBy, '', 'emptying it empties it');
+    ok(ref().clearedAt.authBy > 0,
+       '⚠⚠ and stamps WHY it is empty — without this the field could never be cleared across '
+       + 'two devices: the stale copy would restore it on every sync, forever');
+
+    m._invEdit(3, 'a', 'authBy', { value: 'Ashley Jerome' });
+    ok(!ref().clearedAt.authBy,
+       '⚠ and filling it again withdraws the stamp, or a later clear-by-accident would stick');
+
+    // A field that is not sticky is not stamped — the map is not a general edit log.
+    m._invEdit(3, 'a', 'condition', { value: '' });
+    ok(!(ref().clearedAt && ref().clearedAt.condition), 'an ordinary field records nothing');
+
+    // ⚠ AND THE STAMP HAS TO SURVIVE A SAVE. savePhotoRefs is a WHITELIST — a field missing
+    // from it is dropped silently on every write, which would leave the clear unexplained and
+    // the value restored on the next merge.
+    m._invEdit(3, 'a', 'authBy', { value: '' });
+    m.savePhotoRefs(3);
+    const saved = JSON.parse(m.localStorage.getItem('hav_media_3'))[0];
+    ok(saved.clearedAt && saved.clearedAt.authBy > 0, 'clearedAt is on the whitelist');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   // ───────────────────────────────────────────────────────────────────────────
   group('one rule, stated once');
   {

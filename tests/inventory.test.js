@@ -14,14 +14,14 @@ const INV_FNS = [
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
-  'mergeCustodyLogs', '_custodyEventId',
+  'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal',
   '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
   '_apprGroups', '_apprWithheld', '_apprNFA',
   '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks', '_invHasValue',
   'savePhotoRefs', '_warnPhotoStoreFull',
 ];
 const INV_VARS = [
-  'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
+  'INV_STICKY_FIELDS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
   'INV_APPRAISAL_THRESHOLD', 'INV_ASSET_TRACKS', 'EXEMPT_CAP_732_402',
 ];
 
@@ -568,7 +568,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('a cleared value stays blank, and money shows as money');
   {
     const m = sandbox({ fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
-                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber'],
+                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal'],
+                        vars: ['INV_STICKY_FIELDS'],
                         stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {},
                                  _scheduleInventorySync() {}, _invNetDisplay: () => '' } });
     m._photoRefs[2] = [{ stableId: 'a', label: 'inventory', collId: null, fmv: '500000' }];

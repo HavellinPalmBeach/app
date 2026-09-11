@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 12:08pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 12:17pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15059,7 +15059,7 @@ function savePhotoRefs(jobId) {
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, driveFileId:r.driveFileId,
                reviewed:r.reviewed, reviewedAt:r.reviewedAt, reviewedBy:r.reviewedBy, valNote:r.valNote,
-               status:r.status, ts:r.ts,
+               clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
     localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
@@ -15807,6 +15807,38 @@ function _invTouch(ref) { if (ref) ref.updatedAt = Date.now(); return ref; }
 // this: an invented duplicate on a chain of custody is a false statement about the estate,
 // while a legacy pair that identical almost certainly came from one origin anyway. New events
 // carry ids and are never value-keyed.
+// ⚠⚠ A SCALAR ONE DEVICE HAS AND THE OTHER DOES NOT WAS SIMPLY LOST, and on four of these
+// fields that is a record of something that HAPPENED. **Measured on the real merge:** Ashley
+// records the signed release — `authBy: 'Tripp Butler', approvalDate: '2026-09-10'` — at
+// `updatedAt 10`; Anthony sets the same item's Condition to *Good* at `20` on an iPad that
+// never saw it. His record is newer, so it wins whole, and the merge returns **just the
+// condition**. The representative's written authority is gone, and `_invAwaitingApproval`
+// filters on `!approvalDate`, so the item walks back onto the next release approval request as
+// though nobody had signed for it.
+//
+// ⚠ THE LIST IS NOT "IMPORTANT FIELDS", IT IS A TEST: losing it destroys the record of
+// something that happened, and there is nothing sensible to re-derive it from. The release
+// authority and the disposition receipt (a court-reviewed record), the photo's provenance in
+// Drive (without `driveFileId` the thumbnail cannot be refetched), and the import guards
+// — `sourceCollId` / `sourceVehId` are what stop the same collection or vehicle being
+// materialised twice, which this file already records as six rows numbered 1,2,1,2,3,1.
+// **`fmv` is deliberately NOT on it**: a value is a judgement somebody revises, and the newer
+// judgement should win. Nor is `reviewed`, where un-reviewing is a real operation.
+var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc',
+                         'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId'];
+function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
+// ⚠⚠ "NEVER SAW A VALUE" AND "DELIBERATELY EMPTIED IT" ARE DIFFERENT ANSWERS, and without
+// telling them apart a sticky field could never be cleared at all — you would blank a
+// mis-recorded approver on one device and the other device would put it straight back on the
+// next sync, forever. `_invEdit` stamps `clearedAt[key]` when a person empties one of these,
+// and that stamp is the only thing that lets an empty win. It is the minimum extra state the
+// distinction needs; per-field timestamps for EVERY field is the bigger change this avoids.
+function invStickyValue(win, lose, key) {
+  if (_invHasVal(win[key])) return win[key];
+  if (win.clearedAt && win.clearedAt[key]) return win[key];   // emptied on purpose
+  return _invHasVal(lose[key]) ? lose[key] : win[key];
+}
+
 function _custodyEventId(e) {
   if (!e) return '';
   if (e.cid) return 'id:' + e.cid;
@@ -15841,12 +15873,10 @@ function mergeMediaItems(existing, incoming) {
   // would edit the live store as a side effect of asking what a merge would produce.
   var resolve = function(win, lose) {
     var log = mergeCustodyLogs(win.custodyLog, lose.custodyLog);
-    // An issued item number is PERMANENT (see _invAssignItemNos). The losing side can be the
-    // only one that has seen it assigned, and a winner with none sends the row back through
-    // the backfill to be issued a NEW number above the high-water mark — silently renumbering
-    // an object a receipt already cites. It is never cleared through the UI, so keeping it
-    // costs nothing.
-    var no = (parseInt(win.itemNo, 10) > 0) ? win.itemNo : lose.itemNo;
+    // The sticky fields, of which the item number is one: PERMANENT (see _invAssignItemNos),
+    // and the losing side can be the only one that has seen it assigned — a winner with none
+    // sends the row back through the backfill to be issued a NEW number above the high-water
+    // mark, silently renumbering an object a receipt already cites.
     // ⚠ NO SHORT-CIRCUIT. The first cut returned `win` untouched when the merged log was
     // the same LENGTH — which is not the same as unchanged: a void on the losing side
     // REPLACES an event without adding one, so the tombstone was computed and then thrown
@@ -15856,7 +15886,10 @@ function mergeMediaItems(existing, incoming) {
     var out = {};
     for (var k in win) if (Object.prototype.hasOwnProperty.call(win, k)) out[k] = win[k];
     if (log.length) out.custodyLog = log;
-    out.itemNo = no;
+    INV_STICKY_FIELDS.forEach(function(key){
+      var v = invStickyValue(win, lose, key);
+      if (v !== undefined) out[key] = v;
+    });
     return out;
   };
   var take = function(list) {
@@ -16253,6 +16286,14 @@ function _invEdit(jobId, stableId, key, el) {
     ref[key] = (_raw === '') ? '' : moneyToNumber(el.value);
   } else {
     ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
+  }
+  // ⚠ A STICKY FIELD THAT HAS BEEN DELIBERATELY EMPTIED IS STAMPED, so the merge can tell it
+  // apart from a device that simply never saw a value there. Without this the field could
+  // never be cleared across two devices: the stale copy would restore it on the next sync.
+  if (INV_STICKY_FIELDS.indexOf(key) >= 0) {
+    if (!ref.clearedAt) ref.clearedAt = {};
+    if (_invHasVal(ref[key])) delete ref.clearedAt[key];
+    else ref.clearedAt[key] = Date.now();
   }
   _setPhotoRef(jobId, _invTouch(ref));
   savePhotoRefs(jobId);

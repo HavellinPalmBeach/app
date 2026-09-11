@@ -128,7 +128,9 @@ function server(opts = {}) {
   let code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),
     gsVar(GS, 'JOB_LEDGER_STORE'), ...names.map((n) => gsFn(GS, n)),
     gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_mergeMediaItems'),
-    gsFn(GS_INV, '_mergeCustodyLogs'), gsFn(GS_INV, '_custodyEventId')].join('\n\n');
+    gsFn(GS_INV, '_mergeCustodyLogs'), gsFn(GS_INV, '_custodyEventId'),
+    gsFn(GS_INV, '_invHasVal'), gsFn(GS_INV, '_invStickyValue'),
+    (GS_INV.match(/var INV_STICKY_FIELDS = \[[\s\S]*?\];/) || [''])[0]].join('\n\n');
   if (opts.patch) code = opts.patch(code);
   vm.runInContext(code, ctx, { filename: 'main-sync.gs (extracted)' });
   return ctx;

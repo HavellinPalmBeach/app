@@ -267,6 +267,59 @@ Found by the code audit. App-only, no redeploy. **This is the crew's field paper
   **one** symptom→cause row. Both `.md` copies hand-edited and **7 claims parity-checked**; tag
   balance verified on both HTML files.
 
+## THE SIGNED RELEASE AUTHORITY DIED UNDER AN UNRELATED EDIT (FIXED 2026-09-11)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs`. **Bundle it with the custody-log
+redeploy below; they are the same commit's worth of work and one deployment.** Anthony, on the
+note the custody fix left standing: *"i don't understand the scalar field thing"* — then, once it
+was explained, asked for the narrow version rather than per-field timestamps.
+
+- **⚠⚠ THE SAME WHOLE-RECORD-WINS LINE, ON EVERYTHING THAT IS NOT A LIST.** **Measured on the
+  real merge:** Ashley records the signed release — `authBy: 'Tripp Butler'`,
+  `approvalDate: '2026-09-10'` — at `updatedAt 10`; Anthony sets the same item's Condition to
+  *Good* at `20` on an iPad that never saw it. The merge returns **just the condition**. The
+  representative's written authority is gone, and `_invAwaitingApproval` filters on
+  `!approvalDate`, so **the item walks back onto the next release approval request as though
+  nobody had signed for it**.
+- **`INV_STICKY_FIELDS` IS A TEST, NOT A LIST OF IMPORTANT FIELDS:** losing it destroys the record
+  of something that HAPPENED and there is nothing to re-derive it from. The release authority and
+  the disposition receipt (court-reviewed), the photo's Drive provenance (without `driveFileId`
+  the thumbnail cannot be refetched), and the import guards — `sourceCollId` / `sourceVehId` are
+  what stop a collection or vehicle being materialised twice, which this file already records as
+  six rows numbered 1,2,1,2,3,1.
+- **⚠ `fmv` IS DELIBERATELY NOT ON IT, and nor is `reviewed`.** A value is a judgement somebody
+  revises, and the newer judgement should win — that is the whole point of editing it. Un-reviewing
+  is a real operation. **A sticky field the winner DOES have is never overwritten either**, so
+  correcting a mis-typed approver works normally; the rule fires only into a hole.
+- **⚠⚠ "NEVER SAW A VALUE" AND "DELIBERATELY EMPTIED IT" ARE DIFFERENT ANSWERS, and without
+  telling them apart the fix would be worse than the defect.** A sticky field could then never be
+  cleared at all: blank a mis-recorded approver on one device and the stale device restores it on
+  the next sync, forever. `_invEdit` stamps `clearedAt[key]` when a person empties one of these,
+  and that stamp is the only thing that lets an empty win. **Filling the field again withdraws the
+  stamp**, or a later clear-by-accident would stick. One bit of extra state; per-field timestamps
+  for every field is the bigger change this avoids.
+- **⚠ `clearedAt` HAD TO GO ON THE `savePhotoRefs` WHITELIST** or it is dropped silently on every
+  write — which would leave the clear unexplained and the value restored on the next merge. A test
+  drives a real save and reads the blob back.
+- **⚠ `_invHasVal` TREATS `0` AND `false` AS VALUES.** A truthiness test would read a legitimate
+  zero as absent and reinstate the loser's figure over it. Both pinned.
+- **⚠ THE SERVER CARRIES THE SAME LIST AND THE SAME RULE**, asserted absolutely as well as
+  comparatively — the lesson from the custody fix two hours earlier, where the two implementations
+  agreed on the wrong answer.
+- **3802 committed checks** (26 new across `media-merge` and `custody-log`). **All seven changes
+  revert-verified individually** — dropping the sticky sweep fails **11**, the deliberate-clear
+  rule 4, the clear stamp 1, the whitelist entry 1, the `0`/`false` test 1, and the server's two
+  4 and 3.
+- **Verified end to end in headless Chromium on the real page**, driving the real item editor:
+  recording *Tripp Butler* / *2026-09-10* then merging against a newer record that never saw them
+  returns **condition Good AND authBy Tripp Butler AND approvalDate 2026-09-10**, with
+  `driveFileId`, `sourceCollId` and `itemNo` all intact and `fmv` unmoved. Emptying the approver
+  through the real editor stamps it, the merge then leaves `authBy` **empty** while its neighbour
+  `approvalDate` stays **2026-09-10**, and the stamp survives a real `savePhotoRefs`. Overflow 0
+  at 1440 and 390px, no page errors.
+- No document pass: nothing user-facing changed wording, and neither the manual nor the playbook
+  describes which fields survive a merge. The custody section's redeploy note below already tells
+  anyone deploying that `saveInventory.gs` changed.
+
 ## AN UNRELATED EDIT DESTROYED THE CHAIN OF CUSTODY (FIXED 2026-09-11)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs` AND `main-sync.gs`. The backend
 housekeeping that had been held for "the next real backend change" is **bundled into this one**,
@@ -329,6 +382,10 @@ dispatch lines and their `BACKEND_TYPES` entries, and `BACKEND_VERSION` is `2026
 - **⚠ A PRE-EXISTING TEST PINNED `BACKEND_VERSION = '2026-09-09b'` AS A LITERAL** and broke on the
   bump it existed to require — ninth time. It asserts the FORMAT (dated, so a stale deployment is
   identifiable by eye) and that the bump rule is written where the constant is declared.
+- ~~**⚠ NOT FIXED, AND WORTH KNOWING: A SCALAR ONE DEVICE HAS AND THE OTHER DOES NOT IS STILL
+  LOST.**~~ **FIXED THE SAME DAY — see the section above.** Anthony asked what it meant, then
+  asked for it. *Kept rather than deleted, per the standing rule that a fixed flag left standing
+  reads as outstanding work.* Original note follows.
 - **⚠ NOT FIXED, AND WORTH KNOWING: A SCALAR ONE DEVICE HAS AND THE OTHER DOES NOT IS STILL LOST.**
   Measured: `{authBy:'Tripp Butler', approvalDate:'2026-09-10'}` at `updatedAt 10` against
   `{condition:'Good'}` at `20` merges to **just the condition** — the representative's recorded

@@ -266,6 +266,25 @@ function getMediaStore() {
 // back empty. So the log is UNIONED by event identity rather than won.
 // ⚠ THIS IS THE SAME RULE AS mergeCustodyLogs / _custodyEventId IN havellin.html AND
 // tests/media-merge.test.js DRIVES BOTH AND ASSERTS THEY AGREE. Change one, change the other.
+// ⚠⚠ A SCALAR ONE DEVICE HAS AND THE OTHER DOES NOT WAS SIMPLY LOST. Measured on the real
+// merge: Ashley records `authBy: 'Tripp Butler', approvalDate: '2026-09-10'` at updatedAt 10;
+// Anthony sets the same item's Condition at 20 without having seen it; his record wins whole
+// and the merge returns just the condition. The representative's written authority is gone,
+// and the item walks back onto the next release approval request as though nobody signed.
+// ⚠ SAME LIST AND SAME RULE AS INV_STICKY_FIELDS / invStickyValue IN havellin.html, and
+// tests/media-merge.test.js drives BOTH and asserts they agree. Change one, change the other.
+var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc',
+                         'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId'];
+function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
+// "Never saw a value" and "deliberately emptied it" are different answers: without telling
+// them apart a sticky field could never be cleared at all, because the stale device would
+// restore it on the next sync. The app stamps clearedAt[key] when a person empties one.
+function _invStickyValue(win, lose, key) {
+  if (_invHasVal(win[key])) return win[key];
+  if (win.clearedAt && win.clearedAt[key]) return win[key];
+  return _invHasVal(lose[key]) ? lose[key] : win[key];
+}
+
 function _custodyEventId(e) {
   if (!e) return '';
   if (e.cid) return 'id:' + e.cid;
@@ -299,10 +318,9 @@ function _mergeMediaItems(existing, incoming) {
   // handed, and writing the merged log onto it would edit the store as a side effect.
   var resolve = function(win, lose) {
     var log = _mergeCustodyLogs(win.custodyLog, lose.custodyLog);
-    // An issued item number is permanent. Only the losing side may have seen it assigned,
-    // and a winner without one is sent back through the app's backfill to be issued a NEW
-    // number — silently renumbering an object a receipt already cites.
-    var no = (parseInt(win.itemNo, 10) > 0) ? win.itemNo : lose.itemNo;
+    // The sticky fields, of which the item number is one: permanent, and only the losing side
+    // may have seen it assigned — a winner without one is sent back through the app's backfill
+    // to be issued a NEW number, silently renumbering an object a receipt already cites.
     // ⚠ NO SHORT-CIRCUIT. The first cut returned `win` untouched when the merged log was
     // the same LENGTH — which is not the same as unchanged: a void on the losing side
     // REPLACES an event without adding one, so the tombstone was computed and then thrown
@@ -312,7 +330,11 @@ function _mergeMediaItems(existing, incoming) {
     var out = {};
     for (var k in win) if (Object.prototype.hasOwnProperty.call(win, k)) out[k] = win[k];
     if (log.length) out.custodyLog = log;
-    out.itemNo = no;
+    for (var si = 0; si < INV_STICKY_FIELDS.length; si++) {
+      var key = INV_STICKY_FIELDS[si];
+      var v = _invStickyValue(win, lose, key);
+      if (v !== undefined) out[key] = v;
+    }
     return out;
   };
   var take = function(list) {
