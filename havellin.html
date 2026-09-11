@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:42pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 6:02pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15134,9 +15134,21 @@ function refreshPhotoRefs(jobId, cb) {
       if (d && d.ok) _invCloudSeen[jobId] = true;
       var remote = d && d.ok && d.media && d.media[String(jobId)] && d.media[String(jobId)].items;
       if (!remote || !remote.length) { if (cb) cb(false); return; }
-      _photoRefs[jobId] = mergeMediaItems(_photoRefs[jobId] || [], remote);
+      // ⚠⚠ `changed` HAS TO MEAN THE MERGE MOVED SOMETHING. It used to be an unconditional
+      // cb(true) the moment the server held ANY item — and loadJobPlanTab's callback is
+      // `if (changed) loadJobPlanTab()`, so on any job with photos on file the tab re-entered
+      // itself forever, one network round trip per cycle, rewriting #job-plan-content each
+      // time. Reported 2026-09-11: "when i expand a job plan stage, it automatically shuts on
+      // me within seconds. i can't do anything." It was latent until there were photos in the
+      // sheet to come back — with an empty manifest the guard above short-circuits it.
+      var beforeJson = JSON.stringify(_photoRefs[jobId] || []);
+      var merged = mergeMediaItems(_photoRefs[jobId] || [], remote);
+      var didChange = JSON.stringify(merged) !== beforeJson;
+      _photoRefs[jobId] = merged;
+      // ⚠ Still SAVE either way: this device may not have written the merged copy locally
+      // yet even when the merge was a no-op for the screen.
       savePhotoRefs(jobId);
-      if (cb) cb(true);
+      if (cb) cb(didChange);
     })
     .catch(function(){ if (cb) cb(false); });
 }
@@ -21758,13 +21770,15 @@ function planSubsec(title) {
 }
 
 function planPhaseWrap(id, title, body) {
+  // Re-open whatever the crew had open before this redraw. See _planOpenPhases.
+  var open = !!_planOpenPhases[id];
   return '<div style="margin-bottom:12px;">' +
     '<div onclick="togglePhase(\'' + id + '\')" style="display:flex;justify-content:space-between;' +
     'align-items:center;cursor:pointer;padding:10px 14px;background:var(--gray-dk);color:var(--cream);' +
     'border-radius:5px 5px 0 0;">' +
     '<span style="font-weight:700;font-size:13px;">' + title + '</span>' +
-    '<span id="phase-chev-' + id + '">▶</span></div>' +
-    '<div id="phase-body-' + id + '" style="display:none;padding:12px 14px 14px;border:1px solid var(--border);' +
+    '<span id="phase-chev-' + id + '">' + (open ? '▼' : '▶') + '</span></div>' +
+    '<div id="phase-body-' + id + '" style="display:' + (open ? '' : 'none') + ';padding:12px 14px 14px;border:1px solid var(--border);' +
     'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div>';
 }
 
@@ -24972,6 +24986,16 @@ function renderJobPlan(jobId, job, est) {
     planPhaseWrap('p4','Phase 4 — Close-Out'+(isProbate?' & Court Filing':''), p4);
 }
 
+// ⚠⚠ WHICH PHASES ARE OPEN IS THE CREW'S STATE, NOT THE RENDERER'S. The accordion lived
+// entirely in an inline `display` style, so ANY re-render of #job-plan-content shut every
+// phase — and the tab re-renders for perfectly good reasons: a photo landing from the other
+// device, the estimate store arriving, a directory going stale. Somebody working a room
+// mid-phase had it close under them with nothing to explain it. Remembering it here costs
+// one object and makes every one of those redraws harmless.
+// ⚠ Keyed by phase id and kept for the session only — it is a view state, not a record, and
+// has no business in the job plan store or on the sheet.
+var _planOpenPhases = {};
+
 function togglePhase(id) {
   var body = document.getElementById('phase-body-' + id);
   var chev = document.getElementById('phase-chev-' + id);
@@ -24979,6 +25003,7 @@ function togglePhase(id) {
   var collapsed = body.style.display === 'none';
   body.style.display = collapsed ? '' : 'none';
   if (chev) chev.textContent = collapsed ? '▼' : '▶';
+  if (collapsed) _planOpenPhases[id] = true; else delete _planOpenPhases[id];
 }
 
 function togglePlanTask(jobId, key, checked, el) {

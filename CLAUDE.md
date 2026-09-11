@@ -1,5 +1,62 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A JOB PLAN STAGE THAT SHUT ITSELF WITHIN SECONDS (FIXED 2026-09-11)
+*"when i expand a job plan stage, it automatically shuts on me within seconds. i can't do anything."*
+App-only, no redeploy. **Pre-existing since 2026-09-10 (`8185a7e`) and latent until this afternoon** — the
+first real batch of room photographs is what armed it.
+
+- **⚠⚠ THE TAB WAS RE-ENTERING ITSELF, ONE NETWORK ROUND TRIP PER CYCLE.** `loadJobPlanTab` ends with
+  `refreshPhotoRefs(jobId, function(changed){ if (changed) loadJobPlanTab(); })` — a redraw so a photo taken
+  on the other device appears, which is right. But `refreshPhotoRefs` ended `if (cb) cb(true);`
+  **unconditionally, the moment the server held ANY item for that job.** So `changed` did not mean the merge
+  moved anything; it meant *the sheet has photos*. Unbounded recursion through `fetch`, rewriting
+  `#job-plan-content` every time.
+- **⚠⚠ IT WAS INVISIBLE FOR A DAY BECAUSE THE GUARD ABOVE IT HID IT.** `if (!remote || !remote.length)
+  { cb(false); return; }` short-circuits on an empty manifest, and until today every job's server-side
+  manifest WAS empty. **A latent loop whose trigger is "the feature started being used" is the worst kind**
+  — it ships green, and it arrives on the day the crew first depends on the thing that arms it.
+- **⚠ `changed` IS NOW A REAL COMPARISON** (`JSON.stringify` before/after the merge), and the load-bearing
+  test is **the loop, not the flag**: reverting to a bare `true` fails only ONE assertion about `changed`,
+  which is nowhere near enough for a defect that re-renders a tab forever. The suite drives the actual
+  recursion with a cap — one pass on an unchanged manifest, exactly two when a real photo arrives — and the
+  cap **catches rather than throws**, so a runaway reads as that one assertion failing instead of killing the
+  file before the next group runs. Re-done, the revert fails **4**.
+- **⚠ IT STILL SAVES ON A NO-OP MERGE, deliberately.** This device may not have written the merged copy to
+  localStorage yet even when nothing moved on screen. Only the REDRAW is conditional.
+- **⚠⚠ AND THE SECOND FAULT WOULD HAVE BITTEN ON ITS OWN: ANY REDRAW SHUT EVERY OPEN PHASE.** The
+  accordion lived entirely in an inline `display` style written by `togglePhase`, so it could not survive
+  `content.innerHTML = renderJobPlan(...)`. The Job Plan legitimately redraws for several good reasons — a
+  photo landing from the other device, `_estStoreLanded`, `markDirStale` — and every one of them closed
+  whatever the crew had open, **mid-room, with nothing on screen to explain it**. `_planOpenPhases` is
+  module state; `planPhaseWrap` renders from it.
+- **⚠ IT IS SESSION STATE AND MUST NOT BECOME A RECORD.** Which phase somebody has open is nobody else's
+  business; putting it in the job plan store would sync one person's scroll position to the other's iPad and
+  hand the per-key merge a key that means nothing. Tests `lacks()` `saveJobPlan` and `_planTouch` in
+  `togglePhase`.
+- **⚠ THE PRINT PATH MUST NOT START READING IT.** `printJobPlan` expands a CLONE, so a plan printed with one
+  phase open has to print all of them. `job-plan-print.test.js` now drives a MIXED set — some bodies open,
+  some closed — because until today every body handed to `_jpExpandForPrint` was closed and the open case had
+  never been exercised.
+- **4458 committed checks** (`tests/job-plan-accordion.test.js`, 29 new, plus 4 in `job-plan-print`). **All
+  three changes revert-verified individually** — 4 / 3 / 3.
+- **Verified end to end in headless Chromium on the real page**, driving the real `refreshPhotoRefs` and the
+  real `togglePhase` / `planPhaseWrap`:
+
+  | | old build | new build |
+  |---|---|---|
+  | re-renders on an unchanged manifest | **21 (capped — it does not stop)** | **1** |
+  | network round trips | **20** | **1** |
+  | a phase you opened, after a redraw | **shut, chevron ▶** | **open, chevron ▼** |
+  | a phase you never opened | shut | shut |
+
+  Overflow **0** at 1440 and 390px, no page errors.
+- **⚠ NOTHING WAS LOST WHILE IT WAS HAPPENING, and both documents say so.** Room statuses, notes and ticks
+  were saving normally underneath the flicker; it was the screen that could not be worked, not the record.
+- Manual **§11** (a note with the measurement and why print is unaffected); playbook **one** symptom→cause
+  row that leads with *reload the page*. Both `.md` copies hand-edited; tag balance verified on both HTML
+  files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at 1440/390
+  with **0 overflow** and all tables full-width under `print`.
+
 ## ⚠⚠ ASHLEY LOCKED EVERY ROOM AND NONE OF IT REACHED ANTHONY (FIXED 2026-09-11)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-11b`. Reported in the
 same message as the two photo defects below: *"ashley locked all of the rooms on this job plan, and those are

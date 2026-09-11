@@ -30,7 +30,8 @@ function root(els) {
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
-  const s = sandbox({ fns: ['_jpExpandForPrint', 'planPhaseWrap'], vars: [] });
+  // _planOpenPhases is the crew's accordion state — a re-render used to shut every phase.
+  const s = sandbox({ fns: ['_jpExpandForPrint', 'planPhaseWrap'], vars: ['_planOpenPhases'] });
 
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ EVERY PHASE BODY IS OPENED FOR THE PRINTED COPY');
@@ -55,6 +56,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The chevron is a control's affordance and there is nothing to press on paper.
     eq(chevs.filter((c) => c.textContent === '').length, 2, 'the chevrons are blanked');
     eq(s._jpExpandForPrint(root([])), 0, 'a plan with no phases is 0, not a throw');
+
+    // ⚠ A PHASE THE CREW HAS OPEN ON SCREEN MUST STILL PRINT. Since 2026-09-11 the
+    // accordion survives a redraw (_planOpenPhases), so planPhaseWrap can render a body
+    // already open — the expander must handle that case as well as the closed one, or a
+    // plan printed with Phase 1 open would print Phase 1 and nothing else.
+    s._planOpenPhases = { p1: true };
+    const mixed = [el('phase-body-p0', 'none'), el('phase-body-p1', ''), el('phase-body-p2', 'none')];
+    s._jpExpandForPrint(root(mixed));
+    eq(mixed.filter((b) => b.style.display === 'none').length, 0,
+       'every phase prints whether it was open on screen or not');
+    const openHtml = s.planPhaseWrap('p1', 'Phase 1', 'the checklist');
+    lacks(openHtml, 'style="display:none;', 'an open phase really does render open');
+    s._planOpenPhases = {};
   }
 
   // ───────────────────────────────────────────────────────────────────────────
