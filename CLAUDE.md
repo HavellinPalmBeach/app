@@ -1,6 +1,6 @@
 # Havellin Palm Beach — App Notes
 
-## ⚠⚠ THE INVOICE TOLD A CLIENT THEY HAD BEEN CALLED, AND CREDITED THEM $1 (FIXED 2026-09-11)
+## ⚠⚠ THE VARIANCE ROW IS GONE FROM THE FINAL INVOICE, AND THE $1 CREDIT WITH IT (2026-09-11)
 Anthony, off a real final: *"we ran a job over by a few hours, not 15%, so not requiring a change
 order, and the final invoice flagged that 'Client was notified per T&Cs' which is not true nor
 needed. also there was a weird rounding error on the invoice, creating a $1 credit to client."*
@@ -10,32 +10,41 @@ $1,360 = 5.3%.
 
 - **⚠⚠ THE ROW ASSERTED AN EVENT NOTHING IN THE SYSTEM HAD WITNESSED, ON EVERY POSITIVE VARIANCE.**
   `'Job ran over estimate by ' + fmt(overUnder) + ' — client was notified per T&Cs'` had **no
-  condition on it at all** beyond `overUnder > 0`. Two faults at once and the second is the worse:
+  condition on it at all** beyond `overUnder > 0`. Two faults, and the second is the worse one:
   - **The obligation is a THRESHOLD one.** The estimate's Terms and the agreement's §3.8 both promise
     notice only *"if actual hours exceed the estimate by more than 15%"*. At 5.3% no notice was owed,
     none was given, and the invoice said one had been.
   - **⚠⚠ AND THE APP HAS NEVER RECORDED A NOTIFICATION AT ANY VARIANCE.** That conversation happens
     mid-job, on the phone. What the system can evidence is an **accepted change order** — which
     already has its own section and its own row on the same document. So the sentence was
-    unverifiable **above** the threshold too, where it looked most defensible. Deleting only the
-    under-15% case would have left the app asserting a phone call on the invoices that matter most.
-- **⚠ IT STATES THE VARIANCE AND STATES WHICH SIDE OF THE TOLERANCE IT LANDED — it does not go
-  quiet.** Withholding the overage is the silent omission this file records over and over, and the
-  percentage is the one fact on that row a reader cannot derive from the page: it is the answer to
-  *"the bill is above the estimate — why wasn't I called?"*, which is the question the old sentence
-  was trying to pre-empt and answered by inventing a call. It reads **"Job ran over estimate by
-  $1,360 (5.3%) — inside the 15% tolerance in your agreement"**, or *beyond* it past 15%.
-- **⚠ A FEE-ONLY JOB CITES NO THRESHOLD, because its contract carries none.** Home Prep bills no
-  hours, so its §3.8 re-quotes a scope change instead of naming a 15% — and printing a threshold that
-  is not in that agreement is byte-for-byte the §3.3 defect fixed on the prep contract the same day.
-  `_feeOnly` gates the clause, not the row.
-- **⚠⚠ `EST_TOLERANCE_PCT` IS THE DELIVERABLE, NOT THE SENTENCE.** The ±15% was a bare `0.15` at the
-  manager-PIN gate, another at the change order modal, a `>115` on the Job Plan and a typed *"15%"*
-  in the estimate Terms, the agreement, both dashboard notices and the email — **one rule, ten
-  copies**. It now has one definition and `estTolerancePctTxt()` renders it. That is what makes the
-  new row safe: the final can no longer print *"inside the 15% tolerance"* over an invoice the app is
-  **withholding for being outside it**, which the two independent literals permitted. Driven on both
-  sides: 5.3% prints *inside* and needs no PIN, 26.7% prints *beyond* and requires one.
+    unverifiable **above** the threshold too, where it looked most defensible.
+- **⚠⚠ THE FIRST FIX REWORDED IT. ANTHONY DELETED IT, THE SAME DAY, AND HE IS RIGHT — THIS IS THE
+  ENTRY THAT STANDS.** *"i don't think there is any need to flag a minor over run. and an over run of
+  15% should not happen b/c at 15% we require a change order, and if that is approved, the job will
+  not be 'over run' b/c the additional amount is flagged and agreed to. an estimate is an estimate,
+  not a guarantee of the final number."*
+  - **⚠⚠ THE SECOND HALF IS STRUCTURAL AND IT IS WHY THIS IS NOT A MATTER OF TASTE.**
+    `estHavellinTotal` is `est.havellinTotal + coShift` — **an accepted change order moves the
+    baseline**. So on a job run the way the agreement describes, authorised scope is inside the
+    estimate **by construction** and a large positive variance **cannot reach the final**. One that
+    does means the change order was skipped: a process failure to fix in the office, not a sentence
+    to print at a client who was never asked to agree to it. My reworded version would have gone on
+    narrating a number that, run properly, should not exist.
+  - **⚠ BOTH ARMS WENT, NOT JUST THE OVERAGE.** A document that narrates the favourable direction
+    and goes quiet on the other reads as selective disclosure. And the row **explained something the
+    reader could already see** — the Payment Summary prints *Original Estimate* and *Actual Havellin
+    services total* on rows inches apart, so the line was the subtraction of two numbers already on
+    the page. That is the standing client-copy rule in this file, applied to a line I had just
+    rewritten rather than questioned.
+  - **⚠⚠ `overUnder` ITSELF IS ALIVE AND MUST STAY.** `_variancePct` feeds `requiresApproval`, the
+    **±15% MANAGER PIN**. That gate is INTERNAL and is precisely the control that catches the skipped
+    change order above — withholding the final until a manager looks is the right response to that
+    state, and telling the client is not. **Do not "finish the job" by removing it**; a test drives
+    26.7% and asserts the document still stops while the client copy stays silent.
+- **⚠ `EST_TOLERANCE_PCT` SURVIVES THE DELETION AND IS WORTH KEEPING ON ITS OWN.** The ±15% was a
+  bare `0.15` at the manager-PIN gate, another at the change order modal, a `>115` on the Job Plan
+  and a typed *"15%"* in the estimate Terms, the agreement, both dashboard notices and the email —
+  **one rule, ten copies**. One definition now, with `estTolerancePctTxt()` rendering it.
 - **⚠⚠ THE $1 CREDIT: A FIFTY-CENT DIFFERENCE, AND THE GUARD MEANT TO SWALLOW IT COULD NOT SEE IT.**
   `paymentGap = invoicedBefore - receivedAll` subtracted **two figures that had each already been
   rounded to the dollar**, so the smallest gap `_paymentGapRow` could ever observe was **$1** and
@@ -59,20 +68,20 @@ $1,360 = 5.3%.
   `round(12857.50) = 12858` lands exactly on the target and **both** builds suppress. The figure is
   $12,857.30 now — true gap $0.70 (quiet), rounded first $1 (fires). **Caught by reverting, not by
   reading.** Re-done, it fails 1.
-- **4288 committed checks** (`tests/invoice-variance.test.js`, 25 new — the first coverage of either
-  row). **All seven app changes revert-verified individually** — the whole variance row fails **7**,
-  the PIN gate's constant 2, and the rest 1 each.
+- **4354 committed checks** (`tests/invoice-variance.test.js`, 23 new — the first coverage of either
+  row). **Every change revert-verified individually** — putting the variance row back fails **2**,
+  removing the internal PIN gate with it fails **6**, the gap sites 1 each.
 - **⚠ A PRE-EXISTING TEST PINNED THE EXPRESSION `_variancePct > 0.15` AND BROKE ON A TRUE CHANGE**,
   the eleventh time. Restated as the requirement: the gate is final-only, needs hours, and measures
   against the shared constant rather than a literal of its own.
 - **Verified end to end in headless Chromium on the real page**, driving the real `invoiceHtml` on
   the exact job from the screenshot: *Payments received to date ($19,287)* unchanged, **no gap row**,
-  the variance row reading *"Job ran over estimate by $1,360 (5.3%) — inside the 15% tolerance in
-  your agreement"*, **no `notified per` anywhere**, and no PIN required. Overflow **0** at 1440 and
-  390px, no page errors.
-- Manual **§12** (two notes — the threshold rule with the unverifiable-at-any-size reasoning, and the
-  rounding measurement with the balance-was-never-wrong note); playbook **two bullets** on the
-  invoice step and **two** symptom→cause rows. Both `.md` copies hand-edited and **26 claims
+  **no variance row in either direction**, **no `notified per` anywhere**, *Original Estimate
+  $25,715* and *Actual Havellin services total $27,075* both still printed, and no PIN required.
+  Overflow **0** at 1440 and 390px, no page errors.
+- Manual **§12** (three notes — why the row is gone, that the ±15% PIN is internal and stays, and the
+  rounding measurement with the balance-was-never-wrong note); playbook **three bullets** on the
+  invoice step and **two** symptom→cause rows. Both `.md` copies hand-edited and **23 claims
   parity-checked**; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still
   the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 41 tables
   full-width under `print`**.

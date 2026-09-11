@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:28pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:38pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -20887,42 +20887,29 @@ function invoiceHtml(job, stage) {
       : '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Received ahead of the invoiced schedule — credited in the balance below</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(gap)) + ')</td></tr>';
   }
 
-  // ⚠⚠ IT STATES THE VARIANCE; IT NEVER ASSERTS THAT ANYBODY WAS TOLD. This row read
-  // "Job ran over estimate by $1,360 — client was notified per T&Cs" on EVERY positive
-  // variance, however small — measured on a real final that ran 5.3% over, where no notice
-  // was owed and none was given. Two things wrong with it at once, and the second is worse:
+  // ⚠⚠ THERE IS NO VARIANCE ROW ON THIS DOCUMENT, AND ITS ABSENCE IS THE DECISION.
+  // Anthony, on the row that used to sit here: *"i don't think there is any need to flag a minor
+  // over run. and an over run of 15% should not happen b/c at 15% we require a change order, and
+  // if that is approved, the job will not be 'over run' b/c the additional amount is flagged and
+  // agreed to. an estimate is an estimate, not a guarantee of the final number."*
   //
-  //   1. The obligation is a THRESHOLD one. The estimate's Terms and the agreement's §3.8
-  //      both promise notice only "if actual hours exceed the estimate by more than 15%",
-  //      so on a job inside the tolerance the sentence describes a duty that never arose.
-  //   2. THE APP HAS NO RECORD OF A NOTIFICATION AT ANY VARIANCE. The notice happens mid-job,
-  //      in a phone call; what the app can evidence is an ACCEPTED CHANGE ORDER, and that
-  //      already has its own section and its own row here. So the claim was unverifiable
-  //      above the threshold too — printing it made the invoice assert, to the client, an
-  //      event nothing on the system had witnessed.
+  // ⚠⚠ THE SECOND HALF IS THE STRUCTURAL ARGUMENT AND IT IS WHY THIS IS NOT MERELY TASTE.
+  // `estHavellinTotal` is `est.havellinTotal + coShift` — AN ACCEPTED CHANGE ORDER MOVES THE
+  // BASELINE. So on a job run the way the agreement describes, authorised scope is inside the
+  // estimate by construction and a large positive variance CANNOT reach the final. One that does
+  // means the change order was skipped, which is a process failure to fix in the office — not a
+  // sentence to print at a client who was never asked to agree to it.
   //
-  // What survives is the fact the client cannot see for themselves: the variance as a
-  // percentage, and which side of the tolerance they agreed to it landed on. That is the
-  // answer to "the bill is above the estimate — why wasn't I called?", which is the question
-  // the old sentence was trying to pre-empt and answered by inventing a call.
+  // ⚠ AND THE ROW EXPLAINED SOMETHING THE READER COULD ALREADY SEE, which is the standing
+  // client-copy rule in this file: the Payment Summary prints "Original Estimate" and "Actual
+  // Havellin services total" on rows INCHES APART, so the variance line was the subtraction of two
+  // numbers already on the page, in both directions. Both arms went, not just the overage — a
+  // document that narrates the favourable direction and goes quiet on the other reads as selective.
   //
-  // ⚠ THE TOLERANCE IS ONLY CITED WHERE THE ENGAGEMENT ACTUALLY CARRIES ONE. A fee-only job
-  // (Home Prep) bills no hours, so its §3.8 states no 15% — it re-quotes a scope change
-  // instead — and naming a threshold that is not in that contract is the defect §3.3 was
-  // fixed for. Fixed price cannot reach this row at all: every stage is anchored to the flat
-  // fee, so the variance is structurally zero.
-  function _overUnderRow(){
-    if (!overUnder) return '';
-    var pct = estHavellinTotal > 0 ? Math.abs(overUnder) / estHavellinTotal : 0;
-    var pctTxt = ' (' + (Math.round(pct * 1000) / 10).toFixed(1) + '%)';
-    var within = pct <= EST_TOLERANCE_PCT;
-    var tol = _feeOnly ? '' :
-      (within ? ' — inside the ' + estTolerancePctTxt() + ' tolerance in your agreement'
-              : ' — beyond the ' + estTolerancePctTxt() + ' tolerance in your agreement');
-    return overUnder > 0
-      ? '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Job ran over estimate by ' + fmt(overUnder) + pctTxt + tol + '</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(overUnder) + '</td></tr>'
-      : '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Job came in under estimate by ' + fmt(Math.abs(overUnder)) + pctTxt + ' — credit applied</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(overUnder)) + ')</td></tr>';
-  }
+  // ⚠⚠ `overUnder` ITSELF IS ALIVE AND MUST STAY: `_variancePct` feeds `requiresApproval`,
+  // the ±15% MANAGER PIN. That gate is INTERNAL and is exactly the control that catches the
+  // skipped change order above — withholding the final until a manager looks is the right response
+  // to that state, and telling the client about it is not. Do not "finish the job" by removing it.
 
   function _amtDueBox(label, amt){
     // Set the dark background on every cell (not just the row) so the box renders solid
@@ -20973,7 +20960,6 @@ function invoiceHtml(job, stage) {
     '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
     _paymentGapRow(paymentGap) +
     '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
-    _overUnderRow() +
     (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +

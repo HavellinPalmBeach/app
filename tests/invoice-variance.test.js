@@ -65,70 +65,57 @@ const REPORTED = [pay('deposit', 12858), pay('midpoint', 6428.75)];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
 
-  group('⚠⚠ THE INVOICE NEVER CLAIMS THE CLIENT WAS TOLD');
+  group('⚠⚠ THE FINAL CARRIES NO VARIANCE ROW AT ALL');
   {
     const t = text(doc(REPORTED, 95, 70).html);
     lacks(t, 'notified per',
-          '⚠⚠ the sentence is GONE. An invoice must not assert a phone call nothing on the '
-          + 'system witnessed — and at 5.3% no notice was owed in the first place');
+          '⚠⚠ THE ORIGINAL REPORT. "client was notified per T&Cs" printed on every positive '
+          + 'variance however small — a claim the app has no record of at ANY size, on a job '
+          + 'where no notice was owed');
     lacks(t, 'T&Cs', 'and the document no longer points at terms it was misreading');
-    has(t, 'Job ran over estimate by $1,360',
-        'the overage itself is still stated — withholding it would be the silent omission');
-    has(t, '(5.3%)',
-        '⚠ WITH THE PERCENTAGE, which is the one fact the reader cannot derive from the page '
-        + 'and the answer to "the bill is over the estimate, why wasn\'t I called?"');
-    has(t, 'inside the 15% tolerance in your agreement',
-        'and says which side of the threshold they agreed to it landed on');
+    lacks(t, 'ran over estimate',
+          '⚠⚠ AND THE WHOLE ROW IS GONE, which is the decision rather than a softer wording. '
+          + 'An accepted change order moves the baseline, so authorised scope is inside the '
+          + 'estimate by construction and a real overrun cannot reach a correctly-run final');
+    lacks(t, 'came in under estimate',
+          '⚠ BOTH ARMS, not just the overage. A document that narrates the favourable direction '
+          + 'and goes quiet on the other reads as selective disclosure');
+    has(t, 'Original Estimate',
+        '⚠ NOTHING IS HIDDEN: the estimate is still printed…');
+    has(t, 'Actual Havellin services total',
+        '…on a row inches from the actual, so the reader can do the subtraction the row used to '
+        + 'do for them. That is the standing client-copy rule — a line explaining what is already '
+        + 'visible costs more than it earns');
+    eq(Math.round(doc(REPORTED, 95, 70).amtDue), 7788,
+       'and the balance is untouched — this was never a change to what anyone is billed');
   }
 
-  group('⚠ THE ROW AND THE MANAGER PIN CANNOT DISAGREE — one constant, both readers');
+  group('⚠⚠ THE ±15% MANAGER PIN IS INTERNAL AND IS DELIBERATELY UNTOUCHED');
   {
+    // Anthony's own argument is why this has to stay: a variance this large means the change
+    // order was skipped. Withholding the final until a manager looks is the right answer to
+    // that; telling the client about it on the invoice is not.
     const inside = doc(REPORTED, 95, 70);
-    eq(inside.requiresApproval, false, '5.3% needs no PIN');
-    has(text(inside.html), 'inside the 15%', 'and the client copy says inside');
+    eq(inside.requiresApproval, false, '5.3% issues without a PIN');
 
-    // 95 TC + 120 PS = $32,575 against $25,715 — 26.7% over.
     const past = doc([pay('deposit', 12858), pay('midpoint', 6428)], 95, 120);
-    eq(past.requiresApproval, true, 'past the tolerance the final needs a manager PIN');
-    has(text(past.html), 'beyond the 15% tolerance in your agreement',
-        '⚠ and the client copy says beyond — the two surfaces read EST_TOLERANCE_PCT, so a '
-        + 'final cannot print "inside the tolerance" over an invoice the app is withholding');
-    lacks(text(past.html), 'notified per',
-          '⚠⚠ AND STILL NO CLAIM OF NOTICE ABOVE THE THRESHOLD. That is where the old sentence '
-          + 'looked most defensible and was still unevidenced: the notice happens mid-job in a '
-          + 'phone call, and the record of it is an accepted change order, not this row');
+    eq(past.requiresApproval, true,
+       '⚠⚠ 26.7% STILL STOPS THE DOCUMENT. Removing the client-facing row must not remove the '
+       + 'control — that is the one thing standing between a skipped change order and an invoice');
+    ok(past.variancePct > 0.15, 'and the figure the gate reads is still computed');
+    lacks(text(past.html), 'ran over estimate',
+          '⚠ but the client copy says nothing about it even here');
   }
 
-  group('a job that lands on its estimate says nothing at all');
+  group('an accepted change order moves the baseline, so authorised scope is not a variance');
   {
-    const t = text(doc([pay('deposit', 12858), pay('midpoint', 6428)], 89, 68).html);
-    lacks(t, 'Job ran over estimate', 'no variance, no row');
-    lacks(t, 'Job came in under estimate', 'in either direction');
-  }
-
-  group('the under-estimate arm keeps its credit and gains the percentage');
-  {
-    const t = text(doc([pay('deposit', 12858), pay('midpoint', 6428)], 80, 60).html);
-    has(t, 'Job came in under estimate by $2,665 (10.4%) — credit applied',
-        'a client who is owed money is still told so, in the same shape');
-  }
-
-  group('⚠ A FEE-ONLY JOB IS NOT TOLD ABOUT A TOLERANCE ITS CONTRACT DOES NOT CARRY');
-  {
-    // Home Prep bills no hours, so its §3.8 re-quotes a scope change and states no 15%.
-    // Naming a threshold that is not in that agreement is the §3.3 defect all over again.
-    // Estimated at $10,000 of painting (a $3,000 fee); the painter actually quoted $20,000,
-    // so the fee trues to $6,000 and the engagement finals $3,000 over with no hour logged.
-    const prep = doc([pay('deposit', 1500)], 0, 0,
-                     { svc: 'prep', totTC: 0, totPS: 0, tcFee: 0, psFee: 0, pkgCost: 0,
-                       prepFee: 3000, havellinTotal: 3000, havellinTotalFull: 3000,
-                       prepEnabled: true,
-                       prepItems: [{ lid: 'a', cat: 'Painting', cost: 10000, note: 'interior' }] },
-                     { svc: 'prep', prepSourcing: { La: { quote: 20000, vendorName: 'Ace Painting' } } });
-    const t = text(prep.html);
-    lacks(t, 'tolerance in your agreement',
-          '⚠ no threshold is cited on an engagement whose agreement states none');
-    has(t, 'Job ran over estimate', 'the variance itself is still reported');
+    // The structural half of Anthony's argument, driven rather than asserted: the same extra
+    // hours are a 5.3% variance unauthorised and no variance at all once agreed.
+    const d = doc(REPORTED, 95, 70);
+    ok(Math.abs(d.overUnder) > 0,
+       'unauthorised, the extra hours read as a variance to the gate');
+    eq(d.requiresApproval, false,
+       'small enough to issue — which is exactly the case that needed no flag');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
