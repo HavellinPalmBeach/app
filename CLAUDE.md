@@ -213,6 +213,71 @@ they owe.**
   and playbook describe recording payments and the three stages, and state neither what the final
   reconciles against nor the Payment Summary's rows.
 
+## A SPECIFIC BEQUEST WAS LISTED FOR AUCTION, AND THE PAGE DIDN'T SAY SO (FIXED 2026-09-11)
+Found by the code audit. App-only, no redeploy. **This is the document a personal representative
+signs to authorise property leaving the house.**
+
+- **⚠⚠ `flagBequest` AND `flagDisputed` REACHED NO PRINTED DOCUMENT. NOT ONE.** Both were editable
+  on the manifest, both exported to the attorney's workbook, both painted as chips on screen — and
+  every print path ignored them. **Measured by driving the real `printApprovalRequest`, not argued:**
+  a **$48,000 Sargent portrait the will leaves to a named person printed identically to a set of
+  dining chairs**, proposed for **Auction**, with an initial box beside it. The words *bequest* and
+  *dispute* appeared **nowhere** in the 6,217 bytes of that document.
+- **⚠ AND THE CLIENT ESTIMATE PROMISES THE OPPOSITE IN WRITING, FOUR TIMES OVER.** Every estate arm
+  of its sorting stage says *"specific bequests are set aside"*. So the engagement letter said set
+  aside while the release request asked the representative to authorise the sale, silently.
+- **⚠ IT FLAGS AND EXPLAINS; IT NEVER REFUSES, AND NEVER DROPS THE LINE.** The firearms rule
+  exactly. A specific bequest CAN properly be sold — it may have adeemed, the beneficiary may have
+  disclaimed, the estate may need the proceeds — and that is the representative's decision on
+  counsel's advice. Withholding the line would be the silent-omission defect this file records over
+  and over. **A test asserts all four lines still print.**
+- **`INV_RELEASE_CAUTIONS` IS THE ONE CATALOGUE**, read by the badge, the notice and the bulk bar;
+  `invReleaseCautions(ref)` is the predicate, DOM-free, so the tests read the real rule.
+- **⚠ THE NOTICE GOES ABOVE THE TABLE, AND THAT IS ARITHMETIC RATHER THAN TYPOGRAPHY.** The reader
+  works down this list initialling lines, so a caveat printed under it has arrived after the
+  signature it exists to come before. **The firearms note stays below** — it is informational (how a
+  firearm leaves), not an instruction to stop and check. Both directions asserted on the RENDERED
+  document's own reading order, never on two source indices.
+- **⚠ THE NOTICE NAMES THE OBJECTS AND THEIR ITEM NUMBERS, never a bare count** — `#2 Sargent
+  portrait · #4 Mother's locket`. A count says something is wrong; a name says which line to stop
+  at. Same rule the withheld-firearms list follows and the same rule the appraisal worklist was
+  fixed to follow this morning. **`_invNamed` prints the bare name when no number has been issued**;
+  `#—` in the position a reader quotes back is worse than no number at all.
+- **⚠ EVERY STRING IS NUMBER-NEUTRAL, and there is a test for it.** The first cut built the body
+  round *"is"/"are"*, which reads as broken English on whichever case the author was not picturing —
+  and the author only ever pictures one of them. State the rule about the property, then name the
+  lines.
+- **⚠ THE COLOURS MATCH THE CHIPS THE SAME ROWS ALREADY WEAR ON SCREEN** — bronze for a bequest
+  (check before you sign), red for a dispute (we hold and wait, which is what the client estimate's
+  own stage 3 tells the estate we do). **Not a breach of the intake brief's one-red rule**: that
+  rule is about the Job Plan's standing flags, a different surface.
+- **TWO MORE SURFACES, EACH FOR ITS OWN REASON.** The **Disposition & Accounting Ledger** badges
+  them, because that is the permanent fiduciary record and a bequest that *was* sold has to be
+  findable in it — warning on the request and going quiet on the account is the four-verbs-one-out-
+  of-step shape this file records more often than anything else. And the **bulk bar** names them in
+  its confirmation, because that is where the mistake is MADE: one dropdown sets `Auction` across
+  forty rows and it used to say only *"Auction set on 40 items"*. **Keep and Hold raise nothing, by
+  definition** — nothing is leaving, and cautioning there trains people past it.
+- **⚠ SETTING A DISPOSITION MUST NOT ISSUE AN ITEM NUMBER, and a test pins that.** A number, once
+  issued, is spent forever; spending one as a side effect of a dropdown is not a bulk edit's call.
+- **3681 committed checks** (`tests/release-cautions.test.js`, 63 new — the first committed coverage
+  of either flag). **All eight changes revert-verified individually** — dropping the notices fails
+  **10**, the bequest caution **12**, the dispute caution 10, the bulk callout 4, each badge site 3,
+  moving the notice below the table 2, and `_invNamed`'s guard 1.
+- **Verified end to end in headless Chromium on the real page**, driving the real Inventory tab: the
+  bulk bar reports *"Auction set on 4 items … ⚠ 2 of them are flagged specific bequest — #2 Sargent
+  portrait, #4 Mother's locket. ⚠ 2 of them are flagged disputed — #3 Tabriz rug, #4 Mother's
+  locket. Check before the release request goes to the representative."*; the printed request runs
+  8,275 bytes against 6,159 on the old build, carries both notices **above** the table, badges both
+  rows, still lists **4 items**, and the ledger badges them too. Overflow 0 at 1440 and 390px, no
+  page errors.
+- Prelaunch, so no such request has gone to a real estate. Manual **§10a** (a bullet on the badged
+  line plus three notes — the measurement, the flags-never-refuse rule, and the two other surfaces);
+  playbook a `.stop` on not chasing a flagged signature, a `.note` on the bulk bar, and **three**
+  symptom→cause rows including one for a request printed before today. Both `.md` copies
+  hand-edited and **22 claims parity-checked**; tag balance verified on both HTML files
+  (`manual.html`'s `<code>` delta is still the documented false positive at 1).
+
 ## ⚠⚠ THE DISCOUNT BASE WAS CORRECTED THE SAME DAY — IT INCLUDES THE PREMIUM (FIXED 2026-09-11)
 Anthony, reading the build that had just shipped: *"If it's a hundred thousand dollar job on labor,
 and we apply a twenty percent premium because it's a rush job, that's $120k. A 10% discount is

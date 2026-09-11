@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 11:15am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 11:33am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15864,6 +15864,15 @@ function _invItemNo(ref) {
   return n > 0 ? String(n) : '—';
 }
 
+// "#12 Sargent portrait", or the bare name where no number has been issued yet. ⚠ NEVER
+// "#— Sargent portrait": a placeholder in the position a reader quotes back is worse than no
+// number at all, which is the same distinction `_invItemNo` draws for the inventory snapshot.
+function _invNamed(ref) {
+  var n = _invItemNo(ref);
+  var nm = (ref && ref.objectName) || 'unnamed item';
+  return (n === '—') ? nm : ('#' + n + ' ' + nm);
+}
+
 function _invRoomName(jobId, roomIdx) {
   var estRec = estimateStore[jobId];
   var rooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
@@ -16672,6 +16681,81 @@ function _invAwaitingApproval(jobId) {
     return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !r.approvalDate;
   });
 }
+// ⚠⚠ A SPECIFIC BEQUEST IS NOT OURS TO PROPOSE SELLING, AND A RECORDED DISPUTE IS NOT OURS
+// TO RESOLVE — AND UNTIL 2026-09-11 NEITHER FLAG REACHED A SINGLE PRINTED DOCUMENT.
+// `flagBequest` and `flagDisputed` existed on the manifest, were editable, exported to the
+// workbook and painted as chips on screen, and were read by NO print path. Measured on the
+// real `printApprovalRequest`: a $48,000 Sargent portrait the will leaves to a named person
+// printed identically to a set of dining chairs, with **Auction** proposed and an initial box
+// beside it. The words "bequest" and "dispute" appeared nowhere in the document.
+//
+// ⚠ AND THE CLIENT ESTIMATE PROMISES THE OPPOSITE, IN WRITING, FOUR TIMES OVER — every estate
+// arm of the sorting stage says "specific bequests are set aside". So the engagement letter
+// says set aside and the release request proposed auctioning one, silently.
+//
+// ⚠ IT FLAGS AND EXPLAINS; IT MUST NEVER REFUSE, and must never silently withhold the line
+// either. Same rule the firearms gate follows. A specific bequest CAN properly be sold — it
+// may have adeemed, the beneficiary may have disclaimed, the estate may need the proceeds —
+// and that is the representative's decision on counsel's advice. Dropping the item off the
+// request would be the silent-omission defect this file records over and over; what must never
+// happen again is the app asking for an initial against a bequest without saying it is one.
+//
+// ⚠ THE COLOURS MATCH THE CHIPS THE SAME ROWS ALREADY WEAR ON SCREEN — bronze for a bequest
+// (check before you sign), red for a dispute (we hold and wait, which is what the client
+// estimate's own stage 3 tells the estate we do). Do not read this as painting a second row
+// red in the sense the intake crew brief forbids: that rule is about the Job Plan's standing
+// flags, a different surface with one red reserved for firearms.
+//
+// ⚠ EVERY STRING HERE IS NUMBER-NEUTRAL, deliberately. The notice names one item or nine, and
+// a body built round "is"/"are" or "it"/"them" reads as broken English on whichever case the
+// author was not picturing. State the rule about the property, then name the lines.
+var INV_RELEASE_CAUTIONS = [
+  { key: 'flagBequest', badge: 'SPECIFIC BEQUEST', tone: '#8a5a1e',
+    head: 'Specific bequests on this request',
+    body: 'Property named in a specific bequest is left by the will to a particular person, and '
+        + 'Havellin\u2019s engagement is to set it aside rather than dispose of it. It is on this '
+        + 'request only because a disposition has been proposed against it. A specific bequest can '
+        + 'properly be sold — it may have adeemed, the beneficiary may have disclaimed, or the '
+        + 'estate may need the proceeds — but that is your decision on counsel\u2019s advice and not '
+        + 'one Havellin makes. <strong>Confirm it with counsel before initialling.</strong> To take '
+        + 'a line off this request instead, ask your concierge to set its disposition to Keep or Hold.' },
+  { key: 'flagDisputed', badge: 'DISPUTED', tone: '#A32D2D',
+    head: 'Disputed property on this request',
+    body: 'A recorded dispute means beneficiaries disagree about what happens to the property. '
+        + 'Havellin holds disputed property and takes direction from you alone — nothing moves on '
+        + 'a verbal request from anyone, family included. <strong>Initialling a line below is your '
+        + 'written instruction to release it notwithstanding the dispute.</strong>' },
+];
+// DOM-free, so the tests read the real rule rather than grepping rendered HTML.
+function invReleaseCautions(ref) {
+  if (!ref) return [];
+  return INV_RELEASE_CAUTIONS.filter(function(c){ return !!ref[c.key]; });
+}
+// The badge that rides the item's own row. A reader working down a list initialling lines has
+// to meet this IN the line — a note under the table is read after the signature it needed to
+// come before.
+function _invCautionBadges(ref) {
+  return invReleaseCautions(ref).map(function(c){
+    return '<div style="font-size:9.5px;font-weight:700;letter-spacing:.4px;color:' + c.tone + ';margin-top:2px;">'
+      + '&#9888; ' + esc(c.badge) + '</div>';
+  }).join('');
+}
+// ⚠ THE NOTICE NAMES THE OBJECTS AND THEIR ITEM NUMBERS, never a bare count. A count tells a
+// reader something is wrong; a name tells them which line to stop at. Same rule the withheld-
+// firearms list follows, and the same rule the appraisal worklist was fixed to follow today.
+function _invCautionNotices(items) {
+  return INV_RELEASE_CAUTIONS.map(function(c){
+    var hit = (items || []).filter(function(r){ return !!r[c.key]; });
+    if (!hit.length) return '';
+    var named = hit.map(function(r){ return esc(_invNamed(r)); }).join(' &middot; ');
+    return '<div style="border:1px solid ' + c.tone + ';border-left-width:4px;border-radius:3px;'
+      + 'padding:8px 10px;margin-bottom:10px;font-size:11px;line-height:1.55;color:#3c3228;">'
+      + '<div style="font-weight:700;color:' + c.tone + ';margin-bottom:3px;">&#9888; ' + esc(c.head) + '</div>'
+      + '<div style="font-weight:700;margin-bottom:3px;">' + named + '</div>'
+      + c.body + '</div>';
+  }).join('');
+}
+
 function printApprovalRequest(jobId, selectedOnly) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
@@ -16693,7 +16777,8 @@ function printApprovalRequest(jobId, selectedOnly) {
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;"><strong>' + esc(r.objectName || '—') + '</strong>'
-        + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + ' &middot; ' + esc(_invRoomName(jobId, r.roomIdx)) + '</div></td>'
+        + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + ' &middot; ' + esc(_invRoomName(jobId, r.roomIdx)) + '</div>'
+        + _invCautionBadges(r) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition || '—')
@@ -16711,6 +16796,11 @@ function printApprovalRequest(jobId, selectedOnly) {
       + 'Please initial each line you approve, then sign and date at the foot. '
       + '<strong>Nothing on this list will be moved, sold, donated or disposed of until this request is returned signed. '
       + 'Verbal approval is not accepted.</strong></div>'
+    // ⚠ ABOVE THE TABLE, NOT BELOW IT. The reader works down this list initialling lines, so a
+    // caveat printed under the table has arrived after the signature it exists to come before.
+    // The firearms note stays below because it is informational — it tells the representative
+    // how a firearm leaves, not to stop and check before approving one.
+    + _invCautionNotices(items)
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
       + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Item</th>'
       + '<th style="padding:2px 6px;text-align:right;">Qty</th><th style="padding:2px 6px;text-align:right;">Est. value</th>'
@@ -16870,8 +16960,14 @@ function printDispositionLedger(jobId) {
     if (!isNaN(g)) gross += g; if (!isNaN(f)) fees += f;
     var net = (isNaN(g) ? 0 : g) - (isNaN(f) ? 0 : f);
     var hasNet = !isNaN(g) || !isNaN(f);
+    // ⚠ THE SAME MARKING AS THE APPROVAL REQUEST, and it belongs here for a different reason:
+    // this is the permanent fiduciary accounting. A bequest that WAS sold has to be findable in
+    // the record, or nothing on the page shows the decision was taken deliberately rather than
+    // by nobody. Warning on the request and going quiet on the account is the four-verbs-one-out-
+    // of-step shape this file records more often than anything else.
     return '<tr>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + '</td>'
+      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—')
+        + _invCautionBadges(r) + '</td>'
       + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.disposition || '—') + '</td>'
       + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.channel || '—') + '</td>'
       + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.authBy || '—') + (r.approvalDate ? ' <span style="color:#888;">' + esc(fmtDate2(r.approvalDate)) + '</span>' : '') + '</td>'
@@ -17845,6 +17941,20 @@ function _invBulkApply(jobId, key, value) {
   var items = n + ' item' + (n > 1 ? 's' : '');
   if (key === 'reviewed')          what = items + ' marked reviewed.';
   else if (key === 'disposition')  what = value + ' set on ' + items + ' \u2014 they are now under the ' + value + ' section.';
+  // ⚠ THE EARLIER CATCH. This bar sets one disposition across forty rows at a time, so it is
+  // where a specific bequest or a disputed item gets swept into Auction — and the confirmation
+  // used to read only "Auction set on 40 items". The release approval request names them too,
+  // but that document is read by the representative; this is read by the person who did it,
+  // at the moment they did it. Named, never counted — a count cannot be acted on.
+  if (key === 'disposition' && INV_RELEASE_DISPOSITIONS.indexOf(value) >= 0) {
+    var _swept = INV_RELEASE_CAUTIONS.map(function(c){
+      var hit = picked.filter(function(r){ return !!r[c.key]; });
+      if (!hit.length) return '';
+      return ' \u26a0 ' + hit.length + ' of them ' + (hit.length > 1 ? 'are' : 'is') + ' flagged '
+        + c.badge.toLowerCase() + ' \u2014 ' + hit.map(_invNamed).join(', ') + '.';
+    }).join('');
+    if (_swept) what += _swept + ' Check before the release request goes to the representative.';
+  }
   else if (key === 'roomIdx')      what = items + ' moved to ' + _invRoomName(jobId, picked[0].roomIdx) + '.';
   else if (key === 'valSource')    what = 'Valuation source set to ' + value + ' on ' + items + '.';
   else                             what = items + ' updated.';
