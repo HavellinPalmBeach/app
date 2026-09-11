@@ -138,9 +138,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'function renderProbateAgreement(', 'the old estate renderer name is retired');
     eq((src.match(/renderProbateAgreement\(\)/g) || []).length, 0, 'and nothing calls it');
 
-    // The signing packet still reads the agreement panel for its first page — that is
-    // Slice 3's job to change, and it is recorded here so it is not mistaken for done.
-    has(noComments(fn('signingPacketHtml')), "getElementById('agr-page-content')",
-      'signingPacketHtml still reads the agreement panel — Slice 3 finishes that');
+    // ⚠ Slice 3 finished this: the packet READ `#agr-page-content`, so it was whatever
+    // the Agreement tab happened to be showing, and it returned '' outright if that tab
+    // had never rendered — printing a packet from the dashboard depended on having
+    // visited another tab first. Both halves are built now.
+    const pk = noComments(fn('signingPacketHtml'));
+    lacks(pk, "getElementById('agr-page-content')", 'the packet no longer scrapes the agreement panel');
+    has(pk, 'agreementHtml(job, null)', 'it builds the agreement');
+    has(pk, '_approvedEstimateHtml(jobId)', 'and the approved estimate as its Exhibit A');
   }
 };

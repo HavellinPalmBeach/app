@@ -307,8 +307,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.jobTimelineActions(builtSigned, signedRail.job, signedRail.rec).secondary, [],
       'and withdrawn the moment the client signs');
     const sentSigned = signedRail.rows.filter((r) => r.key === 'estimate_sent')[0];
-    eq(ctx.jobTimelineActions(sentSigned, signedRail.job, signedRail.rec).secondary, [],
-      'so is Offer discount — a signed price is not re-negotiated from here');
+    // ⚠ Offer discount is withdrawn on a signed job — a signed price is not re-negotiated
+    // from here. View and Print are NOT withdrawn: reading a document you have already
+    // sent is always safe, and it is the point of Slice 3 that every document stays
+    // readable from the client it belongs to.
+    const sentSignedActs = ctx.jobTimelineActions(sentSigned, signedRail.job, signedRail.rec).secondary;
+    ok(!sentSignedActs.some((a) => /Offer discount/.test(a.label)), 'Offer discount is withdrawn once signed');
+    ok(sentSignedActs.some((a) => a.call.indexOf("'estimate','view'") >= 0), 'but the estimate stays readable');
+    ok(sentSignedActs.some((a) => a.call.indexOf("'estimate','print'") >= 0), 'and printable');
 
     // A dead job offers nothing.
     const lost = railFor({ status: 'lost', lostReasonLabel: 'Went elsewhere' }, { estimate: EST() });

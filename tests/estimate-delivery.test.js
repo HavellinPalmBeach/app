@@ -65,8 +65,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!/,/.test(n.client), 'no comma in the filename');
 
     // The old name was the surname and the job id, which reads as a database key.
+    // Slice 3: printing goes through the one document action, which owns the naming via
+    // `docNames` — the generalisation of `estimateDocNames` that covers all five
+    // documents. The three names still cannot drift, because they come from one function.
     const print = fn('printClientEstimate');
-    has(print, 'estimateDocNames(job).client', 'the printed PDF takes the shared name');
+    has(print, "docAction(currentEstimate.jobId, 'estimate', 'print')",
+      'the printed PDF goes through the one document action');
+    has(fn('docNames'), 'Havellin Service Estimate', 'which names it for the client');
+    has(fn('docNames'), 'printTitle: client', 'and hands that name to the print path as the PDF filename');
     lacks(print, "clientName.split(' ').pop()", 'the surname-and-id filename is gone');
 
     // A job with no address must still produce something sane.

@@ -300,6 +300,18 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-ghost{font-size:11px;padding:0;border:0;background:none;color:var(--bronze);cursor:pointer;font-family:inherit;text-decoration:underline;}
 /* One strip for the out-of-sequence actions, serving both layouts. */
 .jt-quick{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);}
+/* ─── THE DOCUMENT VIEWER ────────────────────────────────────────────────────
+   Reads the estimate, the signing packet or any invoice without leaving the client.
+   A near-full-screen sheet rather than a narrow modal: these are letter-width
+   documents and a 540px box would reflow every table in them. */
+.doc-viewer{background:var(--white);width:min(980px,96vw);max-height:92vh;border-radius:6px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.25);}
+.doc-viewer-hd{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--cream);flex-shrink:0;}
+.doc-viewer-ttl{font-size:14px;font-weight:600;color:var(--gray-dk);}
+.doc-viewer-sub{font-size:11.5px;color:var(--gray);margin-top:1px;overflow-wrap:anywhere;}
+/* The document scrolls, the header does not — so Print stays reachable on a long
+   agreement instead of being 45KB above the fold. */
+.doc-viewer-body{overflow-y:auto;overflow-x:hidden;padding:18px;background:#f4f1ea;flex:1 1 auto;}
+.doc-viewer-body .ce-page{margin:0 auto;background:var(--white);}
 
 /* ─── THE HORIZONTAL TRACK ───────────────────────────────────────────────────
    On a desk the vertical rail "take[s] up a lot of real estate vertically and uses
@@ -926,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 7:59pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 8:12pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1990,6 +2002,27 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="document.getElementById('inv-pin-modal').style.display='none'">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════ DOCUMENT VIEWER ══════════
+     ⚠ OUTSIDE #client-dashboard-view ON PURPOSE. jobsWatchTick re-renders the drilldown
+     with innerHTML whenever a status changes remotely — every 15 seconds while anything
+     is pending — so a viewer nested inside it would be wiped mid-read. It also keeps
+     .ce-page out of .card, which costs ~29px of document width on a phone. -->
+<div class="modal-overlay" id="doc-viewer-modal" style="display:none;">
+  <div class="doc-viewer">
+    <div class="doc-viewer-hd">
+      <div style="min-width:0;">
+        <div class="doc-viewer-ttl" id="doc-viewer-title">Document</div>
+        <div class="doc-viewer-sub" id="doc-viewer-sub"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn-bronze" onclick="printDocViewer()">&#128424; Print / Save PDF</button>
+        <button class="btn-s" onclick="closeDocViewer()">Close</button>
+      </div>
+    </div>
+    <div class="doc-viewer-body" id="doc-viewer-body"></div>
   </div>
 </div>
 
@@ -11086,6 +11119,209 @@ function jobTimelineNext(rows) {
 // `secondary` is the exception, and only where an action is genuinely available
 // out of sequence: the intake answers are edited all through a job, and an
 // estimate stays editable until the client signs.
+// ─── SLICE 3: ONE WAY TO NAME, VIEW AND PRINT ANY CLIENT DOCUMENT ────────────
+// Slice 2 made the three documents pure functions. This gives them ONE registry, one
+// naming rule, one viewer and one print path — so the estimate, the signing packet and
+// all three invoices behave identically, and learning one teaches the others.
+//
+// ⚠ THE DOC KEY IS `kind` PLUS STAGE, because the invoice is three documents. Keying on
+// `kind` alone would let a midpoint invoice inherit a final's gate, which is the failure
+// `printInvoice` already had for a different reason.
+
+var DOC_KINDS = ['estimate', 'agreement', 'invoice'];
+
+// What differs between the documents, and nothing else. Everything shared lives in
+// `docAction` below — the moment a difference leaks out of this table, the documents
+// stop behaving the same way and there is no longer one thing to learn.
+var DOC_ACTIONS = {
+  estimate: {
+    label: 'Client Estimate',
+    driveSub: 'Estimate',
+    html: function (spec) { return clientEstimateHtml(spec.est, spec.job); },
+    // The estimate is the client's copy of an approved price. An unapproved one is a
+    // working draft and must not leave the building.
+    blocker: function (spec) {
+      if (!spec.est) return 'No estimate has been built for this job yet.';
+      var rec = estimateStore[spec.job.id];
+      if (!(rec && rec.approved)) return 'This estimate has not been approved yet. A manager approves it on the timeline above.';
+      return '';
+    }
+  },
+  agreement: {
+    label: 'Signing Packet',
+    driveSub: 'Agreement',
+    // ⚠ THE PACKET, NEVER THE BARE AGREEMENT. Both forms incorporate the Estimate as
+    // Exhibit A and the estate form says the agreement is not valid without it, so a
+    // client sent the agreement alone is signing against an exhibit they do not have.
+    html: function (spec) { return signingPacketHtml(spec.job.id); },
+    blocker: function (spec) {
+      // ⚠ `agreementReady`'s second argument is the STORE RECORD (`{approved, estimate}`),
+      // not the estimate SNAPSHOT that `spec.est` holds — a snapshot has no `.approved`,
+      // so passing it made every agreement read as unapproved and refused to open at all.
+      // Caught in a browser; the source assertions could not see it, because the call
+      // looked right. Passing null lets it read the record itself, which is the one place
+      // that question is answered.
+      var blk = agreementReady(spec.job, null);
+      if (blk === 'estimate') return 'The estimate must be approved before the agreement can be drawn.';
+      if (blk === 'notwon') return 'Record the client’s acceptance first — until they have said yes there is nothing to put under contract.';
+      if (blk) return 'This job could not be found.';
+      return '';
+    }
+  },
+  invoice: {
+    label: 'Invoice',
+    driveSub: 'Invoice',
+    html: function (spec) { var d = invoiceHtml(spec.job, spec.stage); return d ? d.html : ''; },
+    blocker: function (spec) {
+      var d = invoiceHtml(spec.job, spec.stage);
+      if (!d) return 'This job could not be found.';
+      // ⚠ TWO DIFFERENT ANSWERS AND THEY MUST STAY APART. `blocked` cannot be unlocked by
+      // anyone — nobody can unlock a missing timesheet. `requiresApproval` can, by a PIN.
+      if (d.blocked) return 'No hours have been logged for this job, so the final cannot be issued. Log them on the Job Plan tab first.';
+      if (d.requiresApproval && !invApproved) return 'This final is ' + Math.round(d.variancePct * 100) + '% off the estimate, outside the ±15% tolerance, so it needs a manager PIN before it can be issued.';
+      return '';
+    }
+  }
+};
+
+var DOC_STAGE_WORD = { deposit: 'Deposit', midpoint: 'Midpoint', final: 'Final' };
+
+// The key that identifies one document: 'estimate', 'agreement', or 'invoice:final'.
+function docKeyFor(kind, opt) {
+  return (kind === 'invoice') ? ('invoice:' + (((opt && opt.stage) || currentInvStage || 'final'))) : kind;
+}
+
+// ⚠ ONE NAMING RULE FOR ALL FIVE DOCUMENTS, generalising `estimateDocNames`. Before this
+// the estimate had a considered client-facing name and the other two did not: the invoice
+// PDF was `<Surname>-<hvlId>-Final` — a database key on a document going to a client —
+// and the AGREEMENT set no title at all, so its PDF was named after the browser tab
+// ("Havellin Palm Beach — Clients & Estimator — INTERNAL"). That is what the
+// client saw in their downloads folder.
+//
+// ⚠ THE CLIENT NAME IS DATED AND THE DRIVE NAME IS NOT, and that asymmetry is load-bearing:
+// Drive overwrites by filename, so a stable name makes a re-file REPLACE rather than
+// accumulate. Dating the Drive copy would leave a folder full of near-identical documents
+// with no way to tell which one the client actually holds.
+function docNames(job, kind, opt) {
+  job = job || {};
+  var hvl = job.hvlId || 'HVL';
+  var street = String(job.addr || '').split(',')[0].trim();
+  var stamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
+  var stage = (opt && opt.stage) || '';
+  var title = kind === 'agreement' ? 'Havellin Services Agreement'
+            : kind === 'invoice' ? ('Havellin ' + (DOC_STAGE_WORD[stage] || 'Final') + ' Invoice')
+            : 'Havellin Service Estimate';
+  var client = title + (street ? ' - ' + street : '') + ' - ' + stamp;
+  var driveBase = kind === 'agreement' ? 'Havellin Services Agreement'
+                : kind === 'invoice' ? ('Havellin Invoice - ' + (DOC_STAGE_WORD[stage] || 'Final'))
+                : 'Havellin Service Estimate';
+  return {
+    client: client,
+    attachment: client + '.pdf',
+    printTitle: client,
+    drive: hvl + ' - ' + driveBase + '.html'
+  };
+}
+
+// Everything one action needs, resolved from a job id. ⚠ IT READS NO GLOBAL TO DECIDE
+// WHICH JOB — that is the whole lesson of Slice 1, where six functions resolved their job
+// through a <select> on a tab nobody was looking at.
+function docSpec(kind, jobId, opt) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job || !DOC_ACTIONS[kind]) return null;
+  var stage = (kind === 'invoice') ? (((opt && opt.stage) || currentInvStage || 'final')) : null;
+  var rec = estimateStore[jobId];
+  return {
+    kind: kind,
+    stage: stage,
+    key: docKeyFor(kind, { stage: stage }),
+    job: job,
+    // The APPROVED snapshot where there is one — it carries the rates, the fixed-price
+    // flag and the documentation scope that `job.havellinEst` does not.
+    est: approvedEstimateFor(jobId) || (rec && rec.estimate) || null,
+    cfg: DOC_ACTIONS[kind],
+    names: docNames(job, kind, { stage: stage })
+  };
+}
+
+// ─── THE ONE ACTION ──────────────────────────────────────────────────────────
+// `verb` is 'view' or 'print' in this slice; 'send' and 'file' join them in Slices 4
+// and 5 without the callers changing.
+//
+// ⚠ THE GATE IS CHECKED HERE, ONCE, FOR EVERY VERB. Putting it on the buttons instead is
+// how `printInvoice` came to trust a flag another document had set: a gate that lives
+// beside the action cannot be bypassed by reaching the action another way.
+function docAction(jobId, kind, verb, opt) {
+  var spec = docSpec(kind, jobId, opt);
+  if (!spec) { _docNotice('warn', 'This job could not be found.', jobId); return false; }
+
+  var blk = spec.cfg.blocker(spec);
+  if (blk) { _docNotice('warn', blk, jobId); return false; }
+
+  var html = spec.cfg.html(spec);
+  if (!html) { _docNotice('warn', 'There is nothing to ' + verb + ' on this document yet.', jobId); return false; }
+
+  if (verb === 'view') return openDocViewer(spec, html);
+  if (verb === 'print') return _printDocument('<div class="ce-page">' + html + '</div>', spec.names.printTitle);
+  _docNotice('warn', 'Unknown document action.', jobId);
+  return false;
+}
+
+// Messages land on the drilldown when it is open and in an alert otherwise — the tab
+// strips belong to panels the drilldown hides.
+function _docNotice(type, msg, jobId) {
+  if (typeof dashNotice === 'function' && document.getElementById('dash-fb')) {
+    dashNotice(type, msg);
+    if (typeof _dashRedraw === 'function') _dashRedraw(jobId);
+    return;
+  }
+  alert(msg);
+}
+
+// ─── THE VIEWER ──────────────────────────────────────────────────────────────
+// ⚠ THE MODAL LIVES OUTSIDE `#client-dashboard-view`, DELIBERATELY. `jobsWatchTick`
+// re-renders the drilldown with innerHTML whenever a status changes remotely — every 15
+// seconds while anything is pending — so a viewer nested inside it would be wiped
+// mid-read. It also keeps `.ce-page` out of `.card`, which costs about 29px of document
+// width on a phone for nothing.
+var _docViewerSpec = null;
+
+function openDocViewer(spec, html) {
+  var box = document.getElementById('doc-viewer-body');
+  var ttl = document.getElementById('doc-viewer-title');
+  var sub = document.getElementById('doc-viewer-sub');
+  var ov  = document.getElementById('doc-viewer-modal');
+  if (!box || !ov) return false;
+  _docViewerSpec = spec;
+  ttl.textContent = spec.cfg.label + (spec.stage ? ' — ' + (DOC_STAGE_WORD[spec.stage] || spec.stage) : '');
+  sub.textContent = (spec.job.name || 'Client') + (spec.job.addr ? ' · ' + spec.job.addr : '');
+  box.innerHTML = '<div class="ce-page">' + html + '</div>';
+  ov.style.display = 'flex';
+  box.scrollTop = 0;
+  return true;
+}
+
+function closeDocViewer() {
+  var ov = document.getElementById('doc-viewer-modal');
+  if (ov) ov.style.display = 'none';
+  // ⚠ The document is dropped on close rather than left in the DOM. It can be 45KB of
+  // agreement, and a stale one sitting behind a hidden overlay is one `display:flex`
+  // away from being read as the current client's.
+  var box = document.getElementById('doc-viewer-body');
+  if (box) box.innerHTML = '';
+  _docViewerSpec = null;
+}
+
+// Print what is being viewed, from the SPEC rather than from the viewer's innerHTML —
+// so the printed copy is rebuilt from the same source as everything else rather than
+// scraped off the screen.
+function printDocViewer() {
+  if (!_docViewerSpec) return;
+  var s = _docViewerSpec;
+  closeDocViewer();
+  docAction(s.job.id, s.kind, 'print', { stage: s.stage });
+}
+
 function jobTimelineActions(row, job, estRec) {
   var id = job.id;
   var out = { primary: null, secondary: [] };
@@ -11125,6 +11361,13 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'estimate_sent':
       if (live) out.primary = { label: '&#10003; Mark as sent', call: 'dashMarkEstimateSent(' + id + ')' };
+      // ⚠ View and Print are offered on the SAME row for every document, in the same
+      // order, whatever the document is. That sameness is the point of the slice: learn
+      // it on the estimate and you already know the agreement and the invoices.
+      if (estApproved) {
+        out.secondary.push({ label: '&#128065; View', call: "docAction(" + id + ",'estimate','view')" });
+        out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'estimate','print')" });
+      }
       // A discount is a re-approval, so it is only offered on an approved estimate the
       // client has not yet signed against.
       if (estApproved && !job.agrSigned) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
@@ -11139,6 +11382,8 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'agreement_sent':
       if (live) out.primary = { label: '&#10003; Mark agreement sent', call: 'dashMarkAgreementSent(' + id + ')' };
+      out.secondary.push({ label: '&#128065; View', call: "docAction(" + id + ",'agreement','view')" });
+      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'agreement','print')" });
       break;
 
     case 'agreement_signed':
@@ -11152,6 +11397,8 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'deposit_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'deposit')" };
+      out.secondary.push({ label: '&#128065; View invoice', call: "docAction(" + id + ",'invoice','view',{stage:'deposit'})" });
+      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'invoice','print',{stage:'deposit'})" });
       break;
 
     case 'job_active':
@@ -11163,6 +11410,8 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'midpoint_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'midpoint')" };
+      out.secondary.push({ label: '&#128065; View invoice', call: "docAction(" + id + ",'invoice','view',{stage:'midpoint'})" });
+      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'invoice','print',{stage:'midpoint'})" });
       break;
 
     case 'work_complete':
@@ -11171,6 +11420,8 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'final_paid':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'final')" };
+      out.secondary.push({ label: '&#128065; View invoice', call: "docAction(" + id + ",'invoice','view',{stage:'final'})" });
+      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'invoice','print',{stage:'final'})" });
       break;
   }
   return out;
@@ -15161,10 +15412,17 @@ function removeCustodyEvent(idx) {
 // defers the dialog by even a frame the target is already EMPTY by the time the page is
 // rendered. Reported as "I hit appraisal worklist and a blank doc comes up to print."
 // Route every generated document through here; do not hand-roll the sequence again.
-function _printDocument(html) {
+// ⚠ `title` IS THE PDF's FILENAME. Chrome names a Save-as-PDF after document.title, so
+// every caller that did not set one produced a file called "Havellin Palm Beach —
+// Clients & Estimator — INTERNAL" in a client's downloads folder. printAgreement was
+// exactly that. It is restored on the SAME nested timeout that clears the target, so a
+// caller cannot leak its filename onto whatever is printed next.
+function _printDocument(html, title) {
   var pt = document.getElementById('print-target');
   if (!pt) return false;
   if (!html) { alert('There is nothing to print on this document yet.'); return false; }
+  var _origTitle = document.title;
+  if (title) document.title = title;
   pt.innerHTML = html;
   var panels = document.querySelectorAll('.panel');
   Array.prototype.forEach.call(panels, function(p) {
@@ -15181,6 +15439,7 @@ function _printDocument(html) {
         if (p.dataset.wasActive === '1') p.classList.add('active');
         delete p.dataset.wasActive;
       });
+      document.title = _origTitle;
     }, 500);
   }, 150);
   return true;
@@ -23218,27 +23477,27 @@ function _approvedEstimateHtml(jobId) {
   return clientEstimateHtml(snap, jobs.find(function(j){ return j.id === jobId; }));
 }
 
+// ⚠ THIS READ `#agr-page-content` UNTIL SLICE 3 — so the packet was whatever the
+// Agreement tab happened to be showing, and it returned '' outright if that tab had never
+// rendered. Printing a packet from the dashboard therefore depended on having visited
+// another tab first. Both halves are built now.
 function signingPacketHtml(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
-  var agrEl = document.getElementById('agr-page-content');
-  if (!job || !agrEl || !agrEl.innerHTML.trim()) return '';
+  if (!job) return '';
+  var agrHtml = agreementHtml(job, null);
   var estHtml = _approvedEstimateHtml(jobId);
-  if (!estHtml) return '';
-  return buildSigningPacketHtml(agrEl.innerHTML, estHtml, job);
+  if (!agrHtml || !estHtml) return '';
+  return buildSigningPacketHtml(agrHtml, estHtml, job);
 }
 
 // Same gate as printAgreement, same single print path. The PDF filename carries the
 // packet's name the way printClientEstimate names the estimate's.
+// The agreement key IS the signing packet — see DOC_ACTIONS. Both buttons on the tab now
+// produce the same document, which is the one that is valid: the bare agreement is signed
+// against an Exhibit A the client does not have.
 function printSigningPacket() {
-  // Approval is a consequence now, not a step: stamp it on the way through.
   if (ensureAgreementApproved(currentAgrJobId)) { alert('The estimate must be approved and the client\'s acceptance recorded before this can be printed.'); return; }
-  var html = signingPacketHtml(currentAgrJobId);
-  if (!html) { alert('The signing packet needs an approved estimate for this job.'); return; }
-  var job = jobs.find(function(j){ return j.id === currentAgrJobId; }) || {};
-  var originalTitle = document.title;
-  document.title = ((job.name || 'Client').split(' ').pop()) + '-' + (job.hvlId || 'Unknown') + '-Signing-Packet';
-  _printDocument(html);
-  setTimeout(function(){ document.title = originalTitle; }, 1200);
+  docAction(currentAgrJobId, 'agreement', 'print');
 }
 
 // Filed beside the agreement on approval, into the same Agreement subfolder.
@@ -24644,59 +24903,23 @@ function copyStripeLink(type) {
   showFB('agr-fb','info',msg);
 }
 
+// ⚠ THIS PRINTED WITH NO TITLE SET, so the client's PDF was named after the browser tab.
+// It also hand-rolled the panel-hiding sequence that `_printDocument` exists to own.
 function printAgreement() {
-  // Approval is a consequence now, not a step: stamp it on the way through.
   if (ensureAgreementApproved(currentAgrJobId)) { alert('The estimate must be approved and the client\'s acceptance recorded before this can be printed.'); return; }
-  var content = document.getElementById('agr-page-content').innerHTML;
-  var printTarget = document.getElementById('print-target');
-  printTarget.innerHTML = '<div class="ce-page">' + content + '</div>';
-  var allPanels = document.querySelectorAll('.panel');
-  allPanels.forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
-  printTarget.style.display = 'block';
-  // Small delay ensures DOM and styles are fully applied before print dialog opens
-  setTimeout(function(){
-    window.print();
-    setTimeout(function(){
-      printTarget.style.display = 'none';
-      printTarget.innerHTML = '';
-      allPanels.forEach(function(p){ if(p.dataset.wasActive==='1') p.classList.add('active'); });
-    }, 500);
-  }, 150);
+  docAction(currentAgrJobId, 'agreement', 'print');
 }
 
+
+// ⚠ ALL THREE OF THESE HAND-ROLLED THE PRINT SEQUENCE OR THE NAMING OR BOTH. They are
+// wrappers on `docAction` now, so the tab and the dashboard print the same bytes under
+// the same filename through the same path. `printClientEstimate` keeps its own approval
+// message because the tab's wording is what its users know.
 function printClientEstimate() {
-  if (!estimateApproved) { alert('Estimate must be approved before printing.'); return; }
-  
-  // The PDF filename is what the client sees in their downloads and their inbox, so it
-  // names the document rather than keying it: "Havellin Service Estimate - 1234 Ocean Blvd
-  // - Sep 8 2026" rather than "Ellsworth-HVL-0007". Shared with the Drive copy and the
-  // email attachment through estimateDocNames so the three cannot drift apart.
-  var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; }) || {};
-  var filename = estimateDocNames(job).client;
-  
-  // Save original title and set new one for PDF filename
-  var originalTitle = document.title;
-  document.title = filename;
-  
-  var content = document.getElementById('ce-page-content').innerHTML;
-  var printTarget = document.getElementById('print-target');
-  printTarget.innerHTML = '<div class="ce-page">' + content + '</div>';
-  var allPanels = document.querySelectorAll('.panel');
-  allPanels.forEach(function(p){ p.dataset.wasActive = p.classList.contains('active') ? '1':'0'; p.classList.remove('active'); });
-  printTarget.style.display = 'block';
-  
-  // Longer delay for iPad to ensure DOM and styles are fully applied
-  setTimeout(function(){
-    window.print();
-    setTimeout(function(){
-      printTarget.style.display = 'none';
-      printTarget.innerHTML = '';
-      allPanels.forEach(function(p){ if(p.dataset.wasActive==='1') p.classList.add('active'); });
-      // Restore original title
-      document.title = originalTitle;
-    }, 500);
-  }, 300);
+  if (!currentEstimate) { alert('Select an estimate first.'); return; }
+  docAction(currentEstimate.jobId, 'estimate', 'print');
 }
+
 
 
 

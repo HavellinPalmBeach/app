@@ -50,9 +50,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const print = fn('printSigningPacket');
     has(print, 'ensureAgreementApproved(currentAgrJobId)', 'same gate as printAgreement');
-    has(print, '_printDocument(html)', 'routes through the ONE print path — no hand-rolled print sequence');
+    // Slice 3: it is a wrapper on the one document action, which owns the print path and
+    // the naming. `docNames` gives it a client-facing name rather than a database key.
+    has(print, "docAction(currentAgrJobId, 'agreement', 'print')", 'routes through the ONE document action');
     lacks(print, 'window.print()', 'and does not call window.print itself');
-    has(print, "'-Signing-Packet'", 'the PDF is named as a packet');
+    lacks(print, 'document.title =', 'nor juggles the page title by hand');
+    has(fn('docNames'), 'Havellin Services Agreement', 'the PDF is named for the client, not keyed');
     const exp = fn('exportSigningPacketToDrive');
     has(exp, "resolveSubfolderId(job, 'Agreement'", 'filed to the Agreement subfolder beside the agreement');
     has(exp, "'_Signing_Packet.html'", 'under the packet name');

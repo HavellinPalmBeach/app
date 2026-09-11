@@ -70,6 +70,75 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## SLICE 3 — one way to NAME, VIEW and PRINT any client document (2026-09-11)
+Slice 2 made the documents pure; this gives them ONE registry, one naming rule, one viewer
+and one print path. Sameness is the deliverable — Anthony: *"if they've sent an estimate
+they'll know how to send an agreement, and they'll know how to send an invoice."*
+App-only, no redeploy.
+
+- **⚠ THE THREE PRINTERS EACH GOT IT WRONG IN A DIFFERENT WAY, WHICH IS THE ARGUMENT FOR
+  ONE PATH.** `printAgreement` **set no `document.title` at all** — and Chrome names a
+  Save-as-PDF after the page title, so the client's agreement arrived in their downloads
+  called **"Havellin Palm Beach — Clients & Estimator — INTERNAL"**. It also hand-rolled
+  the panel-hiding sequence `_printDocument` exists to own, as did `printClientEstimate`
+  separately. The invoice named its PDF `<Surname>-<hvlId>-Final`, a database key on a
+  client document. All three are five-line wrappers on `docAction` now.
+- **`_printDocument(html, title)`** — `title` IS the PDF filename, and it is restored on the
+  **same nested timeout that clears the print target**, so a caller cannot leak its filename
+  onto whatever is printed next. A test asserts the restore comes after the clear rather
+  than on a separate timer.
+- **`docNames(job, kind, opt)` generalises `estimateDocNames` to all five documents.**
+  **⚠ THE CLIENT NAME IS DATED AND THE DRIVE NAME IS NOT, and the asymmetry is
+  load-bearing:** Drive overwrites by filename, so a stable name makes a re-file REPLACE
+  rather than accumulate; dating it would leave a folder of near-identical documents with
+  no way to tell which one the client actually holds. Tested in both directions.
+- **⚠ THE DOC KEY IS KIND *PLUS STAGE*, because the invoice is three documents.** Keying on
+  kind alone would let a midpoint inherit a final's gate — the same shape as the bug
+  `printInvoice` already had for a different reason.
+- **⚠ THE GATE IS CHECKED IN `docAction`, ONCE, BEFORE THE DOCUMENT IS BUILT, FOR EVERY
+  VERB.** Putting it on the buttons is how `printInvoice` came to trust a flag another
+  document had set: a gate beside the action cannot be bypassed by reaching the action
+  another way. Slices 4 and 5 add `send` and `file` here with no caller changing.
+  - The invoice's two verdicts stay apart: `blocked` **cannot be unlocked by anyone** —
+    nobody can unlock a missing timesheet — while `requiresApproval` can, by a PIN.
+  - **The agreement key produces the SIGNING PACKET, never the bare agreement.** Both forms
+    incorporate the Estimate as Exhibit A and the estate form says the agreement is not
+    valid without it, so a client sent the agreement alone signs against an exhibit they do
+    not have. A test asserts `agreementHtml` is never the registry's html for that key.
+- **⚠ THE ONE BUG THE TESTS COULD NOT SEE, AND A BROWSER CAUGHT IN ONE RUN.** The agreement
+  refused to open **at all**: `agreementReady`'s second argument is the STORE RECORD
+  (`{approved, estimate}`) and I passed `spec.est`, the estimate **SNAPSHOT**, which has no
+  `.approved` — so every agreement read as unapproved. **The call looked right, which is
+  exactly why grepping for it proved nothing.** Source assertions verify that a line exists;
+  only running the thing verifies what it does.
+- **⚠ THE VIEWER LIVES OUTSIDE `#client-dashboard-view`, DELIBERATELY.** `jobsWatchTick`
+  re-renders the drilldown with `innerHTML` whenever a status changes remotely — every 15
+  seconds while anything is pending — so a viewer nested inside it would be **wiped
+  mid-read**. Proven rather than argued: a 60,876-byte signing packet open in the viewer is
+  byte-identical and still open after a real `renderClientDashboard` call. It also keeps
+  `.ce-page` out of `.card`, which costs ~29px of document width on a phone.
+  - It **drops the document on close**: 45KB of agreement left behind a hidden overlay is
+    one `display:flex` away from being read as the current client's.
+  - **Printing from the viewer rebuilds from the SPEC, never from the viewer's innerHTML** —
+    so the printed copy comes from the same source as everything else instead of being
+    scraped off the screen, and it carries the stage so a midpoint prints as a midpoint.
+- **`signingPacketHtml` no longer reads `#agr-page-content`** — finishing what Slice 2 left.
+  It was whatever the Agreement tab happened to be showing, and returned `''` outright if
+  that tab had never rendered, so printing a packet from the dashboard depended on having
+  visited another tab first.
+- **2592 committed checks** (`tests/doc-actions.test.js`, 82 new). **All 13 changes
+  revert-verified individually.** ⚠ Three of my own assertions were too loose and were
+  caught by their own suite: `html\s*:` also matched `d.html : ''`; `&#128065; View`
+  is a prefix of `&#128065; View invoice`; and the viewer-placement check asserted "after
+  the last panel" when the requirement is "not inside the container that gets rewritten" —
+  the modals block sits *before* `#panel-winloss`, so it was asserting the wrong thing.
+- **Verified in headless Chromium**: all five documents open in the viewer from the rail
+  (estimate 15,235 bytes · packet 60,876 · deposit 4,300 · midpoint 4,519), the print
+  filename reads *"Havellin Service Estimate - 69 beach blvd - Sep 11 2026"* during the
+  print and the page title is restored after, an unapproved estimate and a no-hours final
+  both refuse with their own wording on `#dash-fb`, and overflow is 0 at 1440px and 390px.
+  No page errors.
+
 ## SLICE 2 — the three client documents are PURE FUNCTIONS (2026-09-10)
 Invisible by design: **all five rendered documents were captured before and after and are
 BYTE-IDENTICAL.** App-only, no redeploy. This is the plumbing Slices 3–5 stand on.
