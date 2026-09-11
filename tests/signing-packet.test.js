@@ -85,7 +85,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ It used to fire inside the agreement's PIN handler. The PIN is gone, so the
     // filing moved to `ensureAgreementApproved` — the one place the approval is stamped.
     has(fn('ensureAgreementApproved'), 'exportSigningPacketToDrive(jobId)', 'and it fires when the approval is stamped');
-    has(fn('ensureAgreementApproved'), 'exportAgreementToDrive(jobId)', 'alongside the agreement itself');
+    // ⚠ AND IT IS THE ONLY THING FILED. Retaining the bare agreement beside it put a
+    // document that must never go out one click from the one that must, under a nearly
+    // identical name. The packet carries the agreement verbatim as its first page, so
+    // nothing is lost by not filing it twice.
+    lacks(fn('ensureAgreementApproved'), 'exportAgreementToDrive', '⚠ and the bare agreement is not filed at all');
+    lacks(src, 'function exportAgreementToDrive', 'the filer is deleted, not left dead in the file');
     // ⚠ THIS USED TO ASSERT A `finally` THAT PUT THE CLIENT ESTIMATE TAB BACK. Slice 2
     // removed the borrow it was compensating for: `_approvedEstimateHtml` swapped three
     // globals, rendered into #ce-page-content, read the innerHTML out and restored all

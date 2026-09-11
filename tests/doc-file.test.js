@@ -29,7 +29,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The requirement, stated once and checked across every filing path: a document going
     // into a client's Drive folder is built from the SPEC, never read off the screen.
-    ['docFile', 'saveFolderEstimate', 'exportAgreementToDrive', 'exportSigningPacketToDrive',
+    ['docFile', 'saveFolderEstimate', 'exportSigningPacketToDrive',
      'printInvoice', 'docPdfBase64'].forEach((f) => {
       const b = noComments(fn(f));
       lacks(b, "getElementById('ce-page-content')", f + ' does not read the estimate tab');
@@ -42,8 +42,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // from leaving that panel on another client.
     ['clientEstimateHtml', 'agreementHtml', 'invoiceHtml'].forEach((f) =>
       ok(fn(f).length > 0, f + ' exists as a pure builder for it to use'));
-    has(noComments(fn('exportAgreementToDrive')), 'agreementHtml(job, approvedEstimateFor(jobId))',
-      'the bare agreement builds from the pure renderer and the APPROVED snapshot');
+    // ⚠ `exportAgreementToDrive` is GONE (2026-09-11). It filed the BARE agreement beside
+    // the packet, so the folder held the terms-without-Exhibit-A one click from the document
+    // the client actually signs, under a nearly identical name. Anthony: *"let's just have
+    // the combined doc saved and sent."* The packet carries the agreement verbatim as its
+    // first page, so nothing is lost — and nothing ever read the filed bare copy back.
+    lacks(src, 'function exportAgreementToDrive', 'the bare-agreement filer is deleted, not disabled');
+    // ⚠ Scoped to LIVE lines, and that is the honest scope rather than a weakened check:
+    // the comment above the packet's filer NAMES the retired filename in order to explain
+    // what was removed and why nobody should restore it. The requirement is that no CODE
+    // writes that name any more. (This file records the same needle tripping on its own
+    // comment twice before — reword the comment, or scope the assertion and say why.)
+    lacks(noComments(src), '_Agreement.html', 'and no code writes its Drive filename any more');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -326,7 +336,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _exportDoc: (t, b2) => b2, resolveSubfolderId: (j, n, cb) => cb('folder:' + n),
         _jobRootFolderId: () => 'root',
         uploadHtmlToDrive(f, n, h, done) { rc.__up.push(n); done(true, 'https://drive/x', {}); },
-        _primeAgreementFor: () => true, exportAgreementToDrive() {},
+        _primeAgreementFor: () => true,
         _packetExported: {}, _agrExportKey: (j) => String(j.agrApprovedAt || ''),
         signingPacketHtml: () => '<packet/>', isJobWon: () => true,
         clientEstimateHtml: () => '<e/>', invoiceHtml: () => null,
@@ -378,8 +388,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // correction must — which is why they key on the approval stamp rather than on
     // "already done this session". CLAUDE.md records what the bare boolean cost.
     has(src, 'function _agrExportKey(job) { return String(job.agrApprovedAt || ', 'the stamp key survives');
-    ['exportAgreementToDrive', 'exportSigningPacketToDrive'].forEach((f) =>
-      has(noComments(fn(f)), '_agrExportKey(job)', f + ' still keys on the approval stamp'));
+    has(noComments(fn('exportSigningPacketToDrive')), '_agrExportKey(job)',
+      'the packet — the one document retained — still keys on the approval stamp');
 
     // Drive's duplicate sweep depends on the Shared-Drive lookup fixed on 2026-09-09.
     has(src, 'duplicatesRemoved', 'the duplicate count still reaches the badge');

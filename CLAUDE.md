@@ -70,6 +70,46 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## Only the COMBINED document is retained — the bare agreement is not filed (2026-09-11)
+*"let's just have the combined doc saved and sent."* Anthony closing the open question Slice 5
+recorded. App-only, no redeploy.
+
+- **THE QUESTION, AND IT WAS A RECORDS DECISION RATHER THAN A REFACTOR.** `ensureAgreementApproved`
+  filed **two** documents into the same `Agreement` subfolder: the signing packet as
+  `<HVL-ID> - Havellin Services Agreement.html`, and the bare agreement as `<HVL-ID>_Agreement.html`.
+  **The packet is the document the client signs.** The agreement alone is the same terms with its
+  **Exhibit A missing** — and both forms say the agreement is not valid without it. So the folder
+  held a document that must never go out, one click from the one that must, under a nearly identical
+  name, with nothing on Drive to tell them apart.
+- **⚠ `exportAgreementToDrive` IS DELETED, NOT DISABLED**, and `_agrExported` with it.
+  `_agrExportKey` **survives** — the packet's own guard reads it. Dead code that still compiles is
+  how a retired writer comes back "as a precaution".
+- **⚠ NOTHING IS LOST, AND THAT IS THE POINT: THE PACKET CONTAINS THE AGREEMENT VERBATIM as its
+  first page.** Measured on a real approval driven in Chromium, not argued — before: two files at
+  **114,044** and **128,276** bytes; after: **one**, the 128,276-byte packet, byte-for-byte the same.
+  The 14,232-byte difference IS the Exhibit A pages. **Do not "restore the agreement for the
+  record"**; a second retained copy is precisely the hazard this removes.
+- **Sending, viewing and printing already produced the packet** — `DOC_ACTIONS.agreement` is labelled
+  *Signing Packet* and has resolved to it since Slice 3. **Filing was the one verb still
+  disagreeing**, which is exactly the shape of defect this file keeps recording: four verbs, one of
+  them out of step.
+- **Nothing ever read the filed bare agreement back.** No stored URL, no reader anywhere in the app —
+  checked before removing it, because a retained document with a reader is a different decision.
+- **⚠ A JOB PAPERED BEFORE TODAY STILL HAS BOTH FILES, AND THE APP CANNOT TIDY THAT.** It overwrites
+  the packet by filename on the next approval but never deletes from Drive on its own, and it should
+  not start. Both documents say so, and say which to keep: **the one named *Havellin Services
+  Agreement***. Prelaunch, so this is dummy data — not worth an Apps Script action and a redeploy.
+- **3304 committed checks. Revert-verified: restoring the filer fails 9.** ⚠ **EIGHT TEST SITES
+  ACROSS FOUR SUITES ASSERTED THE OLD DECISION** (*"the agreement files itself on the stamp"*,
+  *"alongside the agreement itself"*) and every one of them failed correctly — they were doing their
+  job. Each now states the new requirement rather than being deleted.
+- **⚠ AND MY OWN COMMENT TRIPPED MY OWN `lacks()` NEEDLE AGAIN**, the third time this file records
+  it: the comment explaining the removal has to NAME `_Agreement.html` to be worth reading. Scoped to
+  non-comment lines and said why, because here the requirement genuinely is *no LIVE reference*.
+- Manual **§8** (a note with the two filenames, the byte measurement, and which to keep in an old
+  folder); playbook **Step 6** a note and **one** symptom→cause row for somebody looking at a folder
+  with two agreements in it. Both `.md` copies hand-edited and **7 claims parity-checked**.
+
 ## Field mode gets the Client Dashboard — five tabs, and the buttons work (2026-09-11)
 The fifth `data-field` tab, agreed with Anthony after Slice 7. App-only, no redeploy.
 

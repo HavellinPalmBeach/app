@@ -178,8 +178,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // approved the price is the named person who signed off on what this document says.
     has(ensure, 'job.agrApprovedBy = (rec && rec.approvedBy)', 'attribution falls to the estimate approver');
     has(ensure, "|| job.wonBy || job.tc || ''", 'with a real name behind that, never a blank');
-    has(ensure, 'exportAgreementToDrive(jobId)', 'the agreement files itself on the stamp');
-    has(ensure, 'exportSigningPacketToDrive(jobId)', 'and so does the signing packet');
+    // ⚠ ONE document files itself on the stamp, and it is the SIGNING PACKET. The bare
+    // agreement filed here too until 2026-09-11; Anthony's call was to retain the combined
+    // document only, so a folder cannot hold the unsigned half beside the signed whole.
+    has(ensure, 'exportSigningPacketToDrive(jobId)', 'the signing packet files itself on the stamp');
+    lacks(ensure, 'exportAgreementToDrive', '⚠ and the bare agreement is NOT filed alongside it');
     // ⚠ It files into a client's Drive folder off whatever the agreement panel holds.
     has(ensure, '_primeAgreementFor(jobId)', 'it primes that panel first');
     has(ensure, "return 'nojob'", 'and refuses if it cannot, rather than filing the wrong estate');

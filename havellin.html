@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 10:37pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 10:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -24064,38 +24064,29 @@ function _jobRootFolderId(job) {
 }
 
 // Keyed on the approval STAMP, not a bare "already done this session". The old guard was
-// `if (_agrExported[jobId]) return`, which meant that revoking approval, correcting the
+// `if (_packetExported[jobId]) return`, which meant that revoking approval, correcting the
 // estimate and re-approving inside one browser session left Drive holding the stale
-// agreement — the whole point of re-approving. Re-filing the same approval is still
+// document — the whole point of re-approving. Re-filing the same approval is still
 // suppressed, so a redraw cannot spam Drive.
-var _agrExported = {};
 function _agrExportKey(job) { return String(job.agrApprovedAt || '') + '|' + String(job.agrApprovedBy || ''); }
-// ⚠ SAME DEFECT AS THE ESTIMATE'S, AND WITH THE WORSE CONSEQUENCE. It read
-// `#agr-page-content`, and CLAUDE.md has flagged it since 2026-09-10: *"firing this from
-// the dashboard with another job loaded would file THAT client's agreement into THIS
-// client's estate folder … not something the app can notice afterwards."* It builds from
-// `agreementHtml(job, est)` now — the pure function Slice 2 extracted for this.
+
+// ⚠⚠ ONLY THE SIGNING PACKET IS RETAINED. THE BARE AGREEMENT IS NOT FILED AT ALL, AND
+// `exportAgreementToDrive` IS DELETED RATHER THAN DISABLED (2026-09-11, Anthony's call:
+// *"let's just have the combined doc saved and sent"*).
 //
-// ⚠ THIS FILES THE BARE AGREEMENT; the packet is a SEPARATE document and files below.
-// Both are kept: the packet is what the client signs, and the agreement alone is what the
-// terms are without the exhibit. Open question for Anthony — retaining both means a folder
-// holding a document the client did not sign, which is one way to send the wrong one.
-function exportAgreementToDrive(jobId) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  if (_agrExported[jobId] === _agrExportKey(job)) return;
-  var body = agreementHtml(job, approvedEstimateFor(jobId));
-  if (!body) return;
-  var html = _exportDoc('Agreement – '+(job.hvlId||''), body, '.ce-page{max-width:800px;margin:0 auto;}');
-  resolveSubfolderId(job, 'Agreement', function(folderId) {
-    var target = folderId || _jobRootFolderId(job);
-    if (!target) return;
-    _agrExported[jobId] = _agrExportKey(job);
-    uploadHtmlToDrive(target, (job.hvlId||'AGR')+'_Agreement.html', html, function(ok) {
-      if (ok) showSyncBadge('Agreement saved to Drive ✓');
-    });
-  });
-}
+// Until now both were written into the same `Agreement` subfolder — the packet as
+// `<HVL-ID> - Havellin Services Agreement.html` and the bare agreement as
+// `<HVL-ID>_Agreement.html`. **The packet is the document the client signs**; the agreement
+// alone is the same terms with its Exhibit A missing, and both forms say the agreement is
+// not valid without it. So the folder held a near-identically-named document that must
+// never go out, one click from the one that must — and nothing on Drive distinguishes them
+// to somebody picking a file in a hurry. Sending, viewing and printing have produced the
+// packet since Slice 3; filing is what still disagreed.
+//
+// ⚠ Do not "restore the agreement for the record". The packet CONTAINS it verbatim as its
+// first page, so nothing is lost by not filing it twice — and a second retained copy is
+// exactly the hazard this removes. Nothing ever read the filed bare agreement back: it had
+// no stored URL and no reader anywhere in the app.
 
 // ─── Signing packet: the agreement and the estimate it incorporates, as ONE document ────
 // Both agreement forms say the Estimate is attached as Exhibit A, and the estate form says
@@ -25459,9 +25450,16 @@ function ensureAgreementApproved(jobId) {
   delete job.agrRevokedBy; delete job.agrRevokedAt;
   saveJobs(); syncJobToSheets(job);
   agrApproved = true; agrApprovedBy = job.agrApprovedBy; agrApprovedAt = job.agrApprovedAt;
-  // renderAgreement has just run inside _primeAgreementFor (or the tab is already on this
-  // job); the delay lets that DOM settle before it is read, exactly as the PIN path did.
-  setTimeout(function(){ exportAgreementToDrive(jobId); }, 400);
+  // ⚠ ONE document is filed, and it is the SIGNING PACKET. The bare agreement was filed
+  // here too until 2026-09-11 and is not any more — see exportSigningPacketToDrive.
+  //
+  // The delay is NOT about letting the DOM settle: that stopped being true when Slice 2 made
+  // these builders pure and Slice 5 routed filing through docAction. It is what keeps the
+  // re-entrant loop bounded — this function stamps the approval, the filer calls
+  // docAction(_,'file'), and docAction runs this function again as the agreement's commit
+  // hook. Deferring lets job.agrApproved be written and read back before the second pass, so
+  // the early return fires. _packetExported is the load-bearing guard and this is the second
+  // line of defence; CLAUDE.md records which is which, measured by reverting each in turn.
   setTimeout(function(){ exportSigningPacketToDrive(jobId); }, 900);
   return '';
 }

@@ -234,14 +234,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('re-approving after a revoke re-files, rather than leaving the stale copy in Drive');
   {
-    const agr = fn('exportAgreementToDrive');
     const packet = fn('exportSigningPacketToDrive');
+    // ⚠ THERE IS ONE FILER NOW. The bare agreement had its own (`exportAgreementToDrive`)
+    // with its own `_agrExported` guard; both are deleted as of 2026-09-11 — only the
+    // combined signing packet is retained.
+    lacks(src, 'function exportAgreementToDrive', 'the bare-agreement filer is gone');
+    lacks(src, '_agrExported[', 'and its session guard with it');
     // The old guard was a bare boolean, so a second approval in the same browser session
     // was suppressed — which is exactly the approval that carries the correction.
-    lacks(agr, 'if (_agrExported[jobId]) return;', 'the bare session guard is gone from the agreement');
-    lacks(packet, 'if (_packetExported[jobId]) return;', 'and from the packet');
-    has(agr, '_agrExported[jobId] === _agrExportKey(job)', 'both key on the approval stamp');
-    has(packet, '_packetExported[jobId] === _agrExportKey(job)', 'so a NEW approval re-files and a redraw does not');
+    lacks(packet, 'if (_packetExported[jobId]) return;', 'the bare session guard is gone from the packet');
+    has(packet, '_packetExported[jobId] === _agrExportKey(job)', 'it keys on the approval stamp, so a NEW approval re-files and a redraw does not');
 
     const ctx = sandbox({ fns: ['_agrExportKey'] });
     const k1 = ctx._agrExportKey({ agrApprovedAt: 'September 8, 2026', agrApprovedBy: 'Anthony' });
