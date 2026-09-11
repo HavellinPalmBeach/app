@@ -3388,11 +3388,21 @@ invoice footer, standard agreement footer, probate agreement footer — plus the
   not a standing fact about the firm. A test asserts the claim now appears **exactly once**
   in `renderClientEstimate`. **Do not read this as the claim being retired** — the footer on
   all four client documents still carries *Insured & Bonded*, deliberately and untouched.
-  ⚠ Anthony's words when he asked for the cut were *"i don't think it is either"*, i.e. he is
-  not certain Havellin currently holds either. **That is a live question about the FOOTERS and
-  it is his and counsel's, not a judgement call** — it was raised back to him rather than acted
-  on, because stripping a standing claim from four client documents is not what "cut this
-  duplicate bullet" asked for.
+  ⚠ Anthony's words when he asked for the cut were *"i don't think it is either"*, i.e. he was
+  not certain Havellin currently held either. That was raised back to him rather than acted on,
+  because stripping a standing claim from four client documents is not what "cut this duplicate
+  bullet" asked for.
+  - **RESOLVED 2026-09-11 — THE WORDING STAYS AND THE COVERAGE IS BEING OBTAINED.** Anthony:
+    *"leave insurance wording, we will get the insurance."* So **do not strip *Insured & Bonded*
+    from the four footers**, and do not re-raise this as an open question — it is decided.
+  - **The one factual consequence, recorded once and not to be re-litigated:** the claim is on
+    every client estimate, invoice and both agreement forms **now**, so it is true from the
+    moment the policy and the bond are bound and not before. Prelaunch, and the app has no real
+    clients yet, so the window that matters is **before the first real client document goes
+    out** — not before the next commit. Nothing in the app needs to change either way; this is
+    a procurement date, not a code change.
+  - A third party's licence is still a different thing and still correct where it appears — see
+    the *Licensed FFL* note below.
 - **The first sweep missed two of the four.** The agreement footers build the string
   differently, so a grep on the estimate's phrasing came back clean while
   `renderAgreement`/`renderProbateAgreement` still said it. A test asserting the claim
