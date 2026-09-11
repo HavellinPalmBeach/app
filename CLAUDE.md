@@ -70,6 +70,68 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## THE PREP FEE WAS 30% IN EIGHTEEN PLACES AND A RATE IN THIRTEEN (FIXED 2026-09-11)
+Next off the audit list after Win/Loss. App-only, no redeploy. `prepFeeRate()` has been the one
+definition since 2026-09-10 and thirteen surfaces already read it; **eighteen others printed the
+digits**, four of them on documents a client reads.
+
+- **⚠⚠ ONE OF THEM WAS NOT PROSE, AND THAT IS THE ONE THAT MATTERS.** `renderPrepJobPlan`
+  computed `var feeActual = Math.round(totalQuoted * 0.30);` — a second copy of the **rate, in
+  arithmetic**, so no amount of reading the wording would find it. **Measured by driving the real
+  renderers on a $100,000 prep job with the rate moved to 0.35**: the estimate and the invoice
+  bill **$35,000** and the *Budget & Fee* card still reads **$30,000**, on the concierge's own fee
+  readout in the field. It follows the rate now — same job, 0.30 → `30% · $30,000`, 0.35 →
+  `35% · $35,000`.
+- **⚠ AND THE SOURCING NOTE HAD GONE FALSE IN BOTH HALVES.** On a **bundled** job it read
+  *"Havellin charges no fee on them — the coordination is billed hourly, in your logged hours."*
+  Since 2026-09-10 prep carries its fee on **every** engagement and `prepTCHrs` is **zero
+  everywhere**, so there is a fee and there are no hours. Told to the one person typing in the
+  actuals that fee is computed from. **The comment two lines above it records fixing the PREVIOUS
+  wrong claim on the same line** (the 15% SMF, 2026-08-03) — the rule moved again and the sentence
+  did not. The ternary is gone, because the rule no longer branches.
+- **Four client-facing literals**, measured on the rendered documents: the estimate's narrative
+  paragraph, its fee-table row *(30% of vendor spend)*, its note *"The final fee is 30% of actual
+  vendor spend"*, its fee-only Terms bullet — and the **client HTML email**'s *"Our fee is 30% of
+  what the vendors actually invoice."*
+- **⚠ THE AGREEMENT'S §3.5 STATED ONE RATE COMPUTED AND ONE TYPED**, in the same sentence:
+  `Math.round(SMF_PCT*100)+'% of vendor invoices … and (b) 30% of contractor invoices'`. Unreachable
+  today (`SMF_PCT` is 0), which is exactly why it rotted unnoticed — and the day the SMF comes back
+  it is a contract clause. The two live arms already spelled it with `_pctWords(prepFeeRate())`.
+- **⚠ THE MARGIN PANEL'S "30% reference" IS A DIFFERENT THIRTY AND IS DELIBERATELY UNTOUCHED.**
+  *Price at 30% Margin* / `walkAway = totalCost / 0.70` is the profitability line, unrelated to any
+  fee, and CLAUDE.md already records it as an accepted pricing-policy literal. The sweep excludes it
+  by construction rather than by an exception — it carries no "fee".
+- **⚠⚠ THE SWEEP IS THE DELIVERABLE, NOT THE EIGHTEEN EDITS.** Any non-comment line mentioning a
+  **fee** and a **30** must read `prepFeeRate()`. Two exemptions, both named: the declaration
+  itself, and §8's *"within 30 days … binding arbitration"*.
+  - **⚠ A NARROWER NET LET ONE THROUGH AND ONLY REVERTING FOUND IT.** The first cut matched
+    *"management fee"*, *"GC fee"*, *"vendor spend"* and four more — and the estimate's own save
+    confirmation says just `· 30% fee $25,715`, so backing that one out came back **GREEN**.
+    **A net woven from the wordings you can think of catches the wordings you thought of.** The
+    bare word is the net.
+- **3881 committed checks** (`tests/prep-fee-rate.test.js`, 22 new). **All eighteen changes
+  revert-verified individually** — the sourcing note fails **6**, the Job Plan arithmetic 4, the
+  three client-estimate sites 3 each, and the rest 1–2. **The rate is flipped and the documents
+  re-rendered**, rather than asserted on source text, on the estimate's fee row, its note and the
+  narrative.
+- **⚠ TWO PRE-EXISTING TESTS PINNED THE LITERAL AND BROKE ON A TRUE CHANGE**, the tenth time this
+  file records it: `estimate-delivery` asserted the byte sequence `30% management fee on actual
+  vendor spend` was **present**, and located the fee-only Terms arm by indexing on it. Both state
+  the requirement now — the fee is stated, and it is read from the rate.
+- **⚠ AND THREE OF MY OWN NEEDLES TRIPPED ON MY OWN COMMENTS**, the fifth time: the comment
+  explaining the fix has to QUOTE `totalQuoted * 0.30` and the old sourcing sentence to be worth
+  reading. Comment-stripped with the reason stated, because here the requirement genuinely is
+  *no LIVE expression*.
+- **Verified end to end in headless Chromium on the real page**, driving the real renderers on a
+  $100,000 standalone prep job: the client estimate prints *(30% of vendor spend)* and *"The final
+  fee is 30% of actual vendor spend"*, the Job Plan card reads *Havellin 30% fee (on quoted
+  actuals) $30,000*, the sourcing note reads *"…calculated on these actuals at invoicing, on this
+  and every engagement. Prep books no concierge hours."*, and the agreement spells *thirty percent
+  (30%)*. Overflow 0 at 1440 **and 390px**, no page errors.
+- Prelaunch, and nothing about what a client pays changed — the rate is 30% and every surface now
+  says 30%. **The documents already state the fee correctly**; the manual and playbook name the 30%
+  in prose, which stays true. Folded into the documentation pass rather than needing its own.
+
 ## THE WIN/LOSS REPORT READ ZERO AND STAYED THERE (FIXED 2026-09-11)
 Anthony, picking it off the open list: *"Win/Loss reads 0."* App-only, no redeploy. **This is the
 tab that tells him whether the business is converting.**

@@ -58,9 +58,11 @@ const DISCOUNT_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT'];
 // ── the real client estimate, so the document a client reads is what is asserted ─────
 const CE_FNS = ['clientEstimateHtml', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection',
-                'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'discountOnLabor'];
+                'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'discountOnLabor',
+                // proposedPlanRow's prep narrative reads the rate rather than printing a 30.
+                'prepFeeRate'];
 const CE_VARS = ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
-                 'NON_MOBILE_NUMBERS'];
+                 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
 function ceDoc(e) {
   return sandbox({ fns: CE_FNS, vars: CE_VARS }).clientEstimateHtml(e, CE_JOB);

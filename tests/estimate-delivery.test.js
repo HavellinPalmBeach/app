@@ -117,7 +117,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ce = fn('clientEstimateHtml');
     has(ce, 'var _isFeeOnlyEst = estimateIsFeeOnly(e, job);', 'the document computes it once');
 
-    has(ce, '30% management fee on actual vendor spend', 'prep states the fee it actually charges');
+    // ⚠ THIS PINNED THE LITERAL `30% management fee on actual vendor spend` and broke on a
+    // TRUE change — routing the rate through prepFeeRate(), which is the whole requirement.
+    // A test that names a behaviour should pin the line that IMPLEMENTS it. The rate is a
+    // constant with ONE definition; a document restating the digits is a second copy.
+    has(ce, "management fee on actual vendor spend</strong>",
+       'prep states the fee it actually charges');
+    has(ce, "Math.round(prepFeeRate()*100) + '% management fee on actual vendor spend",
+       '⚠ …and reads the rate rather than printing a 30 the day the rate moves');
     has(ce, 'It is not billed hourly.', 'and says plainly that it is not hourly');
     has(ce, 'it is re-quoted and agreed with you in writing', 'scope changes are a re-quote, not an hours change order');
 
@@ -126,7 +133,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // `_isFeeOnlyEst` instead picks up the payment-schedule ternary above it and the comment
     // block between them, and that comment quotes all three phrases while explaining why
     // they are wrong here. A test that reads its own rationale as evidence proves nothing.
-    const armStart = ce.indexOf("'<li>Havellin\\'s fee for this project is a <strong>30% management fee");
+    const armStart = ce.indexOf("'<li>Havellin\\'s fee for this project is a <strong>");
     const armEnd = ce.indexOf(': (e.fixedPrice', armStart);
     ok(armStart > -1 && armEnd > armStart, 'the fee-only Terms arm is locatable');
     const branch = ce.slice(armStart, armEnd);

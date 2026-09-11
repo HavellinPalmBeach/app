@@ -179,8 +179,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const fb = [];
       const c = sandbox({
         fns: ['svcFamily', 'svcFamilyOptions', 'sameSvcFamily', 'isDecedentJob', 'isTMOnly',
-              '_svcChangeConsequences', 'changeEstimateService'],
-        vars: ['SVC_LABELS', 'DECEDENT_SERVICES', 'SVC_ORDER'],
+              '_svcChangeConsequences', 'changeEstimateService',
+              // the consequence lines read the rate now rather than printing a 30
+              'prepFeeRate'],
+        vars: ['SVC_LABELS', 'DECEDENT_SERVICES', 'SVC_ORDER', 'PREP_FEE_RATE'],
         stubs: {
           document: dom.document,
           jobs: job ? [job] : [],

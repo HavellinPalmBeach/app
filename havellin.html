@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 12:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:08pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4463,11 +4463,11 @@ function _svcChangeConsequences(prev, next, job) {
   var out = [];
   var prevPrep = prev === 'prep', nextPrep = next === 'prep';
   if (nextPrep && !prevPrep) {
-    out.push('Home Prep for Sale bills no concierge or specialist hours — the fee is 30% of managed vendor spend. Any room scoring on this estimate stops pricing; it is kept and comes back if you switch again.');
+    out.push('Home Prep for Sale bills no concierge or specialist hours — the fee is ' + Math.round(prepFeeRate()*100) + '% of managed vendor spend. Any room scoring on this estimate stops pricing; it is kept and comes back if you switch again.');
   }
   if (prevPrep && !nextPrep) {
     out.push('The room grid opens up and concierge and specialist hours start billing. Score the house on the walkthrough — until you do, the estimate prices on square footage alone.');
-    out.push('The prep vendors already entered stay, and still carry the 30% fee.');
+    out.push('The prep vendors already entered stay, and still carry the ' + Math.round(prepFeeRate()*100) + '% fee.');
   }
   if (isTMOnly(next) && !isTMOnly(prev)) {
     out.push('Fixed price is not offered on probate matters — they bill time-and-materials on logged hours, itemized for the Personal Representative and the court. A fixed fee set here will be cleared.');
@@ -6220,9 +6220,9 @@ function calcAll() {
 
   if (isPrep) {
     var _rb = document.getElementById('ref-box');
-    if (_rb) _rb.innerHTML = '<div style="font-size:11px;color:var(--gray);">Home Prep for Sale — the fee is a flat 30% of managed vendor costs; no size-band benchmark applies.</div>';
+    if (_rb) _rb.innerHTML = '<div style="font-size:11px;color:var(--gray);">Home Prep for Sale — the fee is a flat ' + Math.round(prepFeeRate()*100) + '% of managed vendor costs; no size-band benchmark applies.</div>';
     var _mp = document.getElementById('margin-panel');
-    if (_mp) _mp.innerHTML = '<div style="font-size:11px;color:var(--gray);">Fee-only service — Havellin\'s margin is the full 30% GC fee (third-party vendors billed to the client at cost).</div>';
+    if (_mp) _mp.innerHTML = '<div style="font-size:11px;color:var(--gray);">Fee-only service — Havellin\'s margin is the full ' + Math.round(prepFeeRate()*100) + '% GC fee (third-party vendors billed to the client at cost).</div>';
   } else {
     // Compared against typical fee ranges for the property size, so the expedited premium
     // is held out — it is a delivery-speed surcharge, not evidence the job is overpriced
@@ -7811,7 +7811,7 @@ function saveEstimateAndPreview() {
   var isPrepEst = (currentEstimate.svc === 'prep');
   if (isPrepEst) {
     if (!currentEstimate.prepEnabled || (currentEstimate.havellinTotal || 0) === 0) {
-      showFB('e-fb','warn','Add at least one Home Prep vendor with a cost before saving — the estimate is the 30% management fee on those managed vendors.');
+      showFB('e-fb','warn','Add at least one Home Prep vendor with a cost before saving — the estimate is the ' + Math.round(prepFeeRate()*100) + '% management fee on those managed vendors.');
       return;
     }
   } else {
@@ -7857,7 +7857,7 @@ function saveEstimateAndPreview() {
   if (isPrepEst) {
     var _prepVendorCount = (currentEstimate.prepItems||[]).length;
     saveMsg = 'Saved: Home Prep for Sale · ' + _prepVendorCount + ' managed vendor' + (_prepVendorCount === 1 ? '' : 's')
-      + ' · 30% fee $' + currentEstimate.havellinTotal.toLocaleString()
+      + ' · ' + Math.round(prepFeeRate()*100) + '% fee $' + currentEstimate.havellinTotal.toLocaleString()
       + ' · Uploading to cloud…';
   } else {
     saveMsg = 'Saved: ' + currentEstimate.rooms.length + ' rooms'
@@ -8339,7 +8339,7 @@ function proposedPlanRow(e) {
     cleanout: 'We settle the estate room by room — inventorying contents, documenting and setting aside items of value, and routing the remainder to sale, donation, or disposal. High-value items are photographed and tracked under chain of custody, and your Transition Concierge keeps the representative and any other heirs informed throughout.',
     probate: 'We settle the estate room by room under the documentation standards probate requires — a full inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records the court and counsel may request and keeps all parties informed.',
     contested_probate: 'We settle the estate room by room under heightened documentation standards — a full inventory, photographs, and chain-of-custody tracking for every item of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge keeps meticulous, neutral records and takes direction only from the authorized representative.',
-    prep: 'We prepare the property for market by managing every vendor needed to get it show-ready — painting, repairs, landscaping, deep cleaning, and staging. Your Transition Concierge sources and schedules each trade, oversees the work to Havellin\'s standard, and handles all coordination and quality control on your behalf. Third-party vendors are billed to you directly at cost; Havellin\'s fee is a 30% management fee on that vendor spend.'
+    prep: 'We prepare the property for market by managing every vendor needed to get it show-ready — painting, repairs, landscaping, deep cleaning, and staging. Your Transition Concierge sources and schedules each trade, oversees the work to Havellin\'s standard, and handles all coordination and quality control on your behalf. Third-party vendors are billed to you directly at cost; Havellin\'s fee is a ' + Math.round(prepFeeRate()*100) + '% management fee on that vendor spend.'
   };
   narratives.estate = narratives.cleanout;
   var narrative = narratives[e.svc] || 'We work through the property room by room — sorting and routing every item to the right destination while your Transition Concierge manages the plan and all vendor coordination and Property Specialists handle the hands-on work. The hours below reflect that careful, methodical pace.';
@@ -8522,11 +8522,11 @@ function buildPrepEstimateBody(e, job) {
     // 2) Then Havellin\'s 30% management fee on that spend
     '<div class="ce-band" style="margin-top:1.25rem;">Havellin Management Fee</div>' +
     '<table class="ce-tbl"><tbody>' +
-    '<tr><td>GC / Site Management Fee — sourcing, scheduling, on-site oversight &amp; quality control (30% of vendor spend)</td><td class="r">' + fmt(e.prepFee || e.havellinTotal) + '</td></tr>' +
+    '<tr><td>GC / Site Management Fee — sourcing, scheduling, on-site oversight &amp; quality control (' + Math.round(prepFeeRate()*100) + '% of vendor spend)</td><td class="r">' + fmt(e.prepFee || e.havellinTotal) + '</td></tr>' +
     '</tbody>' +
     '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note" style="margin-top:6px;">The final fee is 30% of actual vendor spend. We review each vendor’s quote with you before booking, so the cost is confirmed before any work begins.</div>' +
+    '<div class="ce-note" style="margin-top:6px;">The final fee is ' + Math.round(prepFeeRate()*100) + '% of actual vendor spend. We review each vendor’s quote with you before booking, so the cost is confirmed before any work begins.</div>' +
 
     // 3) Then the combined total — a single grand-total line. The vendor spend and fee
     // are already itemized in the two sections above, and the "grand" row carries its
@@ -8963,7 +8963,7 @@ function clientEstimateHtml(e, job) {
     // renderInvoice, which exempts prep from every hours gate); the estimate had no
     // equivalent, so one surface was right and the other was not. Same test, same shape.
     (_isFeeOnlyEst
-      ? '<li>Havellin\'s fee for this project is a <strong>30% management fee on actual vendor spend</strong> — sourcing, scheduling, on-site oversight and quality control. It is not billed hourly.</li>' +
+      ? '<li>Havellin\'s fee for this project is a <strong>' + Math.round(prepFeeRate()*100) + '% management fee on actual vendor spend</strong> — sourcing, scheduling, on-site oversight and quality control. It is not billed hourly.</li>' +
         '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins. The fee trues up to what the vendors actually invoice.</li>' +
         '<li>' + vendorFeeNote(e, {feeAlreadyStated:true}) + '</li>' +
         '<li>Adding or removing work changes the vendor scope, so it is re-quoted and agreed with you in writing before that work proceeds.</li>'
@@ -14787,7 +14787,7 @@ function buildEstimateEmailHtml(e, job) {
     : '';
 
   var basis = feeOnly
-    ? 'Our fee is 30% of what the vendors actually invoice. Every quote is reviewed with you before anyone is booked.'
+    ? 'Our fee is ' + Math.round(prepFeeRate()*100) + '% of what the vendors actually invoice. Every quote is reviewed with you before anyone is booked.'
     : (e.fixedPrice
         ? 'The Havellin fee above is firm for the scope described. It does not move with the hours worked.'
         : 'Final charges reflect the hours actually worked and logged. If they look like exceeding this estimate by more than 15%, we will tell you before continuing.');
@@ -21687,10 +21687,14 @@ function renderVendorSourcing(jobId, job, est) {
     // Said "15% Service Management Fee (folded in with all coordinated vendors)" on a bundled
     // job until 2026-08-03, long after SMF_PCT went to zero — promising a fee the app does not
     // charge, on the screen where the actuals that fee would have been computed from are typed.
+    // ⚠⚠ AND THE BUNDLED ARM WENT FALSE ON 2026-09-10 IN BOTH HALVES. It read "Havellin
+    // charges no fee on them — the coordination is billed hourly, in your logged hours", and
+    // since prep started carrying its fee on EVERY engagement there is a fee, and prepTCHrs
+    // is zero everywhere so there are no hours either. Told to the one person typing the
+    // actuals that fee is computed from. The rule is unconditional now, so the sentence is.
     html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Prep vendors are paid directly by the client; '
-      + (((est.svc || job.svc) === 'prep')
-          ? 'Havellin\'s 30% GC / Site Management Fee is calculated on these actuals at invoicing.'
-          : 'Havellin charges no fee on them — the coordination is billed hourly, in your logged hours.') + '</div>';
+      + 'Havellin\'s ' + Math.round(prepFeeRate()*100) + '% GC / Site Management Fee is calculated on these actuals at '
+      + 'invoicing, on this and every engagement. Prep books no concierge hours.</div>';
   }
 
   if (colls.length) {
@@ -23799,7 +23803,12 @@ function renderPrepJobPlan(jobId, job, est) {
     var q = psrc[i] && psrc[i].quote;
     if (q != null && q !== '') { totalQuoted += Number(q) || 0; quotedCount++; }
   });
-  var feeActual = Math.round(totalQuoted * 0.30);
+  // ⚠⚠ THIS WAS `totalQuoted * 0.30` — a second copy of the rate, in ARITHMETIC rather
+  // than prose, so it could not be caught by reading the wording. Measured on a $100,000
+  // prep job with PREP_FEE_RATE moved to 0.35: the estimate and the invoice billed $35,000
+  // and this card still read $30,000 — on the concierge's own fee readout, in the field.
+  // There is one rate; see prepFeeRate.
+  var feeActual = Math.round(totalQuoted * prepFeeRate());
   var allQuoted = prepLines.length > 0 && quotedCount === prepLines.length;
   var overBudget = totalQuoted > totalBudget && totalBudget > 0;
 
@@ -23830,11 +23839,11 @@ function renderPrepJobPlan(jobId, job, est) {
     '<table class="stbl">' +
     '<tr><td class="muted">Estimated vendor spend (budget)</td><td class="num">$' + totalBudget.toLocaleString() + '</td></tr>' +
     '<tr><td class="muted">Quoted to date (' + quotedCount + ' of ' + prepLines.length + ' vendors)</td><td class="num"' + (overBudget?' style="color:var(--err-tx);font-weight:600;"':'') + '>$' + totalQuoted.toLocaleString() + '</td></tr>' +
-    '<tr><td class="muted">Havellin 30% fee (on quoted actuals)</td><td class="num">$' + feeActual.toLocaleString() + '</td></tr>' +
+    '<tr><td class="muted">Havellin ' + Math.round(prepFeeRate()*100) + '% fee (on quoted actuals)</td><td class="num">$' + feeActual.toLocaleString() + '</td></tr>' +
     '</table>' +
-    (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the 30% fee follows actual vendor spend.</div>' : '') +
+    (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the ' + Math.round(prepFeeRate()*100) + '% fee follows actual vendor spend.</div>' : '') +
     (allQuoted ? '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">All prep vendors have quotes — the fee shown is final at these quotes.</div>' : '') +
-    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s 30% GC / Site Management Fee is billed on the actual vendor spend logged here.</div>' +
+    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s ' + Math.round(prepFeeRate()*100) + '% GC / Site Management Fee is billed on the actual vendor spend logged here.</div>' +
     '</div>';
 
   var sourcingCard = '<div class="card" style="margin-bottom:1rem;">' +
@@ -23850,7 +23859,7 @@ function renderPrepJobPlan(jobId, job, est) {
       planChk(jobId, 'prep_booked', 'Vendors booked and scheduled') +
       planChk(jobId, 'prep_progress', 'Work underway — site checks &amp; quality control') +
       planChk(jobId, 'prep_done', 'All prep work completed and inspected show-ready') +
-      planChk(jobId, 'prep_invoiced', 'Final vendor invoices collected; 30% fee invoiced to homeowner')
+      planChk(jobId, 'prep_invoiced', 'Final vendor invoices collected; ' + Math.round(prepFeeRate()*100) + '% fee invoiced to homeowner')
     ) +
     '</div>';
 
@@ -25918,7 +25927,7 @@ function agreementHtml(job, est) {
     // the 15% clause, one service over, so the clause reads the estimate rather than the
     // service key: _agrHasPrepVendors.
     (SMF_PCT > 0
-      ? p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) '+Math.round(SMF_PCT*100)+'% of vendor invoices for Estate Settlement, Home Editing and Home Transition engagements; and (b) 30% of contractor invoices for Home Sale Preparation engagements, when applicable.')
+      ? p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) '+Math.round(SMF_PCT*100)+'% of vendor invoices for Estate Settlement, Home Editing and Home Transition engagements; and (b) ' + Math.round(prepFeeRate()*100) + '% of contractor invoices for Home Sale Preparation engagements, when applicable.')
       : isPrepAgr
         ? p(b('3.5 Management Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2, equal to '+_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this Agreement. No other fee or markup is applied to vendor invoices.')
         : _agrHasPrepVendors(est)
