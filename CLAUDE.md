@@ -213,6 +213,60 @@ they owe.**
   and playbook describe recording payments and the three stages, and state neither what the final
   reconciles against nor the Payment Summary's rows.
 
+## PRINT JOB PLAN PRINTED THE HEADINGS AND NOTHING UNDER THEM (FIXED 2026-09-11)
+Found by the code audit. App-only, no redeploy. **This is the crew's field paper.**
+
+- **⚠⚠ THE PHASES ARE AN ACCORDION AND EVERY BODY SHIPS WITH AN INLINE `display:none`.**
+  `planPhaseWrap` renders each phase closed; `togglePhase` opens one by writing
+  `body.style.display`. `printJobPlan` copied `#job-plan-content`'s innerHTML — **closed state
+  and all** — and an inline style cannot be out-ranked by a print stylesheet without
+  `!important`. **Measured in a browser on a seeded probate job: 9,018 characters of plan,
+  919 printed. 90% of the document gone** — every room card, every checklist, the disposition
+  streams, the court-filing tasks.
+- **⚠ AND THE HEADER ALWAYS LOOKED RIGHT, WHICH IS WHY IT SURVIVED.** The 919 characters that
+  did print are the plan HEADER — client, service, documentation level and the standing job
+  flags panel, which is the part anyone glances at to check the print worked. The defect was
+  entirely below the fold of that glance.
+- **⚠ IT EXPANDS A CLONE, NEVER THE LIVE TAB.** Opening the real accordion to print would
+  leave every phase hanging open behind the dialog, and a `finally` closing them again would
+  be fighting whatever the crew had deliberately opened. **Verified in a browser: after a
+  print all four phases are still closed and the chevrons still read ▶.**
+- **⚠ IT TOUCHES ONLY `phase-body-*`, and a blanket strip of `display:none` would have been
+  wrong.** The per-room `photo-fail-flag-*` divs are hidden because they are **empty** until an
+  upload fails; revealing them is not more of the document, it is noise with no content. A test
+  drives both and fails if the selector is widened.
+- **⚠ THE SELECTOR AND THE MARKUP ARE TESTED AGAINST EACH OTHER.** The silent failure is a
+  renamed id prefix — the print quietly goes back to blank with nothing erroring. So the test
+  reads the body id out of the **real `planPhaseWrap` output** and hands it to the **real
+  expander**, rather than asserting a string in each.
+- **⚠ THE PDF WAS NAMED AFTER THE PAGE.** No title was passed, so Chrome named every
+  Save-as-PDF *"Havellin Palm Beach — Job Manager"* — the same defect Slice 3 fixed on the
+  agreement, on a document nobody had checked since. It reads **"Havellin Job Plan - 69 Beach
+  Blvd - Sep 11 2026"** now, and the page title is restored afterwards.
+- **⚠ AND IT WROTE THE PRINT TARGET, READ IT BACK, AND HANDED THAT TO `_printDocument`** — the
+  one function whose whole job is writing the print target. It builds the html and hands it
+  over in one piece now. A caller that half-fills the target first is how a print path grows a
+  second opinion of the sequence, which this file already records five printers doing.
+- **THE CHEVRONS ARE BLANKED ON THE PRINTED COPY**, not set to ▼: a control's affordance means
+  nothing on paper, and ▼ would assert a state that cannot change.
+- **⚠ NOTED, NOT FIXED: the hours log is not printed and that is correct.** `plan-log-section`
+  sits OUTSIDE `#job-plan-content`; it is a data-entry form, a summary and a history, not a
+  field document. Recorded so nobody "completes" the print by adding it.
+- **3774 committed checks** (`tests/job-plan-print.test.js`, 24 new — the first coverage of this
+  print path at all). **All six changes revert-verified individually** — not opening the bodies
+  fails 2, dropping the expander call 1, expanding the live tab instead of a clone 1, the
+  chevrons 2, widening the selector to catch the photo-fail flags **5**, and the PDF filename 1.
+- **Verified end to end in headless Chromium on the real page**: the printed copy goes
+  **919 → 9,104 characters**, carries every room (*Garage (2-car)*, *Kitchen*) and every phase
+  from Phase 0 to Phase 4, zero phase bodies computed `display:none` in the print target, the
+  document title reads *Havellin Job Plan - 69 Beach Blvd - Sep 11 2026* **during** the print
+  and is restored after, the target is cleared and the panels restored, and the live tab still
+  has all four phases closed. Overflow 0 at 1440 and 390px, no page errors.
+- Manual **§11** (two notes — the measurement and the filename, plus why the hours log is not
+  on it); playbook the Step 10 `.stop` gains *throw away anything printed before today* and
+  **one** symptom→cause row. Both `.md` copies hand-edited and **7 claims parity-checked**; tag
+  balance verified on both HTML files.
+
 ## AN UNRELATED EDIT DESTROYED THE CHAIN OF CUSTODY (FIXED 2026-09-11)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs` AND `main-sync.gs`. The backend
 housekeeping that had been held for "the next real backend change" is **bundled into this one**,

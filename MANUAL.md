@@ -1008,6 +1008,10 @@ NFA-flagged items print on their own notice on the Appraisal Worklist, separate 
 
 > **Standing job flags sit at the top of the plan** (new 2026-09-10). Whatever intake recorded on the *What's in the house* questions (§4) renders here as a banded panel — firearms first and in red with its standing rule, then the must-find and safety answers, then the rest. It is part of the plan *header*, which is what **Print Job Plan** puts on the page, so the crew can carry it. It renders on the Home Prep plan too: an alarm code and a loaded gun safe do not care which service was sold. A job with nothing recorded shows no panel.
 
+> **⚠⚠ Until 2026-09-11 *Print Job Plan* printed the phase HEADINGS and nothing under them.** The phases are an accordion and each body renders closed with an inline `display:none`; the print copied the tab's markup, closed state and all, and an inline style cannot be overridden by a print stylesheet. **Measured on a seeded probate job: 9,018 characters of plan, 919 printed — 90% of the document gone**, including every room card, every checklist, the disposition streams and the court-filing tasks. Only the header block survived, which is why the standing job flags always looked right on paper. It prints in full now; the phases on screen are untouched, and so is the accordion.
+
+> **The printed copy is now named after the document.** *Havellin Job Plan - 69 Beach Blvd - Sep 11 2026*. Chrome names a Save-as-PDF after the page title, so before this every printed plan arrived in somebody's downloads called *Havellin Palm Beach — Job Manager*. The **hours log is deliberately not on it** — it sits outside the plan and is a data-entry form, not a field document.
+
 The plan header shows the **documentation level** on estate/formal jobs. **Chain of custody is mandatory** when that level is Formal or the job is any probate — it is driven by the documentation level (§4), *not* the Premium-estate rate. Estate/probate jobs also carry the §733.604 documentation stream.
 
 ### Staffing the job — do this before any hours exist

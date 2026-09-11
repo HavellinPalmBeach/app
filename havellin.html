@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 11:52am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 12:08pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -24305,17 +24305,57 @@ function setPlanRoomStatus(jobId, roomIdx, status) {
   });
 }
 
+// ⚠⚠ THE PHASES ARE AN ACCORDION AND EVERY BODY SHIPS WITH AN INLINE `display:none`.
+// `planPhaseWrap` renders each phase closed and `togglePhase` opens it by writing
+// `body.style.display` — an INLINE style, which no print stylesheet can out-rank without
+// `!important`. Copying `content.innerHTML` therefore copied the closed state, so Print Job
+// Plan produced the five phase HEADINGS and nothing inside any of them, unless the crew
+// happened to have a phase open on screen. **Measured on a seeded probate job: 9,018
+// characters of plan, 919 printed. 90% of the document gone**, including every room card,
+// every checklist, the disposition streams and the court-filing tasks — on the one document
+// that exists to be carried round a house on paper.
+//
+// ⚠ IT EXPANDS A CLONE, NEVER THE LIVE TAB. Opening the real accordion to print it would
+// leave every phase hanging open behind the dialog, and a `finally` that closed them again
+// would then be fighting whatever the crew had deliberately opened.
+//
+// ⚠ AND IT TOUCHES ONLY `phase-body-*`. A blanket strip of `display:none` would also reveal
+// the per-room `photo-fail-flag-*` divs, which are hidden because they are EMPTY until an
+// upload fails — printing those is not "more of the document", it is noise with no content.
+function _jpExpandForPrint(root) {
+  var n = 0;
+  var bodies = root.querySelectorAll('[id^="phase-body-"]');
+  Array.prototype.forEach.call(bodies, function(el){ el.style.display = ''; n++; });
+  // The chevron is a control's affordance and there is nothing to press on paper. Blanked
+  // rather than set to ▼, which would assert a state that no longer means anything.
+  var chevs = root.querySelectorAll('[id^="phase-chev-"]');
+  Array.prototype.forEach.call(chevs, function(el){ el.textContent = ''; });
+  return n;
+}
+
 function printJobPlan() {
-  var pt = document.getElementById('print-target');
   var content = document.getElementById('job-plan-content');
-  if (!pt || !content) return;
+  if (!content) return false;
   var hdrEl = document.getElementById('job-plan-header');
-  var hdrHTML = hdrEl ? hdrEl.innerHTML : '';
-  pt.innerHTML = '<div style="padding:20px;font-family:Raleway,sans-serif;">' +
+  var copy = content.cloneNode(true);
+  _jpExpandForPrint(copy);
+  var job = jobs.find(function(j){ return j.id === parseInt((document.getElementById('plan-job')||{}).value, 10); });
+  var street = String((job && (job.addr || job.address)) || '').split(',')[0].trim();
+  var stamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
+  // ⚠ THE TITLE IS THE PDF FILENAME. Without one Chrome names a Save-as-PDF after the page
+  // title — "Havellin Palm Beach — Clients & Estimator — INTERNAL" — which is the same defect
+  // Slice 3 fixed on the agreement. Named like the client documents, minus the client naming
+  // rules, because this one is ours.
+  var title = 'Havellin Job Plan' + (street ? ' - ' + street : '') + ' - ' + stamp;
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;">' +
     '<h2 style="font-family:\'Cormorant Garamond\',serif;color:#3c3228;margin-bottom:4px;">Havellin Palm Beach — Job Plan</h2>' +
     '<div style="font-size:11px;color:#888;margin-bottom:16px;">Internal working document · ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>' +
-    hdrHTML + content.innerHTML + '</div>';
-  _printDocument(pt.innerHTML);
+    (hdrEl ? hdrEl.innerHTML : '') + copy.innerHTML + '</div>';
+  // Built and handed over in one go. It used to write `#print-target`, read it back, and pass
+  // that to the function whose whole job is writing `#print-target` — the target is
+  // `_printDocument`'s to own, and a caller that half-fills it first is how a print path grows
+  // a second opinion of the sequence.
+  return _printDocument(html, title);
 }
 
 // (Removed syncLogToSheets — a silent no-cors single-entry post the backend
