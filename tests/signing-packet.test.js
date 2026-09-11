@@ -49,7 +49,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the print and the filing');
   {
     const print = fn('printSigningPacket');
-    has(print, 'ensureAgreementApproved(currentAgrJobId)', 'same gate as printAgreement');
+    // ⚠ THE GATE MOVED IN SLICE 4 AND IS STRONGER FOR IT. It used to be the first line of
+    // this function, of `printAgreement` and of `emailAgreementToClient` — three copies,
+    // and a fourth door one line away from having none. It is `DOC_ACTIONS.agreement
+    // .commit` now, run by `docAction` on every verb but 'view', so it cannot be reached
+    // around.
+    eq(print.replace(/\s+/g, ' ').trim(),
+       "function printSigningPacket() { docAction(currentAgrJobId, 'agreement', 'print'); }",
+       'it is a one-line shim on the one document action');
+    has(fn('docAction'), "verb !== 'view' && spec.cfg.commit && spec.cfg.commit(spec)",
+        'and the gate runs there, for every verb that puts the document in somebody\u2019s hands');
     // Slice 3: it is a wrapper on the one document action, which owns the print path and
     // the naming. `docNames` gives it a client-facing name rather than a database key.
     has(print, "docAction(currentAgrJobId, 'agreement', 'print')", 'routes through the ONE document action');

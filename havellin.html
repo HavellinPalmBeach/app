@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 8:12pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 8:49pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1798,7 +1798,7 @@ body.no-smf .smf-col{display:none;}
         <button class="btn-s" id="btn-deny-est" onclick="openDenyModal()" style="display:none;color:var(--err-tx);border-color:var(--err-tx);">Deny</button>
         <button class="btn-bronze" id="btn-pdf" onclick="printClientEstimate()" style="display:none;">Print / Save PDF</button>
         <button class="btn-bronze" id="btn-html-email-est" onclick="emailEstimateToClient()" style="display:none;">&#9993; Email to Client</button>
-        <!-- The mailto path is reached automatically by _estimateEmailFallback (Gmail
+        <!-- The mailto path is reached automatically by DOC_SEND_PROVIDERS.mailto (Gmail
              unconfigured, sign-in cancelled, draft failed) and says why it fell back. It is
              NOT offered as a choice: a second email button beside the real one invites
              sending the plain version by mistake, which loses the attachment. The anchor
@@ -8960,9 +8960,9 @@ function updateApprovalUI() {
     if (btnDriveEst) btnDriveEst.style.display = (ceJob && ceJob.estimateDriveAt) ? 'none' : 'inline-block';
     if (mailtoEl) { mailtoEl.href = buildEstimateMailto(); }
     // The HTML-email button is the primary send path; the mailto anchor stays beside it as
-    // the escape hatch (see _estimateEmailFallback).
+    // the escape hatch, reached automatically by DOC_SEND_PROVIDERS.mailto.
     var htmlEmailEl = document.getElementById('btn-html-email-est');
-    if (htmlEmailEl) { htmlEmailEl.style.display = 'inline-block'; _setEstEmailBusy(false); }
+    if (htmlEmailEl) htmlEmailEl.style.display = 'inline-block';
     var lockNote = contractSigned ? ' Locked by the signed agreement — revise via a Change Order.' : '';
     // A filing record that outlives the toast. Answers "is this estimate in Drive?"
     // on reopening the tab tomorrow, and links straight to the filed copy.
@@ -10905,8 +10905,9 @@ var JT_SHORT = {
   intake:'Intake', walkthrough:'Walkthrough', estimate_built:'Built',
   estimate_approved:'Approved', estimate_sent:'Sent', client_accepted:'Accepted',
   agreement_sent:'Packet sent', agreement_signed:'Signed',
-  deposit_received:'Deposit', job_active:'Active', midpoint_received:'Midpoint',
-  work_complete:'Complete', final_paid:'Final'
+  deposit_invoiced:'Invoiced', deposit_received:'Deposit', job_active:'Active',
+  midpoint_invoiced:'Invoiced', midpoint_received:'Midpoint',
+  work_complete:'Complete', final_invoiced:'Invoiced', final_paid:'Final'
 };
 
 // ⚠ WHERE THE TRACK WRAPS, AND IT IS NOT AN ARBITRARY WRAP POINT. Fourteen steps do not
@@ -11000,7 +11001,9 @@ function jobTimeline(job, estRec, logs, cos) {
         : '' }),
 
     row({ key: 'estimate_sent', group: 'Estimate', label: 'Estimate sent to client',
-      done: !!job.estimateSentDate, at: job.estimateSentDate }),
+      done: !!job.estimateSentDate, at: job.estimateSentDate,
+      sub: (!job.estimateSentDate && docDraftedAt(job, 'estimate'))
+        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
 
     row({ key: 'client_accepted', group: 'Acceptance', label: 'Client accepted',
       done: won, at: job.wonAt || '', atKind: 'date', by: job.wonBy || '',
@@ -11019,10 +11022,22 @@ function jobTimeline(job, estRec, logs, cos) {
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
       sub: (!job.agrSent && job.agrRevokedBy === 'estimate-edited')
-        ? 'The estimate was edited after this was prepared — re-approve it and send a fresh packet' : '' }),
+        ? 'The estimate was edited after this was prepared — re-approve it and send a fresh packet'
+        : ((!job.agrSent && docDraftedAt(job, 'agreement'))
+          ? 'Drafted \u2014 read it, send it, then confirm' : '') }),
 
     row({ key: 'agreement_signed', group: 'Agreement', label: 'Agreement signed',
       done: !!job.agrSigned, at: job.agrSignedAt || '', by: job.agrSignedBy || '' }),
+
+    // ⚠ THESE THREE WERE DELIBERATELY ABSENT UNTIL NOW. Slice 0: "a row whose `done`
+    // cannot be answered honestly is worse than no row" — nothing recorded that an
+    // invoice had been sent, so they would have been a guess wearing a milestone's face.
+    // `docState` is that record, so they exist.
+    row({ key: 'deposit_invoiced', group: 'Deposit & start', label: 'Deposit invoice sent',
+      done: !!docSentAt(job, 'invoice', 'deposit'), at: docSentAt(job, 'invoice', 'deposit'), atKind: 'iso',
+      amount: hav ? split.deposit : null,
+      sub: (!docSentAt(job, 'invoice', 'deposit') && docDraftedAt(job, 'invoice', 'deposit'))
+        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
 
     row({ key: 'deposit_received', group: 'Deposit & start', label: 'Deposit received',
       done: funded, amount: hav ? split.deposit : null,
@@ -11041,6 +11056,12 @@ function jobTimeline(job, estRec, logs, cos) {
           + ' — the Letters must be received before work can start.')
         : '' }),
 
+    row({ key: 'midpoint_invoiced', group: 'Work', label: 'Midpoint invoice sent',
+      done: !!docSentAt(job, 'invoice', 'midpoint'), at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
+      amount: hav ? split.midpoint : null,
+      sub: (!docSentAt(job, 'invoice', 'midpoint') && docDraftedAt(job, 'invoice', 'midpoint'))
+        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
+
     row({ key: 'midpoint_received', group: 'Work', label: 'Midpoint payment',
       done: midPaid > 0, amount: hav ? split.midpoint : null,
       sub: midPaid > 0 ? ('$' + Math.round(midPaid).toLocaleString() + ' received') : '' }),
@@ -11052,6 +11073,11 @@ function jobTimeline(job, estRec, logs, cos) {
     // blank on every job this app has ever had.
     row({ key: 'work_complete', group: 'Work', label: 'Work complete',
       done: !!job.deliveredOn, at: job.deliveredOn || '', atKind: 'date', by: job.deliveredBy || '' }),
+
+    row({ key: 'final_invoiced', group: 'Close-out', label: 'Final invoice sent',
+      done: !!docSentAt(job, 'invoice', 'final'), at: docSentAt(job, 'invoice', 'final'), atKind: 'iso',
+      sub: (!docSentAt(job, 'invoice', 'final') && docDraftedAt(job, 'invoice', 'final'))
+        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
 
     row({ key: 'final_paid', group: 'Close-out', label: 'Final payment',
       done: finPaid > 0, amount: hav ? split.final : null,
@@ -11119,6 +11145,317 @@ function jobTimelineNext(rows) {
 // `secondary` is the exception, and only where an action is genuinely available
 // out of sequence: the intake answers are edited all through a job, and an
 // estimate stays editable until the client signs.
+// ─── SLICE 4: ONE SEND TEMPLATE ──────────────────────────────────────────────
+// Anthony: *"when we are sending documents to a client, whether it's the estimate, the
+// agreement, or an invoice, it should all follow the exact same process and be one button
+// to generate the HTML email as we currently have with the estimate."*
+//
+// ⚠ THE INVOICE HAD NO EMAIL AT ALL, only a `mailto:` whose body says *"Please find
+// attached your invoice"* WITH NOTHING ATTACHED — RFC 6068 carries plain text and nothing
+// else. It has the same HTML email and the same PDF as the other two now.
+//
+// ⚠ AND THE TWO THAT DID WORK WERE NEAR-DUPLICATES. `estimatePdfBase64` and
+// `signingPacketPdfBase64` differed only in a title and a stylesheet, and carried the SAME
+// eight-line error block verbatim — the one that passes the server's own words through,
+// which took three rounds of "still no PDF" to get right. Two copies of that is two places
+// for it to drift back.
+
+// ─── WHERE A DOCUMENT HAS BEEN ───────────────────────────────────────────────
+// `job.docState[docKey]` = {draftedAt, draftedBy, sentAt, sentBy, draftUrl, pdfOk}.
+// ⚠ NESTED ON THE JOB ON PURPOSE: the Jobs sheet stores JSON.stringify(job) in its Data
+// column, so this rides the existing sync with no column to add and no redeploy — the
+// same reason `houseFlags` is shaped this way. It is NOT `savePhotoRefs`, which has a
+// column whitelist that silently drops anything not listed.
+function docState(job, docKey) {
+  if (!job) return null;
+  if (!job.docState) job.docState = {};
+  if (!job.docState[docKey]) job.docState[docKey] = {};
+  return job.docState[docKey];
+}
+
+// Read-only: has this document been SENT? ⚠ `draftedAt` is not `sentAt` — see
+// DOC_SEND_PROVIDERS.needsHumanSend for why that distinction is the honest one.
+function docSentAt(job, kind, stage) {
+  if (!job || !job.docState) return '';
+  var st = job.docState[docKeyFor(kind, { stage: stage })];
+  return (st && st.sentAt) || '';
+}
+function docDraftedAt(job, kind, stage) {
+  if (!job || !job.docState) return '';
+  var st = job.docState[docKeyFor(kind, { stage: stage })];
+  return (st && st.draftedAt) || '';
+}
+
+// ─── THE INVOICE'S FIRST REAL EMAIL ──────────────────────────────────────────
+function invoiceEmailSubject(job, stage) {
+  var street = String(job && job.addr || '').split(',')[0].trim();
+  return 'Havellin Palm Beach — ' + (DOC_STAGE_WORD[stage] || 'Final') + ' Invoice for ' + (street || (job && job.name) || 'your property');
+}
+
+function buildInvoiceEmailText(job, stage, amtDue) {
+  var tc = assignedTCContact(job);
+  var word = (DOC_STAGE_WORD[stage] || 'Final').toLowerCase();
+  return ['Dear ' + bestClientGreetingName(job) + ',', '',
+    'Your ' + word + ' invoice for Havellin Palm Beach services at ' + (job.addr || 'your property') +
+      ' is attached as a PDF.', '',
+    'Balance due: ' + (amtDue ? _emMoney(amtDue) : 'see attached'),
+    'Payment is due within 7 calendar days.', '',
+    'Thank you for trusting Havellin Palm Beach with this transition.', '',
+    'Warm regards,', tc.name, 'Havellin Palm Beach', conciergePhonesText(tc), tc.email].join('\n');
+}
+
+// ⚠ A COVER NOTE, NOT THE DOCUMENT. Mail clients strip <style> and do not support CSS
+// custom properties at all, so the rendered invoice would arrive as unstyled text — and
+// rebuilding it a second way inline is the second-renderer drift this file records over
+// and over. The complete invoice is the attached PDF, produced by the same server-side
+// conversion as the copy filed to Drive.
+function buildInvoiceEmailHtml(job, stage, amtDue) {
+  var B = EMAIL_BRAND;
+  var tc = assignedTCContact(job);
+  var street = String(job.addr || '').split(',')[0].trim();
+  var word = DOC_STAGE_WORD[stage] || 'Final';
+  return '' +
+  '<div style="margin:0;padding:0;background:#f4f1ea;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
+  '<tr><td align="center" style="padding:24px 12px;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ' + B.line + ';">' +
+  '<tr><td style="background:' + B.ink + ';padding:26px 22px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:23px;letter-spacing:.16em;color:#ffffff;text-transform:uppercase;">Havellin</div>' +
+    '<div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:' + B.bronzeLt + ';margin-top:5px;">Palm Beach</div>' +
+  '</td></tr>' +
+  '<tr><td style="padding:28px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
+    '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">' + _emHtml(word) + ' Invoice</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
+      _emHtml(street || job.name || 'Your property') + '</div>' +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(svcLabelOf(job)) +
+      (job.hvlId ? ' &nbsp;&middot;&nbsp; Reference ' + _emHtml(job.hvlId) : '') + '</div>' +
+  '</td></tr>' +
+  '<tr><td style="padding:20px 22px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:' + B.ink + ';line-height:1.6;">' +
+    'Dear ' + _emHtml(bestClientGreetingName(job)) + ',<br><br>' +
+    'Your ' + _emHtml(word.toLowerCase()) + ' invoice is attached as a PDF.' +
+  '</td></tr>' +
+  (amtDue ? '<tr><td style="padding:18px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' +
+    '<tr><td style="padding:12px 14px;background:' + B.cream + ';border:1px solid ' + B.bronzeLt + ';">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Balance due</div>' +
+      '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:26px;color:' + B.ink + ';margin-top:3px;">' + _emHtml(_emMoney(amtDue)) + '</div>' +
+      '<div style="font-size:12px;color:' + B.gray + ';margin-top:4px;">Payment is due within 7 calendar days.</div>' +
+    '</td></tr></table></td></tr>' : '') +
+  '<tr><td style="padding:22px 22px 26px;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:' + B.ink + ';line-height:1.6;">' +
+    'Thank you for trusting Havellin Palm Beach with this transition.<br><br>' +
+    'Warm regards,<br><strong>' + _emHtml(tc.name) + '</strong><br>' +
+    '<span style="color:' + B.gray + ';">Havellin Palm Beach</span>' + _emPhoneLines(tc) +
+  '</td></tr>' +
+  '</table></td></tr></table></div>';
+}
+
+// ─── ONE PDF BUILDER ─────────────────────────────────────────────────────────
+// ⚠ REPLACES `estimatePdfBase64` AND `signingPacketPdfBase64`, which differed only in a
+// title and a stylesheet and carried the same eight-line error block verbatim. That block
+// is the one that PASSES THE SERVER'S OWN WORDS THROUGH — "The PDF conversion failed"
+// names no cause, so the same report comes back with nothing new in it, which is what made
+// three rounds of "still no PDF" necessary. One copy now.
+function docPdfBase64(spec, html, cb) {
+  if (!html) { cb(null, 'There is no document to convert yet.'); return; }
+  if (!SHEETS_SYNC_URL) { cb(null, 'No Apps Script URL configured — add it in ⚙ Settings.'); return; }
+  var doc = _exportDoc(spec.cfg.label + ' – ' + (spec.job.hvlId || ''), html, spec.cfg.pdfCss || '');
+  _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: doc }, function (ok, d) {
+    if (ok && d && d.base64) { cb(d.base64); return; }
+    // A deployment predating htmlToPdf falls past every `action` test to `data.type`,
+    // which is undefined, and answers "Unknown type: undefined". `_backendErrorKind`
+    // already reads that as `stale`, so the app can say "redeploy" rather than "it failed".
+    var err = (d && d.error) || 'The PDF conversion failed.';
+    cb(null, err, _backendErrorKind(err, !(d && d.clientError)));
+  }, true);
+}
+
+// ─── PROVIDERS ───────────────────────────────────────────────────────────────
+// ⚠ `needsHumanSend` IS A PROPERTY OF THE PROVIDER, NOT OF THE DOCUMENT, and it is why
+// the timeline asks for one confirming tap. Gmail's `gmail.compose` scope deliberately
+// CANNOT send — it creates a draft and a person presses send, which is exactly what
+// Anthony asked for. So the app cannot know the message actually went. `draftedAt` is what
+// it honestly knows; `sentAt` is what the person tells it. When an e-signature or a
+// server-side sender arrives, that provider sets `needsHumanSend:false` and the tap
+// disappears on its own — no screen changes.
+var DOC_SEND_PROVIDERS = {
+  gmail: {
+    needsHumanSend: true,
+    carriesAttachment: true,
+    send: function (spec, pdf, cb) {
+      var mime = buildMimeMessage({
+        to: spec.to, cc: spec.cfg.cc(),
+        subject: spec.cfg.subject(spec),
+        text: spec.cfg.text(spec),
+        html: spec.cfg.emailHtml(spec),
+        pdfBase64: pdf || '',
+        pdfName: spec.names.attachment
+      });
+      gmailCreateDraft(mime, function (ok, d) {
+        if (!ok) { cb(false, (d && d.error) || 'unknown'); return; }
+        cb(true, null, gmailDraftUrl(d.messageId || d.draftId));
+      });
+    }
+  },
+  // ⚠ THE FALLBACK MUST NOT BE DELETED. An unconfigured client id, a cancelled popup or a
+  // failed draft all land here, and a plain compose window that definitely opens beats a
+  // button that reports an error. It carries no attachment — RFC 6068 cannot — so the
+  // notice says so rather than letting the body claim one.
+  mailto: {
+    needsHumanSend: true,
+    // ⚠ RFC 6068 CARRIES PLAIN TEXT AND NOTHING ELSE, and this is not a detail to leave
+    // implicit: the PDF may have built perfectly and still not be on this email. The
+    // first version keyed the notice on whether the PDF existed, so the fallback said
+    // "with the PDF attached" over a message that had none — which is the very claim the
+    // invoice's old mailto: made for months ("Please find attached your invoice", with
+    // nothing attached). Whether an attachment is possible is a property of the PROVIDER.
+    carriesAttachment: false,
+    send: function (spec, pdf, cb) {
+      var href = spec.cfg.mailto(spec);
+      if (!href || href === '#') { cb(false, 'no client email on this job'); return; }
+      try { window.location.href = href; } catch (e) {}
+      cb(true, null, '');
+    }
+  }
+};
+
+function docProvider(spec) { return gmailConfigured() ? 'gmail' : 'mailto'; }
+
+// ─── SENDING ─────────────────────────────────────────────────────────────────
+var _docBusy = null;   // {jobId, docKey} — one send at a time, app-wide
+
+function docSend(spec) {
+  if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', spec.job.id); return false; }
+  var to = spec.to;
+  if (!to) { _docNotice('warn', 'No client email on this job — add one in Client Intake first.', spec.job.id); return false; }
+
+  var html = spec.cfg.html(spec);
+  if (!html) { _docNotice('warn', 'There is nothing to send on this document yet.', spec.job.id); return false; }
+
+  var provider = docProvider(spec);
+  _docBusy = { jobId: spec.job.id, docKey: spec.key };
+  _dashSendState(spec.key, 'Building PDF…');
+
+  // ⚠ A `fetch` HAS NO TIMEOUT, so a backend that never answers would leave the button
+  // dead forever. Re-enabling must be LOUD: the draft may already exist, and a silent
+  // re-enable is the exact moment somebody presses again and gets two.
+  var watchdog = setTimeout(function () {
+    if (!_docBusy) return;
+    _docBusy = null;
+    _docNotice('warn', 'That took too long to answer. A draft may already have been created — check your Gmail drafts before pressing send again.', spec.job.id);
+  }, 45000);
+
+  docPdfBase64(spec, html, function (pdf, pdfErr, pdfErrKind) {
+    if (!_docBusy) return;   // the watchdog already gave up and said so
+    _dashSendState(spec.key, 'Creating draft…');
+    DOC_SEND_PROVIDERS[provider].send(spec, pdf, function (ok, err, draftUrl) {
+      clearTimeout(watchdog);
+      _docBusy = null;
+      if (!ok) {
+        // Gmail failed: fall back rather than stopping. A compose window that opens beats
+        // a button that reports an error.
+        if (provider === 'gmail') {
+          var fb = DOC_SEND_PROVIDERS.mailto;
+          fb.send(spec, null, function (ok2) {
+            _docNotice(ok2 ? 'warn' : 'err',
+              ok2 ? ('Gmail draft failed — ' + err + '. Opened a plain email instead; it carries NO attachment, so attach a printed copy.')
+                  : ('Could not send — ' + err + '.'), spec.job.id);
+          });
+          return;
+        }
+        _docNotice('err', 'Could not send — ' + err + '.', spec.job.id);
+        return;
+      }
+      var needsTap = DOC_SEND_PROVIDERS[provider].needsHumanSend;
+      // ⚠ NAMING THE MAILBOX IS NOT DECORATION. The draft link can only open Google
+      // account 0, which in a browser signed in to several is whichever signed in first —
+      // so when Gmail opens the wrong one the person needs to be told two things the
+      // browser will not tell them: the draft really was created, and where it is.
+      // ⚠ THE ATTACHMENT SENTENCE KEYS ON THE PROVIDER, NOT ON WHETHER THE PDF BUILT.
+      // A mailto: cannot carry one however well the conversion went, and telling somebody
+      // the document is attached when it is not is worse than telling them nothing.
+      var attached = DOC_SEND_PROVIDERS[provider].carriesAttachment && !!pdf;
+      var msg = (provider === 'gmail'
+          ? ('Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox'))
+          : 'Email opened')
+        + (attached ? ' with the PDF attached'
+           : (DOC_SEND_PROVIDERS[provider].carriesAttachment
+              ? ' — WITHOUT the PDF. ' + _pdfFailAdviceText(pdfErrKind) + (pdfErr ? ' The server said: ' + pdfErr + '.' : '')
+              : ' — a plain email carries NO attachment, so attach a printed copy before sending'))
+        + '. ' + (needsTap ? 'Read it, send it, then tap “I’ve sent it”.' : '');
+      docRecordSent(spec, { provider: provider, draftUrl: draftUrl || '', pdfOk: attached });
+      _docNotice(attached ? 'ok' : 'warn', msg, spec.job.id);
+      if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
+      showSyncBadge(provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
+    });
+  });
+  return true;
+}
+
+// ⚠ THE RECORD IS WRITTEN BEFORE ANYTHING ELSE CAN FAIL, and it writes `draftedAt`, never
+// `sentAt`. The app watched a draft be created; it did not watch anyone send it. Calling
+// that "sent" would turn the timeline green over an unsent draft sitting in a mailbox —
+// a quiet lie on the one screen Anthony is being asked to trust.
+function docRecordSent(spec, res) {
+  var st = docState(spec.job, spec.key);
+  st.draftedAt = new Date().toISOString();
+  st.draftedBy = _actor(spec.job) || spec.job.tc || '';
+  st.provider = res.provider;
+  st.draftUrl = res.draftUrl || '';
+  st.pdfOk = !!res.pdfOk;
+  if (!DOC_SEND_PROVIDERS[res.provider].needsHumanSend) {
+    st.sentAt = st.draftedAt;
+    st.sentBy = st.draftedBy;
+  }
+  saveJobs(); syncJobToSheets(spec.job);
+}
+
+// The one confirming tap. Anthony chose to keep it: without it the timeline turns green
+// while an unsent draft sits in the mailbox, and "estimate sent" is what unlocks Mark Won.
+function markDocSent(jobId, docKey) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return;
+  // ⚠ THE TWO LEGACY RECORDERS OWN THEIR OWN RULES AND ARE CALLED, NEVER REIMPLEMENTED.
+  // `markEstimateSent` writes `estimateSentDate`, which six surfaces read; and
+  // `markAgreementSent` REFUSES without an approved agreement, stamping that approval
+  // and filing both documents on the way through. A second copy of either here would be
+  // the one nobody remembers to update — and on the agreement it would be a door around
+  // the one gate that survived the slimming.
+  if (docKey === 'agreement') {
+    if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
+    markAgreementSent();
+    if (!job.agrSent) return;   // it refused, and has already printed why
+  } else if (docKey === 'estimate') {
+    if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
+    markEstimateSent();
+  }
+  var st = docState(job, docKey);
+  st.sentAt = new Date().toISOString();
+  st.sentBy = _actor(job) || job.tc || '';
+  saveJobs(); syncJobToSheets(job);
+  dashNotice('ok', 'Recorded as sent.');
+  _dashRedraw(jobId);
+}
+
+// Button feedback lives on the rail, which redraws — so it goes through the notice rather
+// than being written onto a button that is about to be replaced.
+// ⚠ A CREATED DRAFT MUST NEVER BE A DEAD END. `window.open` is blocked by default on
+// some iPads, and the mailbox link can resolve to the wrong Google account in a browser
+// signed in to several. Neither is a reason to lose a draft that really was created — so
+// the URL rides the document record and the rail offers it until the send is confirmed.
+// It used to be a node inserted beside a tab's feedback strip, which the drilldown's own
+// innerHTML rewrite wipes on the next redraw.
+function openDocDraft(jobId, docKey) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var st = (job && job.docState && job.docState[docKey]) || {};
+  if (!st.draftUrl) { dashNotice('warn', 'No draft link was recorded for this document.'); _dashRedraw(jobId); return; }
+  try { window.open(st.draftUrl, '_blank'); } catch (e) {}
+}
+
+function _dashSendState(docKey, label) {
+  var el = document.getElementById('dash-fb');
+  if (el) el.innerHTML = '<div class="alert a-info">' + esc(label) + '</div>';
+}
+
 // ─── SLICE 3: ONE WAY TO NAME, VIEW AND PRINT ANY CLIENT DOCUMENT ────────────
 // Slice 2 made the three documents pure functions. This gives them ONE registry, one
 // naming rule, one viewer and one print path — so the estimate, the signing packet and
@@ -11137,6 +11474,11 @@ var DOC_ACTIONS = {
   estimate: {
     label: 'Client Estimate',
     driveSub: 'Estimate',
+    cc: function () { return DEPT_EMAILS.estimates; },
+    subject: function (spec) { return estimateEmailSubject(spec.job); },
+    text: function (spec) { return buildEstimateEmailText(spec.est, spec.job); },
+    emailHtml: function (spec) { return buildEstimateEmailHtml(spec.est, spec.job); },
+    mailto: function (spec) { return buildEstimateMailto(spec.est, spec.job); },
     html: function (spec) { return clientEstimateHtml(spec.est, spec.job); },
     // The estimate is the client's copy of an approved price. An unapproved one is a
     // working draft and must not leave the building.
@@ -11150,10 +11492,25 @@ var DOC_ACTIONS = {
   agreement: {
     label: 'Signing Packet',
     driveSub: 'Agreement',
+    cc: function () { return DEPT_EMAILS.agreements; },
+    subject: function (spec) { return agreementEmailSubject(spec.job); },
+    text: function (spec) { return buildAgreementEmailText(spec.job); },
+    emailHtml: function (spec) { return buildAgreementEmailHtml(spec.job); },
+    mailto: function (spec) { return buildAgreementMailto(spec.job); },
+    // The packet paginates: the exhibit starts on a fresh page.
+    pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}',
     // ⚠ THE PACKET, NEVER THE BARE AGREEMENT. Both forms incorporate the Estimate as
     // Exhibit A and the estate form says the agreement is not valid without it, so a
     // client sent the agreement alone is signing against an exhibit they do not have.
     html: function (spec) { return signingPacketHtml(spec.job.id); },
+    // ⚠ THE STAMP IS A CONSEQUENCE OF COMMITTING, AND VIEWING IS NOT COMMITTING.
+    // Reading the contract you are about to talk a client through is free — that is why
+    // the draft renders at all times. Printing it or sending it is what puts it in
+    // somebody's hands, so those are what stamp the approval and file both documents to
+    // the client's Drive folder. ONE hook: it used to be a line at the top of
+    // `printAgreement`, `printSigningPacket` and `emailAgreementToClient` separately, and
+    // a fourth door would have been one line from having no stamp at all.
+    commit: function (spec) { return ensureAgreementApproved(spec.job.id); },
     blocker: function (spec) {
       // ⚠ `agreementReady`'s second argument is the STORE RECORD (`{approved, estimate}`),
       // not the estimate SNAPSHOT that `spec.est` holds — a snapshot has no `.approved`,
@@ -11171,6 +11528,14 @@ var DOC_ACTIONS = {
   invoice: {
     label: 'Invoice',
     driveSub: 'Invoice',
+    // ⚠ THE INVOICE HAD NONE OF THIS. Its only email was a `mailto:` whose body reads
+    // "Please find attached your invoice" — with nothing attached, because RFC 6068
+    // carries plain text and nothing else.
+    cc: function () { return DEPT_EMAILS.billing; },
+    subject: function (spec) { return invoiceEmailSubject(spec.job, spec.stage); },
+    text: function (spec) { return buildInvoiceEmailText(spec.job, spec.stage, _docAmtDue(spec)); },
+    emailHtml: function (spec) { return buildInvoiceEmailHtml(spec.job, spec.stage, _docAmtDue(spec)); },
+    mailto: function (spec) { return buildInvoiceMailto(spec.job, _docAmtDue(spec), spec.stage); },
     html: function (spec) { var d = invoiceHtml(spec.job, spec.stage); return d ? d.html : ''; },
     blocker: function (spec) {
       var d = invoiceHtml(spec.job, spec.stage);
@@ -11185,6 +11550,14 @@ var DOC_ACTIONS = {
 };
 
 var DOC_STAGE_WORD = { deposit: 'Deposit', midpoint: 'Midpoint', final: 'Final' };
+
+// The balance this invoice is asking for. ⚠ Read from `invoiceHtml`, which is the one
+// place the money is computed — the mailto used to take a `balance` its caller derived
+// separately, which is two copies of a figure the client is being asked to pay.
+function _docAmtDue(spec) {
+  var d = invoiceHtml(spec.job, spec.stage);
+  return d ? d.amtDue : 0;
+}
 
 // The key that identifies one document: 'estimate', 'agreement', or 'invoice:final'.
 function docKeyFor(kind, opt) {
@@ -11240,6 +11613,7 @@ function docSpec(kind, jobId, opt) {
     // flag and the documentation scope that `job.havellinEst` does not.
     est: approvedEstimateFor(jobId) || (rec && rec.estimate) || null,
     cfg: DOC_ACTIONS[kind],
+    to: bestClientEmail(job),
     names: docNames(job, kind, { stage: stage })
   };
 }
@@ -11258,11 +11632,19 @@ function docAction(jobId, kind, verb, opt) {
   var blk = spec.cfg.blocker(spec);
   if (blk) { _docNotice('warn', blk, jobId); return false; }
 
+  // ⚠ 'view' IS EXEMPT ON PURPOSE — see `commit` on the agreement. Reading is free;
+  // everything that puts the document in somebody's hands commits first.
+  if (verb !== 'view' && spec.cfg.commit && spec.cfg.commit(spec)) {
+    _docNotice('warn', 'This document could not be approved for sending — check the estimate and the client\u2019s acceptance above.', jobId);
+    return false;
+  }
+
   var html = spec.cfg.html(spec);
   if (!html) { _docNotice('warn', 'There is nothing to ' + verb + ' on this document yet.', jobId); return false; }
 
   if (verb === 'view') return openDocViewer(spec, html);
   if (verb === 'print') return _printDocument('<div class="ce-page">' + html + '</div>', spec.names.printTitle);
+  if (verb === 'send') return docSend(spec);
   _docNotice('warn', 'Unknown document action.', jobId);
   return false;
 }
@@ -11322,6 +11704,54 @@ function printDocViewer() {
   docAction(s.job.id, s.kind, 'print', { stage: s.stage });
 }
 
+// ⚠ ONE SEND BUTTON, BUILT ONCE, FOR ALL FIVE DOCUMENTS. This helper is the whole
+// point of the slice: the estimate, the signing packet and the three invoices get the
+// same control in the same place with the same two states, so learning it on the
+// estimate teaches the other four. The moment a row hand-rolls its own send button,
+// they have stopped being the same thing to learn.
+//
+// ⚠ TWO STATES, AND THE SECOND IS NOT CEREMONY. `gmail.compose` can only create a
+// DRAFT — the scope deliberately cannot send — so between pressing Send and the mail
+// actually going out there is a real interval in which the document is written and
+// unsent. Turning the rail green on the draft would say "sent to client" over an
+// untouched draft sitting in a mailbox, and on the estimate that is what unlocks
+// Mark Won. So a drafted-but-unsent document asks for the confirming tap instead.
+function _jtSendAction(id, job, kind, stage, what) {
+  var key = docKeyFor(kind, stage ? { stage: stage } : null);
+  var st = (job.docState && job.docState[key]) || {};
+  var opt = stage ? (",{stage:'" + stage + "'}") : '';
+  if (st.draftedAt && !st.sentAt) {
+    return { label: '&#10003; I&rsquo;ve sent it', call: 'markDocSent(' + id + ",'" + key + "')" };
+  }
+  return { label: '&#9993; Send ' + what, call: 'docAction(' + id + ",'" + kind + "','send'" + opt + ')' };
+}
+
+// View then Print, in that order, on every document. Same reasoning as above: the
+// order is part of what is being learned.
+//
+// ⚠ THE LABEL NAMES THE DOCUMENT, and that is not redundancy with the row above it.
+// These same objects feed the deduped quick strip at the foot of the rail, which has no
+// row context at all — so bare "View"/"Print" rendered there as four identical pairs in
+// a row, `View · Print · View · Print · View · Print · View · Print`, with nothing saying
+// which document any of them opened. One label has to read correctly in both places.
+function _jtDocViews(id, kind, stage, what) {
+  var opt = stage ? (",{stage:'" + stage + "'}") : '';
+  var of = what ? (' ' + what) : '';
+  return [
+    { label: '&#128065; View' + of, call: 'docAction(' + id + ",'" + kind + "','view'" + opt + ')' },
+    { label: '&#128424; Print' + of, call: 'docAction(' + id + ",'" + kind + "','print'" + opt + ')' }
+  ];
+}
+
+// Offered only while a draft is outstanding — once the send is confirmed the link is
+// history, and a button reopening a sent draft invites sending it twice.
+function _jtDraftLink(id, job, kind, stage, what) {
+  var key = docKeyFor(kind, stage ? { stage: stage } : null);
+  var st = (job.docState && job.docState[key]) || {};
+  if (!st.draftUrl || st.sentAt) return [];
+  return [{ label: '&#8599; Open the ' + (what || 'document') + ' draft', call: 'openDocDraft(' + id + ",'" + key + "')" }];
+}
+
 function jobTimelineActions(row, job, estRec) {
   var id = job.id;
   var out = { primary: null, secondary: [] };
@@ -11360,14 +11790,8 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'estimate_sent':
-      if (live) out.primary = { label: '&#10003; Mark as sent', call: 'dashMarkEstimateSent(' + id + ')' };
-      // ⚠ View and Print are offered on the SAME row for every document, in the same
-      // order, whatever the document is. That sameness is the point of the slice: learn
-      // it on the estimate and you already know the agreement and the invoices.
-      if (estApproved) {
-        out.secondary.push({ label: '&#128065; View', call: "docAction(" + id + ",'estimate','view')" });
-        out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'estimate','print')" });
-      }
+      if (live && estApproved) out.primary = _jtSendAction(id, job, 'estimate', '', 'estimate');
+      if (estApproved) out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'estimate', '', 'estimate'), _jtDocViews(id, 'estimate', '', 'estimate'));
       // A discount is a re-approval, so it is only offered on an approved estimate the
       // client has not yet signed against.
       if (estApproved && !job.agrSigned) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
@@ -11381,9 +11805,8 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'agreement_sent':
-      if (live) out.primary = { label: '&#10003; Mark agreement sent', call: 'dashMarkAgreementSent(' + id + ')' };
-      out.secondary.push({ label: '&#128065; View', call: "docAction(" + id + ",'agreement','view')" });
-      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'agreement','print')" });
+      if (live) out.primary = _jtSendAction(id, job, 'agreement', '', 'signing packet');
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'agreement', '', 'packet'), _jtDocViews(id, 'agreement', '', 'packet'));
       break;
 
     case 'agreement_signed':
@@ -11395,10 +11818,16 @@ function jobTimelineActions(row, job, estRec) {
       if (live) out.primary = { label: '&#10003; Record signature received', call: 'dashMarkAgreementSigned(' + id + ')' };
       break;
 
+    case 'deposit_invoiced':
+      if (live) out.primary = _jtSendAction(id, job, 'invoice', 'deposit', 'deposit invoice');
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'deposit', 'deposit invoice'), _jtDocViews(id, 'invoice', 'deposit', 'deposit invoice'));
+      break;
+
+    // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
+    // View/Print pair sat on the payment row, so the document you had to read before you
+    // could ask for the money was reached from the step that records the money arriving.
     case 'deposit_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'deposit')" };
-      out.secondary.push({ label: '&#128065; View invoice', call: "docAction(" + id + ",'invoice','view',{stage:'deposit'})" });
-      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'invoice','print',{stage:'deposit'})" });
       break;
 
     case 'job_active':
@@ -11408,20 +11837,32 @@ function jobTimelineActions(row, job, estRec) {
       if (row.state === 'current') out.primary = { label: '&#9654; Activate job', call: 'activateOrCycle(' + id + ')' };
       break;
 
+    case 'midpoint_invoiced':
+      if (live) out.primary = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'midpoint', 'midpoint invoice'), _jtDocViews(id, 'invoice', 'midpoint', 'midpoint invoice'));
+      break;
+
+    // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
+    // View/Print pair sat on the payment row, so the document you had to read before you
+    // could ask for the money was reached from the step that records the money arriving.
     case 'midpoint_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'midpoint')" };
-      out.secondary.push({ label: '&#128065; View invoice', call: "docAction(" + id + ",'invoice','view',{stage:'midpoint'})" });
-      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'invoice','print',{stage:'midpoint'})" });
       break;
 
     case 'work_complete':
       if (live) out.primary = { label: '&#9632; Close job', call: 'activateOrCycle(' + id + ')' };
       break;
 
+    case 'final_invoiced':
+      if (live) out.primary = _jtSendAction(id, job, 'invoice', 'final', 'final invoice');
+      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'final', 'final invoice'), _jtDocViews(id, 'invoice', 'final', 'final invoice'));
+      break;
+
+    // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
+    // View/Print pair sat on the payment row, so the document you had to read before you
+    // could ask for the money was reached from the step that records the money arriving.
     case 'final_paid':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'final')" };
-      out.secondary.push({ label: '&#128065; View invoice', call: "docAction(" + id + ",'invoice','view',{stage:'final'})" });
-      out.secondary.push({ label: '&#128424; Print', call: "docAction(" + id + ",'invoice','print',{stage:'final'})" });
       break;
   }
   return out;
@@ -11833,6 +12274,10 @@ function renderClientDashboard(jobId) {
   var _jtAt = function(r){
     if (!r.at) return '';
     if (r.atKind === 'date') return fmtDate2(r.at);
+    if (r.atKind === 'iso') {
+      // docState writes ISO stamps; every other date on the rail is yyyy-mm-dd.
+      return r.at ? fmtDate2(String(r.at).slice(0, 10)) : '';
+    }
     if (r.atKind === 'epoch') {
       var _ms = Number(r.at);
       return _ms > 0 ? new Date(_ms).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
@@ -11978,30 +12423,43 @@ function renderClientDashboard(jobId) {
   // Function replacement so `$` in money values isn't read as a replace pattern.
   h = h.replace('<!--TIMELINE_SLOT-->', function(){ return _tlHtml; });
 
-  // DOCUMENTS CARD
+  // ── CHANGE ORDERS ──────────────────────────────────────────────────────────
+  // ⚠ THE FIVE DOCUMENT ROWS THAT USED TO HEAD THIS CARD ARE RETIRED, AND THE REASON IS
+  // NOT TIDINESS — THE CARD AND THE RAIL VISIBLY DISAGREED. It kept its OWN copy of every
+  // "has this gone out" rule (`estimateSentDate`, `agrSigned`, `depositReceived`) while
+  // the rail above reads `docState`, so a deposit invoice drafted and waiting to be sent
+  // read "Drafted — read it, send it, then confirm" on the timeline and **Send now** in
+  // the card, eight inches apart on the same screen. Two surfaces answering one question
+  // differently is the defect this file records paying for over and over.
+  //
+  // ⚠ AND ITS BUTTONS WENT BACK TO THE TABS, which is the whole thing this rebuild is
+  // removing. `docPdf` navigated to another panel and fired a print 200ms later — timing,
+  // not a gate — and `docEmail` opened a raw mailto:. Both are deleted. Worse, the invoice
+  // row passed `docType:'invoice'` with NO STAGE, so its PDF printed whichever stage
+  // `currentInvStage` happened to hold, and its email invented the balance outright
+  // (`hav * 0.75` hardcoded, ignoring change orders, rush and every recorded payment).
+  //
+  // Change Orders stay, because they are the one thing here the rail does not carry.
   h += '<div class="card" style="margin-bottom:12px;">';
-  h += sectionHdr('Documents');
-  var docs = [
-    {name:'Service Estimate', meta: est ? (fmtMoney(est.havellinTotal)+' · '+(job.estimateSentDate||'Not yet sent')) : 'No estimate built yet', status: est ? (job.estimateSentDate?'Sent':'Approved') : 'Pending', color: est ? (job.estimateSentDate?'#1D9E75':'#BA7517') : '#888780', showPdf: !!est, showEmail: !!est, docType:'estimate'},
-    {name:'Service Agreement', meta: job.agrSigned ? 'Signed' : 'Awaiting client signature', status: job.agrSigned?'Signed':'Not signed', color: job.agrSigned?'#1D9E75':'#A32D2D', showPdf:true, showEmail:true, docType:'agreement'},
-    {name:'First Invoice — Deposit (50%)', meta: hav ? fmtMoney(dep)+' due on signing' : '—', status: job.depositReceived?'Received':( job.agrSigned?'Send now':'Pending'), color: job.depositReceived?'#1D9E75':(job.agrSigned?'#BA7517':'#888780'), showPdf: !!hav, showEmail: !!hav, docType:'invoice'},
-    {name:'Midpoint Invoice (25%)', meta: hav ? fmtMoney(mid)+' due at midpoint' : '—', status:'Pending', color:'#888780', showPdf:false, showEmail:false},
-    {name:'Final Invoice', meta:'Balance of actual hours on completion', status:'Not generated', color:'#888780', showPdf:false, showEmail:false},
-  ];
-  if (cos.length > 0) {
-    cos.forEach(function(co){ docs.push({name:'Change Order CO-'+String(co.id).slice(-6), meta:co.description.slice(0,50)+(co.amount>=0?(' +'+fmtMoney(co.amount)):(' '+fmtMoney(co.amount)))+' · '+co.createdAt, status:'Issued', color:'#3C3489', showPdf:true, coId:co.id, showEmail:false}); });
-  }
-  docs.push({name:'Change Orders', meta:cos.length===0?'None issued':cos.length+' issued', status:'', color:'', newBtn:true});
-  docs.forEach(function(d){
+  h += sectionHdr('Change Orders');
+  cos.forEach(function(co){
     h += '<div class="doc-r">';
-    h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">'+d.name+'</div><div style="font-size:11px;color:var(--gray);margin-top:1px;">'+d.meta+'</div></div>';
+    h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">Change Order CO-'+String(co.id).slice(-6)+'</div>'
+       + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+co.description.slice(0,50)
+       + (co.amount>=0?(' +'+fmtMoney(co.amount)):(' '+fmtMoney(co.amount)))+' · '+co.createdAt+'</div></div>';
     h += '<div style="display:flex;gap:6px;align-items:center;">';
-    if (d.status) h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:'+d.color+'22;color:'+d.color+';font-weight:500;">'+d.status+'</span>';
-    if (d.showPdf) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;" onclick="docPdf('+jobId+',\''+d.docType+'\')">PDF</button>';
-    if (d.showEmail) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;" onclick="docEmail('+jobId+',\''+d.docType+'\')">&#9993; Email</button>';
-    if (d.newBtn) h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;" onclick="openChangeOrder('+jobId+')">+ New</button>';
+    h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#3C348922;color:#3C3489;font-weight:500;">'
+       + (co.clientApproved ? 'Accepted' : 'Awaiting acceptance') + '</span>';
     h += '</div></div>';
   });
+  h += '<div class="doc-r">';
+  h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">Raise a change order</div>'
+     + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'
+     + (cos.length===0 ? 'None issued' : cos.length+' issued')
+     + ' &middot; an unaccepted change order is never billed</div></div>';
+  h += '<div style="display:flex;gap:6px;align-items:center;">';
+  h += '<button class="btn-s" style="font-size:11px;padding:3px 10px;" onclick="openChangeOrder('+jobId+')">+ New</button>';
+  h += '</div></div>';
   h += '</div>';
 
   // HOURS LOG CARD
@@ -12138,72 +12596,6 @@ function goToJobLog(jobId) {
       if (planSel) { planSel.value = jobId; loadJobPlanTab(); }
     }, 100);
   }, 50);
-}
-
-
-// Navigate to a tab with the right job loaded, then trigger PDF or email.
-function docPdf(jobId, docType) {
-  var navBtns = document.querySelectorAll('.nb');
-  function navToPanel(panelId, btnIdx) {
-    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-    navBtns.forEach(function(b){ b.classList.remove('active'); });
-    document.getElementById('panel-' + panelId).classList.add('active');
-    // Highlight the matching tab by its panel id (order-independent).
-    var _pb = document.querySelector('.nb[onclick*="\'' + panelId + '\'"]');
-    if (_pb) _pb.classList.add('active');
-  }
-  if (docType === 'estimate') {
-    var rec = estimateStore[jobId];
-    if (rec) { currentEstimate = rec.estimate; }
-    navToPanel('client-estimate', 3);
-    setTimeout(function(){ renderClientEstimate(); setTimeout(printClientEstimate, 200); }, 150);
-  } else if (docType === 'agreement') {
-    var sel2 = document.getElementById('agr-job');
-    if (sel2) { sel2.value = jobId; loadAgreement(); }
-    navToPanel('agreement', 4);
-  } else if (docType === 'invoice') {
-    var sel3 = document.getElementById('invoice-job');
-    if (sel3) { sel3.value = jobId; loadInvoice(); }
-    navToPanel('invoice', 6);
-    setTimeout(function(){ printInvoice(); }, 400);
-  }
-}
-
-function docEmail(jobId, docType) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  if (docType === 'estimate') {
-    var rec = estimateStore[jobId];
-    // An unapproved estimate must not reach a client. The Estimate tab hides its own
-    // send buttons until approval, but this dashboard shortcut bypassed that entirely —
-    // two clicks from the client list and a price nobody signed off was in the client's
-    // inbox. Hiding a button elsewhere is not a rule; this is.
-    if (!rec || !rec.approved) {
-      alert('This estimate has not been approved yet.\n\n'
-        + 'Approve it on the Client Estimate tab with a manager PIN before sending it to '
-        + 'the client — the figure is not final until someone has signed off on it.');
-      return;
-    }
-    currentEstimate = rec.estimate;
-    window.location.href = buildEstimateMailto();
-  } else if (docType === 'agreement') {
-    // Navigate to Agreement tab — email is sent after approval from there
-    var navBtns2 = document.querySelectorAll('.nb');
-    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-    navBtns2.forEach(function(b){ b.classList.remove('active'); });
-    document.getElementById('panel-agreement').classList.add('active');
-    var _agB = document.querySelector('.nb[onclick*="\'agreement\'"]');
-    if (_agB) _agB.classList.add('active');
-    var sel4 = document.getElementById('agr-job');
-    if (sel4) { sel4.value = jobId; loadAgreement(); }
-  } else if (docType === 'invoice') {
-    var rec2 = estimateStore[jobId];
-    var est = rec2 ? rec2.estimate : null;
-    var hav = est ? est.havellinTotal : (job.havellinEst || 0);
-    var paid = Math.round(hav * 0.75);
-    var balance = Math.max(0, hav - paid);
-    window.location.href = buildInvoiceMailto(job, balance);
-  }
 }
 
 function cycleStatus(id) {
@@ -13249,85 +13641,8 @@ function buildAgreementMailto(job) {
 }
 
 // The packet as a PDF, through the same server-side conversion as everything else.
-function signingPacketPdfBase64(jobId, cb) {
-  var body = signingPacketHtml(jobId);
-  if (!body) { cb(null, 'The packet needs an approved estimate for this job.'); return; }
-  if (!SHEETS_SYNC_URL) { cb(null, 'No Apps Script URL configured — add it in ⚙ Settings.'); return; }
-  var job = jobs.find(function(j){ return j.id === jobId; }) || {};
-  var html = _exportDoc('Signing Packet – ' + (job.hvlId || ''), body,
-    '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}');
-  _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: html }, function(ok, d) {
-    if (ok && d && d.base64) { cb(d.base64); return; }
-    // ⚠ PASS THE SERVER'S OWN WORDS THROUGH. "The PDF conversion failed" names no cause, so
-    // the same report ("still no PDF") comes back with nothing new in it — which is what
-    // made three rounds of this necessary. The one string that identifies the problem is
-    // the one the server sent, and a deployment predating htmlToPdf sends a specific one:
-    // doPost falls past every `action` test to `data.type`, which is undefined, and answers
-    // "Unknown type: undefined". _backendErrorKind already reads that as `stale`, so the
-    // app can say "redeploy" instead of "it failed".
-    var err = (d && d.error) || 'The PDF conversion failed.';
-    cb(null, err, _backendErrorKind(err, !(d && d.clientError)));
-  }, true);
-}
-
-var _agrEmailBusy = false;
-function _setAgrEmailBusy(on, label) {
-  _agrEmailBusy = on;
-  var b = document.getElementById('btn-agr-email');
-  if (!b) return;
-  b.disabled = on;
-  b.innerHTML = on ? (label || '↻ Building…') : '&#9993; Email to Client';
-  b.style.opacity = on ? '0.75' : '';
-}
-
-function emailAgreementToClient() {
-  if (_agrEmailBusy) return;
-  // Approval is a consequence now, not a step: stamp it on the way through.
-  if (ensureAgreementApproved(currentAgrJobId)) { showFB(_dashFbTarget('agr-fb'), 'warn', 'The estimate must be approved and the client\'s acceptance recorded before sending the packet.'); return; }
-  var job = jobs.find(function(j){ return j.id === currentAgrJobId; });
-  if (!job) { showFB('agr-fb', 'warn', 'Job not found.'); return; }
-  var to = bestClientEmail(job);
-  if (!to) { showFB('agr-fb', 'warn', 'No client email on this job — add one in Client Intake first.'); return; }
-  if (!gmailConfigured()) { _agreementEmailFallback(job, 'Gmail is not connected yet (⚙ Settings). Opening a plain-text email instead.'); return; }
-
-  _setAgrEmailBusy(true, '↻ Building packet…');
-  showFB('agr-fb', 'info', 'Building the signing packet PDF…');
-
-  signingPacketPdfBase64(currentAgrJobId, function(pdf, pdfErr, pdfErrKind) {
-    if (!pdf) showFB('agr-fb', 'warn', 'Could not build the packet PDF — ' + (pdfErr || 'unknown') + '. Creating the draft without it — attach a printed copy before sending.');
-    else showFB('agr-fb', 'info', 'Creating the draft in your Gmail…');
-    _setAgrEmailBusy(true, '↻ Creating draft…');
-
-    var mime = buildMimeMessage({
-      to: to,
-      cc: DEPT_EMAILS.agreements,
-      subject: agreementEmailSubject(job),
-      text: buildAgreementEmailText(job),
-      html: buildAgreementEmailHtml(job),
-      pdfBase64: pdf || '',
-      pdfName: ((job.name || 'Client').split(' ').pop()) + ' - Havellin Signing Packet.pdf'
-    });
-
-    gmailCreateDraft(mime, function(ok, d) {
-      _setAgrEmailBusy(false);
-      if (!ok) { _agreementEmailFallback(job, 'Gmail draft failed — ' + (d.error || 'unknown') + '. Opening a plain-text email instead.'); return; }
-      // Same treatment as the estimate: the draft exists, so opening it is best effort and
-      // the link is printed either way. The agreement tab had no strip at all.
-      var agrUrl = gmailDraftUrl(d.messageId || d.draftId);
-      try { window.open(agrUrl, '_blank'); } catch (e) {}
-      _showDraftLink(agrUrl, pdf, pdfErr, pdfErrKind, 'agr-fb');
-      showFB('agr-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the signing packet attached' : '') + '. Review it, send, then click ✉ Mark Agreement Sent here.');
-      showSyncBadge('Gmail draft created ✓');
-    });
-  });
-}
-
-function _agreementEmailFallback(job, why) {
-  _setAgrEmailBusy(false);
-  if (why) showFB('agr-fb', 'warn', why);
-  var href = buildAgreementMailto(job);
-  if (href && href !== '#') window.location.href = href;
-}
+// Retired with the estimate's copy above — one send path for all five documents.
+function emailAgreementToClient() { docAction(currentAgrJobId, 'agreement', 'send'); }
 
 // ─── GMAIL DRAFT PLUMBING ─────────────────────────────────────────────────────
 // Creates the draft in the SIGNED-IN USER'S OWN mailbox, so Ashley's draft is Ashley's and
@@ -13509,7 +13824,7 @@ function _gmailPostDraft(token, mime, cb) {
 //
 // /mail/u/0/ is the only form that always resolves. Its one weakness is that account 0 is
 // whichever Google account signed in FIRST in that browser, which may not be the mailbox
-// holding the draft — so the mailbox is named ON SCREEN instead (see _showDraftLink) and
+// holding the draft — so the mailbox is named ON SCREEN instead (docSend's notice) and
 // Gmail's own account switcher, which always works, is the way across. A named mailbox
 // plus a working page beats a URL that guesses and errors.
 function gmailDraftUrl(messageId) {
@@ -13705,126 +14020,20 @@ function buildEstimateEmailText(e, job) {
   return L.join('\n');
 }
 
-// Ask the Apps Script to render the CLIENT ESTIMATE DOCUMENT as a PDF and hand the bytes
-// back. Same _exportDoc input and same server-side conversion as the copy filed to Drive,
-// so the attachment is that document rather than a second rendering of it.
-// cb(base64|null, errText).
-function estimatePdfBase64(job, cb) {
-  var el = document.getElementById('ce-page-content');
-  if (!el || !el.innerHTML.trim()) { cb(null, 'The estimate is not on screen to convert.'); return; }
-  if (!SHEETS_SYNC_URL) { cb(null, 'No Apps Script URL configured — add it in ⚙ Settings.'); return; }
-  var html = _exportDoc('Estimate – ' + (job.hvlId || ''), el.innerHTML, '');
-  _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: html }, function(ok, d) {
-    if (ok && d && d.base64) { cb(d.base64); return; }
-    // ⚠ PASS THE SERVER'S OWN WORDS THROUGH. "The PDF conversion failed" names no cause, so
-    // the same report ("still no PDF") comes back with nothing new in it — which is what
-    // made three rounds of this necessary. The one string that identifies the problem is
-    // the one the server sent, and a deployment predating htmlToPdf sends a specific one:
-    // doPost falls past every `action` test to `data.type`, which is undefined, and answers
-    // "Unknown type: undefined". _backendErrorKind already reads that as `stale`, so the
-    // app can say "redeploy" instead of "it failed".
-    var err = (d && d.error) || 'The PDF conversion failed.';
-    cb(null, err, _backendErrorKind(err, !(d && d.clientError)));
-  }, true);
-}
-
-// ─── THE BUTTON ───────────────────────────────────────────────────────────────
-// Build the HTML estimate email as a Gmail draft in the signed-in user's own mailbox, then
-// open it so they can add a line and send it themselves.
+// ⚠ RETIRED IN SLICE 4, AND IT IS THE POINT OF THE SLICE. This tab held a SECOND
+// complete send path — its own PDF builder, its own busy flag, its own Gmail call, its
+// own fallback — and the agreement tab held a third, differing only in a title and a
+// stylesheet while carrying the same eight-line error block verbatim. Anthony's
+// requirement was that sending is one thing to learn, and two implementations of it is
+// how two surfaces come to disagree about what "sent" means.
 //
-// The old mailto: path SURVIVES as the fallback and must not be deleted. Gmail drafts need
-// a client ID configured, network, and a popup that is not blocked; on a locked-down device
-// or with no Cloud project set up yet, a plain-text compose window that definitely opens
-// beats a button that reports an error. _estimateEmailFallback is that path.
-var _estEmailBusy = false;
-function _setEstEmailBusy(on, label) {
-  _estEmailBusy = on;
-  var b = document.getElementById('btn-html-email-est');
-  if (!b) return;
-  b.disabled = on;
-  b.innerHTML = on ? (label || '↻ Building…') : '&#9993; Email to Client';
-  b.style.opacity = on ? '0.75' : '';
-}
-
+// ⚠ AND `estimatePdfBase64` SCRAPED `ce-page-content`, so the estimate PDF depended on
+// the Client Estimate TAB having rendered first. From the drilldown that tab has never
+// been opened, and the attachment would have been the previously-loaded client's
+// estimate or nothing at all. `docPdfBase64` builds from the spec, like every other verb.
 function emailEstimateToClient() {
-  if (_estEmailBusy) return;
   if (!currentEstimate || !currentEstimate.jobId) { showFB('ce-fb', 'warn', 'No estimate loaded.'); return; }
-  if (!estimateApproved) { showFB('ce-fb', 'warn', 'Approve the estimate before sending it to the client.'); return; }
-  var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
-  if (!job) { showFB('ce-fb', 'warn', 'Job not found.'); return; }
-  var to = bestClientEmail(job);
-  if (!to) { showFB('ce-fb', 'warn', 'No client email on this job — add one in Client Intake first.'); return; }
-
-  if (!gmailConfigured()) { _estimateEmailFallback('Gmail is not connected yet (⚙ Settings → Gmail). Opening a plain-text email instead.'); return; }
-
-  var e = currentEstimate;
-  var names = estimateDocNames(job);
-  _setEstEmailBusy(true, '↻ Building PDF…');
-  showFB('ce-fb', 'info', 'Building the estimate PDF…');
-
-  estimatePdfBase64(job, function(pdf, pdfErr, pdfErrKind) {
-    // A missing PDF is not a reason to abandon the email — the body carries the summary and
-    // the person can attach a printed copy. Say what happened and carry on.
-    if (!pdf) showFB('ce-fb', 'warn', 'Could not build the PDF — ' + (pdfErr || 'unknown') + '. Creating the draft without it — attach a printed copy before sending.');
-    else showFB('ce-fb', 'info', 'Creating the draft in your Gmail…');
-    _setEstEmailBusy(true, '↻ Creating draft…');
-
-    var mime = buildMimeMessage({
-      to: to,
-      cc: DEPT_EMAILS.estimates,
-      subject: estimateEmailSubject(job),
-      text: buildEstimateEmailText(e, job),
-      html: buildEstimateEmailHtml(e, job),
-      pdfBase64: pdf || '',
-      pdfName: names.attachment
-    });
-
-    gmailCreateDraft(mime, function(ok, d) {
-      _setEstEmailBusy(false);
-      if (!ok) { _estimateEmailFallback('Gmail draft failed — ' + (d.error || 'unknown') + '. Opening a plain-text email instead.'); return; }
-      // The draft EXISTS at this point. Opening it is best effort — a popup blocker, or a
-      // mailbox link that resolves differently in this browser, must not turn a created
-      // draft into a dead end with nowhere to go. So the link is printed too.
-      var draftUrl = gmailDraftUrl(d.messageId || d.draftId);
-      try { window.open(draftUrl, '_blank'); } catch (e) {}
-      _showDraftLink(draftUrl, pdf, pdfErr, pdfErrKind, 'ce-fb');
-      showFB('ce-fb', 'ok', 'Draft created in your Gmail' + (pdf ? ' with the estimate PDF attached' : ' &mdash; WITHOUT the PDF, attach a printed copy') + '. Review it, add anything personal, and send — then click Mark as Sent here.');
-      showSyncBadge('Gmail draft created ✓');
-    });
-  });
-}
-
-// A created draft, reachable by hand. window.open is blocked by default on some iPads and
-// the mailbox link can resolve differently in a browser signed in to several Google
-// accounts — neither is a reason to lose a draft that was successfully created.
-function _showDraftLink(url, hasPdf, pdfErr, pdfErrKind, hostId) {
-  var host = document.getElementById(hostId || 'ce-fb');
-  if (!host || !url) return;
-  var boxId = (hostId || 'ce-fb') + '-draft-link';
-  var box = document.getElementById(boxId);
-  if (!box) {
-    box = document.createElement('div');
-    box.id = boxId;
-    box.style.cssText = 'margin-top:8px;padding:10px 12px;font-size:12px;line-height:1.55;'
-      + 'border:1px solid var(--border-md);border-radius:4px;background:var(--cream);';
-    host.parentNode.insertBefore(box, host.nextSibling);
-  }
-  // NAMING THE MAILBOX IS THE POINT OF THIS BLOCK. The link can only open account 0, so
-  // when that is the wrong Google account the person needs to know two things the browser
-  // will not tell them: the draft really was created, and which mailbox to look in.
-  var who = _gmailUserEmail ? _emHtml(_gmailUserEmail) : 'your Havellin mailbox';
-  box.innerHTML =
-      '<div style="font-weight:600;margin-bottom:4px;">Draft created in ' + who + '</div>'
-    + '<a href="' + url + '" target="_blank" rel="noopener" style="font-weight:600;">Open Gmail &rarr;</a>'
-    + '<span style="color:var(--gray);"> &nbsp;&middot;&nbsp; if Gmail opens a different account, switch to '
-    + who + ' with the avatar top-right — the draft is in <strong>Drafts</strong>.</span>'
-    + (hasPdf
-        ? '<div style="color:var(--gray);margin-top:4px;">The PDF is attached.</div>'
-        : '<div style="color:#8a5a00;margin-top:6px;"><strong>The PDF did not attach.</strong> '
-          + _pdfFailAdvice(pdfErrKind)
-          + (pdfErr ? '<div style="margin-top:3px;font-size:11px;opacity:.85;">The server said: <code>'
-                      + _emHtml(pdfErr) + '</code></div>' : '')
-          + '</div>');
+  docAction(currentEstimate.jobId, 'estimate', 'send');
 }
 
 // What to DO about a missing PDF — keyed on what the error actually proves.
@@ -13834,6 +14043,12 @@ function _showDraftLink(url, hasPdf, pdfErr, pdfErrKind, hostId) {
 // Everything else gets the workaround and no instruction, on the same reasoning
 // _backendErrorKind was built for — sending someone to redeploy a script they just
 // redeployed costs more than saying "it errored, here is the error".
+// The same advice with the markup taken out, for the notice strip — which escapes, so a
+// `<strong>` would arrive on screen as literal tags. ONE table of advice, two renderings.
+function _pdfFailAdviceText(kind) {
+  return String(_pdfFailAdvice(kind)).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+}
+
 function _pdfFailAdvice(kind) {
   if (kind === 'stale') {
     return 'The Apps Script deployment does not have the PDF converter yet. Paste the current '
@@ -13846,22 +14061,16 @@ function _pdfFailAdvice(kind) {
   return 'Use <strong>Print / Save PDF</strong> and attach it by hand before sending.';
 }
 
-// The pre-existing mailto: behaviour, unchanged, reached when Gmail cannot be used. Says
-// why it fell back rather than silently doing something different from what was pressed.
-function _estimateEmailFallback(why) {
-  _setEstEmailBusy(false);
-  if (why) showFB('ce-fb', 'warn', why);
-  var href = buildEstimateMailto();
-  if (href && href !== '#') window.location.href = href;
-}
-
-function buildEstimateMailto() {
-  if (!currentEstimate) return '#';
-  var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; }) || {};
+// ⚠ THIS READ `currentEstimate` — so the fallback email for job A could be built from
+// whatever estimate was last loaded. It takes its arguments now; the globals remain only
+// for the legacy `#btn-mailto-est` anchor, which is reached from the tab that sets them.
+function buildEstimateMailto(e, job) {
+  e = e || currentEstimate;
+  if (!e) return '#';
+  job = job || jobs.find(function(j){ return j.id===e.jobId; }) || {};
   var to = encodeURIComponent(bestClientEmail(job));
   var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - Service Estimate for ' + (job.name||'Your Property'));
-  var e = currentEstimate;
   var money = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
   // Mirror the estimate document's "Total Estimated Project Cost" breakdown so
   // the email reflects ALL projected costs — Havellin services plus pass-through
@@ -23495,10 +23704,7 @@ function signingPacketHtml(jobId) {
 // The agreement key IS the signing packet — see DOC_ACTIONS. Both buttons on the tab now
 // produce the same document, which is the one that is valid: the bare agreement is signed
 // against an Exhibit A the client does not have.
-function printSigningPacket() {
-  if (ensureAgreementApproved(currentAgrJobId)) { alert('The estimate must be approved and the client\'s acceptance recorded before this can be printed.'); return; }
-  docAction(currentAgrJobId, 'agreement', 'print');
-}
+function printSigningPacket() { docAction(currentAgrJobId, 'agreement', 'print'); }
 
 // Filed beside the agreement on approval, into the same Agreement subfolder.
 var _packetExported = {};
@@ -24681,7 +24887,7 @@ function updateAgrUI() {
     // The client email, beside the two print buttons. It was `btn-mailto-agr` in the markup
     // and NOTHING ever showed it or set its href — so agreements@ never received a copy of
     // anything a client was sent. See emailAgreementToClient.
-    if (btnEmail) { btnEmail.style.display='inline-block'; _setAgrEmailBusy(false); }
+    if (btnEmail) btnEmail.style.display='inline-block';
     badge.innerHTML = '<span class="badge b-approved">✓ Approved</span>';
     // Progress line: where this job is in sent → signed → funded, with who and when.
     var _prog;
@@ -24905,10 +25111,11 @@ function copyStripeLink(type) {
 
 // ⚠ THIS PRINTED WITH NO TITLE SET, so the client's PDF was named after the browser tab.
 // It also hand-rolled the panel-hiding sequence that `_printDocument` exists to own.
-function printAgreement() {
-  if (ensureAgreementApproved(currentAgrJobId)) { alert('The estimate must be approved and the client\'s acceptance recorded before this can be printed.'); return; }
-  docAction(currentAgrJobId, 'agreement', 'print');
-}
+// ⚠ The stamp used to be the first line here, and in `printSigningPacket` and
+// `emailAgreementToClient` beside it. It is `DOC_ACTIONS.agreement.commit` now, so it
+// cannot be reached around — three copies of one rule is what this file records paying
+// for repeatedly.
+function printAgreement() { docAction(currentAgrJobId, 'agreement', 'print'); }
 
 
 // ⚠ ALL THREE OF THESE HAND-ROLLED THE PRINT SEQUENCE OR THE NAMING OR BOTH. They are

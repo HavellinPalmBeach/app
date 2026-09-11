@@ -18,7 +18,7 @@
 // And all three read a rendered panel, so printing from the dashboard depended on having
 // visited another tab first.
 
-const { source, fn } = require('./harness');
+const { source, fn, sandbox } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -183,21 +183,112 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('every document is reachable from the client it belongs to, the same way');
   {
-    // The sameness Anthony asked for, asserted as sameness: View then Print, that order,
-    // on every document.
-    const acts = noComments(fn('jobTimelineActions'));
-    [["'estimate','view'", "'estimate','print'"],
-     ["'agreement','view'", "'agreement','print'"],
-     ["'invoice','view',{stage:'deposit'}", "'invoice','print',{stage:'deposit'}"],
-     ["'invoice','view',{stage:'midpoint'}", "'invoice','print',{stage:'midpoint'}"],
-     ["'invoice','view',{stage:'final'}", "'invoice','print',{stage:'final'}"],
-    ].forEach(([v, p]) => {
-      has(acts, v, `${v} is offered`);
-      has(acts, p, `${p} is offered`);
-      ok(acts.indexOf(v) < acts.indexOf(p), 'and View comes before Print, as on every other row');
+    // ⚠ THIS USED TO GREP FIVE HAND-WRITTEN View/Print PAIRS OUT OF `jobTimelineActions`,
+    // which proved the five agreed on the day it was written and nothing about the sixth.
+    // Slice 4 made them ONE builder, so the assertion is the builder — driven, not read —
+    // plus the fact that no row hand-rolls a second copy. That is the requirement:
+    // sameness by construction rather than sameness by coincidence.
+    const ctx = sandbox({ fns: ['_jtDocViews', '_jtSendAction', 'docKeyFor'] });
+    [['estimate', ''], ['agreement', ''],
+     ['invoice', 'deposit'], ['invoice', 'midpoint'], ['invoice', 'final']].forEach(([kind, stage]) => {
+      const v = ctx._jtDocViews(7, kind, stage, stage ? (stage + ' invoice') : kind);
+      const at = stage ? `${kind}/${stage}` : kind;
+      eq(v.length, 2, `${at}: two views and no more`);
+      ok(/^View\b/.test(v[0].label.replace(/^&#\d+; /, '')), `${at}: View comes first`);
+      ok(/^Print\b/.test(v[1].label.replace(/^&#\d+; /, '')), `${at}: Print second, as on every other row`);
+      // ⚠ AND EACH NAMES ITS DOCUMENT. The same objects feed the deduped quick strip at
+      // the foot of the rail, which carries no row context — bare "View"/"Print" rendered
+      // there as four identical pairs with nothing saying which document each opened.
+      [0, 1].forEach((k) => has(v[k].label, stage ? (stage + ' invoice') : kind,
+        `${at}: the ${k ? 'Print' : 'View'} label says which document it opens`));
+      has(v[0].call, `docAction(7,'${kind}','view'`, `${at}: View routes through the one action`);
+      has(v[1].call, `docAction(7,'${kind}','print'`, `${at}: and so does Print`);
+      if (stage) {
+        has(v[0].call, `{stage:'${stage}'}`, `${at}: carrying its stage, so a midpoint views as a midpoint`);
+        has(v[1].call, `{stage:'${stage}'}`, `${at}: on Print too`);
+      } else {
+        lacks(v[0].call, '{stage:', `${at}: and a one-off document carries none`);
+      }
     });
-    // `&#128065; View` is a prefix of `&#128065; View invoice`, so count the exact labels.
-    eq((acts.match(/&#128065; View'/g) || []).length, 2, 'two plain View labels — the estimate and the agreement');
-    eq((acts.match(/&#128065; View invoice'/g) || []).length, 3, 'and three that say which invoice');
+    // No row may build its own. Both counts are 5 — five rows, five calls — and a sixth
+    // document added by hand instead of through the builder fails here.
+    const acts = noComments(fn('jobTimelineActions'));
+    eq((acts.match(/_jtDocViews\(/g) || []).length, 5, 'five rows, each calling the one builder');
+    eq((acts.match(/'view'/g) || []).length, 0, 'and not one of them writes its own view call');
+    eq((acts.match(/'print'/g) || []).length, 0, 'nor its own print call');
+
+    // ⚠ THE SEND BUTTON IS THE SAME SHAPE OF CLAIM AND THE MORE IMPORTANT ONE: the five
+    // documents get ONE send control with ONE pair of states, so learning it on the
+    // estimate teaches the other four.
+    eq((acts.match(/_jtSendAction\(/g) || []).length, 5, 'five rows, one send builder');
+    const job = { id: 7, docState: {} };
+    [['estimate', '', 'estimate'], ['agreement', '', 'signing packet'],
+     ['invoice', 'deposit', 'deposit invoice'], ['invoice', 'midpoint', 'midpoint invoice'],
+     ['invoice', 'final', 'final invoice']].forEach(([kind, stage, what]) => {
+      const key = ctx.docKeyFor(kind, stage ? { stage } : null);
+      job.docState = {};
+      const a = ctx._jtSendAction(7, job, kind, stage, what);
+      eq(a.label, `&#9993; Send ${what}`, `${key}: nothing drafted → Send, and it names the document`);
+      has(a.call, `docAction(7,'${kind}','send'`, `${key}: through the one action`);
+      // ⚠ Drafted-and-unsent is a REAL interval, not a formality: `gmail.compose` can
+      // only create a draft. Turning the rail green on it would say "sent to client"
+      // over an untouched draft — and on the estimate that is what unlocks Mark Won.
+      job.docState[key] = { draftedAt: '2026-09-11T10:00:00Z' };
+      const b = ctx._jtSendAction(7, job, kind, stage, what);
+      has(b.label, 'I&rsquo;ve sent it', `${key}: a pending draft asks for the confirming tap instead`);
+      eq(b.call, `markDocSent(7,'${key}')`, `${key}: which records it under its own key`);
+      job.docState[key].sentAt = '2026-09-11T10:05:00Z';
+      has(ctx._jtSendAction(7, job, kind, stage, what).label, 'Send',
+        `${key}: and once sent the button is Send again — a document can always be re-sent`);
+    });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('sending and receiving are two rows and two buttons');
+  {
+    // They shared one: View/Print sat on the PAYMENT row, so the document you have to
+    // read before you can ask for the money was reached from the step that records the
+    // money arriving. The invoice rows exist now, so each half is where it belongs.
+    const acts = noComments(fn('jobTimelineActions'));
+    ['deposit', 'midpoint', 'final'].forEach((stage) => {
+      const at = acts.indexOf(`case '${stage}_invoiced':`);
+      ok(at > -1, `${stage}_invoiced has its own case`);
+      const nextCase = acts.indexOf('case ', at + 6);
+      const block = acts.slice(at, nextCase > -1 ? nextCase : undefined);
+      has(block, `_jtSendAction(id, job, 'invoice', '${stage}'`, `${stage}: the send lives on the invoice row`);
+      has(block, `_jtDocViews(id, 'invoice', '${stage}', '${stage} invoice')`, `${stage}: and so do View and Print, labelled with the document they open`);
+      lacks(block, 'dashRecordPayment', `${stage}: the payment recorder does not`);
+    });
+    ['deposit_received', 'midpoint_received', 'final_paid'].forEach((key) => {
+      const at = acts.indexOf(`case '${key}':`);
+      const nextCase = acts.indexOf('case ', at + 6);
+      const block = acts.slice(at, nextCase > -1 ? nextCase : acts.length - 40);
+      has(block, 'dashRecordPayment', `${key}: records the money`);
+      lacks(block, '_jtDocViews', `${key}: and no longer carries the document`);
+      lacks(block, '_jtSendAction', `${key}: nor sends it`);
+    });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ markDocSent CALLS the legacy recorders, it does not reimplement them');
+  {
+    // `markAgreementSent` REFUSES without an approved agreement and stamps that approval
+    // on the way through; `markEstimateSent` writes the field six surfaces read. The
+    // first version of markDocSent set `agrSent = true` itself — a door straight past the
+    // one gate that survived the slimming, and a second copy of a rule this file has
+    // already paid for twice.
+    const m = noComments(fn('markDocSent'));
+    has(m, 'markAgreementSent();', 'the agreement goes through its own recorder');
+    has(m, 'markEstimateSent();', 'and the estimate through its own');
+    has(m, '_primeAgreementFor(jobId)', 'primed first, like every other dashboard action');
+    has(m, '_primeEstimateFor(jobId)', 'both of them');
+    ok(m.indexOf('_primeAgreementFor(jobId)') < m.indexOf('markAgreementSent();'),
+      'and the priming comes first, or it records against whichever job was loaded');
+    has(m, 'if (!job.agrSent) return;', 'a refusal stops the send record being written anyway');
+    lacks(m, 'job.agrSent = true', 'it never sets the agreement flag itself');
+    lacks(m, 'job.estimateSentDate =', 'nor the estimate date');
+    // The one thing it DOES own: the per-document record, which is what the three
+    // invoice rows read and what nothing else writes.
+    has(m, 'st.sentAt = new Date().toISOString()', 'it owns the send stamp');
   }
 };

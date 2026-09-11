@@ -364,16 +364,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // server sent, and the app was throwing it away.
     const src = source();
 
-    const epb = src.slice(src.indexOf('function estimatePdfBase64('));
-    const body = epb.slice(0, epb.indexOf('\n}\n'));
+    // ⚠ SLICE 4 COLLAPSED `estimatePdfBase64` AND `signingPacketPdfBase64` INTO ONE, and
+    // this group is the reason that mattered: the two differed only in a title and a
+    // stylesheet while carrying the SAME eight-line error block verbatim — two copies of
+    // the one rule that decides whether a "still no PDF" report contains anything new.
+    // Now there is one, so "they must not drift" is no longer something to check.
+    const body = fn('docPdfBase64');
     has(body, '_backendErrorKind(err', 'the failure is classified with the app\'s one classifier');
     lacks(body, "cb(null, (d && d.error) || 'The PDF conversion failed.');",
           'the bare no-cause callback is gone');
-
-    // The agreement email builds its packet the same way and must not drift.
-    const spb = src.slice(src.indexOf('function signingPacketPdfBase64('));
-    has(spb.slice(0, spb.indexOf('\n}\n')), '_backendErrorKind(err',
-        'the signing packet reports its failure the same way');
+    lacks(src, 'function estimatePdfBase64(', 'the estimate keeps no private copy');
+    lacks(src, 'function signingPacketPdfBase64(', 'nor the signing packet');
+    // ⚠ AND THE OLD ONE SCRAPED THE TAB. `estimatePdfBase64` read `ce-page-content`'s
+    // innerHTML, so the attachment was whatever the Client Estimate tab happened to be
+    // showing — from the drilldown, which never opens that tab, the previous client's
+    // estimate or nothing.
+    lacks(body, 'getElementById', 'and it is built from the spec, never scraped off a panel');
+    has(body, 'spec.cfg.label', 'titled from the registry, so each document names itself');
+    has(body, 'spec.cfg.pdfCss', 'and carries its own print CSS — the packet paginates, the estimate does not');
 
     // ⚠ PROVENANCE. Only text the SERVER sent may diagnose the server — the same rule
     // _backendErrorKind was built for. A fetch that never landed must not read as a stale
@@ -428,13 +436,34 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The mailbox is named ON SCREEN instead — that is what replaces it, and dropping it
     // would leave someone whose account 0 is a personal Gmail with no idea where the
     // draft went.
-    const appSrc = source();
-    const sd = appSrc.slice(src.indexOf('function _showDraftLink('));
-    const body = sd.slice(0, sd.indexOf('\n}\n'));
-    has(body, '_gmailUserEmail', 'the strip names the mailbox the draft was created in');
-    has(body, 'Draft created in', 'and says the draft exists');
-    has(body, 'Drafts', 'and where to find it if Gmail opens another account');
-    has(body, '_emHtml(', 'the address is escaped before going into HTML');
+    // ⚠ IT USED TO BE A NODE INSERTED BESIDE A TAB'S FEEDBACK STRIP (`_showDraftLink`),
+    // and Slice 4 deleted that: the drilldown rewrites itself with innerHTML on every
+    // redraw and every 15-second remote-status tick, so a sibling node beside `dash-fb`
+    // is gone before it can be read. The mailbox is named in the notice at the moment the
+    // draft is created, and the LINK rides the document record — so it survives every
+    // redraw and is still there tomorrow.
+    const sendBody = fn('docSend');
+    has(sendBody, "'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox')",
+      'the notice names the mailbox the draft was created in, with an honest fallback');
+    lacks(src, 'function _showDraftLink(', 'the tab-strip version is gone');
+    has(fn('docRecordSent'), 'st.draftUrl = res.draftUrl', 'the link is kept on the document record');
+    const drafts = sandbox({ fns: ['_jtDraftLink', 'docKeyFor'] });
+    const job = { id: 7, docState: { estimate: { draftedAt: 'x', draftUrl: 'https://mail.google.com/x' } } };
+    eq(drafts._jtDraftLink(7, job, 'estimate', '').length, 1, 'and the rail offers it while the draft is outstanding');
+    eq(drafts._jtDraftLink(7, job, 'estimate', '')[0].call, "openDocDraft(7,'estimate')",
+      'through a function that reads the URL off the record rather than embedding it in an onclick');
+    // ⚠ IT NAMES ITS DOCUMENT, like View and Print beside it and for the same reason: the
+    // deduped quick strip at the foot of the rail carries no row context, so two
+    // outstanding drafts would render as two identical "Open the draft" buttons.
+    has(drafts._jtDraftLink(7, job, 'estimate', '', 'estimate')[0].label, 'estimate draft',
+      'and the label says which draft it opens');
+    has(drafts._jtDraftLink(7, job, 'estimate', '')[0].label, 'document draft',
+      'with an honest fallback when the caller names nothing');
+    // ⚠ WITHDRAWN ONCE THE SEND IS CONFIRMED. A button that reopens an already-sent draft
+    // is an invitation to send it twice.
+    job.docState.estimate.sentAt = 'y';
+    eq(drafts._jtDraftLink(7, job, 'estimate', '').length, 0, 'and withdrawn once the send is confirmed');
+    eq(drafts._jtDraftLink(7, { id: 7 }, 'estimate', '').length, 0, 'a job with no draft offers nothing');
   }
 
   group('the plain-text email is the automatic fallback, not a button beside the real one');
@@ -445,7 +474,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ui = fn('updateApprovalUI');
     has(ui, 'mailtoEl.href = buildEstimateMailto()', 'the href is still maintained');
     lacks(ui, "mailtoEl.style.display = 'inline-block'", 'but it is never shown');
-    has(fn('emailEstimateToClient'), '_estimateEmailFallback', 'the fallback is reached in code, not by the user picking it');
+    // ⚠ THE FALLBACK IS A PROVIDER NOW, NOT A FUNCTION EACH SENDER CALLS. `docSend` falls
+    // to it when Gmail is unconfigured or the draft fails, so all five documents get the
+    // same escape hatch — and it says it carries no attachment, because RFC 6068 cannot.
+    const prov = decl('DOC_SEND_PROVIDERS');
+    has(prov, 'mailto: {', 'the plain-text path survives as a provider');
+    has(prov, 'spec.cfg.mailto(spec)', 'building the href from the registry');
+    has(fn('docProvider'), "gmailConfigured() ? 'gmail' : 'mailto'",
+      'and an unconfigured Gmail falls to it rather than erroring');
+    has(fn('docSend'), 'DOC_SEND_PROVIDERS.mailto', 'as does a failed Gmail draft');
+    has(fn('docSend'), 'it carries NO attachment', 'and the notice says the attachment is not there');
+    // Reached in code, never offered as a choice: two email buttons side by side invites
+    // sending the plain one by mistake, which loses the attachment.
+    lacks(src, "onclick=\"buildEstimateMailto", 'nothing offers the plain path as a button');
   }
 
   group('base64url, because the Gmail API will not take standard base64');
@@ -471,26 +512,44 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(auth, 'popup_closed', 'a closed sign-in popup is reported as that rather than as a failure');
   }
 
-  group('the mailto fallback survives, because the Gmail path has more ways to fail');
+  // ⚠ EVERY REQUIREMENT IN THIS GROUP SURVIVES SLICE 4 — WHAT MOVED IS WHERE IT LIVES.
+  // The estimate tab used to hold a complete second send path: its own busy flag, its own
+  // Gmail call, its own fallback, its own refusals. All five documents share one now, so
+  // each of these is asserted against `docSend` — which means the agreement and the three
+  // invoices get them too, and three of the four never had them.
+  group('the send path refuses, falls back and reports the same way for every document');
   {
-    const send = fn('emailEstimateToClient');
-    const fb = fn('_estimateEmailFallback');
-    has(send, 'if (!gmailConfigured())', 'an unconfigured client ID falls back rather than erroring');
-    has(send, '_estimateEmailFallback', 'and so does a failed draft');
-    has(fb, 'buildEstimateMailto()', 'the fallback is the pre-existing plain-text path');
-    has(send, 'if (!estimateApproved)', 'an unapproved estimate is refused, as on every other send path');
+    const send = fn('docSend');
+    has(fn('docProvider'), 'gmailConfigured()', 'an unconfigured client ID falls back rather than erroring');
+    has(send, 'DOC_SEND_PROVIDERS.mailto', 'and so does a failed draft');
+    has(decl('DOC_SEND_PROVIDERS'), 'spec.cfg.mailto(spec)', 'the fallback is the pre-existing plain-text path');
+    // The unapproved-estimate refusal moved into the registry, where it now guards every
+    // verb rather than only the send button.
+    has(src, "return 'This estimate has not been approved yet.", 'an unapproved estimate is refused');
     has(send, 'No client email on this job', 'and a job with no email says so before doing any work');
-    has(send, 'if (_estEmailBusy) return;', 'a second press while it is working is a no-op');
+    // ⚠ ONE BUSY FLAG, APP-WIDE. It used to be per tab (`_estEmailBusy`, `_agrEmailBusy`),
+    // which could not stop somebody starting an invoice send while an estimate was
+    // building — and `_docBusy` is what the 45-second watchdog clears.
+    has(send, 'if (_docBusy)', 'a second press while it is working is a no-op');
+    has(src, 'var _docBusy = null;', 'through one flag rather than one per document');
+    lacks(src, 'var _estEmailBusy', 'the per-tab flags are gone');
+    lacks(src, 'var _agrEmailBusy', 'both of them');
+    // ⚠ A `fetch` HAS NO TIMEOUT. Re-enabling must be loud — the draft may already exist,
+    // and a silent re-enable is the exact moment somebody presses again and gets two.
+    has(send, 'setTimeout(function () {', 'a watchdog re-enables the button if nothing answers');
+    has(send, 'A draft may already have been created', 'and says so rather than re-enabling silently');
+    has(send, 'clearTimeout(watchdog)', 'and is cleared when the answer arrives');
     // A missing PDF must not abandon the email — the body carries the summary.
-    has(send, 'Creating the draft without it', 'a failed PDF still produces a draft, and says so');
+    has(send, 'WITHOUT the PDF', 'a failed PDF still produces a draft, and says so');
+    has(send, '_pdfFailAdviceText(pdfErrKind)', 'prescribing only what the error entitles it to');
   }
 
   group('the PDF comes from the same conversion that writes the filed copy');
   {
-    const pdf = fn('estimatePdfBase64');
+    const pdf = fn('docPdfBase64');
     has(pdf, "action: 'htmlToPdf'", 'through a dedicated Apps Script action');
-    has(pdf, "_exportDoc('Estimate – '", 'built from the same _exportDoc input as the Drive copy');
-    has(pdf, "getElementById('ce-page-content')", 'reading the client document that is on screen');
+    has(pdf, '_exportDoc(', 'built from the same _exportDoc input as the Drive copy');
+    has(pdf, 'spec.cfg.label', 'titled from the registry rather than read off a rendered panel');
     // The server side must not write anything to Drive on this path.
     const gs = require('fs').readFileSync(require('path').join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8');
     const body = gs.slice(gs.indexOf('function htmlToPdfBase64'), gs.indexOf('function handleGetSubfolders'));
@@ -565,9 +624,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('every client-facing signature carries both numbers');
   {
-    // Six sites read the concierge phone: two HTML emails, two text parts, two mailto bodies.
-    eq((src.match(/_emPhoneLines\(tc\)/g) || []).length, 2, 'both HTML emails render the block');
-    eq((src.match(/conciergePhonesText\(tc\)/g) || []).length, 4, 'both text parts and both mailto bodies');
+    // ⚠ THE COUNT MOVED BECAUSE SLICE 4 GAVE THE INVOICE ITS FIRST HTML EMAIL. It is not
+    // a regression — it is a third client-facing signature that must carry the numbers
+    // like the other two, so the requirement is stated by NAME rather than by a total
+    // that has to be edited every time a surface is added.
+    [['buildEstimateEmailHtml', 'the estimate email'],
+     ['buildAgreementEmailHtml', 'the agreement email'],
+     ['buildInvoiceEmailHtml', 'the invoice email']].forEach(([f, what]) => {
+      has(fn(f), '_emPhoneLines(tc)', `${what} renders the phone block`);
+    });
+    [['buildEstimateEmailText', 'the estimate text part'],
+     ['buildAgreementEmailText', 'the agreement text part'],
+     ['buildInvoiceEmailText', 'the invoice text part'],
+     ['buildInvoiceMailto', 'the invoice mailto']].forEach(([f, what]) => {
+      has(fn(f), 'conciergePhonesText(tc)', `${what} carries both numbers`);
+    });
     eq((src.match(/\+ _emHtml\(tc\.phone\) \+/g) || []).length, 0, 'no bare single-number signature survives');
     has(fn('_emPhoneLines'), 'href="tel:', 'the email numbers are dialable');
     has(fn('_emPhoneLines'), "replace(/[^0-9+]/g, '')", 'with punctuation stripped from the tel: target');
@@ -600,20 +671,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(emailShow, pdfShow, 'shown in exactly the states the PDF button is shown in');
     eq(emailHide, pdfHide, 'and hidden in exactly the states it is hidden in');
 
-    const send = fn('emailAgreementToClient');
-    has(send, 'cc: DEPT_EMAILS.agreements', "CC'd to agreements@ — the thing that was missing");
+    // ⚠ THE BUTTON IS A SHIM ON THE ONE SEND PATH NOW. Every requirement below still
+    // holds; each is asserted where it moved to, and because it moved to the shared path
+    // the estimate and the three invoices get it too.
+    has(fn('emailAgreementToClient'), "docAction(currentAgrJobId, 'agreement', 'send')",
+      'the button routes through the one document action');
+    has(src, 'cc: function () { return DEPT_EMAILS.agreements; },', "CC'd to agreements@ — the thing that was missing");
     // The gate is the same two conditions; what changed is that meeting them STAMPS the
-    // approval rather than requiring a separate one.
-    has(send, 'ensureAgreementApproved(currentAgrJobId)', 'refuses an agreement that is not ready');
-    has(send, 'No client email on this job', 'and a job with no client email');
-    has(send, 'if (_agrEmailBusy) return;', 'a second press while working is a no-op');
-    has(send, '_agreementEmailFallback', 'and it falls back like the estimate does');
+    // approval rather than requiring a separate one — and that stamp is now the registry's
+    // `commit`, run by docAction on every verb but 'view'.
+    has(src, 'commit: function (spec) { return ensureAgreementApproved(spec.job.id); },',
+      'refuses an agreement that is not ready, and stamps when it is');
+    has(fn('docSend'), 'No client email on this job', 'and a job with no client email');
+    has(fn('docSend'), 'if (_docBusy)', 'a second press while working is a no-op');
+    has(fn('docSend'), 'DOC_SEND_PROVIDERS.mailto', 'and it falls back like the estimate does');
 
     // It must send the PACKET. Both forms incorporate the estimate as Exhibit A and the
     // estate form says the agreement is not valid without it.
-    has(send, 'signingPacketPdfBase64', 'the attachment is the signing packet, not the bare agreement');
-    has(fn('signingPacketPdfBase64'), 'signingPacketHtml(jobId)', 'built from the real packet renderer');
-    has(fn('signingPacketPdfBase64'), "action: 'htmlToPdf'", 'through the same conversion as everything else');
+    has(src, 'html: function (spec) { return signingPacketHtml(spec.job.id); },',
+      'the attachment is the signing packet, not the bare agreement');
+    has(fn('docPdfBase64'), "action: 'htmlToPdf'", 'through the same conversion as everything else');
+    // ⚠ AND IT PAGINATES. The exhibit has to start on a fresh page, or the estimate runs
+    // on from the signature block — which is what "attached as Exhibit A" has to look like.
+    has(src, "pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}',",
+      'and the packet carries its own print CSS so the exhibit starts a new page');
 
     // The fallback carries the CC too — that is the whole point of this group.
     const fb = fn('buildAgreementMailto');
@@ -621,7 +702,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fb, 'Attach the signing packet before sending', 'and says to attach the packet, since mailto: cannot');
 
     // Estimates and invoices must not have lost theirs.
-    has(fn('emailEstimateToClient'), 'cc: DEPT_EMAILS.estimates', "the estimate still CC's estimates@");
+    has(src, 'cc: function () { return DEPT_EMAILS.estimates; },', "the estimate still CC's estimates@");
     has(fn('buildEstimateMailto'), 'DEPT_EMAILS.estimates', 'on the fallback too');
     has(fn('buildInvoiceMailto'), 'DEPT_EMAILS.billing', "and invoices still CC billing@");
   }

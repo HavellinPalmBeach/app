@@ -56,6 +56,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments',
       'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
+      // Slice 4: the rail reads where each document has been.
+      'docSentAt', 'docDraftedAt', 'docKeyFor',
     ],
     // The short names the horizontal track uses. A top-level var, so the sandbox has to
     // be told about it — without it `row()` throws and every check in the file is lost.
@@ -85,7 +87,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const at = (s) => ORDER.indexOf(stage) >= ORDER.indexOf(s);
     const ORDER = ['intake', 'walkthrough', 'built', 'approved', 'sent', 'won',
-      'agrApproved', 'agrSent', 'agrSigned', 'funded', 'active', 'midpoint', 'delivered', 'finalPaid'];
+      'agrApproved', 'agrSent', 'agrSigned', 'depInvoiced', 'funded', 'active',
+      'midInvoiced', 'midpoint', 'delivered', 'finalInvoiced', 'finalPaid'];
+
+    // ⚠ Slice 4: an invoice is a document with its own send record, so "the deposit was
+    // asked for" and "the deposit arrived" are two separate carriers and two separate
+    // stages. Before this there was only the payment, so a job could show money received
+    // against an invoice nobody could prove had gone out.
+    const invoiced = (st, when) => {
+      job.docState = job.docState || {};
+      job.docState['invoice:' + st] = { draftedAt: when, draftedBy: 'Anthony', sentAt: when, sentBy: 'Anthony', provider: 'gmail' };
+    };
 
     if (at('walkthrough')) job.walkthrough = PAST;
     if (at('built')) rec = { estimate: est, savedAt: 'Sep 8, 2026', approved: false, submitted: false };
@@ -95,13 +107,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     if (at('agrApproved')) { job.agrApproved = true; job.agrApprovedBy = 'Anthony'; job.agrApprovedAt = 'Sep 9, 2026'; }
     if (at('agrSent')) { job.agrSent = true; job.agrSentAt = 'Sep 9, 2026'; job.agrSentBy = 'Anthony'; }
     if (at('agrSigned')) { job.agrSigned = true; job.agrSignedAt = 'Sep 10, 2026'; job.agrSignedBy = 'Anthony'; }
+    if (at('depInvoiced')) invoiced('deposit', '2026-09-10T14:00:00.000Z');
     if (at('funded')) {
       job.payments = [{ id: 1, stage: 'deposit', amount: 12050, receivedOn: '2026-09-10' }];
       job.depositReceived = true; job.depositReceivedAt = '2026-09-10';
     }
     if (at('active')) job.status = 'active';
+    if (at('midInvoiced')) invoiced('midpoint', '2026-09-19T14:00:00.000Z');
     if (at('midpoint')) job.payments.push({ id: 2, stage: 'midpoint', amount: 6025, receivedOn: '2026-09-20' });
     if (at('delivered')) { job.status = 'closed'; job.deliveredOn = '2026-09-30'; job.deliveredBy = 'Anthony'; }
+    if (at('finalInvoiced')) invoiced('final', '2026-10-01T14:00:00.000Z');
     if (at('finalPaid')) job.payments.push({ id: 3, stage: 'final', amount: 6025, receivedOn: '2026-10-02' });
 
     Object.assign(job, over || {});
@@ -118,7 +133,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const lit = (rows) => rows.filter((r) => r.state === 'current' || r.state === 'blocked');
 
   const STAGES = ['intake', 'walkthrough', 'built', 'approved', 'sent', 'won',
-    'agrApproved', 'agrSent', 'agrSigned', 'funded', 'active', 'midpoint', 'delivered', 'finalPaid'];
+    'agrApproved', 'agrSent', 'agrSigned', 'depInvoiced', 'funded', 'active',
+    'midInvoiced', 'midpoint', 'delivered', 'finalInvoiced', 'finalPaid'];
 
   // ─────────────────────────────────────────────────────────────────────────────
   group('THE INVARIANT — exactly one row is lit, at every point in the lifecycle');
@@ -153,9 +169,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // ⚠ 'won' goes straight to sending the packet: the agreement's approval step is
       // gone, stamped as a side effect of the first print or send instead.
       approved: 'estimate_sent', sent: 'client_accepted', won: 'agreement_sent',
-      agrApproved: 'agreement_sent', agrSent: 'agreement_signed', agrSigned: 'deposit_received',
-      funded: 'job_active', active: 'midpoint_received', midpoint: 'work_complete',
-      delivered: 'final_paid',
+      agrApproved: 'agreement_sent', agrSent: 'agreement_signed',
+      // ⚠ Slice 4: asking for the money is its own step now. A signed agreement's next
+      // move is SENDING the deposit invoice, not waiting for a cheque against an invoice
+      // nobody can prove went out.
+      agrSigned: 'deposit_invoiced', depInvoiced: 'deposit_received',
+      funded: 'job_active', active: 'midpoint_invoiced', midInvoiced: 'midpoint_received',
+      midpoint: 'work_complete', delivered: 'final_invoiced', finalInvoiced: 'final_paid',
     };
     Object.keys(expected).forEach((s) => {
       const n = ctx.jobTimelineNext(run(s));
@@ -322,7 +342,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // Payments are a list precisely so a part payment stays visibly part paid. An
     // elderly client writing a cheque for less than the full 50% is the normal case here.
-    const f = fixture('agrSigned');
+    const f = fixture('depInvoiced');
     f.job.payments = [{ id: 1, stage: 'deposit', amount: 5000, receivedOn: '2026-09-10' }];
     const rows = ctx.jobTimeline(f.job, f.rec, [], []);
     const row = byKey(rows, 'deposit_received');
@@ -331,7 +351,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(row.sub, 'Part paid — $5,000 of $12,050', 'and the rail says exactly how short');
 
     // The 1% tolerance absorbs bank rounding.
-    const near = fixture('agrSigned');
+    const near = fixture('depInvoiced');
     near.job.payments = [{ id: 1, stage: 'deposit', amount: 12000, receivedOn: '2026-09-10' }];
     eq(byKey(ctx.jobTimeline(near.job, near.rec, [], []), 'deposit_received').done, true,
       'within 1% of target counts as funded');
@@ -382,11 +402,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('shape, grouping and the deliberate absences');
   {
     const rows = run('built');
-    eq(rows.length, 13, 'thirteen milestones');
+    eq(rows.length, 16, 'sixteen milestones');
     eq(rows.map((r) => r.key).join(','),
       'intake,walkthrough,estimate_built,estimate_approved,estimate_sent,client_accepted,'
-      + 'agreement_sent,agreement_signed,deposit_received,job_active,'
-      + 'midpoint_received,work_complete,final_paid',
+      + 'agreement_sent,agreement_signed,deposit_invoiced,deposit_received,job_active,'
+      + 'midpoint_invoiced,midpoint_received,work_complete,final_invoiced,final_paid',
       'in the order the work actually happens');
     // ⚠ AND NO 'agreement_approved' ROW. It was a manager PIN that reviewed nothing — the
     // commercial terms ARE the approved estimate attached as Exhibit A, and the document
@@ -398,13 +418,58 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'Set up · Estimate · Acceptance · Agreement · Deposit & start · Work · Close-out',
       'under seven groups, each contiguous');
 
-    // ⚠ THE INVOICE-SENT ROWS ARE ABSENT ON PURPOSE. Nothing records that an invoice was
-    // sent — midpointInvoiceSent is a self-attested Job Plan checkbox with no who and no
-    // when, and the deposit and final have no field at all. A row whose `done` cannot be
-    // answered honestly would read as a milestone while being a guess.
-    ok(!rows.some((r) => /invoiced|invoice_sent/.test(r.key)),
-      'no invoice-sent row exists until a real send record backs one');
+    // ⚠ THE INVOICE-SENT ROWS WERE ABSENT UNTIL SLICE 4, AND THE REASON THEY ARE HERE
+    // NOW IS THE ONLY REASON THAT WOULD DO: a real send record backs them. Slice 0's
+    // rule was "a row whose `done` cannot be answered honestly is worse than no row" —
+    // nothing recorded that an invoice had gone out, so a row would have been a guess
+    // wearing a milestone's face. `docState` is that record, so each of the three reads
+    // its own `sentAt` and nothing else.
+    ['deposit', 'midpoint', 'final'].forEach((st) => {
+      const r = byKey(rows, st + '_invoiced');
+      ok(!!r, st + '_invoiced exists');
+      eq(r.done, false, st + '_invoiced: nothing sent, nothing claimed');
+      eq(byKey(run(st === 'deposit' ? 'depInvoiced' : (st === 'midpoint' ? 'midInvoiced' : 'finalInvoiced')),
+        st + '_invoiced').done, true, st + '_invoiced: a send record turns it green');
+    });
+    // ⚠ AND IT IS STILL NOT THE SELF-ATTESTED CHECKBOX. `midpointInvoiceSent` is a Job
+    // Plan tick with no who and no when — and it is written by nothing in the file, so
+    // it has been false on every job this app has ever had.
     lacks(jtBody, 'midpointInvoiceSent', 'and the rail never reads the self-attested checkbox');
+    // ⚠ AND THE TWO LEGACY ROWS CARRY THE SAME LINE, because they are the same interval.
+    // `estimate_sent` and `agreement_sent` read `estimateSentDate` and `agrSent` — fields
+    // six other surfaces read — so they cannot be moved to docState, but a draft sitting
+    // unsent in a mailbox is exactly as invisible on those two as on the three below.
+    // Without this the row reads plainly "not sent" while a written draft is waiting, and
+    // the rail's whole job is telling you what the one next thing is.
+    [['estimate', 'estimate_sent'], ['agreement', 'agreement_sent']].forEach(([key, rowKey]) => {
+      const f = fixture(key === 'estimate' ? 'approved' : 'won');
+      f.job.docState = {}; f.job.docState[key] = { draftedAt: '2026-09-11T10:00:00.000Z' };
+      has(byKey(ctx.jobTimeline(f.job, f.rec, [], []), rowKey).sub, 'Drafted',
+        rowKey + ': an outstanding draft says so');
+      has(byKey(ctx.jobTimeline(f.job, f.rec, [], []), rowKey).sub, 'read it, send it, then confirm',
+        rowKey + ': and what to do about it');
+      // Once it is really sent the row is done and the line has nothing left to say.
+      f.job.docState[key].sentAt = '2026-09-11T10:05:00.000Z';
+      if (key === 'estimate') f.job.estimateSentDate = 'September 11, 2026'; else f.job.agrSent = true;
+      const done = byKey(ctx.jobTimeline(f.job, f.rec, [], []), rowKey);
+      eq(done.done, true, rowKey + ': a confirmed send turns it green');
+      eq(done.sub, '', rowKey + ': and the drafted line goes with it');
+    });
+    // ⚠ THE AGREEMENT'S STALE-EXHIBIT WARNING OUTRANKS IT. "The estimate was edited after
+    // this was prepared" is a reason NOT to send the draft; "there is a draft waiting" is
+    // a nudge to send it. Showing the nudge over the warning would be the wrong advice.
+    const stale = fixture('won');
+    stale.job.agrRevokedBy = 'estimate-edited';
+    stale.job.docState = { agreement: { draftedAt: '2026-09-11T10:00:00.000Z' } };
+    has(byKey(ctx.jobTimeline(stale.job, stale.rec, [], []), 'agreement_sent').sub,
+      'The estimate was edited after this was prepared', 'a stale exhibit outranks the drafted nudge');
+
+    // A milestone that reads a send record must read THAT document's, or a midpoint
+    // invoice inherits the deposit's — the same key collision `printInvoice` already had.
+    const onlyDep = run('depInvoiced');
+    eq(byKey(onlyDep, 'deposit_invoiced').done, true, 'the deposit invoice is sent');
+    eq(byKey(onlyDep, 'midpoint_invoiced').done, false, 'and the midpoint does not inherit it');
+    eq(byKey(onlyDep, 'final_invoiced').done, false, 'nor the final');
 
     eq(ctx.jobTimeline(null, null, [], []).length, 0, 'no job renders no rail');
     rows.forEach((r) => {
@@ -443,7 +508,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const keys = rows.map((r) => r.key);
     const at = keys.indexOf('agreement_signed');
     eq(at, 7, 'leg one runs intake through the signature — winning and papering the job');
-    eq(rows.length - at - 1, 5, 'leg two is doing it and getting paid');
+    eq(rows.length - at - 1, 8, 'leg two is doing it and getting paid');
 
     // ⚠ ONE DERIVATION FEEDS BOTH LAYOUTS. Two renderers may differ about presentation;
     // they must never differ about state, which is the failure this file records every

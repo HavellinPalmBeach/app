@@ -39,7 +39,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     fns: ['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'estimateSubmitBlocker',
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
-      'depositTargetFor', 'agreementReady'],
+      'depositTargetFor', 'agreementReady',
+      'docSentAt', 'docDraftedAt', 'docKeyFor', '_jtSendAction', '_jtDocViews', '_jtDraftLink'],
     vars: ['JT_SHORT'],
     stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
   });
@@ -181,11 +182,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ensure, '_primeAgreementFor(jobId)', 'it primes that panel first');
     has(ensure, "return 'nojob'", 'and refuses if it cannot, rather than filing the wrong estate');
 
-    // Every door into the agreement stamps through that one function.
-    ['markAgreementSent()', 'emailAgreementToClient()', 'printAgreement()',
-     'printSigningPacket()', 'generateStripeLink()'].forEach((sig) => {
+    // ⚠ EVERY DOOR INTO THE AGREEMENT STAMPS, AND SLICE 4 MOVED WHERE. It used to be the
+    // first line of three separate functions; a fourth door was one line away from having
+    // no stamp at all. It is `DOC_ACTIONS.agreement.commit` now — run by `docAction` on
+    // every verb but 'view' — so a door cannot be opened without going through it.
+    ['markAgreementSent()', 'generateStripeLink()'].forEach((sig) => {
       has(noComments(body(sig)), 'ensureAgreementApproved(', `${sig} stamps on the way through`);
     });
+    ['emailAgreementToClient()', 'printAgreement()', 'printSigningPacket()'].forEach((sig) => {
+      has(noComments(body(sig)), "docAction(", `${sig} goes through the one action`);
+      lacks(noComments(body(sig)), 'ensureAgreementApproved(', `${sig} keeps no copy of the stamp`);
+    });
+    // ⚠ AND 'view' IS EXEMPT, WHICH IS THE HALF THAT IS EASY TO LOSE. Reading the draft
+    // you are about to talk a client through is free — that is why it renders at all
+    // times. Stamping on a read would file two documents into a client's Drive folder
+    // because somebody looked at the contract.
+    const da = noComments(body('docAction(jobId, kind, verb, opt)'));
+    has(da, "if (verb !== 'view' && spec.cfg.commit && spec.cfg.commit(spec))",
+      "docAction commits on every verb but 'view'");
+    ok(da.indexOf('spec.cfg.blocker(spec)') < da.indexOf('spec.cfg.commit(spec)'),
+      'and reads the gate before it stamps, never the other way round');
+    has(src, 'commit: function (spec) { return ensureAgreementApproved(spec.job.id); },',
+      'the agreement is the kind that carries a commit');
+    eq((src.match(/    commit: function \(spec\)/g) || []).length, 1,
+      'and the only one — a second would be a second rule about when a document commits');
 
     // The tab reads readiness, not the stamp — a job that is ready but has not been acted
     // on yet would otherwise show no buttons at all.
@@ -200,8 +220,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ But the CC to agreements@ on what the CLIENT is sent is a different thing and
     // stays: that is the firm's own record of what went out, and it was a defect that it
     // was ever missing.
-    has(noComments(body('emailAgreementToClient()')), 'DEPT_EMAILS.agreements',
+    has(src, "cc: function () { return DEPT_EMAILS.agreements; },",
       'the client-facing send still copies agreements@');
+    // It is the registry that carries it now, and `docSend` reads `spec.cfg.cc()` — so
+    // every document CCs the department that owns it, by construction. The estimate has
+    // always CC'd estimates@ and the agreement never did, which was the defect.
+    has(src, 'to: spec.to, cc: spec.cfg.cc(),', 'through the one send path, which reads the registry');
+    ['estimates', 'agreements', 'billing'].forEach((d) =>
+      has(src, `cc: function () { return DEPT_EMAILS.${d}; },`, `${d}@ is CC'd on its own document`));
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -251,17 +277,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       [{}, { estimate: null }, 'Build the estimate', 'dashGoEstimate(7)'],
       [{}, { estimate: EST() }, 'Submit for approval', 'dashSubmitEstimate(7)'],
       [{ status: 'pending' }, { estimate: EST(), submitted: true }, 'Manager approval', 'dashApproveEstimate(7)'],
-      [{ approved: true }, { estimate: EST(), approved: true }, '&#10003; Mark as sent', 'dashMarkEstimateSent(7)'],
+      // ⚠ SLICE 4: EVERY DOCUMENT ROW'S PRIMARY IS NOW SEND, and it is the same control
+      // in the same place on all five. "Mark as sent" was a book-keeping tick beside a
+      // document you had to go to another tab to actually send; the tick survives as the
+      // SECOND state of this button, for the interval between a Gmail draft being created
+      // and a person pressing send in Gmail.
+      [{ approved: true }, { estimate: EST(), approved: true }, '&#9993; Send estimate', "docAction(7,'estimate','send')"],
       [{ approved: true, estimateSentDate: 'Sep 8, 2026' }, { estimate: EST(), approved: true },
         '&#10003; Client accepted — mark won', 'openWonModal(7)'],
       // ⚠ No 'Approve agreement' step: it is stamped as a side effect of the first print
       // or send now, so a won job goes straight to sending the packet.
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true }, { estimate: EST(), approved: true },
-        '&#10003; Mark agreement sent', 'dashMarkAgreementSent(7)'],
+        '&#9993; Send signing packet', "docAction(7,'agreement','send')"],
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true },
         { estimate: EST(), approved: true }, '&#10003; Record signature received', 'dashMarkAgreementSigned(7)'],
+      // ⚠ ASKING FOR THE MONEY AND RECEIVING IT ARE TWO STEPS NOW. A signed agreement's
+      // next move is sending the deposit invoice; the payment recorder is the row below.
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true, agrSigned: true },
+        { estimate: EST(), approved: true }, '&#9993; Send deposit invoice', "docAction(7,'invoice','send',{stage:'deposit'})"],
+      [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true, agrSigned: true,
+        docState: { 'invoice:deposit': { draftedAt: '2026-09-11T10:00:00Z', sentAt: '2026-09-11T10:05:00Z' } } },
         { estimate: EST(), approved: true }, '&#10003; Record payment', "dashRecordPayment(7,'deposit')"],
+      // The one interval the confirming tap exists for: a draft is written, nothing has
+      // gone out, and `gmail.compose` cannot send it — only a person can.
+      [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true, agrSigned: true,
+        docState: { 'invoice:deposit': { draftedAt: '2026-09-11T10:00:00Z' } } },
+        { estimate: EST(), approved: true }, '&#10003; I&rsquo;ve sent it', "markDocSent(7,'invoice:deposit')"],
     ];
     cases.forEach(([j, r, label, call]) => {
       const { a, row } = actFor(j, r);
@@ -287,6 +328,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // a button that alerts the same blocker back at you is worse than none.
     const auth = actFor({ approved: true, estimateSentDate: 'x', won: true, agrApproved: true, agrSent: true,
       agrSigned: true, depositReceived: true, svc: 'contested_probate', executorAuth: 'pending',
+      docState: { 'invoice:deposit': { draftedAt: 'x', sentAt: '2026-09-11T10:05:00Z' } },
       payments: [{ id: 1, stage: 'deposit', amount: 12050 }] }, { estimate: EST(), approved: true });
     eq(auth.row.key, 'job_active', 'the activation row is the live one');
     eq(auth.row.state, 'blocked', 'and it is blocked');

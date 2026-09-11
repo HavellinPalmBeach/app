@@ -70,6 +70,124 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## SLICE 4 — ONE WAY TO SEND ANY CLIENT DOCUMENT (2026-09-11)
+*"when we are sending documents to a client, whether it's the estimate, the agreement, or an
+invoice, it should all follow the same process and be one button to generate the HTML email as
+we currently have with the estimate … if they've sent an estimate they'll know how to send an
+agreement, and they'll know how to send an invoice."* App-only, no redeploy — `job.docState`
+is nested on the job and the Jobs sheet stores `JSON.stringify(job)` in its Data column.
+
+- **⚠⚠ THERE WERE THREE ANSWERS TO ONE QUESTION AND ONE OF THEM WAS NOTHING.** The ESTIMATE had
+  a real HTML email — ~90 lines on its tab with its own PDF builder, busy flag, Gmail call,
+  fallback and refusals. The AGREEMENT had a near-identical ~90 lines on its own tab, differing
+  in a title and a stylesheet, **carrying the same eight-line error block verbatim** — the one
+  that passes the server's own words through, which took three rounds of *"still no PDF"* to get
+  right. The INVOICE had **no email at all**: only a `mailto:` whose body reads *"Please find
+  attached your invoice"* **with nothing attached**, because RFC 6068 carries plain text and
+  nothing else. It has been telling clients an attachment is there.
+- **⚠ AND `estimatePdfBase64` SCRAPED `ce-page-content`.** The attachment was whatever the Client
+  Estimate TAB happened to be showing — so sent from the drilldown, which never opens that tab,
+  it would have attached the previously-loaded client's estimate or nothing. Same class as Slice
+  1's wrong-job approvals. `docPdfBase64` builds from the spec, like every other verb.
+
+### The two states, and the second is not ceremony
+- **`gmail.compose` DELIBERATELY CANNOT SEND** — that is the requirement, not a limitation:
+  Anthony reviews and sends each email himself. So between the app creating a draft and the mail
+  going out there is a real interval the app cannot see across. `docRecordSent` writes
+  **`draftedAt`, never `sentAt`**; the rail flips its button to **"✓ I've sent it"** and
+  `markDocSent` writes the send. Recording the draft as a send would turn the timeline green over
+  an untouched draft in a mailbox — and on the estimate that is what unlocks Mark Won.
+- **⚠ `needsHumanSend` IS A PROPERTY OF THE PROVIDER, NEVER OF THE DOCUMENT.** When an
+  e-signature or server-side sender arrives (Slices 6/8) it sets `needsHumanSend:false` and the
+  tap disappears on its own — no screen changes, no second rule. A test asserts `_jtSendAction`
+  reads the RECORD rather than the provider, which is what makes that work.
+- **⚠ AND THE ATTACHMENT SENTENCE KEYS ON THE PROVIDER TOO — `carriesAttachment`.** The first cut
+  keyed it on whether the PDF built, so the mailto fallback said *"with the PDF attached"* over a
+  message that cannot carry one. **Found by driving the real fallback in a browser**, not by any
+  assertion. `pdfOk` records what actually went, not what was built.
+
+### Three new rail rows, because asking for money and receiving it are two steps
+- `deposit_invoiced` · `midpoint_invoiced` · `final_invoiced`. **Slice 0 refused to draw these**
+  — *"a row whose `done` cannot be answered honestly is worse than no row"* — because nothing
+  recorded that an invoice had gone out. `docState` is that record, so they exist now and each
+  reads **its own** `sentAt`: keying on kind alone is how a midpoint inherits a final's record.
+- The View/Print pair **moved off the payment row onto the invoice row**. It sat on the step that
+  records money arriving, which is the wrong place for the document you must read before you can
+  ask for it.
+- **⚠ THE LABELS NAME THEIR DOCUMENT (*"View deposit invoice"*), AND THAT IS NOT REDUNDANCY.**
+  The same objects feed the deduped quick strip at the foot of the rail, which carries no row
+  context — bare *View*/*Print* rendered there as **four identical pairs in a row** with nothing
+  saying which document any of them opened. Seen in a screenshot, not caught by a test.
+
+### The Documents card is retired, because it disagreed with the rail on screen
+- It kept its **own** copy of every "has this gone out" rule (`estimateSentDate`, `agrSigned`,
+  `depositReceived`) while the rail reads `docState`. A deposit invoice drafted and waiting read
+  *"Drafted — read it, send it, then confirm"* on the timeline and **Send now** in the card,
+  eight inches apart on the same screen.
+- **Its buttons went back to the TABS**, which is the whole thing this rebuild removes. `docPdf`
+  navigated to another panel and fired a print **200ms later** — timing, not a gate. `docEmail`
+  opened a raw `mailto:`. Worse: the invoice row passed `docType:'invoice'` **with no stage**, so
+  its PDF printed whichever stage `currentInvStage` held, and its email **invented the balance**
+  — `hav * 0.75` hardcoded, ignoring change orders, rush and every recorded payment. That number
+  went to clients. Both functions deleted. **Change Orders stay** — the rail does not carry them.
+
+### One commit hook replaces three copies of the agreement stamp
+- `ensureAgreementApproved` was the first line of `printAgreement`, `printSigningPacket` AND
+  `emailAgreementToClient`. A fourth door was one line from having no stamp at all. It is
+  `DOC_ACTIONS.agreement.commit` now, run by `docAction` **on every verb but `view`**.
+- **⚠ `view` IS EXEMPT AND THAT HALF IS EASY TO LOSE.** Reading the contract you are about to
+  talk a client through is free — that is why the draft renders at all times. Stamping on a read
+  would file two documents into a client's Drive folder because somebody looked at the contract.
+  Verified in a browser both ways.
+
+### ⚠⚠ THE SUITE WAS GREEN THROUGH A LIVE `ReferenceError`, AND THERE IS A TRIPWIRE NOW
+- Retiring the second send path deleted `_setAgrEmailBusy`, and `updateAgrUI` still called it —
+  so opening the agreement tab, or **any path that primes it** (`ensureAgreementApproved` →
+  `_primeAgreementFor` → `loadAgreement`), threw. **All 2872 checks passed anyway**: the harness
+  drives extracted functions and reads source text, and neither notices a call to a name that no
+  longer exists. Found by a browser. **Third time this file records that lesson.**
+- **A consolidation is exactly when this bites** — deleting a duplicate path is the right move
+  and it leaves callers behind, and `git diff --stat` reads as a tidy-up. So the check is
+  general, not a list of today's names: **every `_private(` call in the file must resolve to a
+  definition in the file.** Private helpers are the class that gets removed in a sweep, which is
+  what makes that the useful net. Reverting the one orphan fails it.
+- Deleted, each a second copy of something that now exists once: `estimatePdfBase64`,
+  `signingPacketPdfBase64`, `_estimateEmailFallback`, `_agreementEmailFallback`,
+  `_showDraftLink`, `_setEstEmailBusy`, `_setAgrEmailBusy`, `docPdf`, `docEmail`.
+- **`_showDraftLink` went because it inserted a sibling node beside a TAB's feedback strip**, and
+  the drilldown rewrites itself with innerHTML on every redraw and every 15-second remote tick.
+  The durable home for a draft link is the rail (`_jtDraftLink` → `openDocDraft`, reading the URL
+  off the record rather than embedding it in an onclick), **withdrawn once the send is confirmed**
+  so nothing invites sending it twice. The mailbox is named in the notice at creation instead —
+  which is the fact that mattered, since the link can only open Google account 0.
+
+### ⚠ `markDocSent` CALLS the legacy recorders, it never reimplements them
+- `markAgreementSent` **refuses** without an approved agreement and stamps that approval on the
+  way through; `markEstimateSent` writes the field six surfaces read. The first version set
+  `job.agrSent = true` itself — a door straight past the one gate that survived the slimming. It
+  primes first (those recorders read a global the drilldown never set) and **a refusal stops the
+  send record being written anyway**, or the rail would read "sent" off a record the recorder had
+  just declined to back.
+
+- **2918 committed checks** (`tests/doc-send.test.js`, 138 new). **All 34 changes revert-verified
+  individually** — including the orphan tripwire, the drafted sub-lines, the provider attachment
+  flag, and `view` being exempt from the commit.
+- **Verified end to end in headless Chromium on the real page**, not asserted on source: pressing
+  **Send deposit invoice** builds the PDF server-side, creates the Gmail draft addressed to the
+  client and CC'd to `billing@`, attaches `Havellin Deposit Invoice - 69 Beach Blvd - Sep 11
+  2026.pdf` with **zero bare line feeds** in the MIME, names the mailbox in the notice, and opens
+  the draft; the rail then reads *"Drafted — read it, send it, then confirm"* with the button
+  flipped to **✓ I've sent it**; the tap turns the milestone green, drops the drafted line,
+  **withdraws the draft link** and moves the light to the payment row. The estimate and the
+  packet behave identically, each CC'd to its own department. An unapproved estimate, a job with
+  no client email and a second press while one is in flight are each refused **with the reason on
+  screen**. Viewing the agreement does not stamp it; printing it does. An unconfigured Gmail opens
+  a plain compose window carrying the same CC and says it has no attachment. 390px overflow 0, no
+  page errors.
+- ⚠️ **`manual.html` / `concierge-guide.html` need a pass** — this changes how every client
+  document is sent, adds the confirming tap, retires the Documents card and moves the invoice
+  documents onto the timeline. Not done here.
+
 ## SLICE 3 — one way to NAME, VIEW and PRINT any client document (2026-09-11)
 Slice 2 made the documents pure; this gives them ONE registry, one naming rule, one viewer
 and one print path. Sameness is the deliverable — Anthony: *"if they've sent an estimate
