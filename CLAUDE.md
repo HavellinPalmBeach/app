@@ -70,6 +70,72 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## THE INVOICE CREDITED MONEY IT HAD ASKED FOR, NOT MONEY THAT ARRIVED (FIXED 2026-09-11)
+Found by the code audit. App-only, no redeploy. **This is the document that tells a client what
+they owe.**
+
+- **⚠⚠ `finalDue` WAS `totalFinalBasis - depositAmt - midpointAmt` — THE TWO STAGE TARGETS.**
+  So the final invoice credited the client with every earlier invoice as though it had been paid
+  in full, and the Payment Summary printed those targets under a row reading **"Subtotal payments
+  received"**. `job.payments[]` is the record of what actually landed, `stagePaidTotal` and
+  `jobPaidTotal` have existed since 2026-07-30, and **nothing on this document had ever read
+  either of them**.
+- **Measured by driving the real `invoiceHtml` on a $19,940 job, not argued:**
+
+  | what happened | billed | collected | |
+  |---|---|---|---|
+  | both invoices paid in full | $4,985 | $19,940 | correct — and this is why it survived |
+  | deposit short-paid by $4,970 | $4,985 | **$14,970** | the shortfall is never invoiced again |
+  | midpoint invoice never paid | $4,985 | **$14,955** | **$4,985 drops off the engagement** |
+  | client **overpaid** by $2,000 | $4,985 | **$21,940** | **billed $2,000 over** |
+
+  The first two are the firm writing off its own money silently. **The third reaches a client who
+  paid early as a demand for money they have already sent**, which is the one that becomes a
+  phone call. Printing the final before the midpoint cheque has landed is completely ordinary, so
+  the middle row is not an edge case.
+- **⚠ THE TARGETS SURVIVE, AND THAT IS DELIBERATE — the document states both.** The stage rows
+  say what each earlier invoice **asked for** (*"50% deposit — invoiced on acceptance"*), and a
+  separate row says what **came in**. Collapsing the two into one figure is exactly what produced
+  the defect; a reconciliation that shows only one of them cannot be checked.
+- **⚠ A GAP IS NAMED, NEVER FOLDED SILENTLY INTO THE BALANCE, AND BOTH DIRECTIONS RENDER.**
+  `_paymentGapRow` is one definition read at **four** sites (the T&M final, the fixed-price
+  final, and the midpoint). A client carrying an unpaid midpoint reads a final larger than the
+  25% they expect and must be able to see why; a client who is **ahead** must be told, or the
+  credit reads as an error.
+- **⚠ THE MIDPOINT HAD THE SAME BUG IN ITS OWN WORDS.** It printed *"50% deposit — already
+  collected"* over `depositAmt`, the target, and asked for `midCumTarget - depositAmt`. It reads
+  the received figure now and asks for the cumulative 75% **less what actually arrived**, so a
+  short deposit is carried forward at the next stage rather than at the last one.
+- **⚠ THE DEPOSIT INVOICE IS UNTOUCHED, and a test pins that.** Part-paying it must NOT reduce
+  what it says is due — it states the 50% due, and part payment is what the later stages
+  reconcile. Reducing it would make the document disagree with itself on a reload.
+- **⚠ BANK ROUNDING IS NOT A DEBT.** A wire landing forty cents light must not draw an
+  "outstanding" notice. The **arithmetic always uses the real figure**; only the notice is gated,
+  below a dollar. Both halves tested.
+- **⚠ A JOB WITH NO PAYMENTS ON FILE NOW OWES EVERYTHING, and that is the honest answer** rather
+  than a regression — the old code quietly assumed 75% had arrived. It is also unreachable on a
+  real final: `isJobFunded` gates activation on a recorded deposit.
+- **3538 committed checks** (`tests/payments-received.test.js`, 43 new). **All six changes
+  revert-verified individually** — restoring the target-based `finalDue` fails **14**, removing
+  the gap row 7, the midpoint's received row 4, and the other three 2 each.
+- **⚠⚠ AND FIXING IT BROKE TWO EXISTING SUITES CORRECTLY, WHICH IS THE INTERESTING PART.**
+  `change-order-billing` and `rush-discount` both drove `invoiceHtml` against a job fixture with
+  **no payment records**, so every final suddenly billed the whole job — correct behaviour, and a
+  fixture testing nothing about change orders. Both now **walk the engagement**: render the
+  deposit, record what it asked for as a payment, render the midpoint, record that, then render
+  the final. A fixture that assumes money arrived is how a defect about money arriving stays
+  invisible.
+- **Verified end to end in headless Chromium on the real page**: all four rows of the table above
+  collect **$19,940 exactly**; the short-paid job prints *"Outstanding from the deposit and
+  midpoint invoices — carried into the balance below +$4,970"* above a balance of **$9,955**; the
+  overpaid job prints *"Received ahead of the invoiced schedule — credited in the balance below
+  ($2,000)"* above **$2,985**; and the midpoint invoice after a short deposit reads *invoiced
+  $9,970 · received ($5,000) · outstanding +$4,970 · **Midpoint Payment Due Now $9,955***.
+  Overflow 0 at 1440 and 390px, no page errors.
+- Prelaunch, so nothing real was ever billed this way. **No document pass needed** — the manual
+  and playbook describe recording payments and the three stages, and state neither what the final
+  reconciles against nor the Payment Summary's rows.
+
 ## A DISCOUNT DELETED THE EXPEDITED-DELIVERY PREMIUM, AND THE ORDER WAS BACKWARDS (FIXED 2026-09-11)
 Two things at once. The ordering is Anthony's call, asked and answered: *"If it's a Rush job, we
 charge the 20%. If we then have to discount the job by a little bit, it comes off of the total —

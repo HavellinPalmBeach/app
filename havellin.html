@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:27am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:38am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -19926,10 +19926,38 @@ function invoiceHtml(job, stage) {
   var totalMidBasis     = _midServices + midRushAmt;
   var totalFinalBasis   = _finalServices + finalRushAmt + coCharge;
 
+  // ⚠⚠ WHAT WAS INVOICED AND WHAT WAS RECEIVED ARE DIFFERENT QUESTIONS, AND THIS FUNCTION
+  // USED TO ASK ONLY THE FIRST ONE. `finalDue` was `totalFinalBasis - depositAmt -
+  // midpointAmt` — the two stage TARGETS — so the final invoice credited the client with
+  // money that may never have arrived, and the Payment Summary printed those targets under
+  // a heading reading "Subtotal payments received". `job.payments[]` is the record of what
+  // actually landed and nothing on this document had ever read it.
+  //
+  // Measured by driving this function on a $19,940 job:
+  //   deposit short-paid by $4,970  → billed as if paid in full, $4,970 never invoiced again
+  //   midpoint invoice never paid   → $4,985 silently dropped off the engagement
+  //   client OVERPAID by $2,000     → billed the full final anyway, $2,000 over
+  // The first two are the firm writing off its own money; the third over-bills a client who
+  // paid early, which is the one that reaches them as a complaint.
+  //
+  // ⚠ THE TARGETS SURVIVE, because the document legitimately states both: the stage rows say
+  // what each earlier invoice ASKED for, and the received line says what came in. Collapsing
+  // them into one figure is what produced the defect.
   var depositAmt   = Math.round(0.5 * totalDepositBasis);
   var midCumTarget = Math.round(0.75 * totalMidBasis);
-  var midpointAmt  = midCumTarget - depositAmt;
-  var finalDue     = Math.round(totalFinalBasis) - depositAmt - midpointAmt;
+  var receivedDep  = Math.round(stagePaidTotal(job, 'deposit'));
+  var receivedAll  = Math.round(jobPaidTotal(job));
+  // The midpoint asks for the cumulative 75% LESS WHAT HAS ACTUALLY ARRIVED, so a shortfall
+  // at the deposit is carried forward rather than forgiven. With nothing recorded it asks for
+  // the whole 75%, which is the honest answer to "nothing has been paid".
+  var midpointAmt  = midCumTarget - receivedDep;
+  var finalDue     = Math.round(totalFinalBasis) - receivedAll;
+  // The gap between the two questions, on the final. Positive means earlier invoices are
+  // still outstanding and the balance below carries them; negative means the client is ahead.
+  // ⚠ Sub-dollar differences are bank rounding, not a debt — the arithmetic always uses the
+  // real figure, but the NOTICE stays quiet below a dollar or it fires on fifty cents.
+  var invoicedBefore = midCumTarget;
+  var paymentGap     = invoicedBefore - receivedAll;
 
   // Aliases consumed by the final-invoice body below.
   var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;
@@ -19948,7 +19976,10 @@ function invoiceHtml(job, stage) {
   var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift;
   var deposit = depositAmt;
   var midpoint = midpointAmt;
-  var alreadyPaid = deposit + midpoint;
+  // ⚠ THE NAME IS THE BUG. This was `deposit + midpoint` — the two targets — under a row
+  // labelled "Subtotal payments received". It is the received figure now, and the document
+  // states the invoiced ones on their own rows where they belong.
+  var alreadyPaid = receivedAll;
   var balanceDue = finalDue;
   var overUnder = havellinTotalDiscounted - estHavellinTotal;
   var stageAmtDue = stage === 'deposit' ? depositAmt : (stage === 'midpoint' ? midpointAmt : finalDue);
@@ -19994,6 +20025,17 @@ function invoiceHtml(job, stage) {
   var approvedStamp = (invApproved && invApprovedBy) ?
     '<div class="approved-stamp"><div class="approved-stamp-text">✓ Approved for Release</div><div class="approved-stamp-sub">Approved by ' + invApprovedBy + ' on ' + invApprovedAt + '</div></div>' : '';
 
+  // ⚠ A SHORTFALL IS NAMED, NEVER FOLDED SILENTLY INTO THE BALANCE. The balance below is
+  // correct either way, but a client who owes an unpaid midpoint reads a final that is larger
+  // than the 25% they expect and has no way to see why; and a client who is AHEAD must be told
+  // they are, or the credit looks like an error. Both directions render.
+  function _paymentGapRow(gap){
+    if (Math.abs(gap) < 1) return '';                 // bank rounding is not a debt
+    return gap > 0
+      ? '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Outstanding from the deposit and midpoint invoices — carried into the balance below</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(gap) + '</td></tr>'
+      : '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Received ahead of the invoiced schedule — credited in the balance below</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(gap)) + ')</td></tr>';
+  }
+
   function _amtDueBox(label, amt){
     // Set the dark background on every cell (not just the row) so the box renders solid
     // even when it's the first row in the table — .pay-tbl tr:first-child td forces tan.
@@ -20038,9 +20080,10 @@ function invoiceHtml(job, stage) {
   var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
     '<table class="pay-tbl">' +
     '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(estHavellinTotal) + '</strong></td></tr>' +
-    '<tr><td>50% deposit — paid upon acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--ok-tx);">(' + fmt(deposit) + ')</td></tr>' +
-    '<tr><td>25% midpoint — fees trued to actuals</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--ok-tx);">(' + fmt(midpoint) + ')</td></tr>' +
-    '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Subtotal payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
+    '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
+    '<tr><td>25% midpoint — fees trued to actuals</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
+    '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
+    _paymentGapRow(paymentGap) +
     '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
     (overUnder > 0 ?
       '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Job ran over estimate by ' + fmt(overUnder) + ' — client was notified per T&amp;Cs</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(overUnder) + '</td></tr>' :
@@ -20083,7 +20126,9 @@ function invoiceHtml(job, stage) {
       '<div class="ce-note" style="margin-top:.5rem;">Payment schedule: 50% deposit now · 25% at project midpoint · 25% on completion.</div>' +
       '</div>'
     : '<div style="margin-top:1rem;"><table class="pay-tbl">' +
-        '<tr><td colspan="2" style="color:var(--ok-tx);">50% deposit — already collected</td><td class="r" style="color:var(--ok-tx);">(' + fmt(depositAmt) + ')</td></tr>' +
+        '<tr><td colspan="2" style="color:var(--gray);">50% deposit — invoiced on acceptance</td><td class="r" style="color:var(--gray);">' + fmt(depositAmt) + '</td></tr>' +
+        '<tr><td colspan="2" style="color:var(--ok-tx);">Received to date</td><td class="r" style="color:var(--ok-tx);">(' + fmt(receivedDep) + ')</td></tr>' +
+        _paymentGapRow(depositAmt - receivedDep) +
         _amtDueBox('Midpoint Payment Due Now (25%)', stageAmtDue) +
       '</table>' +
       '<div class="ce-note" style="margin-top:.5rem;">Remaining 25% due upon completion.</div>' +
@@ -20111,9 +20156,10 @@ function invoiceHtml(job, stage) {
     finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
       '<table class="pay-tbl">' +
       '<tr style="background:var(--tan);"><td colspan="2"><strong>Fixed Project Fee</strong></td><td class="r"><strong>' + fmt(_fixedTotal) + '</strong></td></tr>' +
-      '<tr><td>50% deposit — paid upon acceptance</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(deposit) + ')</td></tr>' +
-      '<tr><td>25% midpoint — paid at project midpoint</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(midpoint) + ')</td></tr>' +
-      '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Subtotal payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
+      '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
+      '<tr><td>25% midpoint — invoiced at project midpoint</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
+      '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
+      _paymentGapRow(paymentGap) +
       (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
       '</table></div>';
@@ -20140,7 +20186,7 @@ function invoiceHtml(job, stage) {
       '<div class="alert a-err" style="line-height:1.6;">' +
       '<div style="font-weight:700;font-size:13px;margin-bottom:.35rem;">Final invoice unavailable — no hours logged</div>' +
       'This job bills labor at the hours actually worked, and none have been recorded. Issuing the final now ' +
-      'would bill $0 of labor against the ' + fmt(alreadyPaid) + ' already billed at deposit and midpoint — ' +
+      'would bill $0 of labor against the ' + fmt(invoicedBefore) + ' already invoiced at deposit and midpoint — ' +
       'a credit back to the client rather than a balance due.' +
       '</div>' +
       '<div class="ce-section-hdr" style="margin-top:1.25rem;">To generate this invoice</div>' +

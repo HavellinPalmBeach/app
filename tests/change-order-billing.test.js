@@ -35,7 +35,8 @@ function inv(stubs) {
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
-          'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob'],
+          'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments'],
     vars: ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -71,22 +72,34 @@ function hrs(tc, ps) {
                       { name: 'Crew', role: 'PS', hours: ps }] }];
 }
 
-const DEPOSIT = 9970;   // 50% of $19,940 — unchanged by a change order at either basis
+// ⚠ THE ENGAGEMENT IS WALKED STAGE BY STAGE, AND EACH INVOICE IS PAID IN FULL BEFORE THE
+// NEXT IS RENDERED. Since 2026-09-11 the final invoice reconciles against `job.payments[]`
+// rather than against the stage targets, so a fixture with no payment records would bill the
+// whole job at the final — correct behaviour, and a fixture that tests nothing about change
+// orders. Recording what each invoice actually asked for is also the honest client: it keeps
+// every assertion below about the change order rather than about the money arriving.
 function finalDoc(loggedTC, loggedPS, cos, estOverride) {
   const est = Object.assign({}, EST, estOverride || {});
-  const ctx = inv({
-    estimateStore: { 1: { estimate: est, approved: true, approvedBy: 'Anthony Graziano' } },
-    jobLogs: { 1: hrs(loggedTC, loggedPS) },
-    changeOrders: cos || [],
-  });
-  return ctx.invoiceHtml(JOB, 'final');
+  const store = { 1: { estimate: est, approved: true, approvedBy: 'Anthony Graziano' } };
+  const logs = { 1: hrs(loggedTC, loggedPS) };
+  const pay = (payments) => {
+    const job = Object.assign({}, JOB, { payments: payments });
+    const ctx = inv({ estimateStore: store, jobLogs: logs, changeOrders: cos || [] });
+    return { ctx, job };
+  };
+  const a = pay([]);
+  const dep = Math.round(a.ctx.invoiceHtml(a.job, 'deposit').amtDue);
+  const b = pay([{ stage: 'deposit', amount: dep, date: '2026-08-01', method: 'wire' }]);
+  const mid = Math.round(b.ctx.invoiceHtml(b.job, 'midpoint').amtDue);
+  const c = pay([{ stage: 'deposit', amount: dep, date: '2026-08-01', method: 'wire' },
+                 { stage: 'midpoint', amount: mid, date: '2026-09-01', method: 'wire' }]);
+  const d = c.ctx.invoiceHtml(c.job, 'final');
+  d._dep = dep; d._mid = mid;
+  return d;
 }
-// What the engagement collects across all three stages. The midpoint is anchored to the
-// ESTIMATE at both bases, so it is the same number in every case below; the final is what
-// reconciles. Collecting the right total is the only claim worth making.
-function collected(d, midpoint) {
-  return DEPOSIT + (midpoint === undefined ? 4985 : midpoint) + Math.round(d.amtDue);
-}
+// What the engagement collects across all three stages. Collecting the right total is the
+// only claim worth making.
+function collected(d) { return d._dep + d._mid + Math.round(d.amtDue); }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();

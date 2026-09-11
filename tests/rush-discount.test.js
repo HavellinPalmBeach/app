@@ -62,7 +62,8 @@ function invCtx(e, logs) {
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
-          'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob'],
+          'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments'],
     vars: ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -77,18 +78,24 @@ function invCtx(e, logs) {
     },
   });
 }
-// What the engagement actually collects across the three stages, derived the way the app
-// derives it — the deposit and midpoint from the estimate, the final reconciling.
+// What the engagement actually collects across the three stages, walked the way a real job
+// is walked: each invoice is rendered, paid in full, and the payment recorded before the next
+// one is drawn. Since 2026-09-11 the final reconciles against `job.payments[]`, so a fixture
+// that never records a payment would bill the whole job at the final — correct, and useless
+// for asking what a normally-paying client is charged.
 function collected(e, logs) {
-  const c = invCtx(e, logs);
-  const dep = c.invoiceHtml(JOB, 'deposit');
-  const mid = c.invoiceHtml(JOB, 'midpoint');
-  const fin = c.invoiceHtml(JOB, 'final');
-  return { deposit: Math.round(dep.amtDue), midpoint: Math.round(mid.amtDue),
-           final: Math.round(fin.amtDue), variancePct: fin.variancePct,
-           requiresApproval: fin.requiresApproval,
-           total: Math.round(dep.amtDue) + Math.round(mid.amtDue) + Math.round(fin.amtDue),
-           html: fin.html };
+  const at = (stage, payments) => {
+    const job = Object.assign({}, JOB, { payments: payments });
+    return invCtx(e, logs).invoiceHtml(job, stage);
+  };
+  const dep = Math.round(at('deposit', []).amtDue);
+  const paid1 = [{ stage: 'deposit', amount: dep, date: '2026-08-01', method: 'wire' }];
+  const mid = Math.round(at('midpoint', paid1).amtDue);
+  const paid2 = paid1.concat([{ stage: 'midpoint', amount: mid, date: '2026-09-01', method: 'wire' }]);
+  const fin = at('final', paid2);
+  return { deposit: dep, midpoint: mid, final: Math.round(fin.amtDue),
+           variancePct: fin.variancePct, requiresApproval: fin.requiresApproval,
+           total: dep + mid + Math.round(fin.amtDue), html: fin.html };
 }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
