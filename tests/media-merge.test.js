@@ -21,7 +21,7 @@ const ids = (list) => list.map((r) => r.stableId);
 function _letter(n) { let out = ''; while (n > 0) { out = String.fromCharCode(65 + ((n - 1) % 26)) + out; n = Math.floor((n - 1) / 26); } return out; }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
-  const ctx = sandbox({ fns: ['mergeMediaItems'] });
+  const ctx = sandbox({ fns: ['mergeMediaItems', 'mergeCustodyLogs', '_custodyEventId'] });
   const merge = ctx.mergeMediaItems;
 
   group('merge: union, never loss');
@@ -97,16 +97,114 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'existing order is preserved and new items append — the manifest does not reshuffle');
   }
 
+  // ── The chain-of-custody log ─────────────────────────────────────────────
+  group('⚠⚠ A CUSTODY LOG IS APPEND-ONLY — the newer RECORD must not win it whole');
+  {
+    const ev = (o) => Object.assign({ action: 'Released', party: "Sotheby's",
+                                      date: '2026-09-10' }, o);
+
+    // THE MEASURED DEFECT. Ashley logs the release on the laptop; Anthony, who has not synced,
+    // corrects the same item's value on the iPad. His record is newer, so before 2026-09-11 it
+    // won WHOLE and the log came back [].
+    const ashley = it('b', { updatedAt: 1000, fmv: 48000,
+                             custodyLog: [ev({ cid: 'e1', receipt: 'SBY-4471' })] });
+    const anthony = it('b', { updatedAt: 2000, fmv: 52000, custodyLog: [] });
+    const won = merge([ashley], [anthony])[0];
+    eq(won.fmv, 52000, 'the newer scalar still wins — a correction is a correction');
+    eq((won.custodyLog || []).length, 1,
+       '⚠⚠ and the release to Sotheby\u2019s survives it. It used to come back []');
+    eq(won.custodyLog[0].receipt, 'SBY-4471', 'with its receipt number intact');
+
+    // Two devices, one event each. Before, one of them was simply destroyed.
+    const a2 = it('b', { updatedAt: 3000, custodyLog: [ev({ cid: 'e2', action: 'Moved to storage', date: '2026-09-08' })] });
+    const b2 = it('b', { updatedAt: 4000, custodyLog: [ev({ cid: 'e3', receipt: 'SBY-4471' })] });
+    // ⚠ THE ASSERTION IS ON THE SET, NOT THE ARRAY ORDER, and that is deliberate: the merged
+    // array is in encounter order (winner's events, then the loser's), which depends on which
+    // device synced last. What a reader sees is `custodyEvents`, which sorts by the date the
+    // event HAPPENED. Pinning the array order here would pin an implementation detail and
+    // fail on a correct change.
+    const cids = (x, y) => merge([x], [y])[0].custodyLog.map((e) => e.cid).slice().sort();
+    eq(cids(a2, b2), ['e2', 'e3'], '⚠ both events survive, whichever record is newer');
+    eq(cids(b2, a2), ['e2', 'e3'], 'and the same set the other way round');
+
+    // ⚠⚠ A VOID WINS OVER A LIVE COPY, and the case that matters is the void on the LOSING
+    // side. Ashley removes the event at 10:00; Anthony edits the same item's value at 10:05
+    // without having synced, so HIS record is newer and still holds the event live. The union
+    // walks the winner first, so without the tombstone rule the live copy is taken and the
+    // removal is silently undone on the next sync.
+    //
+    // ⚠ THE FIRST VERSION OF THIS CHECK COULD NOT FAIL, for the eleventh time in this project:
+    // both its cases put the VOIDED copy on the winning side, where it is taken first anyway.
+    // Reverting the rule left it green. Caught by reverting, not by reading.
+    const voidedOlder = it('b', { updatedAt: 10, custodyLog: [ev({ cid: 'e4', deletedAt: 99 })] });
+    const liveNewer   = it('b', { updatedAt: 20, custodyLog: [ev({ cid: 'e4' })] });
+    ok(merge([voidedOlder], [liveNewer])[0].custodyLog[0].deletedAt,
+       '⚠⚠ the removal survives even though the record that still had it live is newer');
+    ok(merge([liveNewer], [voidedOlder])[0].custodyLog[0].deletedAt,
+       'and whichever order the two arrive in');
+    // Driven on the union itself, both ways round, so it cannot depend on who won.
+    ok(ctx.mergeCustodyLogs([ev({ cid: 'e5' })], [ev({ cid: 'e5', deletedAt: 1 })])[0].deletedAt,
+       'live first, void second');
+    ok(ctx.mergeCustodyLogs([ev({ cid: 'e5', deletedAt: 1 })], [ev({ cid: 'e5' })])[0].deletedAt,
+       'void first, live second');
+    eq(ctx.mergeCustodyLogs([ev({ cid: 'e5' })], [ev({ cid: 'e5', deletedAt: 1 })]).length, 1,
+       'and it is still one event, not two');
+
+    // Legacy events carry no cid and fall back to a value key. Identical ones collapse, which
+    // is the lesser error: an invented duplicate on a chain of custody is a false statement.
+    const legacyA = it('b', { updatedAt: 1, custodyLog: [ev({})] });
+    const legacyB = it('b', { updatedAt: 2, custodyLog: [ev({})] });
+    eq(merge([legacyA], [legacyB])[0].custodyLog.length, 1,
+       'two value-identical legacy events resolve to one');
+    const legacyC = it('b', { updatedAt: 2, custodyLog: [ev({ receipt: 'SBY-9' })] });
+    eq(merge([legacyA], [legacyC])[0].custodyLog.length, 2,
+       '⚠ but anything that differs is a different event — the receipt alone is enough');
+
+    // ⚠ AND A NEW EVENT NEVER COLLAPSES, even when value-identical. Two handovers to the same
+    // party on the same day really do happen, and the cid is what keeps them two.
+    const twinA = it('b', { updatedAt: 1, custodyLog: [ev({ cid: 'x1' }), ev({ cid: 'x2' })] });
+    eq(merge([twinA], [it('b', { updatedAt: 9, custodyLog: [] })])[0].custodyLog.length, 2,
+       'value-identical events with their own ids stay two events');
+
+    // The item number is permanent and only the losing side may have seen it issued.
+    const numbered = it('b', { updatedAt: 1, itemNo: 14 });
+    const fresh = it('b', { updatedAt: 2 });
+    eq(merge([numbered], [fresh])[0].itemNo, 14,
+       '⚠ an issued item number survives a newer record that never saw it assigned — without '
+       + 'this the backfill issues a NEW one and silently renumbers an object a receipt cites');
+    eq(merge([it('b', { updatedAt: 1, itemNo: 14 })], [it('b', { updatedAt: 2, itemNo: 3 })])[0].itemNo, 3,
+       'but a number on the winner is not overwritten');
+
+    // ⚠ THE MERGE MUST NOT MUTATE ITS INPUTS. One of them is normally `_photoRefs[jobId]`
+    // itself, so writing the merged log onto the winner would edit the live store as a side
+    // effect of asking what a merge would produce.
+    const src1 = it('b', { updatedAt: 1, custodyLog: [ev({ cid: 'm1' })] });
+    const src2 = it('b', { updatedAt: 2, custodyLog: [ev({ cid: 'm2' })] });
+    merge([src1], [src2]);
+    eq(src1.custodyLog.map((e) => e.cid), ['m1'], 'the older input is untouched');
+    eq(src2.custodyLog.map((e) => e.cid), ['m2'], 'and so is the newer one');
+
+    eq(ctx._custodyEventId(null), '', 'no event is an empty id, not a throw');
+    eq(ctx.mergeCustodyLogs(null, null), [], 'two empty logs merge to empty');
+  }
+
   // ── The two implementations must agree ──────────────────────────────────────
   group('merge: app and Apps Script agree');
   {
     // Lift the server-side copy out of the .gs file and drive it beside the app's.
     const gs = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
-    const m = gs.match(/function _mergeMediaItems\(existing, incoming\) \{[\s\S]*?\n\}/);
-    ok(!!m, '_mergeMediaItems is present in apps-script/saveInventory.gs');
+    const grab = (name) => {
+      const m = gs.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'));
+      ok(!!m, name + ' is present in apps-script/saveInventory.gs');
+      return m ? m[0] : '';
+    };
     const gctx = { };
     vm.createContext(gctx);
-    vm.runInContext(m[0], gctx, { filename: 'saveInventory.gs (extracted)' });
+    // ⚠ THE CUSTODY UNION IS PART OF THE MERGE NOW, so the server copy cannot be driven
+    // without it — and that is the point of this group: the two implementations are the same
+    // rule written twice, and a union written on one side only loses events on the other.
+    vm.runInContext([grab('_custodyEventId'), grab('_mergeCustodyLogs'), grab('_mergeMediaItems')].join('\n\n'),
+                    gctx, { filename: 'saveInventory.gs (extracted)' });
     const gmerge = gctx._mergeMediaItems;
 
     const cases = [
@@ -116,6 +214,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       [[it('a', { updatedAt: 9 })], [it('a', { updatedAt: 1, deletedAt: 1 })]],
       [[], [it('z', { ts: 3 })]],
       [[it('q', { ts: 700 })], [it('q', { ts: 100, fmv: 'older' })]],
+      // The custody union and the permanent item number, driven on BOTH copies of the rule.
+      [[it('a', { updatedAt: 1, custodyLog: [{ cid: 'e1', action: 'Released', party: 'X' }] })],
+       [it('a', { updatedAt: 2, custodyLog: [] })]],
+      [[it('a', { updatedAt: 3, custodyLog: [{ cid: 'e1', action: 'Released' }] })],
+       [it('a', { updatedAt: 4, custodyLog: [{ cid: 'e2', action: 'Returned' }] })]],
+      [[it('a', { updatedAt: 3, custodyLog: [{ cid: 'e1', action: 'Released' }] })],
+       [it('a', { updatedAt: 4, custodyLog: [{ cid: 'e1', action: 'Released', deletedAt: 5 }] })]],
+      [[it('a', { updatedAt: 1, custodyLog: [{ action: 'Released', party: 'X' }] })],
+       [it('a', { updatedAt: 2, custodyLog: [{ action: 'Released', party: 'X' }] })]],
+      [[it('a', { updatedAt: 1, itemNo: 14 })], [it('a', { updatedAt: 2 })]],
+      // ⚠ THE VOID ON THE LOSING SIDE. The case above has it on the winner, where the union
+      // takes it first anyway and the tombstone rule is never exercised.
+      [[it('a', { updatedAt: 3, custodyLog: [{ cid: 'e1', action: 'Released', deletedAt: 5 }] })],
+       [it('a', { updatedAt: 4, custodyLog: [{ cid: 'e1', action: 'Released' }] })]],
     ];
     let agree = 0;
     cases.forEach((pair, i) => {
@@ -125,6 +237,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq(a, b, `case ${i}: the two implementations must produce identical output`);
     });
     eq(agree, cases.length, 'every case agrees between havellin.html and saveInventory.gs');
+
+    // ⚠⚠ AGREEING IS NOT THE SAME AS BEING RIGHT, and reverting the server copy proved it:
+    // with the tombstone rule removed from saveInventory.gs alone, the two implementations
+    // still agreed — on the wrong answer — because the app-side case above happened to put the
+    // void on the winning side. The server's own behaviour is asserted absolutely here.
+    const gev = (o) => Object.assign({ action: 'Released', party: 'X', date: '2026-09-10' }, o);
+    const gone = gmerge(
+      [it('a', { updatedAt: 1, custodyLog: [gev({ cid: 'g1', receipt: 'SBY-4471' })] })],
+      [it('a', { updatedAt: 2, custodyLog: [] })])[0];
+    eq((gone.custodyLog || []).length, 1,
+       '⚠⚠ the server unions the log too — it is the durable store, so fixing only the app '
+       + 'would leave the event alive on two devices and dead in the sheet');
+    ok(gmerge([it('a', { updatedAt: 1, custodyLog: [gev({ cid: 'g2', deletedAt: 9 })] })],
+              [it('a', { updatedAt: 2, custodyLog: [gev({ cid: 'g2' })] })])[0].custodyLog[0].deletedAt,
+       'and a removal on the older side still wins on the server');
+    eq(gmerge([it('a', { updatedAt: 1, itemNo: 14 })], [it('a', { updatedAt: 2 })])[0].itemNo, 14,
+       'and the permanent item number survives there as well');
   }
 
   // ── The payload the server is actually given ────────────────────────────────

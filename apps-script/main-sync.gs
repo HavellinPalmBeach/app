@@ -34,13 +34,13 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-09b';
+var BACKEND_VERSION = '2026-09-11a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder'
 ];
 var BACKEND_TYPES = [
-  'job', 'estimate', 'hours', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
+  'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
   'saveAllChangeOrders', 'saveAllLogs', 'saveAllContractors', 'deleteContractor',
   'deleteJob', 'saveInventory', 'saveMedia', 'log'
 ];
@@ -125,8 +125,6 @@ function doPost(e) {
     // has seen them before and no longer holds them (see JOB LEDGER). The app removes those
     // from the device that sent them, which is how a stale browser stops resurrecting them.
     if      (type === 'job')                 { return jsonOut(_okWithDrops(saveJobToSheet(payload))); }
-    else if (type === 'estimate')            { saveEstimateToSheet(payload); }
-    else if (type === 'hours')               { saveHoursToSheet(payload); }
     else if (type === 'saveAllEstimates')    { return jsonOut(_okWithDrops(saveEstimateStore(payload))); }
     else if (type === 'saveAllJobs')         { return jsonOut(_okWithDrops(saveAllJobsToSheet(payload))); }
     else if (type === 'saveAllJobPlans')     { return jsonOut(_okWithDrops(saveJobPlanStore(payload))); }
@@ -323,11 +321,15 @@ function testDriveThumbnails() {
 //   - Drive. Job folders and their photos are left alone — see trashJobFoldersConfirm.
 var RESET_JOB_STORES = ['EstimateStore', 'JobPlanStore', 'ChangeOrderStore', 'LogStore', 'MediaStore'];
 // ⚠ 'Estimates' and 'Hours' are DEAD TABS and this is worth knowing before you go looking
-// for data in them. The app never posts type:'estimate' or type:'hours' — those handlers
-// exist and nothing calls them. The real estimate data is the EstimateStore blob, the real
-// hours are LogStore, and both look like unreadable JSON rather than a friendly table.
-// Someone clearing the practice data by hand will empty 'Estimates', see it was already
-// empty, and conclude the estimates are gone. They are not.
+// for data in them. The app has never posted type:'estimate' or type:'hours'; the two
+// handlers that answered them were deleted on 2026-09-11 along with their dispatch lines
+// and their BACKEND_TYPES entries, so nothing can write to either tab again. The tabs
+// themselves are left in the reset list: an old deployment really did create them, and a
+// sheet that still has one wants it cleared with the rest of the practice data.
+// The real estimate data is the EstimateStore blob, the real hours are LogStore, and both
+// look like unreadable JSON rather than a friendly table. Someone clearing the practice data
+// by hand will empty 'Estimates', see it was already empty, and conclude the estimates are
+// gone. They are not.
 var RESET_JOB_SHEETS = ['Jobs', 'Estimates', 'Hours'];
 
 function previewReset() {
@@ -1135,58 +1137,6 @@ function deleteJobFromSheet(id) {
   // forever. _purgeJobFromStores is the one list; add a store there, not here.
   var removed = _purgeJobFromStores([id]);
   Object.keys(removed).forEach(function(name) { Logger.log('Purged ' + name + ' for ' + id); });
-}
-
-// ══ ESTIMATES (one row per job — most current version) ═══════════════════════════
-
-function saveEstimateToSheet(estimate) {
-  if (!estimate) return;
-  var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
-  try {
-    var ss = SpreadsheetApp.openById(SHEET_ID);
-    var sheet = ss.getSheetByName('Estimates');
-    if (!sheet) {
-      sheet = ss.insertSheet('Estimates');
-      sheet.appendRow(['Job ID', 'Updated', 'Total TC', 'Total PS', 'Total Amount', 'Approved', 'Approved By', 'Approved At', 'Data JSON']);
-    }
-
-    var rowData = [
-      estimate.jobId || '', new Date().toISOString(),
-      estimate.totTC || 0, estimate.totPS || 0,
-      estimate.havellinTotal || 0, estimate.approved || false,
-      estimate.approvedBy || '', estimate.approvedAt || '', JSON.stringify(estimate)
-    ];
-
-    // Upsert by Job ID under the lock: update the existing row for this job, else append.
-    var data = sheet.getDataRange().getValues();
-    var rowIndex = -1;
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(estimate.jobId)) { rowIndex = i + 1; break; }
-    }
-    if (rowIndex > 0) {
-      sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
-    } else {
-      sheet.appendRow(rowData);
-    }
-  } finally {
-    try { lock.releaseLock(); } catch (e) {}
-  }
-}
-
-// ══ HOURS ════════════════════════════════════════════════════════════════════════
-
-function saveHoursToSheet(hours) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Hours');
-  if (!sheet) {
-    sheet = ss.insertSheet('Hours');
-    sheet.appendRow(['Job ID', 'Date', 'Team Member', 'Role', 'Hours', 'Tasks', 'Data JSON']);
-  }
-  sheet.appendRow([
-    hours.jobId || '', hours.date || '', hours.teamMember || '',
-    hours.role || '', hours.hours || 0, hours.tasks || '', JSON.stringify(hours)
-  ]);
 }
 
 // ══ DRIVE ════════════════════════════════════════════════════════════════════════

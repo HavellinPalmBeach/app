@@ -921,6 +921,14 @@ Two manifest columns: **MAIV §20.2031-6** (Auto / Yes / No) and **MAIV Class**.
 - **🔗 custody log** (per item) — record each transfer: released / received / transferred / returned · party · date · method · receipt. A badge shows the event count.
 - **Snapshot** — capture a labeled point-in-time copy of the manifest (the amended-inventory / what-changed trail); print any snapshot as an as-of schedule.
 
+> **⚠⚠ Until 2026-09-11 an unrelated edit to any field on the row destroyed the custody log.** The manifest merges item by item, and within an item it took the whole *newer record* — right for a value somebody corrected, and wrong for an append-only log. Measured on the real merge: Ashley records *Released · Sotheby's · receipt SBY-4471* on the laptop, Anthony corrects the same item's value on the iPad without having synced, his record is newer, and the log comes back **empty**. Two people each logging one event kept one of them. **Any custody log on a job worked from two devices before 2026-09-11 is worth re-reading** — events may be missing and nothing said so.
+
+> **Custody events are now UNIONED across devices rather than won.** Each event carries its own identity from the moment it is recorded, so two people's entries both survive and two genuine handovers to the same party on the same day stay two events. What you see is ordered by *when the event happened*, not by which device synced last.
+
+> **Removing an event marks it removed; it does not erase it.** That is what makes the union safe — a spliced event is simply re-added by the next sync from a device that still has it. The removal is what survives the merge, in both directions, so a device that still holds the event live cannot quietly undo it. The event count beside the link, and the list inside it, both ignore removed events.
+
+> **⚠ Requires an Apps Script redeploy.** `saveInventory.gs` carries the same union — it is the durable store, so fixing only the app would leave an event alive on two devices and dead in the sheet. `main-sync.gs` changed in the same deploy: the two dead `Estimates` / `Hours` writers were removed and `BACKEND_VERSION` bumped to `2026-09-11a`. They are one project and one deployment — paste both, then *Deploy → Manage deployments → New version*.
+
 ### Exports (work product)
 
 Three sit on the working header; the rest moved under **More ▾** to get them out of the way of the work.

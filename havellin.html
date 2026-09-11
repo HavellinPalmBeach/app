@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 11:33am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 11:52am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15790,8 +15790,75 @@ function _invTouch(ref) { if (ref) ref.updatedAt = Date.now(); return ref; }
 // item missing from one side is simply one that side has not seen, which is why removal
 // writes a `deletedAt` tombstone instead of splicing the row out. Without that, a union
 // merge resurrects everything anyone has ever deleted on the next sync.
+// ⚠⚠ A CHAIN-OF-CUSTODY EVENT IS APPEND-ONLY, AND "THE NEWER RECORD WINS" DESTROYED IT.
+// The per-item merge below resolves by taking the whole newer RECORD, which is right for a
+// scalar (somebody corrected the value; the correction wins) and categorically wrong for a
+// LOG. **Measured by driving the real merge, not argued:** Ashley logs *Released · Sotheby's
+// · 2026-09-10 · receipt SBY-4471* on the laptop; Anthony, who has not synced since, corrects
+// the same item's FMV on the iPad; his record is newer, so it wins whole — and the custody
+// log comes back **`[]`**. Two devices each logging one event keep ONE of them. The estate
+// agreement promises chain-of-custody tracking on every item of value, and an unrelated edit
+// to any field on the row silently deleted it.
+//
+// So the log is UNIONED rather than won, by event identity. `cid` is stamped at creation;
+// events written before 2026-09-11 have none and fall back to a value key.
+// ⚠ THE VALUE KEY CAN COLLAPSE TWO GENUINELY IDENTICAL LEGACY EVENTS — same action, same
+// party, same day, same receipt — and that is the lesser of the two errors on a record like
+// this: an invented duplicate on a chain of custody is a false statement about the estate,
+// while a legacy pair that identical almost certainly came from one origin anyway. New events
+// carry ids and are never value-keyed.
+function _custodyEventId(e) {
+  if (!e) return '';
+  if (e.cid) return 'id:' + e.cid;
+  return 'v:' + [e.action, e.party, e.date, e.method, e.receipt]
+    .map(function(x){ return String(x == null ? '' : x); }).join('\u0000');
+}
+// ⚠ A VOID WINS OVER A LIVE COPY. Union resurrects anything either side removed — exactly
+// the defect `deletedAt` exists to stop on the items themselves — so `removeCustodyEvent`
+// tombstones rather than splices, and the tombstone is what survives the merge.
+function mergeCustodyLogs(a, b) {
+  var out = [], at = {};
+  var take = function(list) {
+    (list || []).forEach(function(e) {
+      if (!e) return;
+      var id = _custodyEventId(e);
+      if (at[id] !== undefined) {
+        if (e.deletedAt && !out[at[id]].deletedAt) out[at[id]] = e;
+        return;
+      }
+      at[id] = out.length;
+      out.push(e);
+    });
+  };
+  take(a); take(b);
+  return out;
+}
+
 function mergeMediaItems(existing, incoming) {
   var byId = {}, order = [];
+  // ⚠ THE WINNER IS COPIED, NEVER MUTATED. Both arguments belong to the caller — one of them
+  // is usually `_photoRefs[jobId]` itself — and writing the merged log onto the winning object
+  // would edit the live store as a side effect of asking what a merge would produce.
+  var resolve = function(win, lose) {
+    var log = mergeCustodyLogs(win.custodyLog, lose.custodyLog);
+    // An issued item number is PERMANENT (see _invAssignItemNos). The losing side can be the
+    // only one that has seen it assigned, and a winner with none sends the row back through
+    // the backfill to be issued a NEW number above the high-water mark — silently renumbering
+    // an object a receipt already cites. It is never cleared through the UI, so keeping it
+    // costs nothing.
+    var no = (parseInt(win.itemNo, 10) > 0) ? win.itemNo : lose.itemNo;
+    // ⚠ NO SHORT-CIRCUIT. The first cut returned `win` untouched when the merged log was
+    // the same LENGTH — which is not the same as unchanged: a void on the losing side
+    // REPLACES an event without adding one, so the tombstone was computed and then thrown
+    // away, and a removal made on one device was silently undone by the other. Found by
+    // reverting the tombstone rule and watching the test fail with the rule still in place.
+    // A contested item is copied, always; an uncontested one never reaches here.
+    var out = {};
+    for (var k in win) if (Object.prototype.hasOwnProperty.call(win, k)) out[k] = win[k];
+    if (log.length) out.custodyLog = log;
+    out.itemNo = no;
+    return out;
+  };
   var take = function(list) {
     (list || []).forEach(function(it) {
       if (!it || !it.stableId) return;
@@ -15799,7 +15866,7 @@ function mergeMediaItems(existing, incoming) {
       if (!cur) { order.push(it.stableId); byId[it.stableId] = it; return; }
       var a = Number(it.updatedAt || it.ts || 0);
       var b = Number(cur.updatedAt || cur.ts || 0);
-      if (a >= b) byId[it.stableId] = it;
+      byId[it.stableId] = (a >= b) ? resolve(it, cur) : resolve(cur, it);
     });
   };
   take(existing); take(incoming);
@@ -16162,7 +16229,7 @@ function _invCell(jobId, ref, col, job, seq) {
       s += ' <span style="font-size:8px;color:var(--bronze);font-weight:700;" title="Manual line item (no photo)">M</span>'
         +  ' <a href="#" onclick="removeInventoryManualItem(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Remove line item" style="color:#c0392b;text-decoration:none;font-weight:700;">✕</a>';
     }
-    var nC = (ref.custodyLog || []).length;
+    var nC = custodyEvents(ref).length;
     s += ' <a href="#" onclick="openCustodyModal(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Chain of custody log" style="text-decoration:none;">&#128279;' + (nC ? '<span style="font-size:8px;color:var(--bronze);font-weight:700;">' + nC + '</span>' : '') + '</a>';
     return s;
   }
@@ -16396,13 +16463,13 @@ function openCustodyModal(jobId, stableId) {
 function closeCustodyModal() { var m = document.getElementById('custody-modal'); if (m) m.style.display = 'none'; }
 function _renderCustodyList() {
   var ref = _getPhotoRef(_custodyCtx.jobId, _custodyCtx.stableId);
-  var log = (ref && ref.custodyLog) || [];
+  var log = custodyEvents(ref);
   var el = document.getElementById('custody-list');
   if (!el) return;
-  el.innerHTML = log.length ? log.map(function(e, i){
+  el.innerHTML = log.length ? log.map(function(e){
     return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:3px 0;border-bottom:0.5px solid var(--border);">'
       + '<span><strong>' + esc(e.action) + '</strong>' + (e.party ? ' &middot; ' + esc(e.party) : '') + (e.date ? ' &middot; ' + esc(fmtDate2(e.date)) : '') + (e.method ? ' &middot; ' + esc(e.method) : '') + (e.receipt ? ' &middot; ' + esc(e.receipt) : '') + '</span>'
-      + '<a href="#" onclick="removeCustodyEvent(' + i + ');return false;" style="color:#c0392b;text-decoration:none;">&#10007;</a></div>';
+      + '<a href="#" onclick="removeCustodyEvent(\'' + _custodyHandle(e) + '\');return false;" style="color:#c0392b;text-decoration:none;">&#10007;</a></div>';
   }).join('') : '<div style="font-size:11px;color:var(--gray);font-style:italic;">No custody events logged yet.</div>';
 }
 function addCustodyEvent() {
@@ -16412,19 +16479,58 @@ function addCustodyEvent() {
   var party = g('cust-party');
   if (!party) { alert('Enter the party (to / from whom).'); return; }
   if (!ref.custodyLog) ref.custodyLog = [];
-  ref.custodyLog.push({ action: (document.getElementById('cust-action')||{}).value || 'Released', party: party, date: g('cust-date'), method: g('cust-method'), receipt: g('cust-receipt') });
+  // `cid` is what makes the union in mergeCustodyLogs exact rather than value-keyed, so two
+  // genuinely identical events — same party, same day, same receipt — stay two events.
+  // `at` is when it was RECORDED, which is not `date`, when it HAPPENED: an event logged the
+  // following morning must still sort where it belongs on the chain.
+  ref.custodyLog.push({ cid: _photoUid(), at: Date.now(),
+    action: (document.getElementById('cust-action')||{}).value || 'Released', party: party, date: g('cust-date'), method: g('cust-method'), receipt: g('cust-receipt') });
   _setPhotoRef(_custodyCtx.jobId, _invTouch(ref)); savePhotoRefs(_custodyCtx.jobId);
   ['cust-party','cust-date','cust-method','cust-receipt'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
   _renderCustodyList();
   renderInventoryTab();                 // refresh the per-item custody count badge
   _scheduleInventorySync(_custodyCtx.jobId);
 }
-function removeCustodyEvent(idx) {
+// ⚠ TOMBSTONE, NEVER SPLICE, and the id rather than the index. The log is unioned across
+// devices now, so a spliced event is simply re-added by the next merge from a device that
+// still has it — the same reason item removal writes `deletedAt` — and an index into a list
+// that the merge can reorder points at whatever moved into that slot.
+function removeCustodyEvent(handle) {
   var ref = _getPhotoRef(_custodyCtx.jobId, _custodyCtx.stableId);
   if (!ref || !ref.custodyLog) return;
-  ref.custodyLog.splice(idx, 1);
+  var cid = _custodyUnhandle(handle);
+  var hit = ref.custodyLog.filter(function(e){ return _custodyEventId(e) === cid; })[0];
+  if (!hit || hit.deletedAt) return;
+  hit.deletedAt = Date.now();
   _setPhotoRef(_custodyCtx.jobId, _invTouch(ref)); savePhotoRefs(_custodyCtx.jobId);
   _renderCustodyList(); renderInventoryTab(); _scheduleInventorySync(_custodyCtx.jobId);
+}
+// The live events, in the order they HAPPENED rather than the order the merge encountered
+// them. Two devices' events interleave by arrival otherwise, which on a chain of custody
+// reads as the object moving backwards in time.
+// ⚠ THE ID CANNOT GO INTO THE MARKUP RAW. A legacy event has no `cid`, so its identity is a
+// value key built from free text (the party name) joined on a NUL — and neither an apostrophe
+// nor a NUL survives a round trip through an HTML attribute into a JS string literal intact.
+// The first cut escaped for HTML and then for JS, which is the wrong order: esc's `&#39;` is
+// decoded by the HTML parser BEFORE the JS is parsed, so O'Hara broke out of the string.
+// Base64 is opaque, attribute-safe and string-safe, and removeCustodyEvent decodes it.
+function _custodyHandle(e) {
+  try { return btoa(unescape(encodeURIComponent(_custodyEventId(e)))); }
+  catch (err) { return ''; }
+}
+function _custodyUnhandle(h) {
+  try { return decodeURIComponent(escape(atob(String(h || '')))); }
+  catch (err) { return String(h || ''); }
+}
+
+function custodyEvents(ref) {
+  return ((ref && ref.custodyLog) || [])
+    .filter(function(e){ return e && !e.deletedAt; })
+    .slice()
+    .sort(function(x, y){
+      var d = String(x.date || '').localeCompare(String(y.date || ''));
+      return d !== 0 ? d : (Number(x.at || 0) - Number(y.at || 0));
+    });
 }
 
 // ── Work-product exports ──────────────────────────────────────────────────────
@@ -18122,7 +18228,7 @@ function _renderInvPanel(job, ref) {
       + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">' + sec.label + '</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px 10px;">' + fields + '</div></div>';
   }).join('');
-  var nC = (ref.custodyLog || []).length;
+  var nC = custodyEvents(ref).length;
   return '<div style="padding:10px 4px 12px 52px;background:#fcfaf5;border-top:1px dashed var(--border-md);">'
     + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;">'
       + _invThumbHTML(jid, ref, 96)

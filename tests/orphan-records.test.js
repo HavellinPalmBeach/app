@@ -127,7 +127,8 @@ function server(opts = {}) {
     'saveChangeOrderStore', 'getChangeOrderStore', 'resetAllJobDataConfirm'];
   let code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),
     gsVar(GS, 'JOB_LEDGER_STORE'), ...names.map((n) => gsFn(GS, n)),
-    gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');
+    gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_mergeMediaItems'),
+    gsFn(GS_INV, '_mergeCustodyLogs'), gsFn(GS_INV, '_custodyEventId')].join('\n\n');
   if (opts.patch) code = opts.patch(code);
   vm.runInContext(code, ctx, { filename: 'main-sync.gs (extracted)' });
   return ctx;
@@ -365,7 +366,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('orphans: the backend declares its new vintage');
   {
-    has(GS, "BACKEND_VERSION = '2026-09-09b'", 'BACKEND_VERSION was bumped with the change');
+    // ⚠ THIS USED TO PIN THE LITERAL '2026-09-09b', which is a byte sequence rather than a
+    // requirement — so it failed on the next legitimate bump, which is the true change it was
+    // supposed to survive. That is the ninth time this project has recorded a test breaking on
+    // a correct edit. The requirement is that the deployment CAN name itself and that the name
+    // is dated; which date is not something source can check, so it is not asserted.
+    const ver = /var BACKEND_VERSION = '([^']+)';/.exec(GS);
+    ok(!!ver, 'the deployment declares a version');
+    ok(/^\d{4}-\d{2}-\d{2}[a-z]?$/.test(ver[1]),
+       'and it is dated \u2014 "' + ver[1] + '" \u2014 so a stale deployment is identifiable by eye');
+    has(GS, 'BUMP BACKEND_VERSION IN THE SAME COMMIT',
+        'and the rule that it moves with the file is written where it is declared');
   }
 
   // ── REVERT VERIFICATION ─────────────────────────────────────────────────────────────

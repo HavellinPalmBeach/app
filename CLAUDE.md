@@ -213,6 +213,95 @@ they owe.**
   and playbook describe recording payments and the three stages, and state neither what the final
   reconciles against nor the Payment Summary's rows.
 
+## AN UNRELATED EDIT DESTROYED THE CHAIN OF CUSTODY (FIXED 2026-09-11)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs` AND `main-sync.gs`. The backend
+housekeeping that had been held for "the next real backend change" is **bundled into this one**,
+per the standing instruction: `saveEstimateToSheet` / `saveHoursToSheet` are deleted with their
+dispatch lines and their `BACKEND_TYPES` entries, and `BACKEND_VERSION` is `2026-09-11a`.
+
+- **⚠⚠ THE PER-ITEM MERGE TAKES THE WHOLE NEWER RECORD, WHICH IS RIGHT FOR A SCALAR AND
+  CATEGORICALLY WRONG FOR AN APPEND-ONLY LOG.** **Measured by driving the real `mergeMediaItems`,
+  not argued:** Ashley logs *Released · Sotheby's · 2026-09-10 · receipt SBY-4471* on the laptop;
+  Anthony, who has not synced, corrects the same item's FMV on the iPad; his record is newer, so
+  it wins whole and the custody log comes back **`[]`**. Two devices each logging one event keep
+  **one** of them. The estate agreement promises chain-of-custody tracking on every item of value,
+  and the record was one unrelated keystroke on the other device from being deleted.
+- **`mergeCustodyLogs` UNIONS BY EVENT IDENTITY.** `cid` is stamped at creation; an event written
+  before today has none and falls back to a value key (`action|party|date|method|receipt`).
+  **⚠ The value key can collapse two genuinely identical LEGACY events**, and that is the lesser
+  error: an invented duplicate on a chain of custody is a false statement about the estate, while
+  a legacy pair that identical almost certainly came from one origin. New events carry ids and are
+  never value-keyed — two real handovers to the same party on the same day stay two.
+- **⚠⚠ A VOID WINS OVER A LIVE COPY, AND THE CASE THAT MATTERS IS THE VOID ON THE *LOSING* SIDE.**
+  Union resurrects whatever either side removed — the same defect `deletedAt` exists to stop on the
+  items themselves — so `removeCustodyEvent` **tombstones rather than splices**. Ashley removes an
+  event at 10:00; Anthony edits the item's value at 10:05 without syncing, so his record is newer
+  and still holds it live; without the rule the removal is silently undone.
+- **⚠ AND THE FIRST VERSION OF THAT TEST COULD NOT FAIL — the eleventh time this file records it.**
+  Both its cases put the voided copy on the WINNING side, where the union takes it first anyway.
+  Reverting the rule left it green. **Caught by reverting, not by reading.**
+- **⚠⚠ REDOING IT PROPERLY THEN FOUND A REAL BUG IN MY OWN FIX.** `resolve` short-circuited with
+  `if (log.length === win.custodyLog.length && no === win.itemNo) return win;` — and a void on the
+  losing side **REPLACES an event without changing the length**, so the tombstone was computed and
+  thrown away. The short-circuit is gone: a contested item is copied, always. **A length check is
+  not a test for "unchanged".**
+- **⚠ THE WINNER IS COPIED, NEVER MUTATED.** One argument is normally `_photoRefs[jobId]` itself, so
+  writing the merged log onto the winner would edit the live store as a side effect of asking what
+  a merge would produce. Both inputs are asserted untouched.
+- **⚠ AN ISSUED `itemNo` SURVIVES FROM EITHER SIDE, and that is a second live defect off the same
+  line.** Only the losing record may have seen the number assigned; a winner without one goes back
+  through `_invAssignItemNos` and is issued a **NEW** number above the high-water mark — silently
+  renumbering an object a receipt already cites, which is exactly what the *Item numbers are
+  PERMANENT* section exists to prevent. It is never cleared through the UI, so keeping it is free.
+- **⚠ THE READING ORDER IS CHRONOLOGICAL, AND THE STORED ORDER IS NOT TOUCHED.** `custodyEvents`
+  sorts by the date the event HAPPENED (then by `at`, when it was recorded) — a union interleaves
+  two devices' events by arrival, which on a chain of custody reads as the object moving backwards
+  in time. **The merged ARRAY order is an implementation detail and the tests assert the SET**, or
+  they would pin which device synced last.
+- **⚠ THE ID CANNOT GO INTO THE MARKUP RAW.** A legacy event's identity is free text joined on a
+  NUL, and the first cut escaped for HTML and *then* for JS — the wrong order, since `esc`'s
+  `&#39;` is decoded by the HTML parser before the JS is parsed, so a party named *O'Hara & Sons*
+  broke out of the onclick's string. `_custodyHandle` is base64: opaque, attribute-safe,
+  string-safe, and round-tripped in a test against exactly that name.
+- **⚠ THERE WERE TWO CUSTODY COUNT SITES AND THE FIRST PASS FIXED ONE.** The row link and the
+  expanded item panel. The test found the other, which is why it asserts the **absence** of the raw
+  `(ref.custodyLog || []).length` read across the whole file rather than the presence of the fix.
+- **⚠ THE SERVER CARRIES THE SAME UNION, and fixing only the app would be worse than useless** —
+  the sheet is the durable store, so the event would be alive on two devices and dead in the
+  record. `tests/media-merge.test.js` drives BOTH implementations. **⚠ And "they agree" is not
+  "they are right": with the tombstone rule removed from `saveInventory.gs` alone the two still
+  agreed — on the wrong answer — because the app-side case put the void on the winning side. The
+  server's behaviour is now asserted absolutely as well as comparatively.**
+- **⚠ A PRE-EXISTING TEST PINNED `BACKEND_VERSION = '2026-09-09b'` AS A LITERAL** and broke on the
+  bump it existed to require — ninth time. It asserts the FORMAT (dated, so a stale deployment is
+  identifiable by eye) and that the bump rule is written where the constant is declared.
+- **⚠ NOT FIXED, AND WORTH KNOWING: A SCALAR ONE DEVICE HAS AND THE OTHER DOES NOT IS STILL LOST.**
+  Measured: `{authBy:'Tripp Butler', approvalDate:'2026-09-10'}` at `updatedAt 10` against
+  `{condition:'Good'}` at `20` merges to **just the condition** — the representative's recorded
+  release authority, gone, which also puts the item back on the approval request. Fixing it needs
+  per-field timestamps, which the schema does not have, and a blanket "keep the loser's non-empty
+  value" would break the documented *blank must stay blank* rule on FMV. Flagged rather than
+  guessed at. The custody log is fixed because there the correct merge is unambiguous.
+- **⚠ FOUND IN PASSING: `saveMediaStore` WRAPS EVERYTHING IN try/catch**, so a throw inside the
+  merge fails the whole save quietly. That is how a missing helper in the test sandbox read as a
+  sweep not running. Pre-existing; not changed here.
+- **3750 committed checks** (`tests/custody-log.test.js`, 49 new, plus 38 in `media-merge`).
+  **All thirteen changes revert-verified individually** — the app union fails 3, whole-record-wins
+  3, the tombstone 3, the item number 3, the no-mutation copy 1, the `cid` 4, the tombstone-not-
+  splice 3, the chronological order 2, the base64 handle 2, and the server's three 3/3/4. A
+  partial backend removal (types over-claiming the dispatch) fails 1.
+- **Verified end to end in headless Chromium on the real page**, driving the real modal and the real
+  form: two events recorded through it carry `cid` and `at`; the Sep 10 entry typed first renders
+  **below** the Sep 2 one; the real `mergeMediaItems` against a newer record with an empty log keeps
+  **both events** while the newer `fmv` of 52,000 still wins, and the input arrays are untouched;
+  removing one through the **rendered** handle (party *O'Hara & Sons (Sotheby's agent)*) leaves 2
+  stored, 1 live and 1 listed; and the removal survives a merge from a device that still has it
+  live. Overflow 0 at 1440 and 390px, no page errors.
+- Manual **§10a** (four notes — the measurement, the union, the tombstone, and the redeploy);
+  playbook a `.stop` correcting the 2026-08-24 claim that the merge *"keeps both sets of edits"*
+  (it did not, for this one field), a `.note` on removal, and **two** symptom→cause rows. Both
+  `.md` copies hand-edited and **17 claims parity-checked**; tag balance verified on both HTML files.
+
 ## A SPECIFIC BEQUEST WAS LISTED FOR AUCTION, AND THE PAGE DIDN'T SAY SO (FIXED 2026-09-11)
 Found by the code audit. App-only, no redeploy. **This is the document a personal representative
 signs to authorise property leaving the house.**
@@ -5488,6 +5577,14 @@ the QuickBooks posting layer is deliberately NOT, pending Laura's September char
   assumed a hoard-level volume score, and Havellin does not take hoards.
 
 ## Backlog / don't forget
+- ~~**HELD, ON PURPOSE — delete `saveEstimateToSheet` / `saveHoursToSheet` from `main-sync.gs`
+  with the NEXT real backend change.**~~ **DONE 2026-09-11**, bundled with the custody-log
+  redeploy exactly as this entry asked. Both functions, both dispatch lines and both
+  `BACKEND_TYPES` entries are gone; `BACKEND_VERSION` is `2026-09-11a`. The `Estimates` and
+  `Hours` TABS stay in `RESET_JOB_SHEETS` — an old deployment really did create them and a sheet
+  that still has one wants it cleared with the rest of the practice data. *Kept rather than
+  deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
+  Original note follows.
 - **HELD, ON PURPOSE — delete `saveEstimateToSheet` / `saveHoursToSheet` from `main-sync.gs`
   with the NEXT real backend change.** Both are dead: the app posts `saveAllEstimates` and
   `saveAllLogs`, and posts neither `type:'estimate'` nor `type:'hours'` anywhere (verified

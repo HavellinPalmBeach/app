@@ -259,8 +259,62 @@ function getMediaStore() {
 // an item missing from one side is one that side has not seen yet, which is why the
 // app writes a `deletedAt` tombstone instead of removing the row. Without tombstones
 // a union merge resurrects everything anyone has ever deleted, on the next sync.
+// ⚠⚠ A CHAIN-OF-CUSTODY EVENT IS APPEND-ONLY, AND "THE NEWER RECORD WINS" DESTROYED IT.
+// Resolving an item by taking the whole newer RECORD is right for a scalar and categorically
+// wrong for a LOG: one device logs "Released · Sotheby's · receipt SBY-4471", another corrects
+// the same item's value without having seen it, and the correction wins whole — the log comes
+// back empty. So the log is UNIONED by event identity rather than won.
+// ⚠ THIS IS THE SAME RULE AS mergeCustodyLogs / _custodyEventId IN havellin.html AND
+// tests/media-merge.test.js DRIVES BOTH AND ASSERTS THEY AGREE. Change one, change the other.
+function _custodyEventId(e) {
+  if (!e) return '';
+  if (e.cid) return 'id:' + e.cid;
+  var parts = [e.action, e.party, e.date, e.method, e.receipt];
+  for (var i = 0; i < parts.length; i++) parts[i] = String(parts[i] == null ? '' : parts[i]);
+  return 'v:' + parts.join('\u0000');
+}
+// A void wins over a live copy, or the union resurrects anything either side removed.
+function _mergeCustodyLogs(a, b) {
+  var out = [], at = {};
+  var take = function(list) {
+    for (var i = 0; i < (list || []).length; i++) {
+      var e = list[i];
+      if (!e) continue;
+      var id = _custodyEventId(e);
+      if (at[id] !== undefined) {
+        if (e.deletedAt && !out[at[id]].deletedAt) out[at[id]] = e;
+        continue;
+      }
+      at[id] = out.length;
+      out.push(e);
+    }
+  };
+  take(a); take(b);
+  return out;
+}
+
 function _mergeMediaItems(existing, incoming) {
   var byId = {}, order = [];
+  // The winner is COPIED, never mutated — `existing` is the store blob this function was
+  // handed, and writing the merged log onto it would edit the store as a side effect.
+  var resolve = function(win, lose) {
+    var log = _mergeCustodyLogs(win.custodyLog, lose.custodyLog);
+    // An issued item number is permanent. Only the losing side may have seen it assigned,
+    // and a winner without one is sent back through the app's backfill to be issued a NEW
+    // number — silently renumbering an object a receipt already cites.
+    var no = (parseInt(win.itemNo, 10) > 0) ? win.itemNo : lose.itemNo;
+    // ⚠ NO SHORT-CIRCUIT. The first cut returned `win` untouched when the merged log was
+    // the same LENGTH — which is not the same as unchanged: a void on the losing side
+    // REPLACES an event without adding one, so the tombstone was computed and then thrown
+    // away, and a removal made on one device was silently undone by the other. Found by
+    // reverting the tombstone rule and watching the test fail with the rule still in place.
+    // A contested item is copied, always; an uncontested one never reaches here.
+    var out = {};
+    for (var k in win) if (Object.prototype.hasOwnProperty.call(win, k)) out[k] = win[k];
+    if (log.length) out.custodyLog = log;
+    out.itemNo = no;
+    return out;
+  };
   var take = function(list) {
     for (var i = 0; i < (list || []).length; i++) {
       var it = list[i];
@@ -269,7 +323,7 @@ function _mergeMediaItems(existing, incoming) {
       if (!cur) { order.push(it.stableId); byId[it.stableId] = it; continue; }
       var a = Number(it.updatedAt || it.ts || 0);
       var b = Number(cur.updatedAt || cur.ts || 0);
-      if (a >= b) byId[it.stableId] = it;
+      byId[it.stableId] = (a >= b) ? resolve(it, cur) : resolve(cur, it);
     }
   };
   take(existing);

@@ -14,6 +14,7 @@ const INV_FNS = [
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
+  'mergeCustodyLogs', '_custodyEventId',
   '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
   '_apprGroups', '_apprWithheld', '_apprNFA',
   '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks', '_invHasValue',
