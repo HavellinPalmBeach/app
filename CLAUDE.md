@@ -70,6 +70,44 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## THE COURT INVENTORY STAMPED "FINAL" OVER A FLOOR (FIXED 2026-09-11)
+Found by the code audit, same document as the section below. App-only, no redeploy.
+
+- **⚠⚠ `section()` ADDS `parseFloat(r.fmv)` ONLY WHEN IT IS A NUMBER.** So an unvalued line
+  prints **"—"** in the value column and contributes **nothing** to the total — and the document
+  went out stamped **FINAL** with *"Reviewed and adopted by"* under it. A personal
+  representative adopting that files an understated §733.604 schedule, and the one thing on the
+  page that could have warned them said the opposite.
+- **⚠ THE APPRAISAL GUARDRAIL DID NOT COVER THIS AND MUST NOT BE CONFLATED WITH IT.** `draft` was
+  `formal && guard.length > 0`, and `_invGuardrailItems` answers a **valuation-support** question
+  — intrinsic category, over the threshold, no appraisal attached. **An ordinary chair with an
+  empty value is on nobody's worklist**, so it was reported nowhere. Same silent-omission shape
+  as the $900 shotgun.
+- **The rule is the one MAIV already follows, and the wording is deliberately the same: report a
+  floor and REFUSE TO CONCLUDE.** *"N items are recorded without a value and are NOT included
+  above, so this figure is a floor rather than a total"*, and the unvalued lines are **named**,
+  not merely counted — a count tells a reader something is wrong, a name tells them what to fix.
+- **⚠ `formal` GATES THE APPRAISAL HALF ONLY.** That is a documentation-standard question;
+  **arithmetic is not.** An unvalued line makes the schedule provisional on any estate.
+- **⚠⚠ AND A DRAFT IS NOT FOR ADOPTION — the signature block is withheld**, replaced by the
+  reason. Offering a rule to sign under a DRAFT stamp invites exactly the signature the stamp
+  exists to prevent.
+- **⚠ A RECORDED ZERO IS AN ANSWER AND A BLANK IS NOT** (`_invHasValue`), the same distinction
+  `moneyToNumber('')` exists for. Treating blank as 0 silently asserts the item is worthless;
+  treating 0 as blank makes a genuine nil answer un-finalisable. **Both directions are tested.**
+- **⚠ AND IT KEYS ON `_invOnProbateSchedule`, WHICH IS WHY THE TWO FIXES BELONG TOGETHER.** An
+  unvalued **Trust** item must not hold up the probate filing — that property is reported
+  elsewhere — but an unvalued **Exempt** one must, because the fix below put exempt property back
+  on this schedule. Both directions are tested.
+- **3415 committed checks** (17 new, driven on the real `printCourtInventory`). **All four
+  changes revert-verified** — dropping the unvalued reason fails **6**, restoring the signature
+  block fails 2, un-labelling the total fails 1, and treating a blank as a value fails **8**.
+- **Verified in headless Chromium**: a seeded estate with one unpriced credenza renders
+  **"DRAFT — 1 item not yet valued"**, a total headed *"Total recorded so far … not a complete
+  total"*, the credenza named beneath it, **no signature block**, and *"This schedule is not
+  ready to be adopted"* in its place. No page errors.
+- No document pass: neither the manual nor the playbook states when this document finalises.
+
 ## ASSET TRACK "EXEMPT" DELETED PROPERTY OFF THE COURT INVENTORY (FIXED 2026-09-11)
 Found by the code audit. App-only, no redeploy. **This document is signed by the personal
 representative and filed.**

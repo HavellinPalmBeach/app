@@ -16,7 +16,7 @@ const INV_FNS = [
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
   '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
   '_apprGroups', '_apprWithheld', '_apprNFA',
-  '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks',
+  '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks', '_invHasValue',
   'savePhotoRefs', '_warnPhotoStoreFull',
 ];
 const INV_VARS = [
@@ -315,6 +315,68 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         '⚠ the note names the track that is really there, not three that are not');
     has(ctx6.__printed, 'Exempt property is not excluded',
         'and says plainly that exempt property is not in this count');
+
+    // ── The FINAL stamp over an incomplete total ────────────────────────────
+    // ⚠⚠ `section()` adds `parseFloat(r.fmv)` only when it is a number, so an unvalued line
+    // prints "—" in the value column and contributes nothing — and the document went out
+    // stamped FINAL with a signature block under it. A PR adopting that files an
+    // understated §733.604 schedule, and the one thing on the page that could have warned
+    // them said the opposite. Same rule MAIV already follows: report a floor, refuse to
+    // conclude.
+    const ctx7 = courtCtx([
+      item({ objectName: 'Bronze', fmv: '8000' }),
+      item({ objectName: 'Unpriced credenza', fmv: '' }),
+    ]);
+    ctx7.printCourtInventory(1);
+    const out7 = ctx7.__printed;
+    lacks(out7, '>FINAL<', '⚠⚠ it does not read FINAL over a total that omits a line');
+    has(out7, 'DRAFT', 'it reads DRAFT');
+    has(out7, '1 item not yet valued', 'and says how many lines are missing a value');
+    has(out7, 'not a complete total', '⚠ the total says outright that it is not one');
+    has(out7, 'Unpriced credenza', 'and the unvalued line is NAMED, not just counted');
+    has(out7, 'floor rather than a total', 'in the language MAIV already uses');
+    lacks(out7, 'Reviewed and adopted by',
+          '⚠⚠ and the signature block is withheld — a draft is not for adoption');
+    has(out7, 'not ready to be adopted', 'with the reason stated in its place');
+
+    // ⚠ A RECORDED ZERO IS AN ANSWER AND A BLANK IS NOT. Treating blank as 0 would silently
+    // assert the item is worthless; treating 0 as blank would make a genuine nil answer
+    // un-finalisable. Both directions are wrong and both are checked.
+    const ctx8 = courtCtx([
+      item({ objectName: 'Bronze', fmv: '8000' }),
+      item({ objectName: 'Worthless bric-a-brac', fmv: '0' }),
+    ]);
+    ctx8.printCourtInventory(1);
+    has(ctx8.__printed, 'FINAL', '⚠ a recorded zero is a value — the schedule can be final');
+    lacks(ctx8.__printed, 'not yet valued', 'and is not reported as missing');
+    has(ctx8.__printed, 'Reviewed and adopted by', 'so the signature block stands');
+
+    // No regression: a fully valued estate still finalises and still invites adoption.
+    const ctx9 = courtCtx([ item({ objectName: 'Bronze', fmv: '8000' }) ]);
+    ctx9.printCourtInventory(1);
+    has(ctx9.__printed, 'FINAL', 'a complete schedule reads FINAL');
+    has(ctx9.__printed, 'Total tangible personal property', 'and its total is called a total');
+    has(ctx9.__printed, 'Reviewed and adopted by', 'with the adoption block present');
+
+    // ⚠ AN UNVALUED LINE THAT IS NOT ON THIS SCHEDULE MUST NOT HOLD IT UP. Trust property is
+    // reported elsewhere; blocking the probate filing on it would be the opposite error.
+    const ctx10 = courtCtx([
+      item({ objectName: 'Bronze', fmv: '8000' }),
+      item({ objectName: 'Trust painting', fmv: '', assetTrack: 'Trust' }),
+    ]);
+    ctx10.printCourtInventory(1);
+    has(ctx10.__printed, 'FINAL', '⚠ an unvalued Trust item does not make the probate schedule a draft');
+    lacks(ctx10.__printed, 'not yet valued', 'and is not counted against it');
+
+    // ⚠ AND EXEMPT PROPERTY IS ON THIS SCHEDULE, so an unvalued exempt line DOES hold it up —
+    // which is the whole point of putting exempt back on the schedule in the first place.
+    const ctx11 = courtCtx([
+      item({ objectName: 'Bronze', fmv: '8000' }),
+      item({ objectName: 'Unpriced suite', fmv: '', assetTrack: 'Exempt' }),
+    ]);
+    ctx11.printCourtInventory(1);
+    has(ctx11.__printed, '1 item not yet valued',
+        '⚠ an unvalued exempt line makes the schedule provisional too');
   }
 
   // ── Guard: the appraisal threshold has not silently moved ──────────────────

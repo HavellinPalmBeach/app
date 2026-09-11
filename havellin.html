@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:45am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:52am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15401,6 +15401,10 @@ function _invIsProbateAsset(ref) { var t = _invTrack(ref); return t === 'Probate
 // So: exempt is answered in ONE place whichever control was used, and the two genuinely
 // separate pots — Trust / Non-probate / Homestead — are what stays off the schedule.
 function _invIsExempt(ref) { return !!(ref && ref.flagExempt) || _invTrack(ref) === 'Exempt'; }
+// Does this line carry a value at all? ⚠ A RECORDED ZERO IS AN ANSWER AND A BLANK IS NOT —
+// the same distinction `moneyToNumber('')` exists for, and the reason *Items Awaiting
+// Valuation* counts what it does. Treating blank as 0 silently asserts the item is worthless.
+function _invHasValue(ref) { return !isNaN(parseFloat(ref && ref.fmv)); }
 // Names the tracks a set of excluded rows actually carries, rather than reciting a fixed
 // list — the court inventory's footnote used to claim "Trust / Non-probate / Homestead"
 // over a count that could contain none of them.
@@ -16654,8 +16658,29 @@ function printCourtInventory(jobId) {
   var items = _invAssignItemNos(jobId);
   var formal = isFormalDoc(job);
   var guard = _invGuardrailItems(jobId);
-  var draft = formal && guard.length > 0;
-  var status = draft ? 'DRAFT — ' + guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal' : 'FINAL';
+  // ⚠⚠ A TOTAL THAT OMITS LINES IS A FLOOR, AND A FLOOR STAMPED FINAL READS AS A CLEARANCE.
+  // `section()` adds `parseFloat(r.fmv)` only when it is a number, so an unvalued line
+  // contributes nothing to the total while printing "—" in the value column on the same
+  // page. Until 2026-09-11 that document went out stamped **FINAL** with a signature block
+  // under it: a personal representative adopting it files an understated §733.604 schedule,
+  // and the one thing on the page that could have warned them said the opposite.
+  //
+  // ⚠ THE APPRAISAL GUARDRAIL DID NOT COVER THIS and must not be conflated with it.
+  // `_invGuardrailItems` answers a VALUATION-SUPPORT question — intrinsic category, over the
+  // threshold, no appraisal attached. An ordinary chair with an empty value is on nobody's
+  // worklist and was reported nowhere. Same silent-omission shape as the $900 shotgun.
+  //
+  // This is the rule MAIV already follows and the wording is deliberately the same: while
+  // anything is blank the app reports a floor and REFUSES TO CONCLUDE. An unvalued line
+  // makes the schedule provisional whether or not the estate is on the formal standard —
+  // `formal` gates the appraisal half only, because that is a documentation-standard
+  // question; arithmetic is not.
+  var unvalued = items.filter(function(r){ return _invOnProbateSchedule(r) && !_invHasValue(r); });
+  var _draftWhy = [];
+  if (formal && guard.length) _draftWhy.push(guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal');
+  if (unvalued.length) _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
+  var draft = _draftWhy.length > 0;
+  var status = draft ? 'DRAFT — ' + _draftWhy.join(' \u00b7 ') : 'FINAL';
   var basis = resolveValBasis(job);
   var vdate = estateValueDate(job);
   var vdateStr = vdate ? fmtDate2(vdate) : '—';
@@ -16714,10 +16739,21 @@ function printCourtInventory(jobId) {
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
     + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
     + body
-    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">Total tangible personal property (' + esc(basis) + '): &nbsp;' + _invMoney(total) + '</div>'
+    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">'
+      + (unvalued.length ? 'Total recorded so far (' + esc(basis) + ') &mdash; not a complete total: &nbsp;' : 'Total tangible personal property (' + esc(basis) + '): &nbsp;')
+      + _invMoney(total) + '</div>'
+    + (unvalued.length
+        ? '<div style="font-size:10.5px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">'
+          + unvalued.length + ' item' + (unvalued.length > 1 ? 's are' : ' is') + ' recorded without a value and '
+          + (unvalued.length > 1 ? 'are' : 'is') + ' NOT included above, so this figure is a floor rather than a total: '
+          + esc(unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
+          + (unvalued.length > 6 ? ' and ' + (unvalued.length - 6) + ' more' : '') + '.</div>'
+        : '')
     + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
-    + '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>'
+    + (draft
+        ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; a final copy is issued once the outstanding items are valued.</div>'
+        : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
   _printDocument(html);
 }
