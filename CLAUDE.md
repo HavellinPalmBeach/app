@@ -1,5 +1,71 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ "APPS SCRIPT NEEDS REDEPLOYING" OVER A SCRIPT THAT HAD JUST RUN (FIXED 2026-09-11)
+Anthony, minutes after the fix above shipped, on a second photograph: **1 change not saved — Apps Script needs
+redeploying**, `saveAllJobPlans → main sheet`, reason **`Unknown action`**. App-only, no redeploy — which is
+the whole point, because the app was telling him to do one. **Read this with the section below it; the two
+reports are one cause wearing two faces.**
+
+- **⚠⚠ `Unknown action` IS EMITTED BY `doGet` AND BY NOTHING ELSE. `doPost`'s OWN FALLBACK NAMES THE TYPE.**
+  Grep `main-sync.gs`: the bare string is at **one** site, `doGet`'s fallback; the POST router answers
+  `'Unknown type: ' + type`. So a store write answered `Unknown action` **never reached the half of the script
+  that writes** — and, just as conclusively, **that deployment's `doGet` ran**, so it is not too old to know
+  `saveAllJobPlans`. The app read it as proof of the opposite and sent him to redeploy.
+- **⚠⚠ HOW A POST BECOMES A GET, because it looks impossible until you see it.** Apps Script answers a POST to
+  `/exec` with a **302**, and a 302 on a POST is followed as a **GET with the body dropped**. Normally the
+  `Location` is Google's `googleusercontent.com/macros/echo` URL, which replays the already-computed answer, so
+  the hop is invisible. When the request needs a Google **session**, the hop re-enters the web app instead — a
+  bare GET, no `action`, straight into `doGet`'s fallback. **The identical hop landing on a sign-in page is the
+  login/HTML error that produced the report below**, which is why both arrived on the same afternoon from the
+  same device. In both, the fix is the `/exec` URL in Settings and the deployment's **Who has access**, and in
+  both **a new version changes nothing**.
+- **⚠⚠ AND THE TEXT ALONE CANNOT SETTLE IT — WHAT WE SENT CAN, WHICH IS WHY THE BODY IS AN ARGUMENT NOW.**
+  `?action=createFolder` and `?action=version` are GETs the app makes **on purpose**, and `doGet` answering
+  *Unknown action* to one of those genuinely **is** a stale deployment — the backend-version banner has read it
+  that way since it was built. A store write carries a `type` and no `action`, and there the same words mean
+  the opposite thing. `_backendErrorKind(errText, fromServer, body)`: `type && !action` → **`route`**,
+  everything else keeps **`stale`**. **With no body the answer stays `stale`**, so every existing caller is
+  unmoved; the two that ask about an action now **declare it** (`{action:'createFolder'}`,
+  `{action:'htmlToPdf'}`) so the rule decides rather than the default.
+  - **⚠ I COLLAPSED THEM ON THE FIRST PASS AND `drive-folder.test.js` CAUGHT IT.** Reading every
+    *Unknown action* as `route` broke two pre-existing checks that the Drive-folder path says *redeploy* on a
+    genuinely old deployment — and they were **right**. A suite catching the over-correction is what stopped
+    the fix trading one wrong instruction for another.
+- **⚠ THIS IS THE 2026-09-01 DEFECT ONE LEVEL FINER.** That one stopped the app reading OUR OWN errors as a
+  verdict on the server (`fromServer`). This one stops it reading one of the SERVER's own sentences as a
+  verdict about the server's **version** when it is a statement about **routing**. Same rule both times:
+  **a claim about the deployment needs evidence that is actually about the deployment.**
+- **The chip says what has to change.** *"check the Apps Script URL and its access"*, and the note names the
+  three things worth looking at — the URL is the **jobs** script rather than the Vendor or Referral Partners
+  one (a directory URL pasted into the jobs field answers every store write with its own idea of unknown),
+  it ends in **`/exec`** and not `/dev`, and the deployment was published with **Who has access: Anyone**. It
+  states **RE-DEPLOYING WILL NOT FIX IT** outright, because the previous wording is what a reader will
+  remember. Held rather than hammered, like `stale` and `crash`: the same POST to the same URL does the same
+  thing.
+- **4331 committed checks** (13 new in `tests/sync-queue.test.js`). **All six changes revert-verified
+  individually** — the `route` rule and the classifier reading the body and the enqueue site's argument fail
+  **9** each, the chip branch 6, the Drive path's declared action 2, the retry site's argument 1.
+- **⚠ THREE PRE-EXISTING ASSERTIONS BROKE CORRECTLY AND ALL THREE ARE RESTATED, not deleted**: the flat
+  `eq(f('Unknown action', true), 'stale')`, and two byte-sequence pins on the classifier's call shape that
+  moved when it grew a third argument. Twelfth time this file records the byte-sequence pattern.
+- **Verified end to end in headless Chromium on the real page**, answering every POST exactly as his
+  deployment did:
+
+  | | old build | new build |
+  |---|---|---|
+  | kind | `stale` | `route` |
+  | chip head | *"1 change not saved — Apps Script needs redeploying"* | *"1 change not saved — check the Apps Script URL and its access"* |
+  | what it tells you to do | *Deploy → Manage deployments → New version* | the URL, `/exec` vs `/dev`, and the access setting |
+  | `createFolder` / store write / `Unknown type` | `stale` / **`stale`** / `stale` | `stale` / **`route`** / `stale` |
+
+  The old build reproduces his screenshot word for word. Overflow **0** at 1440 and 390px, no page errors.
+- Manual **§2** — **the existing chip note said *Apps Script needs redeploying* appears on
+  `Unknown type/action`, and that sentence is now FALSE**; corrected to `Unknown type: <name>` with the reason
+  beside it, plus a new note. Playbook **two** symptom→cause rows, deliberately adjacent so the two wordings
+  are told apart on the page. Both `.md` copies hand-edited and **15 claims parity-checked**; tag balance
+  verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1),
+  rendered at 1440/390 with **0 overflow** and **all 41 tables full-width under `print`**.
+
 ## ⚠⚠ "2 UNSAVED CHANGES — RETRYING…" THAT NEVER CLEARED — THE RETRY WAS CAUSING IT (FIXED 2026-09-11)
 Anthony, from a job site, on a photograph of the chip: **`saveAllJobPlans` and `saveAllJobs`**, both held,
 both reading *"the web app returned a login/HTML page, not data"*. App-only, no redeploy.

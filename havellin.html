@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 5:21pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11762,7 +11762,7 @@ function docPdfBase64(spec, html, cb) {
     // which is undefined, and answers "Unknown type: undefined". `_backendErrorKind`
     // already reads that as `stale`, so the app can say "redeploy" rather than "it failed".
     var err = (d && d.error) || 'The PDF conversion failed.';
-    cb(null, err, _backendErrorKind(err, !(d && d.clientError)));
+    cb(null, err, _backendErrorKind(err, !(d && d.clientError), { action: 'htmlToPdf' }));
   }, true);
 }
 
@@ -19284,6 +19284,14 @@ function _pendingChipCopy() {
       note: 'The deployed Apps Script is older than this app. Re-deploy it (Extensions \u2192 Apps Script \u2192 Deploy \u2192 Manage deployments \u2192 New version), then press Try again.'
     };
   }
+  if (keys.some(function(k){ return _pendingWrites[k].kind === 'route'; })) {
+    // The write reached the script's GET router. That is a transport answer, not a
+    // version one, and prescribing a redeploy here is worse than saying nothing.
+    return {
+      head: '\u26a0 ' + changes + ' not saved \u2014 check the Apps Script URL and its access',
+      note: 'The script answered "Unknown action", which only its GET router says \u2014 so the save never reached the part that writes, and RE-DEPLOYING WILL NOT FIX IT. Check three things under Settings \u2192 Google Sheets Sync: the URL is the jobs script (not the Vendor or Referral Partners one), it ends in /exec rather than /dev, and the deployment was published with "Who has access: Anyone". Then press Try again. Nothing is lost in the meantime.'
+    };
+  }
   if (anyCrash) {
     // The server threw. It MAY be a half-applied paste and it may equally be a live bug
     // on a current deployment, so report what happened and prescribe nothing.
@@ -19427,7 +19435,7 @@ function flushPendingWrites() {
         // showed the old reason.
         w.tries = (w.tries || 0) + 1;
         w.lastError = (res && res.error) || w.lastError || '';
-        w.kind = _backendErrorKind(res && res.error, true);
+        w.kind = _backendErrorKind(res && res.error, true, w.body);
         w.blocked = w.kind !== '';
       })
       .catch(function(e){
@@ -19523,8 +19531,29 @@ function queuedPostSync(body, okMsg, failMsg) {
 // one piece nobody could read. Reported 2026-08-24 after a redeploy that half-landed.
 // Three outcomes, and only ONE of them is evidence that the deployed script is older
 // than the app:
-//   'stale' — the server answered "Unknown type/action". That IS proof: the dispatch
-//             line for this write is not in the deployment, so a redeploy is the fix.
+//   'stale' — the server answered "Unknown type: X". That IS proof: the dispatch line
+//             for this write is not in the deployment, so a redeploy is the fix.
+//   'route' — "Unknown action" in reply to a STORE WRITE. ⚠⚠ THAT STRING IS EMITTED BY
+//             doGet AND BY NOTHING ELSE — doPost's own fallback says "Unknown type: X" —
+//             so a POST carrying a `type` that comes back with it never reached the part
+//             of the script that WRITES. Apps Script answers a POST to /exec with a 302,
+//             and a 302 on a POST is followed as a GET with the body dropped; that
+//             normally lands on Google's echo URL and replays the stored answer, but when
+//             the request needs a Google session the hop re-enters the web app as a bare
+//             GET instead — doGet, with no action, i.e. this. The SAME hop landing on a
+//             sign-in page is the login/HTML error in _readAppsScriptJson, so the two are
+//             one cause wearing two faces. A REDEPLOY DOES NOT FIX IT; the /exec URL in
+//             Settings and the deployment's "Who has access" do. Reported 2026-09-11 on
+//             saveAllJobPlans, with the app telling him to redeploy.
+//
+// ⚠⚠ AND THE TEXT ALONE CANNOT TELL THE LAST TWO APART — WHAT WE SENT CAN, so the body is
+// the third argument. `?action=createFolder` and `?action=version` are GETs the app makes
+// on purpose, and doGet answering "Unknown action" to one of those IS a stale deployment,
+// exactly as the backend-version banner reads it. A store write carries a `type` and no
+// `action`, and for that the same words mean the opposite thing. Collapsing them is how
+// the Drive-folder path would start telling people the URL was wrong when the deployment
+// really was old; drive-folder.test.js is what caught it. With no body the answer stays
+// 'stale', so every caller that hands an `action` keeps the reading it always had.
 //   'crash' — the server threw (ReferenceError / TypeError). A half-applied paste looks
 //             like this, but so does a live bug on a perfectly current deployment, so
 //             this must NOT assert a redeploy. Print what the server said instead.
@@ -19537,16 +19566,24 @@ function queuedPostSync(body, okMsg, failMsg) {
 // sent the user off to redeploy an Apps Script that was never the problem. Reported
 // 2026-09-01: "got this error when saving a new vendor. we haven't changed the apps
 // script for a re-deploy i dont think."
-function _backendErrorKind(errText, fromServer) {
+function _backendErrorKind(errText, fromServer, body) {
   if (!fromServer) return '';
   var s = String(errText || '');
-  if (/unknown (type|action)/i.test(s)) return 'stale';
+  if (/unknown type/i.test(s)) return 'stale';
+  // ⚠ This used to fall into 'stale' with the line above, so the app told people to
+  // redeploy a script that had just executed — the same misdiagnosis as 2026-09-01, one
+  // level finer. checkBackendVersion is unaffected: it reads d.ok/d.version directly and
+  // never asks this function, so an old deployment answering its GET probe still raises
+  // the out-of-date banner.
+  if (/unknown action/i.test(s)) {
+    return (body && body.type && !body.action) ? 'route' : 'stale';
+  }
   if (/is not defined|not a function/i.test(s)) return 'crash';
   return '';
 }
 
 function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded, fromServer) {
-  var kind = _backendErrorKind(errText, fromServer);
+  var kind = _backendErrorKind(errText, fromServer, body);
   var stale = kind !== '';
   var key = _writeKey(body, target);
   // ⚠ A newer snapshot supersedes an older queued one — but the FAILURE COUNT carries
@@ -25489,7 +25526,7 @@ function createDriveJobFolder(job) {
     // and do nothing at all. The server's own words are passed through, because a
     // sentence with no cause in it is what made "still no PDF" take three rounds.
     var err = (data && (data.error || data.message)) || 'the server returned no folder';
-    _driveFolderFailed(job, _backendErrorKind(err, true) === 'stale'
+    _driveFolderFailed(job, _backendErrorKind(err, true, { action: 'createFolder' }) === 'stale'
       ? 'the Apps Script deployment does not know this action \u2014 redeploy it (Deploy \u2192 Manage deployments \u2192 New version)'
       : 'the server refused', err);
     openClientDashboard(job.id);

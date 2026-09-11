@@ -23,7 +23,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // 'stale' is a CLAIM about the deployment, so it needs the server's own words.
     eq(f('Unknown type: saveMedia', true), 'stale', 'an unknown POST type is proof of a stale deployment');
-    eq(f('Unknown action', true), 'stale', 'so is an unknown GET action');
+    // ⚠⚠ "Unknown action" USED TO BE READ AS STALE TOO, and half the time that is wrong.
+    // Reported 2026-09-11: saveAllJobPlans came back with it and the chip said "Apps Script
+    // needs redeploying" over a deployment that had just executed. Only doGet emits that
+    // string — doPost's fallback names the type — so a POST answered with it never reached
+    // the writing half of the script at all, and a redeploy changes nothing.
+    // ⚠ THE TEXT CANNOT SETTLE IT; WHAT WE SENT CAN, which is why the body is an argument.
+    eq(f('Unknown action', true, { action: 'createFolder' }), 'stale',
+       'an action WE asked for that doGet does not know really is an old deployment');
+    eq(f('Unknown action', true, { action: 'version' }), 'stale', 'same for the version probe');
+    eq(f('Unknown action', true, { type: 'saveAllJobPlans', payload: {} }), 'route',
+       'but a store write answered by the GET router was MIS-ROUTED, not out of date');
+    eq(f('Unknown action', true), 'stale',
+       'with nothing to go on it keeps the old reading, so every existing caller is unmoved');
+    eq(f('Unknown type: saveAllJobPlans', true, { type: 'saveAllJobPlans' }), 'stale',
+       'and a named unknown type is still proof of staleness whatever the body says');
 
     // A server crash is held (retrying it is pointless) but is NOT proof of staleness —
     // a live bug on a current deployment throws exactly the same shape. Reported
@@ -56,8 +70,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const enq = src.slice(src.indexOf('function _enqueueWrite('));
     const body = enq.slice(0, enq.indexOf('\n}\n'));
-    has(body, 'var kind = _backendErrorKind(errText, fromServer);',
-        'the classifier is given the provenance, not just the text');
+    has(body, 'var kind = _backendErrorKind(errText, fromServer, body);',
+        'the classifier is given the provenance AND what was sent, not just the text');
     has(body, 'lastError: errText', 'the reason is stored on the write, not just toasted');
     has(body, 'blocked: stale', 'and the write is marked blocked');
     has(body, 'if (!stale) _scheduleRetry();',
@@ -100,8 +114,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const src = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8');
     const fl = src.slice(src.indexOf('function flushPendingWrites('));
     const body = fl.slice(0, fl.indexOf('\n}\n'));
-    has(body, 'w.kind = _backendErrorKind(res && res.error, true);',
-        'each attempt reclassifies against what the server said THIS time');
+    has(body, 'w.kind = _backendErrorKind(res && res.error, true, w.body);',
+        'each attempt reclassifies against what the server said THIS time, for what we sent');
     has(body, "w.kind = '';", 'and a thrown error clears the block so it keeps retrying');
     has(body, 'return !_pendingWrites[key].blocked;',
         'a queue of nothing but blocked writes stops scheduling retries');
@@ -154,7 +168,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     enqueue('saveAllJobs', 'Failed to fetch', true);
     has(ctx._pendingChipCopy().head, 'retrying', 'a network drop keeps retrying');
 
-    // 5. One blocked write among several still surfaces the blocker, and the count is
+    // 5. THE 2026-09-11 REPORT: a store write answered by the GET router. The old build
+    //    said "Apps Script needs redeploying" here, which is the wrong instruction — the
+    //    script ran, the request simply never got to the half that writes.
+    ctx._pendingWrites = {};
+    scheduled.length = 0;
+    enqueue('saveAllJobPlans', 'Unknown action', true);
+    const routed = ctx._pendingChipCopy();
+    has(routed.head, 'Apps Script URL and its access', 'it names the URL and the access setting');
+    lacks(routed.head, 'needs redeploying', 'and does NOT send anyone to redeploy');
+    lacks(routed.note, 'New version', 'the note does not prescribe a redeploy either');
+    has(routed.note, 'RE-DEPLOYING WILL NOT FIX IT', 'it says so outright');
+    has(routed.note, '/exec', 'and names the three things to check: the URL form');
+    has(routed.note, 'Who has access', 'the deployment access');
+    has(routed.note, 'Vendor', 'and that it must be the jobs script, not a directory one');
+    has(routed.note, 'Nothing is lost', 'while saying the work is still held');
+    eq(scheduled.length, 0, 'it is held rather than hammered — the same POST will do the same thing');
+
+    // 6. One blocked write among several still surfaces the blocker, and the count is
     //    of everything outstanding — the chip is the only place the total is shown.
     ctx._pendingWrites = {};
     scheduled.length = 0;
