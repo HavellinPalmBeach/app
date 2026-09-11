@@ -218,7 +218,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_invMoney', 'printCourtInventory', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
-      '_invGuardrailItems', '_invHasAppraisal', '_jobAppraisers',
+      '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
     ]);
     const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED']);
 
@@ -396,7 +396,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the appraisal guardrail lets you link an appraiser from the panel');
   {
     const g = sandbox({
-      fns: ['_renderAppraisalGuardrail', '_invGuardrailItems', '_invHasAppraisal',
+      fns: ['_renderAppraisalGuardrail', '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal',
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
@@ -759,7 +759,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(v._invPanelSection({ key: 'gross', group: 'disp' }), 'disp', 'otherwise the column group decides');
 
     // The EXPORT is unaffected — the workbook always carries every column.
-    eq(v.INVENTORY_COLUMNS.length, 30, 'the manifest is 30 columns wide on export');
+    // ⚠ THIS PINNED A LITERAL 30 AND BROKE CORRECTLY when Needs Appraisal was added on
+    // 2026-09-11. A count is not the requirement; what matters is that every column reaches the
+    // workbook and that the backend can still address the last one, since `_invColLetter` has a
+    // single-letter path that stops working past 26. Stated as the rule rather than the number.
+    ok(v.INVENTORY_COLUMNS.length > 26,
+       'the manifest is past column Z, so the backend\u2019s multi-letter path is live');
+    eq(v.INVENTORY_COLUMNS.filter((c) => !c.key || !c.header).length, 0,
+       'every exported column carries a key and a header the backend resolves it by');
+    eq(new Set(v.INVENTORY_COLUMNS.map((c) => c.header)).size, v.INVENTORY_COLUMNS.length,
+       '⚠ and every header is unique — the backend looks columns up BY HEADER, so a duplicate '
+       + 'silently writes one column into another\u2019s place');
 
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
     lacks(src, 'function setInvView', 'the column-group switcher is deleted, not hidden');

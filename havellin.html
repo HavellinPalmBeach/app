@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 3:09pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 4:31pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15338,6 +15338,44 @@ function invNeedsAppraisal(ref, job){
   var v = parseFloat(ref.fmv);
   return isNaN(v) || v >= invAppraisalThreshold(job);
 }
+// ⚠ "NEEDS AN APPRAISAL" AND "IS STILL WAITING FOR ONE" ARE DIFFERENT QUESTIONS, and three
+// surfaces each answered the second one in their own words — the guardrail panel, the row
+// badge, and (not at all) the release approval request. invNeedsAppraisal says the object
+// warrants a specialist; this says nobody has been engaged and nobody has waived it. ONE
+// definition, so the badge on screen, the panel that chases it and the document that releases
+// the property cannot disagree about whether an item is still outstanding.
+function invAwaitingAppraisal(ref, jobId) {
+  if (!ref) return false;
+  // ⚠ NO JOB MEANS NO ANSWER, AND SILENCE IS THE SAFE ONE — a false positive here cries
+  // wolf on a release document. Both halves below need the job: invNeedsAppraisal resolves the
+  // threshold THIS estate is on (G6 halves it on a dispute), and _invHasAppraisal reads its
+  // appraiser roster — so without one an item that IS linked reads as unlinked and an item on
+  // a disputed estate is evaluated at the ordinary $3,000. Guessing either is worse than going
+  // quiet, and a badge that fires on rows a specialist already has is a badge people stop reading.
+  var job = _invJob(jobId);
+  if (!job) return false;
+  if (!invNeedsAppraisal(ref, job)) return false;
+  return !_invHasAppraisal(jobId, ref) && !ref.apprWaived;
+}
+
+// ⚠⚠ APPRAISE IS DELIBERATELY NOT ON THIS LIST, AND ADDING IT WOULD BE A CATEGORY ERROR.
+// Every value here is a terminal DESTINATION; an appraisal is the step BEFORE one. Anthony,
+// asking for it: "it might have two disposition avenues. First, appraise, then auction,
+// consign, or sell." That is exactly right, and it is why appraise cannot be one of these —
+// an item parked under an "Appraise" heading would carry no recorded destination, and the day
+// the valuation lands somebody has to remember to come back and move it.
+//
+// The app already models the two avenues: an item carries a disposition AND `needsAppr` at the
+// same time, and invAwaitingAppraisal above is what says the second one is still open. What was
+// missing was never a chip — it was that the flag could not be SET by a person (see the
+// Needs Appraisal column and the Job Plan capture card) and that nothing downstream said an
+// item was still waiting on one (see INV_RELEASE_CAUTIONS).
+//
+// It would also force a wrong answer on INV_RELEASE_DISPOSITIONS, which asks "is the property
+// leaving?" — an item does often leave for appraisal, so either answer there is wrong
+// somewhere, and INV_GROUP_ORDER, the bulk bar, the ledger and the client workbook's FMV-by-
+// disposition rollup all key on this list. CLAUDE.md records the app's and the backend's copies
+// of it drifting 5-against-7 once already.
 var INV_DISPOSITIONS = ['Auction','Consign','Donate','Hold','Junk','Keep','Sell'];
 
 // ── Marked artistic or intrinsic value (Treas. Reg. §20.2031-6(b)) ────────────
@@ -15495,6 +15533,31 @@ function _selectInvDisp(btn, jobId, roomIdx) {
   });
 }
 
+// The sentence under the Appraise toggle. ⚠ IT REPORTS, IT DOES NOT INSTRUCT: on an intrinsic
+// category the item is ALREADY bound for the worklist (invNeedsAppraisal fires on the category
+// plus a blank value), and the crew pressing the toggle for it is harmless but pointless. Saying
+// nothing there is what made the whole track look absent — it has been running silently since
+// it was built.
+function _invApprNoteText(cat) {
+  return invIsIntrinsic(cat)
+    ? '&#10003; ' + esc(cat) + ' already goes to the appraisal worklist.'
+    : 'Tick for anything that should be valued by a specialist.';
+}
+function _paintInvApprNote(jobId, roomIdx) {
+  var noteEl = document.getElementById('inv-appr-' + jobId + '-r' + roomIdx + '-note');
+  var catEl = document.getElementById('inv-cat-' + jobId + '-r' + roomIdx);
+  if (noteEl && catEl) noteEl.innerHTML = _invApprNoteText(catEl.value || INV_DEFAULT_CATEGORY);
+}
+// Bronze when on, matching the "⚑ appraise" badge the row wears on the Inventory tab. A fact
+// painted one colour where it is entered and another where it is read is two opinions of it.
+function _selectInvAppr(btn, jobId, roomIdx) {
+  var on = !btn.dataset.on;
+  btn.dataset.on = on ? '1' : '';
+  btn.style.background = on ? 'var(--bronze)' : 'var(--cream)';
+  btn.style.color = on ? 'var(--cream)' : 'var(--gray)';
+  btn.style.borderColor = on ? 'var(--bronze)' : 'var(--border-md)';
+}
+
 function _renderRoomInventoryCapture(jobId, roomIdx) {
   var nameId = 'inv-name-' + jobId + '-r' + roomIdx;
   var catId  = 'inv-cat-'  + jobId + '-r' + roomIdx;
@@ -15511,10 +15574,29 @@ function _renderRoomInventoryCapture(jobId, roomIdx) {
   var chips = INV_DISPOSITIONS.map(function(d){
     return '<button type="button" data-disp="' + esc(d) + '" onclick="_selectInvDisp(this,' + jobId + ',' + roomIdx + ')" style="' + chipStyle + '">' + esc(d) + '</button>';
   }).join('');
+  // ⚠⚠ APPRAISE IS NOT A CHIP, AND THAT IS THE DESIGN — see INV_DISPOSITIONS. It is a
+  // SECOND, INDEPENDENT answer, because the two are not alternatives: the crew standing in the
+  // room can know both that this is going to auction and that nobody knows what it is worth.
+  // Reported by Anthony from the field — "the only disposition avenues are auction, consign,
+  // donate, hold, junk, keep, or sell, and we need appraisal in there too" — and he is right
+  // that it was unreachable: `needsAppr` had ONE writer in the entire file, the collector-vehicle
+  // import, so no person could set it anywhere.
+  //
+  // It is a toggle rather than a chip so it cannot deselect a disposition, and it sits on its own
+  // line under them with the automatic rule spelled out beside it, because the commonest case is
+  // that the category has ALREADY put the item on the worklist and the crew has no way to know.
+  var apprId = 'inv-appr-' + jobId + '-r' + roomIdx;
   return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">'
     + '<input type="text" id="' + nameId + '" placeholder="Object name (e.g. Tiffany lamp)" style="' + fieldStyle + '">'
-    + '<select id="' + catId + '" style="' + fieldStyle + '">' + catOpts + '</select>'
+    + '<select id="' + catId + '" onchange="_paintInvApprNote(' + jobId + ',' + roomIdx + ')" style="' + fieldStyle + '">' + catOpts + '</select>'
     + '<div id="' + dispId + '" data-disp="" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;">' + chips + '</div>'
+    + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">'
+      + '<button type="button" id="' + apprId + '" data-on="" onclick="_selectInvAppr(this,' + jobId + ',' + roomIdx + ')" '
+      + 'title="Send this item to a specialist for valuation. It keeps whatever disposition you picked above." '
+      + 'style="' + chipStyle + '">&#9873; Appraise</button>'
+      + '<span id="' + apprId + '-note" style="font-size:9.5px;color:var(--gray);line-height:1.3;flex:1 1 120px;min-width:0;">'
+      + _invApprNoteText(INV_DEFAULT_CATEGORY) + '</span>'
+    + '</div>'
     + '<label style="' + btnStyle + '">'
     + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
     + 'onchange="attachJobPlanInventoryPhoto(this,' + jobId + ',' + roomIdx + ')">'
@@ -15548,6 +15630,10 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
   var category = (catEl && catEl.value) || INV_DEFAULT_CATEGORY;
   var dispEl = document.getElementById('inv-disp-' + jobId + '-r' + roomIdx);
   var disposition = (dispEl && dispEl.dataset.disp) || '';
+  // The explicit field answer. The automatic category rule still applies on top of it, so
+  // leaving this off never takes an intrinsic item off the worklist.
+  var apprEl = document.getElementById('inv-appr-' + jobId + '-r' + roomIdx);
+  var needsAppr = !!(apprEl && apprEl.dataset.on);
   var ts = Date.now();
   var cleanRoom = _cleanName(roomName);
   var cleanObj = _cleanName(objectName) || ('Item' + seq);
@@ -15562,11 +15648,19 @@ function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
       var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_INV_' + cleanCat + '_' + cleanObj + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
       var ref = { stableId:stableId, roomIdx:roomIdx, label:'inventory', seq:seq, collId:null,
                   objectName:objectName, category:category, disposition:disposition,
+                  needsAppr:needsAppr,
                   filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
       _setPhotoRef(jobId, ref);
       savePhotoRefs(jobId);
       _photoRetryData[stableId] = dataUrl;
       if (nameEl) nameEl.value = '';
+      // ⚠ THE TOGGLE RESETS WITH THE NAME AND THE DISPOSITION DOES NOT, and that asymmetry is
+      // deliberate rather than an oversight. A disposition is a standing answer about the room
+      // being worked — a whole shelf going to auction is one decision made once — whereas
+      // "send this one to a specialist" is a judgement about the single object in front of you.
+      // Leaving it latched would silently flag every subsequent shot in the room for appraisal,
+      // which is the intake-checkbox leak this file already records once.
+      if (apprEl && apprEl.dataset.on) _selectInvAppr(apprEl, jobId, roomIdx);
       _updateRoomInventoryEl(jobId, roomIdx);
       _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
         _updateRoomInventoryEl(jobId, roomIdx);
@@ -15692,6 +15786,13 @@ var INVENTORY_COLUMNS = [
   {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date',      group:'val'},
   {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select',    group:'val'},
   {key:'valNote',      header:'Valuation Basis / Comps', kind:'manage', edit:'text',   group:'val'},
+  // ⚠ UNTIL 2026-09-11 `needsAppr` HAD EXACTLY ONE WRITER IN THE WHOLE FILE — the collector-
+  // vehicle import — so there was no way for a PERSON to say "this needs an appraisal" at all.
+  // The automatic rule (intrinsic category, no value or over the threshold) covers art, jewelry
+  // and silver; it cannot cover the period side table, the unmarked bronze or the collection the
+  // estimator flagged by name. This column is that control, and the Job Plan capture card is the
+  // field half of it.
+  {key:'needsAppr',    header:'Needs Appraisal',     kind:'manage',  edit:'flag',      group:'val'},
   {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage',  edit:'text',      group:'val'},
   {key:'flagMAIV',     header:'MAIV §20.2031-6',     kind:'manage',  edit:'maivSelect',    group:'flags'},
   {key:'maivCat',      header:'MAIV Class',          kind:'manage',  edit:'maivCatSelect', group:'flags'},
@@ -16436,8 +16537,8 @@ function _invEdit(jobId, stableId, key, el) {
   if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','flagMAIV','maivCat','disposition','category','qty'].indexOf(key) >= 0) {
     _invRefreshSummary(jobId);
   }
-  // FMV / category changes can move an item in or out of the appraisal guardrail.
-  if (key === 'fmv' || key === 'category') _invRefreshGuardrail(jobId);
+  // FMV / category / the flag itself can move an item in or out of the appraisal guardrail.
+  if (key === 'fmv' || key === 'category' || key === 'needsAppr') _invRefreshGuardrail(jobId);
   // Forcing MAIV on or off changes whether the class beside it is editable at all, so
   // that row has to be redrawn rather than left showing a control that no longer applies.
   // Changing the disposition moves the item into a different section, and changing the
@@ -16987,8 +17088,16 @@ function _invAwaitingApproval(jobId) {
 // ⚠ EVERY STRING HERE IS NUMBER-NEUTRAL, deliberately. The notice names one item or nine, and
 // a body built round "is"/"are" or "it"/"them" reads as broken English on whichever case the
 // author was not picturing. State the rule about the property, then name the lines.
+//
+// ⚠⚠ A CAUTION IS A TEST, NOT A FIELD NAME — CHANGED 2026-09-11 and the reason is the third
+// entry. Bequest and dispute are booleans sitting on the row; "still waiting on an appraisal" is
+// DERIVED (category, value, the threshold this estate is on, whether a specialist is linked,
+// whether it was waived), so a catalogue keyed on `ref[c.key]` could not express it and the
+// question was therefore asked on this document not at all. `key` survives as the identity
+// string the tests and the bulk bar name it by; `test` is what actually decides.
 var INV_RELEASE_CAUTIONS = [
   { key: 'flagBequest', badge: 'SPECIFIC BEQUEST', tone: '#8a5a1e',
+    test: function(r){ return !!r.flagBequest; },
     head: 'Specific bequests on this request',
     body: 'Property named in a specific bequest is left by the will to a particular person, and '
         + 'Havellin\u2019s engagement is to set it aside rather than dispose of it. It is on this '
@@ -16998,22 +17107,54 @@ var INV_RELEASE_CAUTIONS = [
         + 'one Havellin makes. <strong>Confirm it with counsel before initialling.</strong> To take '
         + 'a line off this request instead, ask your concierge to set its disposition to Keep or Hold.' },
   { key: 'flagDisputed', badge: 'DISPUTED', tone: '#A32D2D',
+    test: function(r){ return !!r.flagDisputed; },
     head: 'Disputed property on this request',
     body: 'A recorded dispute means beneficiaries disagree about what happens to the property. '
         + 'Havellin holds disputed property and takes direction from you alone — nothing moves on '
         + 'a verbal request from anyone, family included. <strong>Initialling a line below is your '
         + 'written instruction to release it notwithstanding the dispute.</strong>' },
+  // ⚠⚠ AND THIS ONE IS THE DEFECT THE OTHER TWO ALREADY TAUGHT US ABOUT. Until today
+  // _invAwaitingApproval filtered on disposition-plus-no-approval-date and consulted the
+  // appraisal track NOWHERE, so an object the app itself had flagged for a specialist — sitting
+  // on the Appraisal Worklist, wearing a "⚑ appraise" badge on screen, with no value on record
+  // — printed on this request with Auction proposed and an initial box beside it, and the
+  // document never said it had not been valued. The representative initials it and it leaves the
+  // property unvalued. Byte-for-byte the shape of the bequest defect fixed earlier today.
+  //
+  // ⚠ IT FLAGS AND EXPLAINS; IT NEVER REFUSES AND NEVER WITHHOLDS THE LINE — the firearms
+  // rule and the bequest rule, for the third time. Selling before a formal appraisal is often
+  // correct: a dealer's offer may be the market test, the estate may need the cash, the item may
+  // be below any threshold that matters. That is the representative's call on counsel's advice.
+  // What must never happen again is the app asking for an initial while staying quiet about it.
+  //
+  // It sorts LAST because the two above are questions about AUTHORITY — whether this is the
+  // estate's property to sell at all — and this one is about PRICE, which only arises once the
+  // answer to that is yes.
+  { key: 'needsAppraisal', badge: 'NOT YET APPRAISED', tone: '#8a5a1e',
+    test: function(r, jobId){ return invAwaitingAppraisal(r, jobId); },
+    head: 'Property on this request has not been valued yet',
+    body: 'These lines are flagged for a specialist appraisal and no appraiser has been engaged '
+        + 'and no waiver recorded. Releasing property before it is valued is a decision you can '
+        + 'properly make — a dealer\u2019s offer may itself be the market test, and not every '
+        + 'article warrants a formal appraisal — but the estate then has no independent record '
+        + 'of what the property was worth when it left. <strong>On an estate filing a federal '
+        + 'return that figure is reported under oath.</strong> Ask your concierge for the '
+        + 'Appraisal Worklist if you want these valued first.' },
 ];
 // DOM-free, so the tests read the real rule rather than grepping rendered HTML.
-function invReleaseCautions(ref) {
+// ⚠ `jobId` IS OPTIONAL AND ITS ABSENCE IS NOT A BUG. The two flag cautions are answerable
+// from the row alone; the appraisal one is not, and a caller with no job in hand must get
+// silence rather than a guess — invAwaitingAppraisal resolves the estate's own threshold and
+// its appraiser roster, and inventing either would report the wrong answer confidently.
+function invReleaseCautions(ref, jobId) {
   if (!ref) return [];
-  return INV_RELEASE_CAUTIONS.filter(function(c){ return !!ref[c.key]; });
+  return INV_RELEASE_CAUTIONS.filter(function(c){ return !!c.test(ref, jobId); });
 }
 // The badge that rides the item's own row. A reader working down a list initialling lines has
 // to meet this IN the line — a note under the table is read after the signature it needed to
 // come before.
-function _invCautionBadges(ref) {
-  return invReleaseCautions(ref).map(function(c){
+function _invCautionBadges(ref, jobId) {
+  return invReleaseCautions(ref, jobId).map(function(c){
     return '<div style="font-size:9.5px;font-weight:700;letter-spacing:.4px;color:' + c.tone + ';margin-top:2px;">'
       + '&#9888; ' + esc(c.badge) + '</div>';
   }).join('');
@@ -17021,9 +17162,9 @@ function _invCautionBadges(ref) {
 // ⚠ THE NOTICE NAMES THE OBJECTS AND THEIR ITEM NUMBERS, never a bare count. A count tells a
 // reader something is wrong; a name tells them which line to stop at. Same rule the withheld-
 // firearms list follows, and the same rule the appraisal worklist was fixed to follow today.
-function _invCautionNotices(items) {
+function _invCautionNotices(items, jobId) {
   return INV_RELEASE_CAUTIONS.map(function(c){
-    var hit = (items || []).filter(function(r){ return !!r[c.key]; });
+    var hit = (items || []).filter(function(r){ return !!c.test(r, jobId); });
     if (!hit.length) return '';
     var named = hit.map(function(r){ return esc(_invNamed(r)); }).join(' &middot; ');
     return '<div style="border:1px solid ' + c.tone + ';border-left-width:4px;border-radius:3px;'
@@ -17056,7 +17197,7 @@ function printApprovalRequest(jobId, selectedOnly) {
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;"><strong>' + esc(r.objectName || '—') + '</strong>'
         + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + ' &middot; ' + esc(_invRoomName(jobId, r.roomIdx)) + '</div>'
-        + _invCautionBadges(r) + '</td>'
+        + _invCautionBadges(r, jobId) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition || '—')
@@ -17078,7 +17219,7 @@ function printApprovalRequest(jobId, selectedOnly) {
     // caveat printed under the table has arrived after the signature it exists to come before.
     // The firearms note stays below because it is informational — it tells the representative
     // how a firearm leaves, not to stop and check before approving one.
-    + _invCautionNotices(items)
+    + _invCautionNotices(items, jobId)
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
       + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Item</th>'
       + '<th style="padding:2px 6px;text-align:right;">Qty</th><th style="padding:2px 6px;text-align:right;">Est. value</th>'
@@ -17245,7 +17386,7 @@ function printDispositionLedger(jobId) {
     // of-step shape this file records more often than anything else.
     return '<tr>'
       + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—')
-        + _invCautionBadges(r) + '</td>'
+        + _invCautionBadges(r, jobId) + '</td>'
       + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.disposition || '—') + '</td>'
       + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.channel || '—') + '</td>'
       + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.authBy || '—') + (r.approvalDate ? ' <span style="color:#888;">' + esc(fmtDate2(r.approvalDate)) + '</span>' : '') + '</td>'
@@ -17364,7 +17505,10 @@ function printAppraisalWorklist(jobId) {
     // expert appraisal under oath. Say what this list does and does not answer, and let
     // the aggregate block below speak for itself.
     html += '<div style="font-size:12px;color:#888;">No individual item is currently flagged for specialist appraisal'
-      + (maiv.count ? ' — but see the aggregate below, which is a separate test.' : '. Flag intrinsic items (art, jewelry, silver, rugs, etc.) in the manifest or capture them on the Job Plan.')
+      // ⚠ THIS USED TO SAY "flag intrinsic items in the manifest", NAMING AN ACTION THE APP
+      // DID NOT OFFER — there was no control for `needsAppr` anywhere. There is now, on both
+      // surfaces, so the sentence names where each one is.
+      + (maiv.count ? ' — but see the aggregate below, which is a separate test.' : '. Art, jewelry, silver and rugs route here on their category alone; for anything else tick Needs Appraisal on the manifest, or press ⚑ Appraise beside the disposition chips when you photograph it on the Job Plan.')
       + '</div>';
   } else {
     names.forEach(function(a) {
@@ -17374,6 +17518,13 @@ function printAppraisalWorklist(jobId) {
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '(unnamed)') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.category || '') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
+          // ⚠ WHAT THE ESTATE INTENDS TO DO WITH THE OBJECT CHANGES WHAT THE APPRAISER IS
+          // BEING ASKED FOR, and this document did not say. A piece being KEPT needs a
+          // date-of-death fair market value for the schedule; one going to AUCTION needs a
+          // reserve and a saleroom view. Same object, two different engagements. It also shows
+          // the two avenues are not alternatives — this line is on the worklist AND already
+          // routed, which is the whole point of appraise not being a disposition.
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.disposition || 'Not yet decided') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + (r.driveFileUrl ? '<a href="' + esc(r.driveFileUrl) + '">photo</a>' : '—') + '</td>'
           + '</tr>';
@@ -17381,7 +17532,7 @@ function printAppraisalWorklist(jobId) {
       html += '<div style="margin-bottom:18px;">'
         + '<h3 style="font-family:\'Cormorant Garamond\',serif;color:#8a6d3b;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:6px;">' + esc(a) + ' <span style="font-size:12px;color:#888;">(' + groups[a].length + ')</span></h3>'
         + '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
-        + '<thead><tr style="text-align:left;color:#888;"><th style="padding:3px 6px;">Item #</th><th style="padding:3px 6px;">Object</th><th style="padding:3px 6px;">Category</th><th style="padding:3px 6px;">Room</th><th style="padding:3px 6px;">Condition</th><th style="padding:3px 6px;">Photo</th></tr></thead>'
+        + '<thead><tr style="text-align:left;color:#888;"><th style="padding:3px 6px;">Item #</th><th style="padding:3px 6px;">Object</th><th style="padding:3px 6px;">Category</th><th style="padding:3px 6px;">Room</th><th style="padding:3px 6px;">Intended Disposition</th><th style="padding:3px 6px;">Condition</th><th style="padding:3px 6px;">Photo</th></tr></thead>'
         + '<tbody>' + rows + '</tbody></table></div>';
     });
   }
@@ -17428,13 +17579,33 @@ function _collDispToInv(disp) {
   switch (disp) {
     case 'auction': case 'online_auction': return 'Auction';
     case 'consign': case 'estate_sale': return 'Consign';
-    case 'appraise': case 'firearms': return 'Hold';   // held pending the appraisal / transfer decision
+    // ⚠⚠ `appraise` USED TO LAND HERE AS 'Hold' AND THE INSTRUCTION WAS SILENTLY LOST.
+    // COL_DISP_LABELS has offered Appraise on Build Estimate since it was written, so the
+    // estimator can mark a collection for valuation at the walkthrough — and this bridge threw
+    // that away twice over: it set Hold, which is where DISPUTED property goes and which sorts
+    // LAST in INV_GROUP_ORDER, and it never set `needsAppr`. So the line only reached the
+    // Appraisal Worklist if _guessCategory happened to land on an intrinsic category. It does
+    // not for "Asian ceramics", "grandfather clock", "porcelain" or "doll collection" — all
+    // four fall through every regex to General/Household, which is not intrinsic. An explicit
+    // written instruction to appraise, parked in Hold where nobody is looking, reported nowhere.
+    //
+    // It resolves to '' (Not yet decided) now, which is the honest answer — the destination
+    // genuinely has not been chosen, that is the whole point of appraising first — and that
+    // section sorts FIRST because it is the worklist. `needsAppr` rides with it via
+    // _collDispNeedsAppr, so the item carries BOTH avenues exactly as it should.
+    case 'appraise': return '';
+    case 'firearms': return 'Hold';   // held pending the written transfer authority, not a valuation
     case 'donate': return 'Donate';
     case 'coin': case 'goldsilver': case 'jewelry': case 'books':
     case 'ebay': case 'replacements': case 'dealer': return 'Sell';
     default: return '';
   }
 }
+// The other half of the line above, kept beside it so the two cannot drift. A collection the
+// estimator marked Appraise carries the flag into the manifest whatever category the guesser
+// picked for it; a firearm is flagged too, because valuing one is a specialist job and the
+// category guess ('Firearms') only reaches the worklist by luck of being intrinsic.
+function _collDispNeedsAppr(disp) { return disp === 'appraise' || disp === 'firearms'; }
 
 // Best-guess taxonomy category from a collection's name/disposition, so the import
 // panel pre-selects the right appraiser routing. The TC can override before adding.
@@ -17530,17 +17701,18 @@ function materializeCollection(jobId, collId) {
   var mode = (document.getElementById('imp-mode-' + collId) || {}).value || 'lot';
   var qty  = Math.max(1, parseInt((document.getElementById('imp-qty-' + collId) || {}).value, 10) || 1);
   var disp = _collDispToInv(coll.disp);
+  var appr = _collDispNeedsAppr(coll.disp);
   var ts = Date.now();
   if (mode === 'itemize') {
     for (var i = 1; i <= qty; i++) {
       _pushInvLine(jobId, { stableId: jobId + '_col' + collId + '_' + i + '_' + ts,
         objectName: coll.name + ' #' + i, category: cat, disposition: disp, qty: '1',
-        fmv: '', sourceCollId: collId, ts: ts + i });
+        fmv: '', needsAppr: appr, sourceCollId: collId, ts: ts + i });
     }
   } else {
     _pushInvLine(jobId, { stableId: jobId + '_col' + collId + '_lot_' + ts,
       objectName: coll.name, category: cat, disposition: disp, qty: String(qty),
-      fmv: _numOrBlank(coll.value), sourceCollId: collId, ts: ts });
+      fmv: _numOrBlank(coll.value), needsAppr: appr, sourceCollId: collId, ts: ts });
   }
   savePhotoRefs(jobId);
   renderInventoryTab();
@@ -17848,9 +18020,7 @@ function _invHasAppraisal(jobId, ref) {
   return _jobAppraisers(jobId).some(function(a){ return String(a.id) === String(ref.apprId); });
 }
 function _invGuardrailItems(jobId) {
-  return _jobInvRefs(jobId).filter(function(r){
-    return invNeedsAppraisal(r, _invJob(jobId)) && !_invHasAppraisal(jobId, r) && !r.apprWaived;
-  });
+  return _jobInvRefs(jobId).filter(function(r){ return invAwaitingAppraisal(r, jobId); });
 }
 function waiveAppraisal(jobId, stableId) {
   var reason = (window.prompt('Waive the appraisal requirement for this item.\nLog who authorized it and why:') || '').trim();
@@ -18232,7 +18402,7 @@ function _invBulkApply(jobId, key, value) {
   // at the moment they did it. Named, never counted — a count cannot be acted on.
   if (key === 'disposition' && INV_RELEASE_DISPOSITIONS.indexOf(value) >= 0) {
     var _swept = INV_RELEASE_CAUTIONS.map(function(c){
-      var hit = picked.filter(function(r){ return !!r[c.key]; });
+      var hit = picked.filter(function(r){ return !!c.test(r, jobId); });
       if (!hit.length) return '';
       return ' \u26a0 ' + hit.length + ' of them ' + (hit.length > 1 ? 'are' : 'is') + ' flagged '
         + c.badge.toLowerCase() + ' \u2014 ' + hit.map(_invNamed).join(', ') + '.';
@@ -18358,7 +18528,7 @@ function _renderInvRow(job, ref) {
   var dispCol = INVENTORY_COLUMNS.filter(function(c){ return c.key === 'disposition'; })[0];
   var warn = [];
   if (invIsFirearm(ref) && invReleaseBlocked(ref)) warn.push('<span title="A firearm moves on written authority only" style="color:#c0392b;font-weight:700;">&#9888; held</span>');
-  if (invNeedsAppraisal(ref, job) && !_invHasAppraisal(jid, ref) && !ref.apprWaived) warn.push('<span title="Flagged for a specialist appraisal" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
+  if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraiser engaged yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
   if (ref.flagBequest) warn.push('<span title="Named in a specific bequest" style="color:var(--bronze);">bequest</span>');
   if (ref.flagDisputed) warn.push('<span title="Recorded dispute" style="color:#c0392b;">disputed</span>');
   var sub = [esc(ref.category || '—'), esc(_invRoomName(jid, ref.roomIdx))].join(' &middot; ');

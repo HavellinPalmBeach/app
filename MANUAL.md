@@ -858,6 +858,19 @@ Photo naming: `HVL-YYMM-XXXX_RoomName_001.jpg`
 
 On each Job Plan room card, use **Capture item** to photograph individual objects for the estate inventory. Type the object name, pick a **category**, and set a disposition before the shot; each photo is saved with a self-identifying filename. Items in an "intrinsic" category (art, jewelry, silver, antiques, rugs, coins, firearms, wine, instruments) that carry real value show a **⚑ needs-a-specialist** flag. Captured items flow straight into the Estate Inventory manifest, where they are grouped by disposition for the evening review — anything you did not chip a disposition onto in the field lands in *Not yet decided* at the top of that tab (§10a).
 
+### ⚑ Appraise — the second avenue (new 2026-09-11)
+
+Under the seven disposition chips there is a separate **⚑ Appraise** toggle. It is not an eighth chip, and that is the whole design: an appraisal is not a destination, it is the step *before* one. Press it and the item goes to the Appraisal Worklist **while keeping whatever disposition you chipped** — first appraise, then auction or consign or sell.
+
+| What you see | What it means |
+| --- | --- |
+| ✓ *Art & Décor already goes to the appraisal worklist.* | The category did it for you. Art, jewelry, silver, antiques, rugs, collectibles, firearms, wine and instruments route automatically. Pressing the toggle as well changes nothing. |
+| *Tick for anything that should be valued by a specialist.* | This category does **not** route automatically. If you think it should be valued, this is the only thing that will do it. |
+
+> **This is the case it was built for:** the period side table, the unmarked bronze, the piece of "furniture" you think is worth a great deal more than furniture. The automatic rule works off the category and cannot see any of those. **Before 2026-09-11 there was no way for anyone to say it** — the flag existed in the data but had no control anywhere in the app, so the only appraisals that ever happened were the ones a category triggered.
+
+> **⚠ The toggle resets after every shot and the disposition deliberately does not.** A disposition is a standing answer about the room you are working — a whole shelf going to auction is one decision made once. "Send *this one* to a specialist" is a judgement about the single object in front of you, so it is asked again for the next one rather than latching on and quietly flagging everything else in the room.
+
 ## 10a. Estate Inventory (Tab)
 
 **Tab: Inventory** → select a client. A per-client tangible-personal-property manifest and the estate documentation workspace. It assembles from three sources: items captured on Job Plan room cards, **+ Add line item** (an asset with no photo — cash, account, a vehicle), and **import from the estimate** (below).
@@ -886,6 +899,8 @@ Every item has a category from the shared taxonomy. Each category knows which sp
 
 When flagged collections or vehicles exist on the estimate, a **From the Estimate Walkthrough** panel offers to add them to the manifest. Collections can be **itemized** (one row per piece) or kept as a **lot**; a guessed category pre-selects the appraiser routing. Collector vehicles carry a needs-appraisal flag. Imported items can't be added twice.
 
+> **⚠⚠ A collection you marked *Appraise* on Build Estimate used to lose that instruction on the way in — fixed 2026-09-11.** It arrived as *Hold*, which is where disputed property goes and which sorts last, and it carried no appraisal flag at all — so it only ever reached the worklist if the category guesser happened to land on an intrinsic category. Measured: *"Asian ceramics"* matches none of the guesser's keywords, so it became General/Household, which is not intrinsic, and **an explicit written instruction to appraise was reported on no document anywhere.** Same for "grandfather clock", "porcelain" and "doll collection". It now arrives as *Not yet decided* — the honest answer, since appraising first is exactly why the destination is open — with the appraisal flag set. **Any collection imported before 2026-09-11 is worth checking against the estimate**; tick *Needs Appraisal* on the row if the estimate said Appraise.
+
 ### Appraisers (per estate)
 
 Add a roster of named appraisers — name, firm, **credential** (ISA / ASA / AAA / USPAP / GIA), **independence**, effective (value) / report dates, and **Due back**. An item whose valuation source is *Appraisal* is linked to a roster appraiser from the *Appraisal Doc* field in its item panel, or from the row the guardrail panel offers — replacing free-text with a defensible record.
@@ -895,6 +910,10 @@ Add a roster of named appraisers — name, firm, **credential** (ISA / ASA / AAA
 ### The $3,000 appraisal guardrail
 
 Items flagged for appraisal that aren't yet linked to an appraiser surface a panel: a **soft amber nudge on Standard** jobs, a **red block on Formal** jobs (the inventory isn't complete until each is appraised). Per-item **Waive** logs a reason. On a Formal job, the Court Inventory export stamps *DRAFT* until every flagged item is appraised or waived.
+
+**Two ways an item gets onto that panel, and they are different questions.** *Automatically*, from its category — an intrinsic category with no value yet, or any value at or above the threshold. Or *because somebody said so*: tick **Needs Appraisal** in the item panel's Valuation section (new 2026-09-11), which is the desk half of the field toggle in §10. Use it for anything the category cannot see, and untick it to take a line back off the worklist without recording a waiver.
+
+> **Waive and untick are not the same act.** *Waive* records that the requirement applied and a named person decided against it, with a reason, and that reason prints. Unticking *Needs Appraisal* just says the flag should not have been set. If the item routes automatically on its category, unticking does nothing — waive it or link an appraiser.
 
 ### Two different $3,000 tests — per item, and across the estate
 
@@ -953,7 +972,7 @@ Three sit on the working header; the rest moved under **More ▾** to get them o
 - **Approval Request** (new 2026-09-01) — see *Release approval* below.
 - **Court Inventory** — a §733.604-style schedule grouped by category with date-of-death FMV, exempt property (§732.402) separated, a valuation-basis header and attestation line, and *no* internal figures. Stamps DRAFT / FINAL per the guardrail. Feeds counsel's filing (Havellin does not file it).
 - **Disposition Ledger** — the fiduciary accounting: gross / fees / net to the estate / receipts. Havellin's own service fee never appears here.
-- **Appraisal Worklist** — a per-specialist packet of every flagged item (photo, room, condition) to hand each appraiser.
+- **Appraisal Worklist** — a per-specialist packet of every flagged item (photo, room, condition and **intended disposition**) to hand each appraiser. The disposition column is new on 2026-09-11 and it is not decoration: a piece being *Kept* needs a date-of-death fair market value for the schedule, one going to *Auction* needs a reserve and a saleroom view. Same object, two different engagements, and until now the packet did not say which. A line with no destination chosen yet prints *Not yet decided*.
 - **Share w/ Counsel** — grants the estate attorney or trust officer *read-only* access to the whole **Estate Inventory** Drive folder (all photos + the workbook), pre-filled from the attorney email. **Revoke** removes it. Named-person access, never a public link — financial folders stay private.
 
 > All inventory valuations are documentation support, not a legal or appraisal opinion — the estate attorney and a credentialed appraiser remain the authority on any estate.
@@ -977,9 +996,10 @@ The deliverables page commits to *"written approval requests, itemized item by i
 - **Keep and Hold are excluded by definition** — nothing is leaving, so there is nothing to ask permission for. So is anything that already carries an approval date. An item with no disposition yet is not a request either.
 - A firearm on the list prints its own note: collected from the property by a licensed dealer only, on the representative's authority, and Havellin does not transport it.
 - **A line flagged *Specific Bequest* or *Disputed* is badged in its own row and named, with its item number, in a notice above the table** (new 2026-09-11). The line is still on the request — that decision is the representative's, not ours — but they are told which lines they are being asked to initial and why it matters.
+- **So is a line that has not been valued yet** — badged *NOT YET APPRAISED* (new 2026-09-11). It fires when the item is flagged for a specialist, no appraiser is linked and no waiver is recorded. Again the line stays on the request: releasing property before it is valued is a decision the representative can properly make. What they are now told is that the estate will have no independent record of what it was worth when it left, which on an estate filing a federal return is a figure reported under oath.
 - When the signed copy comes back, select those items and press **Record approval**. It writes the signer and the date across every one of them in a single action. Typing a name into twenty rows by hand is how a signed approval ends up recorded against three of them.
 
-> **⚠ Until 2026-09-11 neither flag reached a single printed document.** `flagBequest` and `flagDisputed` were editable on the manifest, exported to the attorney's workbook and painted as chips on screen — and every print path ignored them. Measured on a real estate: a **$48,000 painting the will leaves to a named person printed identically to a set of dining chairs**, proposed for *Auction*, with an initial box beside it; the words "bequest" and "dispute" appeared nowhere in the document. **Any release approval request printed before 2026-09-11 is worth re-reading against the manifest** — it did not tell the representative what it was asking for.
+> **⚠ Until 2026-09-11 neither flag reached a single printed document.** `flagBequest` and `flagDisputed` were editable on the manifest, exported to the attorney's workbook and painted as chips on screen — and every print path ignored them. Measured on a real estate: a **$48,000 painting the will leaves to a named person printed identically to a set of dining chairs**, proposed for *Auction*, with an initial box beside it; the words "bequest" and "dispute" appeared nowhere in the document. **Any release approval request printed before 2026-09-11 is worth re-reading against the manifest** — it did not tell the representative what it was asking for. **The same was true of an unvalued line:** an object the app had itself flagged for a specialist, with no value on record, printed with *Auction* proposed and an initial box beside it, and the document never said it had not been valued. Measured on the same estate, the request went from **5,127 bytes to 6,292** once all three cautions printed.
 
 > **It flags and explains; it never refuses, and never drops the line.** Same rule as the firearms gate. A specific bequest can properly be sold — it may have adeemed, the beneficiary may have disclaimed, the estate may need the proceeds — and that is the representative's decision on counsel's advice. Withholding the line would simply hide it. To take a line off a request instead, set its disposition to **Keep** or **Hold**, which excludes it by definition.
 

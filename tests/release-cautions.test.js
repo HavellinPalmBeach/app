@@ -23,8 +23,14 @@ const FNS = ['printApprovalRequest', 'printDispositionLedger', '_invBulkApply',
              '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
              'invIsFirearm', '_invDocHead', 'resolveValBasis', 'estateValueDate',
-             'esc', 'fmtDate2', '_invPicked', '_invMatchesFilter', '_invJob', '_setPhotoRef'];
-const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH'];
+             'esc', 'fmtDate2', '_invPicked', '_invMatchesFilter', '_invJob', '_setPhotoRef',
+             // The appraisal caution added 2026-09-11 is DERIVED rather than a flag on the row,
+             // so the whole chain behind it has to be lifted for real. Stubbing
+             // invAwaitingAppraisal would be testing the stub.
+             'invAwaitingAppraisal', 'invNeedsAppraisal', '_invHasAppraisal', '_jobAppraisers',
+             'invAppraisalThreshold', 'gateDispute', '_gateYes', 'invIsIntrinsic', 'invCatMeta'];
+const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
+              'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler', tc: 'Anthony Graziano' };
@@ -91,10 +97,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ THE ORDER IS BEQUEST THEN DISPUTE, and it is not arbitrary: a bequest question is
     // answered by counsel and a dispute question by the representative, so the one that may
     // have to go out of the room comes first.
-    eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','), 'flagBequest,flagDisputed',
-       'two cautions, in that order');
+    // ⚠ THIS PINNED 'flagBequest,flagDisputed' AND BROKE CORRECTLY when the appraisal caution
+    // landed on 2026-09-11. Restated as the RULE rather than the list: the two AUTHORITY
+    // questions — is this the estate's property to sell at all — come before the PRICE one,
+    // which only arises once the answer to them is yes.
+    eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','),
+       'flagBequest,flagDisputed,needsAppraisal',
+       'authority cautions first, the valuation one last');
     s.INV_RELEASE_CAUTIONS.forEach((c) => {
       ok(c.head && c.body && c.badge && c.tone, c.key + ' carries a heading, a body and a badge');
+      eq(typeof c.test, 'function',
+         c.key + ' decides by a TEST, not a field name — the appraisal one is derived');
     });
 
     // ⚠ THE COLOURS MATCH THE CHIPS THESE SAME ROWS ALREADY WEAR ON SCREEN — bronze for a
@@ -264,10 +277,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(noComments(fn('printApprovalRequest')), 'flagBequest',
           '⚠ the request asks the shared definition rather than testing the raw field');
     lacks(noComments(fn('printDispositionLedger')), 'flagBequest', 'and so does the ledger');
-    has(noComments(fn('printApprovalRequest')), '_invCautionNotices(items)',
-        'the request renders the named notices');
-    has(noComments(fn('printApprovalRequest')), '_invCautionBadges(r)', 'and badges the rows');
-    has(noComments(fn('printDispositionLedger')), '_invCautionBadges(r)', 'the ledger badges its rows');
+    // ⚠ THESE THREE PINNED THE EXACT CALL and broke correctly when `jobId` was threaded through
+    // on 2026-09-11 — the appraisal caution cannot be answered from the row alone. The
+    // requirement was never the argument list; it is that both documents ask the shared
+    // catalogue AND hand it the job, since without one the appraisal caution goes silent.
+    has(noComments(fn('printApprovalRequest')), '_invCautionNotices(items, jobId)',
+        'the request renders the named notices, against this job');
+    has(noComments(fn('printApprovalRequest')), '_invCautionBadges(r, jobId)', 'and badges the rows');
+    has(noComments(fn('printDispositionLedger')), '_invCautionBadges(r, jobId)', 'the ledger badges its rows');
     has(noComments(fn('_invBulkApply')), 'INV_RELEASE_CAUTIONS',
         'and the bulk bar reads the same catalogue');
   }

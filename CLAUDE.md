@@ -1,5 +1,128 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ "WE NEED APPRAISAL IN THERE TOO" — AND IT WAS ALREADY THERE, UNREACHABLE (BUILT 2026-09-11)
+Anthony, from a job site: *"when we're doing the room by room sorting and taking pictures for an
+estate client, the only disposition avenues are auction, consign, donate, hold, junk, keep, or sell.
+And we need appraisal in there too... it might have two disposition avenues. First, appraise, then
+auction, consign, or sell."* App-only, no redeploy — `needsAppr` is already on the `savePhotoRefs`
+whitelist and the manifest rides the existing `saveMedia` sync.
+
+- **⚠⚠ HE IS RIGHT ABOUT THE MODEL AND THE APP ALREADY HELD IT — WHICH IS WHY THE ANSWER IS NOT AN
+  EIGHTH CHIP.** An item has carried a disposition AND `needsAppr` at the same time since the
+  inventory was built, `invNeedsAppraisal` fires automatically off the category, and there is a
+  worklist, a guardrail panel, a `⚑ appraise` row badge and a *Needs appraiser* filter. **Appraise is
+  a PRECONDITION, not a destination**, and the two-avenue sequence he describes is exactly what the
+  schema expresses. Putting it in `INV_DISPOSITIONS` would give an item a heading with no recorded
+  destination, force a wrong answer on `INV_RELEASE_DISPOSITIONS` (property does leave for appraisal,
+  so either answer is wrong somewhere), and break `INV_GROUP_ORDER`, the bulk bar, the ledger and the
+  client workbook's FMV-by-disposition rollup — lists this file already records drifting 5-against-7
+  once. **The reasoning is written on the list itself so nobody adds it.**
+- **⚠⚠ SO THE REAL DEFECT WAS NEVER A MISSING CHIP: `needsAppr` HAD ONE WRITER IN 27,938 LINES.**
+  The collector-vehicle import. **No person could set it anywhere in the app** — not in the field, not
+  at the desk. So the only appraisals that ever happened were the ones a category triggered, and the
+  period side table, the unmarked bronze and anything filed under Furniture that is not furniture were
+  invisible by construction. Three surfaces now: a **⚑ Appraise toggle** on the Job Plan capture card,
+  a **Needs Appraisal** column in the item panel, and the collection bridge below.
+- **⚠ AND THE TRACK HAD BEEN RUNNING SILENTLY SINCE IT WAS BUILT, WHICH IS WHY IT LOOKED ABSENT.**
+  Pick *Art & Décor* in the field and the item is already bound for the worklist; **nothing said so**.
+  The note under the toggle reads *"✓ Art & Décor already goes to the appraisal worklist"* on an
+  intrinsic category and *"Tick for anything that should be valued by a specialist"* otherwise. It
+  **reports, it does not instruct** — asking for an action that changes nothing is what trains people
+  past a control.
+- **⚠ THE TOGGLE RESETS AFTER EVERY SHOT AND THE DISPOSITION DELIBERATELY DOES NOT.** A disposition is
+  a standing answer about the room being worked — a shelf going to auction is one decision made once.
+  *"Send this one to a specialist"* is a judgement about the single object in front of you, and
+  latching it would flag every later shot in the room: the intake-checkbox leak this file already
+  records once, on the field where it would matter most.
+- **⚠⚠ THE LIVE DEFECT, AND IT IS NOT THE ONE HE REPORTED: A COLLECTION MARKED *Appraise* ON BUILD
+  ESTIMATE LOST THE INSTRUCTION AT THE BRIDGE.** `COL_DISP_LABELS` has offered **Appraise** since it
+  was written, so the estimator could already say it at the walkthrough — and `_collDispToInv` mapped
+  it to **`'Hold'`** (where DISPUTED property goes, and which sorts LAST) **and set no flag at all**.
+  So it only reached the worklist if `_guessCategory` happened to land on an intrinsic category.
+  **Measured on the real `materializeCollection`: "Asian ceramics" matches none of the guesser's
+  regexes → `General/Household` → not intrinsic → reported on NO document anywhere.** Same for
+  *grandfather clock*, *porcelain*, *doll collection*. It resolves to `''` (Not yet decided) now — the
+  honest answer, since appraising first is exactly why the destination is open, and that section sorts
+  FIRST because it is the worklist — with `_collDispNeedsAppr` carrying the flag on **both** the lot
+  and itemised paths. **Firearms still holds**, because that is a written-authority question, not a
+  valuation one.
+- **⚠⚠ AND THE WORST OF IT: AN UNVALUED ITEM COULD BE SIGNED AWAY.** `_invAwaitingApproval` filtered
+  on disposition-plus-no-approval-date and consulted the appraisal track **nowhere**, and
+  `INV_RELEASE_CAUTIONS` carried `flagBequest` and `flagDisputed` and nothing else. So an object the
+  app had itself flagged for a specialist — on the worklist, wearing a `⚑ appraise` badge on screen,
+  no value on record — **printed on the release approval request with Auction proposed and an initial
+  box beside it, and the document never said it had not been valued.** The representative initials it
+  and it leaves the property unvalued. **Byte-for-byte the bequest defect fixed earlier the same day**,
+  in the same function, found by reading what that fix had NOT covered.
+  - **⚠ A CAUTION IS A TEST NOW, NOT A FIELD NAME.** Bequest and dispute are booleans on the row;
+    "still waiting on an appraisal" is derived (category, value, the threshold this estate is on,
+    the appraiser link, the waiver), so a catalogue keyed on `ref[c.key]` **could not express it** —
+    which is why the question was not asked on that document at all. `key` survives as the identity
+    string; `test(ref, jobId)` decides.
+  - **⚠ IT FLAGS AND EXPLAINS; IT NEVER REFUSES AND NEVER WITHHOLDS THE LINE.** The firearms rule and
+    the bequest rule for the third time. Selling before a formal appraisal is often correct — a
+    dealer's offer may be the market test, the estate may need the cash, the article may be below any
+    threshold that matters. It sorts **last** of the three because bequest and dispute are questions
+    about AUTHORITY (is this the estate's to sell at all) and this one is about PRICE, which only
+    arises once the answer is yes.
+  - **The bulk bar names them too**, because that is where the mistake is MADE: one dropdown across
+    forty rows, read by the person who did it while they are still looking at the screen.
+- **⚠ ONE DEFINITION: `invAwaitingAppraisal(ref, jobId)`.** The guardrail panel and the row badge each
+  inlined `invNeedsAppraisal(...) && !_invHasAppraisal(...) && !r.apprWaived` — **two copies of one
+  rule**, and the reason the release request could be written without the rule at all. Both ask the
+  shared predicate now; a test `lacks()` each private copy.
+  - **⚠ NO JOB MEANS NO ANSWER, AND I HAD TO FIX MY OWN CODE TO MEET IT.** I asserted silence without
+    a job and the first implementation returned **true** — `_invJob` returns null, the threshold
+    defaults to the ordinary $3,000 and `_invHasAppraisal(undefined, ref)` reads every item as
+    unlinked. A **false positive** on a release document, and a badge that fires on rows a specialist
+    already has is a badge people stop reading. The test caught it; the code changed, not the test.
+- **4263 committed checks** (`tests/appraisal-track.test.js`, 117 new — the first coverage of this
+  interaction at all). **All seventeen app changes revert-verified individually** — the caution entry
+  fails **6**, the guardrail and the `c.test` generalisation **4** each, the row badge and the whole
+  field control **3** each, and the rest 1–2.
+- **⚠ A REVERT CAME BACK GREEN AND THE TEST WAS THE PROBLEM — the fourteenth time this file records
+  it.** Breaking the note span's id in the rendered card, so `_paintInvApprNote` looks up an element
+  that is not there and the sentence never changes, failed **0**: the checks drove `_invApprNoteText`
+  directly and grepped the card for the wiring, and **neither notices that the two ends no longer
+  meet**. The silent failure mode is a renamed id, on the half that tells the crew the automatic rule
+  already fired. It now reads the id out of the **real card** and hands it to the **real painter**,
+  the same rule `job-plan-print` follows. Re-done, it fails 3.
+- **⚠ TWO PRE-EXISTING SUITES PINNED THE OLD DECISIONS AND BROKE CORRECTLY**, four assertions across
+  them, all restated as the new requirement rather than deleted: `INV_RELEASE_CAUTIONS` being exactly
+  `flagBequest,flagDisputed`, the three `_invCautionBadges(r)` / `_invCautionNotices(items)` call
+  shapes, and `INVENTORY_COLUMNS.length === 30`. **That last one is now stated as the rule instead of
+  the number** — past column Z so the backend's multi-letter path is live, every column carrying a key
+  and a header, **and every header UNIQUE, because `_writeInventorySheet` resolves columns BY HEADER
+  and a duplicate silently writes one column into another's place.**
+- **The appraisal worklist prints the INTENDED DISPOSITION now**, and it is not decoration: a piece
+  being *Kept* needs a date-of-death FMV for the schedule, one going to *Auction* needs a reserve and
+  a saleroom view. Same object, two different engagements, and the packet did not say which. It is
+  also the two avenues on one page — on the worklist AND already routed.
+- **⚠ THE EMPTY STATE NAMED AN ACTION THE APP DID NOT OFFER.** It read *"flag intrinsic items in the
+  manifest"* against a `needsAppr` with no control anywhere. It names both real routes now.
+- **Verified end to end in headless Chromium on the real page, and MEASURED against the pre-change
+  tree rather than argued:**
+
+  | | old build | new build |
+  |---|---|---|
+  | field appraise control | **none** | `⚑ Appraise`, bronze `rgb(166,124,69)` when on |
+  | "Asian ceramics" marked *Appraise* | Hold · flag **false** · on the worklist **NO** | Not yet decided · flag true · **YES**, persisted |
+  | *Needs Appraisal* column | **absent** | present; ticking it badges a Furniture row |
+  | release approval request | **5,127 bytes, no notice, no badge** | 6,292 · named notice **above** the table |
+  | appraisal worklist | ceramics and side table **absent**, no disposition column | both listed · *Intended Disposition* |
+  | bulk bar | *"Auction set on 2 items."* | *"… ⚠ 1 of them is flagged not yet appraised — #2 Sargent portrait."* |
+
+  The flagged line is **still listed** on the request in both builds — withholding it would be the
+  silent omission this file records over and over. Overflow **0** at 1440 and 390px, no page errors.
+- Manual **§10** (a new subsection with the what-you-see table and two notes) and **§10a** (the bridge
+  measurement, the two ways onto the guardrail, waive-versus-untick, the third release caution, and
+  the worklist column); playbook **Step 10a** (a `.stop` on pressing it in the house) and **Step 10e**
+  (a `.stop` on the release request, plus a seventh step: work *Needs appraiser* before printing one)
+  and **five** symptom→cause rows. Both `.md` copies hand-edited and **13 claims parity-checked**; tag
+  balance verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false
+  positive at 1), rendered at 1440/390 with **0 overflow** and **all 41 tables full-width under
+  `print`**.
+
 ## ⚠⚠ A CLIENT HAD NO DRIVE FOLDER AT ALL, AND THE APP NEVER SAID SO (FIXED 2026-09-11)
 Anthony, from a job site: *"We have a client that we ran through the intake estimate, approval of an
 estimate, sending an agreement, and receiving payment, and there are still no files in Google Drive.
@@ -287,15 +410,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/fervent-tesla-7dd43r`
-  (was `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
+- Active feature branch: `claude/trusting-allen-iadbqe`
+  (was `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
   `claude/master-suite-cleaning-hours-g62ink`, then
   `claude/home-prep-sale-consolidation-13yxt9`; before that
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/fervent-tesla-7dd43r:main`
+  `git push origin claude/trusting-allen-iadbqe:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
