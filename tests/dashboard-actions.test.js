@@ -40,8 +40,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
       'depositTargetFor', 'agreementReady',
-      'docSentAt', 'docDraftedAt', 'docKeyFor', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'],
-    vars: ['JT_SHORT'],
+      'docSentAt', 'docDraftedAt', 'docKeyFor',
+      // Slice 6: the rail reads the signature RECORD, not the boolean.
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'],
+    vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
     stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
   });
 
@@ -290,7 +292,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true }, { estimate: EST(), approved: true },
         '&#9993; Send signing packet', "docAction(7,'agreement','send')"],
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true },
-        { estimate: EST(), approved: true }, '&#10003; Record signature received', 'dashMarkAgreementSigned(7)'],
+        { estimate: EST(), approved: true }, '&#10003; Record the signed agreement', 'dashMarkAgreementSigned(7)'],
       // ⚠ ASKING FOR THE MONEY AND RECEIVING IT ARE TWO STEPS NOW. A signed agreement's
       // next move is sending the deposit invoice; the payment recorder is the row below.
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true, agrSigned: true },
@@ -443,7 +445,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // drilldown a refusal was visible and the "it worked" was not — the more confusing
     // half of the two.
     has(body('markAgreementSent()'), "_dashFbTarget('agr-fb'),'ok'", 'the sent confirmation reaches the drilldown');
-    has(body('markAgreementSigned()'), "_dashFbTarget('agr-fb'),'ok'", 'so does the signature confirmation');
+    // ⚠ Slice 6: `markAgreementSigned` is a door-opener now — the work, and therefore the
+    // confirmation, moved to `confirmAgreementSignature`, which is where the record is
+    // actually written. The requirement is unchanged: the "it worked" reaches the
+    // drilldown, not a panel the drilldown hides.
+    has(body('confirmAgreementSignature()'), "_dashFbTarget('agr-fb'), 'ok'", 'so does the signature confirmation');
+    has(body('confirmAgreementSignature()'), "dashNotice('ok'", 'and the drilldown strip carries it too');
+    has(body('confirmAgreementSignature()'), 'signed by ', 'naming the person who signed');
 
 
     // ⚠ The handlers must NOT re-check gates their target already enforces.

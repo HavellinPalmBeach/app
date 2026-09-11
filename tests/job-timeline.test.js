@@ -58,10 +58,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
       // Slice 4: the rail reads where each document has been.
       'docSentAt', 'docDraftedAt', 'docKeyFor',
+      // Slice 6: the rail reads the signature RECORD, not the boolean.
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignWatches',
     ],
     // The short names the horizontal track uses. A top-level var, so the sandbox has to
     // be told about it — without it `row()` throws and every check in the file is lost.
-    vars: ['JT_SHORT'],
+    vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
   });
 
   const PAST = '2020-01-01';
@@ -594,7 +596,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // replacement carries the redraw instead.
     [['checkPin()', 'the estimate PIN'], ['approveAgreementNow()', 'approving and filing the agreement'],
      ['markEstimateSent()', 'marking the estimate sent'], ['markAgreementSent()', 'marking the agreement sent'],
-     ['markAgreementSigned()', 'recording the signature'], ['saveDeposit()', 'recording a payment'],
+     // ⚠ Slice 6: `markAgreementSigned` opens the recorder; `confirmAgreementSignature` is
+     // what writes the record, so that is what has to land on the rail.
+     ['confirmAgreementSignature()', 'recording the signature'], ['saveDeposit()', 'recording a payment'],
     ].forEach(([sig, what]) => {
       has(body(sig), '_dashRedraw(', `${what} redraws the drilldown`);
     });

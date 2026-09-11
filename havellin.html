@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 9:13pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 9:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3090,6 +3090,38 @@ body.no-smf .smf-col{display:none;}
      verify any of those, so it records who heard it and how, which is what makes the
      claim reviewable later. This is the moment a job becomes real: staffing unlocks here,
      and nothing before it should commit a contractor's time. -->
+<!-- ⚠ THE SIGNATURE RECORD. `markAgreementSigned` used to flip a boolean and stamp
+     `agrSignedBy = _actor(job)` — the Havellin manager who approved the PRICE — so the
+     rail read "Agreement signed · Anthony Graziano" over a contract Anthony did not sign
+     and the app held no record of who did. On a court-reviewed probate matter that is the
+     question counsel asks. `signedBy` is the client; `recordedBy` is whoever typed it. -->
+<div class="modal-overlay" id="sig-modal" style="display:none;">
+  <div class="modal-box" style="width:420px;">
+    <div class="modal-title">Record the Signed Agreement</div>
+    <div class="modal-sub">This is the record of who bound the client to the engagement.
+      It is not you unless you signed it yourself.</div>
+
+    <label style="margin-top:0;">Who signed it?</label>
+    <input type="text" id="sig-by" placeholder="Full name as signed">
+
+    <label>How did it come back?</label>
+    <select id="sig-how" onchange="onSigHowChange()"></select>
+    <div class="eg" id="sig-hint" style="margin-top:4px;"></div>
+
+    <label>Date signed</label>
+    <input type="date" id="sig-on">
+
+    <label>Note <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— optional, e.g. where the original is</span></label>
+    <textarea id="sig-note" placeholder="e.g. &ldquo;Original held at the office; scan emailed to counsel.&rdquo;" style="width:100%;min-height:56px;"></textarea>
+
+    <div id="sig-fb" style="margin-top:10px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="document.getElementById('sig-modal').style.display='none'">Cancel</button>
+      <button class="btn-p" style="flex:2;" onclick="confirmAgreementSignature()">Record Signature &#8594;</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="won-modal" style="display:none;">
   <div class="modal-box" style="width:420px;">
     <div class="modal-title">Client Accepted the Estimate</div>
@@ -10334,16 +10366,83 @@ function markAgreementSent() {
   showFB(_dashFbTarget('agr-fb'),'ok','Agreement recorded as sent. Record the signature when it comes back.');
 }
 
+// ⚠ IT ASKS WHO SIGNED NOW, rather than flipping a boolean and attributing the signature
+// to whoever pressed the button. See the signature record above for why that mattered.
+var _sigJobId = null;
+
 function markAgreementSigned() {
   var job = _agrJob();
   if (!job) { showFB(_dashFbTarget('agr-fb'),'warn','Select a job first.'); return; }
-  if (!job.agrSent) { showFB(_dashFbTarget('agr-fb'),'warn','Record the agreement as sent first.'); return; }
-  job.agrSigned = true;
-  job.agrSignedBy = _actor(job);
-  job.agrSignedAt = _stamp();
-  saveJobs(); syncJobToSheets(job);
-  updateAgrUI(); renderJobs(); _dashRedraw(job.id);
-  showFB(_dashFbTarget('agr-fb'),'ok','Agreement recorded as signed. Record the deposit when it arrives.');
+  openSignatureModal(job.id);
+}
+
+// ⚠ THE ONE DOOR, AND IT REFUSES WHEN A PROVIDER IS WATCHING. A reachable "mark it signed"
+// control while an envelope is outstanding is a manual write that bypasses the provider —
+// somebody ticks it while DocuSign still says `sent`, and the app and the provider disagree
+// about whether a contract exists. The rail stops OFFERING it (see `jobTimelineActions`);
+// this is the same rule enforced where it cannot be reached around.
+function openSignatureModal(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  if (!job.agrSent) { _docNotice('warn', 'Record the agreement as sent first — there is nothing out to be signed yet.', jobId); return; }
+  if (esignWatches()) {
+    _docNotice('warn', ESIGN_PROVIDERS[esignProviderKey()].label
+      + ' is handling signatures on this account, so the app records them from there rather than by hand.', jobId);
+    return;
+  }
+  _sigJobId = jobId;
+  var sel = document.getElementById('sig-how');
+  if (sel) {
+    sel.innerHTML = AGR_SIG_MANUAL_METHODS.map(function(k){
+      return '<option value="' + k + '">' + esc(AGR_SIG_METHODS[k].label) + '</option>';
+    }).join('');
+    sel.value = 'scanned';
+  }
+  var who = document.getElementById('sig-by');
+  if (who) who.value = expectedSignerName(job);
+  var on = document.getElementById('sig-on');
+  if (on) on.value = new Date().toISOString().slice(0, 10);
+  var note = document.getElementById('sig-note'); if (note) note.value = '';
+  var fb = document.getElementById('sig-fb'); if (fb) fb.innerHTML = '';
+  var hint = document.getElementById('sig-hint');
+  if (hint) hint.textContent = AGR_SIG_METHODS.scanned.hint;
+  var m = document.getElementById('sig-modal');
+  if (m) m.style.display = 'flex';
+}
+
+function onSigHowChange() {
+  var sel = document.getElementById('sig-how');
+  var hint = document.getElementById('sig-hint');
+  var m = sel && AGR_SIG_METHODS[sel.value];
+  if (hint) hint.textContent = m ? m.hint : '';
+}
+
+function confirmAgreementSignature() {
+  var jobId = _sigJobId;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var how = (document.getElementById('sig-how') || {}).value || '';
+  var by = ((document.getElementById('sig-by') || {}).value || '').trim();
+  var on = (document.getElementById('sig-on') || {}).value || '';
+  var note = ((document.getElementById('sig-note') || {}).value || '').trim();
+  // ⚠ THE SIGNER'S NAME IS REQUIRED AND THE METHOD IS NOT INVENTED. A signature record with
+  // no signer on it is the state this slice exists to remove; recording one anyway would
+  // reintroduce it under a new field name.
+  if (!by) { showFB('sig-fb', 'warn', 'Who signed it? This is the name that goes on the record — not yours unless you signed.'); return; }
+  if (!AGR_SIG_METHODS[how] || AGR_SIG_MANUAL_METHODS.indexOf(how) < 0) {
+    showFB('sig-fb', 'warn', 'Choose how the signature came back.'); return;
+  }
+  if (!on) { showFB('sig-fb', 'warn', 'When did they sign it?'); return; }
+  var blk = recordAgreementSignature(jobId, { how: how, signedBy: by, signedOn: on, note: note, provider: 'manual' });
+  if (blk === 'notsent') { showFB('sig-fb', 'warn', 'Record the agreement as sent first.'); return; }
+  if (blk) { showFB('sig-fb', 'warn', 'That job could not be found.'); return; }
+  var m = document.getElementById('sig-modal'); if (m) m.style.display = 'none';
+  _sigJobId = null;
+  if (typeof updateAgrUI === 'function') updateAgrUI();
+  renderJobs();
+  dashNotice('ok', 'Signature recorded — signed by ' + by + '. Record the deposit when it arrives.');
+  _dashRedraw(jobId);
+  showFB(_dashFbTarget('agr-fb'), 'ok', 'Signature recorded. Record the deposit when it arrives.');
 }
 
 // Deposit target: 50% of the approved job total. Read from the saved estimate so the
@@ -10935,6 +11034,7 @@ function jobTimeline(job, estRec, logs, cos) {
   var estSubmitted = !!((estRec && estRec.submitted) || (job.status === 'pending' && !estApproved));
   var won = isJobWon(job);
   var funded = isJobFunded(job);
+  var _jtSig = agreementSignature(job);   // null until something is actually signed
   var depPaid = depositPaidTotal(job);
   var depTgt = depositTargetFor(job);
   var midPaid = stagePaidTotal(job, 'midpoint');
@@ -11026,8 +11126,17 @@ function jobTimeline(job, estRec, logs, cos) {
         : ((!job.agrSent && docDraftedAt(job, 'agreement'))
           ? 'Drafted \u2014 read it, send it, then confirm' : '') }),
 
+    // ⚠ `by` IS THE SIGNER NOW, NOT THE RECORDER. It read `agrSignedBy`, which holds the
+    // Havellin manager who approved the price — so this row named one of ours as having
+    // signed the client's contract. A job signed before 2026-09-11 has no signer recorded
+    // and says so rather than naming somebody.
     row({ key: 'agreement_signed', group: 'Agreement', label: 'Agreement signed',
-      done: !!job.agrSigned, at: job.agrSignedAt || '', by: job.agrSignedBy || '' }),
+      done: isAgreementSigned(job), at: (_jtSig && _jtSig.signedOn) || '', atKind: 'date',
+      by: (_jtSig && _jtSig.signedBy) || '',
+      sub: _jtSig
+        ? (_jtSig.legacy ? 'Signed before the signature record — who signed it is not on file'
+           : ((AGR_SIG_METHODS[_jtSig.how] || {}).label || ''))
+        : (esignWatches() ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it' : '') }),
 
     // ⚠ THESE THREE WERE DELIBERATELY ABSENT UNTIL NOW. Slice 0: "a row whose `done`
     // cannot be answered honestly is worse than no row" — nothing recorded that an
@@ -11413,6 +11522,180 @@ function docSend(spec) {
     });
   });
   return true;
+}
+
+// ─── THE SIGNATURE RECORD ────────────────────────────────────────────────────
+// SLICE 6. Anthony: *"we need to, at some point, integrate DocuSign. So think about how we
+// do that and how we get signatures back on agreements. Prior to building anything that
+// might not work in a DocuSign workflow."*
+//
+// ⚠⚠ THE DEFECT THIS FOUND, AND IT IS LIVE TODAY ON WET SIGNATURES: `agrSignedBy` IS NOT
+// THE SIGNER. `markAgreementSigned` writes `_actor(job)`, which returns `job.agrApprovedBy`
+// — the Havellin manager who approved the PRICE. So the rail reads "Agreement signed ·
+// Anthony Graziano" over a contract Anthony did not sign, and **the app holds no record
+// anywhere of who actually signed it.** On a court-reviewed probate matter that is the
+// question counsel asks: who bound the estate to this? "Our managing partner" is not an
+// answer. The record below separates the two — `signedBy` is the client, `recordedBy` is
+// whoever typed it in — and the second one is what `agrSignedBy` has always really held.
+//
+// ⚠ WHY THIS IS SHAPED FOR A PROVIDER BEFORE THERE IS ONE. `job.agrSigned` is a boolean a
+// person sets. The moment an e-signature provider exists, a reachable "mark it signed"
+// button is a manual write that bypasses the envelope — somebody ticks it while DocuSign
+// still says `sent`, and the app and the provider disagree about whether a contract exists.
+// So the record carries HOW the signature arrived, and the button stands itself down the
+// moment a provider is configured. No screen changes when DocuSign lands; the control
+// simply stops being offered, the same way Slice 4's confirming tap disappears on a
+// provider with `needsHumanSend:false`.
+
+// How a signature came back. `esign` is set by a provider and never by a person — the
+// picker below offers the first three only, which is what makes the distinction hold.
+// ⚠ A SETTINGS VALUE, NOT A CONSTANT — so turning DocuSign on is one field rather than a
+// redeploy, and turning it OFF again is the same field. Kept through a device clear
+// (`LOCAL_KEEP_KEYS`), because re-typing it on a phone after every clear is the pain this
+// file already records about the Apps Script URLs.
+var ESIGN_PROVIDER_KEY = (function(){ try { return localStorage.getItem('hav_esign_provider') || 'manual'; } catch(e){ return 'manual'; } })();
+
+var AGR_SIG_METHODS = {
+  wet:      { label: 'Signed in person',      hint: 'Paper signed in front of you, or handed back at the property' },
+  scanned:  { label: 'Signed copy returned',  hint: 'They printed, signed and emailed or posted it back' },
+  esign:    { label: 'Electronic signature',  hint: 'Completed through the e-signature provider' }
+};
+var AGR_SIG_MANUAL_METHODS = ['wet', 'scanned'];
+
+// ⚠ ONE PROVIDER TABLE, AND `manual` IS THE ONLY LIVE ONE TODAY. `docusign` is declared
+// rather than built: there is no account, no credentials and no backend action for it, and
+// a half-built integration that reports success on an opaque response is a defect this file
+// already records once (`generateStripeLink`, 2026-07-30). What it IS for is the SHAPE —
+// `watches:true` is what stands the manual button down, so wiring a real provider changes
+// this table and nothing else.
+var ESIGN_PROVIDERS = {
+  manual:   { label: 'Recorded by hand', watches: false, live: true },
+  docusign: { label: 'DocuSign',         watches: true,  live: false }
+};
+
+// ⚠ READS SETTINGS, SO IT IS ONE FLIP TO TURN ON — and falls back to `manual` for any value
+// the table does not know, rather than standing the only working control down on a typo.
+function esignProviderKey() {
+  var k = (typeof ESIGN_PROVIDER_KEY !== 'undefined' && ESIGN_PROVIDER_KEY) || 'manual';
+  var p = ESIGN_PROVIDERS[k];
+  return (p && p.live) ? k : 'manual';
+}
+function esignWatches() { return !!ESIGN_PROVIDERS[esignProviderKey()].watches; }
+
+// The record itself. Returns null when nothing is signed — a caller asking "who signed
+// this?" on an unsigned agreement must get nothing, not an empty shape that reads as one.
+function agreementSignature(job) {
+  var st = (job && job.docState && job.docState.agreement) || null;
+  if (st && st.sig && st.sig.signedOn) return st.sig;
+  // ⚠ A JOB SIGNED BEFORE 2026-09-11 HAS THE LEGACY TRIO AND NO RECORD. It is still signed
+  // — that is a fact about the world, not about our schema — so it reads as signed, with
+  // the signer UNKNOWN rather than invented. Printing `agrSignedBy` as the signer here is
+  // exactly the conflation this slice exists to undo.
+  if (job && job.agrSigned) {
+    return { how: '', signedBy: '', signedOn: job.agrSignedAt || '',
+             recordedBy: job.agrSignedBy || '', recordedAt: job.agrSignedAt || '',
+             provider: 'manual', legacy: true };
+  }
+  return null;
+}
+function isAgreementSigned(job) { return !!agreementSignature(job); }
+
+// Who the signature is expected FROM, so the recorder prefills a name rather than asking
+// somebody to retype it. The estate's authorized representative signs for the estate; on a
+// living-client job the client signs for themselves.
+function expectedSignerName(job) {
+  if (!job) return '';
+  if (job.executor) return job.executor + (job.executorRole ? ' (' + job.executorRole + ')' : '');
+  return job.name || '';
+}
+
+// ⚠ THE LEGACY TRIO IS MIRRORED, NOT REPLACED. Eight sites read `job.agrSigned` — the
+// estimate lock, the discount gate, the deposit gate, the activation blockers, the client
+// estimate's contract-signed banner and the rail — and repointing all of them in the same
+// commit as a new record is how one gets missed and a signed job silently unlocks.
+// `agrSignedBy` keeps holding the RECORDER, which is what it always held.
+function recordAgreementSignature(jobId, sig) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return 'nojob';
+  if (!job.agrSent) return 'notsent';
+  var st = docState(job, 'agreement');
+  st.sig = {
+    how: sig.how || '',
+    signedBy: sig.signedBy || '',
+    signedOn: sig.signedOn || new Date().toISOString().slice(0, 10),
+    note: sig.note || '',
+    provider: sig.provider || esignProviderKey(),
+    envelopeId: sig.envelopeId || '',
+    recordedBy: sig.recordedBy || _actor(job) || '',
+    recordedAt: new Date().toISOString()
+  };
+  job.agrSigned = true;
+  job.agrSignedBy = st.sig.recordedBy;
+  job.agrSignedAt = st.sig.signedOn;
+  saveJobs(); syncJobToSheets(job);
+  return '';
+}
+
+// ─── WHERE A PROVIDER'S SIGNATURE WOULD COME BACK ────────────────────────────
+// ⚠⚠ THE DECISION, WRITTEN DOWN BEFORE ANYTHING IS BUILT ON IT: **POLL, DO NOT USE DOCUSIGN
+// CONNECT.** Connect is DocuSign's webhook and it is the obvious design; it cannot work
+// against this backend, for four separate reasons, and each one alone is fatal:
+//   · Apps Script answers a POST to `/exec` with an HTTP **302** redirect to a
+//     `script.googleusercontent.com` URL. Connect reads a non-2xx as a failed delivery and
+//     retries, so every notification looks like a failure forever.
+//   · `ContentService` cannot return a status code at all, so there is no way to answer 200.
+//   · `doPost(e)` does not expose request HEADERS, so `X-DocuSign-Signature-1` — the HMAC
+//     that proves the callback is really DocuSign — is unreadable. An unauthenticated
+//     endpoint that marks contracts signed is not something to ship.
+//   · `/exec` has no inbound auth of its own.
+// So the envelope id is stored on the signature record and a **5-minute Apps Script trigger
+// polls** DocuSign for the status of anything outstanding. Slower, and correct.
+//
+// ⚠ NOTHING BELOW CALLS DOCUSIGN. There is no account, no credentials and no backend action
+// yet, and a half-built integration that reports success on an opaque response is a defect
+// this file already records once (`generateStripeLink`, which announced *"Stripe payment
+// link generated"* unconditionally, including when the endpoint was missing). This is the
+// SHAPE the poll writes into, so wiring a real provider adds a backend action and changes
+// `ESIGN_PROVIDERS` — and no screen.
+
+// What the poll hands back per envelope, and the ONE place a provider's verdict becomes a
+// signature. A provider may only ever report `completed`; nothing else it says is allowed
+// to write the record, because `delivered` and `signed`-per-recipient are not the contract
+// being executed.
+function applyEsignStatus(jobId, status) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return 'nojob';
+  var st = docState(job, 'agreement');
+  st.esign = {
+    envelopeId: (status && status.envelopeId) || (st.esign && st.esign.envelopeId) || '',
+    status: (status && status.status) || '',
+    checkedAt: new Date().toISOString()
+  };
+  if (!status || status.status !== 'completed') { saveJobs(); syncJobToSheets(job); return ''; }
+  // ⚠ THE PROVIDER NAMES THE SIGNER. That is the entire point of routing signatures through
+  // one — it knows who authenticated and when, which a person typing into a box does not.
+  var blk = recordAgreementSignature(jobId, {
+    how: 'esign',
+    signedBy: status.signerName || '',
+    signedOn: (status.completedAt || '').slice(0, 10),
+    provider: esignProviderKey(),
+    envelopeId: st.esign.envelopeId,
+    recordedBy: ESIGN_PROVIDERS[esignProviderKey()].label
+  });
+  if (!blk) { _dashRedraw(jobId); renderJobs(); }
+  return blk;
+}
+
+// Agreements out for signature and not yet back — what a poll would ask about. DOM-free, so
+// the backend side can be written against it and the tests can read it.
+function outstandingEnvelopes() {
+  return (jobs || []).filter(function (j) {
+    if (!j.agrSent || isAgreementSigned(j)) return false;
+    var st = (j.docState && j.docState.agreement) || {};
+    return !!(st.esign && st.esign.envelopeId);
+  }).map(function (j) {
+    return { jobId: j.id, hvlId: j.hvlId || '', envelopeId: j.docState.agreement.esign.envelopeId };
+  });
 }
 
 // ─── FILING TO DRIVE ─────────────────────────────────────────────────────────
@@ -11937,12 +12220,14 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'agreement_signed':
-      // ⚠ SLICE 6 REPLACES THIS BUTTON WITH A READ-ONLY STATUS LINE the moment an
-      // e-signature provider is configured. A reachable "mark it signed" control while
-      // an envelope is outstanding is a manual write that bypasses the provider — the
-      // one hole the signature record exists to close. It stays a button only while
-      // wet-signed-and-scanned is the whole workflow.
-      if (live) out.primary = { label: '&#10003; Record signature received', call: 'dashMarkAgreementSigned(' + id + ')' };
+      // ⚠⚠ THE BUTTON STANDS ITSELF DOWN THE MOMENT A PROVIDER IS WATCHING, and that is the
+      // whole reason this slice came before any DocuSign work. A reachable "mark it signed"
+      // control while an envelope is outstanding is a manual write that bypasses the
+      // provider: somebody ticks it while DocuSign still says `sent`, and the app and the
+      // provider disagree about whether a contract exists. Nothing on screen changes when
+      // a provider is wired — the control simply stops being offered, exactly the way
+      // Slice 4's confirming tap disappears on a provider with `needsHumanSend:false`.
+      if (live && !esignWatches()) out.primary = { label: '&#10003; Record the signed agreement', call: 'dashMarkAgreementSigned(' + id + ')' };
       break;
 
     case 'deposit_invoiced':
@@ -23992,7 +24277,7 @@ var COST_RATE_FIELDS = [
 var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
 // contractor roster (your crew, not practice data), and the two directory caches.
-var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_stripe_pk|hav_stripe_script|hav_gmail_client_id|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_stripe_pk|hav_stripe_script|hav_gmail_client_id|hav_esign_provider|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
@@ -24078,6 +24363,9 @@ function loadSettings() {
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
     VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
     GMAIL_CLIENT_ID   = localStorage.getItem('hav_gmail_client_id') || GMAIL_CLIENT_ID_DEFAULT;
+    // ⚠ An unknown key falls back to `manual` in `esignProviderKey`, not here — so a typo
+    // leaves the only working control standing rather than silently disabling it.
+    ESIGN_PROVIDER_KEY = localStorage.getItem('hav_esign_provider') || 'manual';
     REFERRAL_SYNC_URL = localStorage.getItem('hav_referral_url')  || '';
     try { var _rd = localStorage.getItem('hav_referral_dir'); if (_rd) referralDirectory = JSON.parse(_rd); } catch(e) {}
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';

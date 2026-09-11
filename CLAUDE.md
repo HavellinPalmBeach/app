@@ -70,6 +70,95 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## SLICE 6 — THE SIGNATURE RECORD, SHAPED FOR A PROVIDER BEFORE THERE IS ONE (2026-09-11)
+*"we need to, at some point, integrate DocuSign. So think about how we do that and how we get
+signatures back on agreements. Prior to building anything that might not work in a DocuSign
+workflow."* App-only, no redeploy.
+
+- **⚠⚠ THE DEFECT THIS FOUND IS LIVE TODAY ON WET SIGNATURES AND HAS NOTHING TO DO WITH
+  DOCUSIGN: `agrSignedBy` IS NOT THE SIGNER.** `markAgreementSigned` wrote `_actor(job)`,
+  which returns `job.agrApprovedBy` — the Havellin manager who approved the **price**. So the
+  rail read *"Agreement signed · Anthony Graziano"* over a contract Anthony did not sign, and
+  **the app held no record anywhere of who actually signed it.** On a court-reviewed probate
+  matter that is exactly the question counsel asks: who bound the estate to this? *"Our
+  managing partner"* is not an answer.
+  - `docState.agreement.sig` splits them: **`signedBy` is the client, `recordedBy` is whoever
+    typed it in** — and `recordedBy` is what `agrSignedBy` has always really held.
+  - The recorder asks, prefilled with `expectedSignerName` (the estate's authorized rep, or
+    the client on a living job) and **refuses a blank signer**: a signature record with no
+    signer on it is the state this slice removes, and writing one anyway would reintroduce it
+    under a new field name.
+- **⚠ A JOB SIGNED BEFORE TODAY IS STILL SIGNED, AND ITS SIGNER IS UNKNOWN.** That is a fact
+  about the world, not about our schema. It reads signed with **nobody named** and the row
+  says *"Signed before the signature record — who signed it is not on file"*. Printing
+  `agrSignedBy` as the signer there is precisely the conflation this slice exists to undo.
+- **⚠ THE LEGACY TRIO IS MIRRORED, NOT REPLACED.** Eight sites read `job.agrSigned` — the
+  estimate lock, the discount gate, the deposit gate, the activation blockers, the client
+  estimate's contract banner and the rail. Repointing all of them in the same commit as a new
+  record is how one gets missed and a signed job silently unlocks. **But the RECORD is the
+  truth and the boolean is the mirror**, so the rail reads `isAgreementSigned`: a record
+  written without the mirror still shows, which is what stops a signed agreement reading
+  unsigned the day something writes one.
+
+### ⚠⚠ Why the shape came before the integration
+- `job.agrSigned` is a boolean a person sets. The moment an e-signature provider exists, a
+  reachable *"mark it signed"* button is a **manual write that bypasses the envelope** —
+  somebody ticks it while DocuSign still says `sent`, and the app and the provider disagree
+  about whether a contract exists. That hole has to close BEFORE the provider lands.
+- **The button stands itself down on `esignWatches()`**, and the recorder refuses to open as
+  well, so it cannot be reached around from another surface. Nothing on screen changes when a
+  provider is wired — the control simply stops being offered and the row says *"DocuSign is
+  watching for it"* instead. Same mechanism as Slice 4's confirming tap disappearing on a
+  provider with `needsHumanSend:false`.
+- **`ESIGN_PROVIDERS` — `manual` is live, `docusign` is DECLARED AND NOT.** There is no
+  account, no credentials and no backend action, and a half-built integration reporting
+  success on an opaque response is a defect this file already records once
+  (`generateStripeLink`). An unknown or not-live key **falls back to `manual`** rather than
+  standing the only working control down on a typo. Turning it on is one Settings field
+  (`hav_esign_provider`, on `LOCAL_KEEP_KEYS`).
+- **⚠ `esign` IS NEVER OFFERED TO A PERSON.** The picker is built from
+  `AGR_SIG_MANUAL_METHODS` (`wet`, `scanned`) and `confirmAgreementSignature` rejects anything
+  outside it, so a human cannot claim an electronic signature that no provider issued.
+
+### ⚠⚠ POLL, DO NOT USE DOCUSIGN CONNECT — the decision, recorded before anything rests on it
+Connect is DocuSign's webhook and the obvious design. It **cannot work against this backend**,
+for four reasons, each fatal alone:
+- Apps Script answers a POST to `/exec` with an HTTP **302** to `script.googleusercontent.com`.
+  Connect reads a non-2xx as a failed delivery and **retries forever**.
+- `ContentService` cannot return a status code at all, so there is no way to answer 200.
+- **`doPost(e)` does not expose request HEADERS**, so `X-DocuSign-Signature-1` — the HMAC that
+  proves the callback is really DocuSign — is unreadable. An unauthenticated endpoint that
+  marks contracts signed is not something to ship. This is the one that settles it.
+- `/exec` has no inbound auth of its own.
+
+So the envelope id rides the record and a **5-minute Apps Script trigger polls**. Slower, and
+correct. `applyEsignStatus` is where a provider's verdict becomes a signature and
+`outstandingEnvelopes` is what a poll would ask about — both DOM-free, so the backend side can
+be written against them.
+- **⚠ ONLY `completed` IS A SIGNATURE.** `delivered` and a per-recipient `signed` are not the
+  contract being executed; treating either as one marks a job signed early. The status is
+  still kept, so the row can say where it is rather than going quiet.
+- **⚠ THE PROVIDER NAMES THE SIGNER** — that is the entire point of routing signatures through
+  one. It knows who authenticated and when; a person typing into a box does not.
+- **A signed agreement drops off the poll**, or it is asked about forever.
+
+- **3199 committed checks** (`tests/signature-record.test.js`, 97 new). **All 20 changes
+  revert-verified individually.** ⚠ Three came back green on the first pass and all three were
+  the **rail ROW** — everything drove the RECORD and the ACTION and nothing drove the row, so
+  repointing `by` back at `agrSignedBy` (the defect, the thing a person actually reads on
+  screen) was invisible. There is a group that builds the real row now.
+- **Verified end to end in headless Chromium**: the recorder prefills *Tripp Butler (Trustee)*,
+  offers only the two manual methods, refuses a blank signer with the reason on screen, and on
+  save the row reads **"Tripp Butler"** where it used to read Anthony Graziano — with the
+  legacy boolean mirrored so every existing gate still sees it. A job signed on the old build
+  reads signed with no signer and says why. **Flipping `docusign` live removes the button
+  entirely**, the recorder refuses to open, and the row says what is watching; a `delivered`
+  status does not sign it, `completed` does and names the signer, and the envelope then drops
+  off the poll. 390px overflow 0, no page errors.
+- ⚠️ **`manual.html` / `concierge-guide.html` are now THREE slices behind** — how documents are
+  sent (4), where they are filed and how to tell (5), and now who signed and what changes when
+  a provider is switched on (6). The playbook is the one that goes stale dangerously.
+
 ## SLICE 5 — ONE WAY TO FILE ANY CLIENT DOCUMENT TO DRIVE (2026-09-11)
 The last verb: `docAction(jobId, kind, 'file', opt)`. App-only, no redeploy.
 
