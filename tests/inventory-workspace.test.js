@@ -342,4 +342,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A value with no stated source is what the published promise exists to prevent.
     has(body, 'not stated', 'a missing valuation source is called out, not left blank');
   }
+
+  group('⚠ THE APPRAISER ROSTER SCROLLS, THE PAGE DOES NOT');
+  {
+    // Seven columns, three of them NATIVE DATE PICKERS — which carry a hard minimum width
+    // no stylesheet can shrink. Measured at 874px: it dragged the whole document 511px past
+    // a 390px phone and **133px past an iPad in PORTRAIT**, which is the device this tab is
+    // actually worked on. The symptom is the cut-off header with a blank gap beside it.
+    const src = APP();
+    const at = src.indexOf('function _renderAppraiserRoster(');
+    const body = src.slice(at, src.indexOf('\n}\n', at));
+    const iWrap = body.indexOf("class=\"tbl-scroll\"");
+    const iTbl = body.indexOf("<table class=\"vtbl\"");
+    ok(iWrap > -1, 'the roster is inside a scroll container');
+    ok(iWrap < iTbl, '⚠ which OPENS before the table — a container after it is not one');
+    // It closes after the table, so the tfoot (where the three date pickers live) is inside.
+    has(body, "'</tr></tfoot></table></div></div>'", 'and closes after the whole table');
+    // The rule itself is what the wrap depends on; losing it is the 368-line-CSS-deletion
+    // shape, silent and invisible to every test that only reads the markup.
+    has(src, '.tbl-scroll{overflow-x:auto', 'and the rule it depends on is still declared');
+  }
 };

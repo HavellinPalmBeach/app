@@ -84,6 +84,46 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ THE CHANGE ORDER IS A CLIENT DOCUMENT AND WAS THE LAST PRINTER OFF THE PATH');
+  {
+    // It hand-rolled the sequence _printDocument exists to own. Measured in a browser:
+    //   · it set NO document.title, so Chrome named the client's Save-as-PDF after the
+    //     PAGE — "Havellin Palm Beach — Job Manager". Third time this file records that.
+    //   · it hid the panels with an inline display:none and restored the active one with
+    //     an inline display:block, which BEATS the stylesheet's .panel{display:none} — so
+    //     after printing a change order and switching tabs, BOTH panels rendered, stacked,
+    //     until the page was reloaded.
+    //   · `document.querySelector('.panel.active').style.display` would throw inside its
+    //     own timeout if no panel happened to be active.
+    const body = noComments(fn('printChangeOrder'));
+    has(body, '_printDocument(content,', 'it goes through the one print path');
+    lacks(body, 'window.print()', '⚠⚠ and holds no print call of its own');
+    lacks(body, "pt.style.display = 'block'", 'nor its own target handling');
+    lacks(body, "p.style.display='none'", '⚠⚠ nor the inline panel hiding that broke the app');
+    lacks(body, "querySelector('.panel.active')", 'nor the lookup that could throw');
+    has(body, "docNames(job, 'changeorder'", 'and it is named by the one namer');
+
+    // The CO number is on the document's face, so the filename that cites it carries it.
+    const n = noComments(fn('docNames'));
+    has(n, "'Havellin Change Order'", 'the namer knows the kind');
+    has(n, 'opt.coNo', 'and takes the change order number');
+
+    const c = sandbox({ fns: ['docNames'], vars: ['DOC_STAGE_WORD'] });
+    const job = { hvlId: 'HVL-0701', addr: '69 Beach Blvd, Palm Beach, FL' };
+    const co = c.docNames(job, 'changeorder', { coNo: 'CO-000001' });
+    has(co.printTitle, 'Havellin Change Order CO-000001 - 69 Beach Blvd - ',
+       'the PDF is named for the client, the change order and the property');
+    lacks(co.printTitle, 'HVL-0701', '⚠ and carries no database key, the way the invoice used to');
+    // Same asymmetry as every other kind: the client name is dated, the Drive name is not.
+    eq(co.drive, 'HVL-0701 - Havellin Change Order CO-000001.html',
+       'the Drive name is the job id plus a stable title');
+    lacks(co.drive, new Date().getFullYear().toString(), 'and carries no date');
+    // A change order printed before a job record exists must still be named, not throw.
+    ok(/^Havellin Change Order - /.test(c.docNames(null, 'changeorder', {}).printTitle),
+       'no job and no number still produces a name');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   group('⚠ the gate is checked in docAction, once, for every verb');
   {
     // Putting the gate on the buttons instead is how `printInvoice` came to trust a flag

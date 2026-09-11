@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:37pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11128,19 +11128,17 @@ function printChangeOrder(coId) {
     '<div style="text-align:center;margin-top:2rem;font-size:10px;color:#6B6B72;">Havellin Palm Beach · 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401</div>' +
     '</div>';
 
-  var pt = document.getElementById('print-target');
-  pt.innerHTML = content;
-  pt.style.display = 'block';
-  document.querySelectorAll('.panel').forEach(function(p){ p.style.display='none'; });
-  setTimeout(function(){
-    window.print();
-    setTimeout(function(){
-      pt.style.display='none';
-      pt.innerHTML='';
-      document.querySelectorAll('.panel').forEach(function(p){ p.style.display=''; });
-      document.querySelector('.panel.active').style.display='block';
-    }, 500);
-  }, 150);
+  // ⚠⚠ THIS HAND-ROLLED THE PRINT SEQUENCE, AND IT LEFT THE APP BROKEN AFTERWARDS.
+  // It hid the panels with an inline `display:none` and restored the active one with an
+  // inline `display:block` — which beats the stylesheet's `.panel{display:none}`, so that
+  // panel never went away again. Measured in a browser: print a change order, switch to
+  // Vendors, and BOTH panels render, stacked, until the page is reloaded. It also set no
+  // document.title (so the client's PDF was named after the app), never refused an empty
+  // document, and would throw inside its own timeout if no panel happened to be active.
+  // _printDocument is the ONE print path and exists for exactly this; six printers were
+  // routed through it on 2026-08-24 and this one was missed.
+  return _printDocument(content, docNames(job, 'changeorder',
+    { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle);
 }
 
 function openClientDashboard(jobId) {
@@ -12267,12 +12265,21 @@ function docNames(job, kind, opt) {
   var street = String(job.addr || '').split(',')[0].trim();
   var stamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
   var stage = (opt && opt.stage) || '';
+  // ⚠ A change order is a client document and it is NAMED here, with everything else. It is
+  // not in DOC_ACTIONS — it has no send, file or view verb — but printChangeOrder set no
+  // document.title at all, so Chrome named every Save-as-PDF after the PAGE: a client's
+  // change order arrived in their downloads called "Havellin Palm Beach — Job Manager".
+  // Third time this file records that defect (the agreement, the Job Plan, this). The CO
+  // number is on the document's face, so it belongs in the filename that cites it.
+  var coNo = (opt && opt.coNo) ? (' ' + opt.coNo) : '';
   var title = kind === 'agreement' ? 'Havellin Services Agreement'
             : kind === 'invoice' ? ('Havellin ' + (DOC_STAGE_WORD[stage] || 'Final') + ' Invoice')
+            : kind === 'changeorder' ? ('Havellin Change Order' + coNo)
             : 'Havellin Service Estimate';
   var client = title + (street ? ' - ' + street : '') + ' - ' + stamp;
   var driveBase = kind === 'agreement' ? 'Havellin Services Agreement'
                 : kind === 'invoice' ? ('Havellin Invoice - ' + (DOC_STAGE_WORD[stage] || 'Final'))
+                : kind === 'changeorder' ? ('Havellin Change Order' + coNo)
                 : 'Havellin Service Estimate';
   return {
     client: client,
@@ -13471,6 +13478,11 @@ function renderWinLoss() {
     } else {
       var sorted = lost.slice().sort(function(a,b){ return (b.lostAt||'').localeCompare(a.lostAt||''); });
       var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;font-weight:500;margin-bottom:.6rem;">Lost Prospects</div>';
+      // ⚠ EIGHT COLUMNS, TWO OF THEM FREE TEXT (the reason and the note), so there is no
+      // width this reflows to. Measured at 557px against a 390px phone: 178px of document
+      // overflow, which renders as the cut-off header with a blank gap beside it. The table
+      // scrolls inside its own container instead.
+      h += '<div class="tbl-scroll">';
       h += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
       h += '<thead><tr style="background:var(--tan);">';
       h += '<th style="padding:7px 10px;text-align:left;">Client</th>';
@@ -13497,7 +13509,7 @@ function renderWinLoss() {
         h += '<td style="padding:7px 10px;">' + dateLost + '</td>';
         h += '</tr>';
       });
-      h += '</tbody></table>';
+      h += '</tbody></table></div>';
       tEl.innerHTML = h;
     }
   }
@@ -17756,6 +17768,12 @@ function _renderAppraiserRoster(job) {
   return '<div class="card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link to Appraisal items)</span></div>'
     + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date.</div>'
+    // ⚠ SEVEN COLUMNS, THREE OF THEM NATIVE DATE PICKERS — which carry a hard minimum
+    // width no stylesheet can shrink. Measured at 874px: it dragged the whole document
+    // 511px past a 390px phone and 133px past an iPad in PORTRAIT, so the header and nav
+    // rendered at viewport width against a wider scrolled page. .tbl-scroll is the rule
+    // for exactly this: the TABLE scrolls, the page does not.
+    + '<div class="tbl-scroll">'
     + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th>Due back</th><th></th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr>'
@@ -17766,7 +17784,7 @@ function _renderAppraiserRoster(job) {
     + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
     + '<td><button class="icon-btn" onclick="addAppraiser(' + job.id + ')">+ Add</button></td>'
-    + '</tr></tfoot></table></div>';
+    + '</tr></tfoot></table></div></div>';
 }
 
 // ── $3k appraisal guardrail ───────────────────────────────────────────────────

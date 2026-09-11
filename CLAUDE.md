@@ -70,6 +70,68 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## PRINTING A CHANGE ORDER LEFT TWO TABS ON SCREEN AT ONCE (FIXED 2026-09-11)
+The seventh printer, and the one `_printDocument` was built for. App-only, no redeploy.
+**`printChangeOrder` hand-rolling its own sequence has been flagged in this file since the
+change-order rebuild this morning; this is it.**
+
+- **⚠⚠ IT LEFT AN INLINE `display:block` ON THE PANEL IT HAD HIDDEN.** It hid every panel with
+  `p.style.display='none'`, then restored with `p.style.display=''` **and forced
+  `document.querySelector('.panel.active').style.display='block'`** — an inline style, which beats
+  the stylesheet's `.panel{display:none}`. So that panel never went away again. **Measured in a
+  browser: print a change order, switch to Vendors, and BOTH panels render, stacked, until the
+  page is reloaded.** `_printDocument` toggles the `.active` CLASS and remembers which panel had
+  it (`dataset.wasActive`), which is why it does not have this problem.
+- **⚠ AND IT SET NO `document.title` AT ALL**, so Chrome named the client's Save-as-PDF after the
+  PAGE: **"Havellin Palm Beach — Job Manager"**. Third time this file records that exact defect —
+  the agreement (Slice 3) and the Job Plan print (this morning) were the other two. It reads
+  **"Havellin Change Order CO-000001 - 69 Beach Blvd - Sep 11 2026"** now and the page title is
+  restored afterwards.
+- Two more it inherited by not using the shared path: `document.querySelector('.panel.active')`
+  **would throw inside its own timeout** if no panel happened to be active, and it never refused
+  an empty document.
+- **⚠ THE CHANGE ORDER IS NAMED BY `docNames`, WITH EVERYTHING ELSE.** It is not in `DOC_ACTIONS`
+  — it has no send, file or view verb — but a namer per document is how the invoice came to be
+  called `<Surname>-<hvlId>-Final`. The CO number is on the document's face, so it is in the
+  filename that cites it, and the Drive name carries **no date**, which the existing rule requires
+  (overwrite-by-filename is what makes a re-file replace rather than accumulate).
+- **3959 committed checks** (13 new in `tests/doc-actions.test.js`). **All three changes
+  revert-verified** — restoring the hand-rolled sequence fails **6**, dropping the kind 2, dropping
+  the CO number 3.
+- **Verified in headless Chromium on a real change order**: the title at print time reads the new
+  filename, the page title is restored, and after switching tabs **exactly one panel is visible
+  with no inline display left behind** — it was two.
+
+## EVERY TAB IS CLEAN AT 390, 768 AND 1024px (FIXED 2026-09-11)
+The last presentation item off the audit list. App-only, no redeploy.
+
+- **Measured across every tab on a populated app, not eyeballed:**
+
+  | | 390px (phone) | 768px (iPad portrait) | 1024px |
+  |---|---|---|---|
+  | Win / Loss — Lost Prospects | **178px over** | clean | clean |
+  | Inventory — appraiser roster | **511px over** | **133px over** | clean |
+
+  **The iPad one is the one that matters** — that is the device this tab is worked on, and the
+  symptom is the cut-off header with a blank gap beside it that this file already describes twice.
+- **The rule already existed and both tables were simply outside it.** `.tbl-scroll` is declared
+  with the reasoning in a comment (*"Keep wide tables inside one of these"*) and six tables use it.
+  - **The appraiser roster is seven columns, three of them NATIVE DATE PICKERS** — those carry a
+    hard minimum width no stylesheet can shrink, which is why it is the worst offender at 874px.
+  - **The lost-prospects table is eight columns, two of them free text** (the reason and the note),
+    so there is no width it reflows to.
+- **⚠ THE EMPTY STATES ARE NOT WRAPPED, and a test pins that.** An `overflow-x:auto` container
+  round one sentence is a scrollbar with nothing to scroll.
+- **⚠ VERIFIED THAT THEY SCROLL, not that the page stopped overflowing** — a clipped table nobody
+  can reach is worse than a page that scrolls. Measured: Win/Loss `clientWidth 368 / scrollWidth
+  557`, Inventory `337 / 874`, and both really move when `scrollLeft` is set.
+- **3968 committed checks** (9 new). **All three changes revert-verified** — including deleting
+  the `.tbl-scroll` RULE, which is the 368-line-CSS-deletion shape: silent, and invisible to any
+  test that only reads the markup.
+- **Verified in headless Chromium across every tab at 390 / 768 / 1024px: overflow 0 everywhere**,
+  no page errors.
+- No document pass: nothing changed wording.
+
 ## A DELETED ESTIMATE LINE MOVED EVERY QUOTE BELOW IT ONTO THE WRONG TRADE (FIXED 2026-09-11)
 Next off the audit list. App-only, no redeploy. **This reaches the invoice the client pays and the
 plan the crew works from.**

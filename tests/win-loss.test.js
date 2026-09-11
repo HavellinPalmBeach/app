@@ -284,6 +284,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ THE LOST-PROSPECTS TABLE SCROLLS, THE PAGE DOES NOT');
+  {
+    // Eight columns, two of them free text (the reason and the note), so there is no width
+    // it reflows to. Measured at 557px against a 390px phone: 178px of DOCUMENT overflow,
+    // which renders as the cut-off header with a blank gap beside it — the symptom the
+    // .tbl-scroll rule was written for. Zero at 390, 768 and 1024 now, and the container
+    // really scrolls (clientWidth 368 against scrollWidth 557).
+    const r = wl('ready', JOBS);
+    const i = r.table.indexOf('<table');
+    ok(i > -1, 'the table renders');
+    has(r.table.slice(0, i), 'class="tbl-scroll"',
+       '⚠ and the scroll container OPENS before it — a container after the table is not one');
+    ok(r.table.indexOf('</table>') < r.table.indexOf('</div>', r.table.indexOf('</table>')),
+       'and closes after it');
+
+    // The empty states are plain text and must NOT be wrapped — an overflow container round
+    // one sentence is a scrollbar with nothing to scroll.
+    lacks(wl('ready', []).table, 'tbl-scroll', 'a pipeline with no losses wraps nothing');
+    lacks(wl('loading', []).table, 'tbl-scroll', 'nor does the unread notice');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   group('⚠ THE REPORT IS STILL REACHABLE THE THREE WAYS IT ALWAYS WAS');
   {
     // The button and showPanel are what a person presses; _jobsLanded is what the data
