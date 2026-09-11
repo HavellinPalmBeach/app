@@ -70,6 +70,73 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## THE WIN/LOSS REPORT READ ZERO AND STAYED THERE (FIXED 2026-09-11)
+Anthony, picking it off the open list: *"Win/Loss reads 0."* App-only, no redeploy. **This is the
+tab that tells him whether the business is converting.**
+
+- **⚠⚠ `renderWinLoss` HAD EXACTLY THREE REFERENCES IN 1.74 MB** — the ↺ Refresh button, its own
+  definition, and `showPanel`. Nothing else. `loadJobs` hydrates `jobs` from localStorage
+  synchronously and *then* fetches the sheet, and its cloud callback called `renderJobs()` and
+  nothing else. So on a device whose cache is cold — a new iPad, cleared data, Safari evicting
+  storage for a site not visited in a week — the tab painted against `jobs = []` and **never
+  corrected itself**. Same shape this file already records three times (`loadPhotoRefs`
+  2026-08-03, the Job Plan `_estStoreLanded` 2026-08-24, the dashboard rail 2026-09-10): render
+  before the data, never re-render after.
+- **Measured in a browser on a pipeline of three won and two lost worth $12,600, not argued:**
+
+  |  | on screen | true |
+  |---|---|---|
+  | Won · Lost · Conversion · Lost revenue | **0 · 0 · 0% · $0** | 3 · 2 · 60% · $12,600 |
+  | under it | *"No lost prospects yet — that's a good sign."* | two prospects we lost |
+
+  **⚠⚠ THE SENTENCE IS THE HALF THAT MATTERS.** A blank reads as *nothing here yet*; that reads as
+  **good news**, over a pipeline the device had simply not read. Pressing ↺ Refresh was the only
+  way to the truth and nothing on screen suggested it was needed.
+- **⚠ AND IT WAS NOT THE ONLY SURFACE — `referralPartnerStats` READS THE SAME ARRAY.** Measured on
+  the same cold cache the referral leaderboard rendered **ZERO BYTES**: `renderReferralLeaderboard`
+  filters to partners with `count > 0`, so with no jobs every partner drops out and
+  `el.innerHTML = ''` — the section saying which estate attorney sends the most business was
+  **absent**, not merely wrong. 0 bytes → **2,236 bytes, 2 rows** on the fix.
+- **`_jobsLanded()` IS THE ONE DEFINITION of "the jobs arrived — repaint what is on screen"**,
+  mirroring `_estStoreLanded`. **⚠ `jobsWatchTick` AND `_applyDroppedJobs` EACH KEPT THEIR OWN
+  NARROWER COPY** — the tick redrew the clients list and the drilldown, the drop redrew the list —
+  and a partial copy is exactly how Win/Loss came to be the surface nobody remembered. Both ask the
+  shared hook now; a test `lacks()` each private copy.
+- **⚠ `renderJobs()` IS NOT GATED ON ITS PANEL BEING ACTIVE AND THE TWO TAB RENDERERS ARE.** That is
+  what `loadJobs` always did, the list is cheap, and a path into that panel that does not re-render
+  on entry must not find it stale. The tab renderers have `showPanel` covering the other direction.
+  Both directions tested.
+- **⚠⚠ AN EMPTY `jobs` HAS TWO MEANINGS AND THE REPORT ASSERTED THE CHEERFUL ONE**, so the
+  re-render alone would have left an **offline** device confidently reporting a 0% conversion rate
+  forever. `_jobsState` is `loading` / `ready` / `offline` exactly as `_estStoreState` is, resolved
+  on **all three** arms — the landed fetch, the failed one, and **no sync URL configured at all**,
+  where the local cache IS the truth and leaving it at `loading` would report a pipeline the device
+  can already see as unread. `jobsUnread()` is the DOM-free predicate; every figure becomes an em
+  dash and the table says *Loading clients…* or names the unreachable sheet **and the fix**.
+- **⚠ THE CONVERSE IS WHAT KEEPS IT FROM BEING A DOWNGRADE: `jobsUnread` REQUIRES `jobs.length === 0`.**
+  A warm cache is reporting on real clients while the fetch is in flight; going quiet there would
+  replace a correct answer with an em dash. And a genuinely read, genuinely empty pipeline **keeps
+  the cheerful line**, because there it is true — removing it would be its own silent omission.
+  All three pinned.
+- **3859 committed checks** (`tests/win-loss.test.js`, 57 new — the first coverage of this report at
+  all). **All ten changes revert-verified individually** — the unread table branch fails **7**, the
+  tick's private copy 3, the Win/Loss branch of the hook 3, and the rest 1–2 each. **The real
+  `loadJobs` is DRIVEN on all three arms** with a hand-rolled synchronous thenable, rather than
+  asserted on source text; `tests/deleted-jobs.test.js` lifts the real `_jobsLanded` instead of
+  stubbing the hop in the middle, which is what makes its revert fail behaviourally.
+- **Verified end to end in headless Chromium on the real page**, driving the real nav: the tab left
+  **open** across a cold load reads *— · — · — · —* / *Loading clients…* and then **3 · 2 · 60% ·
+  $12,600** with nothing touched; an unreachable sheet reads the offline notice; a warm cache prints
+  its figures on first paint with no dashes; the referral leaderboard goes **0 → 2,236 bytes**; a
+  client dropped remotely takes its row off the lost table live (*3 · 1 · 75% · $4,200*); and a job
+  won on the other device moves the report through `jobsWatchTick` (*4 · 2 · 67%*). Overflow 0 at
+  1440px, no page errors.
+- **⚠ NOTED, NOT INTRODUCED, NOT FIXED: the lost-prospects table overflows 88px at 390px.** Measured
+  **identical before and after** against the pre-change tree — it is the eight-column table, already
+  on the audit list with the Inventory tab's sideways scroll. Belongs to a layout pass, not this one.
+- No document pass: neither the manual nor the playbook describes this tab's refresh behaviour, and
+  nothing client-facing changed wording.
+
 ## THE PROBATE CONTRACT STATED $150/$100 OVER AN ENGAGEMENT BILLED AT $185/$125 (FIXED 2026-09-11)
 Found by the code audit. App-only, no redeploy. **This document is signed by the personal
 representative and its expenses are reviewed by a court.**

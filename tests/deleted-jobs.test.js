@@ -305,10 +305,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('app: the device drops what the sheet refused, without saving it back');
   {
-    let saves = 0, badges = [], redraws = 0;
+    let saves = 0, badges = [], redraws = 0, wlRedraws = 0;
     const ctx = sandbox({
-      fns: ['_applyDroppedJobs', '_purgeLocalJobRecords'],
+      fns: ['_applyDroppedJobs', '_purgeLocalJobRecords', '_jobsLanded'],
       stubs: {
+        // The Win/Loss report lists lost prospects BY NAME. A client deleted on the other
+        // device stays on this one's table until something repaints it, so the drop has to
+        // reach that surface and not only the clients list.
+        document: { getElementById: (id) => id === 'panel-winloss'
+          ? { classList: { contains: (c) => c === 'active' } } : null },
+        renderWinLoss() { wlRedraws++; },
         jobs: [job(A, 'Alpha'), job(B, 'Bravo'), job(C, 'Charlie')],
         estimateStore: { [A]: { e: 1 }, [B]: { e: 2 } },
         jobLogs: { [A]: [{ id: 1 }], [C]: [{ id: 3 }] },
@@ -338,7 +344,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.localStorage.getItem('hav_media_' + B), '[2]', 'the surviving job\'s manifest is untouched');
     eq(JSON.parse(ctx.localStorage.getItem('havellin_est_v4')), { [B]: { e: 2 } }, 'the estimate store was re-persisted');
     eq(saves, 0, 'NOTHING WAS PUSHED — saveJobs() here would post the deleted jobs straight back');
-    ok(redraws >= 2, 'the list and the dropdowns were redrawn');
+    ok(redraws >= 2, 'the list and the dropdowns were redrawn, through the real _jobsLanded');
+    eq(wlRedraws, 1,
+       '\u26a0 and so was the open Win/Loss report \u2014 a dropped prospect is still named on its '
+       + 'lost table until it is');
     eq(badges.length, 1, 'one message');
     has(badges[0], '2 clients deleted elsewhere', 'that says what happened, not "lost"');
     eq(ctx._applyDroppedJobs([]), 0, 'an empty list is a no-op');

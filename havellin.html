@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 12:17pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 12:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3182,6 +3182,13 @@ body.no-smf .smf-col{display:none;}
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 var jobs = [];
+// Has the cloud jobs load finished? 'loading' until the fetch resolves either way.
+// This exists because an EMPTY `jobs` has two completely different meanings — "there
+// are no clients" and "the clients have not arrived yet" — and the Win/Loss report was
+// treating them as the same thing: it printed a 0% conversion rate and "No lost
+// prospects yet — that's a good sign" over a pipeline the device had simply not read.
+// Same distinction _estStoreState exists for. See jobsUnread / renderWinLoss.
+var _jobsState = 'loading';
 var vendors = [];
 var currentFilter = 'all';
 var currentEstimate = null; // snapshot of last saved estimate
@@ -11173,13 +11180,11 @@ function jobsWatchTick() {
   var before = jobsStatusSig();
   refreshJobsFromCloud(function(){
     if (jobsStatusSig() !== before) {
-      // Something flipped remotely — re-render whichever clients view is showing.
-      var dv = document.getElementById('client-dashboard-view');
-      if (dv && dv.style.display !== 'none' && _dashboardJobId) {
-        renderClientDashboard(_dashboardJobId);
-      }
-      var jp = document.getElementById('panel-jobs');
-      if (jp && jp.classList.contains('active')) renderJobs();
+      // Something flipped remotely. This used to redraw the clients list and the
+      // drilldown only — a second, narrower copy of the rule — so a job won or lost on
+      // the other device left the Win/Loss report and the referral leaderboard showing
+      // the outcome they were painted with.
+      _jobsLanded();
     }
     maybeStartJobsWatch();   // stop once nothing is pending anymore
   });
@@ -13376,6 +13381,26 @@ function cycleStatus(id) {
 }
 
 // ─── WIN / LOSS REPORT ───────────────────────────────────────────────────────
+// Is this report looking at an empty client list it has not finished READING? An empty
+// `jobs` is the same array whether there are genuinely no clients or the sheet has not
+// answered — and "0 won, 0 lost, 0% conversion" is a CLAIM either way. Answered in one
+// place so the metrics, the loss breakdown and the table cannot disagree about which of
+// the two they are looking at. DOM-free so the tests can drive the real rule.
+function jobsUnread() { return _jobsState !== 'ready' && jobs.length === 0; }
+
+// What to say instead of a number, and the fix, when the outcomes have not been read.
+function jobsUnreadNotice() {
+  if (_jobsState === 'offline') {
+    return '<strong>Could not reach the client list.</strong><br><br>'
+      + 'This device has no clients cached and the sync could not be reached to fetch them, '
+      + 'so there is nothing to report on yet. Check the connection and the Google Sheets Sync '
+      + 'URL in Settings, then press \u21ba Refresh.'
+      + '<br><span style="font-size:11px;color:var(--gray);">Nothing is lost — the clients are '
+      + 'safe in the sheet.</span>';
+  }
+  return 'Loading clients&hellip;';
+}
+
 function renderWinLoss() {
   var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
   var won  = jobs.filter(isJobWon);
@@ -13383,14 +13408,20 @@ function renderWinLoss() {
   var total = won.length + lost.length;
   var convRate = total > 0 ? Math.round(won.length / total * 100) : 0;
   var lostRev = lost.reduce(function(a,j){ return a + (j.lostEst||j.havellinEst||0); }, 0);
+  // ⚠ MEASURED ON A COLD CACHE: this read 0 · 0 · 0% · $0 against a pipeline of three
+  // won and two lost worth $12,600, and printed "No lost prospects yet — that's a good
+  // sign" underneath it. A blank is survivable; a reassurance is not. Every figure below
+  // becomes an em dash until the outcomes are actually in hand.
+  var unread = jobsUnread();
+  var dash = function(v){ return unread ? '\u2014' : v; };
 
   // ── Metrics row ──
   var mEl = document.getElementById('wl-metrics');
   if (mEl) mEl.innerHTML =
-    '<div class="metric-card"><div class="metric-label">Won</div><div class="metric-val" style="color:var(--sage-dk);">' + won.length + '</div></div>' +
-    '<div class="metric-card"><div class="metric-label">Lost</div><div class="metric-val" style="color:#B0413E;">' + lost.length + '</div></div>' +
-    '<div class="metric-card"><div class="metric-label">Conversion Rate</div><div class="metric-val">' + convRate + '%</div></div>' +
-    '<div class="metric-card"><div class="metric-label">Lost Revenue</div><div class="metric-val" style="color:#B0413E;">' + fmt(lostRev) + '</div></div>';
+    '<div class="metric-card"><div class="metric-label">Won</div><div class="metric-val" style="color:var(--sage-dk);">' + dash(won.length) + '</div></div>' +
+    '<div class="metric-card"><div class="metric-label">Lost</div><div class="metric-val" style="color:#B0413E;">' + dash(lost.length) + '</div></div>' +
+    '<div class="metric-card"><div class="metric-label">Conversion Rate</div><div class="metric-val">' + dash(convRate + '%') + '</div></div>' +
+    '<div class="metric-card"><div class="metric-label">Lost Revenue</div><div class="metric-val" style="color:#B0413E;">' + dash(fmt(lostRev)) + '</div></div>';
 
   // ── Loss-reason breakdown ──
   var rEl = document.getElementById('wl-reason-wrap');
@@ -13431,7 +13462,9 @@ function renderWinLoss() {
   // ── Lost clients table ──
   var tEl = document.getElementById('wl-table-wrap');
   if (tEl) {
-    if (lost.length === 0) {
+    if (unread) {
+      tEl.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:1rem 0;line-height:1.55;">' + jobsUnreadNotice() + '</div>';
+    } else if (lost.length === 0) {
       tEl.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:1rem 0;">No lost prospects yet — that\'s a good sign.</div>';
     } else {
       var sorted = lost.slice().sort(function(a,b){ return (b.lostAt||'').localeCompare(a.lostAt||''); });
@@ -13660,7 +13693,9 @@ function _applyDroppedJobs(ids) {
   if (removed) {
     var ct = document.getElementById('jct'); if (ct) ct.textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
     if (typeof rebuildDropdowns === 'function') { try { rebuildDropdowns(); } catch(e) {} }
-    if (typeof renderJobs === 'function') { try { renderJobs(); } catch(e) {} }
+    // A client deleted on the other device is still on this one's Win/Loss table until
+    // something redraws it — which for a lost prospect is the row saying we lost them.
+    _jobsLanded();
     // Say so. A client vanishing from the list with no explanation reads as data loss;
     // this is the opposite — the list is catching up with a deletion made elsewhere.
     showSyncBadge(removed + ' client' + (removed > 1 ? 's' : '') + ' deleted elsewhere — removed from this device too', true);
@@ -13843,12 +13878,43 @@ function loadJobs() {
           if (Array.isArray(data.deletedJobs)) _purgeLocalJobRecords(data.deletedJobs);
           document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
           rebuildDropdowns();
-          renderJobs();
           showSyncBadge('Loaded ' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' from Sheets \u2713');
         }
+        // ⚠ THE JOBS ARRIVE AFTER THE SCREEN IS DRAWN. This used to call renderJobs()
+        // and nothing else, so every OTHER surface built from this array kept whatever it
+        // had painted against an empty list — for good, until you navigated away and back.
+        _jobsState = 'ready';
+        _jobsLanded();
       })
-      .catch(function(){ /* silent fail — localStorage is the fallback */ });
+      .catch(function(){
+        // Offline — the local cache remains as the last-known fallback. Resolve the flag
+        // either way, or the reporting says "loading" forever on a device that will never
+        // hear back, which is the state this flag exists to stop being reported as zero.
+        _jobsState = 'offline';
+        _jobsLanded();
+      });
+  } else {
+    _jobsState = 'ready';   // no sync URL configured; the local cache is all there is
   }
+}
+
+// The jobs arrived AFTER the screen was drawn. Redraw whatever is open that is built
+// from them. This is the ONE definition of that — jobsWatchTick and _applyDroppedJobs
+// kept their own partial copies, and a partial copy is how the Win/Loss report came to
+// be the one surface nobody remembered. Every branch guards itself, so this is safe to
+// call from anywhere the `jobs` array is replaced.
+//
+// ⚠ renderJobs() is NOT gated on its panel being active, deliberately: it is what
+// loadJobs always did here, and the client list is cheap and must never be left stale
+// for a path into that panel that does not re-render on entry.
+function _jobsLanded() {
+  if (typeof renderJobs === 'function') { try { renderJobs(); } catch(e) {} }
+  if (typeof _dashRedraw === 'function') { try { _dashRedraw(); } catch(e) {} }
+  var wl = document.getElementById('panel-winloss');
+  if (wl && wl.classList.contains('active') && typeof renderWinLoss === 'function') renderWinLoss();
+  // The referral leaderboard is built from jobs too — measured on a cold cache it
+  // rendered ZERO BYTES, so the whole section was absent rather than merely wrong.
+  if (typeof refreshReferralsTabIfActive === 'function') refreshReferralsTabIfActive();
 }
 // Per-job estimate store
 var estimateStore = {};  // { jobId: { estimate, approved, approvedBy, approvedAt } }
