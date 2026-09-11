@@ -433,6 +433,113 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(g._renderAppraisalGuardrail(job), '', 'and the panel disappears once nothing is outstanding');
   }
 
+  // ── 3b. The appraisal worklist numbered by POSITION ────────────────────────
+  // The packet handed to an outside specialist. The appraiser reads a number off this
+  // page, values the object and reports the value back against that number — so the
+  // number has to identify the object, which is exactly what itemNo is for and exactly
+  // what `(i + 1)` is not. The list is GROUPED BY APPRAISER, so positions restarted at 1
+  // in every group and two different objects printed as "#1" on one page; and inserting
+  // an item renumbered everything below it between one printing and the next.
+  group('appraisal worklist: the permanent item number, not the row position');
+  {
+    const WL_FNS = INV_FNS.concat([
+      'printAppraisalWorklist', '_apprEstimateFlags', '_invRoomName', '_invMoney',
+      'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
+      'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat', 'invMAIVCategory',
+      'isDecedentJob', '_gate706',
+    ]);
+    const WL_VARS = INV_VARS.concat([
+      'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
+      'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INVENTORY_COLUMNS',
+    ]);
+
+    function wlCtx(items) {
+      const ctx = sandbox({ fns: WL_FNS, vars: WL_VARS });
+      ctx.jobs.push({ id: 1, name: 'Estate of Doe', hvlId: 'HVL-1001',
+                      deathDate: '2026-01-15', svc: 'cleanout', docLevel: 'standard' });
+      ctx._photoRefs[1] = items;
+      return ctx;
+    }
+    // The number cell is the first <td> of a worklist row; read them back in page order.
+    function printedNos(out) {
+      const re = /<td style="padding:3px 6px;border-bottom:1px solid #eee;font-weight:700;color:#666;">([^<]*)<\/td>/g;
+      const found = []; let m;
+      while ((m = re.exec(out))) found.push(m[1]);
+      return found;
+    }
+
+    // TWO APPRAISERS, TWO GROUPS. This is the shape that produced two "#1"s.
+    const two = wlCtx([
+      item({ stableId: 'art', objectName: 'Oil painting', category: 'Art & Décor', itemNo: 4 }),
+      item({ stableId: 'jwl', objectName: 'Diamond brooch', category: 'Jewelry & Watches', itemNo: 7 }),
+    ]);
+    two.printAppraisalWorklist(1);
+    const nosTwo = printedNos(two.__printed);
+    eq(nosTwo.length, 2, 'both items print');
+    eq(new Set(nosTwo).size, 2,
+       'two objects on one page never share a number, however they are grouped');
+    ok(nosTwo.indexOf('4') >= 0 && nosTwo.indexOf('7') >= 0,
+       'and each prints its OWN permanent number, not its position in its group');
+    lacks(two.__printed, '<th style="padding:3px 6px;">#</th>',
+          'the column is headed Item #, so the appraiser knows what to quote back');
+    has(two.__printed, '<th style="padding:3px 6px;">Item #</th>', 'header names it');
+
+    // STABLE ACROSS PRINTINGS. Adding an item must not renumber the ones already quoted.
+    const before = printedNos(two.__printed).slice().sort();
+    two._photoRefs[1].unshift(
+      item({ stableId: 'rug', objectName: 'Tabriz rug', category: 'Rugs & Carpets', itemNo: 9 }));
+    two.printAppraisalWorklist(1);
+    const after = printedNos(two.__printed);
+    ok(before.every((n) => after.indexOf(n) >= 0),
+       'every number from the first printing still names the same object on the second');
+    eq(new Set(after).size, 3, 'and the new row took a number of its own');
+
+    // A ROW THAT HAS NEVER BEEN NUMBERED IS NUMBERED BY THE PRINT, not given a position.
+    // printCourtInventory and printApprovalRequest both assign first; this one did not,
+    // so a manifest nobody had printed from yet had no permanent numbers to print.
+    const fresh = wlCtx([
+      item({ stableId: 'a', objectName: 'Silver service', category: 'Silver & Precious Metal' }),
+      item({ stableId: 'b', objectName: 'Sculpture', category: 'Art & Décor' }),
+    ]);
+    fresh.printAppraisalWorklist(1);
+    ok(fresh._photoRefs[1].every((r) => parseInt(r.itemNo, 10) > 0),
+       'printing the worklist assigns the permanent numbers, exactly as the court inventory does');
+    const nosFresh = printedNos(fresh.__printed);
+    eq(new Set(nosFresh).size, 2, 'and they are distinct');
+    nosFresh.forEach((n) => ok(n !== '—', 'nothing prints as unnumbered once assigned'));
+
+    // THE TWO NOTICE BLOCKS IN THE SAME DOCUMENT name items the same reader must find.
+    const guns = wlCtx([
+      item({ stableId: 'g1', objectName: 'Shotgun', category: 'Firearms', fmv: '900', itemNo: 12 }),
+      item({ stableId: 'g2', objectName: 'Suppressor', category: 'Firearms', flagNFA: true,
+             authBy: 'J. Smith, PR', approvalDate: '2026-09-01', itemNo: 13 }),
+    ]);
+    guns.printAppraisalWorklist(1);
+    has(guns.__printed, '#12 Shotgun',
+        'a firearm withheld for want of written authority is named by its item number');
+    has(guns.__printed, '#13 Suppressor',
+        'and so is an NFA item the dealer has to be told about in advance');
+  }
+
+  group('a snapshot prints the number it recorded, or says it has none');
+  {
+    // it.itemNo || (i + 1) — a snapshot row taken before item numbers existed carries
+    // none, and a position printed in that column reads as a number that was issued.
+    const snapFns = ['printInventorySnapshot', '_invItemNo', '_invMoney', '_invDateTime'];
+    const sctx = sandbox({ fns: snapFns, vars: [] });
+    sctx.jobs.push({ id: 1, name: 'Estate of Doe', hvlId: 'HVL-1001', invSnapshots: [{
+      ts: 1757000000000, label: 'At filing', count: 2, totalFMV: 5100,
+      items: [{ itemNo: 6, object: 'Console', category: 'Furniture', fmv: '100', track: 'Probate' },
+              { itemNo: '',  object: 'Credenza', category: 'Furniture', fmv: '5000', track: 'Probate' }],
+    }] });
+    sctx.printInventorySnapshot(1, 1757000000000);
+    has(sctx.__printed, '>6<', 'a recorded number prints');
+    has(sctx.__printed, '>—<', 'and a row that never had one says so rather than printing its position');
+    lacks(sctx.__printed, '>2<', 'the second row is not numbered by where it sits');
+    has(sctx.__printed, '<th style="padding:2px 6px;">Item #</th>',
+        'the column says what the number is');
+  }
+
   group('printing: assign, print, clear cannot happen on one tick');
   {
     // "I hit appraisal worklist and a blank doc comes up to print." Five printers set

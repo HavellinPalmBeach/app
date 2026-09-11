@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:52am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:07am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -16257,8 +16257,11 @@ function printInventorySnapshot(jobId, ts) {
   if (!job || !pt) return;
   var snap = (job.invSnapshots || []).find(function(s){ return String(s.ts) === String(ts); });
   if (!snap) return;
-  var rows = snap.items.map(function(it, i){
-    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(String(it.itemNo || (i + 1))) + '</td>'
+  // Same rule as the worklist: a snapshot row taken before item numbers existed carries
+  // none, and printing its position there asserts a number that was never issued. _invItemNo
+  // prints an em dash instead, which is the honest answer.
+  var rows = snap.items.map(function(it){
+    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(_invItemNo(it)) + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.object || '—') + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.category || '—') + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.track || '—') + '</td>'
@@ -16268,7 +16271,7 @@ function printInventorySnapshot(jobId, ts) {
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Snapshot</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Captured ' + esc(_invDateTime(snap.ts)) + (snap.label ? ' &middot; ' + esc(snap.label) : '') + ' &middot; ' + snap.count + ' items &middot; total ' + (_invMoney(snap.totalFMV)) + '</div>'
-    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">#</th><th style="padding:2px 6px;">Object</th><th style="padding:2px 6px;">Category</th><th style="padding:2px 6px;">Track</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Item #</th><th style="padding:2px 6px;">Object</th><th style="padding:2px 6px;">Category</th><th style="padding:2px 6px;">Track</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '</div>';
   _printDocument(pt.innerHTML);
 }
@@ -16864,6 +16867,15 @@ function printAppraisalWorklist(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
+  // ⚠ THE NUMBER ON THIS PAGE IS THE ONE THE APPRAISER REPORTS BACK AGAINST, so it has
+  // to be the permanent item number the Court Inventory and the receipts cite — not the
+  // row's position, which was what it printed until 2026-09-11. Grouping by appraiser
+  // means positions restart at 1 in every group, so two different objects printed as
+  // "#1" on one page, and inserting an item renumbered everything under it between one
+  // printing and the next. Assign first, exactly as printCourtInventory and
+  // printApprovalRequest do: _invAssignItemNos mutates the rows _jobInvRefs hands back,
+  // so a row that has never been numbered gets its number before _apprGroups reads it.
+  _invAssignItemNos(jobId);
   var groups = _apprGroups(jobId);
   var names = Object.keys(groups).sort();
   var dod = job.deathDate ? ' (' + esc(fmtDate2(job.deathDate)) + ')' : '';
@@ -16884,9 +16896,9 @@ function printAppraisalWorklist(jobId) {
       + '</div>';
   } else {
     names.forEach(function(a) {
-      var rows = groups[a].map(function(r, i) {
+      var rows = groups[a].map(function(r) {
         return '<tr>'
-          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + (i + 1) + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '(unnamed)') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.category || '') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
@@ -16897,7 +16909,7 @@ function printAppraisalWorklist(jobId) {
       html += '<div style="margin-bottom:18px;">'
         + '<h3 style="font-family:\'Cormorant Garamond\',serif;color:#8a6d3b;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:6px;">' + esc(a) + ' <span style="font-size:12px;color:#888;">(' + groups[a].length + ')</span></h3>'
         + '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
-        + '<thead><tr style="text-align:left;color:#888;"><th style="padding:3px 6px;">#</th><th style="padding:3px 6px;">Object</th><th style="padding:3px 6px;">Category</th><th style="padding:3px 6px;">Room</th><th style="padding:3px 6px;">Condition</th><th style="padding:3px 6px;">Photo</th></tr></thead>'
+        + '<thead><tr style="text-align:left;color:#888;"><th style="padding:3px 6px;">Item #</th><th style="padding:3px 6px;">Object</th><th style="padding:3px 6px;">Category</th><th style="padding:3px 6px;">Room</th><th style="padding:3px 6px;">Condition</th><th style="padding:3px 6px;">Photo</th></tr></thead>'
         + '<tbody>' + rows + '</tbody></table></div>';
     });
   }
@@ -16910,7 +16922,7 @@ function printAppraisalWorklist(jobId) {
       + nfa.length + ' NFA item' + (nfa.length > 1 ? 's' : '') + ' &mdash; tell the dealer before they come out</div>'
       + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Registered NFA items transfer on a different path (ATF Form 5 to the estate) and it runs in months, not days. Confirm the dealer holds the right licence to take them, and put the timeline in front of the representative and counsel now rather than at handover &mdash; an estate trying to close does not want to discover this last.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
-      + nfa.map(function(r){ return esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
+      + nfa.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
   }
   if (withheld.length) {
@@ -16919,7 +16931,7 @@ function printAppraisalWorklist(jobId) {
       + withheld.length + ' firearm' + (withheld.length > 1 ? 's are' : ' is') + ' awaiting written authority</div>'
       + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until the personal representative has authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the authority on the item — Authorized By and Approval Date, with the dealer in Channel / Recipient — and the item joins this worklist. The dealer collects from the property; Havellin does not transport firearms.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
-      + withheld.map(function(r){ return esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
+      + withheld.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
   }
   var f = _apprEstimateFlags(jobId);

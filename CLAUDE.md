@@ -70,6 +70,49 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## THE APPRAISAL WORKLIST NUMBERED BY POSITION, SO FOUR ITEMS PRINTED AS "#1" (FIXED 2026-09-11)
+Found by the code audit. App-only, no redeploy. **This document is handed to an outside specialist
+and the values come back quoted against these numbers.**
+
+- **⚠⚠ `printAppraisalWorklist` PRINTED `(i + 1)`, AND THE LIST IS GROUPED BY APPRAISER**, so the
+  position restarted at 1 inside every group. **Measured in a browser on the shipped build, not
+  argued:** a six-item estate printed **four of five rows as "#1"** — the rug, the painting, the
+  suppressor and the brooch — with two distinct numbers across five rows. An appraiser reporting
+  *"item 1 is worth $14,000"* has named four objects.
+- **⚠ AND THE NUMBERS MOVED BETWEEN PRINTINGS.** Same estate, one item added, printed again: the
+  rug went **#1 → #2** and the tea service **#2 → #3**. So the number on the copy the specialist is
+  holding no longer matches the number on ours — and this is the same defect the app already fixed
+  once, in the manifest, on 2026-08-24: *"Item # was the render position, not an ID."* It was fixed
+  there and left standing here.
+- **`_invItemNo(r)` IS THE ONE DEFINITION AND IT ALREADY EXISTED** — the Court Inventory, the
+  Estate Inventory Report and the release approval request all read it. The worklist was the last
+  hand-rolled copy. The column header reads **Item #** rather than **#**, because *what number is
+  this* is exactly the question a reader quoting it back needs answered on the page.
+- **⚠ IT ALSO HAD TO ASSIGN FIRST, and that half is not cosmetic.** `printCourtInventory` and
+  `printApprovalRequest` both open with `_invAssignItemNos(jobId)`; this one did not, so a row that
+  had never been numbered had nothing permanent to print. It assigns now — verified in a browser
+  that an unnumbered tea service is issued **#14** by the print and that the assignment **persists**
+  to `_photoRefs`, so the next document cites the same number.
+- **⚠ THE TWO NOTICE BLOCKS IN THE SAME DOCUMENT NAMED OBJECTS AND NOT NUMBERS.** The withheld-
+  firearms list and the NFA list printed bare object names, on the one page whose entire purpose is
+  that a third party can identify a specific object. They read **#12 Remington 870 shotgun** and
+  **#13 Suppressor** now. `17559` already did this elsewhere; it is one rule.
+- **⚠ `printInventorySnapshot` HAD THE SAME BUG IN MINIATURE: `it.itemNo || (i + 1)`.** A snapshot
+  row captured before item numbers existed carries none, and a position printed in that column
+  **asserts a number that was never issued** — on a point-in-time record whose stated purpose
+  (`16221`) is that two snapshots can be diffed **by identity**. It prints an em dash now, which is
+  the honest answer, and its header says **Item #** too.
+- **3432 committed checks** (17 new, driven on the real `printAppraisalWorklist` and
+  `printInventorySnapshot`). **All seven changes revert-verified individually** — restoring the
+  position number fails **5**, dropping the assign-first call fails 4, and each header and notice
+  list fails its own check.
+- **Verified end to end in headless Chromium** on a seeded probate estate: five worklist rows across
+  four appraiser groups print **9 · 14 · 4 · 13 · 7**, all distinct, none numbered 1; a second
+  printing with an item inserted at the top of the list leaves **every existing number where it
+  was** and issues **#15** to the new one. Overflow 0 at 1440px, no page errors. **The same estate on
+  the old build printed 1 · 2 · 1 · 1 · 1.**
+- No document pass: neither the manual nor the playbook describes this document's numbering.
+
 ## THE COURT INVENTORY STAMPED "FINAL" OVER A FLOOR (FIXED 2026-09-11)
 Found by the code audit, same document as the section below. App-only, no redeploy.
 
