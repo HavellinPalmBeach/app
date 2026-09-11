@@ -70,7 +70,83 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## A CHANGE ORDER CARRIES HOURS, NOT A PRICE (REBUILT 2026-09-11)
+Anthony, settling the question the section below opened: *"the change order is supposed to trigger
+when we're gonna run fifteen percent over a job, and that's on the transition concierge and property
+specialist hours. It's not even time and materials. It's just literally the time we're billing …
+everything else is a pass through … I don't think the change order should have a dollar amount, and
+we certainly shouldn't bill a client for it on the change order. It should be an estimate of the
+additional hours or an increase in scope … and that should just be added to the final invoice once
+those hours are actually billed."* App-only, no redeploy — the record is a job-keyed store blob.
+
+- **⚠⚠ THE DEFECT THIS CLOSES IS THE SAME WORK CHARGED TWICE, and it is separate from the
+  `prevTotal` bug below.** Fixing `prevTotal` made the line bill the right *delta*; this removes the
+  line. On a T&M job — **the default on every service** — the crew works the added scope, logs the
+  hours, and `_finalServices` trues labour to the log. The change is in the bill before the line is
+  added. Driven on the real `invoiceHtml`: a $19,940 estate with a +$5,000 change order whose 20 TC
+  + 20 PS hours were logged collected **$29,940 against a revised total of $24,940**.
+- **THE RECORD IS `tcHrs` / `psHrs` AND NOTHING ELSE.** `amount`, `originalTotal` and `newTotal` are
+  **deleted, not left dead** — a retired money field on a change order comes back as a second charge.
+  Verified in a browser that a saved record's keys are exactly `clientAcceptedAt, clientApproved,
+  clientName, createdAt, description, id, jobId, psHrs, reason, tcHrs, updatedAt`.
+- **⚠⚠ THE ONE RULE, AND IT MUST NOT BE APPLIED TWICE: the hours are billed by the TIMESHEET on T&M
+  and by the RATE CARD on fixed price.** A flat fee never consults the log (`_fixed` anchors every
+  stage to `_fixedTotal` and the final does not true up), so there the derived shift **is** the
+  charge and added scope is otherwise charged nowhere; on T&M it is not a charge at all. That is
+  `coCharge = _fixedBasis ? coShift : 0`, and **applying it on both bases is the original defect
+  wearing a different hat.** Every test drives BOTH bases and asserts what the job *collects*.
+- **⚠ THE BASELINE HALF IS NOT COSMETIC AND THE CONVERSE IS THE TEST THAT MATTERS.** `overUnder`
+  reads `est.havellinTotal`, so without `+ coShift` an expansion the client had signed for reported
+  to the manager as *"job ran over estimate"* and tripped the ±15% PIN — the app treating its own
+  approved change as a variance. **But a baseline that moves must not be a baseline that blinds:**
+  hours *beyond* the authorised scope still trip it (driven: 120/100 logged against a +20/+20 change
+  order → $5,000 over, `requiresApproval` true), and an **unaccepted** change order moves nothing,
+  so unsigned scope cannot excuse an overrun.
+- **⚠ `havellinTotalDiscounted = totalFinalBasis` NOW — nothing is backed out.** It used to be
+  `totalFinalBasis - coTotal`, which is precisely why the PIN could not see the old bug: the same
+  wrong number was subtracted straight back out before the variance was computed.
+- **THE 15% IS WHY THE SCREEN EXISTS, so the modal states it rather than leaving it to be worked
+  out.** Measured in a browser: +20/+20 on a 140-hour estimate reads *"140.0 hrs on the estimate
+  becomes 180.0 (+28.6%) — **Past the 15% threshold**"* in amber; +2/+2 reads *"+2.9% — inside the
+  15% the client already agreed to"* in blue. **A change order with no hours is refused** — it would
+  put a row on the timeline and the invoice reading as an agreed change while agreeing to nothing.
+- **⚠ THE CLIENT'S COPY CARRIES NO PRICE AT ALL — measured, not asserted:** the printed change order
+  renders four rows (*Hours on the approved estimate 140.0* · the scope change · *Revised estimated
+  hours 180.0*) and **`/\$\s?[\d,]/` does not match anywhere in it.** It states outright that
+  *"This change order does not itself create a charge"* and that vendor costs are billed by the
+  vendor directly and unaffected. The invoice's own section states the hours, names who accepted and
+  when, and says *"already included in the figures above"* — on fixed price it says instead that
+  they are *"added to the fixed project fee above"*, because there they are.
+- **⚠ `acceptChangeOrder` RECOMPUTES FROM EVERY ACCEPTED ORDER, never from the one being accepted.**
+  The old line was `job.havellinEst = co.newTotal`, so a second change order compounded off an
+  already-revised figure. Deriving the whole thing each time is idempotent and a withdrawn
+  acceptance simply drops out of it.
+- **3362 committed checks** (`tests/change-order-billing.test.js` rewritten, 58 more). **All six
+  load-bearing changes revert-verified individually** — charging it on T&M fails **10**, dropping
+  the fixed-price charge fails 3, freezing the baseline fails 5, backing the shift out again fails
+  5, allowing a no-hours order fails 1, hardcoding the rate pair fails 1.
+- **Verified end to end in headless Chromium on the real page** — the modal opened through the real
+  handler, hours typed into the real inputs firing the real `oninput`, saved, accepted through the
+  real acceptance modal, then the invoice and the print path read back: job total $19,940 →
+  **$24,940** on acceptance, final **$9,985**, variance **0.0%**, no PIN, and the payment summary
+  reading *"Approved Change Orders (1) · +20.0 concierge / +20.0 specialist hrs, billed in the hours
+  above"*. Overflow 0 at 1440 and 390px, **no page errors**.
+- **⚠ FOUND IN PASSING, NOT FIXED: `printChangeOrder` HAND-ROLLS THE PRINT SEQUENCE** — it writes
+  `#print-target` and calls `window.print()` itself instead of going through `_printDocument`, the
+  one print path this file already records building for exactly that reason. Pre-existing, and on
+  the audit's list with seven other print paths; flagged rather than swept into this commit.
+- **⚠ THE DEPOSIT AND MIDPOINT DELIBERATELY DO NOT MOVE.** Both are anchored to the estimate, and
+  the final reconciles everything — the same treatment rush already gets. A change order accepted
+  mid-job therefore under-collects at the midpoint and catches up at the final, which is the
+  conservative direction and never over-bills.
+- Prelaunch, dummy data only, so there is nothing to migrate. **Both documents need a pass** —
+  the manual and the playbook describe raising a change order with a dollar amount, which is now
+  false in both.
+
 ## ⚠⚠ EVERY CHANGE ORDER BILLED THE WHOLE PROJECT TOTAL AGAIN (FIXED 2026-09-11)
+**⚠ SUPERSEDED THE SAME DAY by the hours rebuild above — `coDelta`, `amount`, `originalTotal` and
+`newTotal` no longer exist. Kept because the defect and how it hid are worth knowing, and because
+the `_coMoney` house-style rule it established is still live on the fixed-price charge.**
 Found by the code audit Anthony asked for — *"let's do an audit of the code and sus out anything
 you think doesn't compute or is broken"*. App-only, no redeploy. **The worst live money defect
 this file has recorded.**

@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 4:14am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:22am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2669,15 +2669,14 @@ body.no-smf .smf-col{display:none;}
       <button class="btn-s" onclick="closeChangeOrder()">✕</button>
     </div>
     <input type="hidden" id="co-jobid">
-    <input type="hidden" id="co-orig-total">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
       <div style="background:var(--tan);border-radius:6px;padding:10px 12px;">
-        <div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Original Total</div>
-        <div style="font-size:18px;font-weight:500;" id="co-original-total">$0</div>
+        <div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Estimated Hours</div>
+        <div style="font-size:18px;font-weight:500;" id="co-original-hrs">0.0</div>
       </div>
       <div style="background:var(--cream);border-radius:6px;padding:10px 12px;border:2px solid var(--bronze);">
-        <div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Revised Total</div>
-        <div style="font-size:18px;font-weight:600;" id="co-new-total">$0</div>
+        <div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;">Revised Hours</div>
+        <div style="font-size:18px;font-weight:600;" id="co-new-hrs">0.0</div>
       </div>
     </div>
     <label>Reason for change</label>
@@ -2689,11 +2688,16 @@ body.no-smf .smf-col{display:none;}
       <option value="vendor">Vendor cost change</option>
       <option value="other">Other</option>
     </select>
-    <label>Description of change</label>
-    <textarea id="co-description" style="height:80px;" placeholder="e.g. Client requested completion in 5 days instead of 10. Rush adjustment of +25% applied to all hours. Added guest house and pool house to scope."></textarea>
-    <label>Dollar amount of change</label>
-    <input type="number" id="co-amount" placeholder="Positive to add, negative to reduce (e.g. 2500 or -1000)" oninput="updateCOTotal()">
-    <div style="font-size:11px;color:var(--gray);margin-top:2px;">Enter the net change in Havellin fees. Positive = client pays more. Negative = credit to client.</div>
+    <label>What changed in the scope</label>
+    <textarea id="co-description" style="height:80px;" placeholder="e.g. Added the guest house and pool house to scope. Client asked for the garage to be cleared as well."></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><label>Additional concierge hours</label>
+        <input type="number" step="0.5" id="co-tc-hrs" placeholder="e.g. 8 (negative to reduce)" oninput="updateCOHours()"></div>
+      <div><label>Additional specialist hours</label>
+        <input type="number" step="0.5" id="co-ps-hrs" placeholder="e.g. 16 (negative to reduce)" oninput="updateCOHours()"></div>
+    </div>
+    <div class="vform"><div class="fld-note" style="font-size:11px;color:var(--gray);margin-top:2px;line-height:1.5;">Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;15% check measures against.</div></div>
+    <div id="co-hrs-note" style="margin-top:6px;"></div>
     <div id="co-fb" style="margin-top:8px;"></div>
     <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end;">
       <button class="btn-s" onclick="closeChangeOrder()">Cancel</button>
@@ -2716,7 +2720,7 @@ body.no-smf .smf-col{display:none;}
     <div id="coa-summary" style="background:var(--cream);border-radius:6px;padding:12px;margin-bottom:1rem;font-size:12px;line-height:1.7;"></div>
     <label>Client full name <span style="color:#A32D2D;font-weight:700;">*</span></label>
     <input type="text" id="coa-client-name" placeholder="Type client's full name to accept" autocomplete="off" style="font-size:15px;">
-    <div style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5;">By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change order and the revised project total.</div>
+    <div style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5;">By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and the additional hours it is expected to take. Those hours are billed on the final invoice as they are actually worked.</div>
     <div id="coa-fb" style="margin-top:8px;"></div>
     <div style="display:flex;gap:8px;margin-top:1.2rem;justify-content:flex-end;">
       <button class="btn-s" onclick="closeCOAcceptModal()">Cancel</button>
@@ -9771,7 +9775,7 @@ function renderJobs() {
           '<div style="flex:1;min-width:0;"><strong>CO-' + co.id.toString().slice(-6) + '</strong> · ' + co.description.substring(0,50) + (co.description.length>50?'...':'') +
             '<div style="margin-top:2px;">' + coStatus + '</div></div>' +
           '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' +
-          '<span style="color:' + (co.amount>=0?'var(--bronze)':'var(--ok-tx)') + ';font-weight:600;">' + (co.amount>=0?'+':'') + '$' + Math.round(co.amount).toLocaleString() + '</span>' +
+          '<span style="color:' + (coHours(co).total>=0?'var(--bronze)':'var(--ok-tx)') + ';font-weight:600;">' + coHoursLabel(co) + '</span>' +
           coActions +
           '</div></div>';
       });
@@ -10229,51 +10233,86 @@ function migrateChangeOrders() {
   });
 }
 
-// The dollar DELTA one change order adds to the job — the ONE definition, read by the
-// invoice's total AND by the line the invoice prints. Two sites computing the same delta
-// is precisely how they drift; here they did not drift, they were simply both wrong.
+// ⚠⚠ A CHANGE ORDER CARRIES HOURS, NOT A PRICE — Anthony, 2026-09-11, and the reasoning
+// is the whole design rather than a preference:
 //
-// ⚠⚠ THE FIELD THIS REPLACES WAS NEVER WRITTEN BY ANYTHING IN THE REPOSITORY.
-// Both readers used to compute `co.newTotal - co.prevTotal`, and `prevTotal` appears
-// nowhere else in this file, in tests/, or in apps-script/ — `saveChangeOrder` is the
-// only writer of a change order and it writes `originalTotal`. So the expression
-// resolved to `newTotal - 0`: the WHOLE REVISED PROJECT TOTAL rather than the delta,
-// and `totalFinalBasis` added an entire second copy of the job to the final invoice.
-// Driven on the real `invoiceHtml` against a $19,940 Estate Settlement with the hours
-// logged to match: a +$5,000 change order billed a final of $29,925 against a correct
-// $9,985; a $5,000 REDUCTION billed $19,925, i.e. agreeing to take work OUT raised the
-// bill; two change orders billed $54,865. The error is one whole project total PER
-// change order, and it lands on the invoice that goes to the client.
+//   "the change order is supposed to trigger when we're gonna run fifteen percent over a
+//    job, and that's on the transition concierge and property specialist hours … everything
+//    else is a pass through … I don't think the change order should have a dollar amount,
+//    and we certainly shouldn't bill a client for it on the change order. It should be an
+//    estimate of the additional hours or an increase in scope … and that should just be
+//    added to the final invoice once those hours are actually billed."
 //
-// ⚠ AND THE 15% MANAGER PIN COULD NOT SEE IT, which is why nothing caught it.
-// `havellinTotalDiscounted` is `totalFinalBasis - coTotal`, so the same wrong number is
-// subtracted straight back out before `overUnder` is computed: every one of those
-// invoices read variance 0.0% with `requiresApproval` false. A gate reading a figure the
-// defect cancels itself out of is not a second line of defence.
+// WHAT IT REPLACES AND WHY THAT WAS WRONG. The record used to carry `amount` /
+// `originalTotal` / `newTotal`, and the final invoice added the delta as a line. On a T&M
+// job — the default on every service — that is the SAME WORK CHARGED TWICE: the crew does
+// the extra scope, logs the hours, and `_finalServices` trues labour to the log, so the
+// change is already in the bill before the line is added. Driven on the real `invoiceHtml`:
+// a $19,940 estate with a +$5,000 change order whose 20 TC + 20 PS hours were logged
+// collected $29,940 against a revised total of $24,940.
 //
-// ⚠ THE DELTA IS THE GAP BETWEEN THE TWO FIGURES THE CLIENT SIGNED, not `co.amount`.
-// The change order document prints "Original estimate" (`originalTotal`) and "Revised
-// Total" (`newTotal`), and the client accepts THAT. Billing anything other than the
-// difference between those two bills a number their signed copy does not show. `amount`
-// is the fallback for a record missing either figure, never the primary.
-// A change-order delta on the CLIENT'S invoice, in the house style.
+// ⚠ THE ONE RULE, AND IT MUST NOT BE APPLIED TWICE: the change order's hours are billed by
+// the TIMESHEET on a T&M job and by the RATE CARD on a fixed-price one. A flat fee does not
+// move with logged hours (`_fixed` anchors every stage to `_fixedTotal` and the final does
+// not true up), so there the derived shift IS the charge; on T&M it is not a charge at all
+// and only moves the baseline the ±15% variance is measured against. Adding it in both
+// places is the defect this replaces, wearing a different hat.
 //
-// ⚠ THE NEGATIVE CASE ONLY BECAME REACHABLE WITH THE `coDelta` FIX ABOVE, and that is
-// the lesson rather than the typography: while the delta resolved to the whole revised
-// total it was positive on every realistic job, so `(d >= 0 ? '+' : '') + fmt(d)` had
-// never once taken its else-branch — and that branch prints `$-5,000`. The discount row
-// four lines up has always written `- ` + fmt(positive). A fix that gives an existing
-// expression a value it never used to see is how a dormant defect ships.
+// ⚠ AND THE BASELINE HALF IS NOT COSMETIC. `overUnder` reads `est.havellinTotal`, so before
+// this an expansion the client had signed for reported to the manager as "job ran over
+// estimate" and tripped the PIN. Authorised scope is not a variance.
+
+// A change-order charge on the CLIENT'S invoice, in the house style. Reached only on a
+// fixed-price job, where the derived shift really is a charge; on T&M nothing calls it,
+// because there is no change-order money to render.
+//
+// \u26a0 THE NEGATIVE BRANCH ONLY BECAME REACHABLE WHEN THE DELTA STARTED BEING A DELTA, and
+// that is the lesson rather than the typography: while it resolved to the whole revised
+// project total it was positive on every realistic job, so `(d >= 0 ? '+' : '') + fmt(d)`
+// had never once taken its else-arm \u2014 which prints `$-5,000`. The discount row above it has
+// always written a minus sign and a positive figure.
 function _coMoney(d) {
   return (d < 0 ? '\u2212 ' : '+ ') + fmt(Math.abs(d));
 }
 
-function coDelta(co) {
-  if (!co) return 0;
-  var orig = Number(co.originalTotal), revised = Number(co.newTotal);
-  if (isFinite(orig) && isFinite(revised)) return revised - orig;
-  var amt = Number(co.amount);
-  return isFinite(amt) ? amt : 0;
+// The estimated additional hours one change order carries. The ONE definition — every
+// surface that shows, prints or prices a change order reads it.
+function coHours(co) {
+  if (!co) return { tc: 0, ps: 0, total: 0 };
+  var tc = Number(co.tcHrs), ps = Number(co.psHrs);
+  if (!isFinite(tc)) tc = 0;
+  if (!isFinite(ps)) ps = 0;
+  return { tc: tc, ps: ps, total: tc + ps };
+}
+
+// Summed hours across a set of change orders. Callers pass the ACCEPTED ones —
+// `clientApproved` is what makes a change order real, and that filter stays at the call
+// site so it is visible rather than buried in here.
+function coHoursTotal(cos) {
+  var tc = 0, ps = 0;
+  (cos || []).forEach(function(co){ var h = coHours(co); tc += h.tc; ps += h.ps; });
+  return { tc: tc, ps: ps, total: tc + ps };
+}
+
+// The dollar figure the ESTIMATE BASELINE moves by, at the job's own rates.
+//
+// ⚠ DERIVED, NEVER STORED, AND NEVER PRINTED ON THE CHANGE ORDER. The document the client
+// signs states scope and hours; putting a price on it is what made it an invoice. This
+// figure exists so the ±15% test has something to measure against, and — on a fixed-price
+// job only — so the added scope can be charged at all.
+function coBaselineShift(hrs, tcRate, psRate) {
+  var h = hrs || { tc: 0, ps: 0 };
+  return (h.tc || 0) * (Number(tcRate) || 0) + (h.ps || 0) * (Number(psRate) || 0);
+}
+
+// "+2.0 concierge / +4.0 specialist hrs" — how a change order reads everywhere a person
+// sees one. A reduction keeps the minus sign on the figure rather than inside it.
+function coHoursLabel(co) {
+  var h = (co && co.tc !== undefined) ? co : coHours(co);
+  var parts = [];
+  if (h.tc) parts.push((h.tc > 0 ? '+' : '\u2212') + Math.abs(h.tc).toFixed(1) + ' concierge');
+  if (h.ps) parts.push((h.ps > 0 ? '+' : '\u2212') + Math.abs(h.ps).toFixed(1) + ' specialist');
+  return parts.length ? parts.join(' / ') + ' hrs' : 'no hours change';
 }
 
 function loadChangeOrders() {
@@ -10305,53 +10344,103 @@ function saveChangeOrders() {
   postSyncBadge({ type: 'saveAllChangeOrders', payload: changeOrders }, 'Change order synced ✓', 'Change order sync failed — saved locally');
 }
 
-function openChangeOrder(jobId) {
-  var job = jobs.find(function(j){ return j.id===jobId; });
-  if (!job) return;
-  var est = currentEstimate && currentEstimate.jobId===jobId ? currentEstimate : null;
-  var origTotal = est ? est.havellinTotal : (job.havellinEst || 0);
+// The estimate's own billed hours, and the rates they were quoted at. One resolver so the
+// modal, the acceptance and the invoice cannot disagree about what "the estimate" is.
+function _coJobBasis(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var rec = estimateStore[jobId];
+  var est = (rec && rec.estimate) ? rec.estimate
+          : ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
+  return {
+    job: job, est: est,
+    tcHrs: est ? (est.totTC || 0) : 0,
+    psHrs: est ? (est.totPS || 0) : 0,
+    tcRate: (est && est.tcRate) || (job && job.premium ? 185 : 150),
+    psRate: (est && est.psRate) || (job && job.premium ? 125 : 100)
+  };
+}
 
-  document.getElementById('co-job-name').textContent = job.name;
-  document.getElementById('co-original-total').textContent = '$' + Math.round(origTotal).toLocaleString();
+function openChangeOrder(jobId) {
+  var b = _coJobBasis(jobId);
+  if (!b.job) return;
+
+  document.getElementById('co-job-name').textContent = b.job.name;
   document.getElementById('co-jobid').value = jobId;
-  document.getElementById('co-orig-total').value = origTotal;
   document.getElementById('co-description').value = '';
-  document.getElementById('co-amount').value = '';
-  document.getElementById('co-reason').value = 'timeline';
+  document.getElementById('co-tc-hrs').value = '';
+  document.getElementById('co-ps-hrs').value = '';
+  document.getElementById('co-reason').value = 'scope_add';
   document.getElementById('co-fb').innerHTML = '';
-  document.getElementById('co-new-total').textContent = '$' + Math.round(origTotal).toLocaleString();
+  updateCOHours();
   document.getElementById('change-order-modal').style.display = 'flex';
 }
 
-function updateCOTotal() {
-  var orig = parseFloat(document.getElementById('co-orig-total').value) || 0;
-  var delta = parseFloat(document.getElementById('co-amount').value) || 0;
-  var newTotal = orig + delta;
-  document.getElementById('co-new-total').textContent = '$' + Math.round(newTotal).toLocaleString();
-  document.getElementById('co-new-total').style.color = delta > 0 ? 'var(--bronze)' : (delta < 0 ? 'var(--ok-tx)' : '');
+// ⚠ THE 15% IS WHY THIS SCREEN EXISTS, so the readout states it rather than leaving the
+// concierge to work it out. Anthony: "the change order is supposed to trigger when we're
+// gonna run fifteen percent over a job, and that's on the transition concierge and property
+// specialist hours." The threshold is the estimate's own hours — everything else on the job
+// is a pass-through and cannot move it.
+function updateCOHours() {
+  var jobId = parseInt(document.getElementById('co-jobid').value);
+  var b = _coJobBasis(jobId);
+  var baseHrs = b.tcHrs + b.psHrs;
+  var tc = parseFloat(document.getElementById('co-tc-hrs').value) || 0;
+  var ps = parseFloat(document.getElementById('co-ps-hrs').value) || 0;
+  var addHrs = tc + ps;
+  var newHrs = baseHrs + addHrs;
+
+  document.getElementById('co-original-hrs').textContent = baseHrs.toFixed(1);
+  var revEl = document.getElementById('co-new-hrs');
+  revEl.textContent = newHrs.toFixed(1);
+  revEl.style.color = addHrs > 0 ? 'var(--bronze)' : (addHrs < 0 ? 'var(--ok-tx)' : '');
+
+  var note = document.getElementById('co-hrs-note');
+  if (!addHrs) { note.innerHTML = ''; return; }
+  if (!baseHrs) {
+    note.innerHTML = '<div class="alert a-info">' + coHoursLabel({tc:tc, ps:ps}) +
+      ' — this job has no approved estimate yet, so there is nothing to measure it against.</div>';
+    return;
+  }
+  var pct = addHrs / baseHrs;
+  var pctTxt = (pct > 0 ? '+' : '\u2212') + Math.abs(Math.round(pct * 1000) / 10).toFixed(1) + '%';
+  note.innerHTML = '<div class="alert ' + (Math.abs(pct) >= 0.15 ? 'a-warn' : 'a-info') + '">' +
+    coHoursLabel({tc:tc, ps:ps}) + ' — ' + baseHrs.toFixed(1) + ' hrs on the estimate becomes ' +
+    newHrs.toFixed(1) + ' (' + pctTxt + ').' +
+    (Math.abs(pct) >= 0.15
+      ? ' <strong>Past the 15% threshold</strong> — this is exactly the change the client has to agree to in writing before the hours are worked.'
+      : ' Inside the 15% the client already agreed to, so this records the scope rather than changing what they owe.') +
+    '</div>';
 }
 
 function saveChangeOrder() {
   var jobId = parseInt(document.getElementById('co-jobid').value);
   var desc = document.getElementById('co-description').value.trim();
-  var amount = parseFloat(document.getElementById('co-amount').value);
+  var tcRaw = document.getElementById('co-tc-hrs').value.trim();
+  var psRaw = document.getElementById('co-ps-hrs').value.trim();
+  var tc = parseFloat(tcRaw) || 0;
+  var ps = parseFloat(psRaw) || 0;
   var reason = document.getElementById('co-reason').value;
-  var orig = parseFloat(document.getElementById('co-orig-total').value) || 0;
 
-  if (!desc) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter a description of the change.</div>'; return; }
-  if (isNaN(amount)) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the dollar amount (positive to add, negative to reduce).</div>'; return; }
+  if (!desc) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Describe what changed in the scope.</div>'; return; }
+  // ⚠ A change order with no hours on it authorises nothing and moves nothing. Writing one
+  // anyway would put a row on the timeline and the invoice that reads as an agreed change
+  // while carrying no agreement about anything — the state this rebuild exists to remove.
+  if (!tc && !ps) {
+    document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional hours this change is expected to take — concierge, specialist or both. Negative to reduce scope.</div>';
+    return;
+  }
 
   var co = {
     id: Date.now(),
     updatedAt: Date.now(),
     jobId: jobId,
     description: desc,
-    amount: amount,
     reason: reason,
-    originalTotal: orig,
-    newTotal: orig + amount,
+    // ⚠ HOURS, NOT DOLLARS. `amount` / `originalTotal` / `newTotal` are gone: the final
+    // invoice bills these hours through the timesheet, so a price here was a second charge.
+    tcHrs: tc,
+    psHrs: ps,
     createdAt: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
-    approved: false,
     clientApproved: false,
     clientName: '',
     clientAcceptedAt: ''
@@ -10362,7 +10451,7 @@ function saveChangeOrder() {
 
   document.getElementById('change-order-modal').style.display = 'none';
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order created — pending client acceptance. Open the job in Client Dashboard to get client sign-off.');
+  showFB('e-fb', 'ok', 'Change Order created (' + coHoursLabel(co) + ') — pending client acceptance. Open the job in Client Dashboard to get client sign-off.');
 }
 
 // ─── AGREEMENT SENT → SIGNED → DEPOSIT ────────────────────────────────────────
@@ -10834,12 +10923,10 @@ function openCOAcceptModal(coId) {
   document.getElementById('coa-summary').innerHTML =
     '<div style="margin-bottom:4px;"><strong>' + co.description + '</strong></div>' +
     '<div style="color:var(--gray);">Reason: ' + co.reason + '</div>' +
-    '<div style="margin-top:8px;display:flex;justify-content:space-between;">' +
-      '<span>Original total</span><span>$' + Math.round(co.originalTotal).toLocaleString() + '</span></div>' +
-    '<div style="display:flex;justify-content:space-between;font-weight:700;color:' + (co.amount>=0?'var(--bronze)':'var(--ok-tx)') + ';">' +
-      '<span>Change</span><span>' + (co.amount>=0?'+':'') + '$' + Math.round(co.amount).toLocaleString() + '</span></div>' +
-    '<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:6px;padding-top:6px;">' +
-      '<span>Revised total</span><span>$' + Math.round(co.newTotal).toLocaleString() + '</span></div>';
+    '<div style="margin-top:8px;display:flex;justify-content:space-between;font-weight:700;color:' + (coHours(co).total>=0?'var(--bronze)':'var(--ok-tx)') + ';">' +
+      '<span>Additional hours</span><span>' + coHoursLabel(co) + '</span></div>' +
+    '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
+      'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.</div>';
   document.getElementById('coa-client-name').value = '';
   document.getElementById('coa-fb').innerHTML = '';
   document.getElementById('co-accept-modal').style.display = 'flex';
@@ -10864,16 +10951,23 @@ function acceptChangeOrder() {
   co.clientAcceptedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   co.updatedAt = Date.now();   // recency for the cross-device merge (acceptance beats the pending copy)
   saveChangeOrders();
-  var job = jobs.find(function(j){ return j.id===co.jobId; });
-  if (job) {
-    job.havellinEst = co.newTotal;
-    job.totalEst = co.newTotal;
+  // ⚠ RECOMPUTED FROM THE ESTIMATE PLUS EVERY ACCEPTED CHANGE ORDER, never from this one
+  // alone. The old line read `job.havellinEst = co.newTotal`, so a second change order
+  // compounded off an already-revised figure. Deriving the whole thing each time is
+  // idempotent and cannot drift, and a withdrawn acceptance simply drops back out of it.
+  var b = _coJobBasis(co.jobId);
+  if (b.job) {
+    var accepted = (changeOrders || []).filter(function(c){ return c.jobId === co.jobId && c.clientApproved; });
+    var shift = Math.round(coBaselineShift(coHoursTotal(accepted), b.tcRate, b.psRate));
+    var baseTotal = b.est ? (b.est.havellinTotal || 0) : (b.job.havellinEst || 0);
+    b.job.havellinEst = baseTotal + shift;
+    b.job.totalEst = b.job.havellinEst;
     saveJobs();
-    syncJobToSheets(job);
+    syncJobToSheets(b.job);
   }
   closeCOAcceptModal();
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + '. Project total updated.');
+  showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + '). These hours bill on the final invoice as they are worked.');
 }
 
 function printChangeOrder(coId) {
@@ -10882,6 +10976,8 @@ function printChangeOrder(coId) {
   var job = jobs.find(function(j){ return j.id===co.jobId; });
   var jobName = job ? job.name : 'Client';
   var jobAddr = job ? (job.addr||'') : '';
+  var _b = _coJobBasis(co.jobId);
+  var _coBasis = { baseHrs: _b.tcHrs + _b.psHrs, addHrs: coHours(co).total };
 
   var content = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:1rem;">' +
     '<div style="text-align:center;margin-bottom:1.5rem;">' +
@@ -10895,11 +10991,20 @@ function printChangeOrder(coId) {
     '<div><span style="color:#6B6B72;">Change Order #:</span> CO-' + co.id.toString().slice(-6) + '</div>' +
     '</div>' +
     '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
-    '<tr style="background:#2e2e33;color:#FEF5E7;"><th style="padding:8px 12px;text-align:left;">Item</th><th style="padding:8px 12px;text-align:right;">Amount</th></tr>' +
-    '<tr style="background:#FEF5E7;"><td style="padding:8px 12px;">Original estimate</td><td style="padding:8px 12px;text-align:right;">$' + Math.round(co.originalTotal).toLocaleString() + '</td></tr>' +
-    '<tr><td style="padding:8px 12px;"><strong>' + co.description + '</strong><br><span style="color:#6B6B72;font-size:11px;">Reason: ' + co.reason + '</span></td><td style="padding:8px 12px;text-align:right;color:' + (co.amount>=0?'#A67C45':'#3B6D11') + ';font-weight:600;">' + (co.amount>=0?'+':'') + '$' + Math.round(co.amount).toLocaleString() + '</td></tr>' +
-    '<tr style="background:#2e2e33;color:#FEF5E7;"><td style="padding:8px 12px;font-weight:700;">Revised Total</td><td style="padding:8px 12px;text-align:right;font-weight:700;">$' + Math.round(co.newTotal).toLocaleString() + '</td></tr>' +
+    '<tr style="background:#2e2e33;color:#FEF5E7;"><th style="padding:8px 12px;text-align:left;">Item</th><th style="padding:8px 12px;text-align:right;">Estimated hours</th></tr>' +
+    '<tr style="background:#FEF5E7;"><td style="padding:8px 12px;">Hours on the approved estimate</td><td style="padding:8px 12px;text-align:right;">' + _coBasis.baseHrs.toFixed(1) + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;"><strong>' + esc(co.description||'Scope change') + '</strong><br><span style="color:#6B6B72;font-size:11px;">Reason: ' + esc(co.reason||'') + '</span></td><td style="padding:8px 12px;text-align:right;color:' + (_coBasis.addHrs>=0?'#A67C45':'#3B6D11') + ';font-weight:600;">' + coHoursLabel(co) + '</td></tr>' +
+    '<tr style="background:#2e2e33;color:#FEF5E7;"><td style="padding:8px 12px;font-weight:700;">Revised estimated hours</td><td style="padding:8px 12px;text-align:right;font-weight:700;">' + (_coBasis.baseHrs + _coBasis.addHrs).toFixed(1) + '</td></tr>' +
     '</table>' +
+    // ⚠ THE SENTENCE THAT MAKES THIS DOCUMENT HONEST, and it is the whole point of the
+    // rebuild: a change order authorises scope, it does not create a charge. The hours
+    // above are an estimate; the client is billed for the hours actually worked, on the
+    // final invoice, at the rates already in their agreement. Do not add a price here.
+    '<div style="background:#FEF5E7;border-radius:6px;padding:12px 16px;margin-bottom:1.5rem;font-size:12px;line-height:1.6;color:#3a3a40;">' +
+    '<strong>This change order does not itself create a charge.</strong> The hours above are an estimate of the additional work. ' +
+    'You are billed for the hours actually worked, at the rates already set out in your agreement, on the final invoice \u2014 the same way every other hour on this engagement is billed. ' +
+    'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.' +
+    '</div>' +
     (co.clientApproved
       ? '<div style="margin-top:2rem;background:#e8f5e9;border-radius:6px;padding:12px 16px;font-size:12px;">' +
         '<div style="font-weight:700;color:#2e6b10;margin-bottom:4px;">&#10003; Client Accepted</div>' +
@@ -13010,7 +13115,7 @@ function renderClientDashboard(jobId) {
     h += '<div class="doc-r">';
     h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">Change Order CO-'+String(co.id).slice(-6)+'</div>'
        + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+co.description.slice(0,50)
-       + (co.amount>=0?(' +'+fmtMoney(co.amount)):(' '+fmtMoney(co.amount)))+' · '+co.createdAt+'</div></div>';
+       + ' · '+coHoursLabel(co)+' · '+co.createdAt+'</div></div>';
     h += '<div style="display:flex;gap:6px;align-items:center;">';
     h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#3C348922;color:#3C3489;font-weight:500;">'
        + (co.clientApproved ? 'Accepted' : 'Awaiting acceptance') + '</span>';
@@ -19603,10 +19708,22 @@ function invoiceHtml(job, stage) {
   var laborBase = tcFee + psFee;
   var discountAmt = Math.round(laborBase * discountPct / 100);
 
-  // Accepted change orders for this job — shown as addendum line items on the invoice
+  // Read before the change-order block, which needs to know the billing basis: a
+  // fixed-price job charges a change order's hours at the rate card because its flat fee
+  // never consults the timesheet, and a T&M job must not, because the timesheet already has.
+  var _fixedBasis = !!(est && est.fixedPrice);
+
+  // Accepted change orders. ⚠ THEY CARRY HOURS, NOT A PRICE — see `coHours` for why, and
+  // for the one rule that must not be applied twice: on a T&M job the crew logs those hours
+  // and `_finalServices` bills them through the timesheet, so adding a figure here would
+  // charge the same work a second time; on a FIXED-PRICE job the flat fee does not move
+  // with the log, so there the derived shift is the only way the added scope is charged.
+  // `clientApproved` stays the filter — an unaccepted change order authorises nothing.
   var jobCOs = (changeOrders || []).filter(function(co){ return co.jobId === jobId && co.clientApproved; });
-  var coTotal = jobCOs.reduce(function(sum, co){ return sum + coDelta(co); }, 0);
-  coTotal = Math.round(coTotal);
+  var coHrs = coHoursTotal(jobCOs);
+  var coShift = Math.round(coBaselineShift(coHrs, tcRate, psRate));
+  // What the client is actually charged for the change orders on THIS basis.
+  var coCharge = _fixedBasis ? coShift : 0;
 
   // ── STAGE RECONCILIATION (cumulative-target model) ──────────────────────────
   // "Best-known total" uses actuals for any component already known at that stage:
@@ -19619,7 +19736,7 @@ function invoiceHtml(job, stage) {
   // FIXED-PRICE JOBS: the client owes the agreed flat fee, period — every stage is
   // anchored to it and the final does NOT true-up to actual logged hours. Change
   // orders (coTotal) are the only thing that adjusts a fixed price, added at the final.
-  var _fixed = !!(est && est.fixedPrice);
+  var _fixed = _fixedBasis;
   var _fixedTotal = _fixed ? (est.havellinTotal || 0) : 0;
 
   // An hourly final bills labor at the logged hours and nothing else. With no hours
@@ -19668,7 +19785,7 @@ function invoiceHtml(job, stage) {
                         : ((est && est.havellinTotal) ? est.havellinTotal
                           : (estLaborNet + materials + smfEst + prepFeeEst + ((est && est.rushAmt) || 0)));
   var totalMidBasis     = _midServices + midRushAmt;
-  var totalFinalBasis   = _finalServices + finalRushAmt + coTotal;
+  var totalFinalBasis   = _finalServices + finalRushAmt + coCharge;
 
   var depositAmt   = Math.round(0.5 * totalDepositBasis);
   var midCumTarget = Math.round(0.75 * totalMidBasis);
@@ -19677,9 +19794,19 @@ function invoiceHtml(job, stage) {
 
   // Aliases consumed by the final-invoice body below.
   var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;
-  var havellinTotalDiscounted = totalFinalBasis - coTotal; // actual Havellin services (pre-CO)
+  // ⚠ NOTHING IS BACKED OUT HERE ANY MORE, and that is the fix rather than a tidy-up.
+  // This used to be `totalFinalBasis - coTotal`, which subtracted the change order straight
+  // back out before `overUnder` was computed — so the ±15% gate was measuring a figure the
+  // change-order defect had cancelled itself out of, and read 0.0% variance over an invoice
+  // three times the revised total. On T&M the hours are genuinely part of services; on
+  // fixed price the charged shift is too.
+  var havellinTotalDiscounted = totalFinalBasis;
   var grandTotal = havellinTotalDiscounted + vendorCost + prepCost;
-  var estHavellinTotal = (est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted;
+  // ⚠ THE BASELINE MOVES WITH AUTHORISED SCOPE. Without `+ coShift` an expansion the client
+  // signed for reports to the manager as "job ran over estimate" and trips the PIN — the app
+  // treating its own approved change as a variance. This is the half that makes the hours
+  // model work, and it is the reason the shift is derived at all.
+  var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift;
   var deposit = depositAmt;
   var midpoint = midpointAmt;
   var alreadyPaid = deposit + midpoint;
@@ -19750,15 +19877,24 @@ function invoiceHtml(job, stage) {
     '</table>' +
     '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>';
 
+  // ⚠ THIS SECTION EXPLAINS HOURS, IT DOES NOT CHARGE. On T&M the change orders' hours are
+  // already inside the labour lines above — this is what says the client agreed to them, so
+  // a bill above the original estimate has its authority on the same page. On fixed price
+  // the flat fee could not absorb them, so there the section also carries the charge.
   var coSection = (jobCOs.length > 0 ?
     '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
-    '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Description</th><th style="text-align:right;">Delta</th></tr></thead><tbody>' +
+    '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Change in scope</th><th style="text-align:right;">Additional hours</th></tr></thead><tbody>' +
     jobCOs.map(function(co) {
-      var delta = coDelta(co);
-      return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') + '</td><td style="text-align:right;font-weight:600;">' + _coMoney(delta) + '</td></tr>';
+      return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') +
+             (co.clientName ? '<br><span style="font-size:10.5px;color:var(--gray);">Accepted by ' + esc(co.clientName) + (co.clientAcceptedAt ? ' on ' + esc(co.clientAcceptedAt) : '') + '</span>' : '') +
+             '</td><td style="text-align:right;font-weight:600;">' + coHoursLabel(co) + '</td></tr>';
     }).join('') +
-    '<tr class="subtotal"><td colspan="2">Change Order Total</td><td style="text-align:right;">' + _coMoney(coTotal) + '</td></tr>' +
-    '</tbody></table>' : '');
+    '<tr class="subtotal"><td colspan="2">Additional hours authorised</td><td style="text-align:right;">' + coHoursLabel(coHrs) + '</td></tr>' +
+    '</tbody></table>' +
+    '<div class="ce-note">' + (_fixedBasis
+      ? 'Charged at the rates in your agreement and added to the fixed project fee above, because a fixed fee does not otherwise move with the hours worked.'
+      : 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.') +
+    '</div>' : '');
 
   var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
     '<table class="pay-tbl">' +
@@ -19772,7 +19908,7 @@ function invoiceHtml(job, stage) {
       (overUnder < 0 ?
         '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Job came in under estimate by ' + fmt(Math.abs(overUnder)) + ' — credit applied</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(overUnder)) + ')</td></tr>' :
         '')) +
-    (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + _coMoney(coTotal) + '</td></tr>' : '') +
+    (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
     '</div>';
@@ -19839,7 +19975,7 @@ function invoiceHtml(job, stage) {
       '<tr><td>50% deposit — paid upon acceptance</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(deposit) + ')</td></tr>' +
       '<tr><td>25% midpoint — paid at project midpoint</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(midpoint) + ')</td></tr>' +
       '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Subtotal payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
-      (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + _coMoney(coTotal) + '</td></tr>' : '') +
+      (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
       '</table></div>';
     advanceServices =
