@@ -551,8 +551,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
     lacks(src, "window.print();\n  pt.innerHTML = '';",
           'no printer clears the target on the same tick as the dialog');
+    // printJobPlan was on this list until 2026-09-11, when the control was retired outright
+    // ("Print job plan is useless. Too long printing all the cards."). Removed rather than
+    // left to the `if (at < 0) return` guard below, which would silently vouch for a printer
+    // that no longer exists.
     const printers = ['printCourtInventory', 'printDispositionLedger', 'printAppraisalWorklist',
-                      'printInventorySnapshot', 'printJobPlan'];
+                      'printInventorySnapshot'];
     printers.forEach((name) => {
       const at = src.indexOf('function ' + name + '(');
       if (at < 0) return;                       // renamed upstream; the lacks() above still guards

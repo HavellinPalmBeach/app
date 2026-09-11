@@ -174,13 +174,43 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(/var _planOpenPhases = \{\};/.test(SRC), 'it is plain module state');
   }
 
-  group('⚠ the print path must not start reading the accordion');
+  // ⚠⚠ PRINT JOB PLAN IS RETIRED AND MUST NOT COME BACK BY ACCIDENT (2026-09-11).
+  // Anthony: *"Print job plan is useless. Too long printing all the cards. Let's scrap that
+  // for now and revisit."* Measured before removing it: an 18-room probate plan printed 9
+  // Letter pages carrying 36 room cards for 18 rooms — every room renders twice, in the
+  // Phase 1 sort grid and again in the Phase 2 pack grid — and 72 checkboxes, all of them
+  // status buttons and Take Photo controls that are inert on paper.
+  //
+  // This group replaces the whole of tests/job-plan-print.test.js. The old file asserted
+  // that the printed copy opened every phase body; the requirement now is that there is no
+  // printer at all, which is a claim about ABSENCE and therefore needs its own check —
+  // deleting the suite alone would have left the removal untested.
+  group('⚠⚠ THE JOB PLAN HAS NO PRINT PATH, AND CANNOT REGROW ONE SILENTLY');
   {
-    // printJobPlan expands a CLONE, so a plan printed with one phase open must still print
-    // all of them. The interaction is driven in job-plan-print.test.js, which owns the DOM
-    // fakes; what belongs here is the coupling rule itself.
-    lacks(fnBody('_jpExpandForPrint'), '_planOpenPhases',
-          'the expander opens every phase regardless of what is open on screen');
-    lacks(fnBody('printJobPlan'), '_planOpenPhases', 'and the print path does not consult it');
+    // ⚠ COMMENT-STRIPPED ON PURPOSE, AND THIS IS THE FIFTH TIME THIS REPO HAS PAID FOR IT:
+    // the retirement note left at the old site has to NAME both functions to be worth
+    // reading, so a raw needle over the source trips on the explanation of the fix. The
+    // requirement is genuinely "no LIVE reference", so the comments come out first.
+    const live = SRC.split('\n')
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*'))
+      .join('\n');
+    lacks(live, 'function printJobPlan', 'printJobPlan is deleted, not hidden');
+    lacks(live, 'function _jpExpandForPrint', 'and so is its expander');
+    lacks(live, 'printJobPlan(', 'nothing calls it');
+    lacks(live, '_jpExpandForPrint(', 'nothing calls the expander either');
+    lacks(live, 'btn-plan-pdf', 'the button is gone from the tab header and from loadJobPlanTab');
+    lacks(fnBody('loadJobPlanTab'), 'printBtn',
+          'and the loader keeps no handle to show or hide');
+
+    // ⚠ THE RETIREMENT IS EXPLAINED WHERE THE CODE WAS, because a deletion with no note is
+    // indistinguishable from an accident and comes back as one.
+    has(SRC, 'PRINT JOB PLAN IS RETIRED', 'the removal says why, at the site it was removed from');
+
+    // ⚠ WHAT WENT WITH IT. The standing-flags brief reached paper ONLY because the printer
+    // carried #job-plan-header along with the content. It is screen-only now, and that is a
+    // real loss on the one panel that carries the firearms rule — stated here so a revisit
+    // knows what it has to give back rather than rediscovering it on a job.
+    has(SRC, 'SCREEN-ONLY brief', 'and says plainly that the crew brief lost its paper route');
+    has(SRC, 'standingFlagsBlock(job)', 'the brief itself is untouched and still renders');
   }
 };

@@ -397,8 +397,8 @@ input:checked+.slider:before{transform:translateX(18px);}
 /* Seven of these expanded at the app's default textarea height (70px) makes the intake
    card scroll for ever; two lines is what these prompts actually want. */
 .hf-note textarea{font-size:11.5px;background:var(--white);height:46px;}
-/* The standing-flags brief on the Job Plan header — on screen in the house, and on
-   paper via printJobPlan, which prints #job-plan-header along with the content. */
+/* The standing-flags brief on the Job Plan header — on screen in the house, which since
+   Print Job Plan was retired on 2026-09-11 is the only place it appears. */
 .sf-brief{margin-top:8px;border:1px solid var(--border-md);border-radius:4px;overflow:hidden;}
 .sf-hd{background:var(--gray-dk);color:var(--cream);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;}
 .sf-row{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 11px;font-size:11.5px;line-height:1.5;border-top:1px solid var(--border);background:var(--white);}
@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 6:02pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 7:57pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1907,7 +1907,6 @@ body.no-smf .smf-col{display:none;}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">JOB</span>
         <select id="plan-job" onchange="loadJobPlanTab()" style="width:340px;font-size:12px;"><option value="">Select job</option></select>
-        <button class="btn-bronze" id="btn-plan-pdf" onclick="printJobPlan()" style="display:none;">Print Job Plan</button>
       </div>
     </div>
   </div>
@@ -7435,8 +7434,10 @@ function buildHouseFlagInputs() {
 }
 
 // The standing job flags, rendered for the Job Plan header — what the crew has open in
-// the house, and what printJobPlan puts on paper (it prints #job-plan-header along with
-// the content). Also shown on the client dashboard, where the job is prepped.
+// the house. Also shown on the client dashboard, where the job is prepped.
+// ⚠ It used to reach PAPER too, because printJobPlan printed #job-plan-header along with
+// the content. That control was retired on 2026-09-11 (see the note at printJobPlan's old
+// site), so this is a SCREEN-ONLY brief now — which is what a revisit has to give back.
 //
 // ⚠ THIS IS THE POINT OF THE INTAKE QUESTIONS. Asking a widow on the phone where her
 // husband kept the cash and then not telling the two people emptying the house is worse
@@ -21610,11 +21611,9 @@ function planCollectionStatusBtns(jobId, collId, status) {
 function loadJobPlanTab() {
   var jobId = parseInt(document.getElementById('plan-job').value);
   var content = document.getElementById('job-plan-content');
-  var printBtn = document.getElementById('btn-plan-pdf');
   var empty = function(msg) {
     content.innerHTML = '<div class="tab-empty">' + msg + '</div>';
     var hdrEl = document.getElementById('job-plan-header'); if (hdrEl) hdrEl.innerHTML = '';
-    if (printBtn) printBtn.style.display = 'none';
   };
   if (!jobId) {
     var ls = document.getElementById('plan-log-section');
@@ -21665,11 +21664,9 @@ function loadJobPlanTab() {
       + 'Record their acceptance on the Client Dashboard to open staffing and hours logging.<br>'
       + '<span style="font-size:11px;color:var(--gray);">You can review the plan below once the job is won — '
       + 'nothing here is lost in the meantime.</span>');
-    if (printBtn) printBtn.style.display = 'none';
     return;
   }
   var est = estRec.estimate;
-  if (printBtn) printBtn.style.display = 'inline-block';
 
   // Photo refs load BEFORE the plan is built, not after. The room cards render their
   // shot counts and their "not saved — Retry" flags out of _photoRefs, so loading it
@@ -25029,58 +25026,29 @@ function setPlanRoomStatus(jobId, roomIdx, status) {
   });
 }
 
-// ⚠⚠ THE PHASES ARE AN ACCORDION AND EVERY BODY SHIPS WITH AN INLINE `display:none`.
-// `planPhaseWrap` renders each phase closed and `togglePhase` opens it by writing
-// `body.style.display` — an INLINE style, which no print stylesheet can out-rank without
-// `!important`. Copying `content.innerHTML` therefore copied the closed state, so Print Job
-// Plan produced the five phase HEADINGS and nothing inside any of them, unless the crew
-// happened to have a phase open on screen. **Measured on a seeded probate job: 9,018
-// characters of plan, 919 printed. 90% of the document gone**, including every room card,
-// every checklist, the disposition streams and the court-filing tasks — on the one document
-// that exists to be carried round a house on paper.
+// ⚠⚠ PRINT JOB PLAN IS RETIRED (2026-09-11). `printJobPlan` and `_jpExpandForPrint` are
+// DELETED, not hidden, and the button is gone from the tab header — a retired control left
+// compiling is how one comes back "as a precaution".
 //
-// ⚠ IT EXPANDS A CLONE, NEVER THE LIVE TAB. Opening the real accordion to print it would
-// leave every phase hanging open behind the dialog, and a `finally` that closed them again
-// would then be fighting whatever the crew had deliberately opened.
+// Anthony, on the build that had just fixed it: *"Print job plan is useless. Too long
+// printing all the cards. Let's scrap that for now and revisit."* He is right, and the
+// measurement is why: an 18-room probate plan printed **9 Letter pages**, carrying **36 room
+// cards for 18 rooms** — every room renders TWICE, once in the Phase 1 sort grid and again in
+// the Phase 2 pack grid — and **72 checkboxes**.
 //
-// ⚠ AND IT TOUCHES ONLY `phase-body-*`. A blanket strip of `display:none` would also reveal
-// the per-room `photo-fail-flag-*` divs, which are hidden because they are EMPTY until an
-// upload fails — printing those is not "more of the document", it is noise with no content.
-function _jpExpandForPrint(root) {
-  var n = 0;
-  var bodies = root.querySelectorAll('[id^="phase-body-"]');
-  Array.prototype.forEach.call(bodies, function(el){ el.style.display = ''; n++; });
-  // The chevron is a control's affordance and there is nothing to press on paper. Blanked
-  // rather than set to ▼, which would assert a state that no longer means anything.
-  var chevs = root.querySelectorAll('[id^="phase-chev-"]');
-  Array.prototype.forEach.call(chevs, function(el){ el.textContent = ''; });
-  return n;
-}
-
-function printJobPlan() {
-  var content = document.getElementById('job-plan-content');
-  if (!content) return false;
-  var hdrEl = document.getElementById('job-plan-header');
-  var copy = content.cloneNode(true);
-  _jpExpandForPrint(copy);
-  var job = jobs.find(function(j){ return j.id === parseInt((document.getElementById('plan-job')||{}).value, 10); });
-  var street = String((job && (job.addr || job.address)) || '').split(',')[0].trim();
-  var stamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
-  // ⚠ THE TITLE IS THE PDF FILENAME. Without one Chrome names a Save-as-PDF after the page
-  // title — "Havellin Palm Beach — Clients & Estimator — INTERNAL" — which is the same defect
-  // Slice 3 fixed on the agreement. Named like the client documents, minus the client naming
-  // rules, because this one is ours.
-  var title = 'Havellin Job Plan' + (street ? ' - ' + street : '') + ' - ' + stamp;
-  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;">' +
-    '<h2 style="font-family:\'Cormorant Garamond\',serif;color:#3c3228;margin-bottom:4px;">Havellin Palm Beach — Job Plan</h2>' +
-    '<div style="font-size:11px;color:#888;margin-bottom:16px;">Internal working document · ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>' +
-    (hdrEl ? hdrEl.innerHTML : '') + copy.innerHTML + '</div>';
-  // Built and handed over in one go. It used to write `#print-target`, read it back, and pass
-  // that to the function whose whole job is writing `#print-target` — the target is
-  // `_printDocument`'s to own, and a caller that half-fills it first is how a print path grows
-  // a second opinion of the sequence.
-  return _printDocument(html, title);
-}
+// ⚠ THE LENGTH IS THE SYMPTOM; THE CAUSE IS THAT THE JOB PLAN IS A CONTROL SURFACE, NOT A
+// DOCUMENT. Every one of those cards is status buttons, Take Photo buttons and a live shot
+// count — all of which are inert on paper, and none of which a crew can act on there. The
+// fix earlier the same day made the print COMPLETE and that is exactly what made it useless:
+// it faithfully reproduced a screen nobody wanted on paper. A revisit should produce a
+// one-page BRIEF (the standing flags, the room list with its statuses, the open phase gates)
+// rather than a fuller dump of the tab.
+//
+// ⚠ WHAT WENT WITH IT, STATED PLAINLY: the standing-flags brief has no paper route any more.
+// `standingFlagsBlock` still renders into `#job-plan-header` on both plan renderers, so it is
+// in front of the crew on the phone in the house — which is the surface that matters — but
+// the firearms rule can no longer be handed to somebody on a sheet of paper. That is the one
+// thing a revisit has to carry back.
 
 // (Removed syncLogToSheets — a silent no-cors single-entry post the backend
 // explicitly ignored. Hours logs persist through saveLogData()'s verified,

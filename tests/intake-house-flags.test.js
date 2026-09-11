@@ -226,10 +226,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const prep = src.slice(src.indexOf('// Header (set into the shared job-plan-header slot)'));
     has(prep.slice(0, 2500), 'standingFlagsBlock(job)', 'so does the Home Prep one');
 
-    // printJobPlan prints #job-plan-header, which is where the brief is injected — that is
-    // the whole reason it goes in the header rather than into the phase content.
-    const printer = src.slice(src.indexOf('function printJobPlan'), src.indexOf('function printJobPlan') + 900);
-    has(printer, "getElementById('job-plan-header')", 'and the printed plan carries the header with it');
+    // ⚠ IT USED TO REACH PAPER, AND NO LONGER DOES. The brief went into #job-plan-header
+    // rather than into the phase content precisely because printJobPlan carried that element
+    // along with the content — and that control was retired on 2026-09-11 ("Print job plan is
+    // useless. Too long printing all the cards."). So this is a SCREEN-ONLY brief now.
+    // The requirement that survives is the one that always mattered: both plan renderers put
+    // it in front of the crew, on the phone, in the house.
+    const hdrWrite = src.slice(src.indexOf("var _jpHeader = document.getElementById('job-plan-header')"), 0
+      + src.indexOf("var _jpHeader = document.getElementById('job-plan-header')") + 240);
+    has(hdrWrite, '_jpHeader.innerHTML = hdr', 'the Job Plan writes the brief into its header slot');
+    lacks(src.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n'), 'printJobPlan',
+          'and nothing prints it — the print path is retired, comments aside');
 
     // The intake form's host element, and the one call that fills it at boot.
     has(src, 'id="i-houseflags"', 'the intake form has a host for the checklist');

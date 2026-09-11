@@ -1,5 +1,91 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ PRINT JOB PLAN IS RETIRED — FIXING IT IS WHAT PROVED IT WAS USELESS (2026-09-11)
+Anthony, on the build that had fixed it hours earlier: *"Print job plan is useless. Too long printing all the
+cards. Let's scrap that for now and revisit."* App-only, no redeploy.
+
+- **⚠⚠ THE MORNING'S FIX IS WHAT EXPOSED IT, AND THAT IS THE LESSON RATHER THAN THE REMOVAL.** The printer
+  had been emitting the phase HEADINGS and nothing under them (the accordion's inline `display:none` rode the
+  `innerHTML` copy), so for months nobody had ever seen the whole thing. Expanding a clone made the print
+  **complete**, and complete is exactly what made it unusable. **A defect can be the only thing holding a
+  feature up**; closing it is how you find out.
+- **⚠⚠ MEASURED BEFORE REMOVING ANYTHING, ON THE REAL PRINT PATH.** An 18-room probate plan, rendered into
+  the real `#print-target` under the app's own `@media print`: **203,542 bytes, 8,805px, NINE Letter pages**,
+  carrying **36 room cards for 18 rooms** and **72 checkboxes**.
+- **⚠⚠ AND THE LENGTH IS THE SYMPTOM, NOT THE CAUSE: THE JOB PLAN IS A CONTROL SURFACE, NOT A DOCUMENT.**
+  Every one of those cards is status buttons, Take Photo buttons and a live shot count — **all inert on paper**,
+  none of them actionable there. Printing it faithfully reproduced a screen nobody wanted on paper. A revisit
+  should build a one-page **brief** (standing flags, the room list with its statuses, the open phase gates),
+  not a fuller dump of the tab. **Do not "restore and trim" the old printer**; it is the wrong shape.
+- **⚠ THE 36-FOR-18 IS CORRECT BEHAVIOUR AND MUST NOT BE "FIXED".** Every room renders in BOTH grids
+  deliberately: Phase 1 caps a room at `locked` (decisions final) and Phase 2 owns `packed → complete`
+  (execution), so the crew cannot drive a room to complete from Phase 1 and skip the midpoint invoice with it.
+  `planRoomStatusBtns` carries that split and its comment says so. The duplication is a gate, not a bug.
+- **⚠⚠ WHAT WENT WITH IT, AND IT IS A REAL LOSS: THE STANDING-FLAGS BRIEF HAS NO PAPER ROUTE.** That panel
+  reached paper ONLY because `printJobPlan` carried `#job-plan-header` along with the content — which is why
+  it was injected into the header rather than the phase content in the first place. It is screen-only now. It
+  is still the first thing on the Job Plan tab, which is what a phone has open in the house, so the surface
+  that matters is intact; but **the firearms rule can no longer be handed to somebody on a sheet**. Both
+  documents now say *read it aloud off the screen*, and giving the paper route back is the first thing a
+  revisit has to do. Told to Anthony plainly rather than quietly dropped.
+- **`printJobPlan` and `_jpExpandForPrint` are DELETED, not hidden**, and the button is off the tab with
+  `loadJobPlanTab`'s `printBtn` handle and its three `style.display` writes. A retired control left compiling
+  is how one comes back "as a precaution" — the rule this file already records on `checkAgrPin`,
+  `exportAgreementToDrive` and `copyStripeLink`.
+- **4439 committed checks.** `tests/job-plan-print.test.js` (26) is **deleted and replaced by a group in
+  `job-plan-accordion.test.js`**: the requirement is now a claim about ABSENCE, which needs its own check —
+  **deleting the suite alone would have left the removal untested.** **All four changes revert-verified
+  individually** — the button 1, the two functions 3 (plus 1 in `intake-house-flags`), the loader wiring 2,
+  the retirement note 2.
+- **⚠ THE TRIPWIRE IS COMMENT-STRIPPED AND SAYS WHY — the fifth time this file records the trap.** The
+  retirement note left at the old site has to NAME both functions to be worth reading, so a raw needle over
+  the source trips on the explanation of the fix.
+- **⚠ TWO PRE-EXISTING SUITES NAMED THE PRINTER AND BOTH WERE RESTATED, not deleted.**
+  `intake-house-flags` asserted the printed plan carried the header (now: the brief reaches
+  `#job-plan-header` and **nothing prints it**); `inventory` listed `printJobPlan` among the printers that
+  must route through `_printDocument` — dropped from the list rather than left to its `if (at < 0) return`
+  guard, which would have silently vouched for a function that no longer exists.
+- **Verified in headless Chromium on the real page**: no `btn-plan-pdf` in the DOM, `printJobPlan` and
+  `_jpExpandForPrint` both `undefined`, the plan renders on all seven service types, the standing-flags brief
+  still paints into the header on every one of them, overflow **0** at 1440 and 390px, no page errors.
+- Manual **§4** (the brief no longer goes out on paper), **§11** (the accordion note's closing claim about the
+  print was FALSE and is gone; the two print notes replaced by one retirement note plus a note naming what
+  was lost); playbook **Step 10** — its `.stop` said *"hand them the printed plan"*, **an instruction that
+  could no longer be followed** — and **three** symptom→cause rows. Both `.md` copies hand-edited and **16
+  claims parity-checked**; tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still
+  the documented false positive at 1), rendered at 1440/390 with **0 overflow** and all 42 tables full-width
+  under `print`.
+
+### THE JOB PLAN IS ONE PLAN FOR SIX SERVICES — ESTATE RIGOR IS ADDED, NOT SUBSTITUTED (2026-09-11)
+Asked in the same message: *"does the job plan change for estate and non-estate jobs? The estate job plan is
+very detailed and complicated but obviously needs rigor for PR documentation or court quality … what do non
+estate jobs have?"* **Driven on the real renderer across all seven service types, same house, same six
+rooms**, rather than read off the source:
+
+| | phases | checkboxes | hours log | what it adds |
+|---|---|---|---|---|
+| Home Editing | 4 | 35 | yes | the baseline; Phase 2 is *Pack & Prepare* |
+| Home Transition | **5** | 53 | yes | **Phase 3 — Move Day**, plus *New Home Prep* in Phase 0 |
+| Home Cleanout | 4 | 40 | yes | Phase 2 becomes *Pack & Disposition* — the full streams |
+| Estate Settlement | 4 | 58 | yes | *Authority & Legal*, *Chain of Custody — Mandatory*, the *§733.604 Documentation Package*; gates reword to the PR |
+| Probate | 4 | **68** | yes | *Florida Court & Legal Compliance*, the 60-day §733.604 deadline |
+| Contested Probate | 4 | **68** | yes | **nothing — identical to Probate** |
+| Home Prep for Sale | — | 6 | **no** | a different renderer entirely |
+
+- **`hasPlaybook = isDownsizing || isDisposal` covers SIX of the seven services**, and `loadJobPlanTab` routes
+  `prep` to `renderPrepJobPlan` before `renderJobPlan` is reached. So the estate/non-estate split is not two
+  plans: it is one spine with `isDocJob` / `isProbate` / `isDisposal` adding sections to it.
+- **⚠ CONTESTED PROBATE AND PROBATE PRODUCE AN IDENTICAL PLAN**, section for section, because `isProbate`
+  covers both and nothing below it distinguishes them. Every contested-specific difference lives elsewhere —
+  the pricing coefficients, the executor-authorisation activation blocker, fixed price being withheld. Worth
+  knowing before somebody goes hunting for a difference that is not there; recorded rather than "fixed",
+  because the work in the house really is the same.
+- **⚠ THE `!hasPlaybook` PLACEHOLDER IS REACHED BY NO CATALOGUED SERVICE** — measured, all seven render a
+  real plan. It reads *"Workflow playbook for this service type is in development"*, which is false of every
+  service in `SVC_ORDER`. **Left in place as the graceful arm for a job with a missing or unknown `svc`**
+  (the *keep cheap null-guards* half of the standing rule), but the sentence is wrong if it ever shows.
+  Flagged rather than changed, to keep this commit to what was asked.
+
 ## ⚠⚠ A JOB PLAN STAGE THAT SHUT ITSELF WITHIN SECONDS (FIXED 2026-09-11)
 *"when i expand a job plan stage, it automatically shuts on me within seconds. i can't do anything."*
 App-only, no redeploy. **Pre-existing since 2026-09-10 (`8185a7e`) and latent until this afternoon** — the
