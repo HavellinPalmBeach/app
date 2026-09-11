@@ -70,6 +70,70 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## ⚠⚠ EVERY CHANGE ORDER BILLED THE WHOLE PROJECT TOTAL AGAIN (FIXED 2026-09-11)
+Found by the code audit Anthony asked for — *"let's do an audit of the code and sus out anything
+you think doesn't compute or is broken"*. App-only, no redeploy. **The worst live money defect
+this file has recorded.**
+
+- **⚠⚠ THE READER NAMED A FIELD NOTHING HAS EVER WRITTEN.** Both consumers of a change order's
+  money computed `co.newTotal - co.prevTotal`, and **`prevTotal` appears nowhere** — not in
+  `havellin.html`, not in `tests/`, not in `apps-script/`. `saveChangeOrder` is the **only**
+  writer of a change order (one `changeOrders.push`, asserted) and it writes **`originalTotal`**.
+  So the expression resolved to `newTotal - 0` — the **whole revised project total** — and
+  `totalFinalBasis = _finalServices + finalRushAmt + coTotal` added a second entire copy of the
+  job to the final invoice.
+- **Measured by driving the real `invoiceHtml`**, on a $19,940 Estate Settlement with the hours
+  logged to reproduce the estimate exactly:
+
+  | scenario | billed | correct |
+  |---|---|---|
+  | +$5,000 change order | **$29,925** | $9,985 |
+  | **−$5,000** change order | **$19,925** | −$15 |
+  | two +$5,000 orders | **$54,865** | $14,985 |
+
+  **The error is one whole project total PER accepted change order**, and it lands on the
+  document that goes to the client. **⚠ A REDUCTION IN SCOPE RAISED THE BILL** by nearly twenty
+  thousand dollars — agreeing to take work *out* cost the client more.
+- **⚠⚠ AND THE ±15% MANAGER PIN WAS BLIND TO IT, WHICH IS WHY IT SURVIVED.** The variance gate
+  reads `overUnder`, derived from `havellinTotalDiscounted = totalFinalBasis - coTotal` — **the
+  same wrong number subtracted straight back out**. Every one of those invoices reported variance
+  **0.0%** with `requiresApproval` **false**. A gate reading a figure the defect cancels itself
+  out of is not a second line of defence, and **a test watching the flag would have been green
+  through every row of that table**. The suite asserts `amtDue`.
+- **`coDelta(co)` is the ONE definition.** ⚠ **The delta is the gap between the two figures the
+  client SIGNED**, not `co.amount`: the change order document prints *Original estimate*
+  (`originalTotal`) and *Revised Total* (`newTotal`), and billing anything else bills a number
+  their signed copy does not show. `amount` is the fallback for a record missing either figure,
+  never the primary — and a test asserts the signed pair wins over a disagreeing `amount`.
+- **⚠ THERE WERE FOUR RENDER SITES, NOT TWO, AND THE DRIVEN TEST IS WHAT FOUND THAT.** The first
+  pass routed the section row and its subtotal and called it done; the `lacks` then failed on a
+  `$-5,000` in the **Payment Summary**, which renders the figure again — **twice**, once in the
+  final body and once in the fee-only one. Grepping for the two sites I already knew about proved
+  nothing. `_coMoney` is read at all four; a test counts them and fails on any hand-rolled sign.
+- **⚠ THE NEGATIVE BRANCH ONLY BECAME REACHABLE WITH THE FIX, and that is the lesson rather than
+  the typography.** While the delta resolved to the whole revised total it was positive on every
+  realistic job, so `(d >= 0 ? '+' : '') + fmt(d)` had **never once** taken its else-arm — which
+  prints `$-5,000`. The discount row four lines above has always written `− ` + a positive figure.
+  **A fix that gives an existing expression a value it never used to see is how a dormant defect
+  ships**; same shape as the `assignedTCContact` fallback whose blast radius moved underneath it.
+- **⚠ THERE WAS NO COVERAGE OF CHANGE-ORDER BILLING ANYWHERE IN `tests/`.** 3306 committed checks
+  and not one had ever put a change order on an invoice. That is the whole reason this ran: the
+  money path with the fewest readers had none. `tests/change-order-billing.test.js`, **3337
+  committed checks** (31 new).
+- **All five changes revert-verified individually** — 2 / 1 / 3 / 3 / **8** failures. ⚠ Worth
+  knowing: reverting `coDelta` alone to read `prevTotal` fails only **2**, because the `amount`
+  fallback rescues it. **The true defect revert is inlining the old arithmetic back into
+  `invoiceHtml`, and that fails 8.** A revert that a fallback catches is not a revert of the bug.
+- **Verified end to end in headless Chromium** on the real page with two mixed-sign change orders
+  (+$5,000 and −$2,000) on a funded, signed, active job: the rows read **+ $5,000** and
+  **− $2,000**, the subtotal and *both* payment-summary rows read **+ $3,000**, *Actual Havellin
+  services total* stays **$19,940** (pre-CO, correctly), and the balance is **$7,985** —
+  $4,985 + $3,000. **The same invoice on the old build billed $47,865.** Overflow 0 at 1440 and
+  390px, no page errors.
+- Prelaunch, so nothing real was ever billed this way. **No document pass needed** — the manual
+  and playbook describe *raising* a change order and say it is billed on the final, which was and
+  remains true; neither states the arithmetic.
+
 ## Only the COMBINED document is retained — the bare agreement is not filed (2026-09-11)
 *"let's just have the combined doc saved and sent."* Anthony closing the open question Slice 5
 recorded. App-only, no redeploy.

@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 10:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 4:14am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10227,6 +10227,53 @@ function migrateChangeOrders() {
   changeOrders.forEach(function(co) {
     if (co.clientApproved === undefined) { co.clientApproved = true; co.clientName = 'Pre-existing'; co.clientAcceptedAt = co.createdAt || ''; }
   });
+}
+
+// The dollar DELTA one change order adds to the job — the ONE definition, read by the
+// invoice's total AND by the line the invoice prints. Two sites computing the same delta
+// is precisely how they drift; here they did not drift, they were simply both wrong.
+//
+// ⚠⚠ THE FIELD THIS REPLACES WAS NEVER WRITTEN BY ANYTHING IN THE REPOSITORY.
+// Both readers used to compute `co.newTotal - co.prevTotal`, and `prevTotal` appears
+// nowhere else in this file, in tests/, or in apps-script/ — `saveChangeOrder` is the
+// only writer of a change order and it writes `originalTotal`. So the expression
+// resolved to `newTotal - 0`: the WHOLE REVISED PROJECT TOTAL rather than the delta,
+// and `totalFinalBasis` added an entire second copy of the job to the final invoice.
+// Driven on the real `invoiceHtml` against a $19,940 Estate Settlement with the hours
+// logged to match: a +$5,000 change order billed a final of $29,925 against a correct
+// $9,985; a $5,000 REDUCTION billed $19,925, i.e. agreeing to take work OUT raised the
+// bill; two change orders billed $54,865. The error is one whole project total PER
+// change order, and it lands on the invoice that goes to the client.
+//
+// ⚠ AND THE 15% MANAGER PIN COULD NOT SEE IT, which is why nothing caught it.
+// `havellinTotalDiscounted` is `totalFinalBasis - coTotal`, so the same wrong number is
+// subtracted straight back out before `overUnder` is computed: every one of those
+// invoices read variance 0.0% with `requiresApproval` false. A gate reading a figure the
+// defect cancels itself out of is not a second line of defence.
+//
+// ⚠ THE DELTA IS THE GAP BETWEEN THE TWO FIGURES THE CLIENT SIGNED, not `co.amount`.
+// The change order document prints "Original estimate" (`originalTotal`) and "Revised
+// Total" (`newTotal`), and the client accepts THAT. Billing anything other than the
+// difference between those two bills a number their signed copy does not show. `amount`
+// is the fallback for a record missing either figure, never the primary.
+// A change-order delta on the CLIENT'S invoice, in the house style.
+//
+// ⚠ THE NEGATIVE CASE ONLY BECAME REACHABLE WITH THE `coDelta` FIX ABOVE, and that is
+// the lesson rather than the typography: while the delta resolved to the whole revised
+// total it was positive on every realistic job, so `(d >= 0 ? '+' : '') + fmt(d)` had
+// never once taken its else-branch — and that branch prints `$-5,000`. The discount row
+// four lines up has always written `- ` + fmt(positive). A fix that gives an existing
+// expression a value it never used to see is how a dormant defect ships.
+function _coMoney(d) {
+  return (d < 0 ? '\u2212 ' : '+ ') + fmt(Math.abs(d));
+}
+
+function coDelta(co) {
+  if (!co) return 0;
+  var orig = Number(co.originalTotal), revised = Number(co.newTotal);
+  if (isFinite(orig) && isFinite(revised)) return revised - orig;
+  var amt = Number(co.amount);
+  return isFinite(amt) ? amt : 0;
 }
 
 function loadChangeOrders() {
@@ -19558,7 +19605,7 @@ function invoiceHtml(job, stage) {
 
   // Accepted change orders for this job — shown as addendum line items on the invoice
   var jobCOs = (changeOrders || []).filter(function(co){ return co.jobId === jobId && co.clientApproved; });
-  var coTotal = jobCOs.reduce(function(sum, co){ return sum + ((co.newTotal || 0) - (co.prevTotal || 0)); }, 0);
+  var coTotal = jobCOs.reduce(function(sum, co){ return sum + coDelta(co); }, 0);
   coTotal = Math.round(coTotal);
 
   // ── STAGE RECONCILIATION (cumulative-target model) ──────────────────────────
@@ -19707,10 +19754,10 @@ function invoiceHtml(job, stage) {
     '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
     '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Description</th><th style="text-align:right;">Delta</th></tr></thead><tbody>' +
     jobCOs.map(function(co) {
-      var delta = (co.newTotal||0) - (co.prevTotal||0);
-      return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') + '</td><td style="text-align:right;font-weight:600;">' + (delta >= 0 ? '+' : '') + fmt(delta) + '</td></tr>';
+      var delta = coDelta(co);
+      return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') + '</td><td style="text-align:right;font-weight:600;">' + _coMoney(delta) + '</td></tr>';
     }).join('') +
-    '<tr class="subtotal"><td colspan="2">Change Order Total</td><td style="text-align:right;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' +
+    '<tr class="subtotal"><td colspan="2">Change Order Total</td><td style="text-align:right;">' + _coMoney(coTotal) + '</td></tr>' +
     '</tbody></table>' : '');
 
   var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
@@ -19725,7 +19772,7 @@ function invoiceHtml(job, stage) {
       (overUnder < 0 ?
         '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Job came in under estimate by ' + fmt(Math.abs(overUnder)) + ' — credit applied</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(overUnder)) + ')</td></tr>' :
         '')) +
-    (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' : '') +
+    (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + _coMoney(coTotal) + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
     '</div>';
@@ -19792,7 +19839,7 @@ function invoiceHtml(job, stage) {
       '<tr><td>50% deposit — paid upon acceptance</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(deposit) + ')</td></tr>' +
       '<tr><td>25% midpoint — paid at project midpoint</td><td style="font-style:italic;color:var(--gray);">Fixed price</td><td class="r" style="color:var(--ok-tx);">(' + fmt(midpoint) + ')</td></tr>' +
       '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Subtotal payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
-      (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coTotal >= 0 ? '+' : '') + fmt(coTotal) + '</td></tr>' : '') +
+      (coTotal !== 0 ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + _coMoney(coTotal) + '</td></tr>' : '') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
       '</table></div>';
     advanceServices =
