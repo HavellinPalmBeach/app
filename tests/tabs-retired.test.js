@@ -47,8 +47,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // fewer tab than exist would have gone on passing if a ninth were removed. Verified in a
     // browser: nine `.nb` elements render.
     eq((src.match(/<button class="nb[" ]/g) || []).length, 9, 'nine tabs, down from twelve');
-    has(src, '<button class="nb active" onclick="showPanel(\'jobs\',this)">Client Dashboard</button>',
-      'and the Client Dashboard is the one that opens by default, since it is where a job is now run');
+    // ⚠ THIS PINNED THE BUTTON'S EXACT MARKUP AND BROKE ON A TRUE CHANGE — adding
+    // `data-field` to make the dashboard a field tab failed a check about which tab opens
+    // by default. A byte sequence is not a requirement; this file has now paid for that
+    // five times. State what has to be true instead: exactly one tab is marked active, and
+    // it is the one that opens the dashboard.
+    const activeBtns = src.match(/<button class="nb active"[^>]*>/g) || [];
+    eq(activeBtns.length, 1, 'exactly one tab opens by default');
+    ok(/showPanel\('jobs'/.test(activeBtns[0]),
+      'and it is the Client Dashboard, since that is where a job is now run');
 
     // ⚠ THE PANELS STAY IN THE DOM AND MUST NOT BE DELETED YET. The priming that makes the
     // rail safe (Slice 1) runs the REAL loaders, and those render into these panels;
@@ -207,5 +214,48 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, 'enter your manager PIN on the job timeline to approve', 'the approval email names the timeline');
     has(src, 'send the final invoice from the job timeline', 'so does the billing notice');
     has(src, 'Approve the estimate on the job timeline', 'and the agreement blocker');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // FIELD MODE — the Client Dashboard joined the field tabs (2026-09-11).
+  //
+  // ⚠ THE COUNT IN THE TOGGLE'S OWN title= HAD BEEN WRONG SINCE SLICE 7 AND NOTHING
+  // CAUGHT IT. The nav-count check above reads <button> markup; this string is a JS
+  // literal assigned to `title`, so it went on promising "all twelve tabs" after three of
+  // them were retired. Any user-facing COUNT of the tabs is asserted here now, wherever it
+  // is written.
+  group('field mode carries the Client Dashboard, and says how many tabs it has');
+  {
+    const navBlock = src.slice(src.indexOf('<div class="nav">'), src.indexOf('</div>', src.indexOf('<div class="nav">')));
+    const fieldBtns = navBlock.match(/<button[^>]*data-field="1"[^>]*>/g) || [];
+    eq(fieldBtns.length, 5, 'five nav buttons carry data-field="1"');
+
+    // ⚠ The dashboard's button is `class="nb active"` — the same shape that made my own
+    // nav count wrong in Slice 7. Pin it by name rather than by counting around it.
+    ok(/<button class="nb active"[^>]*data-field="1"[^>]*data-field-label="Clients"[^>]*showPanel\('jobs'/.test(navBlock),
+      '⚠ THE CLIENT DASHBOARD IS A FIELD TAB — the timeline is where a job is run now');
+
+    const labels = [...navBlock.matchAll(/data-field-label="([^"]+)"/g)].map((m) => m[1]);
+    eq(labels.join(' · '), 'Clients · Intake · Estimate · Job Plan · Vendors',
+      'and each has a short label, in nav order');
+    ok(labels.every((l) => l.length <= 9),
+      'every label is short enough for a fifth of a phone (measured: the longest renders 47px into 56px at 320px)');
+
+    // ⚠ The counts a person actually READS. Both were stale.
+    const body = fn('setFieldMode');
+    ok(/bring back all nine tabs/.test(body), '⚠ the exit tooltip counts the nine tabs that come back, not twelve');
+    lacks(body, 'twelve tabs', 'the pre-Slice-7 count is gone');
+    ok(/five tabs/.test(body), 'and the enter tooltip counts five');
+    lacks(body, 'four tabs, bottom bar', 'the pre-dashboard count is gone');
+
+    // ⚠ FIELD MODE IS A LAYOUT, NOT A PERMISSION LEVEL. There must be no second,
+    // field-only opinion about which timeline actions are allowed — the timeline's own
+    // gates are the one copy of that rule, and a second copy is what drifts.
+    const actions = fn('jobTimelineActions');
+    lacks(actions, 'field-mode', 'jobTimelineActions has no field-mode opinion');
+    lacks(actions, 'isFieldMode', 'and does not consult field mode at all');
+    const css = src.slice(src.indexOf('<style'), src.lastIndexOf('</style>'));
+    lacks(css, 'body.field-mode #client-dashboard-view', 'and no stylesheet rule hides the dashboard in field mode');
+    lacks(css, 'body.field-mode .jt-', 'nor any part of the timeline');
   }
 };

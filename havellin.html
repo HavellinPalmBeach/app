@@ -808,7 +808,7 @@ body.field-mode .rtable th:nth-child(7), body.field-mode .rtable td:nth-child(7)
 /* The mode toggle, and the banner that keeps you from wondering why half the tab is
    missing. Desk view hides both by default. */
 /* Always visible — it is the way in as well as the way out. Filled bronze while field
-   mode is on so the app never looks merely broken when nine tabs are missing. */
+   mode is on so the app never looks merely broken when four tabs are missing. */
 #field-toggle{display:inline-block;white-space:nowrap;}
 body.field-mode #field-toggle{background:var(--bronze)!important;border-color:var(--bronze)!important;color:#fff!important;}
 #field-banner{display:none;}
@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 10:02pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.10 · 10:37pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -953,13 +953,25 @@ body.no-smf .smf-col{display:none;}
   </div>
 </div>
 
-<!-- data-field marks the four tabs that survive in field mode. The walkthrough needs
+<!-- data-field marks the five tabs that survive in field mode. The walkthrough needs
      Build Estimate; a prospect calling while you're out needs Client Intake; the crew
      needs Job Plan; and Vendors is how you call a hauler from the driveway. Everything
-     else is desk work and is hidden rather than removed, so calcAll still reads it. -->
+     else is desk work and is hidden rather than removed, so calcAll still reads it.
+
+     ⚠ CLIENT DASHBOARD JOINED THEM 2026-09-11, AND ITS BUTTONS ARE LIVE HERE — field
+     mode is a LAYOUT, not a permission level. Since the tab consolidation the timeline is
+     where a job is run, and the three things most worth doing standing in somebody's house
+     are all on it: recording a cheque just handed to you (the normal payment path on these
+     jobs), recording a signature handed back, and marking the client won after the
+     walkthrough conversation. Withholding those would have taken the field out of field
+     mode.
+     ⚠ And a second, field-only rule about which actions are allowed would be a SECOND copy
+     of what the timeline's own gates already enforce — two copies of one rule drifting is
+     the defect this file records more often than any other. There is one gate, on the
+     timeline, and field mode does not get an opinion about it. -->
 <div class="nav">
   <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
-  <button class="nb active" onclick="showPanel('jobs',this)">Client Dashboard</button>
+  <button class="nb active" data-field="1" data-field-label="Clients" onclick="showPanel('jobs',this)">Client Dashboard</button>
   <button class="nb" data-field="1" data-field-label="Intake" onclick="showPanel('intake',this)">Client Intake</button>
   <button class="nb" data-field="1" data-field-default="1" data-field-label="Estimate" onclick="showPanel('estimate',this)">Build Estimate</button>
   <!-- ⚠⚠ CLIENT ESTIMATE, AGREEMENT AND INVOICES ARE RETIRED FROM THE NAV (Slice 7).
@@ -26742,19 +26754,25 @@ function setFieldMode(on) {
   if (tog) {
     tog.innerHTML = on ? 'Field &middot; exit' : '&#128241; Field';
     tog.title = on
-      ? 'Leave field mode and bring back all twelve tabs'
-      : 'Field mode — four tabs, bottom bar, capture only. Everything still saves in full.';
+      ? 'Leave field mode and bring back all nine tabs'
+      : 'Field mode — five tabs, bottom bar, built for a phone. Everything still saves in full.';
   }
 
-  // Entering field mode can strand you: the desk default is Client Dashboard, which
-  // field mode hides, so you would face an empty main area under four tabs that do not
-  // include the one marked active. Land on Build Estimate instead — not merely the
-  // first surviving tab, since the walkthrough is the common field job and starting
-  // anywhere else costs a tap on every visit.
+  // Entering field mode from a tab field mode HIDES would strand you: an empty main area
+  // under a nav that does not include the tab marked active. Land on Build Estimate
+  // instead — not merely the first surviving tab, since the walkthrough is the common
+  // field job and starting anywhere else costs a tap on every visit.
   //
-  // Leaving field mode needs no equivalent: all twelve tabs come back, so whatever you
-  // were on is still there. Staying put is also the behaviour you want — capture on the
-  // phone, then open the desk view on that same estimate to review it.
+  // ⚠ THE DASHBOARD NO LONGER TRIPS THIS, AND THAT IS AN IMPROVEMENT RATHER THAN A
+  // LOOPHOLE (2026-09-11). It used to be the worst case — it is the desk default, so the
+  // commonest way into field mode bounced you off the job you were looking at. Now that it
+  // carries data-field you stay on it, which is what somebody opening a client and then
+  // reaching for their phone actually wants. Build Estimate stays the fallback for the
+  // tabs that really are hidden.
+  //
+  // Leaving field mode needs no equivalent: all nine tabs come back, so whatever you were
+  // on is still there. Staying put is also the behaviour you want — capture on the phone,
+  // then open the desk view on that same job to review it.
   var activeBtn = document.querySelector('.nb.active');
   if (on && activeBtn && !activeBtn.hasAttribute('data-field')) {
     var target = document.querySelector('.nb[data-field-default]')

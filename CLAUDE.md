@@ -70,6 +70,51 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## Field mode gets the Client Dashboard — five tabs, and the buttons work (2026-09-11)
+The fifth `data-field` tab, agreed with Anthony after Slice 7. App-only, no redeploy.
+
+- **⚠ FIELD MODE IS A LAYOUT, NOT A PERMISSION LEVEL — and that was the decision, not a
+  default.** The options were view-only, a split (in-house actions live, desk actions hidden) or
+  full; Anthony picked full. The reason it is the right answer: **the three things most worth doing
+  standing in somebody's house are all on the timeline** — recording a cheque just handed to you
+  (which this file already records as the NORMAL payment path, "elderly clients in person"),
+  recording a signature handed back, and marking the client won after the walkthrough conversation.
+  A view-only dashboard would have removed exactly the field-native half of the rail.
+- **⚠⚠ AND THE ARCHITECTURAL HALF, WHICH IS WHY THE SPLIT OPTION WAS THE WRONG ONE.** A field-only
+  rule about which actions are allowed would be a **SECOND COPY** of what `jobTimelineActions`
+  already enforces — and two copies of one rule drifting is the defect this file records more
+  often than any other. There is one gate, on the timeline; field mode does not get an opinion.
+  **A test asserts `jobTimelineActions` never mentions `field-mode` or `isFieldMode`, and that no
+  stylesheet rule hides the drilldown or any `.jt-` element in field mode.**
+- **⚠ SLICE 7 LEFT THE TOGGLE PROMISING "all twelve tabs", AND THE NAV-COUNT TEST COULD NOT SEE
+  IT.** That check reads `<button>` markup; this string is a **JS literal assigned to `title`**, so
+  it went on naming twelve tabs after three were retired. The enter tooltip said "four tabs" too.
+  Both are asserted now, and the lesson is the general one: **a user-facing COUNT has to be pinned
+  wherever it is written, not only where the things being counted live.**
+- **Entering field mode from the dashboard now KEEPS you there, and that is a fix rather than a
+  side effect.** The dashboard is the desk default, so it was the commonest way in — and it was
+  the one case that bounced you off the job you were reading, onto Build Estimate. Measured both
+  ways against the pre-change file: 4 tabs → bounced, 5 tabs → stays. Build Estimate remains the
+  fallback for the four tabs that really are hidden, because the walkthrough is the common field job.
+- **The label is `Clients`, and the width was measured rather than eyeballed.** Five tabs at
+  `flex:1 1 0` take a fifth of the bar instead of a quarter — 78px at 390px, **64px at 320px**. The
+  longest labels (*Estimate*, *Job Plan*) render **47px into 56px of usable width** at 320px, so
+  nothing truncates on the narrowest phone the app supports. A test caps every label at 9 characters.
+- **3306 committed checks. All four changes revert-verified individually** — dropping `data-field`
+  from the dashboard fails 3, and each stale tab count fails its own check.
+- **⚠ A PRE-EXISTING TEST PINNED THE BUTTON'S EXACT MARKUP AND BROKE ON A TRUE CHANGE — the fifth
+  time in this file.** `has(src, '<button class="nb active" onclick="showPanel(\'jobs\',this)">Client
+  Dashboard</button>')` failed because adding `data-field` to it is not a change to *which tab opens
+  by default*. Rewritten to state the requirement: exactly one tab is marked active, and it is the
+  one that opens the dashboard.
+- **Verified in headless Chromium at 390 / 320 / 768px**: five tabs at even widths, no label
+  truncated, the drilldown opens with the full 16-row rail and **18 live buttons**, the nav is fixed
+  with `main` padded 88px to clear it, overflow 0 at every width, no page errors.
+- Manual **§1** (a note on the five tabs, the layout-not-permission rule, and the entry behaviour);
+  playbook a `.note` in the opening (what to press, and the three things to do in the kitchen) plus
+  **one** symptom→cause row for somebody who has hit the toggle by accident. Both `.md` copies
+  hand-edited and **9 claims parity-checked**; tag balance verified on both HTML files.
+
 ## SLICE 7 — THE THREE TABS ARE RETIRED FROM THE NAV (2026-09-11)
 *"we are finding ourselves having to go to too many tabs in the app … all of the functionality
 that we currently have in client estimate agreement and invoices needs to go into the client
