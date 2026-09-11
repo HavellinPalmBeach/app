@@ -70,6 +70,83 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## THE PROBATE CONTRACT STATED $150/$100 OVER AN ENGAGEMENT BILLED AT $185/$125 (FIXED 2026-09-11)
+Found by the code audit. App-only, no redeploy. **This document is signed by the personal
+representative and its expenses are reviewed by a court.**
+
+- **⚠⚠ THE PROBATE FORM'S §3.1 FEE TABLE HARDCODED THE RATE PAIR**, while `agreementHtml` beside
+  it correctly read `est.tcRate` / `est.psRate`. On a **premium** engagement the estimate, the
+  client estimate and every invoice bill **$185 / $125** — so the representative signed at
+  $150/$100 and was invoiced at $185/$125. Driven on the real builder, a 100 TC + 100 PS matter:
+  the contract stated **$25,000** of labour against **$31,000** billed. **A $6,000 gap, on the one
+  matter type where the expenses are filed and questioned.**
+- **`agrBillingRates(job, est)` is the ONE definition** — the estimate's pinned pair, falling back
+  to the premium flag only for the blank template. **⚠ THE ESTIMATE WINS OVER THE FLAG**, and a
+  test pins it: a job re-flagged premium after pricing must not silently reprice a contract
+  against an estimate quoted at the old rates. Both forms read it; a test counts the call sites
+  at exactly 2 and `lacks()` the literals.
+- **⚠ AND THE TABLE NOW SAYS WHY A RATE IS HIGHER.** `agreementHtml` §3.3 has always carried the
+  Premium Estate explanation; the probate table had none, so a representative reading $185 had to
+  ask the question the contract should already answer. It renders only when the job is premium.
+
+### ⚠⚠ THE SAME TABLE PROMISED A BILLING MECHANISM THAT HAS NEVER EXISTED
+- **`pkgCost` IS A FLAT PACKAGE PRICE PICKED FROM A DROPDOWN** (`e-pkg` — None / $200 / $350 /
+  $500 / $550 / $750 / $1,500). There is **no cost input anywhere in the app, no markup arithmetic
+  and no receipt store.** Four client surfaces — **two of them contracts** — said *"billed at cost
+  plus a 25% materials handling fee, itemized separately on the invoice. Receipts available on
+  request."* The invoice prints one line reading `Moving materials — Estate Premium`.
+- **The promise of RECEIPTS is the half that matters**, on a probate matter where the
+  representative may well ask for them and the firm cannot produce any.
+- **⚠ THE APP COULD NOT HAVE BEEN THE WRONG HALF.** There is no cost basis to mark up, so
+  implementing cost-plus was never the alternative — only describing what is actually billed.
+  **Nothing about what the client pays changes.** ⚠ If the package price internally embeds a
+  markup that is Havellin's business and does not belong in the client's contract; raised to
+  Anthony rather than assumed either way.
+- `materialsBasisNote(pkgLabel)` is the one sentence, read at **four** sites, and it **names the
+  package the estimate quoted** so Exhibit A and the agreement cannot state the basis two ways
+  across one staple.
+
+### ⚠⚠ A CONTRACTOR'S RATE IS A COST AND MUST NEVER REACH A CLIENT DOCUMENT
+Anthony asked the right question mid-build — *"rates should also read from contractors, when
+selected in an estimate. how do we square that? is there a conflict anywhere?"* **There is not,
+and there must not be.** Written down because it is the obvious-looking change that would break
+the model, and the comment at `4674` has always said it without a test behind it.
+- **The BILLING rate follows the ROLE** — TC / PS, $150/$100 or $185/$125 premium — pinned on the
+  estimate and printed on the agreement and the invoice. **The CONTRACTOR rate follows the
+  PERSON** (Anthony $100, Ashley $100, Anthony Jr $60, or the four placeholder slots) and feeds
+  **margin and the walk-away floor alone**.
+- **Two reasons it cannot be otherwise, and both are fatal on their own:** two clients on
+  identical jobs would pay different amounts because a different specialist was free that week;
+  and **the agreement is signed before the crew is named**, so a person-keyed billing rate could
+  not be written into it at all.
+- **⚠ "A default, then specifics when the crew is selected" IS ALREADY BUILT — on the COST side.**
+  `getTCCostRate` matches the named person through `samePerson` and wins over the Settings
+  placeholder, and `isTCCostResolved` exists so the margin panel says which it used. That is
+  exactly the shape Anthony described, correctly placed on the margin side of the wall.
+- **Tests pin all of it:** no agreement reads `getTCCostRate` / `getPSCostRate` / `COST_RATES` /
+  `activeCostRates` / the roster, and `invoiceHtml` bills `t.role === 'TC' ? tcRate : psRate`.
+- **3589 committed checks** (`tests/agreement-rates.test.js`, 51 new — the first coverage of what
+  rate an agreement states). **All eight changes revert-verified individually** — restoring the
+  probate materials row fails **6**, each hardcoded rate 4, the estimate Terms 4, the standard
+  §3.6 and the estimate cell 3 each, the shared helper 2, the premium note 1.
+- **⚠ TWO OF MY OWN NEEDLES MATCHED PROSE, AND BOTH FAILED LOUD — which is the good direction.**
+  A bare `contractors` matches the standard agreement calling Havellin **"Contractor"** throughout,
+  plus its bonding, NDA and Independent Contractor clauses; a bare `25%` matches the **payment
+  schedule**, which is correct and must stay. Both now pin the claim (`handling fee`, `Cost + 25%`,
+  `contractors.filter`) rather than a word the document legitimately uses. ⚠ And in the browser
+  check the only surviving `handling fee` hit was **the sentence that denies it** — the fourth
+  time this file records a needle tripping on the text explaining the fix.
+- **Verified end to end in headless Chromium on the real page**: the premium probate agreement
+  renders **$185 / hour** and **$125 / hour** with *"Premium Estate rates apply"* beneath, the
+  ordinary job still reads $150/$100, both forms and Exhibit A state *"supplied as a fixed
+  package, quoted on the Estimate (Estate Premium — $1,500) … not cost-plus and carries no
+  separate handling fee"*, and **the invoice bills the same pair by role** — `Anthony Graziano TC
+  100.0 $185/hr $18,500 · Crew PS 100.0 $125/hr $12,500`. Contract and invoice agree, which is the
+  whole point. Overflow 0 at 1440 and 390px, no page errors.
+- Prelaunch, so no client has signed either form. **Both documents need a pass** — the manual and
+  playbook describe the materials line as cost-plus with a handling fee, which is now false in
+  both, and neither states which rates an agreement prints.
+
 ## THE INVOICE CREDITED MONEY IT HAD ASKED FOR, NOT MONEY THAT ARRIVED (FIXED 2026-09-11)
 Found by the code audit. App-only, no redeploy. **This is the document that tells a client what
 they owe.**

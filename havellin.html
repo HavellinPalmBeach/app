@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:38am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 10:59am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8697,7 +8697,7 @@ function clientEstimateHtml(e, job) {
       : '') +
       (hasMaterialsSection ?
         '<tr style="background:#f7f4ee;"><td colspan="4" style="' + _subHdrStyle + '">Moving Materials &amp; Vendor Coordination</td></tr>' +
-        (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Cost + 25%</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
+        (e.pkgCost > 0 ? '<tr><td>Moving materials — ' + e.pkgLabel + '</td><td>—</td><td>Fixed package</td><td class="r">' + fmt(e.pkgCost) + '</td></tr>' : '') +
         (vendorSMF > 0 ? '<tr><td>Service Management Fee — Vendor coordination (' + Math.round(SMF_PCT*100) + '%)</td><td>—</td><td>' + Math.round(SMF_PCT*100) + '% of vendors</td><td class="r">' + fmt(vendorSMF) + '</td></tr>' : '') +
         ''
       : '') +
@@ -8933,7 +8933,7 @@ function clientEstimateHtml(e, job) {
         (SMF_PCT > 0
               ? '<li>A ' + Math.round(SMF_PCT*100) + '% Service Management Fee applies to all third-party vendors coordinated by Havellin, including any home-prep vendors managed as part of this engagement.</li>'
               : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>') +
-        '<li>Moving materials (boxes, tape, wrap, specialty crates) are billed at cost plus a 25% materials handling fee.</li>')) +
+        '<li>' + materialsBasisNote(e.pkgLabel) + '</li>')) +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     // The insured-and-bonded bullet used to sit here and is gone (2026-09-10, Anthony's
     // call). The footer of this same document states it seven lines below, so as a Term it
@@ -24913,6 +24913,39 @@ function _agrMidpointTrigger(docScope) {
 
 // The estate / probate agreement, as a string. Addressed to a REPRESENTATIVE rather
 // than an owner — see isDecedentJob for why the service type alone decides that.
+// ⚠⚠ THE RATES A CONTRACT STATES MUST BE THE RATES THE ESTIMATE WAS PRICED AT, and until
+// 2026-09-11 the probate form hardcoded '$150 / hour' and '$100 / hour' in its §3.1 table
+// while the standard form correctly read the estimate. On a PREMIUM engagement the estimate,
+// the client estimate and every invoice bill $185 / $125 — so a personal representative signed
+// a contract at $150/$100 and was invoiced at $185/$125. Measured on a 100 TC + 100 PS probate
+// matter: the contract stated **$25,000** of labour against **$31,000** billed, a $6,000 gap,
+// on a COURT-REVIEWED matter where those expenses are filed and questioned.
+//
+// ⚠ IT IS ONE FUNCTION BECAUSE IT WAS TWO COPIES OF A FALLBACK. `agreementHtml` already had
+// `est ? est.tcRate : (job.premium ? 185 : 150)`; the probate form had nothing. Two copies of a
+// rate rule is precisely the drift that produced this, so the blank-template fallback lives in
+// one place and both forms read it.
+function agrBillingRates(job, est) {
+  return {
+    tc: (est && est.tcRate) || ((job && job.premium) ? 185 : 150),
+    ps: (est && est.psRate) || ((job && job.premium) ? 125 : 100),
+  };
+}
+
+// ⚠⚠ AND WHAT THE MATERIALS LINE ACTUALLY IS. `pkgCost` is a FLAT PACKAGE PRICE picked from a
+// dropdown (`e-pkg` — None / $200 / $350 / $500 / $550 / $750 / $1,500). There is no cost input
+// anywhere in the app, no markup arithmetic and no receipt store, so "billed at cost plus a 25%
+// materials handling fee, itemized separately on the invoice, receipts available on request" —
+// which four client surfaces said, two of them CONTRACTS — described a billing mechanism that
+// has never existed. The invoice prints one line reading `Moving materials — Estate Premium`.
+// A promise of receipts the firm cannot produce is the half that matters on a probate matter.
+// **Nothing about what the client pays changes**; this states the basis truthfully.
+function materialsBasisNote(pkgLabel) {
+  return 'Moving and packing materials are supplied as a fixed package, quoted on the Estimate'
+    + (pkgLabel ? ' (' + pkgLabel + ')' : '')
+    + ', and billed at that price. The package is not cost-plus and carries no separate handling fee.';
+}
+
 function probateAgreementHtml(job, est) {
   if (!job) return '';
   var jobId = job.id;
@@ -25033,10 +25066,14 @@ function probateAgreementHtml(job, est) {
   content += subHdr('3.1 Hourly Rate Structure');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Role</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Billing Rate</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Description</th></tr></thead><tbody>';
+  // ⚠ READ FROM THE ESTIMATE — see agrBillingRates. A literal here is how this table came to
+  // state $150/$100 on an engagement invoiced at $185/$125.
+  var _agrRates = agrBillingRates(job, est);
   var feeRows = [
-    ['Transition Concierge (TC)','$150 / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'],
-    ['Property Specialist (PS)','$100 / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
-    ['Specialty Materials','Cost + 25%','Boxes, packing materials, protective supplies — itemized separately on invoice. Receipts available on request.'],
+    ['Transition Concierge (TC)','$'+_agrRates.tc+' / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'
+      + (job.premium ? ' Premium Estate rates apply to this engagement, reflecting the elevated care, handling and oversight required for a property containing fine art, antiques, collectibles or high-value contents.' : '')],
+    ['Property Specialist (PS)','$'+_agrRates.ps+' / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
+    ['Moving &amp; Packing Materials','Fixed package price', materialsBasisNote(est && est.pkgLabel)],
     // Follows SMF_PCT — see the §3.5 comment in renderAgreement. On a court-reviewed matter a
     // percentage markup on a third-party invoice is exactly the line counsel questions.
     (SMF_PCT > 0
@@ -25316,8 +25353,9 @@ function agreementHtml(job, est) {
   if (!est) est = approvedEstimateFor(jobId) || ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
   var havTotal  = est ? est.havellinTotal : (job.havellinEst || 0);
   var isFixedAgr = !!(est && est.fixedPrice);   // firm flat fee instead of hourly billing
-  var tcRate    = est ? est.tcRate  : (job.premium ? 185 : 150);
-  var psRate    = est ? est.psRate  : (job.premium ? 125 : 100);
+  var _agrRates = agrBillingRates(job, est);
+  var tcRate    = _agrRates.tc;
+  var psRate    = _agrRates.ps;
 
   // Client fields from intake
   var clientName  = esc(job.name  || '[CLIENT FULL LEGAL NAME]');
@@ -25463,7 +25501,7 @@ function agreementHtml(job, est) {
         : _agrHasPrepVendors(est)
           ? p(b('3.5 Vendor Coordination and Home Sale Preparation Fee.')+'  Contractor adds no fee or markup to third-party vendor invoices, and the Transition Concierge time spent sourcing, scheduling, and supervising those vendors is billed as Transition Concierge time under Section 3.3.  Home sale preparation vendors identified in the Estimate are the exception: those are billed to Client at cost, and Contractor charges a General Contractor / Site Management Fee of '+_pctWords(prepFeeRate())+' of those vendor costs.  That fee covers Contractor\'s coordination and site supervision of the preparation work, which is not additionally billed as Transition Concierge time.')
           : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is billed as Transition Concierge time under Section 3.3.'))+
-    p(b('3.6 Moving and Packing Materials.')+'  Boxes, packing materials, protective supplies, and specialty crating are billed at cost plus a '+b('25% materials handling fee')+', itemized separately on the invoice. Contractor will identify the applicable materials package in the Estimate.')+
+    p(b('3.6 Moving and Packing Materials.')+'  '+materialsBasisNote(est && est.pkgLabel))+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     (isFixedAgr
       ? p(b('3.8 Changes to Scope.')+'  The fixed price covers the scope of work described in the Estimate. If Client requests, or conditions require, work beyond that scope, Contractor will notify Client in writing before proceeding, and any resulting price adjustment will be documented in a written Change Order signed by both Parties.')

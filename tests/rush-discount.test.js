@@ -43,7 +43,7 @@ const DISCOUNT_VARS = ['MAX_DISCOUNT_PCT'];
 // ── the real client estimate, so the document a client reads is what is asserted ─────
 const CE_FNS = ['clientEstimateHtml', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection',
-                'proposedPlanRow', '_cePhases'];
+                'proposedPlanRow', '_cePhases', 'materialsBasisNote'];
 const CE_VARS = ['SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
