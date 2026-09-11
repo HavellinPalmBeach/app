@@ -938,7 +938,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:37pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 1:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -26006,11 +26006,33 @@ function agreementHtml(job, est) {
     '<th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-weight:600;color:var(--gray);">Amount</th>' +
     '<th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-weight:600;color:var(--gray);">Timing</th>' +
     '</tr></thead><tbody>' +
+    // ⚠⚠ THE ESTIMATE IS ATTACHED TO THIS AGREEMENT AS EXHIBIT A, AND ON A PREP JOB THE TWO
+    // NAMED DIFFERENT TRIGGERS FOR THE SAME 25%. The estimate says the midpoint falls "once
+    // the vendor schedule is booked"; this table said "approximately 50% of scope is
+    // complete" — an event the estimate's own comment says does not exist on that
+    // engagement, since the vendors invoice the client directly and there are no phases to
+    // sit between. One staple, two answers, on the middle payment. The rows name the same
+    // three events the estimate names now.
     '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Deposit (50%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+dep+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due within 7 calendar days of signing — Services will not commence until received</td></tr>' +
-    '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Midpoint Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+mid+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon Contractor\'s determination that approximately 50% of scope is complete</td></tr>' +
-    '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon substantial completion, prior to final property walk-through</td></tr>' +
+    (isPrepAgr
+      ? '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Second Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+mid+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due once the vendor schedule is booked</td></tr>' +
+        '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due at show-ready handover of the property</td></tr>'
+      : '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Midpoint Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+mid+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon Contractor\'s determination that approximately 50% of scope is complete</td></tr>' +
+        '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">$'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon substantial completion, prior to final property walk-through</td></tr>') +
     '</tbody></table></div>'+
-    (isFixedAgr
+    // ⚠⚠ A STANDALONE HOME PREP AGREEMENT PRINTED AN HOURLY RATE CARD ON AN ENGAGEMENT
+    // THAT BILLS NO HOURS. Measured on the real builder: "Transition Concierge services are
+    // billed at $150/hour. Property Specialist services are billed at $100/hour" — on a
+    // signed contract whose §1.2 states the fee is thirty percent of vendor costs. calcAll
+    // zeroes baseTCHrs, basePSHrs and coordTC on prep, prepTCHrs is zero on EVERY engagement
+    // since 2026-09-10, and loadJobPlanTab hides the hours log outright, so there is no hour
+    // this clause could ever describe. The estimate's Terms were corrected for exactly this
+    // on 2026-09-08 (estimateIsFeeOnly) and the agreement was never given the same arm.
+    // isFixedAgr is false on prep — the fixed-price toggle is not reachable there — so the
+    // hourly arm was what every prep client signed.
+    (isPrepAgr
+      ? p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.')
+      : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+havTotal.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.')
       : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
@@ -26034,7 +26056,13 @@ function agreementHtml(job, est) {
           : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is billed as Transition Concierge time under Section 3.3.'))+
     p(b('3.6 Moving and Packing Materials.')+'  '+materialsBasisNote(est && est.pkgLabel))+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
-    (isFixedAgr
+    // ⚠ AND THE 15% CLAUSE IS AN HOURS CLAUSE. A Change Order carries additional CONCIERGE
+    // AND SPECIALIST HOURS (see coHours — it has carried no dollar amount since the rebuild),
+    // and prep books none, so on that engagement this mechanism describes nothing. The
+    // estimate's prep Terms already say a scope change is RE-QUOTED; this says the same.
+    (isPrepAgr
+      ? p(b('3.8 Changes to Scope.')+'  Contractor\'s fee follows the third-party vendor costs actually incurred, so a change in the work to be done changes the fee only through those costs. Contractor will review each vendor\'s quote with Client before that vendor is booked, and any work added after that is quoted and agreed with Client in writing before it proceeds.')
+      : isFixedAgr
       ? p(b('3.8 Changes to Scope.')+'  The fixed price covers the scope of work described in the Estimate. If Client requests, or conditions require, work beyond that scope, Contractor will notify Client in writing before proceeding, and any resulting price adjustment will be documented in a written Change Order signed by both Parties.')
       : p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.'))+
     p(b('3.9 Payment Method.')+'  Payment may be made by credit/debit card via Contractor\'s secure payment link, or by check or ACH payable to Havellin Palm Beach LLC.')
@@ -26064,7 +26092,14 @@ function agreementHtml(job, est) {
   // ── SECTION 7 ─────────────────────────────────────────────────────────────
   content += agrSection('7. Property Condition; Hazardous Materials',
     p(b('7.1 Existing Condition.')+'  Contractor is not responsible for any pre-existing defect or condition, including structural issues, code violations, mold, pests, water intrusion, or environmental hazards.')+
-    p(b('7.2 Hazardous Conditions.')+'  If Contractor reasonably believes hazardous or unsafe conditions exist, Contractor may pause or terminate work until the condition is remediated. Additional costs caused by undisclosed hazardous conditions may be charged to Client via Change Order.')+
+    // ⚠ "CHARGED TO CLIENT VIA CHANGE ORDER" STOPPED BEING POSSIBLE ON 2026-09-11. A Change
+    // Order carries additional CONCIERGE AND SPECIALIST HOURS and no dollar amount at all
+    // (see coHours; `amount`, `originalTotal` and `newTotal` were deleted, not retired), so
+    // a clause charging a COST through one describes a mechanism the app cannot produce. It
+    // names the two real routes instead — and pointing at §3.3 rather than restating a basis
+    // is what makes one sentence true on all three arms, including prep, whose §3.3 says no
+    // hours are billed at all.
+    p(b('7.2 Hazardous Conditions.')+'  If Contractor reasonably believes hazardous or unsafe conditions exist, Contractor may pause or terminate work until the condition is remediated. Any additional Contractor time required is documented in a written Change Order and billed as set out in Section 3.3. Any remediation performed by a third-party specialist is arranged with Client\'s consent and billed to Client directly by that specialist.')+
     p(b('7.3 Disposal.')+'  Contractor will dispose of debris and unwanted items in accordance with applicable laws. Client is responsible for any governmental fees, fines, or penalties arising from information Client failed to disclose or that were contrary to law.')
   );
 

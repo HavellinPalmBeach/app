@@ -70,6 +70,62 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 - Hosted on GitHub Pages from `main` branch
 - No build process
 
+## THE HOME PREP CONTRACT PRINTED AN HOURLY RATE CARD ON AN ENGAGEMENT THAT BILLS NO HOURS (FIXED 2026-09-11)
+Last off the audit list before the document pass. App-only, no redeploy. **This is a signed
+contract.**
+
+- **⚠⚠ §3.3 READ *"Transition Concierge services are billed at $150/hour. Property Specialist
+  services are billed at $100/hour."*** — measured on the real builder, on a standalone Home Prep
+  agreement whose **§1.2 states the fee is thirty percent of vendor costs**. Two incompatible fee
+  bases in one contract. `calcAll` zeroes `baseTCHrs`, `basePSHrs` and `coordTC` on prep,
+  `prepTCHrs` is zero on **every** engagement since 2026-09-10, and `loadJobPlanTab` hides the
+  hours log outright, so **there is no hour that clause could ever describe.**
+- **⚠ AND `isFixedAgr` IS FALSE ON PREP, WHICH IS WHY IT WAS THE HOURLY ARM EVERY TIME.** The
+  fixed-price toggle is not reachable on that service (its staffing column is hidden), so the
+  two-arm ternary had no branch prep could take and it fell to the hourly one. It reads
+  **§3.3 Basis of Fee** now — *"No Transition Concierge or Property Specialist hours are billed on
+  this engagement"* — pointing at §1.2 and §3.5, which do state the fee.
+- **⚠ §3.8's 15% CLAUSE IS AN HOURS CLAUSE.** A Change Order carries additional **concierge and
+  specialist hours** and no dollar amount at all since this morning's rebuild, so *"exceed the
+  Estimate by more than 15% … documented in a written Change Order"* describes nothing on prep.
+  It says what the estimate's own Terms already say: a scope change is **re-quoted** and agreed in
+  writing before it proceeds.
+- **⚠⚠ THE ESTIMATE IS EXHIBIT A AND THE TWO NAMED DIFFERENT TRIGGERS FOR THE SAME 25%.** The
+  estimate bills the second payment *"once the vendor schedule is booked"*; the agreement's table
+  said *"approximately 50% of scope is complete"* — **an event the estimate's own comment says does
+  not exist on that engagement**, since the vendors invoice the client directly and there are no
+  phases to sit between. One staple, two answers, on the middle payment. The rows name the same
+  three events now (*Second Payment (25%) — Due once the vendor schedule is booked*; *Final — Due
+  at show-ready handover*), and a test drives BOTH documents and asserts they agree.
+- **⚠ AND §7.2 CHARGED A COST THROUGH A MECHANISM THAT NO LONGER CARRIES ONE, ON EVERY SERVICE
+  TYPE.** *"Additional costs caused by undisclosed hazardous conditions may be charged to Client
+  via Change Order"* — `amount`, `originalTotal` and `newTotal` were **deleted, not retired**, this
+  morning. It names the two real routes instead: additional Contractor time goes on a Change Order
+  and is **billed as set out in §3.3**, and third-party remediation is billed to the client
+  directly by that specialist. **⚠ Pointing at §3.3 rather than restating a basis is what makes one
+  sentence true on all three arms** — including prep, whose §3.3 now says no hours are billed.
+- **⚠ THE CONVERSE IS TESTED, so the fix cannot be a blanket deletion**: a T&M Home Editing job
+  still prints the full rate card and the 15% threshold, and a fixed-price job still prints its
+  flat fee and its own scope clause. The estate/probate form is a different builder and is
+  untouched.
+- **⚠ LEFT ALONE DELIBERATELY: §1.4 still says *"Any material change to Services, hours, or
+  timeline"*.** It is boilerplate about scope rather than a statement about billing, and §3.3 now
+  says plainly that no hours are billed. Rewriting every occurrence of the word would be
+  over-correction; recorded so it is not mistaken for something missed.
+- **3997 committed checks** (29 new in `tests/agreement-fees.test.js`, which now drives the real
+  `agreementHtml` across all three arms rather than reading its source). **All four changes
+  revert-verified individually** — the hourly arm fails **6**, the hazardous clause 4, and the
+  other two 3 each.
+- **Verified end to end in headless Chromium on the real builder**, all four documents side by
+  side: prep gets *3.3 Basis of Fee* / *3.8 Changes to Scope* / *Second Payment (25%) — show-ready
+  handover*; Home Editing on T&M keeps *3.3 Hourly and Project Rates* / *3.8 Adjustment to
+  Estimate*; fixed price keeps *3.3 Fixed Project Fee*; and the estate form is byte-for-byte its
+  own document. The prep agreement now contains **no `$150/hour`, no `$100/hour` and no `15%`**.
+  No page errors.
+- Prelaunch, so no client has signed either form. **No document pass needed** — the manual and the
+  playbook describe the two agreement FORMS and the signing packet, and state none of these
+  clauses.
+
 ## PRINTING A CHANGE ORDER LEFT TWO TABS ON SCREEN AT ONCE (FIXED 2026-09-11)
 The seventh printer, and the one `_printDocument` was built for. App-only, no redeploy.
 **`printChangeOrder` hand-rolling its own sequence has been flagged in this file since the
