@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 7:57pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 8:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -21787,6 +21787,18 @@ function planRoomStatusBtns(jobId, roomIdx, status, phaseKey) {
           : phaseKey === 'p2' ? ['locked','packed','complete']
           : ['pending','sorting','locked','packed','complete'];
   var CLR = {pending:'#aaa',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
+  // ⚠⚠ PHASE 2 CANNOT DRAW THREE OF THE FIVE STATES, AND SILENCE IS THE WRONG ANSWER.
+  // Its row is locked / packed / complete, so a room still at `pending` or `sorting` lights
+  // NOTHING — three grey buttons and no indication of where the room actually is. Reported
+  // 2026-09-12 as *"why don't the 'locked' from phase 1 carry to starting point in stage 2?"*,
+  // which is exactly how a blank control reads: as state that failed to arrive. The state DID
+  // arrive (the badge says PENDING and the store holds it); the BUTTON ROW just had no way to
+  // say so. It says so here, in the same wrapper the buttons live in, so `setPlanRoomStatus`'s
+  // existing two-grid repaint keeps it live with no second call site to forget.
+  // ⚠ IT FLAGS, IT NEVER REFUSES. Locking a room from the Phase 2 card is legitimate — the
+  // crew is standing in it — and disabling the control would strand somebody mid-room. The
+  // split exists to stop Phase 1 driving a room to `complete`, not to stop Phase 2 locking one.
+  var below = phaseKey === 'p2' && (status === 'pending' || status === 'sorting');
   return '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:5px 0;">' +
     ST.map(function(s) {
       var a = s === status;
@@ -21794,7 +21806,10 @@ function planRoomStatusBtns(jobId, roomIdx, status, phaseKey) {
         ' style="padding:3px 9px;font-size:10px;font-weight:' + (a ? 700 : 400) + ';border-radius:3px;cursor:pointer;font-family:inherit;' +
         'background:' + (a ? CLR[s] : 'var(--cream)') + ';color:' + (a ? '#fff' : 'var(--gray)') + ';' +
         'border:1px solid ' + (a ? CLR[s] : 'var(--border-md)') + ';">' + s + '</button>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' +
+    (below ? '<div style="font-size:10px;font-weight:600;color:var(--warn-tx);background:var(--warn-bg);' +
+      'border-radius:3px;padding:3px 6px;margin:-2px 0 4px;">Still ' + status +
+      ' — finish the decisions in Phase 1, or lock it here</div>' : '');
 }
 
 function renderDailyCloseBlock(jobId, phase) {

@@ -1,5 +1,56 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ "LOCKED DOESN'T CARRY TO PHASE 2" — IT DOES; WHAT DOESN'T IS EVERY STATE BELOW IT (FIXED 2026-09-12)
+Anthony, after confirming the two sync causes were closed (*"App script done. Will work in one browser."*):
+*"Why don't the 'locked' from phase 1 carry to starting point in stage 2?"* App-only, no redeploy.
+
+- **⚠⚠ THE LOCK DOES CARRY, AND THAT WAS MEASURED BEFORE ANYTHING WAS CHANGED.** Both grids read the
+  same `plan.rooms[idx].status` and `setPlanRoomStatus` repaints both wrappers. Driven on the real page:
+  lock three rooms through the **real Phase 1 buttons** and the Phase 2 card reads badge **LOCKED** with
+  the `locked` button lit — live, and again after a full `loadJobPlanTab()` re-render, with the store
+  holding `{1:locked, 4:locked, 15:locked}`. **Reproducing the report first is what stopped this becoming
+  a fix to a mechanism that was already right.**
+- **⚠⚠ WHAT DOES NOT CARRY IS EVERY STATE BELOW LOCKED, AND THAT IS THE REAL DEFECT.** Phase 2's row is
+  `locked / packed / complete`, so a room at **`pending` or `sorting` lit NOTHING** — three grey buttons
+  and no reading at all. **A control with nothing selected reads as state that failed to arrive**, which is
+  the report almost word for word. The status was always present (the corner badge said PENDING and the
+  store held it); the BUTTON ROW, which is where the eye goes, simply had no way to express it.
+- **The card says which it is now** — *"Still pending — finish the decisions in Phase 1, or lock it here"* —
+  and the line **clears the instant the room locks**, verified in the browser.
+- **⚠ IT IS RENDERED INSIDE `planRoomStatusBtns`, NOT BESIDE IT, AND THAT IS THE LOAD-BEARING PART.**
+  `setPlanRoomStatus` already repaints `#plan-room-status-p1-<idx>` AND `-p2-<idx>` from that one function,
+  so putting the note in its return value makes it live on both grids with **no second call site to
+  forget**. A note appended by the caller is exactly how the two grids come to disagree — the failure this
+  whole area already records twice.
+- **⚠ IT FLAGS AND NEVER REFUSES, the standing rule, on the one control the crew presses in the room.**
+  Locking from the **Phase 2** card is legitimate: they are standing in it, and disabling the button would
+  strand somebody mid-room. **The phase split exists to stop Phase 1 driving a room to `complete` and
+  skipping the midpoint invoice — it was never a rule about Phase 2 reaching `locked`.** A test drives a
+  pending room's Phase 2 card and fails on `disabled` or `pointer-events:none`.
+- **⚠ THE CONVERSE IS WHAT KEEPS IT FROM BECOMING NOISE.** A room Phase 2 *can* draw says nothing at all,
+  and Phase 1 never carries the note — there all three of its states are drawable. Widening it to every
+  Phase 2 state fails **3**.
+- **4463 committed checks** (`tests/room-phase-carry.test.js`, 24 new — the first coverage of what the two
+  grids show each other at all). **All three arms revert-verified individually** — dropping the note fails
+  **5**, widening it 3, disabling the button 1.
+- **⚠ AND ONE REVERT CAME BACK GREEN BECAUSE THE REVERT NEVER APPLIED.** A `str.replace` whose needle did
+  not match exits 0 and rewrites the file unchanged, so the suite was green over code I had not touched —
+  and the needle occurred **twice** anyway (`planCollectionStatusBtns` carries the same button markup).
+  Re-done scoped to the function and asserted on the **rendered output** before trusting the count, it
+  fails 1. *A revert that does not actually undo the change proves nothing* — this file records that once
+  before, and the new shape is a silent no-op rather than a too-weak edit.
+- **Verified in headless Chromium on the real page**: a fresh plan shows the note on all three Phase 2
+  cards with nothing lit; locking through the Phase 1 buttons lights `locked` on **both** grids and drops
+  the note; a full re-render holds it. Plans render on all seven service types, overflow **0** at 1440 and
+  390px, no page errors.
+- **⚠ THE OTHER HONEST ANSWER, and it is not a bug:** a lock made on the *other* device **before** the
+  2026-09-11 Apps Script redeploy really is gone, not hidden — the sheet merged the whole plan as one
+  record until then. The playbook row names that as the one real exception and says to re-lock once.
+- Manual **§11** (a note beside the renders-twice one); playbook **one** symptom→cause row that leads with
+  *the lock did carry — read the badge*. Both `.md` copies hand-edited and **10 claims parity-checked**; tag
+  balance verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false
+  positive at 1), rendered at 1440/390 with **0 overflow** and all 42 tables full-width under `print`.
+
 ## ⚠⚠ PRINT JOB PLAN IS RETIRED — FIXING IT IS WHAT PROVED IT WAS USELESS (2026-09-11)
 Anthony, on the build that had fixed it hours earlier: *"Print job plan is useless. Too long printing all the
 cards. Let's scrap that for now and revisit."* App-only, no redeploy.
