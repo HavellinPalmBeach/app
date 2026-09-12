@@ -18,7 +18,7 @@
 
 const { sandbox } = require('./harness');
 
-const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'coHours', 'coHoursTotal', 'coBaselineShift',
+const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift',
              'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
              'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine',
              'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc',

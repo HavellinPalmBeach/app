@@ -943,7 +943,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 8:09pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10964,7 +10964,15 @@ function saveDeposit() {
   var list = jobPayments(job);
 
   var payment = {
+    // ⚠⚠ `id` IS A PER-DEVICE COUNTER AND MUST NOT BE THE MERGE KEY. max(id)+1 is
+    // computed from the payments THIS device happens to hold, so two people each
+    // recording a payment both mint the same number — and a union by id would then fuse
+    // two real payments into one rather than merely losing one. `uid` is minted the way a
+    // photo's is (clock + monotonic counter), so it is unique across devices and across
+    // two payments recorded in the same millisecond. `id` stays, because it names the
+    // cheque-photo file in Drive and a payment written before today has no other key.
     id: (list.reduce(function(m,p){ return Math.max(m, p.id || 0); }, 0) + 1),
+    uid: _photoUid(),
     stage: stage,
     amount: amount,
     receivedOn: date,
@@ -10979,6 +10987,7 @@ function saveDeposit() {
     qbMatchId: null        // set by QuickBooks reconciliation, when that exists
   };
   list.push(payment);
+  _jobTouch(job, 'payments', payment.uid);   // or the other device's save merges it away
   delete job.deposit;      // superseded by the list; jobPayments migrated it already
 
   // depositReceived stays in sync as the derived flag — seven places still read it.
@@ -11230,7 +11239,7 @@ function toggleProbatePkg(jobId) {
 function dashboardSubmitForApproval(jobId) { dashSubmitEstimate(jobId); }
 
 function getJobActuals(jobId) {
-  var logs = jobLogs[jobId] || [];
+  var logs = jobLogEntries(jobId);
   var actTC = 0, actPS = 0;
   logs.forEach(function(e){ e.members.forEach(function(m){ if(m.role==='TC') actTC+=m.hours; else actPS+=m.hours; }); });
   return { actTC: Math.round(actTC*10)/10, actPS: Math.round(actPS*10)/10, entries: logs.length, days: [...new Set(logs.map(function(e){ return e.date; }))].length };
@@ -11664,10 +11673,18 @@ function jobTimelineNext(rows) {
 // column, so this rides the existing sync with no column to add and no redeploy — the
 // same reason `houseFlags` is shaped this way. It is NOT `savePhotoRefs`, which has a
 // column whitelist that silently drops anything not listed.
+// ⚠ THIS IS THE WRITER'S ACCESSOR, NOT A GETTER — it upserts, and every one of its
+// callers mutates what it hands back. Readers go at `job.docState[key]` directly (see
+// docFiledAt). That is what makes it safe to STAMP here: one site instead of five, so no
+// writer can forget, which is how the two devices would come to disagree about whether a
+// document had gone out. A read routed through here would mark a key this device only
+// looked at, and that stale-but-stamped value would then beat the other device's real
+// change — so keep reads off it.
 function docState(job, docKey) {
   if (!job) return null;
   if (!job.docState) job.docState = {};
   if (!job.docState[docKey]) job.docState[docKey] = {};
+  _jobTouch(job, 'docState', docKey);
   return job.docState[docKey];
 }
 
@@ -12886,7 +12903,7 @@ function renderClientDashboard(jobId) {
   if (!job) { closeClientDashboard(); return; }
   var est = estimateStore[jobId] ? estimateStore[jobId].estimate : null;
   var actuals = getJobActuals(jobId);
-  var logs = jobLogs[jobId] || [];
+  var logs = jobLogEntries(jobId);
   var cos = changeOrders.filter(function(c){ return c.jobId===jobId; });
 
   // ── Status badge colours
@@ -13854,6 +13871,9 @@ function showPanel(id, btn) {
     if (logDateEl && !logDateEl.value) {
       logDateEl.value = new Date().toISOString().split('T')[0];
     }
+    maybeStartPlanWatch();
+  } else {
+    stopPlanWatch();
   }
   if (id==='invoice') { populateLogAndInvSelects(); loadInvoice(); }
   if (id==='agreement') { populateAgrSelect(); }
@@ -13915,6 +13935,27 @@ function generateHvlId() {
   for (var i=0;i<4;i++) suffix += chars[Math.floor(Math.random()*chars.length)];
   return 'HVL-' + yy + mm + '-' + suffix;
 }
+// ⚠⚠ WHO TOUCHED WHICH PART OF THIS JOB, AND WHEN. The mirror of _planTouch, and it
+// exists for the same reason: the sheet used to merge a job as ONE RECORD on updatedAt,
+// so the last device to save any part of it overwrote all of it. A job is not a scalar —
+// it carries job.payments[] (what the client actually paid), job.docState{} (which
+// documents have gone out), job.appraisers[] and job.invSnapshots[]. Measured 2026-09-12:
+// a $12,857 deposit cheque recorded at the desk was destroyed by the house marking the
+// agreement signed an hour later against its own morning copy of the job.
+//
+// ⚠ STAMP ON REMOVAL TOO, not only on write. Every device posts the WHOLE jobs array, so
+// a record simply missing from a payload means "this device never saw it" and can never be
+// read as a deletion. The stamp is what tells the two apart: a touch with no value left
+// behind it IS the removal. See _mergeJobRecord in main-sync.gs.
+function _jobTouch(job, kind, key) {
+  if (!job || key === undefined || key === null || key === '') return;
+  if (!job.at) job.at = {};
+  job.at[kind + ':' + key] = Date.now();
+  // The record-level clock has to move as well, or a stale device's newer updatedAt still
+  // wins every SCALAR on the job while this key merges correctly underneath it.
+  job.updatedAt = Date.now();
+}
+
 function saveJobs() {
   // Give every job a modified-time so the Sheet can MERGE saves by id (newest wins)
   // instead of doing a destructive full replace. Only fill when missing, so we never
@@ -16729,6 +16770,7 @@ function takeInventorySnapshot(jobId) {
     return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r) }; });
   if (!job.invSnapshots) job.invSnapshots = [];
   job.invSnapshots.push({ ts: Date.now(), label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: totalFMV, items: snapItems });
+  _jobTouch(job, 'invSnapshots', job.invSnapshots[job.invSnapshots.length - 1].ts);
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   renderInventoryTab();
@@ -16738,7 +16780,8 @@ function removeInventorySnapshot(jobId, ts) {
   if (!job || !job.invSnapshots) return;
   if (!window.confirm('Remove this snapshot?')) return;
   job.invSnapshots = job.invSnapshots.filter(function(s){ return String(s.ts) !== String(ts); });
-  saveJobs(); renderInventoryTab();
+  _jobTouch(job, 'invSnapshots', ts);
+  saveJobs(); syncJobToSheets(job); renderInventoryTab();
 }
 function _renderInventorySnapshots(job) {
   var snaps = (job.invSnapshots || []).slice().sort(function(a,b){ return b.ts - a.ts; });
@@ -17870,6 +17913,7 @@ function addAppraiser(jobId) {
     independent: !!(document.getElementById('appr-indep')||{}).checked,
     effectiveDate: g('appr-effdate'), reportDate: g('appr-rptdate'), dueDate: g('appr-duedate')
   });
+  _jobTouch(job, 'appraisers', job.appraisers[job.appraisers.length - 1].id);
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   renderInventoryTab();
@@ -17879,6 +17923,9 @@ function removeAppraiser(jobId, apprId) {
   if (!job || !job.appraisers) return;
   if (!window.confirm('Remove this appraiser? Items linked to them will lose the link.')) return;
   job.appraisers = job.appraisers.filter(function(a){ return String(a.id) !== String(apprId); });
+  // Stamped although the record is GONE — that is precisely what tells the merge this was
+  // a removal rather than a device that never saw it. See _jobTouch.
+  _jobTouch(job, 'appraisers', apprId);
   // Unlink any items pointing at the removed appraiser.
   (_photoRefs[jobId] || []).forEach(function(r){ if (String(r.apprId) === String(apprId)) { r.apprId = ''; r.apprDoc = ''; } });
   saveJobs(); savePhotoRefs(jobId);
@@ -20016,7 +20063,7 @@ function getJobCrew(jobId) {
   // that already has logged hours is treated as confirmed — its team was settled in
   // practice, and retroactively gating a job mid-flight would block the next entry.
   if (job.crew && typeof job.crew.confirmed === 'undefined') {
-    var hadHours = !!(typeof jobLogs !== 'undefined' && jobLogs[jobId] && jobLogs[jobId].length);
+    var hadHours = !!jobLogEntries(jobId).length;
     job.crew.confirmed   = hadHours;
     job.crew.confirmedBy = hadHours ? (job.tc || '') : '';
     job.crew.confirmedAt = hadHours ? '(before team sign-off existed)' : '';
@@ -20064,7 +20111,7 @@ function setCrewPS(jobId, slot, name) {
 // worked cannot be un-assigned — their hours are real and belong to them.
 function crewMemberHasHours(jobId, name) {
   if (!name) return false;
-  var entries = (typeof jobLogs !== 'undefined' && jobLogs[jobId]) ? jobLogs[jobId] : [];
+  var entries = jobLogEntries(jobId);
   return entries.some(function(e){
     return (e.members || []).some(function(m){ return samePerson(m.name, name) && (m.hours || 0) > 0; });
   });
@@ -20397,6 +20444,16 @@ function buildLogTeamRows() {
 }
 
 
+// ⚠⚠ THE LIVE HOURS ON A JOB. A deleted entry is TOMBSTONED rather than spliced, so
+// this is the only honest way to read the log — the raw store still carries the void.
+// Ten sites read jobLogs[jobId] directly before this existed, which is ten places to
+// forget; the inventory already learned that once (_jobInvRefs). Writers still go at the
+// store, and only deleteLogEntry ever writes a void.
+function jobLogEntries(jobId) {
+  var arr = (typeof jobLogs !== 'undefined' && jobLogs && jobLogs[jobId]) ? jobLogs[jobId] : [];
+  return arr.filter(function(e) { return e && !e.deletedAt; });
+}
+
 function saveLogEntry() {
   var jobId = parseInt(document.getElementById('log-job').value);
   if (!jobId) { showFB('log-fb','warn','Select a job first.'); return; }
@@ -20496,7 +20553,16 @@ function clearLogEntry() {
 
 function deleteLogEntry(jobId, entryId) {
   if (!confirm('Delete this hours entry?')) return;
-  jobLogs[jobId] = (jobLogs[jobId]||[]).filter(function(e){ return e.id !== entryId; });
+  // ⚠⚠ TOMBSTONE, NEVER SPLICE — and the splice did not merely fail to reach the other
+  // device, it never reached the SHEET. saveLogStore unions the payload by id and only
+  // ever adds, so the removed line came straight back to this device on its next page
+  // load, and it bills the client: the final invoice trues labour to this log. Every
+  // device posts the whole log, so a missing entry means "never saw it" and can never be
+  // read as a deletion — the removal has to travel as a record. Same rule the inventory
+  // and the custody log already follow.
+  jobLogs[jobId] = (jobLogs[jobId] || []).map(function(e) {
+    return (e && e.id === entryId) ? { id: e.id, deletedAt: Date.now() } : e;
+  });
   saveLogData();
   updateLogSummary(jobId);
   renderLogHistory(jobId);
@@ -20504,7 +20570,7 @@ function deleteLogEntry(jobId, entryId) {
 }
 
 function updateLogSummary(jobId) {
-  var logs = jobLogs[jobId] || [];
+  var logs = jobLogEntries(jobId);
   var job = jobs.find(function(j){ return j.id === jobId; });
 
   var actTC = 0, actPS = 0;
@@ -20564,7 +20630,7 @@ function updateLogSummary(jobId) {
 }
 
 function renderLogHistory(jobId) {
-  var logs = (jobLogs[jobId] || []).slice().reverse();
+  var logs = jobLogEntries(jobId).slice().reverse();
   var wrap = document.getElementById('log-history-wrap');
   if (logs.length === 0) {
     wrap.innerHTML = '<div class="empty-state">No entries yet for this job.</div>';
@@ -20599,7 +20665,7 @@ function renderLogHistory(jobId) {
   wrap.innerHTML = html;
   var btn = document.getElementById('log-history-toggle');
   if (btn) {
-    var total = (jobLogs[jobId] || []).length;
+    var total = jobLogEntries(jobId).length;
     var isOpen = wrap.style.display !== 'none';
     btn.textContent = isOpen ? '− Hide hours log' : '+ View hours log (' + total + ' entries)';
   }
@@ -20609,7 +20675,7 @@ function toggleLogHistory() {
   var wrap = document.getElementById('log-history-wrap');
   var btn = document.getElementById('log-history-toggle');
   if (!wrap || !btn) return;
-  var logs = jobLogs[parseInt((document.getElementById('log-job')||{}).value)] || [];
+  var logs = jobLogEntries(parseInt((document.getElementById('log-job')||{}).value));
   var count = logs.length;
   if (wrap.style.display === 'none') {
     wrap.style.display = '';
@@ -20678,7 +20744,7 @@ function invoiceHtml(job, stage) {
   if (!job) return null;
   var jobId = job.id;
 
-  var logs = jobLogs[jobId] || [];
+  var logs = jobLogEntries(jobId);
   var actTC = 0, actPS = 0;
   logs.forEach(function(entry) {
     entry.members.forEach(function(m) {
@@ -21417,6 +21483,105 @@ function loadJobPlanData() {
   }
 }
 
+// ⚠⚠ THE JOB PLAN AND THE HOURS LOG WERE READ ONCE, AT PAGE LOAD, AND NEVER AGAIN.
+// loadJobPlanData and loadLogData run from INIT and from nowhere else, and the only poll
+// in the app is jobsWatchTick — which is gated on a job sitting at `pending`, i.e. it is
+// stopped for the whole working phase. So the 2026-09-11 per-key plan merge was correct on
+// the sheet and INVISIBLE on screen: Ashley locks a room in the house, and the desk goes on
+// showing it pending until somebody reloads the page. The Job Plan is the one surface two
+// people genuinely work at the same time, so it is the one that has to follow.
+var _planWatch = { timer: null };
+var PLAN_WATCH_MS = 20000;
+
+// ⚠ THE SHEET IS ONLY AUTHORITATIVE ONCE OUR OWN WRITES HAVE REACHED IT. Replacing the
+// local store over a queued write would revert a room on screen seconds after somebody
+// locked it — a worse defect than the one this closes, and the kind that trains people to
+// stop trusting the tab. A tick with anything outstanding simply waits for the next one.
+function _syncWritesOutstanding() {
+  if (typeof _outboxSending !== 'undefined' && _outboxSending) return true;
+  if (typeof _flushing !== 'undefined' && _flushing) return true;
+  try { if (typeof _pendingWrites === 'object' && Object.keys(_pendingWrites).length) return true; } catch (e) {}
+  try { if (typeof _outbox === 'object' && Object.keys(_outbox).length) return true; } catch (e) {}
+  return false;
+}
+
+// ⚠ A REDRAW REWRITES #job-plan-content WITH innerHTML, so it destroys a half-typed note.
+// Somebody standing in a room typing is exactly who this tab is for; the tick defers
+// rather than interrupting them.
+function _planTabBusy() {
+  var el = document.activeElement;
+  if (!el) return false;
+  var tag = (el.tagName || '').toLowerCase();
+  if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return false;
+  var panel = document.getElementById('panel-job-plan');
+  return !!(panel && panel.contains(el));
+}
+
+// ⚠ `changed` IS A REAL COMPARISON, not "the fetch succeeded". refreshPhotoRefs ended in
+// an unconditional cb(true) and that re-entered loadJobPlanTab forever, one network round
+// trip per cycle — the stage that shut itself within seconds. This scopes the comparison to
+// the job on screen, so another client's plan landing never redraws this one.
+function refreshPlanAndLogFromCloud(jobId, cb) {
+  if (!SHEETS_SYNC_URL || !jobId) { if (cb) cb(false); return; }
+  if (_syncWritesOutstanding()) { if (cb) cb(false); return; }
+  var sig = function() {
+    return JSON.stringify((typeof jobPlanStore === 'object' && jobPlanStore[jobId]) || null)
+         + '|' + JSON.stringify((typeof jobLogs === 'object' && jobLogs[jobId]) || null);
+  };
+  var before = sig();
+  var done = 0, fail = false;
+  var finish = function() {
+    if (++done < 2) return;
+    if (fail) { if (cb) cb(false); return; }
+    if (cb) cb(sig() !== before);
+  };
+  fetch(SHEETS_SYNC_URL + '?action=loadJobPlans')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && data.jobPlans && typeof data.jobPlans === 'object' && !data.error) {
+        jobPlanStore = migrateRetiredNames(data.jobPlans);
+        try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
+      }
+    })
+    .catch(function(){ fail = true; })
+    .then(finish);
+  fetch(SHEETS_SYNC_URL + '?action=loadLogs')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && data.logs && typeof data.logs === 'object' && !data.error) {
+        jobLogs = migrateRetiredNames(data.logs);
+        try { localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
+      }
+    })
+    .catch(function(){ fail = true; })
+    .then(finish);
+}
+
+function planWatchTick() {
+  var panel = document.getElementById('panel-job-plan');
+  if (!panel || !panel.classList.contains('active')) { stopPlanWatch(); return; }
+  var sel = document.getElementById('plan-job');
+  var jobId = sel ? parseInt(sel.value) : 0;
+  if (!jobId || _planTabBusy()) return;
+  refreshPlanAndLogFromCloud(jobId, function(changed) {
+    if (!changed || _planTabBusy()) return;
+    var still = document.getElementById('plan-job');
+    if (!still || parseInt(still.value) !== jobId) return;   // they moved on
+    loadJobPlanTab();
+  });
+}
+
+function maybeStartPlanWatch() {
+  if (!SHEETS_SYNC_URL) return;
+  planWatchTick();                       // entering the tab is itself a refresh
+  if (_planWatch.timer) return;
+  _planWatch.timer = setInterval(planWatchTick, PLAN_WATCH_MS);
+}
+
+function stopPlanWatch() {
+  if (_planWatch.timer) { clearInterval(_planWatch.timer); _planWatch.timer = null; }
+}
+
 // ─── PROJECTION ENGINE ───────────────────────────────────────────────────────
 // Noise floor: combined actual hours before any projection is trusted.
 // One crew-day = 7 hours, representing meaningful on-site data.
@@ -21434,7 +21599,7 @@ function computeProjection(jobId) {
   if (!est || !est.rooms || !est.rooms.length) return null;
 
   var plan = getJobPlan(jobId);
-  var logs = jobLogs[jobId] || [];
+  var logs = jobLogEntries(jobId);
 
   var actTC = 0, actPS = 0;
   logs.forEach(function(entry) {

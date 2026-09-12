@@ -107,7 +107,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(f({ svc: 'probate', totTC: 10, totPS: 0 }), false, 'concierge hours alone still count as hours');
 
     // The invoice's copy of the rule, so a future edit to one shows up against the other.
-    const invoice = fn('invoiceHtml');
+    const invoice = fn('invoiceHtml', 'jobLogEntries');
     has(invoice, "=== 'prep')", 'the invoice still keys fee-only off the same service');
     has(invoice, '(est.totTC || 0) + (est.totPS || 0)) === 0', 'and the same zero-hours arm');
   }

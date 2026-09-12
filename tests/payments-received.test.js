@@ -20,7 +20,7 @@
 
 const { sandbox, fn } = require('./harness');
 
-const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel',
+const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel',
              '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
              '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
              'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -202,7 +202,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('one rule, read from the payment record');
   {
-    const body = fn('invoiceHtml').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+    const body = fn('invoiceHtml', 'jobLogEntries').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
     has(body, "stagePaidTotal(job, 'deposit')", 'the deposit received is read from the record');
     has(body, 'jobPaidTotal(job)', 'and the total received from the record');
     has(body, 'var finalDue     = Math.round(totalFinalBasis) - receivedAll;',

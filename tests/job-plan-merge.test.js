@@ -181,8 +181,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // priced snapshot, not a thing two people edit half of each. Do not "fix" it too.
     has(gsFn(GS, 'saveEstimateStore'), '_mergeStoreByKey(getEstimateStore(), incoming)',
         'the estimate store deliberately keeps whole-record-wins');
-    has(GS, "var BACKEND_VERSION = '2026-09-11b';",
-        '⚠ the deployment must identify itself, or the banner cannot tell it from the old one');
+    // ⚠ PIN THE REQUIREMENT, NOT THE LITERAL — twice now this constant has been asserted by
+    // equality and broken on the very bump it exists to require. The rule is that it is
+    // DATED (so a stale deployment is identifiable by eye) and never older than the last
+    // backend change, which is a floor and survives the next bump.
+    const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
+    ok(/^\d{4}-\d{2}-\d{2}[a-z]?$/.test(bv),
+       '⚠ BACKEND_VERSION is dated, or the banner cannot tell a deployment from the old one');
+    ok(bv >= '2026-09-12a',
+       '⚠ bump BACKEND_VERSION in the SAME commit as any main-sync.gs change');
   }
 
   group('⚠ the app stamps at every write site, or the merge has nothing to read');

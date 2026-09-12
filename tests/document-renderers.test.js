@@ -23,7 +23,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
-  const BUILDERS = ['clientEstimateHtml', 'agreementHtml', 'probateAgreementHtml', 'invoiceHtml'];
+  const BUILDERS = ['clientEstimateHtml', 'agreementHtml', 'probateAgreementHtml', 'invoiceHtml', 'jobLogEntries'];
 
   // ───────────────────────────────────────────────────────────────────────────
   group('the builders touch no DOM — that is the whole property');
@@ -72,7 +72,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // on this tab" is a statement about the tab, and a builder that returned it would
     // put that sentence inside a printed PDF.
     lacks(noComments(fn('clientEstimateHtml')), 'tab-empty', 'the builder never emits a tab empty-state');
-    lacks(noComments(fn('invoiceHtml')), 'tab-empty', 'nor does the invoice builder');
+    lacks(noComments(fn('invoiceHtml', 'jobLogEntries')), 'tab-empty', 'nor does the invoice builder');
 
     const ag = noComments(fn('renderAgreement'));
     has(ag, 'agreementHtml(job, null)', 'the agreement shim calls the builder');
@@ -88,7 +88,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ the invoice gates — the first committed coverage of them');
   {
-    const inv = noComments(fn('invoiceHtml'));
+    const inv = noComments(fn('invoiceHtml', 'jobLogEntries'));
     // Blocked and requires-approval are NOT the same idea and collapsing them is the
     // defect to guard: `requiresApproval` means "a manager can unlock this", and nobody
     // can unlock a missing timesheet.

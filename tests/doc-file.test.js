@@ -40,7 +40,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ The three renderers Slice 2 extracted are what make that possible. A caller that
     // has to render into a panel to obtain a document will always be one early return away
     // from leaving that panel on another client.
-    ['clientEstimateHtml', 'agreementHtml', 'invoiceHtml'].forEach((f) =>
+    ['clientEstimateHtml', 'agreementHtml', 'invoiceHtml', 'jobLogEntries'].forEach((f) =>
       ok(fn(f).length > 0, f + ' exists as a pure builder for it to use'));
     // ⚠ `exportAgreementToDrive` is GONE (2026-09-11). It filed the BARE agreement beside
     // the packet, so the folder held the terms-without-Exhibit-A one click from the document
@@ -90,7 +90,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // an estimate had been filed. The agreement, the packet and all three invoices still
     // had none, so the question was unanswerable for four of the five.
     const ctx = sandbox({
-      fns: ['docState', 'docRecordFiled', 'docFiledAt', 'docKeyFor'],
+      fns: ['docState', '_jobTouch', 'docRecordFiled', 'docFiledAt', 'docKeyFor'],
       stubs: { saveJobs() { ctx.__saved = (ctx.__saved || 0) + 1; }, syncJobToSheets() {} },
     });
     ctx.currentInvStage = 'final';
@@ -126,7 +126,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and again. So: the real `docAction`, the real registry, a fake Drive.
     const uploads = [];
     const ctx = sandbox({
-      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', 'docSentAt', 'docFiledAt',
+      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docSentAt', 'docFiledAt',
             'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
       stubs: {
@@ -199,7 +199,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // An unresolved subfolder falls back to the job root rather than dropping the document.
     const fb = sandbox({
-      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
+      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
       stubs: Object.assign({}, {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, _docNotice() {},
@@ -327,7 +327,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // unbounded loop blows the stack in this test instead of in somebody's browser.
     const rc = sandbox({
       fns: ['ensureAgreementApproved', 'exportSigningPacketToDrive', 'docAction', 'docFile',
-            'docRecordFiled', 'docState', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec',
+            'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec',
             'approvedEstimateFor', 'agreementReady'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
       stubs: {

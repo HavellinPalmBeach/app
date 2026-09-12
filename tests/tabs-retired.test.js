@@ -146,7 +146,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, 'invoiceHtml(job, currentInvStage)', '⚠ and the verdict is computed FRESH, not read off a global');
     has(a, 'if (!d.requiresApproval)', 'an invoice inside tolerance says so rather than asking for a PIN');
     has(a, 'openInvPinModal()', 'and the PIN modal is the one that already exists');
-    ok(a.indexOf('invoiceHtml') < a.indexOf('openInvPinModal'),
+    ok(a.indexOf('invoiceHtml', 'jobLogEntries') < a.indexOf('openInvPinModal'),
       'the verdict comes before the modal, so a PIN is never asked for on an invoice that needs none');
     has(src, 'id="inv-pin-modal"', 'the modal is still in the DOM');
     has(fn('checkInvPin'), 'resolvePin(pin)', 'and still resolves a named approver');

@@ -142,7 +142,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // And the invoice bills by ROLE at the job's rate, so two specialists on one job bill the
     // same. A person-keyed billing rate would make two identical jobs cost different amounts
     // and could not be written into a contract signed before the crew is named.
-    const inv = noComments(fn('invoiceHtml'));
+    const inv = noComments(fn('invoiceHtml', 'jobLogEntries'));
     has(inv, "var rate = t.role === 'TC' ? tcRate : psRate;",
         '⚠ the invoice bills each team member at the ROLE rate, never at their own cost rate');
     lacks(inv, 'getTCCostRate', 'the invoice never reaches for a cost rate');

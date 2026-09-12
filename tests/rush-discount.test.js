@@ -74,7 +74,7 @@ const JOB = { id: 1, hvlId: 'HVL-0007', client: 'Butler Estate', svc: 'cleanout'
               premium: false, executor: 'Tripp Butler' };
 function invCtx(e, logs) {
   return sandbox({
-    fns: ['invoiceHtml', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel',
+    fns: ['invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -370,7 +370,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(calc, 'havellinTotal + rushAmt - discountAmt',
         'and the discount comes off the result');
 
-    const invBody = noComments(fn('invoiceHtml'));
+    const invBody = noComments(fn('invoiceHtml', 'jobLogEntries'));
     has(invBody, 'Math.round(_midGross * _rushRate)', 'the invoice bills the midpoint premium on gross');
     has(invBody, 'Math.round(_finalGross * _rushRate)', 'and the final premium on gross');
     lacks(invBody, 'Math.round(_midServices * _rushRate)',

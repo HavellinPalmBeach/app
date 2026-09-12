@@ -27,7 +27,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const box = (stubs) => sandbox({
     fns: ['agreementSignature', 'isAgreementSigned', 'recordAgreementSignature', 'expectedSignerName',
-          'esignProviderKey', 'esignWatches', 'docState', 'applyEsignStatus', 'outstandingEnvelopes', '_actor'],
+          'esignProviderKey', 'esignWatches', 'docState', '_jobTouch', 'applyEsignStatus', 'outstandingEnvelopes', '_actor'],
     vars: ['AGR_SIG_METHODS', 'AGR_SIG_MANUAL_METHODS', 'ESIGN_PROVIDERS'],
     stubs: Object.assign({
       saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
@@ -125,7 +125,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // something else.
     const rail = sandbox({
       fns: ['jobTimeline', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
-            'esignProviderKey', 'esignWatches', 'docState', 'paymentSplit', 'unscoredRoomNames',
+            'esignProviderKey', 'esignWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor'],
       vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],

@@ -460,7 +460,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'neither fee: it no longer points at a Service Management Fee line the invoice lacks');
     lacks(ctx._invVendorFeeSentence(0, 0), 'shown above', 'and does not reference a line that is not there');
 
-    const inv = fn('invoiceHtml');
+    const inv = fn('invoiceHtml', 'jobLogEntries');
     has(inv, '_invVendorFeeSentence(smf, prepFee)', 'the invoice note reads the function');
     lacks(inv, "Havellin\\'s coordination fee is the Service Management Fee shown above.</div>",
           'the old unconditional sentence is gone');
@@ -473,7 +473,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Anthony, 2026-09-10: "30% should be the number, it's an industry standard general
     // contractor" — so it is a constant, not a per-job dial. What matters then is that no
     // document hardcodes the digits, or the day it ever moves they disagree.
-    ['clientEstimateHtml', 'invoiceHtml', 'agreementHtml', 'probateAgreementHtml',
+    ['clientEstimateHtml', 'invoiceHtml', 'jobLogEntries', 'agreementHtml', 'probateAgreementHtml',
      'buildPrepEstimateBody'].forEach((name) => {
       const body = fn(name);
       lacks(body, '(30%)', name + ' hardcodes no (30%) literal');
@@ -501,7 +501,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'GC / Site Management Fee</td>', 'and the invoice row they gated is gone');
     has(fn('calcAll'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
         'the services total adds only the five fees that exist');
-    has(fn('invoiceHtml'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
+    has(fn('invoiceHtml', 'jobLogEntries'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
         'and the invoice agrees with it, term for term');
   }
 

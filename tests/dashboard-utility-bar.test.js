@@ -42,7 +42,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
     'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'depositPaidTotal', 'depositTargetFor',
     'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignWatches', 'field', 'fmtMoney',
-    'getJobActuals', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
+    'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
     'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
     'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
     'standingFlagLines', 'standingFlagsBlock', 'stopJobsWatch', 'unscoredRoomNames'];

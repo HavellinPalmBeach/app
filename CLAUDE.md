@@ -1,5 +1,126 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE JOB RECORD WAS THE NEXT WHOLE-RECORD MERGE, AND IT DESTROYED A CHEQUE (FIXED 2026-09-12)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-12a`. Anthony, right after
+confirming the plan fix: *"Are there any other obvious locking issues that would keep things from propagating
+either in app or between devices that we should clean up now?"* **Three, and all three are here.** He was
+asked which to take and chose all of them in one redeploy.
+
+- **⚠⚠ A JOB IS NOT A SCALAR, AND BOTH SAVE PATHS MERGED IT AS ONE.** `saveAllJobsToSheet` and
+  `saveJobToSheet` each took the newer WHOLE record on `updatedAt` — byte-for-byte the rule that was wrong
+  for the job plan, one level up, on the record that carries the money. A job holds **`payments[]`** (what
+  the client actually paid), **`docState{}`** (which documents have gone out and been filed),
+  **`appraisers[]`** and **`invSnapshots[]`**, and those are edited by different people at different desks.
+  **Measured on the real backend before anything was changed**, both devices holding the morning's copy:
+
+  | | |
+  |---|---|
+  | 2pm, the desk | records a **$12,857** deposit cheque, sends the deposit invoice |
+  | 3pm, the house | marks the agreement signed, against its own morning copy |
+  | what the sheet then held | agreement signed ✓ · **payments 0** · deposit invoice sent **missing** |
+
+  **Nothing on either screen said so.** The mechanism is the plan's, deliberately and not a second one:
+  `job.at['<kind>:<key>']`, keyed sub-records resolved key by key, scalars still following the newer record.
+- **⚠⚠ AN UNSTAMPED KEY IS THE WEAKEST CLAIM, AND THAT ARM CAME BACK GREEN ON THE FIRST REVERT SWEEP.**
+  Every device posts the WHOLE job, so the other machine's payload carries a value for every record the desk
+  changed — the stale one it loaded that morning — and with only `updatedAt` the stale copy looks exactly as
+  fresh as the real edit. **My tests exercised only the cases where ONE side has the key**, which resolve in
+  the absence branches above that rule, so the branch that decides the actual defect was never driven.
+  Re-done with both sides holding the key, it fails **4**. *An arm that only fires when both sides have the
+  same key needs a test where both sides have the same key* — obvious afterwards, invisible while writing it.
+- **⚠ A STAMP WITH NO VALUE IS A REMOVAL, and that is the whole mechanism for propagating a deletion.**
+  Absence ALONE is never a deletion (that is how a stale laptop resurrects things), so `removeAppraiser` and
+  `removeInventorySnapshot` stamp the key they just emptied. The stamps union newest-per-key, so the removal
+  keeps winning against every later stale save rather than being undone on the next sync from that laptop.
+- **⚠⚠ `payment.id` WAS A PER-DEVICE COUNTER AND KEYING ON IT WOULD HAVE BEEN WORSE THAN THE BUG.**
+  `max(id)+1` over the payments *this device holds*, so two people each recording one both mint **1** — a
+  union by id then **fuses two real payments into one** rather than merely losing one. `uid` is minted the
+  way a photo's is (`_photoUid`, clock + monotonic counter). **`id` survives**: it names the cheque-photo file
+  in Drive, and a payment written before today has no other key — the index fallback `_srcLineKey` already
+  keeps for the same reason.
+- **⚠ THE STAMP LIVES INSIDE `docState`, NOT AT ITS FIVE CALL SITES.** All five callers mutate what it hands
+  back — it is the writer's accessor, not a getter (readers go at `job.docState[key]` directly). One site
+  instead of five is what stops a writer forgetting, the same reasoning that put the Phase 2 note inside
+  `planRoomStatusBtns`. **⚠ A read routed through it would stamp a key this device only looked at, and that
+  stale-but-stamped value would then beat the other device's real change** — so keep reads off it; the
+  comment says so.
+
+### ⚠⚠ A DELETED HOURS ENTRY WAS NEVER DELETED — NOT EVEN ON THE DEVICE THAT DELETED IT
+- **`deleteLogEntry` SPLICED and `saveLogStore` UNIONED BY ID, ADDING ONLY.** So the removal never reached
+  the sheet at all: `loadLogData` does `jobLogs = data.logs` (cloud wins), and the line came **straight back
+  to the deleting device on its next page load**. Not a two-device race — a one-device one.
+  **And it bills the client**, because the final invoice trues labour to this log. Measured: delete a
+  mis-typed 8 hr line from a 21 hr job, log tomorrow's hours, and the job reads **26**.
+- **⚠ THE REMOVAL TRAVELS AS A RECORD, NEVER AS AN ABSENCE**, the rule the inventory and the custody log
+  already follow. Every device posts the whole log, so a device that has not seen an entry omits it too.
+  A void wins over a live copy **from either side**, or whichever device synced second would decide.
+- **⚠ TEN SITES READ `jobLogs[jobId]` DIRECTLY, WHICH IS TEN PLACES TO FORGET.** `jobLogEntries(jobId)` is
+  the one live view (`_jobInvRefs` for the inventory, again); writers still go at the store. **⚠ The watch's
+  change signature deliberately reads the RAW store** — a tombstone arriving from the other device has to
+  register as a change, or a remote deletion never redraws the tab.
+
+### ⚠⚠ THE PLAN AND THE LOG WERE READ ONCE, AT PAGE LOAD, AND NEVER AGAIN
+- **`loadJobPlanData` and `loadLogData` run from INIT and from nowhere else**, and the only poll in the app
+  is `jobsWatchTick` — **gated on a job sitting at `pending`, i.e. stopped for the whole working phase.**
+  So last night's per-key plan merge was correct on the sheet and **invisible on screen**: Ashley locks a
+  room and the desk goes on showing it pending until somebody reloads. *A merge fix nobody can see is half
+  a fix.*
+- **⚠ THE SHEET IS ONLY AUTHORITATIVE ONCE OUR OWN WRITES HAVE LANDED IN IT.** `refreshPlanAndLogFromCloud`
+  stands down entirely on `_syncWritesOutstanding()` — replacing the local store over a queued write reverts
+  a room on screen seconds after somebody locked it, **a worse defect than the one this closes** and the kind
+  that teaches people to stop trusting the tab.
+- **⚠ AND IT NEVER REDRAWS OVER A FOCUSED INPUT.** `loadJobPlanTab` rewrites `#job-plan-content` with
+  `innerHTML`, so it destroys a half-typed note — and somebody standing in a room typing is exactly who this
+  tab is for. It defers to the next pass rather than interrupting.
+- **⚠ `changed` IS A REAL COMPARISON, scoped to the job on screen.** `refreshPhotoRefs` ended in an
+  unconditional `cb(true)` and that re-entered `loadJobPlanTab` forever, one network round trip per cycle —
+  the stage that shut itself within seconds. Driven in a browser: a second tick over the same answer does
+  **0** redraws. It also withholds the redraw if the selector has moved on while the request was in flight.
+- **⚠ THE OTHER STORES ARE DELIBERATELY LEFT ALONE, and that is a decision rather than an oversight.**
+  `loadChangeOrders` and `loadContractors` are also INIT-only, and the jobs list still polls only while
+  something is `pending`. With the job merge fixed, a stale list **displays** stale rather than **losing**
+  anything, and the Job Plan is the one surface two people genuinely work at once. Widening every poll would
+  put traffic on every device all day for a display problem. Reload for a current Client Dashboard; both
+  documents say so.
+- **4538 committed checks** (`tests/job-record-merge.test.js`, 65 new — the first coverage of what a job
+  merge does at all). **All sixteen changes revert-verified individually** — the bulk job path fails **5**,
+  the unstamped-is-weakest arm **4**, the log void **4**, the queued-write stand-down and the splice **2**
+  each, the rest 1.
+- **⚠⚠ THE REVERT SWEEP DESTROYED THE WORK UNDER TEST AND REPORTED GREEN — a new shape, and the worst yet.**
+  It restored each file with **`git checkout -- <file>`**. Nothing was committed, so the first restore rolled
+  the file back past *every* change in the commit; the fifteen later needles then matched nothing, and the
+  script printed a tidy `NEEDLE x0` for each. **The `x0` guard is the only reason this was caught rather
+  than read as fifteen green reverts** — and the source edits had to be replayed from scratch. A revert sweep
+  over uncommitted work must snapshot the file, never `git checkout`.
+- **⚠ AND ONE REVERT ADDED A DEAD LINE INSTEAD OF REMOVING A LIVE ONE.** `if (false) job.updatedAt = …`
+  inserted *above* the real assignment, which stayed. Green, and it proved nothing. Re-done by removing the
+  assignment, it fails 1. The sweep now asserts the replacement text is present in the file afterwards, which
+  is the general form of the check this file has now paid for three times.
+- **⚠ ONE ASSERTION CRASHED THE FILE ON REVERT INSTEAD OF FAILING.** `out.payments[0].amount` throws when the
+  list is empty, so the headline defect read as one crash rather than the five assertions it actually breaks.
+  Read defensively in a test whose whole point is the empty case.
+- **⚠ A PRE-EXISTING TEST PINNED `BACKEND_VERSION = '2026-09-11b'` AS A LITERAL AND BROKE ON THE BUMP IT
+  EXISTS TO REQUIRE — the second time on this exact constant.** The first fix was supposed to have stated
+  the FORMAT and did not survive. It is now a format check plus a **floor** (`bv >= '2026-09-12a'`), which
+  states the requirement and survives the next bump.
+- **⚠ TWELVE SUITES PINNED EXPLICIT `fns:` LISTS AND BROKE CORRECTLY** when `docState` grew a call to
+  `_jobTouch` and `invoiceHtml` to `jobLogEntries`. Mechanical, and the right failure.
+- **Verified end to end in headless Chromium on the real page**: a payment is born with a distinct `uid`,
+  stamped, and moves the record clock; `docState` stamps both document keys; the hours log goes **21 → 13**
+  with the void kept in the store and hidden from the live view; and, driving the **real Job Plan tab**, the
+  Kitchen reads **PENDING** before and **LOCKED** after one tick of the watch with nobody reloading — 0
+  redraws on a second tick over the same answer, 0 fetches while a write is queued. Overflow 0 at 1440 and
+  390px on the dashboard, no page errors.
+- **⚠ NOTED, NOT INTRODUCED, NOT FIXED: the Job Plan overflows 94px at 390px**, on `plan-room-block-p1-15`
+  (the Garage card). Measured **identical before and after** against the pre-change tree, same element, same
+  number. It belongs to a layout pass, and it is on the device this tab is actually used on.
+- Manual **§2** (two notes — the job merge with the redeploy and the re-record instruction, and the hours-log
+  delete with the check-the-total instruction) and **§11** (the tab now follows the other device, the two
+  things it deliberately will not do, and that nothing else polls); playbook a `.note` on Step 10 and **four**
+  symptom→cause rows. Both `.md` copies hand-edited and **17 claims parity-checked**; tag balance verified on
+  both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
+  1440/390 with **0 overflow** and all 42 tables full-width under `print`.
+
 ## ⚠⚠ "LOCKED DOESN'T CARRY TO PHASE 2" — IT DOES; WHAT DOESN'T IS EVERY STATE BELOW IT (FIXED 2026-09-12)
 Anthony, after confirming the two sync causes were closed (*"App script done. Will work in one browser."*):
 *"Why don't the 'locked' from phase 1 carry to starting point in stage 2?"* App-only, no redeploy.
@@ -942,8 +1063,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/busy-heisenberg-h24ya9`
-  (`claude/festive-noether-ggr0fn` shipped alongside it on 2026-09-11 — two sessions ran
+- Active feature branch: `claude/festive-noether-ggr0fn`
+  (`claude/busy-heisenberg-h24ya9` shipped alongside it on 2026-09-11 — two sessions ran
   concurrently and both are on `main`; neither is stale.)
   (was `claude/trusting-allen-iadbqe`, then `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
   `claude/photo-sync-google-drive-69ykub`, then
@@ -952,7 +1073,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/busy-heisenberg-h24ya9:main`
+  `git push origin claude/festive-noether-ggr0fn:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-11b';
+var BACKEND_VERSION = '2026-09-12a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder'
@@ -791,6 +791,131 @@ function pruneOrphanRecordsConfirm(force) {
   }
 }
 
+// ══ THE JOB RECORD MERGES PER KEY TOO ════════════════════════════════════════════
+//
+// ⚠⚠ A JOB IS NOT A SCALAR, AND MERGING IT AS ONE DESTROYS MONEY. Found 2026-09-12 by
+// auditing what else still merged the way the job plan did before the 09-11 fix. Both
+// job paths took the newer WHOLE record on updatedAt — and a job carries several
+// independently-edited sub-records: job.payments[] (what the client actually paid),
+// job.docState{} (which documents have gone out and been filed), job.appraisers[] and
+// job.invSnapshots[]. Driven on this function, both devices holding the morning's copy:
+// the desk records a $12,857 deposit cheque at 2pm; the house marks the agreement signed
+// at 3pm without having reloaded; the sheet ends up with the signature and NO PAYMENT.
+// Nothing on either screen says so.
+//
+// ⚠ The rule is the job plan's rule, and deliberately the same mechanism rather than a
+// second one: keyed sub-records resolve KEY BY KEY against `job.at['<kind>:<key>']`, and
+// AN UNSTAMPED KEY IS THE WEAKEST CLAIM — it means that device never touched it, so it
+// loses to a stamped one whatever updatedAt says. Everything else on the job is a scalar
+// somebody sets, and there the newer record is genuinely right.
+//
+// ⚠ A STAMP WITH NO VALUE IS A REMOVAL. That is what lets removeAppraiser and
+// removeInventorySnapshot survive a merge from a device that still holds the record live:
+// absence ALONE is never a deletion (that is how a stale laptop resurrects things), but
+// absence plus a touch means this device took it out. The stamps union newest-per-key, so
+// the removal keeps winning against every later stale save.
+var JOB_KEYED_LISTS = ['payments', 'appraisers', 'invSnapshots'];
+var JOB_KEYED_MAPS  = ['docState'];
+// Per-list identity. ⚠ `payments` used to be minted `max(id)+1` PER DEVICE, so two people
+// each recording a payment both produced the same id and union-by-id would fuse two real
+// payments into one. The app mints a uid now; `id` stays the fallback so a payment written
+// before this deployment still has a key, exactly as _srcLineKey keeps its index fallback.
+var JOB_LIST_KEY = { payments: 'uid', appraisers: 'id', invSnapshots: 'ts' };
+
+function _jobStamp(job, kind, key) {
+  var at = job && job.at;
+  var v = at && at[kind + ':' + key];
+  return (v === undefined || v === null || v === '') ? null : Number(v);
+}
+
+function _jobListKey(kind, rec) {
+  if (!rec) return null;
+  var v = rec[JOB_LIST_KEY[kind]];
+  if (v === undefined || v === null || v === '') v = rec.id;
+  return (v === undefined || v === null || v === '') ? null : String(v);
+}
+
+// Resolve one keyed collection given both sides as {key: value} views. Shared by the list
+// and the map shapes so there is ONE copy of the rule; two copies is how the two shapes
+// would come to disagree about what a stamp means.
+function _mergeJobKeyed(cur, inc, kind, a, b, incIsNewer) {
+  var keys = {}, k;
+  for (k in a) keys[k] = 1;
+  for (k in b) keys[k] = 1;
+  var out = {}, order = [];
+  for (k in a) order.push(k);
+  for (k in b) if (!Object.prototype.hasOwnProperty.call(a, k)) order.push(k);
+  for (var i = 0; i < order.length; i++) {
+    k = order[i];
+    var inA = Object.prototype.hasOwnProperty.call(a, k);
+    var inB = Object.prototype.hasOwnProperty.call(b, k);
+    var sA = _jobStamp(cur, kind, k), sB = _jobStamp(inc, kind, k);
+    if (!inA) {
+      // Stamped on the side that does NOT have it, and no newer stamp opposite: removed.
+      if (sA !== null && (sB === null || sA > sB)) continue;
+      out[k] = b[k]; continue;
+    }
+    if (!inB) {
+      if (sB !== null && (sA === null || sB > sA)) continue;
+      out[k] = a[k]; continue;
+    }
+    if (sA !== null && sB !== null) out[k] = sB >= sA ? b[k] : a[k];
+    else if (sA !== null)           out[k] = a[k];
+    else if (sB !== null)           out[k] = b[k];
+    else                            out[k] = incIsNewer ? b[k] : a[k];
+  }
+  out.__order = order;
+  return out;
+}
+
+function _mergeJobRecord(cur, inc) {
+  if (!cur) return inc;
+  if (!inc) return cur;
+  var curT = Number(cur.updatedAt || 0), incT = Number(inc.updatedAt || 0);
+  var incIsNewer = incT >= curT;
+
+  // Scalars follow the newer record; the keyed sub-records are resolved below.
+  var out = {}, k;
+  var newer = incIsNewer ? inc : cur;
+  for (k in newer) out[k] = newer[k];
+
+  JOB_KEYED_LISTS.forEach(function(kind) {
+    var aArr = (cur[kind] && cur[kind].length !== undefined) ? cur[kind] : null;
+    var bArr = (inc[kind] && inc[kind].length !== undefined) ? inc[kind] : null;
+    if (!aArr && !bArr) return;
+    var a = {}, b = {}, i, key;
+    for (i = 0; i < (aArr || []).length; i++) { key = _jobListKey(kind, aArr[i]); if (key !== null && !(key in a)) a[key] = aArr[i]; }
+    for (i = 0; i < (bArr || []).length; i++) { key = _jobListKey(kind, bArr[i]); if (key !== null && !(key in b)) b[key] = bArr[i]; }
+    var m = _mergeJobKeyed(cur, inc, kind, a, b, incIsNewer);
+    var order = m.__order; delete m.__order;
+    var list = [];
+    for (i = 0; i < order.length; i++) if (Object.prototype.hasOwnProperty.call(m, order[i])) list.push(m[order[i]]);
+    out[kind] = list;
+  });
+
+  JOB_KEYED_MAPS.forEach(function(kind) {
+    var a = (cur[kind] && typeof cur[kind] === 'object') ? cur[kind] : null;
+    var b = (inc[kind] && typeof inc[kind] === 'object') ? inc[kind] : null;
+    if (!a && !b) return;
+    var m = _mergeJobKeyed(cur, inc, kind, a || {}, b || {}, incIsNewer);
+    delete m.__order;
+    out[kind] = m;
+  });
+
+  // The stamps themselves union, newest per key — a device that did not touch a payment
+  // would otherwise drop the proof that the other one did, and the record would be
+  // contested again on the next save.
+  var at = {};
+  [cur.at || {}, inc.at || {}].forEach(function(src) {
+    for (var key in src) {
+      var v = Number(src[key]);
+      if (!(key in at) || v > at[key]) at[key] = v;
+    }
+  });
+  for (var _k in at) { out.at = at; break; }
+  return out;
+}
+
 // ══ ESTIMATE STORE (merge by jobId) ══════════════════════════════════════════════
 
 function saveEstimateStore(incoming) {
@@ -979,10 +1104,25 @@ function saveLogStore(incoming) {
     Object.keys(incoming).forEach(function(jid) {
       var inArr = incoming[jid] || [];
       var cur = out[jid] || [];
-      var seen = {};
-      cur.forEach(function(en) { if (en && en.id != null) seen[en.id] = true; });
-      inArr.forEach(function(en) { if (en && en.id != null && !seen[en.id]) { cur.push(en); seen[en.id] = true; } });
-      out[jid] = cur;
+      // ⚠⚠ A DELETED HOURS ENTRY USED TO BE UNDELETABLE. This unioned by id and only ever
+      // ADDED, so deleteLogEntry's splice never reached the sheet at all: the entry came
+      // straight back to the deleting device on its next page load, and it bills the
+      // client, because the final invoice trues labour to this log. Measured 2026-09-12 —
+      // delete a mis-typed 8 hr line, log tomorrow's hours, and the job goes 21 hrs to 26.
+      //
+      // ⚠ A VOID WINS OVER A LIVE COPY, from either side, and the removal has to travel as
+      // a RECORD rather than as an absence. Every device posts the whole log, so a device
+      // that simply has not seen an entry omits it too — absence can never mean deletion
+      // here. Same rule the inventory and the custody log already follow.
+      var byId = {}, order = [];
+      cur.forEach(function(en) { if (en && en.id != null) { if (!(en.id in byId)) order.push(en.id); byId[en.id] = en; } });
+      inArr.forEach(function(en) {
+        if (!en || en.id == null) return;
+        var was = byId[en.id];
+        if (!was) { order.push(en.id); byId[en.id] = en; return; }
+        if (en.deletedAt && !was.deletedAt) byId[en.id] = en;
+      });
+      out[jid] = order.map(function(id) { return byId[id]; });
     });
     _sweepDeletedJobKeys(out, ctx.present, ctx.ledger);
     _writeStoreBlob('LogStore', out);
@@ -1109,9 +1249,11 @@ function saveAllJobsToSheet(jobsArr) {
       // still had it. Refuse it: merging it is how a cleared sheet refilled itself.
       if (_jobRefusal(j.id, j.created, present, ledger)) { result.dropped.push(j.id); return; }
       var cur = byId[j.id];
-      var inT = Number(j.updatedAt || 0), curT = cur ? Number(cur.updatedAt || 0) : -1;
-      if (!cur) order.push(j.id);
-      if (!cur || inT >= curT) byId[j.id] = j;
+      // Per key, not per record — see _mergeJobRecord. Taking the newer whole job here is
+      // what destroyed a recorded deposit cheque when the other device marked the
+      // agreement signed against its own morning copy.
+      if (!cur) { order.push(j.id); byId[j.id] = j; return; }
+      byId[j.id] = _mergeJobRecord(cur, j);
     });
 
     // Rewrite the data rows from the merged set.
@@ -1161,14 +1303,14 @@ function saveJobToSheet(job) {
       Logger.log('saveJob refused deleted job ' + job.id);
       return result;
     }
-    // Newest-wins guard: if the stored row is newer than this write, leave it alone
-    // rather than overwriting fresher data with a stale edit from another device.
+    // Newest-wins on the SCALARS, per key on the sub-records. This used to return early
+    // when the stored row was newer, which threw away the incoming device's payments and
+    // docState wholesale; and when the incoming row was newer it overwrote the stored
+    // ones. ~20 edit sites fire this per record, so both directions were live.
     if (rowIndex > 0) {
       var stored = null;
       try { stored = JSON.parse(data[rowIndex - 1][11]); } catch (e) {}
-      var inT  = Number(job.updatedAt || 0);
-      var curT = stored ? Number(stored.updatedAt || 0) : -1;
-      if (curT > inT) return;
+      if (stored) job = _mergeJobRecord(stored, job);
     }
     var rowData = [
       job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',

@@ -378,6 +378,8 @@ Two things worth knowing when you ask for one:
 
 The job is now **Active**. Three things run in parallel.
 
+> **⚠ The Job Plan keeps itself current while it is open (new 2026-09-12).** Two people work this tab at once — one in the house, one at the desk — and until this date it only read the plan **when the page loaded**. So a room locked in the house did not appear at the desk until somebody reloaded. It now re-reads roughly **every 20 seconds**, and again the moment you open the tab. Two things it will not do, both on purpose: it **never refreshes while you are typing in the plan** (a refresh redraws the whole tab and would take your half-written note with it), and it **stands down entirely while the red unsaved-changes chip is showing** — your own work has not reached the sheet yet, so pulling the sheet in would undo the room you just locked. In both cases it simply waits. Nothing else in the app refreshes by itself; for a current **Client Dashboard**, reload the page.
+
 ### a. Document the property — Client Dashboard → job documentation
 
 Photos can be captured from the moment the job is **Won** — you do not have to wait for the deposit, and the room cards are on screen from then on.
@@ -647,6 +649,10 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| **A payment you recorded is not on the client any more** | Fixed 2026-09-12, and it needs the Apps Script redeploy of that date. A client used to sync as *one record*, so the last device to save anything on that client overwrote everything the other one had done — including a recorded cheque, and the record that an invoice had gone out. It now merges payment by payment. **Record the payment again**; nothing is recoverable from before the redeploy. |
+| **You deleted an hours entry and it is back** | Same date, same redeploy. The deletion never reached the sheet at all, so the line returned on the next page load — on your own device as well as everyone else's. Those hours bill the client, because the final invoice trues the labour charge to the log. **Check the hours total on any job where you deleted a line before 2026-09-12**, then delete it again. |
+| The other device locked rooms and you cannot see them on the Job Plan | The tab re-reads every 20 seconds now, so give it a moment. If it still does not move: the **red unsaved-changes chip** is showing, which stands the refresh down until your own work is saved; or your cursor is in a box on the plan, which holds it off so your typing is not wiped. Click away and wait one pass. Failing both, reload the page. |
+| The Job Plan redrew itself while you were looking at it | That is the 2026-09-12 refresh, and it only happens when something actually changed on the other device. It will not do it while you are typing. Other tabs do not do this at all. |
 | Half the tabs are missing and the nav is at the bottom | You are in **field mode** — the **📱 Field** button in the header is filled bronze. It keeps five tabs (Clients · Intake · Estimate · Job Plan · Vendors) and hides the four that are desk work. Nothing is lost; press it again to come back. |
 | **The Client Estimate / Agreement / Invoices tab is gone** | Retired 2026-09-11. Everything they did is on the **job timeline** — open the client on the Client Dashboard and look at the row for the step you want. Nothing was removed. |
 | You sent the email but the step has not gone green, and the row says *"Drafted — read it, send it, then confirm"* | You have not pressed **✓ I've sent it**. The app can only put a draft in your Gmail; it cannot see that you sent it. Press it. On the estimate this is what **Mark Won** is waiting for. |

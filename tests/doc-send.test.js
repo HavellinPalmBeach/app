@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // Slice 0 refused to draw invoice-sent rows because nothing recorded a send: "a row
     // whose `done` cannot be answered honestly is worse than no row". This is that record.
-    const ctx = sandbox({ fns: ['docState', 'docSentAt', 'docDraftedAt', 'docKeyFor'] });
+    const ctx = sandbox({ fns: ['docState', '_jobTouch', 'docSentAt', 'docDraftedAt', 'docKeyFor'] });
     ctx.currentInvStage = 'final';
 
     eq(ctx.docState(null, 'estimate'), null, 'no job, no record');
@@ -50,8 +50,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ NESTED ON THE JOB, NOT A NEW SHEET COLUMN. The Jobs sheet stores
     // JSON.stringify(job) in its Data column, so this rides the existing sync with no
     // Apps Script redeploy — the same reason `houseFlags` is shaped this way.
-    has(noComments(fn('docState')), 'job.docState', 'it lives on the job, so the existing sync carries it');
-    lacks(src, "'docState'," , 'and is not added to any column whitelist, because there is none to add to');
+    has(noComments(fn('docState', '_jobTouch')), 'job.docState', 'it lives on the job, so the existing sync carries it');
+    lacks(src, "'docState', '_jobTouch'," , 'and is not added to any column whitelist, because there is none to add to');
 
     // ⚠ KEYED BY KIND **PLUS STAGE**, because the invoice is three documents. Keying on
     // kind alone is how a midpoint inherits a final's record — the same collision
@@ -99,7 +99,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the record is written before anything else can fail, and it writes draftedAt');
   {
     const ctx = sandbox({
-      fns: ['docState', 'docRecordSent'],
+      fns: ['docState', '_jobTouch', 'docRecordSent'],
       stubs: { saveJobs() { ctx.__saved = (ctx.__saved || 0) + 1; },
                syncJobToSheets() { ctx.__synced = (ctx.__synced || 0) + 1; },
                _actor: () => 'Ashley Graziano',
@@ -126,7 +126,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // No actor and no concierge must not write `undefined` onto a client record.
     const bare = sandbox({
-      fns: ['docState', 'docRecordSent'],
+      fns: ['docState', '_jobTouch', 'docRecordSent'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _actor: () => '',
                DOC_SEND_PROVIDERS: { gmail: { needsHumanSend: true } } },
     });
@@ -157,7 +157,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Driven: an invoice touches neither recorder, because neither has anything to say
     // about it — the invoice's only record IS docState.
     const ctx = sandbox({
-      fns: ['docState', 'markDocSent'],
+      fns: ['docState', '_jobTouch', 'markDocSent'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {},
                _actor: () => 'Anthony Graziano',
                _primeAgreementFor() { ctx.__primedAgr = true; return true; },
@@ -179,7 +179,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ A REFUSED AGREEMENT RECORDS NOTHING. Otherwise the rail would read "sent" off a
     // docState the recorder had just declined to back.
     const refuse = sandbox({
-      fns: ['docState', 'markDocSent'],
+      fns: ['docState', '_jobTouch', 'markDocSent'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, _actor: () => 'x',
                _primeAgreementFor: () => true, _primeEstimateFor: () => true,
                markAgreementSent() {}, markEstimateSent() {} },
@@ -192,7 +192,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // An unprimeable job stops before it records anything, rather than recording a send
     // against whichever job the agreement panel was last showing.
     const noprime = sandbox({
-      fns: ['docState', 'markDocSent'],
+      fns: ['docState', '_jobTouch', 'markDocSent'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, _actor: () => 'x',
                _primeAgreementFor: () => false, _primeEstimateFor: () => false,
                markAgreementSent() { throw new Error('must not be reached'); }, markEstimateSent() {} },
