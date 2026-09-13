@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 4:27pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 5:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18168,7 +18168,14 @@ function printApprovalRequest(jobId, selectedOnly) {
   }).join('');
   var total = items.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
   var who = job.executor || 'Personal Representative';
-  var firearms = items.filter(invIsFirearm).length;
+  // ⚠ TWO ROUTES, NOT ONE. Until 2026-09-13 this document closed "Havellin does not
+  // transport them" over every firearm on the list — the third false notice of that day and
+  // the worst of them, because this is the page the representative SIGNS. A non-NFA firearm
+  // may now be carried by the named principal; an NFA item never may. Counted separately so
+  // the sentence states the route that applies rather than averaging the two.
+  var gunRows = items.filter(invIsFirearm);
+  var firearms = gunRows.length;
+  var nfaRows  = gunRows.filter(function(r){ return !!r.flagNFA; }).length;
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Release Approval Request')
     + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
@@ -18189,8 +18196,15 @@ function printApprovalRequest(jobId, selectedOnly) {
     + '<div style="display:flex;justify-content:flex-end;font-size:12px;font-weight:700;margin-top:8px;border-top:2px solid #333;padding-top:6px;">'
       + items.length + ' item' + (items.length > 1 ? 's' : '') + ' &middot; estimated value ' + _invMoney(total) + '</div>'
     + (firearms ? '<div style="font-size:10.5px;color:#A32D2D;font-style:italic;margin-top:8px;">'
-        + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Firearms are collected from the property by a '
-        + 'licensed dealer only, on the authority of the personal representative acting on counsel&rsquo;s advice. Havellin does not transport them.</div>' : '')
+        + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Every one goes to a '
+        + '<strong>licensed dealer</strong>, named by you on counsel&rsquo;s advice. Where you authorise it separately in writing, '
+        + 'naming each firearm by serial and the receiving dealer, Havellin&rsquo;s named principal may transport a non-NFA firearm '
+        + 'directly to that dealer; title stays with the estate throughout and Havellin neither purchases estate firearms nor '
+        + 'takes any share of the proceeds.'
+        + (nfaRows ? ' ' + nfaRows + ' of them ' + (nfaRows > 1 ? 'are' : 'is') + ' flagged <strong>NFA</strong> and '
+            + (nfaRows > 1 ? 'are' : 'is') + ' collected by the dealer &mdash; Havellin does not take custody of an NFA item '
+            + 'under any authority.' : '')
+        + '</div>' : '')
     + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
       + 'Approved by: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
       + '<span style="color:#888;">' + esc(who) + ' / authorized fiduciary</span></div>'

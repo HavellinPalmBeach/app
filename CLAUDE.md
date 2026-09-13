@@ -120,9 +120,18 @@ build out our process rather than lock it down needlessly."* App-only, no redepl
   already have hand-maintained markdown copies this file records as a standing cost, and a third is not worth
   it until a converter exists in the repo.
 - **4947 committed checks; SEVENTEEN changes revert-verified, zero green.**
-- **Both documents need a pass** — the manual's §10a describes the firearms track and the playbook's Step 10f
-  is the field procedure, and **both still say the dealer collects everything**. Flagged rather than
-  half-done.
+- ~~**Both documents need a pass** — the manual's §10a describes the firearms track and the playbook's Step 10f
+  is the field procedure, and **both still say the dealer collects everything**.~~ **DONE — the twenty-sixth pass,
+  same day; see the documentation section.** *Kept rather than deleted, per the standing rule that a fixed flag
+  left standing reads as outstanding work.*
+- **⚠⚠ AND THE PASS FOUND A THIRD FALSE NOTICE, ON THE PAGE THE REPRESENTATIVE SIGNS.** The two corrected above
+  were on the worklist, which only we read. `printApprovalRequest` closed *"Firearms are collected from the
+  property by a licensed dealer only… Havellin does not transport them"* over every firearm on the list — and the
+  reader of that page is **initialling lines** against a statement about how the property travels. It states the
+  two routes now, and **counts NFA rows separately (`nfaRows`)**: one figure covering both would either claim we
+  carry NFA items or claim we carry nothing, and on a mixed list both are false. Driven on the real document — a
+  two-firearm list with one suppressor prints the transport sentence and then *"1 of them is flagged NFA and is
+  collected by the dealer."* **4953 committed checks**; both arms revert-verified, 1 each.
 
 ## ⚠⚠ THE SCHEDULE STRIP READS REAL PROGRESS NOW — AND THE CLAIM IT REPLACED WAS MINE, AND WRONG (2026-09-13)
 Anthony, reading the strip shipped hours earlier: *"the app should know if half the work has been done by how
@@ -6614,7 +6623,34 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-13 (twenty-fifth pass)** — both documents, against the two builds of
+- Last reconciled against the app: **2026-09-13 (twenty-sixth pass)** — both documents, against the firearms transport
+  build. **This pass corrects three standing claims rather than adding to them**, and each would have had somebody do
+  the wrong thing.
+  - **⚠⚠ THE DEALER NO LONGER COLLECTS EVERYTHING.** Manual §10a's custody note said outright *"Havellin never
+    transports a firearm: the dealer collects from the property"*, and playbook Step 10f said *"Havellin does not
+    transport firearms and does not ride along with them"*, full stop. Both now carry the split: a **non-NFA** firearm
+    may be driven by the named principal once authority, serial and dealer are all on the record; an **NFA** item never
+    may, by anybody, under any authority. The manual gains a whole **transport gate** subsection with the four-arm table
+    and the legal reasoning; the playbook gains *Getting them to the dealer* plus the four-row what-the-app-says table,
+    the pre-drive checklist and the counter procedure.
+  - **⚠ THE FORM 5 TIMELINE WAS STALE IN BOTH.** *"takes months, not days"* — Form 5 eForms clear in about **two days**
+    in 2026. Both now say so and both say **do not quote a timeline to a client** (a Form 4 to a dealer is the slow one).
+  - **⚠ AND THE NFA FLAG'S OWN DESCRIPTION WAS FALSE.** Both said it *"changes nothing"* and *"protects Havellin from
+    nothing"*. True from 2026-08-24 to 2026-09-13 and false now: it is the first arm of the transport gate and the only
+    one that cannot be cleared.
+  - **Added:** the **Serial Number** column (manual's valuation field list, playbook's Step 10f note) with the
+    photograph-it-in-the-house instruction and the not-firearms-only rule; **never buy / never take a cut** as the risk
+    that actually matters; **one named principal carries** and that the app cannot enforce it; the **protocol link**
+    from the crew brief and the worklist, with the three-copies rule; and the rewritten approval-request notice.
+  - **Six new symptom→cause rows**: a firearm reading *cleared to carry* · blocked on *no serial* · a fully-papered NFA
+    item still refused · somebody proposing a cut of the gun proceeds · a representative asking how long NFA takes ·
+    where to find the whole procedure standing in the house.
+  - **39 claims parity-checked** across the four files, **0 mismatches**. Tag balance verified on all three HTML files —
+    `manual.html`'s `<code>` delta is still the documented false positive at **1**, and `concierge-guide.html` and
+    `firearms-protocol.html` are clean on every tag. Rendered in Chromium at 1440 and 390px: **overflow 0** on all three,
+    no page errors, and under `print` media **every table keeps its full width** (31 · 16 · 1), so the phone block is
+    still correctly scoped to `screen`.
+- Prior pass **2026-09-13 (twenty-fifth pass)** — both documents, against the two builds of
   2026-09-13: the schedule strip / document tray / Save redirect, and the progress reading. **This pass clears a flag
   that had been standing through two commits**, which this file records as reading like outstanding work.
   - **Manual — two new subsections.** **§9a-i** the schedule strip: the six figures and where each comes from, the

@@ -199,6 +199,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           'a flag with no protocol behind it links nowhere');
   });
 
+  group('the THIRD notice \u2014 on the page the representative signs', () => {
+    // The approval request closed "Havellin does not transport them" over every firearm on
+    // the list. Worse than the worklist's two, because this document is SIGNED: the reader
+    // is initialling lines against a statement of how the property travels.
+    const ar = fn('printApprovalRequest');
+    lacks(ar, 'Havellin does not transport them',
+          'the blanket claim is gone from the request');
+    has(ar, 'may transport a non-NFA firearm',
+        'and the narrower, true claim is in its place');
+    has(ar, 'naming each firearm by serial',
+        'it names the document that makes the carry lawful, not just the permission');
+    has(ar, 'does not take custody of an NFA item',
+        'and the NFA carve-out is stated where it applies');
+
+    // \u26a0 The two routes are counted separately. One figure covering both would either
+    // claim we carry NFA items or claim we carry nothing \u2014 both false on a mixed list.
+    has(ar, 'var nfaRows', 'NFA items are counted apart from the rest');
+    has(ar, "r.flagNFA", 'on the flag that decides the route');
+  });
+
   group('the two notices that were false until today', () => {
     const wl = fn('printAppraisalWorklist');
     // Form 5 eForms clear in about two days as of 2026, not months. The old sentence put a
