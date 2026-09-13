@@ -49,14 +49,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
     'agreementReady', 'jobTimelineDoc',
     // The schedule strip and the planned dates the rail now carries.
-    'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays',
+    'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
     'workingDaysInclusive', 'approvedEstimateFor',
     'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
     'standingFlagLines', 'standingFlagsBlock', 'stopJobsWatch', 'unscoredRoomNames'];
   const VARS = ['ESIGN_PROVIDERS', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
-    'PRODUCTIVE_HRS_PER_DAY'];
+    'PRODUCTIVE_HRS_PER_DAY',
+      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES'];
 
   const EST = () => ({ rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], havellinTotal: 24100 });
   const BASE = { id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout', created: 'Sep 8, 2026',

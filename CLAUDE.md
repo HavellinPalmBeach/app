@@ -1,5 +1,117 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE SCHEDULE STRIP READS REAL PROGRESS NOW — AND THE CLAIM IT REPLACED WAS MINE, AND WRONG (2026-09-13)
+Anthony, reading the strip shipped hours earlier: *"the app should know if half the work has been done by how
+many hours have been logged. Even in a fixed price contract the hours are tracked, I hope, to monitor job
+progress on the job plan. Confirm."* App-only, no redeploy.
+
+- **⚠⚠ CONFIRMED, AND THE COMMENT I SHIPPED THAT MORNING SAID THE OPPOSITE.** `jobSchedule`'s halfway arm
+  carried *"The app records no room-level progress this derivation can see."* **False.** The crew's own room
+  statuses have driven `computeProjection` since long before the strip existed — `locked` earns a room's
+  concierge hours, `packed` earns its specialist hours — and `jobLogEntries` has carried the hours the whole
+  time. What was missing was never the data. It was the split between **measuring** and **persisting**:
+  `computeProjection` ends in `plan.lastProjection = snap; saveJobPlan(jobId);`, and `jobSchedule` runs on
+  every dashboard paint and every 15-second remote tick, so a derivation that saves would have pushed a plan
+  record up the sync **as a side effect of somebody looking at a client**. That is why it could not simply be
+  called, and why the fix is a function rather than a line.
+- **⚠⚠ AND THE FIXED-PRICE HALF IS STRUCTURAL, NOT INCIDENTAL.** `loadJobPlanTab` gates the hours log on four
+  things — a job, an estimate, that estimate approved, `isJobWon` — plus **one** service carve-out,
+  `svc === 'prep'`, which books no concierge or specialist hours at all. **Grepped the whole loader: no branch
+  anywhere on that path reads the fixed-price flag.** Fixed price decides how hours are BILLED (`_fixed`
+  anchors every stage to the flat fee and the final never trues up to the log); it has never decided whether
+  they are RECORDED. Pinned now in two ways — a `lacks()` on `loadJobPlanTab`'s own body, and the same job
+  driven through the real dashboard on T&M and on a flat fee, whose strips come back **byte-identical**.
+- **⚠⚠ HOURS BURNED IS NOT WORK DONE, AND ONE FIGURE CANNOT CARRY BOTH.** A job that has burned 70% of its
+  hours in 30% of its rooms is in trouble; one that has burned 70% in 70% is fine, and a single "70%" cannot
+  tell them apart. So `jobProgress` returns **both** and the strip prints both — *52% of the work done · 57%
+  of the estimated hours logged*. **The gap between them is the reading**, and collapsing them would have
+  destroyed the one thing the question was asking for.
+- **⚠ IT IS HOURS-WEIGHTED, WHICH IS WHY NO ROOM COUNT IS PRINTED ANYWHERE.** Measured on the real renderer:
+  a 2-car garage is 3.5 load units against a powder room's 0.5, so on a three-room job *one room of three
+  done* is **33% by count and 5% by hours**. Printing both would invite the reader to check one against the
+  other and find them wrong by a factor of six. Only the weighted figure exists.
+- **⚠⚠ TWO FLOORS, AND THEY ARE THE DIFFERENCE BETWEEN A FLAG AND NOISE.** `elapsed / workPct` is a projection
+  off a ratio, so it is wildest exactly where the job is youngest: one room of twelve on day one reads as a
+  thirteen-day job. Nothing derived from the rate is offered below **one crew-day of logged hours**
+  (`PROJ_CREW_DAY`, the projection engine's own floor, reused rather than a second one invented) **or below a
+  fifth complete**. Below either, the percentages still print and the verdict does not. Driven in a browser:
+  a job **5% done** prints its 5% and projects nothing.
+- **⚠ NO "AHEAD" FLAG, DELIBERATELY.** A job at 100% on working day 4 of 6 is good news, and the chip already
+  prints the 100% beside the day count. Flagging it would be the standing copy rule's exact failure — a line
+  explaining what the reader can already see. Verified on the real page: the finished house raises nothing.
+- **⚠⚠ `behind` OUTRANKS `halfway_late`, AND THE LOSER RIDES THE FIX RATHER THAN TAKING A SECOND SLOT.**
+  `pace` is still ONE value. A job running long changes the invoice conversation anyway, so `behind` wins —
+  and when the midpoint invoice is also unsent its sentence is **appended to the fix** (*"The midpoint invoice
+  has not gone out either."*) instead of opening a third note. Two red notes on one card is how a card stops
+  being read. **⚠ AND `halfway_late` SURVIVES rather than being replaced**: it is a statement about BILLING,
+  money not yet asked for, which is a different fact from how much work is done.
+- **⚠ `nostatus` IS A THIRD ARM AND IT IS NOT PAINTED AS A WARNING.** Hours going in with no room marked done
+  means every rate figure is withheld — and the cause is fixable in thirty seconds, so the strip says
+  *"36 hours logged and no room marked done yet, so there is no progress reading"* and names the Job Plan.
+  **Plain grey, not amber**: it reports that a reading is unavailable, and a housekeeping note beside three
+  genuine amber flags is how people learn to skip all four. It ranks BELOW `halfway_late`, because that one
+  is money.
+- **⚠ 0% IS WITHHELD, NEVER PRINTED.** A job with no room marked done is far more often a crew that has not
+  touched the statuses than a crew that has done nothing, and *"0% of the work done"* asserts the second on a
+  card a concierge reads mid-job. The `nostatus` note says which it is instead.
+- **⚠ THE DATE IS FORMATTED IN THE RENDERER, NEVER IN THE DERIVATION.** `jobSchedule` returns `paceEnd` as
+  yyyy-mm-dd and `paceBy` as an integer — the rule it already carried and the reason `atKind` exists — so
+  *"Tracking to Sep 30, 2026 at this rate, 2 working days past the target end"* is assembled at the one place
+  that owns format. **⚠ And `prog` IS PASSED IN, exactly as `sched` is to `jobTimeline`**: reaching for the
+  plan store or the log inside `jobSchedule` would cost it the property every test depends on. With no `prog`
+  every existing caller behaves byte-identically.
+- **⚠ THE DASHBOARD READS `jobPlanStore[jobId]` DIRECTLY AND MUST NOT USE `getJobPlan`.** That accessor MINTS
+  an empty plan for any job that has none, and this function runs on every paint and every remote tick — so
+  it would quietly seed the store with a record for every client somebody merely **looked at**, and
+  `saveAllJobPlans` posts the whole store. Reverting it fails 3 and **throws 3 more**.
+- **⚠ ONE ESTIMATE FEEDS BOTH.** The schedule and the progress are measured against the same record
+  (`approvedEstimateFor(jobId) || est`), or the strip prints a day count from one estimate and a percentage
+  from another — the two-copies-of-one-rule drift this file records more often than anything else, here
+  inside a single line of output.
+- **4898 committed checks** (`tests/job-progress.test.js`, 145 new — the first coverage of what "how far along
+  is this job" means anywhere in the repo). **All 26 changes revert-verified individually** — the hours
+  weighting fails **13**, the `behind` arm **13**, the wiring **13**, the ranking 8, the shared measurement 6,
+  the nostatus arm 5, and the rest 1–4.
+  - **⚠⚠ ONE CAME BACK GREEN AND IT WAS THE DEFECT-SHAPED ONE: DROPPING `_jtProg` FROM THE DASHBOARD'S CALL
+    BROKE NOTHING.** That change blanks every progress figure on the only screen that shows one, and the whole
+    suite passed — because every check drove a PIECE (`jobProgress` alone, `jobSchedule` alone, the strip
+    alone) and **nothing drove the join**. Same gap this file records four times already. There is a group
+    that drives the real `renderClientDashboard` against a seeded plan store and hours log and reads the
+    figures out of the rendered markup now; the revert fails **13**.
+  - **⚠ AND ONE REVERT IS GREEN ON PURPOSE, WITH A NOTE INSTEAD OF AN ASSERTION.** `_rateOK`'s
+    `S.elapsed >= 1` clause cannot change any outcome — `Math.ceil(0 / workPct)` is 0 and a plan is at least
+    one day, so the arm could never fire on a job with no working day in any case. It stays because it makes
+    the intent local and because `paceTxt` would otherwise be able to print *"working day 0"*, the defect this
+    strip closed once. **Recorded as belt-and-braces at the source and in the test rather than covered by a
+    check that could not fail** — the eighteenth time this file has had to draw that distinction.
+  - **⚠ TWO OF MY OWN ASSERTIONS STRADDLED A `</span>`.** The renderer bolds the FIGURE and leaves the noun
+    plain (`>19%</span> of the estimated hours logged`), so a needle spanning both matched nothing and read as
+    the chip being absent. Found by dumping the real markup rather than by reasoning about it.
+- **`computeProjection` KEEPS THE BANDING AND THE WRITE; ONLY THE COUNTING MOVED.** A test asserts
+  `TC_DONE_STATUSES[` and `PS_DONE_STATUSES[` each appear **exactly once in the whole file**, drives the real
+  `computeProjection` against the real `jobProgress`, and asserts the snapshot it publishes carries the same
+  figures — and that it **still calls `saveJobPlan`**, which is the half that stayed.
+- **Verified end to end in headless Chromium on the real page**, driving the real dashboard against a 6-day
+  Estate Settlement activated on its target start, four working days in, 36 hours logged against 63 priced:
+
+  | room statuses | old build | new build |
+  |---|---|---|
+  | powder room only (**5%** done) | *Working day 4 of 6* and nothing else | *5% of the work done · 57% of the estimated hours logged*, **no projection** (below the floor) |
+  | + kitchen (**52%** done) | **identical to the row above** | *52% done · 57% logged* · red: *tracking to Sep 30, 2026, 2 working days past the target end* |
+  | everything packed (**100%**) | identical again | *100% of the work done*, **no flag** |
+  | nothing marked, 36 hrs logged | identical again | work figure withheld · *36 hours logged and no room marked done yet* in **plain grey** |
+  | the 52% job on a **FIXED FEE** | — | **byte-identical to T&M** |
+
+  The old build prints the same strip for a job 5% done and one 52% done, which is the whole report.
+  Overflow **0** at 1440 and 390px, no page errors.
+- **⚠ `plan.lastProjection` IS WRITTEN AND READ BY NOTHING** — checked before refactoring around it, because a
+  retained snapshot with a reader would have been a different decision. Noted, not removed: it is one line and
+  the Daily Close block is the obvious future reader.
+- **⚠⚠ BOTH DOCUMENTS STILL NEED THE PASS FLAGGED THIS MORNING, AND IT IS NOW LARGER.** Manual §9a does not
+  describe the schedule strip, the planned dates, the tray **or the progress reading**; §9b describes the
+  quick strip as the route to every document; §5/§7 and playbook Step 3 describe Save Estimate landing on the
+  Client Estimate tab. **Not done in this commit** — flagged rather than half-done, for the second time.
+
 ## ⚠⚠ THE DASHBOARD GAINS A SCHEDULE AND A DOCUMENT TRAY — AND TWO LIVE DEFECTS CAME WITH THEM (2026-09-13)
 Anthony, five asks in one message: Save Estimate *"just wipes the screen"* and should land on the client;
 the chips belong *"to the right of the client's name and address"*; target start and hard target belong

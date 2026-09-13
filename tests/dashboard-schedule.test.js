@@ -131,8 +131,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.actualStartKind, 'activated', 'anchored on the write-once activation stamp');
     eq(r.elapsed, 4, 'and elapsed counts inclusive working days');
     eq(r.pace, 'halfway_late', '⚠ past the halfway point with no midpoint invoice sent');
-    // ⚠ IT NAMES EXACTLY WHAT IT COMPARED. The app records no room-level progress this
-    // derivation can see, so it must never say the job is half DONE.
+    // ⚠ IT NAMES EXACTLY WHAT IT COMPARED, AND WHAT IT COMPARED IS A CALENDAR. This arm is a
+    // statement about BILLING — money not yet asked for — and must never read as one about how
+    // much work is done. (The comment here once claimed the app recorded no room-level progress
+    // at all. That was false: the crew's own room statuses have driven `computeProjection` since
+    // long before this strip existed, and `job-progress.test.js` now covers the arm that reads
+    // them. What was missing was the split between measuring and persisting, not the data.)
     lacks(r.paceTxt, 'half done', 'and it never claims the WORK is half done');
     has(r.paceTxt, 'midpoint invoice has not gone out', 'only that the invoice has not gone out');
 
@@ -329,7 +333,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'dashUtilityBar', '_dashUtilityBarHtml', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays',
+      'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
@@ -338,7 +342,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'standingFlagsBlock', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal'];
     const DVARS = ['ESIGN_PROVIDERS', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
-      'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY'];
+      'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
+      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES'];
     const paint = (over, rec) => {
       const job = Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout',
         status: 'won', won: true, approved: true, walkthrough: '2020-01-01',

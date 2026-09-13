@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 12:23pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 2:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11465,6 +11465,15 @@ function jtScheduleHtml(sched) {
     h += (sched.elapsed >= 1)
       ? '<span class="jt-sched-i jt-sched-lead">' + V('Working day ' + sched.elapsed + ' of ' + sched.days) + '</span>'
       : I(V(dayTxt));
+    // ⚠⚠ TWO FIGURES, NEVER ONE. Work DONE and hours BURNED answer different questions and
+    // a single percentage cannot tell "70% spent, 70% done" from "70% spent, 30% done" — the
+    // second being the job in trouble. The gap between them is the reading.
+    //
+    // ⚠ 0% IS WITHHELD RATHER THAN PRINTED. A job with no room marked done is far more often
+    // a crew that has not touched the statuses than a crew that has done nothing, and "0% of
+    // the work done" asserts the second. The `nostatus` pace note says which it is instead.
+    if (sched.workPct > 0) h += I(V(Math.round(sched.workPct * 100) + '% of the work done'));
+    if (sched.hoursPct > 0) h += I(V(Math.round(sched.hoursPct * 100) + '%') + ' of the estimated hours logged');
   } else {
     h += I('Target start ' + V(fmtDate2(sched.start)));
     h += I(V(dayTxt));
@@ -11487,8 +11496,20 @@ function jtScheduleHtml(sched) {
   // ⚠ PACE IS ITS OWN SLOT, on its own line. A brand-new job with a tight closing date is
   // perfectly on pace and its plan still does not fit; one slot holding both hides one.
   if (sched.pace) {
-    var cls = (sched.pace === 'overrun' || sched.pace === 'start_missed') ? ' jt-s-err' : ' jt-s-warn';
-    h += '<div class="jt-sched-note' + cls + '">' + esc(sched.paceTxt) + (sched.paceFix ? ' ' + esc(sched.paceFix) : '') + '</div>';
+    // ⚠ `nostatus` IS NOT A WARNING COLOUR. It reports that a reading is unavailable, which
+    // is a housekeeping fact rather than a schedule problem — painting it amber beside three
+    // genuine amber flags is how people learn to skip all four.
+    var cls = (sched.pace === 'overrun' || sched.pace === 'behind' || sched.pace === 'start_missed') ? ' jt-s-err'
+            : (sched.pace === 'nostatus') ? ''
+            : ' jt-s-warn';
+    // ⚠ THE DATE IS FORMATTED HERE, NOT IN THE DERIVATION. `jobSchedule` returns yyyy-mm-dd
+    // and integers and never a rendered date — the same rule `jobTimeline`'s `atKind` exists
+    // for — so the sentence is assembled around `paceEnd` at the one place that owns format.
+    var track = sched.paceEnd
+      ? ' Tracking to ' + esc(fmtDate2(sched.paceEnd)) + ' at this rate, ' + sched.paceBy
+        + ' working day' + (sched.paceBy === 1 ? '' : 's') + ' past the target end.'
+      : '';
+    h += '<div class="jt-sched-note' + cls + '">' + esc(sched.paceTxt) + track + (sched.paceFix ? ' ' + esc(sched.paceFix) : '') + '</div>';
   }
   return h + '</div>';
 }
@@ -11647,6 +11668,96 @@ function jobStageDoc(rowKey) { return JT_ROW_DOC[rowKey] || null; }
 // deposit — so a reader already thinks in these two halves.
 var JT_LEG_BREAK = 'agreement_signed';
 
+// ─── HOW MUCH OF THE JOB IS ACTUALLY DONE ────────────────────────────────────
+// Anthony, reading the schedule strip: *"the app should know if half the work has been done
+// by how many hours have been logged. Even in a fixed price contract the hours are tracked."*
+// Both halves are right, and the second is structural rather than incidental: `loadJobPlanTab`
+// gates the hours log on four things — a job, an estimate, that estimate approved, and
+// `isJobWon` — plus one service carve-out, `svc === 'prep'`, which books no concierge or
+// specialist hours at all. **No branch anywhere in that path reads the fixed-price flag.**
+// Fixed price decides how hours are BILLED (every stage anchors to the flat fee and the final
+// never trues up to the log); it has never decided whether they are RECORDED.
+//
+// ⚠⚠ HOURS LOGGED IS EFFORT SPENT, NOT WORK DONE, AND THE TWO MUST NOT SHARE A FIGURE.
+// A job that has burned 70% of its hours in 30% of its rooms is in trouble; one that has
+// burned 70% in 70% is fine, and a single "70%" cannot tell them apart. So this returns BOTH
+// and the strip prints both: `workPct` is room hours EARNED (the crew's own room statuses,
+// weighted by the hours the estimate priced each room at) and `hoursPct` is hours BURNED.
+// The gap between them is the whole signal.
+//
+// ⚠ THE ROOM WEIGHTING IS WHY THIS IS NOT A ROOM COUNT. A 2-car garage is 3.5 load units and
+// a powder room is 0.5, so "3 of 12 rooms" and "40% of the work" disagree by construction —
+// printing both would invite the reader to check one against the other and find them wrong.
+// Only the hours-weighted figure is reported.
+//
+// ⚠ PURE: no DOM, no clock, no store reads, and — unlike `computeProjection`, which wraps it —
+// NO WRITES. That function ends in `plan.lastProjection = snap; saveJobPlan(jobId);`, so it
+// could never be called from `jobSchedule`, whose entire contract is that the rail's most-driven
+// derivation stays side-effect-free. Splitting the measurement out of the persistence is what
+// made the schedule able to read progress at all.
+var PROJ_CREW_DAY = 7;
+// TC% counts a room once locked (sort/decision done).
+// PS% counts a room once packed (physical packing done).
+var TC_DONE_STATUSES = { locked:1, packed:1, complete:1 };
+var PS_DONE_STATUSES = { packed:1, complete:1 };
+
+function jobProgress(est, plan, logs) {
+  var P = { has:false, estTC:0, estPS:0, estHrs:0, actTC:0, actPS:0, actHrs:0, hoursPct:0,
+            planTC:0, planPS:0, doneTC:0, donePS:0, doneHrs:0, planHrs:0,
+            workPct:0, tcPct:0, psPct:0, wholePctTC:0, wholePctPS:0,
+            aboveFloor:false, invalidRooms:[] };
+  if (!est || !est.rooms || !est.rooms.length) return P;
+
+  (logs || []).forEach(function(e) {
+    ((e && e.members) || []).forEach(function(m) {
+      if (m && m.role === 'TC') P.actTC += (Number(m.hours) || 0);
+      else if (m) P.actPS += (Number(m.hours) || 0);
+    });
+  });
+  P.actTC = Math.round(P.actTC * 10) / 10;
+  P.actPS = Math.round(P.actPS * 10) / 10;
+  P.actHrs = Math.round((P.actTC + P.actPS) * 10) / 10;
+
+  P.estTC = Number(est.totTC) || 0;
+  P.estPS = Number(est.totPS) || 0;
+  P.estHrs = P.estTC + P.estPS;
+  P.hoursPct = P.estHrs > 0 ? P.actHrs / P.estHrs : 0;
+
+  var rooms = (plan && plan.rooms) || {};
+  est.rooms.filter(function(r){ return !r.excluded; })   // homeowner-handled rooms aren't tracked
+           .forEach(function(r) {
+    var tcH = Number(r.tcH), psH = Number(r.psH);
+    if (!Number.isFinite(tcH) || !Number.isFinite(psH)) { P.invalidRooms.push(r.name || ('Room ' + r.idx)); return; }
+    P.planTC += tcH;
+    P.planPS += psH;
+    var s = (rooms[r.idx] && rooms[r.idx].status) || 'pending';
+    if (TC_DONE_STATUSES[s]) P.doneTC += tcH;
+    if (PS_DONE_STATUSES[s]) P.donePS += psH;
+  });
+
+  P.tcPct = P.planTC > 0 ? P.doneTC / P.planTC : 0;
+  P.psPct = P.planPS > 0 ? P.donePS / P.planPS : 0;
+
+  // Whole-job percent-complete: room hours earned divided by the ADJUSTED total.
+  // On zero-adjustment jobs estTC === planTC so wholePctTC === tcPct; on adjusted ones this
+  // aligns the change-order gate's basis with its adjusted trigger.
+  var adjTC = P.estTC > 0 ? P.estTC : P.planTC;
+  var adjPS = P.estPS > 0 ? P.estPS : P.planPS;
+  P.wholePctTC = adjTC > 0 ? P.doneTC / adjTC : 0;
+  P.wholePctPS = adjPS > 0 ? P.donePS / adjPS : 0;
+  P.doneHrs = Math.round((P.doneTC + P.donePS) * 10) / 10;
+  P.planHrs = adjTC + adjPS;
+  P.workPct = P.planHrs > 0 ? P.doneHrs / P.planHrs : 0;
+
+  // ⚠ THE NOISE FLOOR IS THE PROJECTION ENGINE'S OWN, NOT A SECOND ONE. One crew-day of
+  // combined hours before anything derived from the burn rate may be trusted — on day one
+  // of any job `elapsed / workPct` is wild, and a strip that cries "behind" on every job's
+  // first morning is a strip people stop reading by the second week.
+  P.aboveFloor = P.actHrs >= PROJ_CREW_DAY;
+  P.has = P.planHrs > 0;
+  return P;
+}
+
 // ─── THE SCHEDULE ────────────────────────────────────────────────────────────
 // Anthony: *"I don't think the dates are prominent enough in the app to allow us to know
 // where we are versus the deliverable timeline we agreed to."* This is the one derivation
@@ -11671,11 +11782,13 @@ var JT_LEG_BREAK = 'agreement_signed';
 // the midpoint INVOICE has no calendar relationship to it at all. Two facts two inches apart
 // on one card must not share a word, or the strip reads as though the invoice is due on the
 // halfway date — which is a statement about money nobody made.
-function jobSchedule(job, est, todayStr) {
+function jobSchedule(job, est, todayStr, prog) {
   var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false,
             start:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
             actualStart:'', actualStartKind:'', projectedEnd:'', startSlip:0,
             elapsed:0, overBy:0, endVariance:0,
+            progress:false, workPct:0, hoursPct:0, actHrs:0, estHrs:0,
+            paceEnd:'', paceBy:0,
             fit:'', fitTxt:'', pace:'', paceTxt:'', paceFix:'' };
   if (!job) return S;
 
@@ -11738,21 +11851,75 @@ function jobSchedule(job, est, todayStr) {
     else { S.fit = 'ok'; }
   }
 
+  // PROGRESS — how much of the work is DONE, against how much of the calendar is spent.
+  // ⚠ IT IS PASSED IN, NEVER READ. `jobProgress` needs the plan store and the hours log, and
+  // reaching for either in here would cost this derivation the property every test depends on.
+  // With no `prog` the strip prints exactly what it printed before, which is what keeps every
+  // existing caller byte-identical.
+  //
+  // ⚠⚠ RUNNING ONLY, AND THAT IS NOT A SHORTCUT. A `planned` job has nothing logged and a
+  // `done` one is 100% by definition, so on either the figure would be an assertion about
+  // nothing. `prep` never reaches here at all — it returned `vendor` two hundred lines above.
+  if (prog && prog.has && S.state === 'running') {
+    S.progress = true;
+    S.workPct = prog.workPct;
+    S.hoursPct = prog.hoursPct;
+    S.actHrs = prog.actHrs;
+    S.estHrs = prog.estHrs;
+  }
+
   // PACE — ONE value, worst first. ⚠ PACE AND FIT ARE TWO SLOTS AND MUST NOT BE COLLAPSED: a
   // brand-new job with a tight closing date is perfectly on pace and its plan still does not
   // fit, and one slot holding both hides whichever it did not win.
   var midSent = !!docSentAt(job, 'invoice', 'midpoint');
+  // ⚠ TWENTY PERCENT, AND THE FLOOR IS THE POINT RATHER THAN THE NUMBER. `elapsed / workPct`
+  // is a projection off a ratio, so it is wildest exactly where the job is youngest: one room
+  // of twelve done on day one reads as a thirteen-day job. Below a fifth complete, or below
+  // one crew-day of logged hours, the rate says nothing and the strip says nothing about it.
+  // ⚠ THE `elapsed >= 1` CLAUSE IS BELT AND BRACES AND ITS REVERT IS GREEN — recorded here
+  // rather than covered by an assertion that could not fail. `Math.ceil(0 / workPct)` is 0 and
+  // a plan is at least one day, so the arm below could never fire on a job with no working day
+  // in any case. It stays because it makes the intent local, and because `paceTxt` would
+  // otherwise be able to print "working day 0", which is the defect this strip closed once.
+  var _rateOK = !!(S.progress && prog.aboveFloor && prog.workPct >= 0.20 && S.elapsed >= 1);
+  var _trackDays = _rateOK ? Math.ceil(S.elapsed / prog.workPct) : 0;
   if (S.state === 'running' && S.overBy > 0) {
     S.pace = 'overrun';
     S.paceTxt = 'Working day ' + S.elapsed + ' of ' + S.days + ' — ' + S.overBy + ' working day' + (S.overBy === 1 ? '' : 's') + ' past the proposed length.';
     S.paceFix = 'Re-plan with the client, or raise a change order if the scope grew — a change order carries HOURS, not a dollar amount.';
+  } else if (_rateOK && _trackDays > S.days) {
+    // ⚠⚠ THE ONE FLAG ANTHONY ASKED FOR: *"where we are versus the deliverable timeline we
+    // agreed to."* Not the calendar against itself — the WORK against the calendar. It
+    // outranks the unsent-invoice flag below because a job running long changes the invoice
+    // conversation anyway, and when both hold the fix carries the invoice clause rather than
+    // taking a second slot: two red notes on one card is how a card stops being read.
+    //
+    // ⚠ NO "AHEAD" FLAG, DELIBERATELY. A job at 80% on day 3 of 6 is good news, and the
+    // progress chip already prints the 80% beside the day count. Flagging it would be the
+    // standing rule's exact failure — a line explaining what the reader can already see.
+    S.pace = 'behind';
+    S.paceBy = _trackDays - S.days;
+    S.paceEnd = addWorkingDays(S.actualStart, _trackDays);
+    S.paceTxt = Math.round(prog.workPct * 100) + '% of the work is done on working day '
+              + S.elapsed + ' of ' + S.days + '.';
+    S.paceFix = 'Re-plan with the client, or raise a change order if the scope grew — a change order carries HOURS, not a dollar amount.'
+              + (midSent ? '' : ' The midpoint invoice has not gone out either.');
   } else if (S.state === 'running' && S.halfway && S.today && S.today > S.halfway && !midSent) {
-    // ⚠ IT NAMES EXACTLY WHAT IT COMPARED. The app records no room-level progress this
-    // derivation can see, so it never says the job is half DONE — only that the calendar
-    // halfway has passed and the invoice that belongs to that stretch has not gone out.
+    // ⚠ IT NAMES EXACTLY WHAT IT COMPARED, AND WHAT IT COMPARED IS A CALENDAR. This is a
+    // statement about BILLING, not about progress — money not yet asked for — which is why
+    // it survives `behind` above rather than being replaced by it. It never says the WORK is
+    // half done; `behind` is the arm that reads the work.
     S.pace = 'halfway_late';
     S.paceTxt = 'Past the halfway point and the midpoint invoice has not gone out.';
     S.paceFix = 'Send it from the band above, or agree a new schedule with the client.';
+  } else if (S.progress && prog.aboveFloor && prog.workPct === 0) {
+    // ⚠ THE READING IS UNAVAILABLE, AND SAYING SO BEATS SAYING NOTHING. Hours are going in
+    // and no room has been marked done, so every figure derived from the rate is withheld —
+    // and the reason is a thing somebody can fix in thirty seconds. A panel reporting a
+    // blocker carries the fix on screen, the rule the rest of this file already follows.
+    S.pace = 'nostatus';
+    S.paceTxt = prog.actHrs + ' hours logged and no room marked done yet, so there is no progress reading.';
+    S.paceFix = 'Set each room\'s status on the Job Plan as the crew finishes it.';
   } else if (S.state === 'planned' && S.today && S.today > S.start) {
     // ⚠ ITS OWN FLAG: a job that has not started has not missed its halfway point.
     S.pace = 'start_missed';
@@ -13654,7 +13821,17 @@ function renderClientDashboard(jobId) {
   // reopening a legacy record can move the duration and therefore the projected end the
   // client has already been sent. Reading the approved snapshot is what stops our screen and
   // the client's held document disagreeing silently.
-  var _jtSched = jobSchedule(job, approvedEstimateFor(jobId) || est, _todayStr());
+  // ⚠ ONE ESTIMATE FOR BOTH. The schedule and the progress must be measured against the
+  // SAME record or the strip prints a day count from one estimate and a percentage from
+  // another — which is the two-copies-of-one-rule drift this file records more often than
+  // anything else, here inside a single line of output.
+  // ⚠ `jobPlanStore[jobId]` DIRECTLY, NOT `getJobPlan(jobId)`: that accessor MINTS an empty
+  // plan for any job that has none, and this function runs on every dashboard paint and every
+  // 15-second remote tick — so it would quietly seed the plan store with an empty record for
+  // every client the user merely looked at, and `saveAllJobPlans` posts the whole store.
+  var _jtEst = approvedEstimateFor(jobId) || est;
+  var _jtProg = jobProgress(_jtEst, jobPlanStore[jobId], logs);
+  var _jtSched = jobSchedule(job, _jtEst, _todayStr(), _jtProg);
   var _jtRows = jobTimeline(job, estRec, logs, cos, _jtSched);
   var _jtNext = jobTimelineNext(_jtRows);
   var _jtAt = function(r){
@@ -22173,16 +22350,14 @@ function stopPlanWatch() {
   if (_planWatch.timer) { clearInterval(_planWatch.timer); _planWatch.timer = null; }
 }
 
-// ─── PROJECTION ENGINE ───────────────────────────────────────────────────────
-// Noise floor: combined actual hours before any projection is trusted.
-// One crew-day = 7 hours, representing meaningful on-site data.
-var PROJ_CREW_DAY = 7;
-
-// TC% counts a room once locked (sort/decision done).
-// PS% counts a room once packed (physical packing done).
-var TC_DONE_STATUSES = { locked:1, packed:1, complete:1 };
-var PS_DONE_STATUSES = { packed:1, complete:1 };
-
+// ─── PROJECTION ENGINE ─────────────────────────────────────────────
+// ⚠ THE MEASUREMENT MOVED OUT; ONLY THE BANDING AND THE PERSISTENCE LIVE HERE NOW.
+// `jobProgress` (declared up beside the schedule, with `PROJ_CREW_DAY`, `TC_DONE_STATUSES`
+// and `PS_DONE_STATUSES`) counts the hours and the room hours earned. What is left below is
+// this function's own concern — projecting each role's total at the observed rate and banding
+// it against the change-order trigger — plus the snapshot write, which is exactly why the
+// measurement could not stay in here: this function ends in `saveJobPlan(jobId)`, and
+// `jobSchedule` is required to be side-effect-free.
 function computeProjection(jobId) {
   var estRec = estimateStore[jobId];
   var est = estRec ? estRec.estimate
@@ -22190,52 +22365,21 @@ function computeProjection(jobId) {
   if (!est || !est.rooms || !est.rooms.length) return null;
 
   var plan = getJobPlan(jobId);
-  var logs = jobLogEntries(jobId);
+  var P = jobProgress(est, plan, jobLogEntries(jobId));
 
-  var actTC = 0, actPS = 0;
-  logs.forEach(function(entry) {
-    entry.members.forEach(function(m) {
-      if (m.role === 'TC') actTC += m.hours; else actPS += m.hours;
-    });
-  });
-  actTC = Math.round(actTC * 10) / 10;
-  actPS = Math.round(actPS * 10) / 10;
-
-  var estTC = est.totTC, estPS = est.totPS;
-  var rooms = est.rooms.filter(function(r){ return !r.excluded; });  // homeowner-handled rooms aren't tracked
-  var totalTCHrs = 0, totalPSHrs = 0, doneTCHrs = 0, donePSHrs = 0;
-  var invalidRooms = [];
-
-  rooms.forEach(function(r) {
-    var tcH = Number(r.tcH), psH = Number(r.psH);
-    if (!Number.isFinite(tcH) || !Number.isFinite(psH)) {
-      invalidRooms.push(r.name || ('Room ' + r.idx));
-      return;
-    }
-    totalTCHrs += tcH;
-    totalPSHrs += psH;
-    var s = (plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
-    if (TC_DONE_STATUSES[s]) doneTCHrs += tcH;
-    if (PS_DONE_STATUSES[s]) donePSHrs += psH;
-  });
-
-  var tcPct = totalTCHrs > 0 ? doneTCHrs / totalTCHrs : 0;
-  var psPct = totalPSHrs > 0 ? donePSHrs / totalPSHrs : 0;
-  var actTotal = actTC + actPS;
-  var aboveFloor = actTotal >= PROJ_CREW_DAY;
+  var actTC = P.actTC, actPS = P.actPS;
+  var estTC = P.estTC, estPS = P.estPS;
+  var invalidRooms = P.invalidRooms;
+  var tcPct = P.tcPct, psPct = P.psPct;
+  var actTotal = P.actHrs;
+  var aboveFloor = P.aboveFloor;
 
   var projTC = tcPct > 0 ? Math.round((actTC / tcPct) * 10) / 10 : null;
   var projPS = psPct > 0 ? Math.round((actPS / psPct) * 10) / 10 : null;
   var triggerTC = Math.round(estTC * 1.15 * 10) / 10;
   var triggerPS = Math.round(estPS * 1.15 * 10) / 10;
 
-  // Whole-job percent-complete: room hours earned divided by adjusted total.
-  // On zero-adjustment jobs estTC === totalTCHrs so wholePctTC === tcPct.
-  // On adjusted jobs this aligns the gate's basis with the adjusted trigger.
-  var totalAdjTC = estTC > 0 ? estTC : totalTCHrs;
-  var totalAdjPS = estPS > 0 ? estPS : totalPSHrs;
-  var wholePctTC = totalAdjTC > 0 ? doneTCHrs / totalAdjTC : 0;
-  var wholePctPS = totalAdjPS > 0 ? donePSHrs / totalAdjPS : 0;
+  var wholePctTC = P.wholePctTC, wholePctPS = P.wholePctPS;
 
   function bandFor(proj, estHrs, pct) {
     if (!aboveFloor) return 'preliminary';
