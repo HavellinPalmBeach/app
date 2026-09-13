@@ -267,11 +267,29 @@
   </table>
   <div class="note"><strong>If the app recommends a second concierge</strong>, it's telling you one person can't cover the schedule — more than 10 concierge hours a day. It changes neither the fee nor the duration; it stops somebody working 12-hour days. Contested probate and heavy documentation estates trip this, which is right.</div>
 
-  <p>Hit <strong>Save &amp; Preview Client Estimate</strong>. It saves, syncs, and opens the client-facing preview. You can keep editing until it's approved.</p>
+  <p>Hit <strong>Save Estimate</strong>. It saves, syncs, and <strong>puts you on the Client Dashboard, on the client you just
+    priced</strong> &mdash; with the summary of what you saved (rooms, concierge hours, specialist hours, total) carried across onto
+    that screen. You can keep editing until it is approved.</p>
+  <div class="stop"><strong>&#9888; If you pressed Save before 2026-09-13 and thought you had lost the form, you had not.</strong> The
+    button was trying to open the Client Estimate tab, which was retired from the nav two days earlier &mdash; so it went nowhere,
+    blanked the form on the screen you were still looking at, and replaced your save summary with <em>&ldquo;Estimate cleared.&rdquo;</em>
+    a few seconds later. <strong>Every one of those estimates saved correctly.</strong> Open the client on the Client Dashboard and it
+    is there.</div>
 
   <h2>Step 3 · Get it approved — Client Dashboard</h2>
 <div class="stop"><strong>&#9888; The buttons that used to sit across the top of the Client Dashboard are gone (changed 2026-09-11).</strong> There were seven: <em>Estimate &middot; Submit for Approval &middot; Client Accepted &mdash; Mark Won &middot; Change Order &middot; Edit Client &middot; Drive &middot; Activate Job</em>. <strong>Five of them were already further down the same screen.</strong> Nothing was removed &mdash; every one of them is where it belongs now: the four job steps are rows on the <strong>timeline</strong>, <em>Change Order</em> has its <strong>+ New</strong> in the Change Orders card, and the two that are not steps sit on the <strong>Job Timeline &amp; Payments</strong> heading: <strong>&#9998; Edit Client</strong> and <strong>&#128193; Drive</strong>. <strong>If you are hunting for a button, look at the lit row.</strong> That is the whole design &mdash; one screen, one lit step, the buttons on the step they belong to.</div>
 
+  <div class="note"><strong>The document you need is in the brown band at the top, not down the page (new 2026-09-13).</strong> The
+    band reads <strong>NEXT</strong> and the step, and directly above the one brown button it carries the <strong>document this stage is
+    about</strong> &mdash; <em>Client Estimate</em>, with <strong>&#128065; View</strong> and <strong>&#9998; Edit</strong> beside it. It
+    advances with the job: the estimate, then the signing packet, then each invoice in turn. Consult the document, then act &mdash; that
+    is the order it is laid out in. <strong>The strip at the very foot of the timeline is the job&rsquo;s archive</strong>, for going back
+    to a document from an earlier stage; on a job whose estimate is still a draft it is empty, and that is correct.</div>
+  <div class="stop"><strong>&#9888; A draft estimate has View and Edit but NO Print, on purpose.</strong> The tray titles it <em>Client
+    Estimate &mdash; DRAFT</em>. Read it on screen all you like; it must not reach paper or a client until a manager has approved it.
+    <strong>And until 2026-09-13 the foot of the timeline offered you &ldquo;View deposit invoice&rdquo; on a job with no approved
+    estimate at all</strong> &mdash; which opened a complete, printable bill priced off the draft. If anyone has a printed invoice from a
+    job that was never approved, bin it.</div>
   <p>Open the client and find the <em>Estimate approved</em> row. <strong>&#128065; View</strong> reads the client-facing document — do that first, for accuracy. Then <strong>Submit for approval</strong> → a manager presses <strong>&#128273; Manager approval</strong> and types their PIN → the estimate locks as <em>Approved for Release</em>.</p>
   <p><strong>The document now opens with a full job plan (new 2026-08-03).</strong> Ahead of the money there is <em>How We Work</em>, <em>Spaces In Scope</em> grouped the way the Build Estimate grid groups them, and <em>How The Work Runs</em> — every stage of the job with what you will do, what you need from the client, and what finishes it. <strong>Read it before you submit.</strong> It is written out of the estimate, so a room filed in the wrong section or a vendor you forgot shows up here in plain English, where a number would not have caught your eye.</p>
   <p><strong>Every vendor you entered is named in the stage it actually happens in</strong> — appraisers in the sorting stage (they value while everything is still in place), haulers and auction houses in disposition, cleaners in close-out. So read the stages as a check on your vendor list: <em>if a vendor you entered is not named anywhere in the sequence, you have filed it under the wrong category.</em> What the client receives at the end — photographs, the inventory, vendor invoices, donation receipts, the final invoice against logged hours — is listed inside the Close-Out stage.</p>
@@ -423,6 +441,45 @@
   <h2>Step 10 · Work the job</h2>
   <p>The job is now <strong>Active</strong>. Three things run in parallel.</p>
 
+  <h3>Where you are against the schedule &mdash; read it on the Client Dashboard</h3>
+  <p>Open the client and the line above the timeline reads the whole schedule at once:
+    <em>Started Sep 21 &middot; <strong>Working day 4 of 6</strong> &middot; 52% of the work done &middot; 57% of the estimated hours
+    logged &middot; Halfway Sep 23 &middot; Target end Sep 28</em>, with the hard target or the court deadline beside it.</p>
+  <div class="stop"><strong>&#9888; THOSE TWO PERCENTAGES ARE DIFFERENT QUESTIONS AND THE GAP BETWEEN THEM IS THE POINT (new
+    2026-09-13).</strong> <strong>Work done</strong> comes from the room statuses you set on the Job Plan, weighted by the hours the
+    estimate priced each room at. <strong>Hours logged</strong> comes from your timesheet. <em>70% spent against 70% done</em> is a job
+    going fine. <em>70% spent against 30% done</em> is a job in trouble &mdash; and one number could never have told you which you were
+    looking at. <strong>Look at the pair, not at either one.</strong></div>
+  <div class="stop"><strong>&#9888; THE WORK FIGURE ONLY EXISTS IF SOMEBODY SETS THE ROOM STATUSES.</strong> If hours are going in and
+    no room is marked done, the app <strong>will not print a percentage</strong> &mdash; it says <em>&ldquo;36 hours logged and no room
+    marked done yet, so there is no progress reading&rdquo;</em> and points you at the Job Plan. That is deliberate: a crew that has not
+    touched the statuses and a crew that has done nothing look identical from the dashboard, and it will not assert the second.
+    <strong>Set each room to <em>locked</em> when the decisions are final and <em>packed</em> when it is physically done, as you go.</strong>
+    Two minutes a room, and it is what makes the whole schedule reading work &mdash; for you, and for whoever is reading the job from the
+    desk.</div>
+  <table>
+    <tr><th>What the line says</th><th>What to do</th></tr>
+    <tr><td><strong>red</strong> &mdash; <em>N% of the work is done on working day X of Y. Tracking to &lt;date&gt;, Z working days past the target end.</em></td><td>At the rate you are actually going, this job finishes late. Ring the client and re-plan, or raise a change order if the scope grew. <strong>Do not wait for the target end to arrive to have that conversation.</strong></td></tr>
+    <tr><td><strong>red</strong> &mdash; <em>Working day X of Y &mdash; Z working days past the proposed length.</em></td><td>You are already over the length that was quoted. Same conversation, more urgently.</td></tr>
+    <tr><td><strong>amber</strong> &mdash; <em>Past the halfway point and the midpoint invoice has not gone out.</em></td><td>This one is about <strong>money</strong>, not about the work. Send it from the band above.</td></tr>
+    <tr><td><strong>grey</strong> &mdash; <em>N hours logged and no room marked done yet.</em></td><td>Not a telling-off. Go and set the room statuses.</td></tr>
+    <tr><td><strong>red</strong> &mdash; <em>ends N working days past the hard target / court deadline</em></td><td>The <strong>plan itself</strong> does not reach the date we committed to &mdash; separate from how the job is running. On probate that date is statutory. Raise it now.</td></tr>
+  </table>
+  <div class="note"><strong>It stays quiet for the first day or so, and that is right.</strong> It will not call a job behind until at
+    least one crew-day of hours is logged and a fifth of the work is done &mdash; on the first morning, one room of twelve finished
+    projects to a thirteen-day job. The percentages still show; it just does not draw a conclusion from them yet. <strong>And it never
+    tells you you are ahead</strong> &mdash; the percentage is right there beside the day count, so a flag saying so would be telling you
+    something you can already see.</div>
+  <div class="note"><strong>&ldquo;Halfway&rdquo; is a date, not the midpoint invoice.</strong> It is the middle working day of the plan.
+    The payment split is a flat 50/25/25 and has no calendar in it at all, so the two are unrelated &mdash; the app deliberately never
+    prints the word <em>midpoint</em> next to that date.</div>
+  <div class="note"><strong>A job that started late keeps the date the client was given, and adds a second one.</strong> The plan is
+    always measured from the <em>target start</em> &mdash; that is what their estimate and their agreement both say. If the job activated
+    late you also get <em>now ending &lt;date&gt;</em>. That is the date to renegotiate; the first one is the date you promised.</div>
+  <div class="note"><strong>Home Prep for Sale has no day count and says so.</strong> That engagement books no concierge or specialist
+    hours and runs on the vendors&rsquo; calendar, so its line reads <em>&ldquo;scheduled around vendor availability&rdquo;</em> rather
+    than inventing a number.</div>
+
   <div class="note"><strong>&#9888; The Job Plan keeps itself current while it is open (new 2026-09-12).</strong> Two people work this tab at once &mdash; one in the house, one at the desk &mdash; and until this date it only read the plan <strong>when the page loaded</strong>. So a room locked in the house did not appear at the desk until somebody reloaded. It now re-reads roughly <strong>every 20 seconds</strong>, and again the moment you open the tab. Two things it will not do, both on purpose: it <strong>never refreshes while you are typing in the plan</strong> (a refresh redraws the whole tab and would take your half-written note with it), and it <strong>stands down entirely while the red unsaved-changes chip is showing</strong> &mdash; your own work has not reached the sheet yet, so pulling the sheet in would undo the room you just locked. In both cases it simply waits. Nothing else in the app refreshes by itself; for a current <strong>Client Dashboard</strong>, reload the page.</div>
   <h3>a. Document the property — Client Dashboard → job documentation</h3>
   <p>Photos can be captured from the moment the job is <strong>Won</strong> — you do not have to wait for the deposit, and the room cards are on screen from then on.</p>
@@ -450,6 +507,11 @@
   <p>One entry per working day: the <strong>date</strong>, an <strong>activity summary</strong>, and <strong>hours against each named crew member</strong>. The roles come from the roster you confirmed — concierge rows log as TC, specialist rows as PS.</p>
   <div class="stop"><strong>Log daily. Do not batch at end of job.</strong> The hours drive the forward-variance projection <em>and</em> the final invoice — the timesheet <em>is</em> the invoice. A job with no logged hours cannot issue a final invoice at all, and nobody can unlock it for you.</div>
   <p>Log <em>your own</em> hours as well as the crew's. You are on site for every crew hour; if the log shows crew time with no concierge time against it, the invoice warns you in dollars about the time it thinks you've missed.</p>
+  <div class="note"><strong>Your hours are half of the schedule reading on the Client Dashboard.</strong> The line above the timeline
+    shows <em>hours logged</em> against <em>work done</em>, and the second half comes from the room statuses. Log daily and set the
+    statuses as rooms finish, and anyone opening the client sees where the job really is. Skip either and the dashboard goes quiet
+    rather than guessing. <strong>This is true on a fixed-price job too</strong> &mdash; a flat fee changes how the hours are billed,
+    never whether they are recorded.</div>
 
   <h3>c. Source the vendors — Job Plan tab</h3>
   <p>Assign a directory vendor to each estimate line, set its status, and <strong>record the actual quote</strong>. Actual quotes on <strong>Home Prep</strong> lines are what the 30% fee is charged on at the midpoint and final &mdash; on a standalone prep job and, since 2026-09-10, on prep bundled into any other job too. Every other vendor line carries nothing for Havellin; those are recorded so the client's costs and the job's real margin are known. You will notice prep lines have <strong>no <em>Coord hrs</em> box</strong> &mdash; prep books no hours now, so there is nothing to compare against. A line with no logged quote falls back to the estimate and gets tagged "est." on the client's invoice.</p>
@@ -655,6 +717,15 @@
   <h3>If something won't let you proceed</h3>
   <table>
     <tr><th>Symptom</th><th>What's missing</th></tr>
+<tr><td><strong>The dashboard says &ldquo;no room marked done yet, so there is no progress reading&rdquo;</strong></td><td>Hours are going in and nobody has set a room status on the Job Plan. Set each room to <strong>locked</strong> when the decisions are final and <strong>packed</strong> when it is physically done. The percentage appears as soon as one room is done. It withholds the figure rather than printing <em>0% of the work done</em>, because that would be a much stronger claim than the app can actually make.</td></tr>
+<tr><td>The schedule line shows no percentages, or no verdict about the pace</td><td>It stays quiet until at least one crew-day of hours (7 combined) is logged <em>and</em> a fifth of the work is done. On the first morning the rate means nothing &mdash; one room of twelve projects to a thirteen-day job. Keep logging; it fills in.</td></tr>
+<tr><td>A job on a <strong>fixed price</strong> shows no hours and no progress</td><td>Nothing about fixed price hides the hours log &mdash; it opens on any won job once the deposit is recorded. Either the hours have not been logged or the job is <strong>Home Prep for Sale</strong>, which books no hours at all and is scheduled around the vendors instead.</td></tr>
+<tr><td>The dashboard says the job is <em>tracking to</em> a date past the target end</td><td>At the rate it is actually going, it finishes late. That is a conversation with the client <strong>now</strong>, not on the target end date &mdash; re-plan, or raise a change order if the scope grew.</td></tr>
+<tr><td>You want to know when the midpoint invoice is due and the strip says <em>Halfway</em></td><td>Those are unrelated. <em>Halfway</em> is the middle working day of the plan; the payment split is a flat 50/25/25 with no calendar in it. The invoice is due when you send it, from the band above the timeline.</td></tr>
+<tr><td><strong>You hit Save Estimate and the form went blank</strong></td><td>Fixed 2026-09-13 &mdash; and <strong>nothing was lost</strong>. Save now lands you on the Client Dashboard, on the client you just priced. Before that it was trying to open a tab that had been retired, so it blanked the form and went nowhere. Open the client; the estimate is there.</td></tr>
+<tr><td>You are looking for View / Print on a document and the strip at the foot is empty</td><td>The document for the stage you are on is in the <strong>brown band at the top</strong>, above the one brown button. The strip at the foot is the archive &mdash; documents from <em>earlier</em> stages only. On a job whose estimate is still a draft it is legitimately empty.</td></tr>
+<tr><td><strong>There is no Print on the estimate</strong></td><td>It has not been approved yet, so the tray titles it <em>Client Estimate &mdash; DRAFT</em> and offers View and Edit only. A draft may be read on our screen and must not reach paper. Get it approved (Step 3) and Print appears.</td></tr>
+<tr><td>The Hard target on the client details shows a plain dash</td><td>No hard target was set at intake &mdash; that is fine and not a warning. Until 2026-09-13 the app painted that dash <strong>red and bold</strong> on every job that simply had no hard date, which looked like a problem and was not. Set one in Edit Client if there is one.</td></tr>
 <tr><td><strong>A payment you recorded is not on the client any more</strong></td><td>Fixed 2026-09-12, and it needs the Apps Script redeploy of that date. A client used to sync as <em>one record</em>, so the last device to save anything on that client overwrote everything the other one had done &mdash; including a recorded cheque, and the record that an invoice had gone out. It now merges payment by payment. <strong>Record the payment again</strong>; nothing is recoverable from before the redeploy.</td></tr>
 <tr><td><strong>You deleted an hours entry and it is back</strong></td><td>Same date, same redeploy. The deletion never reached the sheet at all, so the line returned on the next page load &mdash; on your own device as well as everyone else's. Those hours bill the client, because the final invoice trues the labour charge to the log. <strong>Check the hours total on any job where you deleted a line before 2026-09-12</strong>, then delete it again.</td></tr>
 <tr><td>The other device locked rooms and you cannot see them on the Job Plan</td><td>The tab re-reads every 20 seconds now, so give it a moment. If it still does not move: the <strong>red unsaved-changes chip</strong> is showing, which stands the refresh down until your own work is saved; or your cursor is in a box on the plan, which holds it off so your typing is not wiped. Click away and wait one pass. Failing both, reload the page.</td></tr>

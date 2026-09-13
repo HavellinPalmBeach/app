@@ -107,10 +107,9 @@ progress on the job plan. Confirm."* App-only, no redeploy.
 - **⚠ `plan.lastProjection` IS WRITTEN AND READ BY NOTHING** — checked before refactoring around it, because a
   retained snapshot with a reader would have been a different decision. Noted, not removed: it is one line and
   the Daily Close block is the obvious future reader.
-- **⚠⚠ BOTH DOCUMENTS STILL NEED THE PASS FLAGGED THIS MORNING, AND IT IS NOW LARGER.** Manual §9a does not
-  describe the schedule strip, the planned dates, the tray **or the progress reading**; §9b describes the
-  quick strip as the route to every document; §5/§7 and playbook Step 3 describe Save Estimate landing on the
-  Client Estimate tab. **Not done in this commit** — flagged rather than half-done, for the second time.
+- ~~**⚠⚠ BOTH DOCUMENTS STILL NEED THE PASS FLAGGED THIS MORNING, AND IT IS NOW LARGER.**~~ **DONE — the
+  twenty-fifth pass, same day; see the documentation section.** *Kept rather than deleted, per the standing rule
+  that a fixed flag left standing reads as outstanding work.*
 
 ## ⚠⚠ THE DASHBOARD GAINS A SCHEDULE AND A DOCUMENT TRAY — AND TWO LIVE DEFECTS CAME WITH THEM (2026-09-13)
 Anthony, five asks in one message: Save Estimate *"just wipes the screen"* and should land on the client;
@@ -285,11 +284,8 @@ to allow us to know where we are versus the deliverable timeline we agreed to."*
 
   Planned dates read *"Planned start / halfway point / end"* on the rail and drop the moment the row is done.
   Overflow **0** at 1440 and 390px; no page errors.
-- **⚠ BOTH DOCUMENTS NEED A PASS, AND THE PLAYBOOK MORE THAN THE MANUAL.** Manual §9a (the rail) does not
-  describe the schedule strip, the planned dates or the tray; §9b (the five documents) describes the quick
-  strip as the route to every document, which is now the tray for the current one and the strip for the
-  archive; §5/§7 describe Save Estimate landing on the Client Estimate tab. Playbook Step 3 tells the reader
-  where Save lands. **Not done in this commit** — flagged rather than half-done.
+- ~~**⚠ BOTH DOCUMENTS NEED A PASS, AND THE PLAYBOOK MORE THAN THE MANUAL.**~~ **DONE 2026-09-13** in the
+  twenty-fifth pass, together with the progress reading. *Kept rather than deleted, per the standing rule.*
 
 ## ⚠⚠ THE JOB RECORD WAS THE NEXT WHOLE-RECORD MERGE, AND IT DESTROYED A CHEQUE (FIXED 2026-09-12)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-12a`. Anthony, right after
@@ -6494,7 +6490,32 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-11 (twenty-fourth pass)** — both documents, and **this pass CORRECTS three
+- Last reconciled against the app: **2026-09-13 (twenty-fifth pass)** — both documents, against the two builds of
+  2026-09-13: the schedule strip / document tray / Save redirect, and the progress reading. **This pass clears a flag
+  that had been standing through two commits**, which this file records as reading like outstanding work.
+  - **Manual — two new subsections.** **§9a-i** the schedule strip: the six figures and where each comes from, the
+    CALENDAR-halfway warning (it has nothing to do with the midpoint invoice, and the strip never prints that word
+    beside it), the late-start second date, **the two progress percentages and why they are two**, the
+    room-statuses dependency, the two floors, the fixed-price answer, a six-row flag table, no-ahead-flag, pace
+    versus fit, and the rail's Planned dates. **§9a-ii** the band: the tray, what it advances through, the
+    readiness gate, why a DRAFT has no Print, and the one-filled-button rule.
+  - **Three claims CORRECTED rather than added to**, each of which would have sent somebody the wrong way:
+    **§5h** said Save opens the Client Estimate preview — a tab retired on 2026-09-11, which is the whole reason
+    the screen looked wiped; **§9a**'s strip note and **§9b**'s opening both described the foot-of-timeline strip
+    as the route to every document, which is now the tray for the current one and the strip for the archive only.
+  - **Playbook — Step 2** (where Save lands, plus a `.stop` that nothing was ever lost), **Step 3** (the document
+    is in the brown band; a draft has no Print; the unapproved-invoice warning), **a new Step 10 section** on
+    reading the schedule off the dashboard with its own five-row flag table, **Step 10b** (your hours are half the
+    reading, and fixed price does not change that), and **nine** symptom→cause rows.
+  - **38 claims parity-checked** across the four files, **0 mismatches** (one apparent miss was a markdown
+    emphasis marker, verified). Tag balance verified on both HTML files — `manual.html`'s `<code>` delta is still
+    the documented false positive at **1**, `concierge-guide.html` is clean on every tag. Rendered in Chromium at
+    1440 and 390px: **overflow 0** on both, no page errors, and **under `print` media all 45 tables keep their full
+    width**, so the phone block is still correctly scoped to `screen`.
+  - ⚠ A sweep for the two old wordings (*"opens in the Client Estimate preview"*, *"reached the same way from its
+    own row"*) comes back with **zero hits in all four files** — no needle tripped on the text explaining the fix
+    this time, because both corrections were rewrites rather than additions.
+- Prior pass **2026-09-11 (twenty-fourth pass)** — both documents, and **this pass CORRECTS three
   standing claims rather than adding to them**. Each would have had somebody do the wrong thing.
   - **⚠⚠ A CHANGE ORDER CARRIES HOURS, NOT A DOLLAR AMOUNT** (rebuilt in the app this morning). Manual **§9** and playbook
     **Step 10d** both told the reader to enter *&ldquo;the dollar impact (positive to add, negative to reduce)&rdquo;* into a

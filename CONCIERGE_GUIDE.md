@@ -208,12 +208,18 @@ Vendors are picked from **six Category Group cards**, sitting **below Notable Co
 
 > **If the app recommends a second concierge**, it's telling you one person can't cover the schedule — more than 10 concierge hours a day. It changes neither the fee nor the duration; it stops somebody working 12-hour days. Contested probate and heavy documentation estates trip this, which is right.
 
-Hit **Save & Preview Client Estimate**. It saves, syncs, and opens the client-facing preview. You can keep editing until it's approved.
+Hit **Save Estimate**. It saves, syncs, and **puts you on the Client Dashboard, on the client you just priced** — with the summary of what you saved (rooms, concierge hours, specialist hours, total) carried across onto that screen. You can keep editing until it is approved.
+
+> **⚠** **⚠ If you pressed Save before 2026-09-13 and thought you had lost the form, you had not.** The button was trying to open the Client Estimate tab, which was retired from the nav two days earlier — so it went nowhere, blanked the form on the screen you were still looking at, and replaced your save summary with *"Estimate cleared."* a few seconds later. **Every one of those estimates saved correctly.** Open the client on the Client Dashboard and it is there.
 
 ## Step 3 · Get it approved — Client Dashboard
 
 > **⚠** **The buttons that used to sit across the top of the Client Dashboard are gone (changed 2026-09-11).** There were seven: *Estimate · Submit for Approval · Client Accepted — Mark Won · Change Order · Edit Client · Drive · Activate Job*. **Five of them were already further down the same screen.** Nothing was removed — every one of them is where it belongs now: the four job steps are rows on the **timeline**, *Change Order* has its **+ New** in the Change Orders card, and the two that are not steps sit on the **Job Timeline & Payments** heading: **✎ Edit Client** and **📁 Drive**. **If you are hunting for a button, look at the lit row.** That is the whole design — one screen, one lit step, the buttons on the step they belong to.
 
+
+> **The document you need is in the brown band at the top, not down the page (new 2026-09-13).** The band reads **NEXT** and the step, and directly above the one brown button it carries the **document this stage is about** — *Client Estimate*, with **👁 View** and **✎ Edit** beside it. It advances with the job: the estimate, then the signing packet, then each invoice in turn. Consult the document, then act — that is the order it is laid out in. **The strip at the very foot of the timeline is the job's archive**, for going back to a document from an earlier stage; on a job whose estimate is still a draft it is empty, and that is correct.
+
+> **⚠** **⚠ A draft estimate has View and Edit but NO Print, on purpose.** The tray titles it *Client Estimate — DRAFT*. Read it on screen all you like; it must not reach paper or a client until a manager has approved it. **And until 2026-09-13 the foot of the timeline offered you "View deposit invoice" on a job with no approved estimate at all** — which opened a complete, printable bill priced off the draft. If anyone has a printed invoice from a job that was never approved, bin it.
 
 Open the client and find the *Estimate approved* row. **👁 View** reads the client-facing document — do that first, for accuracy. Then **Submit for approval** → a manager presses **🔑 Manager approval** and types their PIN → the estimate locks as *Approved for Release*.
 
@@ -378,6 +384,31 @@ Two things worth knowing when you ask for one:
 
 The job is now **Active**. Three things run in parallel.
 
+### Where you are against the schedule — read it on the Client Dashboard
+
+Open the client and the line above the timeline reads the whole schedule at once: *Started Sep 21 · **Working day 4 of 6** · 52% of the work done · 57% of the estimated hours logged · Halfway Sep 23 · Target end Sep 28*, with the hard target or the court deadline beside it.
+
+> **⚠** **⚠ THOSE TWO PERCENTAGES ARE DIFFERENT QUESTIONS AND THE GAP BETWEEN THEM IS THE POINT (new 2026-09-13).** **Work done** comes from the room statuses you set on the Job Plan, weighted by the hours the estimate priced each room at. **Hours logged** comes from your timesheet. *70% spent against 70% done* is a job going fine. *70% spent against 30% done* is a job in trouble — and one number could never have told you which you were looking at. **Look at the pair, not at either one.**
+
+> **⚠** **⚠ THE WORK FIGURE ONLY EXISTS IF SOMEBODY SETS THE ROOM STATUSES.** If hours are going in and no room is marked done, the app **will not print a percentage** — it says *"36 hours logged and no room marked done yet, so there is no progress reading"* and points you at the Job Plan. That is deliberate: a crew that has not touched the statuses and a crew that has done nothing look identical from the dashboard, and it will not assert the second. **Set each room to *locked* when the decisions are final and *packed* when it is physically done, as you go.** Two minutes a room, and it is what makes the whole schedule reading work — for you, and for whoever is reading the job from the desk.
+
+| What the line says | What to do |
+|---|---|
+| **red** — *N% of the work is done on working day X of Y. Tracking to &lt;date&gt;, Z working days past the target end.* | At the rate you are actually going, this job finishes late. Ring the client and re-plan, or raise a change order if the scope grew. **Do not wait for the target end to arrive to have that conversation.** |
+| **red** — *Working day X of Y — Z working days past the proposed length.* | You are already over the length that was quoted. Same conversation, more urgently. |
+| **amber** — *Past the halfway point and the midpoint invoice has not gone out.* | This one is about **money**, not about the work. Send it from the band above. |
+| **grey** — *N hours logged and no room marked done yet.* | Not a telling-off. Go and set the room statuses. |
+| **red** — *ends N working days past the hard target / court deadline* | The **plan itself** does not reach the date we committed to — separate from how the job is running. On probate that date is statutory. Raise it now. |
+
+> **It stays quiet for the first day or so, and that is right.** It will not call a job behind until at least one crew-day of hours is logged and a fifth of the work is done — on the first morning, one room of twelve finished projects to a thirteen-day job. The percentages still show; it just does not draw a conclusion from them yet. **And it never tells you you are ahead** — the percentage is right there beside the day count, so a flag saying so would be telling you something you can already see.
+
+> **"Halfway" is a date, not the midpoint invoice.** It is the middle working day of the plan. The payment split is a flat 50/25/25 and has no calendar in it at all, so the two are unrelated — the app deliberately never prints the word *midpoint* next to that date.
+
+> **A job that started late keeps the date the client was given, and adds a second one.** The plan is always measured from the *target start* — that is what their estimate and their agreement both say. If the job activated late you also get *now ending &lt;date&gt;*. That is the date to renegotiate; the first one is the date you promised.
+
+> **Home Prep for Sale has no day count and says so.** That engagement books no concierge or specialist hours and runs on the vendors' calendar, so its line reads *"scheduled around vendor availability"* rather than inventing a number.
+
+
 > **⚠ The Job Plan keeps itself current while it is open (new 2026-09-12).** Two people work this tab at once — one in the house, one at the desk — and until this date it only read the plan **when the page loaded**. So a room locked in the house did not appear at the desk until somebody reloaded. It now re-reads roughly **every 20 seconds**, and again the moment you open the tab. Two things it will not do, both on purpose: it **never refreshes while you are typing in the plan** (a refresh redraws the whole tab and would take your half-written note with it), and it **stands down entirely while the red unsaved-changes chip is showing** — your own work has not reached the sheet yet, so pulling the sheet in would undo the room you just locked. In both cases it simply waits. Nothing else in the app refreshes by itself; for a current **Client Dashboard**, reload the page.
 
 ### a. Document the property — Client Dashboard → job documentation
@@ -415,6 +446,8 @@ One entry per working day: the **date**, an **activity summary**, and **hours ag
 > **⚠** **Log daily. Do not batch at end of job.** The hours drive the forward-variance projection *and* the final invoice — the timesheet *is* the invoice. A job with no logged hours cannot issue a final invoice at all, and nobody can unlock it for you.
 
 Log *your own* hours as well as the crew's. You are on site for every crew hour; if the log shows crew time with no concierge time against it, the invoice warns you in dollars about the time it thinks you've missed.
+
+> **Your hours are half of the schedule reading on the Client Dashboard.** The line above the timeline shows *hours logged* against *work done*, and the second half comes from the room statuses. Log daily and set the statuses as rooms finish, and anyone opening the client sees where the job really is. Skip either and the dashboard goes quiet rather than guessing. **This is true on a fixed-price job too** — a flat fee changes how the hours are billed, never whether they are recorded.
 
 ### c. Source the vendors — Job Plan tab
 
@@ -649,6 +682,15 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| **The dashboard says "no room marked done yet, so there is no progress reading"** | Hours are going in and nobody has set a room status on the Job Plan. Set each room to **locked** when the decisions are final and **packed** when it is physically done. The percentage appears as soon as one room is done. It withholds the figure rather than printing *0% of the work done*, because that would be a much stronger claim than the app can actually make. |
+| The schedule line shows no percentages, or no verdict about the pace | It stays quiet until at least one crew-day of hours (7 combined) is logged *and* a fifth of the work is done. On the first morning the rate means nothing — one room of twelve projects to a thirteen-day job. Keep logging; it fills in. |
+| A job on a **fixed price** shows no hours and no progress | Nothing about fixed price hides the hours log — it opens on any won job once the deposit is recorded. Either the hours have not been logged or the job is **Home Prep for Sale**, which books no hours at all and is scheduled around the vendors instead. |
+| The dashboard says the job is *tracking to* a date past the target end | At the rate it is actually going, it finishes late. That is a conversation with the client **now**, not on the target end date — re-plan, or raise a change order if the scope grew. |
+| You want to know when the midpoint invoice is due and the strip says *Halfway* | Those are unrelated. *Halfway* is the middle working day of the plan; the payment split is a flat 50/25/25 with no calendar in it. The invoice is due when you send it, from the band above the timeline. |
+| **You hit Save Estimate and the form went blank** | Fixed 2026-09-13 — and **nothing was lost**. Save now lands you on the Client Dashboard, on the client you just priced. Before that it was trying to open a tab that had been retired, so it blanked the form and went nowhere. Open the client; the estimate is there. |
+| You are looking for View / Print on a document and the strip at the foot is empty | The document for the stage you are on is in the **brown band at the top**, above the one brown button. The strip at the foot is the archive — documents from *earlier* stages only. On a job whose estimate is still a draft it is legitimately empty. |
+| **There is no Print on the estimate** | It has not been approved yet, so the tray titles it *Client Estimate — DRAFT* and offers View and Edit only. A draft may be read on our screen and must not reach paper. Get it approved (Step 3) and Print appears. |
+| The Hard target on the client details shows a plain dash | No hard target was set at intake — that is fine and not a warning. Until 2026-09-13 the app painted that dash **red and bold** on every job that simply had no hard date, which looked like a problem and was not. Set one in Edit Client if there is one. |
 | **A payment you recorded is not on the client any more** | Fixed 2026-09-12, and it needs the Apps Script redeploy of that date. A client used to sync as *one record*, so the last device to save anything on that client overwrote everything the other one had done — including a recorded cheque, and the record that an invoice had gone out. It now merges payment by payment. **Record the payment again**; nothing is recoverable from before the redeploy. |
 | **You deleted an hours entry and it is back** | Same date, same redeploy. The deletion never reached the sheet at all, so the line returned on the next page load — on your own device as well as everyone else's. Those hours bill the client, because the final invoice trues the labour charge to the log. **Check the hours total on any job where you deleted a line before 2026-09-12**, then delete it again. |
 | The other device locked rooms and you cannot see them on the Job Plan | The tab re-reads every 20 seconds now, so give it a moment. If it still does not move: the **red unsaved-changes chip** is showing, which stands the refresh down until your own work is saved; or your cursor is in a box on the plan, which holds it off so your typing is not wiped. Click away and wait one pass. Failing both, reload the page. |

@@ -387,7 +387,9 @@ Title located is worth ticking honestly. It is the one field on this card with a
 
 ### 5h. Saving
 
-Hit **Save & Preview Client Estimate**. Estimate saves and syncs to Google Sheets, then opens in the Client Estimate preview. Editable until approved.
+Hit **Save Estimate**. It saves, syncs to Google Sheets, and **lands you on the Client Dashboard, on the client you just priced**, with the save summary (rooms, concierge hours, specialist hours, total) carried across onto that screen. The estimate stays editable until it is approved.
+
+> **⚠ IT USED TO LOOK LIKE THE FORM HAD BEEN WIPED (fixed 2026-09-13).** Anthony: *"when you hit save estimate, the screen now just wipes."* The button was trying to navigate to the **Client Estimate tab, which was retired from the navigation on 2026-09-11** — so the navigation silently did nothing while the rest of the sequence went ahead and blanked the form on the screen you were still looking at, overwrote the save summary with *"Estimate cleared."* nearly three seconds early, and jumped the page to the top. **Nothing was ever lost** — the estimate saved correctly every time — but the end state read as data loss on a form somebody had just spent a walkthrough filling in. It now finds its destination first and changes nothing if it cannot.
 
 ### 5i. Hours, Crew Size & Timeline — how the numbers come out
 
@@ -749,12 +751,76 @@ Opening a client draws a **timeline** of sixteen milestones, from intake to fina
 | Work complete | **■ Close job** — stamps the handover date, once. |
 
 > **The action button is drawn in the pinned band and nowhere else.** The lit row and the band are the same step, so drawing it twice would put one control on screen twice and make you check which is real. The rows themselves are a status read. Actions that are out of sequence (edit the client, mark the job lost) gather into one strip at the foot.
+>
+> **⚠ That strip is the job's ARCHIVE, not the route to every document (changed 2026-09-13).** The document for the stage you are on is in the band at the top, in the tray (§9a-ii); the strip is the only on-screen route back to a document from an *earlier* stage. Nothing is offered in both places — the strip is built from what the band already took. On a job whose estimate is still a draft it is now legitimately **empty**, because every link it used to carry was either moved into the tray or refused by the readiness gate.
 
 > **The timeline is driven by the five things that actually carry a job's state, not by the status label.** The status word on a job card moves independently of the estimate record, the client's acceptance, the agreement chain and the payments — re-approving an estimate on a signed, funded job even knocks the status back to *Approved*. Each milestone reads whichever of the five owns it, so the timeline stays right when the status word is not. **Trust the timeline over the status chip.**
 
 > **A step can be done out of order and the timeline copes.** *Estimate sent to client* is a button somebody can legitimately skip, so a signed and funded job may carry no estimate-sent date. Later steps stay green and the light lands on the *earliest* gap rather than treating everything after it as unfinished.
 
 > **A dead job collapses to one row.** *Lost* and *Closed — Deposit Retained* are terminal, so there is no next action and nothing is lit — a button there would invite a click the app refuses.
+
+### 9a-i. The schedule strip — how long the job is, and where you are in it
+
+Above the timeline, one line: **Target start · N working days · Halfway · Target end**, with the hard target or the court deadline beside it where one is set. Anthony asked for it plainly: *"the proposed length of the job really needs to be front and centre … I don't think the dates are prominent enough in the app to allow us to know where we are versus the deliverable timeline we agreed to."*
+
+| What it says | Where the figure comes from |
+|---|---|
+| **Target start** | The date on intake / Edit Client. It is the same date the client estimate's header and the agreement's *Estimated Start Date* both state. |
+| **N working days** | The proposed length off the approved estimate. It reads *about N* when the figure was derived rather than quoted, because that is a number nobody ever told the client. |
+| **Halfway** | The middle working day of the plan. |
+| **Target end** | Target start plus the proposed length, counting working days only. |
+| **Working day N of M** | Replaces the length once the job is active, measured from the day it was actually activated. |
+| **Hard target / Court deadline** | From intake. On probate the **court deadline outranks the hard target** — one is statutory and the other is a preference. |
+
+> **⚠ "Halfway" is a CALENDAR halfway and has nothing to do with the midpoint invoice.** The payment split is a flat 50/25/25 with no calendar in it at all, so the midpoint invoice has no date relationship to this figure. The strip never prints the word *midpoint* beside it for exactly that reason — two facts two inches apart on one card must not share a word, or the strip reads as a statement about when money is due that nobody made.
+
+> **A job that started late gets a SECOND, labelled date — never a quiet replacement.** The plan stays anchored on the target start, always, because that is the date on the paperwork the client is holding; re-deriving it from the real activation would print an end date they were never given. A late start adds *now ending &lt;date&gt;* beside the target end. **That is the date to renegotiate**, and it is labelled so nobody mistakes it for what was agreed.
+
+#### How much of the work is actually done
+
+> **⚠⚠ TWO FIGURES, AND THEY ANSWER DIFFERENT QUESTIONS (new 2026-09-13).** On a running job the strip also reads *52% of the work done · 57% of the estimated hours logged*. Anthony asked for it: *"the app should know if half the work has been done by how many hours have been logged."*
+>
+> **Work done** is the room statuses on the Job Plan, weighted by the hours the estimate priced each room at — a room earns its concierge hours once it is **locked** and its specialist hours once it is **packed**. **Hours logged** is what the timesheet has burned against the estimate.
+>
+> **The gap between them is the whole reading.** 70% spent against 70% done is a job going fine; 70% spent against 30% done is a job in trouble, and a single combined percentage could not tell you which one you were looking at. That is why there are two numbers and not one.
+>
+> **⚠ It is weighted by hours, not by rooms, and that is not a detail.** On a three-room job one room finished is 33% by count and can be 5% by hours — a 2-car garage and a powder room are not the same amount of work. No room count is printed anywhere on this strip, deliberately, because the two figures would disagree by a factor of six and invite you to check one against the other.
+
+> **⚠ THE WORK FIGURE COMES OFF THE ROOM STATUSES, SO SOMEBODY HAS TO SET THEM.** If hours are going in and no room has been marked done, the strip **withholds the percentage** rather than printing *0% of the work done* — a crew that has not touched the statuses and a crew that has done nothing look identical from here, and the second is by far the more alarming claim to make on screen. It says instead, in plain grey, *"36 hours logged and no room marked done yet, so there is no progress reading"* and names the Job Plan as the fix. **Set each room's status as the crew finishes it and the reading appears.**
+
+> **It stays quiet early, on purpose.** No verdict about the *rate* is offered until at least one crew-day of hours (7 combined) has been logged **and** a fifth of the work is done. On day one, one room of twelve finished projects to a thirteen-day job — a strip that cried "behind" every Monday morning is a strip nobody reads by the second week. The two percentages still print; only the projection is withheld.
+
+> **Fixed price changes none of this.** The hours log is open on every engagement that books hours — it gates on the job being won and the deposit being recorded, and on nothing else. A flat fee decides how hours are *billed* (the final never trues up to the timesheet), never whether they are *recorded*. The one service with no hours log at all is **Home Prep for Sale**, which books no concierge or specialist hours and is scheduled around the vendors; its strip says so rather than inventing a day count.
+
+#### The flags
+
+| What it says | What to do |
+|---|---|
+| **red** — *Working day X of Y — Z working days past the proposed length.* | Already over the length quoted. Outranks everything else on the strip. |
+| **red** — *N% of the work is done on working day X of Y. Tracking to &lt;date&gt;, Z working days past the target end.* | At the rate the job is actually going, it finishes late. Re-plan with the client, or raise a change order if the scope grew. |
+| **amber** — *Past the halfway point and the midpoint invoice has not gone out.* | A statement about **billing**, not about progress. Send it from the band above. |
+| **grey** — *N hours logged and no room marked done yet.* | Not a warning. The reading is unavailable; set the room statuses on the Job Plan. |
+| **red** — *The target start has passed and the job is not active.* | Record the deposit and activate it, or set a new target start in Edit Client. |
+| **red** — *ends N working days past the hard target / court deadline* | The **plan** does not reach the date committed to. Separate from pace: a brand-new job can be perfectly on pace and still not fit. |
+
+> **There is no "ahead of schedule" flag, and that is deliberate.** A job at 100% on working day 4 of 6 is good news, and the percentage is already printed two inches away beside the day count. Flagging it would be a line explaining what the reader can already see — which is the standing rule this app cuts every time.
+
+> **Pace and fit are two separate slots and never collapse into one.** *Pace* is how the job is running; *fit* is whether the plan reaches the date we committed to. A brand-new job with a tight closing date is perfectly on pace and its plan still does not fit, and one line holding both would hide whichever it did not win.
+
+> **Steps on the rail carry their PLANNED date until they have a real one.** A planned date always has the word **Planned** in front of it and sits in its own slot, and it **disappears the instant the step has its actual**. Everything else on the rail is something that happened; a projection sitting in that slot would be indistinguishable from a record, on the one surface whose whole contract is what has happened.
+
+### 9a-ii. The band above the timeline — the step, and the document in play
+
+The tan band opens with **NEXT** and the step, and carries **one** filled button: the thing to do. Above that button sits the **document tray** — the document this stage of the job is about, with **👁 View**, **🖨 Print** and **✎ Edit** beside it as outline buttons. Anthony asked for that order and it is the real reading order: you consult the document, then you act.
+
+The tray advances with the job — *Client Estimate* through the approval and send steps, then the *Signing Packet*, then each *Invoice* in turn. Twelve of the sixteen milestones name a document; four do not (intake, walkthrough, job active, work complete), and those are the steps where the thing to do is **record** something rather than read something.
+
+> **⚠⚠ WHAT THE TRAY OFFERS IS GATED, AND BEFORE 2026-09-13 IT WAS NOT.** Four of the five document rows offered their View and Print links on **no condition at all**. On a job at status *New* with an estimate built but **not approved**, not won and no agreement, the strip at the foot rendered *View deposit invoice* and *View midpoint invoice* — and those opened a **complete, printable billing document priced off the unapproved draft**. One gate now answers both what is offered and what happens when it is pressed, so the two cannot drift apart. If a document is not ready, its buttons are not there.
+
+> **A DRAFT estimate can be read and cannot be printed.** The tray titles it *Client Estimate — DRAFT* and offers **View** and **Edit** but no **Print**. A draft may be read on our own screen and must not reach paper; the word DRAFT in the title is the whole explanation, and a Print button that alerts a refusal back at you would be worse than no button.
+
+> **Exactly one filled button in the band.** The tray's controls are bronze outlines; the step primary is the only solid one. Two filled buttons side by side make the reader choose between two primaries, which costs the band its whole meaning.
 
 | Status | Meaning |
 | --- | --- |
@@ -775,7 +841,7 @@ Opening a client draws a **timeline** of sixteen milestones, from intake to fina
 
 ### 9b. The five client documents — one way to view, print, send and file
 
-Client estimate · signing packet · deposit invoice · midpoint invoice · final invoice. Every one of them is reached the same way from its own row on the timeline, and the sameness is the deliverable — Anthony: *"if they've sent an estimate they'll know how to send an agreement, and they'll know how to send an invoice."*
+Client estimate · signing packet · deposit invoice · midpoint invoice · final invoice. Every one of them is reached the same way — from the **tray in the band** while it is the document in play (§9a-ii), and from the strip at the foot of the timeline once the job has moved past it — and the sameness is the deliverable — Anthony: *"if they've sent an estimate they'll know how to send an agreement, and they'll know how to send an invoice."*
 
 | Button | What it does |
 |---|---|
