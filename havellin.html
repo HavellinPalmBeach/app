@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 4:09pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 4:27pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -7378,6 +7378,18 @@ function saveIntake() {
 // esc(). The opposite contract is what put `&amp;amp;` on a client's screen when the
 // estimate email ran _cePhases' already-escaped titles through the escaper a second time.
 // One rule, checked by a test, beats two encodings each guessing what the other did.
+// ⚠⚠ ONE DEFINITION, AND IT IS DECLARED ABOVE ITS FIRST READER ON PURPOSE. `HOUSE_FLAGS`
+// is a top-level `var` evaluated at load, so a constant declared below it hoists as
+// `undefined` and the catalogue entry silently carries nothing — the exact shape of the
+// `_rushRate` defect this file already records, with no error and no symptom.
+//
+// ⚠ A RELATIVE PATH, NOT THE DRIVE COPY AND NOT THE ARTIFACT. This is read on a phone
+// standing in somebody's house at the moment a firearm turns up: same origin as the app,
+// no Google sign-in, nothing to authenticate against on a bad signal. The Drive document is
+// counsel's review copy and the page in this repo is the live procedure; if they ever
+// disagree, this one is the one the crew actually opened.
+var FIREARMS_PROTOCOL_DOC = 'firearms-protocol.html';
+
 var HOUSE_FLAGS = [
   { key:'cash', label:'Cash',
     detail:'Loose cash, envelopes, hidden spots.',
@@ -7388,7 +7400,13 @@ var HOUSE_FLAGS = [
   { key:'firearms', label:'Firearms & ammunition', severity:'err',
     detail:'Anything that fires, plus ammunition.',
     ask:'How many, where, and who is authorized to take possession.',
-    crewRule:'Nothing moves without written authority. Photograph it where it lies, tell the concierge the same day, and let nobody carry one out — family included.' },
+    crewRule:'Nothing moves without written authority. Photograph it where it lies, tell the concierge the same day, and let nobody carry one out — family included.',
+    // ⚠ THE DOCUMENT RIDES ON THE CATALOGUE ENTRY, not on the renderer. `crewRule` is one
+    // sentence and the protocol behind it is six stages and a recognition check; the crew
+    // brief is where somebody standing in the house meets the flag, so that is where the
+    // full procedure has to be one tap away. Any other flag can carry a `doc` the same way
+    // without a render site learning its name.
+    doc:FIREARMS_PROTOCOL_DOC, docLabel:'Read the firearms protocol' },
   { key:'safes', label:'Safes & lockboxes',
     detail:'Wall, floor, closet or freestanding.',
     ask:'Location, do you have the combination or key, are the contents known?' },
@@ -7424,8 +7442,14 @@ function activeHouseFlags(job) {
   var st = houseFlagsOf(job);
   return HOUSE_FLAGS.filter(function(f) { return st[f.key].on; })
     .map(function(f) {
+      // ⚠ THIS NARROWS THE CATALOGUE ENTRY, so anything added to HOUSE_FLAGS has to be
+      // named here or it is dropped on the floor between the catalogue and the brief —
+      // silently, with every source assertion still passing because each link looks right
+      // on its own. That is exactly what happened to `doc` on 2026-09-13, and only driving
+      // the real brief caught it.
       return { key:f.key, label:f.label, severity:f.severity || 'warn',
-               crewRule:f.crewRule || '', note:st[f.key].note };
+               crewRule:f.crewRule || '', note:st[f.key].note,
+               doc:f.doc || '', docLabel:f.docLabel || '' };
     });
 }
 
@@ -7448,7 +7472,8 @@ function standingFlagLines(job) {
   var flags = activeHouseFlags(job);
   var line = function(f) {
     return { severity:f.severity, label:f.label,
-             note:(f.note || '').trim() || NO_DETAIL, rule:f.crewRule || '' };
+             note:(f.note || '').trim() || NO_DETAIL, rule:f.crewRule || '',
+             doc:f.doc || '', docLabel:f.docLabel || '' };
   };
   var lines = flags.filter(function(f) { return f.severity === 'err'; }).map(line);
   var mustFind = String((job && job.mustFind) || '').trim();
@@ -7560,6 +7585,10 @@ function standingFlagsBlock(job) {
         '<span class="sf-lbl">' + esc(l.label) + '</span>' +
         '<span class="sf-txt">' + esc(l.note) + '</span>' +
         (l.rule ? '<span class="sf-rule">' + esc(l.rule) + '</span>' : '') +
+        // target=_blank so a tap on the brief never navigates away from the Job Plan the
+        // crew is working from — losing the tab mid-room is how somebody stops opening it.
+        (l.doc ? '<span class="sf-rule"><a href="' + esc(l.doc) + '" target="_blank" rel="noopener">'
+                 + esc(l.docLabel || 'Read the protocol') + ' &rarr;</a></span>' : '') +
       '</div>';
     }).join('') +
   '</div>';
@@ -18487,7 +18516,8 @@ function printAppraisalWorklist(jobId) {
     if (tr.ready.length) {
       html += '<div style="font-size:11px;color:#3c3228;line-height:1.5;"><strong>' + tr.ready.length
         + ' cleared to carry.</strong> Non-NFA, authorised in writing, serial and dealer on the record. '
-        + 'Locked case, unloaded, not on your person, direct route &mdash; and an itemised receipt signed at the counter before you leave.</div>'
+        + 'Locked case, unloaded, not on your person, direct route &mdash; and an itemised receipt signed at the counter before you leave. '
+        + '<a href="' + esc(FIREARMS_PROTOCOL_DOC) + '" target="_blank" rel="noopener">Full protocol &rarr;</a></div>'
         + '<div style="font-size:11px;color:#666;margin-top:6px;">'
         + tr.ready.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)')
             + ' &middot; <span style="font-family:monospace;">' + esc(r.serial) + '</span>'; }).join('<br>')

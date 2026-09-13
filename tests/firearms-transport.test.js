@@ -150,6 +150,55 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           'the serial column is offered on every row, not only firearms');
   });
 
+  group('the protocol is one tap from the flag', () => {
+    // ⚠ DECLARED ABOVE ITS FIRST READER. HOUSE_FLAGS is a top-level `var` evaluated at load,
+    // so a constant declared below it hoists as `undefined` and the entry silently carries
+    // nothing — no error, no symptom, exactly the _rushRate shape. Assert the ORDER.
+    ok(src.indexOf('var FIREARMS_PROTOCOL_DOC') < src.indexOf('var HOUSE_FLAGS'),
+       'the constant is declared before HOUSE_FLAGS evaluates');
+
+    // ⚠ A RELATIVE, SAME-ORIGIN PATH. This is opened on a phone in somebody's house at the
+    // moment a firearm turns up; a Drive or claude.ai URL needs a sign-in and a good signal.
+    const c = src.slice(src.indexOf('var FIREARMS_PROTOCOL_DOC'));
+    has(c.slice(0, c.indexOf(';')), "'firearms-protocol.html'", 'it points at the repo copy');
+    lacks(c.slice(0, c.indexOf(';')), 'http', 'not an off-site URL that needs authenticating');
+
+    // The document rides on the catalogue entry, so a render site never learns a flag's name.
+    lacks(fn('standingFlagsBlock'), 'firearms',
+          'the brief renders whatever doc it is given rather than keying on firearms');
+    has(fn('standingFlagLines'), 'doc:f.doc', 'the line builder carries it through');
+
+    // Both readers use the constant; neither retypes the filename.
+    const strip = (t) => t.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    const literals = (strip(src).match(/'firearms-protocol\.html'/g) || []).length;
+    eq(literals, 1, 'the filename appears exactly once in live code');
+    has(strip(fn('printAppraisalWorklist')), 'FIREARMS_PROTOCOL_DOC',
+        'the worklist links it through the constant');
+
+    // ⚠⚠ AND THE JOIN, WHICH EVERYTHING ABOVE MISSES. The first sweep came back GREEN on
+    // deleting `doc:` from the firearms catalogue entry — every assertion drove a PIECE
+    // (the constant, the line builder, the renderer's indifference to the key) and none
+    // drove the whole chain, so the link could be absent from the brief with the suite
+    // passing. That is the shape this repo records more often than any other. Drive the
+    // REAL brief on a job with the flag ticked and read the anchor out of the markup.
+    const b = sandbox({
+      fns: ['standingFlagsBlock', 'standingFlagLines', 'activeHouseFlags', 'houseFlagsOf',
+            '_houseFlagRowClass', 'esc'],
+      vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
+    });
+    const armed = { id: 1, houseFlags: { firearms: { on: true, note: 'Gun safe in the study, 4 long guns.' } } };
+    const brief = b.standingFlagsBlock(armed);
+    has(brief, 'href="firearms-protocol.html"', 'the crew brief renders the link');
+    has(brief, 'Read the firearms protocol', 'under a label that says what it is');
+    has(brief, 'target="_blank"', 'opening it does not navigate off the Job Plan');
+    has(brief, 'Gun safe in the study', 'beside the detail taken at intake');
+
+    // A flag carrying no document renders no link rather than an empty one.
+    const safes = { id: 1, houseFlags: { safes: { on: true, note: 'Wall safe, combination unknown.' } } };
+    lacks(b.standingFlagsBlock(safes), 'href=',
+          'a flag with no protocol behind it links nowhere');
+  });
+
   group('the two notices that were false until today', () => {
     const wl = fn('printAppraisalWorklist');
     // Form 5 eForms clear in about two days as of 2026, not months. The old sentence put a

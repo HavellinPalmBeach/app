@@ -24,7 +24,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // stub that does not match source is what hid the `&amp;amp;` defect in the estimate
   // email — the rendering assertions below are worthless against an approximation.
   const ctx = sandbox({
-    vars: ['HOUSE_FLAGS'],
+    vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
     fns: [
       'esc',
       'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines', 'jobHasStandingFlags',

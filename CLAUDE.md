@@ -63,7 +63,7 @@ build out our process rather than lock it down needlessly."* App-only, no redepl
   not transport firearms"*, true until today. And the NFA notice said Form 5 *"runs in months, not days"* —
   **stale**: Form 5 eForms clear in about **2 days** in 2026, paper about 9. It put a closing-timeline worry
   in front of the representative that no longer exists.
-- **4935 committed checks** (`tests/firearms-transport.test.js`, 37 new — the first coverage of what may be
+- **4947 committed checks** (`tests/firearms-transport.test.js`, 49 new — the first coverage of what may be
   carried). **All twelve changes revert-verified individually, ZERO green** — the NFA arm fails **9**, the
   serial gate / authority gate / non-firearm early return 3 each, the column and the NFA notice 2 each, and
   the rest 1.
@@ -92,6 +92,34 @@ build out our process rather than lock it down needlessly."* App-only, no redepl
   person carries and the app has no concept of who is driving. Today that is a document rather than a gate,
   which is the honest state; if this becomes a service line rather than something Anthony does, the crew
   screening question (`§922(g)`, `Fla. Stat. §790.23`) needs a real answer first.
+- **⚠⚠ THE PROTOCOL IS LINKED FROM THE APP, AND `activeHouseFlags` WAS SILENTLY EATING THE LINK.**
+  Anthony: *"will you link to the firearm html in the app?"* It is `firearms-protocol.html` in the repo root
+  beside `manual.html` and `concierge-guide.html`, served from the same Pages site — **a relative path, not
+  the Drive copy and not the artifact**, because it is opened on a phone standing in somebody's house at the
+  moment a firearm turns up and neither of those resolves without a sign-in and a good signal.
+  - **⚠ `FIREARMS_PROTOCOL_DOC` IS DECLARED ABOVE `HOUSE_FLAGS`, DELIBERATELY.** That catalogue is a
+    top-level `var` evaluated at load, so a constant declared below it hoists as `undefined` and the entry
+    carries nothing — no error, no symptom, the `_rushRate` shape exactly. Reverting the order **throws 7**.
+  - **⚠ THE DOCUMENT RIDES ON THE CATALOGUE ENTRY (`doc` / `docLabel`), not on the renderer**, so no render
+    site learns the word *firearms* and any later flag can carry a protocol the same way. A test `lacks()`
+    `'firearms'` in `standingFlagsBlock`.
+  - **⚠⚠ AND THE FIRST SWEEP CAME BACK GREEN ON DELETING `doc:` FROM THE ENTRY — which is how the real
+    defect surfaced.** Every assertion drove a PIECE (the constant, the line builder, the renderer's
+    indifference to the key) and **nothing drove the chain**, so the link could be absent from the brief with
+    the suite passing. Writing the driven test then found that **`activeHouseFlags` rebuilds a NARROWED object
+    and was dropping `doc` on the floor between the catalogue and the brief** — the link had never rendered at
+    all, and every source assertion passed because each link looked right on its own. The narrowing now carries
+    it and says in a comment that anything added to `HOUSE_FLAGS` must be named there. Same gap this file
+    records five times; the fifth is the one that caught a live bug rather than a weak test.
+  - **⚠ `target="_blank"`** so a tap never navigates off the Job Plan the crew is working from.
+- **⚠ THREE COPIES EXIST AND THE RULE IS WRITTEN DOWN BEFORE THEY DRIFT.** `firearms-protocol.html` in the
+  repo is **the live procedure** — it is what the app links to and what the crew opens. The Google Doc in
+  `03_Operations / SOPs & Playbooks` is **counsel's review copy**, a point-in-time draft to be redlined; when
+  counsel signs off the repo page is updated and the Doc is marked superseded. The artifact was the drafting
+  preview and is not authoritative. **⚠ No `.md` twin was generated**, deliberately: the manual and playbook
+  already have hand-maintained markdown copies this file records as a standing cost, and a third is not worth
+  it until a converter exists in the repo.
+- **4947 committed checks; SEVENTEEN changes revert-verified, zero green.**
 - **Both documents need a pass** — the manual's §10a describes the firearms track and the playbook's Step 10f
   is the field procedure, and **both still say the dealer collects everything**. Flagged rather than
   half-done.

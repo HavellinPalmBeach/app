@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estate Firearms Protocol — Havellin Palm Beach</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --paper:#faf8f4;
+  --surface:#f3efe6;
+  --ink:#2a241d;
+  --ink-soft:#5c5347;
+  --grey:#8a8078;
+  --bronze:#7a5a2e;
+  --bronze-bright:#a67c45;
+  --red:#8f2323;
+  --red-ground:#f7eaea;
+  --green:#4f6b2a;
+  --rule:#e3ddd1;
+  --rule-strong:#cec5b4;
+
+  --ff-display:'Spectral', Georgia, 'Times New Roman', serif;
+  --ff-body:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --ff-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#17140f;
+    --surface:#211c16;
+    --ink:#ece5d9;
+    --ink-soft:#b5aa99;
+    --grey:#8d8375;
+    --bronze:#c9a36a;
+    --bronze-bright:#dbb987;
+    --red:#e89393;
+    --red-ground:#33191a;
+    --green:#a6c478;
+    --rule:#332c23;
+    --rule-strong:#4a4034;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#17140f;
+  --surface:#211c16;
+  --ink:#ece5d9;
+  --ink-soft:#b5aa99;
+  --grey:#8d8375;
+  --bronze:#c9a36a;
+  --bronze-bright:#dbb987;
+  --red:#e89393;
+  --red-ground:#33191a;
+  --green:#a6c478;
+  --rule:#332c23;
+  --rule-strong:#4a4034;
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--ff-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:760px;
+  margin:0 auto;
+  padding-inline:22px;
+  padding-block:56px 96px;
+}
+
+/* ---- masthead ---- */
+.mast{border-bottom:2px solid var(--bronze);padding-bottom:26px;}
+.eyebrow{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:600;color:var(--bronze);margin:0 0 14px;
+}
+h1{
+  font-family:var(--ff-display);
+  font-size:clamp(34px,6.5vw,50px);
+  line-height:1.06;font-weight:700;margin:0;
+  text-wrap:balance;letter-spacing:-.015em;
+}
+.standfirst{
+  font-family:var(--ff-display);
+  font-size:18px;font-style:italic;line-height:1.55;
+  color:var(--ink-soft);margin:16px 0 0;max-width:60ch;
+}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px 26px;
+  margin-top:22px;font-size:12px;color:var(--grey);
+}
+.meta b{color:var(--ink-soft);font-weight:600;}
+
+/* ---- shared blocks ---- */
+section{margin-top:52px;}
+h2{
+  font-family:var(--ff-display);
+  font-size:26px;font-weight:600;line-height:1.2;
+  margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em;
+}
+h3{
+  font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:700;color:var(--bronze);margin:30px 0 10px;
+}
+p{margin:0 0 14px;max-width:66ch;}
+.lede{color:var(--ink-soft);margin-bottom:26px;max-width:64ch;}
+code{
+  font-family:var(--ff-mono);font-size:.87em;
+  background:var(--surface);padding:1px 5px;border-radius:3px;
+  color:var(--bronze);white-space:nowrap;
+}
+strong{font-weight:700;}
+a{color:var(--bronze);}
+
+/* ---- the two hard lines ---- */
+.hardlines{
+  margin-top:44px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);
+}
+.hardline{background:var(--red-ground);padding:20px 22px;}
+.hardline .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--red);font-weight:500;
+  display:block;margin-bottom:8px;
+}
+.hardline h4{
+  font-family:var(--ff-display);font-size:19px;font-weight:600;
+  margin:0 0 8px;color:var(--red);line-height:1.25;
+}
+.hardline p{font-size:13.5px;margin:0;color:var(--ink-soft);line-height:1.55;}
+
+/* ---- staged sequence ---- */
+.stages{margin-top:10px;}
+.stage{
+  position:relative;
+  padding-left:52px;
+  padding-bottom:34px;
+  border-left:2px solid var(--rule-strong);
+  margin-left:14px;
+}
+.stage:last-child{border-left-color:transparent;padding-bottom:4px;}
+.stage::before{
+  content:attr(data-n);
+  position:absolute;left:-15px;top:0;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--bronze);color:var(--paper);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+.stage-h{
+  font-family:var(--ff-display);font-size:21px;font-weight:600;
+  margin:0 0 3px;line-height:1.25;
+}
+.stage-when{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--grey);font-weight:600;margin:0 0 14px;
+}
+.stage ul{margin:0;padding-left:0;list-style:none;}
+.stage li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:62ch;
+}
+.stage li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+.stage li.crit::before{background:var(--red);}
+.stage li.crit{color:var(--ink);}
+
+/* ---- NFA recognition ---- */
+.nfa{
+  margin-top:52px;
+  border:1px solid var(--red);
+  background:var(--red-ground);
+}
+.nfa-head{padding:22px 24px 0;}
+.nfa-head h2{color:var(--red);}
+.nfa-head p{font-size:14.5px;color:var(--ink-soft);}
+.nfa-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:1px;background:var(--red);margin:18px 0 0;border-top:1px solid var(--red);
+}
+.nfa-item{background:var(--paper);padding:15px 18px;}
+.nfa-item dt{
+  font-weight:700;font-size:14px;margin-bottom:4px;
+}
+.nfa-item dd{
+  margin:0;font-size:13px;line-height:1.5;color:var(--ink-soft);
+}
+.nfa-tell{
+  padding:18px 24px;border-top:1px solid var(--red);
+  font-size:14.5px;line-height:1.6;
+}
+.nfa-tell b{color:var(--red);}
+
+/* ---- never list ---- */
+.never{margin-top:52px;border-top:2px solid var(--red);padding-top:22px;}
+.never h2{color:var(--red);}
+.never ol{margin:18px 0 0;padding-left:0;list-style:none;counter-reset:n;}
+.never li{
+  counter-increment:n;position:relative;padding-left:36px;
+  margin-bottom:13px;font-size:15px;line-height:1.55;max-width:64ch;
+}
+.never li::before{
+  content:counter(n,decimal-leading-zero);
+  position:absolute;left:0;top:1px;
+  font-family:var(--ff-mono);font-size:11px;font-weight:500;
+  color:var(--red);letter-spacing:.04em;
+}
+
+/* ---- kit table ---- */
+.kit{width:100%;border-collapse:collapse;margin-top:8px;font-size:14.5px;}
+.kit th{
+  text-align:left;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--grey);font-weight:700;padding:0 12px 8px 0;
+  border-bottom:1px solid var(--rule-strong);
+}
+.kit th:last-child,.kit td:last-child{text-align:right;padding-right:0;
+  font-variant-numeric:tabular-nums;white-space:nowrap;}
+.kit td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;}
+.kit td:first-child{font-weight:600;width:34%;}
+.kit .why{color:var(--ink-soft);font-size:13.5px;}
+.kit tfoot td{border-bottom:none;font-weight:700;padding-top:14px;}
+@media screen{ .tbl-scroll{overflow-x:auto;} }
+
+/* ---- claim language ---- */
+.claim{
+  background:var(--surface);
+  border-left:3px solid var(--bronze);
+  padding:22px 24px;margin:18px 0 0;
+}
+.claim p{
+  font-family:var(--ff-display);font-size:16.5px;line-height:1.65;
+  margin:0 0 12px;max-width:62ch;
+}
+.claim p:last-child{margin-bottom:0;}
+.claim em{color:var(--bronze);font-style:normal;font-weight:600;}
+
+.avoid{margin-top:26px;}
+.avoid li{margin-bottom:10px;font-size:14.5px;line-height:1.55;max-width:64ch;}
+
+/* ---- counsel questions ---- */
+.q{
+  border-top:1px solid var(--rule-strong);padding-top:16px;margin-top:22px;
+}
+.q:first-of-type{border-top:none;}
+.q h4{
+  font-family:var(--ff-display);font-size:17px;font-weight:600;
+  margin:0 0 7px;line-height:1.3;
+}
+.q p{font-size:14px;color:var(--ink-soft);margin:0;max-width:64ch;}
+.cite{font-family:var(--ff-mono);font-size:12px;color:var(--bronze);
+  display:block;margin-top:8px;letter-spacing:-.01em;}
+
+/* ---- footer ---- */
+footer{
+  margin-top:64px;padding-top:22px;border-top:1px solid var(--rule-strong);
+  font-size:12.5px;color:var(--grey);line-height:1.65;
+}
+footer p{max-width:66ch;}
+
+@media screen and (max-width:520px){
+  .wrap{padding-block:38px 64px;}
+  .stage{padding-left:36px;margin-left:10px;}
+  .stage::before{left:-14px;width:26px;height:26px;font-size:11px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+}
+
+@media print{
+  @page{margin:.6in .6in;}
+  :root{--paper:#fff;--surface:#f4f1ec;--ink:#1a1a1a;--ink-soft:#333;--grey:#555;
+        --rule:#ccc;--rule-strong:#999;--red-ground:#f6eded;}
+  body{background:#fff;}
+  .wrap{max-width:100%;padding-block:0;padding-inline:0;}
+  h1{font-size:28px;}
+  h2,h3,.stage-h,.hardline h4,.q h4{page-break-after:avoid;break-after:avoid;}
+  /* Keep a stage, a prohibition and a reference block whole; never a long list. */
+  .hardline,.nfa-item,.q,.kit tr{page-break-inside:avoid;break-inside:avoid;}
+  .stage{page-break-inside:avoid;break-inside:avoid;}
+  p,li{orphans:3;widows:3;}
+  .kit{font-size:11px;}
+  footer{page-break-before:avoid;break-before:avoid;}
+}
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Havellin Palm Beach &middot; Operating Procedure</p>
+    <h1>Estate Firearms Protocol</h1>
+    <p class="standfirst">How a decedent&rsquo;s firearms are documented, authorized, and moved to a licensed
+      dealer &mdash; and the three things that never happen, on any job, for any reason.</p>
+    <div class="meta">
+      <span><b>Scope</b> Non-NFA firearms only</span>
+      <span><b>Transport by</b> A. Graziano, sole authorized principal</span>
+      <span><b>Status</b> Draft for counsel review</span>
+      <span><b>Issued</b> 13 Sep 2026</span>
+    </div>
+  </header>
+
+  <div class="hardlines">
+    <div class="hardline">
+      <span class="tag">Hard line 01</span>
+      <h4>NFA items are never in our hands</h4>
+      <p>A suppressor, short-barrelled rifle or shotgun, machine gun or AOW transfers directly from
+        the estate to the dealer on ATF paperwork. Havellin does not take custody for one minute or
+        one mile. There is no override and no exception for convenience.</p>
+    </div>
+    <div class="hardline">
+      <span class="tag">Hard line 02</span>
+      <h4>We never buy, and never take a cut</h4>
+      <p>Havellin does not purchase estate firearms and takes no percentage of firearm proceeds. Our
+        fee is our logged hours. That is what keeps us an agent of the estate rather than a dealer
+        under <code>18 U.S.C. &sect;&nbsp;922(a)(1)(A)</code>.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>The sequence</h2>
+    <p class="lede">Order is load-bearing. Nothing physically moves before stage&nbsp;3 exists in
+      writing, and stage&nbsp;3 cannot be drafted until stage&nbsp;2 has produced serial numbers.</p>
+
+    <div class="stages">
+
+      <div class="stage" data-n="1">
+        <p class="stage-h">Ask on the intake call</p>
+        <p class="stage-when">Before anyone is at the property</p>
+        <ul>
+          <li>Firearms is already the one red standing flag on the crew brief. Tick it and record
+            the detail &mdash; a ticked row with no note reads the same as never having asked.</li>
+          <li>Ask <strong>what kind</strong>, in plain words: handguns, long guns, or anything that
+            came with paperwork. Families rarely know the term <em>NFA</em>; they very often
+            remember a framed certificate or &ldquo;a stamp for the quiet one.&rdquo;</li>
+          <li>Ask where they are kept and whether there is a safe, and get the combination from the
+            representative rather than a family member.</li>
+          <li class="crit">Tell them plainly: <strong>do not move, unload or gather anything before
+            we arrive.</strong> A well-meant tidy-up is how a loaded gun ends up in a box of linens.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="2">
+        <p class="stage-h">Document in place</p>
+        <p class="stage-when">Day one, before anything is handled</p>
+        <ul>
+          <li>Photograph where it lies before touching it &mdash; whole object, both sides, and a
+            legible close-up of the <strong>serial number and every marking on the receiver</strong>.</li>
+          <li>Record it in the manifest as category <code>Firearms</code>. Serial number is the
+            identity here, not our item number: the dealer&rsquo;s receipt, an insurance claim and
+            any police report will all be written serial by serial.</li>
+          <li class="crit">Run the NFA check below on every single item. Not the ones that look
+            unusual &mdash; every one.</li>
+          <li>Verify unloaded: magazine out, action locked open, chamber checked by eye
+            <em>and</em> by finger. Leave the action open with a chamber flag where the design allows.</li>
+          <li class="crit">If you are not completely confident an item is clear &mdash; an unfamiliar
+            action, a jammed round, anything that does not feel right &mdash; <strong>stop and have
+            the dealer collect that item.</strong> A wasted call-out costs a hundred dollars.</li>
+          <li>Ammunition is inventoried separately and never travels in the same container as a gun.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="3">
+        <p class="stage-h">Get the authority in writing</p>
+        <p class="stage-when">Before anything leaves the property</p>
+        <ul>
+          <li class="crit">The representative signs a transport authorization naming <strong>each
+            firearm by make, model and serial</strong>, and naming the destination dealer. A blanket
+            &ldquo;dispose of the guns&rdquo; is not this document.</li>
+          <li>It must state that title remains with the estate, that Havellin takes no ownership
+            interest, that proceeds run to the estate, and that Havellin takes no share of them.</li>
+          <li>That paragraph is the whole basis of the arrangement. It is what makes the possession
+            lawful under <code>Fla.&nbsp;Stat.&nbsp;&sect;&nbsp;790.25(5)</code>, and what keeps a
+            courier from reading as a dealer.</li>
+          <li>Record it on each item: <em>Authorized By</em> and <em>Approval Date</em>. The app
+            already withholds any item missing either field.</li>
+          <li>Counter-sign and leave the representative a copy before you load the car.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="4">
+        <p class="stage-h">The drive</p>
+        <p class="stage-when">One trip, direct</p>
+        <ul>
+          <li>Locked hard case, in the trunk or cargo area. Ammunition in a separate locked
+            container, ideally not on the same trip.</li>
+          <li class="crit">Never on your person. <code>&sect;&nbsp;790.25(5)</code> is explicit that a
+            handgun carried under this subsection may not be carried on the person, and the safe
+            reading covers everything in the case.</li>
+          <li>Direct route, no errands. No showings, no lunch, no school pickup &mdash; school zones
+            carry their own rules and there is no reason to be near one.</li>
+          <li class="crit">Never leave the vehicle unattended with firearms in it. If that ever
+            becomes unavoidable, the case is cable-locked to an anchor point &mdash; but the real
+            rule is that it does not become unavoidable.</li>
+          <li>Intrastate only. Florida estate, Florida dealer. Do not cross a state line with estate
+            property in the car.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="5">
+        <p class="stage-h">Hand over at the counter</p>
+        <p class="stage-when">Before you leave the shop</p>
+        <ul>
+          <li class="crit">Itemized receipt, <strong>serial by serial</strong>, signed and dated by
+            the dealer, in your hand before you walk out. Twelve in the case and eleven on the
+            receipt is a problem you cannot unwind six months later.</li>
+          <li>Photograph the receipt at the counter. Do not wait for the car.</li>
+          <li>Record which items are an outright purchase (with the price) and which are on
+            consignment (with the terms and the expected timeline).</li>
+          <li>Confirm the dealer will remit to the estate, not to Havellin. Money never routes
+            through us.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="6">
+        <p class="stage-h">Close the record</p>
+        <p class="stage-when">Same day</p>
+        <ul>
+          <li>Custody log entry per item: action, the dealer as the party, the date, method
+            <em>Transported by A. Graziano</em>, and the receipt number. The log already merges
+            correctly across devices &mdash; use it rather than a note.</li>
+          <li>Upload the signed authorization and the dealer receipt to the estate&rsquo;s Drive
+            folder.</li>
+          <li>Update disposition and channel on each item so the ledger and the court inventory
+            reconcile.</li>
+          <li>Record proceeds against each item when they land, so the accounting shows what each
+            object realized rather than a lump sum.</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="nfa">
+    <div class="nfa-head">
+      <h2>The NFA check</h2>
+      <p>Run this on every firearm, every time. The risk was never mishandling one of these &mdash;
+        it is failing to recognize it as one at all, in which case every gate downstream stays shut
+        and the item rides in the trunk anyway.</p>
+    </div>
+    <dl class="nfa-grid">
+      <div class="nfa-item">
+        <dt>Suppressor</dt>
+        <dd>A metal tube, often threaded, sometimes already fitted to a barrel and sometimes loose
+          in a sock or a padded case. <strong>Any serial number on a bare tube is an NFA item.</strong></dd>
+      </div>
+      <div class="nfa-item">
+        <dt>Short-barrelled rifle</dt>
+        <dd>Rifle with a barrel under 16&Prime;, or under 26&Prime; overall. If it reads as a rifle
+          but looks stubby, measure it.</dd>
+      </div>
+      <div class="nfa-item">
+        <dt>Short-barrelled shotgun</dt>
+        <dd>Shotgun with a barrel under 18&Prime;, or under 26&Prime; overall. Common in older
+          collections and rarely papered correctly.</dd>
+      </div>
+      <div class="nfa-item">
+        <dt>Machine gun</dt>
+        <dd>A selector with any position beyond safe and semi-automatic. Also any loose part
+          described as a conversion device.</dd>
+      </div>
+      <div class="nfa-item">
+        <dt>Any Other Weapon</dt>
+        <dd>Pen guns, cane guns, smoothbore pistols, disguised firearms. Rare, but they turn up in
+          exactly the kind of Palm Beach collection we work in.</dd>
+      </div>
+      <div class="nfa-item">
+        <dt>A tax stamp</dt>
+        <dd>A sheet of paper with an ATF seal, often framed on the wall or folded in the safe beside
+          the item. If there is a stamp, there is an NFA item, and it is registered to someone.</dd>
+      </div>
+    </dl>
+    <p class="nfa-tell"><b>If in any doubt, treat it as NFA.</b> The cost of being wrong in that
+      direction is a phone call to the dealer. The cost of being wrong in the other direction is an
+      unapproved transfer of a registered item under <code>26&nbsp;U.S.C.&nbsp;&sect;&nbsp;5861</code>,
+      which carries up to ten years.</p>
+  </div>
+
+  <section class="never">
+    <h2>Never, on any job</h2>
+    <ol>
+      <li><strong>Never transport an NFA item.</strong> No representative&rsquo;s authority reaches
+        this, because it is not theirs to give &mdash; the registration is federal and the carve-out
+        for estates names the executor, not the executor&rsquo;s vendor.</li>
+      <li><strong>Never buy an estate firearm.</strong> Not once, not at fair value, not as a favour
+        to a family that wants it gone.</li>
+      <li><strong>Never take a percentage of firearm proceeds.</strong> Bill the hours. A commission
+        on a gun sale is the fact pattern that turns a concierge into an unlicensed dealer.</li>
+      <li><strong>Never let anyone else transport.</strong> Not Ashley, not a specialist, not a
+        1099 contractor. One named principal, or the dealer collects.</li>
+      <li><strong>Never hand a firearm to a family member or beneficiary</strong> &mdash; including
+        the named heir, including one standing there asking for it. The dealer performs the transfer.</li>
+      <li><strong>Never transport anything you cannot verify is unloaded.</strong></li>
+      <li><strong>Never cross a state line</strong> with estate firearms in the vehicle.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>The kit</h2>
+    <p class="lede">Buy it. The case is not belt-and-braces &mdash; <code>&sect;&nbsp;790.25(5)</code>
+      turns on the firearm being <em>securely encased</em>, and a locked hard case removes the
+      argument entirely at a traffic stop. It is also what makes an insurance claim work, and what a
+      representative watching you load the car expects to see.</p>
+    <div class="tbl-scroll">
+      <table class="kit">
+        <thead>
+          <tr><th>Item</th><th>Why it earns its place</th><th>Approx.</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Long hard case, lockable</td>
+            <td class="why">Foam-lined, 50&Prime; class. Two real padlocks rather than the moulded
+              latches. Pelican 1750 or equivalent.</td>
+            <td>$350</td>
+          </tr>
+          <tr>
+            <td>Handgun case, lockable</td>
+            <td class="why">Separate from the long case so a single-handgun job does not travel in a
+              half-empty rifle case.</td>
+            <td>$90</td>
+          </tr>
+          <tr>
+            <td>Steel cable lock</td>
+            <td class="why">Anchors the case to a trunk tie-down. For the trip you should never
+              have to make, not for routine use.</td>
+            <td>$30</td>
+          </tr>
+          <tr>
+            <td>Chamber flags, pack</td>
+            <td class="why">Makes &ldquo;verified unloaded&rdquo; visible to anyone who opens the
+              case, including the dealer. Cheapest credibility on the list.</td>
+            <td>$15</td>
+          </tr>
+          <tr>
+            <td>Lockable ammunition can</td>
+            <td class="why">Ammunition never shares a container with a firearm.</td>
+            <td>$45</td>
+          </tr>
+          <tr>
+            <td>Trip inventory card</td>
+            <td class="why">Printed manifest extract for that trip, serials listed, kept in the
+              case lid. What you read from at the counter.</td>
+            <td>&mdash;</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Full kit</td><td class="why"></td><td>&asymp;&nbsp;$530</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>What we say to clients</h2>
+    <p class="lede">Narrow and true. The independence line is the part worth leading with &mdash; it
+      is the same promise the appraisal rule already makes, and it is what a trust officer is
+      listening for.</p>
+
+    <h3>Estimate, agreement and site copy</h3>
+    <div class="claim">
+      <p>Firearms are documented in place and dispositioned through a licensed dealer. Where the
+        representative authorizes it in writing, Havellin transports non-NFA firearms directly to
+        that dealer for purchase or consignment.</p>
+      <p><em>Havellin never purchases estate firearms and takes no share of firearm proceeds</em> —
+        our fee is our time, so the estate&rsquo;s interest and ours are the same one.</p>
+      <p>NFA items — suppressors, short-barrelled rifles and shotguns, and machine guns — transfer
+        directly from the estate to the dealer on ATF paperwork. Havellin does not take custody of
+        them at any point.</p>
+    </div>
+
+    <h3>What we do not say</h3>
+    <ul class="avoid">
+      <li><strong>Do not market firearms handling as a service line.</strong> It is something we do
+        within an estate engagement, not something we sell. A headline service is a fact pattern.</li>
+      <li><strong>Do not use the word <em>licensed</em> anywhere near this.</strong> Havellin is
+        insured and bonded. The dealer is licensed. That distinction is already a standing rule
+        across every client document and it matters most here.</li>
+      <li><strong>Do not promise an NFA timeline.</strong> A Form&nbsp;5 to an heir currently clears
+        in days, but a Form&nbsp;4 to a dealer does not, and the representative will hold us to
+        whatever we said.</li>
+      <li><strong>Do not offer to value what we might move.</strong> If we are transporting to a
+        buying dealer, the valuation opinion comes from someone else.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>For counsel</h2>
+    <p class="lede">Three questions. The research behind each is done; what is wanted is a yes, a no,
+      or a redline on the authorization language.</p>
+
+    <div class="q">
+      <h4>Does the authorization carry the possession?</h4>
+      <p>Havellin holds as the representative&rsquo;s written agent, title never moving from the
+        estate, delivering to an FFL. Does &ldquo;in lawful possession&rdquo; reach an agent holding
+        under a personal representative&rsquo;s statutory authority?</p>
+      <span class="cite">Fla. Stat. § 790.25(5) &middot; Fla. Stat. § 733.607</span>
+    </div>
+
+    <div class="q">
+      <h4>Confirm the NFA line is where we have drawn it.</h4>
+      <p>Our reading is that the estate carve-out names the executor, administrator or personal
+        representative and does not extend to a vendor they engage, and that the temporary-conveyance
+        exception reaches only a qualified dealer for repair or evaluation with return to the same
+        possessor. Neither fits us.</p>
+      <span class="cite">27 CFR § 479.90a &middot; 27 CFR § 479.11 &middot; 26 U.S.C. § 5861</span>
+    </div>
+
+    <div class="q">
+      <h4>Does the fee structure keep us clear of dealing?</h4>
+      <p>Havellin never purchases and takes no share of proceeds; compensation is logged concierge
+        hours. Confirm that holds under the statutory test, and flag anything in the pending
+        rulemaking that would change it.</p>
+      <span class="cite">18 U.S.C. § 922(a)(1)(A) &middot; BSCA 2022 &middot; RIN 1140-AB01 (proposed May 2026)</span>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>This is an operating procedure, not legal advice.</strong> It was assembled from the
+      cited statutes and regulations so that counsel reviews a document rather than answers an open
+      question. Several primary sources could not be retrieved directly during drafting and were
+      read through secondary summaries; counsel should verify the operative text before this is
+      adopted.</p>
+    <p style="margin-top:12px;">Supersedes the standing rule that Havellin never transports firearms,
+      for non-NFA items only, on the representative&rsquo;s written authority, transported by the
+      sole authorized principal. Everything else stands unchanged.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>

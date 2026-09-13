@@ -53,7 +53,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'workingDaysInclusive', 'approvedEstimateFor',
     'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
     'standingFlagLines', 'standingFlagsBlock', 'stopJobsWatch', 'unscoredRoomNames'];
-  const VARS = ['ESIGN_PROVIDERS', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
+  const VARS = ['ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',
