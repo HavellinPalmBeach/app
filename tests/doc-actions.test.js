@@ -130,7 +130,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // another document had set: a gate beside the action cannot be bypassed by reaching
     // the action another way.
     const a = noComments(fn('docAction'));
-    has(a, 'var blk = spec.cfg.blocker(spec);', 'every action runs the document’s blocker');
+    has(a, 'var blk = spec.cfg.blocker(spec, verb);', 'every action runs the document’s blocker');
     has(a, 'if (blk) {', 'and refuses when it speaks');
     const iBlk = a.indexOf('spec.cfg.blocker');
     const iHtml = a.indexOf('spec.cfg.html');
@@ -151,7 +151,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // agreement read as unapproved and refuse to open. The call LOOKED right, which is
     // exactly why grepping for it proved nothing.
     const ab = noComments(src.slice(src.indexOf('agreement: {'), src.indexOf('invoice: {')));
-    has(ab, 'agreementReady(spec.job, null)', 'the agreement blocker lets agreementReady read the record itself');
+    // ⚠ RESTATED, NOT DELETED. The agreement blocker no longer calls `agreementReady` itself
+    // — it asks `docReadiness`, the ONE gate the band's document tray asks before it offers
+    // the button, so what is offered and what happens when it is pressed cannot drift. The
+    // record-not-snapshot rule this pinned still holds and is asserted where it now lives.
+    has(ab, "docReadiness('agreement'", 'the agreement blocker asks the one shared gate');
+    has(noComments(fn('docReadiness')), 'agreementReady(job, rec)',
+      'and that gate lets agreementReady read the store record, never the snapshot');
     lacks(ab, 'agreementReady(spec.job, spec.est)', 'never handing it a snapshot');
   }
 
@@ -228,18 +234,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Slice 4 made them ONE builder, so the assertion is the builder — driven, not read —
     // plus the fact that no row hand-rolls a second copy. That is the requirement:
     // sameness by construction rather than sameness by coincidence.
-    const ctx = sandbox({ fns: ['_jtDocViews', '_jtSendAction', 'docKeyFor'] });
+    const ctx = sandbox({ fns: ['_jtDocViews', '_jtSendAction', 'docKeyFor', 'docWord'], vars: ['DOC_KIND_WORD'] });
     [['estimate', ''], ['agreement', ''],
      ['invoice', 'deposit'], ['invoice', 'midpoint'], ['invoice', 'final']].forEach(([kind, stage]) => {
-      const v = ctx._jtDocViews(7, kind, stage, stage ? (stage + ' invoice') : kind);
+      // ⚠ THE FOURTH ARGUMENT IS `viewOnly` NOW, NOT THE DOCUMENT'S WORD. The word was
+      // hand-passed at five call sites — five copies of one noun — and is read from
+      // `docWord` internally. The slot carries the one thing only the CALLER knows: whether
+      // this document may reach paper. Passing nothing is the ordinary, printable case.
+      const v = ctx._jtDocViews(7, kind, stage);
       const at = stage ? `${kind}/${stage}` : kind;
       eq(v.length, 2, `${at}: two views and no more`);
       ok(/^View\b/.test(v[0].label.replace(/^&#\d+; /, '')), `${at}: View comes first`);
       ok(/^Print\b/.test(v[1].label.replace(/^&#\d+; /, '')), `${at}: Print second, as on every other row`);
+      // ⚠ AND THE ONE CASE THAT WITHHOLDS IT. An unapproved estimate may be READ on our own
+      // screen and must not reach paper — withheld, never offered-and-refused, because a
+      // button that alerts a blocker back at you is worse than none.
+      eq(ctx._jtDocViews(7, kind, stage, true).length, 1, `${at}: view only, when the document is a draft`);
       // ⚠ AND EACH NAMES ITS DOCUMENT. The same objects feed the deduped quick strip at
       // the foot of the rail, which carries no row context — bare "View"/"Print" rendered
       // there as four identical pairs with nothing saying which document each opened.
-      [0, 1].forEach((k) => has(v[k].label, stage ? (stage + ' invoice') : kind,
+      // ⚠ THE WORD COMES FROM `docWord` NOW, not from the caller — so the agreement reads
+      // 'packet', which is what it is. The requirement is unchanged: the label names its
+      // document, because these same objects feed the strip at the foot of the rail, which
+      // carries no row context.
+      const word = stage ? (stage + ' invoice') : ({ estimate: 'estimate', agreement: 'packet' }[kind]);
+      [0, 1].forEach((k) => has(v[k].label, word,
         `${at}: the ${k ? 'Print' : 'View'} label says which document it opens`));
       has(v[0].call, `docAction(7,'${kind}','view'`, `${at}: View routes through the one action`);
       has(v[1].call, `docAction(7,'${kind}','print'`, `${at}: and so does Print`);
@@ -252,8 +271,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // No row may build its own. Both counts are 5 — five rows, five calls — and a sixth
     // document added by hand instead of through the builder fails here.
+    // ⚠⚠ IT IS ONE CALL SITE NOW, NOT FIVE, AND THAT IS A TIGHTENING. Five rows each calling
+    // the builder meant five places to forget a gate — and five is exactly what happened:
+    // only `estimate_sent` carried a readiness condition, so the packet and all three
+    // invoices were offered on a job with no approved estimate, two of them rendering a
+    // printable bill priced off the draft. `_jtDocSecondaries` is the one assembler, behind
+    // the one gate, fed by the one row→document map.
     const acts = noComments(fn('jobTimelineActions'));
-    eq((acts.match(/_jtDocViews\(/g) || []).length, 5, 'five rows, each calling the one builder');
+    eq((acts.match(/_jtDocViews\(/g) || []).length, 0, 'no row builds its own view pair');
+    eq((noComments(fn('_jtDocSecondaries')).match(/_jtDocViews\(/g) || []).length, 1,
+       'one assembler calls the one builder');
+    has(noComments(fn('_jtDocSecondaries')), 'docReadiness(', 'behind the one readiness gate');
     eq((acts.match(/'view'/g) || []).length, 0, 'and not one of them writes its own view call');
     eq((acts.match(/'print'/g) || []).length, 0, 'nor its own print call');
 
@@ -290,13 +318,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // read before you can ask for the money was reached from the step that records the
     // money arriving. The invoice rows exist now, so each half is where it belongs.
     const acts = noComments(fn('jobTimelineActions'));
+    const ctx2 = sandbox({ fns: ['jobStageDoc'], vars: ['JT_ROW_DOC'] });
     ['deposit', 'midpoint', 'final'].forEach((stage) => {
       const at = acts.indexOf(`case '${stage}_invoiced':`);
       ok(at > -1, `${stage}_invoiced has its own case`);
       const nextCase = acts.indexOf('case ', at + 6);
       const block = acts.slice(at, nextCase > -1 ? nextCase : undefined);
       has(block, `_jtSendAction(id, job, 'invoice', '${stage}'`, `${stage}: the send lives on the invoice row`);
-      has(block, `_jtDocViews(id, 'invoice', '${stage}', '${stage} invoice')`, `${stage}: and so do View and Print, labelled with the document they open`);
+      // ⚠ RESTATED, NOT DELETED. This pinned the CALL SHAPE inside the row's own block, and
+      // the row no longer builds its own view pair — one assembler does, from the one
+      // row→document map, behind the one gate. The requirement is that this stage's document
+      // is that map's answer for both of its rows, which is what is asserted now.
+      eq(ctx2.jobStageDoc(stage + '_invoiced'), { kind: 'invoice', stage: stage },
+         `${stage}: the invoiced row maps to its own stage's invoice`);
+      eq(ctx2.jobStageDoc(stage === 'final' ? 'final_paid' : stage + '_received'),
+         { kind: 'invoice', stage: stage },
+         `${stage}: and so does the row that records the payment for it`);
       lacks(block, 'dashRecordPayment', `${stage}: the payment recorder does not`);
     });
     ['deposit_received', 'midpoint_received', 'final_paid'].forEach((key) => {

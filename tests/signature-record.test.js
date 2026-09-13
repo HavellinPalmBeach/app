@@ -101,8 +101,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Driven: flip the provider and watch the primary disappear.
     const rail = sandbox({
       fns: ['jobTimelineActions', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+        'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'agreementReady', 'isJobWon',
             'docKeyFor', 'esignWatches', 'esignProviderKey'],
-      vars: ['ESIGN_PROVIDERS'], stubs: { ESIGN_PROVIDER_KEY: 'manual' },
+      vars: ['ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
+      stubs: { ESIGN_PROVIDER_KEY: 'manual' },
     });
     const row = { key: 'agreement_signed', state: 'current' };
     const j = { id: 7, agrSent: true };

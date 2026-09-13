@@ -37,13 +37,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: ['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'estimateSubmitBlocker',
+      // The document tray: `jobTimelineActions` builds the step's document from the ONE
+      // row→document map, behind the ONE readiness gate, rather than five ungated concats.
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'agreementReady', 'isJobWon',
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docDraftedAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'],
-    vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
+    vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+      'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
     stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
   });
 
@@ -349,21 +353,35 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // identical button twice. `dashboard-utility-bar.test.js` holds the positive half.
     eq(intake.secondary, [], 'Edit client is NOT on the intake row — it lives in the utility bar');
     const built = railDone.rows.filter((r) => r.key === 'estimate_built')[0];
-    ok(ctx.jobTimelineActions(built, railDone.job, railDone.rec).secondary.length === 1,
+    // ⚠ THIS PINNED THE OLD LOCATION TOO. Edit estimate is an action ON THE ESTIMATE, so it
+    // moved into the band's document tray beside the View/Print of the document it edits — it
+    // used to render at the FOOT of the page in the quick strip. The requirement is unchanged
+    // and is what is asserted: offered while the client has not signed, withdrawn the moment
+    // they do, and reachable exactly once.
+    const builtActs = ctx.jobTimelineActions(built, railDone.job, railDone.rec);
+    eq(builtActs.secondary, [], 'the estimate row itself carries no loose secondary');
+    ok(!!builtActs.doc, 'it carries the estimate as the step\u2019s document');
+    ok(builtActs.doc.acts.some((a) => /dashEditEstimate/.test(a.call)),
       'Edit estimate is offered while the client has not signed');
     // ⚠ updateApprovalUI hides Edit Estimate on agrSigned because the signature IS the
     // lock. A second door into the same edit that ignored that would be a way around it.
     const signedRail = railFor({ approved: true, estimateSentDate: 'x', won: true, agrApproved: true,
       agrSent: true, agrSigned: true }, { estimate: EST(), approved: true });
     const builtSigned = signedRail.rows.filter((r) => r.key === 'estimate_built')[0];
-    eq(ctx.jobTimelineActions(builtSigned, signedRail.job, signedRail.rec).secondary, [],
+    const bsActs = ctx.jobTimelineActions(builtSigned, signedRail.job, signedRail.rec);
+    eq(bsActs.secondary, [], 'no loose secondary on a signed job either');
+    ok(!(bsActs.doc || { acts: [] }).acts.some((a) => /dashEditEstimate/.test(a.call)),
       'and withdrawn the moment the client signs');
     const sentSigned = signedRail.rows.filter((r) => r.key === 'estimate_sent')[0];
     // ⚠ Offer discount is withdrawn on a signed job — a signed price is not re-negotiated
     // from here. View and Print are NOT withdrawn: reading a document you have already
     // sent is always safe, and it is the point of Slice 3 that every document stays
     // readable from the client it belongs to.
-    const sentSignedActs = ctx.jobTimelineActions(sentSigned, signedRail.job, signedRail.rec).secondary;
+    const sentSignedAll = ctx.jobTimelineActions(sentSigned, signedRail.job, signedRail.rec);
+    // ⚠ View and Print live on the step's DOCUMENT now, not in `secondary` — the five ungated
+    // concat lines that used to put them there are gone. `Offer discount` is a step action and
+    // stays where it was, which is exactly why the two are asserted on different lists.
+    const sentSignedActs = sentSignedAll.secondary.concat(sentSignedAll.doc ? sentSignedAll.doc.acts : []);
     ok(!sentSignedActs.some((a) => /Offer discount/.test(a.label)), 'Offer discount is withdrawn once signed');
     ok(sentSignedActs.some((a) => a.call.indexOf("'estimate','view'") >= 0), 'but the estimate stays readable');
     ok(sentSignedActs.some((a) => a.call.indexOf("'estimate','print'") >= 0), 'and printable');
@@ -416,7 +434,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the real one. The rail stays a status read.
     const rc = body('renderClientDashboard(jobId)');
     has(rc, 'jt-btn jt-btn-p', 'the band draws the primary');
-    eq((rc.match(/jt-btn-p/g) || []).length, 1, 'exactly one primary button site');
+    // ⚠ TWO OCCURRENCES NOW, AND BOTH ARE THE SAME SITE: the emitted literal plus the comment
+    // above it that says why there is only one. The requirement is ONE EMITTING SITE, so the
+    // count is taken over the comment-stripped body — the trap this file records five times,
+    // where a needle trips on the text explaining the fix.
+    eq((noComments(rc).match(/jt-btn-p/g) || []).length, 1, 'exactly one primary button site');
 
     // ⚠ The out-of-sequence actions used to hang off their own row, which the horizontal
     // track has no room for and which scattered them down the vertical rail. They are

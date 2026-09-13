@@ -133,7 +133,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(blk, 'if (d.requiresApproval', 'and the approval verdict too');
     lacks(blk, 'if (invBlocked)', 'never off the global the last render left behind');
     lacks(blk, 'if (invRequiresApproval', 'nor that one');
-    has(noComments(fn('docAction')), 'var blk = spec.cfg.blocker(spec);', 'and docAction runs it');
+    has(noComments(fn('docAction')), 'var blk = spec.cfg.blocker(spec, verb);', 'and docAction runs it');
     ok(noComments(fn('docAction')).indexOf('spec.cfg.blocker(spec)') <
        noComments(fn('docAction')).indexOf("verb === 'print'"),
        'before any verb acts — so print, view, send and file all read one gate');

@@ -230,6 +230,22 @@ input:checked+.slider:before{transform:translateX(18px);}
    to do next", and hanging unrelated controls in it costs it exactly that meaning. */
 .d-sec-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .d-sec-bar .d-util{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
+/* Identity and chips on ONE line: the client's name on the left, the status chips filling the
+   space to its right. Both children declare their own wrapping, so the phone block's
+   `.card div{flex-wrap:wrap}` (specificity 0,1,1) changes nothing under 820px and the two
+   widths agree — the same trick .d-sec-bar, .jt-acts and .jt-quick already use, and the reason
+   this needs no phone-block entry at all. A single-class rule wanting nowrap here would LOSE
+   to that selector silently: correct on a desk, broken at 390px.
+   ⚠ .dash-avatar uses flex:0 0 38px and NOT an inline flex-shrink:0 — the phone block matches
+   that attribute substring and `.card div{min-width:0}` strips the automatic minimum, so an
+   inline one collapses the circle on the iPad this screen is read on. */
+.dash-id{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;min-width:0;}
+.dash-id-who{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 260px;}
+.dash-avatar{flex:0 0 38px;height:38px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bronze);}
+.dash-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:flex-end;min-width:0;}
+/* A hard date the reader must not miss. A class rather than an inline span so the probate
+   card's court-deadline cell can share it. */
+.dfv-alert{color:#A32D2D;font-weight:600;}
 .fin-r{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px;}
 .fin-r:last-child{border-bottom:none;}
 .fin-l{color:var(--gray);}
@@ -255,6 +271,22 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-next-done .jt-next-lbl,.jt-next-done .jt-next-step{color:var(--ok-tx);}
 .jt-next-blk{background:var(--err-bg);border-color:var(--err-tx);}
 .jt-next-blk .jt-next-lbl,.jt-next-blk .jt-next-step,.jt-next-blk .jt-next-sub{color:var(--err-tx);}
+/* THE DOCUMENT IN PLAY AT THE LIT STEP. A title and its own buttons under a rule, inside the
+   band, so "the document you just created" is at the top of the timeline rather than in a strip
+   at the foot of the page. Buttons reuse .jt-btn — there is no second button vocabulary, and
+   exactly one FILLED button lives in the band (the step primary) or the reader has to choose
+   between two primaries and the band loses the meaning it exists for.
+   ⚠ The four .jt-next-blk / .jt-next-done overrides are required, not polish: those two
+   modifiers repaint the band's ground and the lines above recolour only their three named
+   children, so without them a bronze heading and a bronze rule sit invisibly on an error or
+   success ground. */
+.jt-doc{margin-top:10px;padding-top:9px;border-top:0.5px solid var(--bronze-lt);}
+.jt-doc-hd{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);margin-bottom:6px;}
+.jt-doc-acts{display:flex;flex-wrap:wrap;gap:7px;}
+.jt-next-blk .jt-doc{border-top-color:var(--err-tx);}
+.jt-next-blk .jt-doc-hd{color:var(--err-tx);}
+.jt-next-done .jt-doc{border-top-color:var(--ok-tx);}
+.jt-next-done .jt-doc-hd{color:var(--ok-tx);}
 .jt-grp{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);margin:12px 0 4px;padding-left:6px;}
 .jt-grp:first-of-type{margin-top:0;}
 /* The 2px left edge IS the rail. Colour carries the state, so a row needs no
@@ -297,14 +329,40 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
 .jt-btn{font-size:12px;font-weight:600;padding:6px 13px;border-radius:4px;border:1px solid var(--bronze);background:var(--white);color:var(--bronze);cursor:pointer;font-family:inherit;}
 .jt-btn:hover{background:#fdfaf4;}
-.jt-btn-p{background:var(--gray-dk);border-color:var(--gray-dk);color:var(--white);}
-.jt-btn-p:hover{background:#000;}
+/* ⚠ --bronze-dk, NOT --bronze. White on #A67C45 is about 3.1:1 at 12px; on #7a5a2e it is
+   about 6.4:1, and against the band's --tan it still reads unambiguously brown. The renderer
+   emits no second jt-btn-p literal, so the band still has exactly one primary-button site. */
+.jt-btn-p{background:var(--bronze-dk);border-color:var(--bronze-dk);color:var(--white);}
+.jt-btn-p:hover{background:#5f4623;}
 .jt-btn-d{border-color:var(--err-tx);color:var(--err-tx);}
 .jt-btn-d:hover{background:var(--err-bg);}
 .jt-next-blk .jt-btn-p{background:var(--err-tx);border-color:var(--err-tx);}
 .jt-ghost{font-size:11px;padding:0;border:0;background:none;color:var(--bronze);cursor:pointer;font-family:inherit;text-decoration:underline;}
 /* One strip for the out-of-sequence actions, serving both layouts. */
 .jt-quick{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);}
+/* A PLANNED date on a rail row. ⚠ Its own element and its own class, never the meta join —
+   every `at` on this rail is something that HAPPENED, and a projection sharing that slot is
+   indistinguishable from a record. The renderer always prints the word "Planned" in front of it
+   and suppresses it the instant the row is done.
+   flex-basis:100% is a line break only because .jt-row declares flex-wrap:wrap; without wrap it
+   is a third flex item demanding the whole row, which is how .jt-sub once squeezed a label into
+   two lines at 1400px while looking correct at 390px. */
+.jt-plan{flex-basis:100%;font-size:11px;color:var(--gray);font-style:italic;}
+.jt-plan.jt-plan-late{color:var(--err-tx);font-style:normal;font-weight:600;}
+.jt-step .jt-splan{font-size:10px;color:var(--err-tx);font-weight:600;margin-top:2px;}
+/* THE SCHEDULE STRIP — proposed length, the calendar halfway, the target end. One line inside
+   the rail's reading column, replacing a two-field grid that said less.
+   ⚠ State classes are scoped UNDER .jt-sched. A bare .jt-s-err would also reach a horizontal
+   track step: the rail and the track share the whole .jt- vocabulary, which is why a bare state
+   rule painted a stray cream box behind the live step once already. */
+.jt-sched{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid var(--border);min-width:0;}
+.jt-sched-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);}
+.jt-sched-i{font-size:11.5px;color:var(--gray);min-width:0;}
+.jt-sched-v{font-size:12.5px;font-weight:600;color:var(--gray-dk);}
+.jt-sched-lead .jt-sched-v{font-size:15px;color:var(--bronze);}
+.jt-sched-note{flex-basis:100%;font-size:11.5px;color:var(--gray);margin-top:2px;}
+.jt-sched .jt-s-warn{color:var(--warn-tx);font-weight:600;}
+.jt-sched .jt-s-err{color:var(--err-tx);font-weight:600;}
 /* ─── THE DOCUMENT VIEWER ────────────────────────────────────────────────────
    Reads the estimate, the signing packet or any invoice without leaving the client.
    A near-full-screen sheet rather than a narrow modal: these are letter-width
@@ -943,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.11 · 9:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 12:23pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4612,23 +4670,44 @@ function propValMultiplier(propVal) {
   return 1.85;  // $75M+ — ultra estate tier
 }
 
-// ─── WORKING-DAYS HELPER ─────────────────────────────────────────────────────
-// Counts weekdays (Mon–Fri) inclusive between two dates. Start is clamped to
-// today if it is in the past. Returns 0 if dates are missing or target < start.
-function workingDaysBetween(startDateStr, targetDateStr) {
-  if (!startDateStr || !targetDateStr) return 0;
-  var today = new Date(); today.setHours(0,0,0,0);
+// ─── TODAY, IN LOCAL CALENDAR TERMS ──────────────────────────────────────────
+// ⚠ LOCAL CALENDAR, NOT toISOString(). `new Date().toISOString().slice(0,10)` is UTC, so in
+// Eastern it rolls over at 8pm and stamps TOMORROW'S date on tonight's work — a job closed
+// at 8:30pm was recorded as delivered the next day. This is the one wall-clock read the
+// schedule makes; everything downstream takes today as an ARGUMENT, which is also the seam
+// that makes every pace assertion falsifiable in a test instead of a time bomb that passes
+// today and fails on a future Tuesday.
+function _todayStr() {
+  var d = new Date();
+  var m = d.getMonth() + 1, day = d.getDate();
+  return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+
+// ─── WORKING-DAYS HELPERS ────────────────────────────────────────────────────
+// The pure count: weekdays (Mon–Fri) INCLUSIVE between two yyyy-mm-dd dates. No clamp, no
+// clock. 0 when either is missing, unparseable, or end < start.
+function workingDaysInclusive(startDateStr, endDateStr) {
+  if (!startDateStr || !endDateStr) return 0;
   var start = new Date(startDateStr + 'T12:00:00');
-  if (start < today) start = today;
-  var target = new Date(targetDateStr + 'T12:00:00');
-  if (target < start) return 0;
+  var end   = new Date(endDateStr + 'T12:00:00');
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
   var n = 0, d = new Date(start);
-  while (d <= target) {
+  while (d <= end) {
     var dow = d.getDay();
     if (dow !== 0 && dow !== 6) n++;
     d.setDate(d.getDate() + 1);
   }
   return n;
+}
+
+// ⚠ THIS ONE CLAMPS ITS START TO TODAY, so it answers "how far is this deadline from NOW"
+// and nothing else. It returns a confident, silent 0 for any window that has already closed
+// — workingDaysBetween('2020-01-01','2020-02-01') is 0 — so no elapsed or past-to-now
+// measurement may use it. Those ask `workingDaysInclusive`.
+function workingDaysBetween(startDateStr, targetDateStr) {
+  if (!startDateStr || !targetDateStr) return 0;
+  var today = _todayStr();
+  return workingDaysInclusive(startDateStr < today ? today : startDateStr, targetDateStr);
 }
 
 // ─── ADD WORKING DAYS ─────────────────────────────────────────────────────────
@@ -4643,6 +4722,24 @@ function addWorkingDays(startDateStr, days) {
     if (d.getDay() !== 0 && d.getDay() !== 6) remaining--;
   }
   return d.toISOString().slice(0, 10);
+}
+
+// ─── THE PROPOSED LENGTH OF A JOB ────────────────────────────────────────────
+// ⚠ ONE DEFINITION, AND THERE WERE TWO THAT DISAGREED. The client estimate took
+// max(TC leg, PS leg) and the Job Plan header took the TC leg ALONE, so on any estimate
+// saved without `days` where the specialist leg is the larger one, the document the client
+// holds and the header the crew works from printed DIFFERENT projected completion dates for
+// one job. The client-facing form wins: it is the number a client was actually sent.
+// ⚠ PREP RETURNS 0 THROUGH AN EXPLICIT BRANCH, not incidentally because `days` is 0. That
+// engagement runs on the vendors' schedule and the app has no defensible day count for it;
+// saying so here is what stops somebody "fixing" the zero later.
+function estWorkingDays(est) {
+  if (!est) return 0;
+  if (est.svc === 'prep') return 0;
+  if (est.days && est.days > 0) return est.days;   // the finalised count the estimator quoted
+  var per = PRODUCTIVE_HRS_PER_DAY;
+  return Math.max(Math.ceil((est.totTC || 0) / per),
+                  (est.psCount && est.psCount > 0) ? Math.ceil((est.totPS || 0) / est.psCount / per) : 0);
 }
 
 // ─── WORKING-SUPERVISOR STAFFING & HOURS ─────────────────────────────────────
@@ -6989,31 +7086,41 @@ function isWeekend(dateStr) {
   return d.getDay() === 0 || d.getDay() === 6;
 }
 
-function updateIntakeDateMins() {
-  var wt = document.getElementById('i-walkthrough').value;
-  var st = document.getElementById('i-start');
-  var co = document.getElementById('i-completion');
+// ⚠ ONE WEEKEND / MIN-CHAIN RULE, SHARED BY INTAKE AND EDIT CLIENT. These dates became
+// editable in two places the day the schedule strip made them prominent, and a second copy of
+// "no weekends, and the chain runs walkthrough → start → completion" is how the two forms come
+// to disagree about what is a legal date.
+// ⚠ EVERY ELEMENT ACCESS IS GUARDED: `ec-walkthrough` does not exist — the walkthrough date is
+// an intake field, and Edit Client carries only the two targets.
+// This is the one function in this area that is NOT DOM-free, and deliberately: it IS a form
+// behaviour. Nothing derives from it.
+function dateChainGuard(prefix, fbId) {
+  var wtEl = document.getElementById(prefix + '-walkthrough');
+  var st   = document.getElementById(prefix + '-start');
+  var co   = document.getElementById(prefix + '-completion');
+  var say  = function (msg) { if (fbId) showFB(fbId, 'warn', msg); else alert(msg); };
 
-  if (wt && isWeekend(wt)) {
-    document.getElementById('i-walkthrough').value = '';
-    showFB('i-fb','warn','Walkthroughs cannot be scheduled on weekends. Please select a weekday.');
+  if (wtEl && wtEl.value && isWeekend(wtEl.value)) {
+    wtEl.value = '';
+    say('Walkthroughs cannot be scheduled on weekends. Please select a weekday.');
     return;
   }
-  if (wt) {
-    st.min = wt;
-    if (st.value && st.value < wt) st.value = '';
+  if (wtEl && wtEl.value && st) {
+    st.min = wtEl.value;
+    if (st.value && st.value < wtEl.value) st.value = '';
   }
-  if (st.value && isWeekend(st.value)) {
+  if (st && st.value && isWeekend(st.value)) {
     st.value = '';
-    showFB('i-fb','warn','Start date cannot be a weekend. Please select a weekday.');
+    say('Start date cannot be a weekend. Please select a weekday.');
     return;
   }
-  var stVal = st.value;
-  if (stVal) {
-    co.min = stVal;
-    if (co.value && co.value < stVal) co.value = '';
+  if (st && st.value && co) {
+    co.min = st.value;
+    if (co.value && co.value < st.value) co.value = '';
   }
 }
+
+function updateIntakeDateMins() { return dateChainGuard('i', 'i-fb'); }
 
 function computeInventoryDeadline(){
   var l = document.getElementById('i-letters-date').value;
@@ -7883,41 +7990,58 @@ function saveEstimateAndPreview() {
   if (isPrepEst) {
     var _prepVendorCount = (currentEstimate.prepItems||[]).length;
     saveMsg = 'Saved: Home Prep for Sale · ' + _prepVendorCount + ' managed vendor' + (_prepVendorCount === 1 ? '' : 's')
-      + ' · ' + Math.round(prepFeeRate()*100) + '% fee $' + currentEstimate.havellinTotal.toLocaleString()
-      + ' · Uploading to cloud…';
+      + ' · ' + Math.round(prepFeeRate()*100) + '% fee $' + currentEstimate.havellinTotal.toLocaleString();
   } else {
     saveMsg = 'Saved: ' + currentEstimate.rooms.length + ' rooms'
       + (roomsWithNotes > 0 ? ', ' + roomsWithNotes + ' with notes' : '')
       + ' · ' + currentEstimate.totTC.toFixed(1) + ' TC hrs · ' + currentEstimate.totPS.toFixed(1) + ' PS hrs'
-      + ' · $' + currentEstimate.havellinTotal.toLocaleString()
-      + ' · Uploading to cloud…';
+      + ' · $' + currentEstimate.havellinTotal.toLocaleString();
   }
-  showFB('e-fb','ok', saveMsg);
+  // ⚠ THE PROGRESS CLAIM RIDES THE FEEDBACK CALL, NOT `saveMsg`. The same summary is carried
+  // to the dashboard a second later, by which point the outbox has flushed — repeating
+  // "Uploading to cloud…" there would state something that is no longer true.
+  showFB('e-fb','ok', saveMsg + ' · Uploading to cloud…');
   // Capture estimate snapshot now — clearEstimateTab() nulls currentEstimate at t+1200ms
   // so Drive uploads must use a local reference, not currentEstimate.
   var _estSnapshotForDrive = currentEstimate;
   setTimeout(function() { exportEstimateToDrive(jobId, _estSnapshotForDrive); uploadWalkthroughNotesToDrive(jobId, _estSnapshotForDrive); }, 1500);
+  // ⚠⚠ THIS BLOCK USED TO WIPE THE SCREEN, AND THE MECHANISM IS WORTH KNOWING. It opened with
+  // `document.querySelector('.nb[onclick*="\'client-estimate\'"]')` — and that tab was RETIRED
+  // FROM THE NAV in Slice 7, so the selector resolves to **null**. `querySelector` returns null
+  // without throwing and `if (_ceBtn)` swallowed it, so the navigation was a silent no-op —
+  // while the nested t+200 block went on to blank the form on the panel the user was still
+  // looking at, `clearEstimateTab`'s own trailing 'Estimate cleared.' overwrote the save
+  // summary 2.8 seconds early, and the page jumped to the top. The end state reads as data loss
+  // on a form somebody has just spent a walkthrough filling in.
+  //
+  // ⚠ THE ORDER IS THE FIX, NOT JUST THE SELECTOR: find the button FIRST and change nothing if
+  // it is not there. The line this replaces cleared the form and THEN discovered it could not
+  // navigate.
   setTimeout(function() {
-    var _ceBtn = document.querySelector('.nb[onclick*="\'client-estimate\'"]'); if (_ceBtn) _ceBtn.click();
-    setTimeout(function() {
-      window._suppressEstimateAutoSave = true;
-      clearEstimateTab();
-      window._suppressEstimateAutoSave = false;
-      // clearEstimateTab() nulls currentEstimate to reset the estimator form.
-      // Reload the just-saved estimate into the Client Estimate preview so it
-      // lands in TC Review state with the Submit-for-Approval / Edit buttons.
-      var rec = estimateStore[jobId];
-      if (rec && rec.estimate) {
-        currentEstimate = rec.estimate;
-        estimateApproved = rec.approved || false;
-        estimateSubmitted = rec.submitted || false;
-        approvedBy = rec.approvedBy || '';
-        approvedAt = rec.approvedAt || '';
-        renderClientEstimate();
-      }
-      // Land at the top of the Client Estimate, not scrolled down to it.
-      window.scrollTo(0, 0);
-    }, 200);
+    var _navJobs = document.querySelector('.nb[onclick*="showPanel(\'jobs\'"]');
+    if (!_navJobs) return;   // nothing cleared, summary still on #e-fb, user stays put
+
+    // Release the estimator while we are still on its panel.
+    window._suppressEstimateAutoSave = true;
+    clearEstimateTab();
+    window._suppressEstimateAutoSave = false;
+
+    // ⚠ NAV FIRST, DRILLDOWN SECOND. `showPanel('jobs', btn)` sets #client-dashboard-view to
+    // display:none and calls renderJobs(), so opening the drilldown first lands the user on the
+    // client LIST. ⚠ AND NEVER `showPanel('jobs')` DIRECTLY: it does an unguarded
+    // `btn.classList.add('active')` AFTER stripping .active off every panel and every nav
+    // button, so a one-argument call throws and leaves no visible panel at all.
+    _navJobs.click();
+    openClientDashboard(jobId);
+
+    // ⚠ THE NOTICE COMES AFTER `openClientDashboard`, which nulls `_dashNotice` so a message
+    // about the last client cannot open on the next one. That costs a second render; there is
+    // no single-render route that also carries a message.
+    dashNotice('ok', saveMsg);
+    _dashRedraw(jobId);
+
+    // The Save button is at the bottom of a multi-screen form.
+    window.scrollTo(0, 0);
   }, 1000);
 }
 
@@ -8576,8 +8700,7 @@ function clientEstimateHtml(e, job) {
   // Duration comes straight from the estimate's stored working-day count (e.days),
   // the same figure the Estimate tab's timeline badge shows — so the two never
   // disagree. Fallback recompute only for older estimates saved before e.days.
-  var _estDayNum = (e.days && e.days > 0) ? e.days
-    : Math.max(Math.ceil((e.totTC || 0) / 7), (e.psCount && e.psCount > 0) ? Math.ceil((e.totPS || 0) / e.psCount / 7) : 0);
+  var _estDayNum = estWorkingDays(e);
   var estDays = _estDayNum > 0 ? _estDayNum + ' working day' + (_estDayNum !== 1 ? 's' : '') : '—';
 
   // Preparer contact info from contractor directory
@@ -11287,6 +11410,88 @@ function dot(color) { return '<span style="display:inline-block;width:8px;height
 function field(label, val, extraStyle) {
   return '<div class="df"><div class="dfl">'+label+'</div><div class="dfv'+(extraStyle?' '+extraStyle:'')+'">'+val+'</div></div>';
 }
+
+// ─── THE SCHEDULE STRIP ──────────────────────────────────────────────────────
+// One line above the rail: how long the job is, when it starts, where its calendar halfway
+// falls, when it should end, and whether any of that is slipping.
+//
+// ⚠ IT TAKES ONLY THE DESCRIPTOR, never the job — so it holds no opinion of its own about
+// the engagement and every branch is drivable from a plain object in a test.
+//
+// ⚠ IT NEVER PRINTS A PROJECTION IN THE SHAPE OF A RECORD. "Target start", "Halfway",
+// "Target end" are all labelled as intentions; only "Started" and "Delivered" name something
+// that happened, and those two read the actuals.
+function jtScheduleHtml(sched) {
+  // ⚠ NO "no schedule yet" LINE. Explaining an absence is what draws attention to it, and on
+  // a cold estimate-store cache this is also the correct behaviour: `_estStoreLanded` already
+  // calls `_dashRedraw`, so the strip simply appears when the store lands.
+  if (!sched || sched.state === 'dead' || sched.state === 'none') return '';
+  var I = function (t) { return '<span class="jt-sched-i">' + t + '</span>'; };
+  var V = function (t) { return '<span class="jt-sched-v">' + esc(t) + '</span>'; };
+  var h = '<div class="jt-sched"><span class="jt-sched-lbl">Schedule</span>';
+
+  // A positive statement of how this engagement IS scheduled, not an apology for a number the
+  // app has no honest way to produce. Prep books no concierge hours at all.
+  if (sched.state === 'vendor') {
+    return h + I('Scheduled around vendor availability ' + '\u2014' + ' the concierge confirms the working schedule once the vendors are booked.') + '</div>';
+  }
+
+  // ⚠ "about", NOT a bare figure, when the length was DERIVED rather than quoted. A legacy
+  // estimate carrying no `days` gives a number nobody ever told the client.
+  var dayTxt = (sched.daysQuoted ? '' : 'about ') + sched.days + ' working day' + (sched.days === 1 ? '' : 's');
+
+  // The one absence that earns a line: it is fixable, it blanks four other figures, and a
+  // panel reporting a blocker carries the fix on screen rather than in a title=.
+  if (sched.state === 'nostart') {
+    return h + I(V(dayTxt)) + I('No target start on this job')
+         + '<div class="jt-sched-note jt-s-warn">Set one in Edit Client to get a target end.</div></div>';
+  }
+
+  if (sched.state === 'done') {
+    h += I('Started ' + esc(fmtDate2(sched.actualStart || sched.start)));
+    if (sched.delivered) h += I('Delivered ' + V(fmtDate2(sched.delivered)));
+    if (sched.endVariance) h += I(sched.endVariance + ' working days against a ' + sched.days + '-day plan');
+    return h + '</div>';   // flat grey, no flag: history is not an instruction
+  }
+
+  if (sched.state === 'running') {
+    h += I('Started ' + esc(fmtDate2(sched.actualStart))
+         + (sched.actualStartKind === 'deposit' ? ' (from the deposit)' : ''));
+    // ⚠ NEVER "Working day 0 of 6". `elapsed` is 0 whenever today is before the recorded start
+    // — an activation stamped ahead of the calendar, or a clock-skewed device — and a job
+    // cannot be on day zero of itself. Measured in a browser, not reasoned about: a job
+    // activated on a future date printed exactly that. It falls back to the proposed length,
+    // which is the honest reading of a job that has not had a working day yet.
+    h += (sched.elapsed >= 1)
+      ? '<span class="jt-sched-i jt-sched-lead">' + V('Working day ' + sched.elapsed + ' of ' + sched.days) + '</span>'
+      : I(V(dayTxt));
+  } else {
+    h += I('Target start ' + V(fmtDate2(sched.start)));
+    h += I(V(dayTxt));
+  }
+  // On a one-day job `addWorkingDays(s,1)` is `s` and `ceil(1/2)` is 1, so halfway and end are
+  // both the start — one clause, or the strip prints the same date three times.
+  if (sched.days > 1) {
+    // ⚠ "Halfway", NEVER "Midpoint". `paymentSplit` is a flat 50/25/25 with no calendar in it,
+    // so the midpoint INVOICE has no date relationship to this. Two facts two inches apart on
+    // one card must not share a word.
+    if (sched.halfway) h += I('Halfway ' + esc(fmtDate2(sched.halfway)));
+    h += I('Target end ' + V(fmtDate2(sched.planEnd)));
+    if (sched.projectedEnd) h += I('now ending ' + V(fmtDate2(sched.projectedEnd)));
+  }
+  if (sched.fit === 'late' || sched.fit === 'inverted') {
+    h += '<span class="jt-sched-i jt-s-err">&#9888; ' + esc(sched.fitTxt) + '</span>';
+  } else if (sched.courtDeadline || sched.hard) {
+    h += I((sched.courtDeadline ? 'Court deadline ' : 'Hard target ') + esc(fmtDate2(sched.courtDeadline || sched.hard)));
+  }
+  // ⚠ PACE IS ITS OWN SLOT, on its own line. A brand-new job with a tight closing date is
+  // perfectly on pace and its plan still does not fit; one slot holding both hides one.
+  if (sched.pace) {
+    var cls = (sched.pace === 'overrun' || sched.pace === 'start_missed') ? ' jt-s-err' : ' jt-s-warn';
+    h += '<div class="jt-sched-note' + cls + '">' + esc(sched.paceTxt) + (sched.paceFix ? ' ' + esc(sched.paceFix) : '') + '</div>';
+  }
+  return h + '</div>';
+}
 // ─── THE CLIENT DASHBOARD'S UTILITY BAR ──────────────────────────────────────
 // ⚠⚠ THE RULE, AND IT IS THE ONLY REASON THIS BAR EXISTS: THE TIMELINE HOLDS EVERY
 // STEP, AND THIS BAR HOLDS ONLY WHAT IS NOT ONE.
@@ -11402,6 +11607,37 @@ var JT_SHORT = {
   work_complete:'Complete', final_invoiced:'Invoiced', final_paid:'Final'
 };
 
+// ⚠⚠ THE ONE MAP FROM A TIMELINE STEP TO THE DOCUMENT IN PLAY AT IT. The band's tray and the
+// quick strip both ask this; neither may branch on a row key of its own, or the document the
+// band offers and the document the strip offers drift apart on one screen.
+//
+// THE RULE: a step's document is the artefact that step ACTS ON — the estimate through
+// building it, approving it, sending it and the client accepting it; the packet through
+// sending and signing; each stage invoice through both invoicing and being paid for that
+// stage. ⚠ `*_received` maps to the SAME invoice as `*_invoiced` deliberately: recording a
+// cheque against an invoice you cannot open is a real gap. The SEND action still lives only
+// on the `*_invoiced` row, so the two rows are not interchangeable.
+//
+// ⚠ FOUR ROWS HAVE NO DOCUMENT — intake, walkthrough, job_active, work_complete — and that is
+// stated by ABSENCE. There is no "no document at this stage" line: those four are steps where
+// the thing to do is RECORD something rather than read something, and explaining an absence is
+// the standing copy rule this file cuts every time.
+var JT_ROW_DOC = {
+  estimate_built:    { kind:'estimate',  stage:'' },
+  estimate_approved: { kind:'estimate',  stage:'' },
+  estimate_sent:     { kind:'estimate',  stage:'' },
+  client_accepted:   { kind:'estimate',  stage:'' },
+  agreement_sent:    { kind:'agreement', stage:'' },
+  agreement_signed:  { kind:'agreement', stage:'' },
+  deposit_invoiced:  { kind:'invoice',   stage:'deposit'  },
+  deposit_received:  { kind:'invoice',   stage:'deposit'  },
+  midpoint_invoiced: { kind:'invoice',   stage:'midpoint' },
+  midpoint_received: { kind:'invoice',   stage:'midpoint' },
+  final_invoiced:    { kind:'invoice',   stage:'final'    },
+  final_paid:        { kind:'invoice',   stage:'final'    }
+};
+function jobStageDoc(rowKey) { return JT_ROW_DOC[rowKey] || null; }
+
 // ⚠ WHERE THE TRACK WRAPS, AND IT IS NOT AN ARBITRARY WRAP POINT. Fourteen steps do not
 // fit one line at any sane width, and letting flex-wrap choose means the break moves
 // with the window — the same steps landing in different places on a laptop and a
@@ -11411,7 +11647,126 @@ var JT_SHORT = {
 // deposit — so a reader already thinks in these two halves.
 var JT_LEG_BREAK = 'agreement_signed';
 
-function jobTimeline(job, estRec, logs, cos) {
+// ─── THE SCHEDULE ────────────────────────────────────────────────────────────
+// Anthony: *"I don't think the dates are prominent enough in the app to allow us to know
+// where we are versus the deliverable timeline we agreed to."* This is the one derivation
+// that answers it — proposed length, target start, the calendar halfway, the target end, and
+// whether the job is keeping to any of them.
+//
+// ⚠ DOM-FREE AND CLOCK-FREE, the same reason `jobTimeline` beside it is. Today is an
+// ARGUMENT. Reading the clock in here would make every pace assertion a time bomb that
+// passes on the Tuesday it is written and fails on some later one, and would force every
+// sandbox that drives the rail to stub Date.
+//
+// ⚠ IT RETURNS yyyy-mm-dd STRINGS AND INTEGERS AND NEVER FORMATS A DATE. The renderer owns
+// how a date looks — the rule `jobTimeline` already follows, and the reason `atKind` exists.
+//
+// ⚠⚠ THE PLAN IS ANCHORED ON `job.start`, ALWAYS, EVEN ONCE THE JOB IS RUNNING. That is the
+// date the client estimate's header and the agreement's Estimated Start Date both state, so
+// a plan re-derived from the real activation would print an end date the client was never
+// given. A job that activated late gets `projectedEnd` as a SECOND, clearly-labelled figure
+// — the date to renegotiate, never a quiet replacement for the one on the paperwork.
+//
+// ⚠⚠ THE CALENDAR HALFWAY IS `halfway`, NEVER `mid`. `paymentSplit` is a flat 50/25/25 and
+// the midpoint INVOICE has no calendar relationship to it at all. Two facts two inches apart
+// on one card must not share a word, or the strip reads as though the invoice is due on the
+// halfway date — which is a statement about money nobody made.
+function jobSchedule(job, est, todayStr) {
+  var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false,
+            start:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
+            actualStart:'', actualStartKind:'', projectedEnd:'', startSlip:0,
+            elapsed:0, overBy:0, endVariance:0,
+            fit:'', fitTxt:'', pace:'', paceTxt:'', paceFix:'' };
+  if (!job) return S;
+
+  // A dead job has no schedule to keep. `JOB_TRANSITIONS` has no entry for either, so there
+  // is no next action and a date to chase would be an instruction that cannot be followed.
+  if (job.status === 'lost' || job.status === 'closed_retained') { S.state = 'dead'; return S; }
+
+  // Home Prep for Sale books no concierge hours and runs on the vendors' calendar, so the
+  // app has no defensible day count for it. Its own state, and the strip says so positively
+  // rather than printing an apology for a missing number.
+  if (job.svc === 'prep' || (est && est.svc === 'prep')) { S.state = 'vendor'; return S; }
+
+  if (!est) { S.why = 'no-estimate'; return S; }
+  S.days = estWorkingDays(est);
+  S.daysQuoted = !!(est.days && est.days > 0);
+  if (S.days < 1) { S.why = 'no-days'; return S; }
+
+  S.hard = job.completion || '';
+  if (job.svc === 'probate' || job.svc === 'contested_probate') S.courtDeadline = job.probateDeadline || '';
+  S.delivered = job.deliveredOn || '';
+  S.start = job.start || '';
+  if (!S.start) { S.state = 'nostart'; return S; }
+
+  // ⚠ ceil, not days/2. `addWorkingDays` counts the start as day 1 and `days` is inclusive,
+  // so the middle working day of a 6-day job is day 3, not day 4.
+  S.planEnd = addWorkingDays(S.start, S.days);
+  S.halfway = (S.days >= 3) ? addWorkingDays(S.start, Math.ceil(S.days / 2)) : '';
+
+  // ⚠⚠ A DEPOSIT DATE MAY ANCHOR `elapsed` AND MAY NEVER SUPPORT A SLIP CLAIM. It is a proxy
+  // for when work COULD start, not when it did. Every job that went active before the
+  // `activatedOn` stamp shipped is in exactly that case, and the strip labels it on screen
+  // rather than passing it off as a recorded start.
+  if (job.activatedOn) { S.actualStart = job.activatedOn; S.actualStartKind = 'activated'; }
+  else if (job.status === 'active' && job.depositReceivedAt) { S.actualStart = job.depositReceivedAt; S.actualStartKind = 'deposit'; }
+
+  if (job.deliveredOn) {
+    S.state = 'done';
+    if (S.actualStart) S.endVariance = workingDaysInclusive(S.actualStart, job.deliveredOn);
+  } else if (job.status === 'active') {
+    S.state = 'running';
+    if (S.actualStart && S.today) S.elapsed = workingDaysInclusive(S.actualStart, S.today);
+    if (S.actualStartKind === 'activated') {
+      S.startSlip = Math.max(0, workingDaysInclusive(S.start, S.actualStart) - 1);
+      if (S.actualStart !== S.start) S.projectedEnd = addWorkingDays(S.actualStart, S.days);
+    }
+    S.overBy = Math.max(0, S.elapsed - S.days);
+  } else {
+    S.state = 'planned';
+  }
+
+  // FIT — does the plan reach the date we committed to. Plain yyyy-mm-dd string compare;
+  // both are that format. ⚠ A COURT DEADLINE OUTRANKS THE HARD TARGET on probate, because it
+  // is statutory and the hard target is a preference.
+  var _end = S.projectedEnd || S.planEnd;
+  var _tgt = S.courtDeadline || S.hard;
+  var _tgtWord = S.courtDeadline ? 'court deadline' : 'hard target';
+  if (_tgt && _end) {
+    if (_tgt < S.start) { S.fit = 'inverted'; S.fitTxt = 'The ' + _tgtWord + ' is before the target start.'; }
+    else if (_end > _tgt) { S.fit = 'late'; S.fitTxt = 'ends ' + Math.max(1, workingDaysInclusive(_tgt, _end) - 1) + ' working days past the ' + _tgtWord; }
+    else { S.fit = 'ok'; }
+  }
+
+  // PACE — ONE value, worst first. ⚠ PACE AND FIT ARE TWO SLOTS AND MUST NOT BE COLLAPSED: a
+  // brand-new job with a tight closing date is perfectly on pace and its plan still does not
+  // fit, and one slot holding both hides whichever it did not win.
+  var midSent = !!docSentAt(job, 'invoice', 'midpoint');
+  if (S.state === 'running' && S.overBy > 0) {
+    S.pace = 'overrun';
+    S.paceTxt = 'Working day ' + S.elapsed + ' of ' + S.days + ' — ' + S.overBy + ' working day' + (S.overBy === 1 ? '' : 's') + ' past the proposed length.';
+    S.paceFix = 'Re-plan with the client, or raise a change order if the scope grew — a change order carries HOURS, not a dollar amount.';
+  } else if (S.state === 'running' && S.halfway && S.today && S.today > S.halfway && !midSent) {
+    // ⚠ IT NAMES EXACTLY WHAT IT COMPARED. The app records no room-level progress this
+    // derivation can see, so it never says the job is half DONE — only that the calendar
+    // halfway has passed and the invoice that belongs to that stretch has not gone out.
+    S.pace = 'halfway_late';
+    S.paceTxt = 'Past the halfway point and the midpoint invoice has not gone out.';
+    S.paceFix = 'Send it from the band above, or agree a new schedule with the client.';
+  } else if (S.state === 'planned' && S.today && S.today > S.start) {
+    // ⚠ ITS OWN FLAG: a job that has not started has not missed its halfway point.
+    S.pace = 'start_missed';
+    S.paceTxt = 'The target start has passed and the job is not active.';
+    S.paceFix = 'Record the deposit and activate it, or set a new target start in Edit Client.';
+  }
+  return S;
+}
+
+// ⚠ `sched` IS PASSED IN, NOT READ. `jobSchedule` needs today's date, and reading the clock
+// inside this function would make the repo's most-driven pure derivation non-deterministic
+// forever. It is optional: with no schedule no row carries a plan and every existing caller
+// behaves byte-identically.
+function jobTimeline(job, estRec, logs, cos, sched) {
   if (!job) return [];
 
   var est = (estRec && estRec.estimate) || null;
@@ -11458,8 +11813,27 @@ function jobTimeline(job, estRec, logs, cos) {
       at: o.at || '', atKind: o.atKind || 'text', by: o.by || '',
       sub: o.sub || '', amount: (typeof o.amount === 'number') ? o.amount : null,
       blockedWhy: o.blockedWhy || '', blockedFix: o.blockedFix || '',
+      // ⚠⚠ A PLANNED DATE IS NOT AN ACTUAL AND MUST NEVER SHARE THE `at` SLOT. Every `at` on
+      // this rail is something that HAPPENED and `_jtAt` formats it as one, so a projection
+      // sitting there is indistinguishable from a record — on the one surface whose entire
+      // contract is what has happened. Its own field, its own element, and the renderer
+      // always prints the word "Planned" in front of it.
+      plan: o.plan || '', planLbl: o.planLbl || '', planLate: !!o.planLate,
       state: 'waiting'
     };
+  }
+
+  // ⚠ A PLAN IS WITHHELD THE MOMENT THE ROW HAS ITS ACTUAL, and that is not tidiness: a row
+  // reading "done Sep 24" with "Planned Sep 23" still under it asks the reader to work out a
+  // variance the schedule strip above has already stated. One statement of one fact.
+  // ⚠ It takes the ROW OBJECT and returns it, so there is one helper rather than a merge
+  // function beside a builder — a second helper here is a second place to forget the guard.
+  var _sc = sched || null;
+  function _plan(o, dateStr, lbl) {
+    if (!_sc || !dateStr || o.done || _sc.state === 'dead' || _sc.state === 'none' || _sc.state === 'vendor') return o;
+    o.plan = dateStr; o.planLbl = lbl;
+    o.planLate = !!(_sc.today && dateStr < _sc.today);
+    return o;
   }
 
   var rows = [
@@ -11555,19 +11929,24 @@ function jobTimeline(job, estRec, logs, cos) {
         ? ('Part paid — $' + Math.round(depPaid).toLocaleString() + ' of $' + Math.round(depTgt).toLocaleString())
         : '' }),
 
-    row({ key: 'job_active', group: 'Deposit & start', label: 'Job active',
+    row(_plan({ key: 'job_active', group: 'Deposit & start', label: 'Job active',
       done: (job.status === 'active' || !!job.deliveredOn),
       blockedWhy: authBlocker, blockedFix: authBlocker
         ? ('Contact ' + (job.executor || 'the authorized representative')
           + (job.executorPhone ? ' on ' + job.executorPhone : (job.executorEmail ? ' at ' + job.executorEmail : ''))
           + ' — the Letters must be received before work can start.')
-        : '' }),
+        : '' }, _sc && _sc.start, 'start')),
 
-    row({ key: 'midpoint_invoiced', group: 'Work', label: 'Midpoint invoice sent',
+    // ⚠ THE PLANNED DATE HERE IS THE CALENDAR HALFWAY OF THE JOB, NOT A DUE DATE FOR THE
+    // MONEY. `paymentSplit` is a flat 50/25/25 with no calendar anywhere in it. What this
+    // says is "by now you should be about half way through the work, so this invoice is
+    // about due" — which is why the strip above calls the same date the halfway point and
+    // never the midpoint.
+    row(_plan({ key: 'midpoint_invoiced', group: 'Work', label: 'Midpoint invoice sent',
       done: !!docSentAt(job, 'invoice', 'midpoint'), at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
       amount: hav ? split.midpoint : null,
       sub: (!docSentAt(job, 'invoice', 'midpoint') && docDraftedAt(job, 'invoice', 'midpoint'))
-        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
+        ? 'Drafted \u2014 read it, send it, then confirm' : '' }, _sc && _sc.halfway, 'halfway point')),
 
     row({ key: 'midpoint_received', group: 'Work', label: 'Midpoint payment',
       done: midPaid > 0, amount: hav ? split.midpoint : null,
@@ -11578,8 +11957,9 @@ function jobTimeline(job, estRec, logs, cos) {
     // handed over. The strip this replaces read `job.completionDate`, which is read
     // in two places and WRITTEN NOWHERE IN THE FILE, so "Work completed" has been
     // blank on every job this app has ever had.
-    row({ key: 'work_complete', group: 'Work', label: 'Work complete',
-      done: !!job.deliveredOn, at: job.deliveredOn || '', atKind: 'date', by: job.deliveredBy || '' }),
+    row(_plan({ key: 'work_complete', group: 'Work', label: 'Work complete',
+      done: !!job.deliveredOn, at: job.deliveredOn || '', atKind: 'date', by: job.deliveredBy || '' },
+      _sc && _sc.planEnd, 'end')),
 
     row({ key: 'final_invoiced', group: 'Close-out', label: 'Final invoice sent',
       done: !!docSentAt(job, 'invoice', 'final'), at: docSentAt(job, 'invoice', 'final'), atKind: 'iso',
@@ -11634,6 +12014,39 @@ function jobTimeline(job, estRec, logs, cos) {
 function jobTimelineNext(rows) {
   for (var i = 0; i < rows.length; i++) {
     if (rows[i].state === 'current' || rows[i].state === 'blocked') return rows[i];
+  }
+  return null;
+}
+
+// ⚠⚠ THE ONE DEFINITION OF "THE DOCUMENT IN PLAY RIGHT NOW", mirroring `jobTimelineNext`
+// exactly. Anthony: *"at the top of the timeline you can see the document you just created …
+// once that's done, the next document you'd have up there would be the agreement."* Returns AT
+// MOST ONE document, so the band can never offer two primaries and the reader never has to
+// choose which one is real.
+//
+// ⚠ THE BACKWARD WALK ACCEPTS ONLY A DOCUMENT THAT WAS ACTUALLY SENT, and `done` is not
+// `sent`. `estimate_built.done` means an estimate EXISTS and `estimate_approved.done` means a
+// manager approved it — neither means it went out, and `markEstimateSent` is a skippable
+// manual button this file already records as non-monotonic. Without the `docSentAt` test the
+// Complete band would read "Last sent — Client Estimate" over a document that never left the
+// building, which is exactly the false claim the readiness gate exists to close.
+function jobTimelineDoc(rows, job, estRec) {
+  var live = jobTimelineNext(rows);
+  if (live) {
+    var a = jobTimelineActions(live, job, estRec);
+    if (a.doc) { a.doc.rel = 'now'; return a.doc; }
+  }
+  var from = live ? rows.indexOf(live) - 1 : rows.length - 1;
+  for (var i = from; i >= 0; i--) {
+    var r = rows[i];
+    if (!r.done) continue;
+    var d = jobStageDoc(r.key);
+    if (!d || !docSentAt(job, d.kind, d.stage)) continue;
+    var a2 = jobTimelineActions(r, job, estRec);
+    if (!a2.doc) continue;
+    a2.doc.rel = 'last';
+    a2.doc.title = 'Last sent — ' + a2.doc.title;
+    return a2.doc;
   }
   return null;
 }
@@ -12276,10 +12689,14 @@ var DOC_ACTIONS = {
     html: function (spec) { return clientEstimateHtml(spec.est, spec.job); },
     // The estimate is the client's copy of an approved price. An unapproved one is a
     // working draft and must not leave the building.
-    blocker: function (spec) {
-      if (!spec.est) return 'No estimate has been built for this job yet.';
-      var rec = estimateStore[spec.job.id];
-      if (!(rec && rec.approved)) return 'This estimate has not been approved yet. A manager approves it on the timeline above.';
+    // ⚠ TWO QUESTIONS, AND ONLY THE SECOND IS THIS DOCUMENT'S OWN. "Is there an estimate at
+    // all" is the shared gate; "may an UNAPPROVED one leave the building" is the estimate's,
+    // and it answers 'view' differently from every other verb.
+    blocker: function (spec, verb) {
+      var why = docReadiness('estimate', spec.job, estimateStore[spec.job.id]);
+      if (why) return why;
+      if (verb !== 'view' && docDraftOnly('estimate', spec.job, estimateStore[spec.job.id]))
+        return 'This estimate has not been approved yet. A manager approves it on the timeline above.';
       return '';
     }
   },
@@ -12305,19 +12722,10 @@ var DOC_ACTIONS = {
     // `printAgreement`, `printSigningPacket` and `emailAgreementToClient` separately, and
     // a fourth door would have been one line from having no stamp at all.
     commit: function (spec) { return ensureAgreementApproved(spec.job.id); },
-    blocker: function (spec) {
-      // ⚠ `agreementReady`'s second argument is the STORE RECORD (`{approved, estimate}`),
-      // not the estimate SNAPSHOT that `spec.est` holds — a snapshot has no `.approved`,
-      // so passing it made every agreement read as unapproved and refused to open at all.
-      // Caught in a browser; the source assertions could not see it, because the call
-      // looked right. Passing null lets it read the record itself, which is the one place
-      // that question is answered.
-      var blk = agreementReady(spec.job, null);
-      if (blk === 'estimate') return 'The estimate must be approved before the agreement can be drawn.';
-      if (blk === 'notwon') return 'Record the client’s acceptance first — until they have said yes there is nothing to put under contract.';
-      if (blk) return 'This job could not be found.';
-      return '';
-    }
+    // ⚠ THE `agreementReady` CODE→SENTENCE MAPPING MOVED INTO `DOC_READY_WHY`, IT WAS NOT
+    // COPIED. The band's tray asks the same question before it offers the button, and two
+    // wordings of one refusal is how an offered control and a refused one come to disagree.
+    blocker: function (spec) { return docReadiness('agreement', spec.job, estimateStore[spec.job.id]); }
   },
   invoice: {
     label: 'Invoice',
@@ -12332,6 +12740,11 @@ var DOC_ACTIONS = {
     mailto: function (spec) { return buildInvoiceMailto(spec.job, _docAmtDue(spec), spec.stage); },
     html: function (spec) { var d = invoiceHtml(spec.job, spec.stage); return d ? d.html : ''; },
     blocker: function (spec) {
+      // ⚠ THE SHARED GATE FIRST, AND IT IS THE HALF THAT WAS MISSING. This blocker only ever
+      // refused a FINAL, so a deposit or midpoint invoice opened and PRINTED on a job whose
+      // estimate nobody had approved — a bill for a number the client never agreed to.
+      var why = docReadiness('invoice', spec.job, estimateStore[spec.job.id]);
+      if (why) return why;
       var d = invoiceHtml(spec.job, spec.stage);
       if (!d) return 'This job could not be found.';
       // ⚠ TWO DIFFERENT ANSWERS AND THEY MUST STAY APART. `blocked` cannot be unlocked by
@@ -12344,6 +12757,61 @@ var DOC_ACTIONS = {
 };
 
 var DOC_STAGE_WORD = { deposit: 'Deposit', midpoint: 'Midpoint', final: 'Final' };
+
+// The noun a button uses for a document ('Send estimate', 'View deposit invoice'). It was
+// hand-passed at five call sites, which is five copies of one word.
+var DOC_KIND_WORD = { estimate: 'estimate', agreement: 'packet', invoice: 'invoice' };
+function docWord(kind, stage) { return stage ? (stage + ' invoice') : (DOC_KIND_WORD[kind] || kind); }
+
+// The human NAME of a document: 'Client Estimate' / 'Signing Packet' / 'Invoice — Deposit'.
+// ⚠ NEVER `docNames(...).client` OR `.printTitle` FOR A HEADING — both are stamped with
+// `new Date()`, so a title built from them silently re-dates on every render and on every
+// 15-second remote tick, on the one screen the firm is being asked to trust.
+function docTitle(kind, stage) {
+  var cfg = DOC_ACTIONS[kind];
+  return (cfg ? cfg.label : kind) + (stage ? ' — ' + (DOC_STAGE_WORD[stage] || stage) : '');
+}
+
+var DOC_READY_WHY = {
+  nojob:    'This job could not be found.',
+  estimate: 'The estimate must be approved before the agreement can be drawn.',
+  notwon:   'Record the client\u2019s acceptance first — until they have said yes there is nothing to put under contract.'
+};
+
+// ⚠⚠ THE ONE ANSWER TO "IS THE RECORD READY FOR THIS DOCUMENT TO EXIST AT ALL". Read by the
+// band's document tray AND by all three `DOC_ACTIONS` blockers, so what is OFFERED and what
+// happens when it is PRESSED cannot drift apart — two rules answering one question is the
+// defect this file records more often than any other.
+//
+// ⚠⚠ AND IT CLOSES A LIVE ONE. Four of the five document rows gated their View/Print links on
+// NOTHING: only `estimate_sent` carried a condition. On a job at status NEW with no approval,
+// no client acceptance and no agreement, the strip's "View deposit invoice" and "View midpoint
+// invoice" rendered a complete, printable billing document priced off the UNAPPROVED draft,
+// because the invoice blocker only ever refused a FINAL.
+//
+// It deliberately stops short of what only `invoiceHtml` knows (a missing timesheet, the ±15%
+// variance): those stay in the invoice blocker, because running a 439-line pricing build on
+// every dashboard paint — including the 15-second remote tick — is not free.
+function docReadiness(kind, job, estRec) {
+  if (!job) return DOC_READY_WHY.nojob;
+  var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
+  if (!(rec && rec.estimate)) return 'No estimate has been built for this job yet.';
+  if (kind === 'estimate') return '';   // a draft may be READ; `docDraftOnly` stops it leaving
+  // ⚠ `agreementReady`, not a restatement of "approved and won". The packet and the invoices
+  // genuinely share that rule: an invoice priced off a draft is a bill for a number nobody
+  // approved, and a packet built on one cites the wrong Exhibit A.
+  return DOC_READY_WHY[agreementReady(job, rec)] || '';
+}
+
+// An estimate that EXISTS but is not approved: readable on our own screen, and it must not be
+// printed, sent or filed. One rule, two readers — `_jtDocViews` withholds Print, and the
+// registry blocker refuses every verb but 'view'. Same shape as `docAction`'s existing
+// `verb !== 'view'` commit exemption: reading is free, putting it in somebody's hands is not.
+function docDraftOnly(kind, job, estRec) {
+  if (kind !== 'estimate') return false;
+  var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job && job.id] : null);
+  return !!(rec && rec.estimate && !rec.approved);
+}
 
 // The balance this invoice is asking for. ⚠ Read from `invoiceHtml`, which is the one
 // place the money is computed — the mailto used to take a `balance` its caller derived
@@ -12432,7 +12900,7 @@ function docAction(jobId, kind, verb, opt) {
   var spec = docSpec(kind, jobId, opt);
   if (!spec) { _docNotice('warn', 'This job could not be found.', jobId); return false; }
 
-  var blk = spec.cfg.blocker(spec);
+  var blk = spec.cfg.blocker(spec, verb);
   if (blk) { _docNotice('warn', blk, jobId); return false; }
 
   // ⚠ 'view' IS EXEMPT ON PURPOSE — see `commit` on the agreement. Reading is free;
@@ -12479,7 +12947,7 @@ function openDocViewer(spec, html) {
   var ov  = document.getElementById('doc-viewer-modal');
   if (!box || !ov) return false;
   _docViewerSpec = spec;
-  ttl.textContent = spec.cfg.label + (spec.stage ? ' — ' + (DOC_STAGE_WORD[spec.stage] || spec.stage) : '');
+  ttl.textContent = docTitle(spec.kind, spec.stage);
   sub.textContent = (spec.job.name || 'Client') + (spec.job.addr ? ' · ' + spec.job.addr : '');
   box.innerHTML = '<div class="ce-page">' + html + '</div>';
   ov.style.display = 'flex';
@@ -12538,13 +13006,17 @@ function _jtSendAction(id, job, kind, stage, what) {
 // row context at all — so bare "View"/"Print" rendered there as four identical pairs in
 // a row, `View · Print · View · Print · View · Print · View · Print`, with nothing saying
 // which document any of them opened. One label has to read correctly in both places.
-function _jtDocViews(id, kind, stage, what) {
+function _jtDocViews(id, kind, stage, viewOnly) {
   var opt = stage ? (",{stage:'" + stage + "'}") : '';
-  var of = what ? (' ' + what) : '';
-  return [
-    { label: '&#128065; View' + of, call: 'docAction(' + id + ",'" + kind + "','view'" + opt + ')' },
-    { label: '&#128424; Print' + of, call: 'docAction(' + id + ",'" + kind + "','print'" + opt + ')' }
-  ];
+  var of = ' ' + docWord(kind, stage);
+  var out = [{ label: '&#128065; View' + of, call: 'docAction(' + id + ",'" + kind + "','view'" + opt + ')' }];
+  // ⚠ WITHHELD, NOT OFFERED-AND-REFUSED. An unapproved estimate may be read on our own screen
+  // and must not reach paper, and a button that alerts a blocker back at you is worse than
+  // none — the rule `job_active` already follows by showing nothing on a blocked activation.
+  // The word DRAFT in the tray's own title carries the reason in one word; a sentence
+  // explaining why a button is missing would be explaining an absence.
+  if (!viewOnly) out.push({ label: '&#128424; Print' + of, call: 'docAction(' + id + ",'" + kind + "','print'" + opt + ')' });
+  return out;
 }
 
 // ⚠ "IS THIS IN DRIVE?" WAS UNANSWERABLE FOR FOUR OF THE FIVE DOCUMENTS. `estimateDriveAt`
@@ -12555,7 +13027,7 @@ function _jtDocViews(id, kind, stage, what) {
 //
 // ⚠ AND A DOCUMENT THAT WENT OUT AND WAS NOT FILED IS THE CASE THAT MATTERS. It is the
 // one the firm cannot produce later, so it gets a button rather than silence.
-function _jtDriveLink(id, job, kind, stage, what) {
+function _jtDriveLink(id, job, kind, stage) {
   var key = docKeyFor(kind, stage ? { stage: stage } : null);
   var st = (job.docState && job.docState[key]) || {};
   var opt = stage ? (",{stage:'" + stage + "'}") : '';
@@ -12570,19 +13042,59 @@ function _jtDriveLink(id, job, kind, stage, what) {
 
 // Offered only while a draft is outstanding — once the send is confirmed the link is
 // history, and a button reopening a sent draft invites sending it twice.
-function _jtDraftLink(id, job, kind, stage, what) {
+function _jtDraftLink(id, job, kind, stage) {
   var key = docKeyFor(kind, stage ? { stage: stage } : null);
   var st = (job.docState && job.docState[key]) || {};
   if (!st.draftUrl || st.sentAt) return [];
-  return [{ label: '&#8599; Open the ' + (what || 'document') + ' draft', call: 'openDocDraft(' + id + ",'" + key + "')" }];
+  return [{ label: '&#8599; Open the ' + docWord(kind, stage) + ' draft', call: 'openDocDraft(' + id + ",'" + key + "')" }];
+}
+
+// ⚠ THE ONE ASSEMBLER OF A DOCUMENT'S NON-PRIMARY LINKS. These three builders were called at
+// five sites each inside `jobTimelineActions`' switch, and only ONE of those fifteen calls
+// carried a readiness condition. One site now, with the gate in front of it.
+function _jtDocSecondaries(id, job, estRec, rowKey) {
+  var d = jobStageDoc(rowKey);
+  if (!d) return [];
+  if (docReadiness(d.kind, job, estRec)) return [];
+  var viewOnly = docDraftOnly(d.kind, job, estRec);
+  return _jtDraftLink(id, job, d.kind, d.stage)
+    .concat(_jtDocViews(id, d.kind, d.stage, viewOnly),
+            _jtDriveLink(id, job, d.kind, d.stage));
 }
 
 function jobTimelineActions(row, job, estRec) {
   var id = job.id;
-  var out = { primary: null, secondary: [] };
+  var out = { primary: null, secondary: [], doc: null };
   var live = (row.state === 'current' || row.state === 'blocked');
   var estApproved = !!((estRec && estRec.approved) || job.approved);
   var estSubmitted = !!((estRec && estRec.submitted) || (job.status === 'pending' && !estApproved));
+
+  // ⚠⚠ BUILT ONCE, FROM THE ONE MAP, BEHIND THE ONE GATE. This used to be five separate
+  // `out.secondary.concat(...)` lines inside the switch below, and only ONE of them
+  // (`estimate_sent`) had a condition on it — so the packet and all three invoices were
+  // offered on a job with no approved estimate, no client acceptance and no agreement, and
+  // two of those buttons rendered a real, printable bill off the draft.
+  var _d = jobStageDoc(row.key);
+  if (_d && !docReadiness(_d.kind, job, estRec)) {
+    out.doc = {
+      kind: _d.kind, stage: _d.stage,
+      // ⚠ THE WORD "DRAFT" IS THE WHOLE EXPLANATION OF THE MISSING PRINT BUTTON. One word in
+      // the title the reader is already looking at, rather than a sentence about an absence.
+      title: docTitle(_d.kind, _d.stage) + (docDraftOnly(_d.kind, job, estRec) ? ' — DRAFT' : ''),
+      acts: _jtDocSecondaries(id, job, estRec, row.key)
+    };
+    // ⚠ EDIT ESTIMATE IS A DOCUMENT ACTION AND BELONGS BESIDE THE DOCUMENT. It used to be
+    // pushed only on the `estimate_built` row while that row was `done`, so on the very state
+    // in Anthony's screenshot it rendered at the FOOT of the page in the quick strip rather
+    // than under the estimate it edits. ⚠ `dashEditEstimate`, never `dashGoEstimate`: editing
+    // an APPROVED estimate has to un-approve it first or the form it lands on is locked.
+    // ⚠ Withdrawn on a signed agreement, because `updateApprovalUI` hides Edit Estimate on
+    // exactly that condition — the signature IS the lock, and a second door into the same
+    // edit that ignored it would be a way around it.
+    if (_d.kind === 'estimate' && !job.agrSigned) {
+      out.doc.acts = out.doc.acts.concat([{ label: '&#9998; Edit estimate', call: 'dashEditEstimate(' + id + ')' }]);
+    }
+  }
 
   switch (row.key) {
     case 'intake':
@@ -12600,12 +13112,9 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'estimate_built':
       if (live) out.primary = { label: 'Build the estimate', call: 'dashGoEstimate(' + id + ')' };
-      // ⚠ Offered only while the client has NOT signed. `updateApprovalUI` hides Edit
-      // Estimate on `agrSigned` because the signature is the lock, and a second door
-      // into the same edit that ignored that rule would be a way around it.
-      // ⚠ `dashEditEstimate`, NOT `dashGoEstimate` — editing an APPROVED estimate has to
-      // un-approve it first or the form it lands on is locked. See `revokeEstimateApproval`.
-      else if (row.state === 'done' && !job.agrSigned) out.secondary.push({ label: '&#9998; Edit estimate', call: 'dashEditEstimate(' + id + ')' });
+      // (Edit estimate moved to the document tray at the top of this function — it is an
+      // action on the estimate, so it belongs under the estimate rather than in the strip at
+      // the foot of the page.)
       break;
 
     case 'estimate_approved':
@@ -12622,7 +13131,6 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'estimate_sent':
       if (live && estApproved) out.primary = _jtSendAction(id, job, 'estimate', '', 'estimate');
-      if (estApproved) out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'estimate', '', 'estimate'), _jtDocViews(id, 'estimate', '', 'estimate'), _jtDriveLink(id, job, 'estimate', ''));
       // A discount is a re-approval, so it is only offered on an approved estimate the
       // client has not yet signed against.
       if (estApproved && !job.agrSigned) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
@@ -12637,7 +13145,6 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'agreement_sent':
       if (live) out.primary = _jtSendAction(id, job, 'agreement', '', 'signing packet');
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'agreement', '', 'packet'), _jtDocViews(id, 'agreement', '', 'packet'), _jtDriveLink(id, job, 'agreement', ''));
       break;
 
     case 'agreement_signed':
@@ -12658,7 +13165,6 @@ function jobTimelineActions(row, job, estRec) {
       if (live && typeof STRIPE_SCRIPT_URL !== 'undefined' && STRIPE_SCRIPT_URL) {
         out.secondary.push({ label: '&#128179; Stripe link', call: 'dashStripeLink(' + id + ')' });
       }
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'deposit', 'deposit invoice'), _jtDocViews(id, 'invoice', 'deposit', 'deposit invoice'), _jtDriveLink(id, job, 'invoice', 'deposit'));
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -12677,7 +13183,6 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'midpoint_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'midpoint', 'midpoint invoice'), _jtDocViews(id, 'invoice', 'midpoint', 'midpoint invoice'), _jtDriveLink(id, job, 'invoice', 'midpoint'));
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -12697,7 +13202,6 @@ function jobTimelineActions(row, job, estRec) {
       // "needs a manager PIN" — and until Slice 7 the only place to give one was a button
       // on the Invoices tab. A refusal with no door is worse than no gate at all.
       if (live) out.secondary.push({ label: '&#128273; Manager approval', call: "dashApproveInvoice(" + id + ",'final')" });
-      out.secondary = out.secondary.concat(_jtDraftLink(id, job, 'invoice', 'final', 'final invoice'), _jtDocViews(id, 'invoice', 'final', 'final invoice'), _jtDriveLink(id, job, 'invoice', 'final'));
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -12910,9 +13414,10 @@ function renderClientDashboard(jobId) {
   var statusColors = {new:'#888780',pending:'#A67C45',approved:'#A67C45',won:'#1D9E75',active:'#1D9E75',closed:'#3C3489',closed_retained:'#3C3489',lost:'#B0413E'};
   var statusLabels = {new:'New',pending:'Pending Approval',approved:'Approved — Awaiting Client',won:'Won',active:'Active',closed:'Closed',closed_retained:'Closed — Deposit Retained',lost:'Lost'};
 
-  // ── RE commission calc
-  var reComm = null;
-  if (job.re==='yes' && est && est.propVal) reComm = calcRECommission(est.propVal, est.propVal);
+  // (`reComm` is gone: it was computed here and read NOWHERE. The RE chip recomputes from a
+  // different source — `job.propVal || est.propVal` against `est.propVal`, and
+  // `calcRECommission(x)` against `calcRECommission(x, x)` — so this was a second, divergent
+  // copy of one number three inches away in one function.)
 
   // ── Hours pct for progress bars
   var tcEst = est ? est.totTC : (job.estTC||0);
@@ -12966,8 +13471,17 @@ function renderClientDashboard(jobId) {
   // CLIENT INFO CARD — identity (avatar + name + address) and the status chips,
   // on its own now that the actions have their own bar above.
   h += '<div class="card" style="margin-bottom:12px;">';
-  h += '<div style="display:flex;align-items:center;gap:12px;min-width:0;">';
-  h += '<div style="width:38px;height:38px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bronze);flex-shrink:0;">'+initials+'</div>';
+  // ⚠ THE NAME AND THE CHIPS ARE ONE ROW NOW. Anthony: *"put the chips … up higher, to the
+  // right of the client's name and address."* Both children declare their own wrapping, so the
+  // phone block's `.card div{flex-wrap:wrap}` changes nothing under 820px and the two widths
+  // agree — the trick `.d-sec-bar`, `.jt-acts` and `.jt-quick` already use.
+  h += '<div class="dash-id">';
+  h += '<div class="dash-id-who">';
+  // ⚠ `.dash-avatar` WITH flex:0 0 38px IN CSS, AND NO INLINE flex-shrink:0. The phone block
+  // carries `.card div[style*="flex-shrink:0"]{flex-shrink:1!important}` and
+  // `.card div{min-width:0}`, so an inline one collapses the circle on the iPad this screen
+  // is actually read on.
+  h += '<div class="dash-avatar">'+initials+'</div>';
   h += '<div style="min-width:0;">';
   h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
   if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
@@ -12978,7 +13492,7 @@ function renderClientDashboard(jobId) {
   // order, all on one line. Blockers are folded in here as compact red chips
   // (hover for the how-to) so they no longer need a separate full-width box.
   var _bpad = 'font-size:12px;padding:6px 13px;border-radius:5px;';
-  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">';
+  h += '<div class="dash-chips">';
   h += '<span class="badge" style="'+_bpad+'background:'+statusColors[job.status]+';color:white;">'+statusLabels[job.status]+'</span>';
   h += '<span class="badge b-bronze" style="'+_bpad+'">'+svcLabel+'</span>';
   if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="'+_bpad+'">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
@@ -12988,7 +13502,9 @@ function renderClientDashboard(jobId) {
     var _reC = _reProp > 0 ? calcRECommission(_reProp) : null;
     // The headline chip: a bronze→gold gradient with a gold star and soft glow so
     // a six-figure commission opportunity actually looks like one.
-    h += '<span class="badge" style="font-size:12.5px;padding:6px 15px;border-radius:5px;background:linear-gradient(135deg,#C9A06A 0%,#A67C45 55%,#7a5a2e 100%);color:#fff;border:1px solid #7a5a2e;box-shadow:0 1px 5px rgba(122,90,46,.4);text-shadow:0 1px 1px rgba(0,0,0,.15);">'
+    // ⚠ `_bpad`, not its own font-size/padding pair — it was the one chip hardcoding
+    // 12.5px/6px 15px and rendered a half-point taller than every chip beside it.
+    h += '<span class="badge" style="'+_bpad+'background:linear-gradient(135deg,#C9A06A 0%,#A67C45 55%,#7a5a2e 100%);color:#fff;border:1px solid #7a5a2e;box-shadow:0 1px 5px rgba(122,90,46,.4);text-shadow:0 1px 1px rgba(0,0,0,.15);">'
        + '<span style="color:#FFE39A;">&#9733;</span> Real Estate Opportunity'
        + (_reC ? ' <span style="opacity:.8;">·</span> <strong style="color:#FFF3DC;">' + formatPropVal(_reC.net) + ' potential</strong>' : '')
        + '</span>';
@@ -13003,6 +13519,7 @@ function renderClientDashboard(jobId) {
     });
   }
   h += '</div>';   // close chip row
+  h += '</div>';   // close .dash-id
 
   // ⚠ THE CLIENT DETAIL IS IN THIS CARD, NOT ITS OWN ONE BELOW THE TIMELINE. Anthony:
   // *"put the first screenshot's info under the second screenshot's info, below the Won,
@@ -13040,6 +13557,14 @@ function renderClientDashboard(jobId) {
     h += field('Phone', job.phone||'—');
     h += field('Email', '<span style="font-size:11px;">'+(job.email||'—')+'</span>');
   }
+  // ⚠ ANTHONY ASKED FOR THESE TWO HERE and they bring a defect with them. The old copy read
+  // `fmtDate2(job.completion) ? ... : '—'` — and `fmtDate2('')` returns the literal '—', which
+  // is TRUTHY, so a job with no hard target painted a RED BOLD EM DASH: an error-coloured
+  // warning nobody can act on, visible in the screenshot that asked for this move. Every test
+  // was blind to it because the harness stubs `fmtDate2` as a passthrough returning ''.
+  // BRANCH ON THE RAW VALUE, NEVER ON THE FORMATTED ONE.
+  h += field('Target start', job.start ? fmtDate2(job.start) : '—');
+  h += field('Hard target', job.completion ? '<span class="dfv-alert">' + fmtDate2(job.completion) + '</span>' : '—');
   h += '</div>';
   // Notes — one full-width line along the bottom to save vertical space.
   h += '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border);">';
@@ -13114,26 +13639,23 @@ function renderClientDashboard(jobId) {
   h += '<div class="card" style="margin-bottom:12px;">';
   h += '<div class="d-sec-bar">' + sectionHdr('Job Timeline & Payments')
        + _dashUtilityBarHtml(job) + '</div>';
-  // ⚠ THIS GRID USED TO CARRY EIGHT FIELDS AND FIVE OF THEM WERE ALSO ROWS ON THE RAIL
-  // DIRECTLY BELOW IT — Client intake, Walkthrough, Estimate sent, Agreement signed and
-  // Work completed. Two statements of the same fact, and they could disagree: the grid
-  // said "Not signed" in red while the rail lit "Agreement signed" as the live step, so
-  // the eye had to reconcile a warning with an instruction that were the same thing.
-  // What survives is only what the rail does NOT say, and cannot: these three are
-  // TARGETS — dates somebody typed at intake — not milestones anything reaches.
-  h += '<div class="d-grid4" style="margin-bottom:16px;margin-top:12px;">';
-  h += field('Target start', fmtDate2(job.start)||'—');
-  h += field('Hard target', fmtDate2(job.completion) ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.completion)+'</span>' : '—');
-  // Same omission the chips carried: contested_probate has a §733.604 deadline too.
-  if (job.svc==='probate' || job.svc==='contested_probate') h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
-  h += '</div>';
+  // (The two-field Target start / Hard target grid that used to sit here is GONE. Both fields
+  // moved up into the client detail grid where Anthony asked for them, and the schedule they
+  // were trying to describe is now stated properly by the strip below — proposed length, the
+  // calendar halfway and a target end, rather than two dates with nothing measuring them.)
   // THE RAIL. One row a milestone, exactly one lit, and a pinned NEXT band above it
   // so "what do I do now" is answered before any scrolling. Replaces the eight-step
   // horizontal strip, which could carry no reason and no fix, hardcoded Midpoint to
   // `done:false` whatever had actually been paid, and read `job.completionDate` — a
   // field nothing in this file writes. The state machine itself is `jobTimeline`,
   // which is DOM-free and tested; everything here is presentation.
-  var _jtRows = jobTimeline(job, estRec, logs, cos);
+  // ⚠ THE APPROVED SNAPSHOT FIRST, falling back to the current one — the rule `docSpec`
+  // already uses. `est.days` is NOT immutable: `restoreEstimateToUI` ends in `calcAll()`, so
+  // reopening a legacy record can move the duration and therefore the projected end the
+  // client has already been sent. Reading the approved snapshot is what stops our screen and
+  // the client's held document disagreeing silently.
+  var _jtSched = jobSchedule(job, approvedEstimateFor(jobId) || est, _todayStr());
+  var _jtRows = jobTimeline(job, estRec, logs, cos, _jtSched);
   var _jtNext = jobTimelineNext(_jtRows);
   var _jtAt = function(r){
     if (!r.at) return '';
@@ -13162,38 +13684,71 @@ function renderClientDashboard(jobId) {
      + '</div>';
   _dashNotice = null;   // shown once; a stale one must not reappear on the next redraw
 
+  h += jtScheduleHtml(_jtSched);
+
   // The NEXT band. It is the answer to the question the dashboard exists to answer —
   // open a client, know the one thing to do — so it sits above the rail rather than
   // being something you find by reading down it.
+  // ⚠⚠ ONE RENDER PATH FOR THE BAND, AND THAT IS WHAT MAKES THE TRAY POSSIBLE. There were two
+  // — a live-row branch and a separate Complete branch — so anything added to the band had to
+  // be written twice or silently existed on only one of them. The state is resolved into a
+  // {cls, lbl, step} triple BEFORE any markup, and there is exactly one opening tag.
+  var _jtA = null, _bandDoc = null, _band = null;
   if (_jtNext) {
     var _jtBlocked = _jtNext.state === 'blocked';
-    h += '<div class="jt-next' + (_jtBlocked ? ' jt-next-blk' : '') + '">';
-    h += '<div class="jt-next-lbl">' + (_jtBlocked ? '&#9888; Blocked' : 'Next') + '</div>';
-    h += '<div class="jt-next-step">' + esc(_jtNext.label) + '</div>';
-    if (_jtBlocked) {
+    _band = { cls: _jtBlocked ? ' jt-next-blk' : '', lbl: _jtBlocked ? '&#9888; Blocked' : 'Next',
+              step: esc(_jtNext.label), blocked: _jtBlocked };
+    _jtA = jobTimelineActions(_jtNext, job, estRec);
+    _bandDoc = _jtA.doc;
+  } else if (_jtRows.length && _jtRows[0].state !== 'terminal') {
+    _band = { cls: ' jt-next-done', lbl: 'Complete',
+              step: 'Every milestone on this job is recorded', blocked: false };
+    // ⚠ ON A FINISHED JOB THE TRAY WALKS BACK to the last document that was actually SENT.
+    // `done` is not `sent` — see `jobTimelineDoc`.
+    _bandDoc = jobTimelineDoc(_jtRows, job, estRec);
+  }
+  if (_band) {
+    h += '<div class="jt-next' + _band.cls + '">';
+    h += '<div class="jt-next-lbl">' + _band.lbl + '</div>';
+    h += '<div class="jt-next-step">' + _band.step + '</div>';
+    if (_band.blocked) {
       h += '<div class="jt-next-sub">' + esc(_jtNext.blockedWhy) + '</div>';
-      // A panel reporting a blocker carries the fix. Standing rule, and the reason
-      // the old chips' how-to was in a `title=` that a touch device cannot reach.
+      // A panel reporting a blocker carries the fix. Standing rule, and the reason the old
+      // chips' how-to in a `title=` was unreachable on the iPad this is read on.
       if (_jtNext.blockedFix) h += '<div class="jt-next-fix">' + esc(_jtNext.blockedFix) + '</div>';
-    } else if (_jtNext.sub) {
+    } else if (_jtNext && _jtNext.sub) {
       h += '<div class="jt-next-sub">' + esc(_jtNext.sub) + '</div>';
     }
-    // The buttons. ⚠ Labels carry HTML entities (&#10003;, &#9654;) and are app
-    // constants, never user input, so they go in RAW — running them through esc() a
-    // second time is what printed `&amp;amp;` on a client's screen once already.
-    var _jtA = jobTimelineActions(_jtNext, job, estRec);
-    if (_jtA.primary || _jtA.secondary.length) {
+    // ⚠⚠ THE DOCUMENT TRAY. Anthony: *"at the top of the timeline, you can see the document
+    // you just created … view estimate … edit the estimate, or submit it for approval. Once
+    // that's done, the next document you'd have up there would be the agreement."*
+    // ⚠ TRAY BEFORE THE PRIMARY, and that is the real reading order as well as his: you
+    // consult the document, then you act on it. The band still OPENS with NEXT / <step>, so
+    // the one thing to do next is still read first, and the call to action is the last thing
+    // before the eye leaves the band.
+    if (_bandDoc) {
+      h += '<div class="jt-doc">';
+      h += '<div class="jt-doc-hd">' + esc(_bandDoc.title) + '</div>';
+      h += '<div class="jt-doc-acts">';
+      // ⚠ Labels carry HTML entities and are app constants, never user input, so they go in
+      // RAW. Only the title is user-reachable and it goes through esc().
+      _bandDoc.acts.forEach(function (a) {
+        h += '<button class="jt-btn" onclick="' + a.call + '">' + a.label + '</button>';
+      });
+      h += '</div></div>';
+    }
+    if (_jtA && (_jtA.primary || _jtA.secondary.length)) {
       h += '<div class="jt-acts">';
+      // ⚠ EXACTLY ONE FILLED BUTTON IN THE BAND. The tray's View/Print/Edit are bronze
+      // OUTLINE `.jt-btn`; this is the only `.jt-btn-p`. Two filled buttons side by side make
+      // the reader choose between two primaries, which costs the band its whole meaning.
       if (_jtA.primary) h += '<button class="jt-btn jt-btn-p" onclick="' + _jtA.primary.call + '">' + _jtA.primary.label + '</button>';
-      _jtA.secondary.forEach(function(a){
+      _jtA.secondary.forEach(function (a) {
         h += '<button class="jt-btn' + (a.danger ? ' jt-btn-d' : '') + '" onclick="' + a.call + '">' + a.label + '</button>';
       });
       h += '</div>';
     }
     h += '</div>';
-  } else if (_jtRows.length && _jtRows[0].state !== 'terminal') {
-    h += '<div class="jt-next jt-next-done"><div class="jt-next-lbl">Complete</div>'
-       + '<div class="jt-next-step">Every milestone on this job is recorded</div></div>';
   }
 
   var _jtCls = function(r){ return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait'; };
@@ -13232,6 +13787,10 @@ function renderClientDashboard(jobId) {
       if (_sm) h += '<div class="jt-smeta">' + esc(_sm) + '</div>';
       var _ss = r.by || (r.state === 'blocked' ? '' : r.sub);
       if (_ss) h += '<div class="jt-ssub">' + esc(_ss) + '</div>';
+      // ⚠ THE TRACK SHOWS A PLAN ONLY WHEN IT IS LATE, and the asymmetry is deliberate: a
+      // 150px column already carries three lines and a fourth stops it being scannable. The
+      // rail shows every plan because it has the room.
+      if (!r.done && r.plan && r.planLate) h += '<div class="jt-splan">Planned ' + esc(r.planLbl) + ' ' + esc(fmtDate2(r.plan)) + '</div>';
       h += '</div>';
     });
     h += '</div>';
@@ -13254,6 +13813,10 @@ function renderClientDashboard(jobId) {
     // A blocked row says nothing extra: the band directly above carries the reason and
     // the fix, and repeating them here is the duplication the client-copy rule cuts.
     if (r.state !== 'blocked' && r.sub) h += '<div class="jt-sub">' + esc(r.sub) + '</div>';
+    // ⚠ A PLAN IS SUPPRESSED THE INSTANT ITS ACTUAL EXISTS: once it happened, the actual IS
+    // the fact and the projection is history. The word "Planned" is ALWAYS in front of it, so
+    // this line can never be read as something that was recorded.
+    if (!r.done && r.plan) h += '<div class="jt-plan' + (r.planLate ? ' jt-plan-late' : '') + '">Planned ' + esc(r.planLbl) + ' ' + esc(fmtDate2(r.plan)) + '</div>';
     h += '</div>';
   });
   h += '</div>';   // close .jt-rail
@@ -13262,10 +13825,25 @@ function renderClientDashboard(jobId) {
   // horizontal track has no room for and which scattered them down the rail. Gathered
   // and deduped by call, they are a single strip serving BOTH layouts — and the primary
   // is still only ever in the band, so no control appears twice on screen.
+  // ⚠⚠ SEEDED FROM THE BAND BEFORE THE SWEEP, AND THIS IS WHAT MAKES "NO CONTROL TWICE"
+  // STRUCTURAL RATHER THAN A COINCIDENCE. The strip's own dedup is internal to itself and it
+  // skips only the LIT row — but twelve rows map onto five documents, so a done row and the
+  // live row legitimately name the same one (`deposit_invoiced` and `deposit_received` both
+  // reach the deposit invoice). Seeding every call the band already emitted closes that.
+  //
+  // THE STRIP IS KEPT, and that is a deliberate reversal of simply deleting it: it is the only
+  // on-screen route to a document from an EARLIER stage — reopening the deposit invoice you
+  // sent five weeks ago. The tray is the CURRENT document; the strip is the job's archive.
   var _qa = [], _qaSeen = {};
+  if (_jtA) {
+    if (_jtA.primary) _qaSeen[_jtA.primary.call] = 1;
+    _jtA.secondary.forEach(function(a){ _qaSeen[a.call] = 1; });
+  }
+  if (_bandDoc) _bandDoc.acts.forEach(function(a){ _qaSeen[a.call] = 1; });
   _jtRows.forEach(function(r){
     if (r.state === 'current' || r.state === 'blocked') return;
-    jobTimelineActions(r, job, estRec).secondary.forEach(function(a){
+    var _ra = jobTimelineActions(r, job, estRec);
+    _ra.secondary.concat(_ra.doc ? _ra.doc.acts : []).forEach(function(a){
       if (_qaSeen[a.call]) return;
       _qaSeen[a.call] = 1; _qa.push(a);
     });
@@ -13427,8 +14005,21 @@ function applyJobTransition(j) {
       return false;
     }
   }
+  // ⚠ WRITE-ONCE, AND THE GUARD IS LOAD-BEARING. `JOB_TRANSITIONS.closed` is 'active', so
+  // re-opening a closed job IS an `active` transition and would otherwise reset the date the
+  // job really started — the same reason `deliveredOn` is stamped once. Before this there was
+  // NO activation date anywhere in the file, so "how far into the job are we" had no left end
+  // to measure from, and the schedule strip could only ever report the PLAN.
+  if (next === 'active' && !j.activatedOn) {
+    j.activatedOn = _todayStr();
+    j.activatedAt = new Date().toISOString();
+    j.activatedBy = _actor(j);
+  }
   if (next === 'closed' && !j.deliveredOn) {
-    j.deliveredOn = new Date().toISOString().split('T')[0];
+    // ⚠ `_todayStr()`, not toISOString — see its comment. `deliveredAt` keeps the full ISO
+    // stamp because that is a TIMESTAMP; `deliveredOn` is a calendar date and must be the
+    // one the person closing the job is living in.
+    j.deliveredOn = _todayStr();
     j.deliveredAt = new Date().toISOString();
     j.deliveredBy = _actor(j);
   }
@@ -24859,7 +25450,10 @@ function renderJobPlan(jobId, job, est) {
     ['Service', esc(SVC_LABELS[job.svc] || job.svcLabel || est.svc || '—')],
     ['Property', esc([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—')],
     ['Target Start', fmtDate2(job.start)],
-    ['Projected', (job.start && (est.days || est.totTC) ? fmtDate2(addWorkingDays(job.start, est.days > 0 ? est.days : Math.ceil(est.totTC / 7))) : '—')]
+    // ⚠ `estWorkingDays`, the shared definition — this row used to take the TC leg ALONE
+    // while the client's own estimate took max(TC, PS), so a legacy estimate with no `days`
+    // and a larger specialist leg printed two different completion dates for one job.
+    ['Projected', (function(){ var _d = estWorkingDays(est); return (job.start && _d > 0) ? fmtDate2(addWorkingDays(job.start, _d)) : '—'; })()]
   ];
   if (isMM && job.destAddr) {
     _hdrBits.push(['New Home', esc([job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') + (job.destSqft ? ' · '+job.destSqft+' sqft':''))]);
@@ -27894,6 +28488,12 @@ function showEditClient(jobId) {
   html += fld('Priority', '<select id="ec-priority" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'normal',l:'Normal'},{v:'high',l:'High — probate deadline'},{v:'urgent',l:'Urgent — health / emergency'}], job.priority)+'</select>', false);
   html += fld('RE Potential', '<select id="ec-re" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'unknown',l:'Unknown'},{v:'yes',l:'Yes — likely RE transaction'},{v:'no',l:'No RE component expected'}], job.re)+'</select>', false);
   html += fld('Premium Estate', '<select id="ec-premium" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'no',l:'No — standard rates'},{v:'yes',l:'Yes — art, antiques, wine'}], job.premium?'yes':'no')+'</select>', false);
+  // ⚠ EDITABLE HERE BECAUSE THE SCHEDULE STRIP MADE THEM PROMINENT. Making a figure the first
+  // thing on the card while leaving it uncorrectable is worse than not showing it: the target
+  // start is set once at intake and the whole point of the strip is that the job is measured
+  // against it. Both share `dateChainGuard` with intake rather than restating the rule.
+  html += fld('Target Start', '<input type="date" id="ec-start" value="'+(job.start||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
+  html += fld('Hard Target', '<input type="date" id="ec-completion" value="'+(job.completion||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += '</div>';
 
   // Probate fields
@@ -28016,6 +28616,22 @@ function saveClientEdit(jobId) {
   job.city  = document.getElementById('ec-city').value;
   job.zip   = document.getElementById('ec-zip').value;
   job.notes = document.getElementById('ec-notes').value;
+  // ⚠ IT FLAGS AND EXPLAINS; IT NEVER REFUSES — the standing rule. The client estimate's
+  // header states the target start and the projected completion, and the standard agreement
+  // states an Estimated Start Date, so moving this date after either went out makes a document
+  // in somebody's hands wrong. The app cannot reissue them; it can say so at the moment of the
+  // edit, which is the one moment somebody can still do something about it.
+  var _oldStart = job.start || '', _oldEnd = job.completion || '';
+  job.start      = (document.getElementById('ec-start') || {}).value || '';
+  job.completion = (document.getElementById('ec-completion') || {}).value || '';
+  if (job.start !== _oldStart || job.completion !== _oldEnd) {
+    var _stale = [];
+    if (docSentAt(job, 'estimate')) _stale.push('the client estimate');
+    if (job.agrSigned) _stale.push('the signed agreement');
+    else if (job.agrSent) _stale.push('the signing packet');
+    if (_stale.length) alert('The dates on this job have changed.\n\n' + _stale.join(' and ')
+      + ' state the old target start. Agree the new dates with the client, and re-send the estimate if it has not been accepted yet.');
+  }
   job.mustFind    = (document.getElementById('ec-mustfind')||{}).value||'';
   job.safetyNotes = (document.getElementById('ec-safety')||{}).value||'';
   job.houseFlags  = readHouseFlagInputs('ec');

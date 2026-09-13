@@ -505,7 +505,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'the notice names the mailbox the draft was created in, with an honest fallback');
     lacks(src, 'function _showDraftLink(', 'the tab-strip version is gone');
     has(fn('docRecordSent'), 'st.draftUrl = res.draftUrl', 'the link is kept on the document record');
-    const drafts = sandbox({ fns: ['_jtDraftLink', 'docKeyFor'] });
+    const drafts = sandbox({ fns: ['_jtDraftLink', 'docKeyFor', 'docWord'], vars: ['DOC_KIND_WORD'] });
     const job = { id: 7, docState: { estimate: { draftedAt: 'x', draftUrl: 'https://mail.google.com/x' } } };
     eq(drafts._jtDraftLink(7, job, 'estimate', '').length, 1, 'and the rail offers it while the draft is outstanding');
     eq(drafts._jtDraftLink(7, job, 'estimate', '')[0].call, "openDocDraft(7,'estimate')",
@@ -513,10 +513,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ IT NAMES ITS DOCUMENT, like View and Print beside it and for the same reason: the
     // deduped quick strip at the foot of the rail carries no row context, so two
     // outstanding drafts would render as two identical "Open the draft" buttons.
-    has(drafts._jtDraftLink(7, job, 'estimate', '', 'estimate')[0].label, 'estimate draft',
-      'and the label says which draft it opens');
-    has(drafts._jtDraftLink(7, job, 'estimate', '')[0].label, 'document draft',
-      'with an honest fallback when the caller names nothing');
+    // ⚠ THE WORD IS READ, NOT PASSED. It was hand-passed at five call sites — five copies of
+    // one noun, and a caller that named nothing got a generic 'document draft' that said
+    // exactly as much as no label. `docWord` is the one namer, so the fallback is gone
+    // BECAUSE IT CANNOT HAPPEN: there is no caller-supplied word to omit.
+    has(drafts._jtDraftLink(7, job, 'estimate', '')[0].label, 'estimate draft',
+      'and the label says which draft it opens, from the one namer');
+    const invJob = { id: 7, docState: { 'invoice:midpoint': { draftedAt: 'x', draftUrl: 'https://mail.google.com/y' } } };
+    has(drafts._jtDraftLink(7, invJob, 'invoice', 'midpoint')[0].label, 'midpoint invoice draft',
+      'and a staged document carries its stage in the label');
     // ⚠ WITHDRAWN ONCE THE SEND IS CONFIRMED. A button that reopens an already-sent draft
     // is an invitation to send it twice.
     job.docState.estimate.sentAt = 'y';

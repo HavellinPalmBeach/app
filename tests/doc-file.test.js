@@ -62,7 +62,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // `uploadHtmlToDrive` overwrites BY FILENAME — that asymmetry is load-bearing and
     // CLAUDE.md records it: the client-facing name is dated, the Drive name is not,
     // precisely so a re-file REPLACES. A changed name orphans every copy already there.
-    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD'] });
+    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD', 'DOC_READY_WHY'] });
     const job = { hvlId: 'HVL-0007', addr: '69 Beach Blvd, Palm Beach FL', name: 'Butler' };
     eq(nm.docNames(job, 'estimate', {}).drive, nm.estimateDocNames(job).driveClient,
       'the estimate keeps the exact name it already files under');
@@ -127,8 +127,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const uploads = [];
     const ctx = sandbox({
       fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docSentAt', 'docFiledAt',
+        // The registry's three blockers ask ONE shared readiness gate now, so what the band
+        // OFFERS and what happens when it is PRESSED cannot drift apart.
+        // (`agreementReady` stays STUBBED in these sandboxes — this suite is about the FILING
+        // path, and lifting the real one would make every case turn on the win state instead.)
+        'docReadiness', 'docDraftOnly',
             'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
-      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {},
         _exportDoc: (title, body) => '<doc>' + title + '|' + body + '</doc>',
@@ -199,8 +204,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // An unresolved subfolder falls back to the job root rather than dropping the document.
     const fb = sandbox({
-      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
-      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
+      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor',
+        'docReadiness', 'docDraftOnly'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: Object.assign({}, {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, _docNotice() {},
         _exportDoc: (t, b) => b, resolveSubfolderId: (j, n, cb) => cb(null),
@@ -255,7 +261,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the rail answers it, and offers the retry where it matters');
   {
-    const ctx = sandbox({ fns: ['_jtDriveLink', 'docKeyFor'] });
+    const ctx = sandbox({ fns: ['_jtDriveLink', 'docKeyFor', 'docWord'], vars: ['DOC_KIND_WORD', 'DOC_READY_WHY'] });
     const j = (o) => ({ id: 7, docState: { estimate: o } });
     eq(ctx._jtDriveLink(7, j({}), 'estimate', '').length, 0, 'nothing sent, nothing offered');
     eq(ctx._jtDriveLink(7, j({ filedAt: 't', filedUrl: 'https://drive/x' }), 'estimate', '')[0].call,
@@ -273,9 +279,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const mid = ctx._jtDriveLink(7, { id: 7, docState: { 'invoice:midpoint': { sentAt: 't' } } }, 'invoice', 'midpoint');
     has(mid[0].call, "{stage:'midpoint'}", 'and an invoice retry carries its stage');
 
-    // Every document row offers it, by construction rather than by five copies.
+    // ⚠⚠ IT IS ONE CALL SITE NOW, NOT FIVE, AND THAT IS A TIGHTENING RATHER THAN A LOSS.
+    // Five rows each calling the builder was five places to forget a gate — and five is what
+    // happened: only `estimate_sent` carried a readiness condition. `_jtDocSecondaries` is the
+    // one assembler, fed by the one row→document map, behind the one gate. Every document row
+    // still offers the link, by construction; the construction just moved up one level.
     const acts = noComments(fn('jobTimelineActions'));
-    eq((acts.match(/_jtDriveLink\(/g) || []).length, 5, 'five rows, one builder');
+    eq((acts.match(/_jtDriveLink\(/g) || []).length, 0, 'no row builds its own Drive link');
+    eq((noComments(fn('_jtDocSecondaries')).match(/_jtDriveLink\(/g) || []).length, 1,
+       'one assembler calls the one builder');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -327,9 +339,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // unbounded loop blows the stack in this test instead of in somebody's browser.
     const rc = sandbox({
       fns: ['ensureAgreementApproved', 'exportSigningPacketToDrive', 'docAction', 'docFile',
+        // (`agreementReady` stays STUBBED in these sandboxes — this suite is about the FILING
+        // path, and lifting the real one would make every case turn on the win state instead.)
+        'docReadiness', 'docDraftOnly',
             'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec',
             'approvedEstimateFor', 'agreementReady'],
-      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: {
         setTimeout: (f) => f(),
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, _docNotice() {},

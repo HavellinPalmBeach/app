@@ -203,15 +203,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // refusal was invisible and the button read as dead). A true statement about a
     // requirement must not break because a line moved. So: name the functions that have
     // to consult the shared definition, and assert each one does.
-    const fnBody = (sig) => {
-      const from = src.indexOf('function ' + sig);
+    // ⚠ THIS USED TO PIN THE WHOLE SIGNATURE, ARGUMENT LIST AND ALL, and broke the day
+    // `jobTimeline` grew a fifth parameter for the schedule — a true change that says nothing
+    // about whether the rail consults the shared room-coverage definition. Eleventh time this
+    // repo has recorded a byte-sequence pin failing on a correct edit. It matches the NAME and
+    // the opening paren now, which is the requirement: this function, whatever it takes.
+    const fnBody = (name) => {
+      const from = src.indexOf('function ' + name + '(');
       if (from < 0) return '';
       const rest = src.slice(from + 10);
       const end = rest.indexOf('\nfunction ');
       return end < 0 ? rest : rest.slice(0, end);
     };
-    [['saveEstimateAndPreview()', 'Save'], ['estimateSubmitBlocker(est)', 'Submit'],
-     ['checkPin()', 'the manager PIN'], ['jobTimeline(job, estRec, logs, cos)', 'the timeline rail'],
+    [['saveEstimateAndPreview', 'Save'], ['estimateSubmitBlocker', 'Submit'],
+     ['checkPin', 'the manager PIN'], ['jobTimeline', 'the timeline rail'],
     ].forEach(([sig, what]) => {
       has(fnBody(sig), 'unscoredRoomNames(', `${what} reads the shared definition`);
     });
@@ -219,9 +224,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'and nothing else calls it — four readers plus the definition itself');
     has(src, "showFB('e-fb','warn','Every included room needs a volume and complexity score",
        'Save still refuses a genuinely unscored room');
-    has(fnBody('estimateSubmitBlocker(est)'), 'Cannot submit — every included room needs',
+    has(fnBody('estimateSubmitBlocker'), 'Cannot submit — every included room needs',
        'Submit still does too, and still says why');
-    has(fnBody('submitForApproval(opts)'), 'estimateSubmitBlocker(currentEstimate)',
+    has(fnBody('submitForApproval'), 'estimateSubmitBlocker(currentEstimate)',
        'and Submit reads that one blocker rather than re-testing');
     has(src, 'Cannot approve — unscored rooms:',
        'and the manager PIN still does');

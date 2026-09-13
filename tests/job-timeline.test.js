@@ -529,7 +529,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // they must never differ about state, which is the failure this file records every
     // time a second renderer grows its own copy of a rule.
     const rc = body('renderClientDashboard(jobId)');
-    eq((rc.match(/jobTimeline\(job, estRec, logs, cos\)/g) || []).length, 1,
+    // ⚠ THE ARGUMENT LIST IS NOT THE REQUIREMENT. This pinned the exact four-parameter call
+    // and broke when `jobTimeline` grew a fifth for the schedule — a true change that says
+    // nothing about whether both layouts read one derivation. It counts the CALL now.
+    eq((rc.match(/jobTimeline\(job, estRec, logs, cos/g) || []).length, 1,
       'the rail and the track are built from a single jobTimeline call');
     has(rc, 'var _jtCls = function(r)', 'and share one state-to-class mapping');
     has(rc, "h += '<div class=\"jt-track\" style=\"--jt-cols:'", 'the track renders');
@@ -658,7 +661,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // opposite sides of the screen. The rail is a reading column; the card stays wide.
     has(css, '.jt{max-width:', 'the rail is capped to a readable width');
     has(css, '.jt-lbl{flex:1 1 auto;min-width:0;', 'and the label takes the slack rather than shrinking');
-    has(src, "'<div class=\"jt-next' + (_jtBlocked ? ' jt-next-blk' : '') + '\">'",
+    // ⚠ RESTATED. The band used to have TWO render paths — a live-row branch and a separate
+    // Complete branch — so anything added to it had to be written twice. It resolves the state
+    // into one {cls, lbl, step} triple and emits ONE opening tag, so the byte sequence this
+    // pinned is gone while the requirement (the modifier rides the band's own class) holds.
+    has(src, "'<div class=\"jt-next' + _band.cls + '\">'",
       'and the renderer puts the modifier on it');
+    eq((body('renderClientDashboard(jobId)')
+          .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+          .match(/'<div class="jt-next'/g) || []).length, 1,
+      'from a single band render path');
   }
 };

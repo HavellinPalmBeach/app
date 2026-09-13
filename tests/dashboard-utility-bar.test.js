@@ -44,10 +44,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignWatches', 'field', 'fmtMoney',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
     'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
+    // The document tray: the step's document comes from the ONE row→document map, behind the
+    // ONE readiness gate, so these lift with anything that drives the rail or a document verb.
+    'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+    'agreementReady', 'jobTimelineDoc',
+    // The schedule strip and the planned dates the rail now carries.
+    'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays',
+    'workingDaysInclusive', 'approvedEstimateFor',
     'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
     'standingFlagLines', 'standingFlagsBlock', 'stopJobsWatch', 'unscoredRoomNames'];
   const VARS = ['ESIGN_PROVIDERS', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
-    '_dashNotice', '_jobsWatch', 'jobLogs'];
+    '_dashNotice', '_jobsWatch', 'jobLogs',
+    'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
+    'PRODUCTIVE_HRS_PER_DAY'];
 
   const EST = () => ({ rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], havellinTotal: 24100 });
   const BASE = { id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout', created: 'Sep 8, 2026',
@@ -150,6 +159,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       };
       add(a.primary);
       a.secondary.forEach(add);
+      // ⚠ THE DOCUMENT TRAY IS PART OF WHAT THE RAIL OFFERS. View / Print / Edit estimate /
+      // the Drive link moved out of `secondary` and onto the step's DOCUMENT, so a walk that
+      // reads only `secondary` no longer sees them — and this check's whole point is that
+      // nothing in the utility bar is also reachable from a step.
+      if (a.doc) a.doc.acts.forEach(add);
     });
   });
 

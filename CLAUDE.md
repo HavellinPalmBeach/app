@@ -1,5 +1,184 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE DASHBOARD GAINS A SCHEDULE AND A DOCUMENT TRAY — AND TWO LIVE DEFECTS CAME WITH THEM (2026-09-13)
+Anthony, five asks in one message: Save Estimate *"just wipes the screen"* and should land on the client;
+the chips belong *"to the right of the client's name and address"*; target start and hard target belong
+*"to the right of email"*; the band above the timeline should carry *"the document you just created"* with
+view / edit / submit beside it, advancing to the agreement and then the invoices; and *"the proposed length
+of the job … really needs to be front and center … I don't think the dates are prominent enough in the app
+to allow us to know where we are versus the deliverable timeline we agreed to."* App-only, no redeploy.
+
+- **⚠⚠ THE SAVE BUTTON WAS CLICKING A TAB THAT WAS RETIRED IN SLICE 7.**
+  `document.querySelector('.nb[onclick*="\'client-estimate\'"]')` resolves to **null** — nine `.nb` buttons
+  and none carries that substring since the nav went 12 → 9. `querySelector` returns null without throwing,
+  `if (_ceBtn)` swallowed it, and the navigation was a **silent no-op** — while the nested t+200 block went
+  on to blank the form on the panel the user was still looking at, `clearEstimateTab`'s own trailing
+  *"Estimate cleared."* overwrote the save summary **2.8 seconds early**, and the page jumped to the top.
+  **The end state reads as data loss on a form somebody has just spent a walkthrough filling in.**
+  - **⚠ THE ORDER IS THE FIX, NOT JUST THE SELECTOR.** It finds the button FIRST and changes nothing if it
+    is absent; the old line cleared the form and THEN discovered it could not navigate.
+  - **⚠ NAV FIRST, DRILLDOWN SECOND** — `showPanel('jobs', btn)` sets `#client-dashboard-view` to
+    `display:none` and calls `renderJobs()`, so opening the drilldown first lands you on the client LIST.
+    **⚠ And NEVER `showPanel('jobs')` with one argument**: it does an unguarded `btn.classList.add('active')`
+    AFTER stripping `.active` off every panel and every nav button, so a one-arg call throws and leaves no
+    visible panel at all.
+  - **⚠ THE NOTICE COMES AFTER `openClientDashboard`**, which nulls `_dashNotice` so a message about the
+    last client cannot open on the next one. That costs a second render; there is no single-render route
+    that also carries a message.
+  - **⚠ AND THE PROGRESS CLAIM RIDES THE FEEDBACK CALL, NOT `saveMsg`.** By the time the dashboard paints,
+    the outbox has flushed — repeating *"Uploading to cloud…"* there states something no longer true.
+  - The invisible `renderClientEstimate()` preview is **deleted**: it writes into a panel with no nav button,
+    so it has painted nothing since Slice 7; its one live side effect (`applyEstimateLock` via
+    `updateApprovalUI`) is already reached by `clearEstimateTab()`.
+- **⚠⚠ FOUR OF THE FIVE DOCUMENT ROWS GATED THEIR View/Print LINKS ON NOTHING, AND THIS IS THE ONE THAT
+  REACHES A CLIENT.** Only `estimate_sent` carried a condition. On the job in Anthony's own screenshot —
+  status NEW, estimate built, **not approved**, not won, no agreement — the strip's *View deposit invoice*
+  and *View midpoint invoice* rendered a **complete, printable billing document priced off the UNAPPROVED
+  draft**, because the invoice blocker only ever refused a FINAL. Promoting those links into the band
+  without a gate would have made it more prominent, not less.
+  - **`docReadiness(kind, job, estRec)` IS THE ONE GATE**, read by the band's tray AND by all three
+    `DOC_ACTIONS` blockers — so what is OFFERED and what happens when it is PRESSED cannot drift apart.
+  - **⚠ THE EXPENSIVE ARMS STAY IN THE REGISTRY.** `DOC_ACTIONS.invoice.blocker` calls `invoiceHtml` — a
+    439-line pricing build — to answer *no hours logged* and the ±15% variance. Running that on every
+    dashboard paint, **including the 15-second remote tick**, is not free. Each blocker asks the shared gate
+    first and appends only what it alone knows.
+  - **`docDraftOnly` WITHHOLDS PRINT ON A DRAFT ESTIMATE, never offers-and-refuses.** A draft may be READ on
+    our own screen and must not reach paper; a button that alerts a blocker back at you is worse than none,
+    the rule `job_active` already follows. **The word DRAFT in the tray's title is the whole explanation** —
+    a sentence about a missing button would be explaining an absence.
+- **⚠⚠ AND THE RED EM DASH IN HIS OWN SCREENSHOT: `fmtDate2('')` RETURNS THE LITERAL `'—'`, WHICH IS
+  TRUTHY.** So `fmtDate2(job.completion) ? red : '—'` took its TRUE arm on every job with no hard target and
+  painted a **red bold em dash** — an error-coloured warning nobody can act on. **Every test in the repo was
+  blind to it because the harness stubs `fmtDate2` as a passthrough returning `''`**, which takes the FALSE
+  arm. A stub that does not match the real source is worse than no stub — the second time this file records
+  that. **BRANCH ON THE RAW VALUE, NEVER ON THE FORMATTED ONE.** The new group lifts the REAL `fmtDate2`.
+- **`jobSchedule(job, est, todayStr)` IS THE ONE SCHEDULE DERIVATION**, DOM-free and **clock-free**.
+  - **⚠ TODAY IS AN ARGUMENT.** Reading the clock inside it would make every pace assertion a time bomb that
+    passes on the Tuesday it is written and fails on some later one, and would force five sandboxes to stub
+    `Date`. `jobTimeline` takes the schedule as an optional fifth parameter for the same reason.
+  - **⚠⚠ THE PLAN IS ANCHORED ON `job.start`, ALWAYS, EVEN ONCE THE JOB IS RUNNING.** That is the date the
+    client estimate's header and the agreement's Estimated Start Date both state, so a plan re-derived from
+    the real activation would print an end date the client was never given. A job that activated late gets
+    `projectedEnd` as a SECOND, clearly-labelled figure — the date to renegotiate, never a quiet replacement.
+  - **⚠⚠ THE CALENDAR HALFWAY IS `halfway`, NEVER `mid`, AND THE STRIP NEVER PRINTS THE WORD "MIDPOINT".**
+    `paymentSplit` is a flat 50/25/25 with **no calendar in it at all**, so the midpoint INVOICE has no date
+    relationship to the halfway point. Two facts two inches apart on one card must not share a word, or the
+    strip reads as a statement about when money is due that nobody made.
+  - **⚠ `pace` AND `fit` ARE TWO SLOTS AND MUST NOT BE COLLAPSED.** A brand-new job with a tight closing date
+    is perfectly on pace and its plan still does not fit; one slot holding both hides whichever it did not
+    win. A court deadline OUTRANKS the hard target on probate — it is statutory.
+  - **⚠⚠ A DEPOSIT DATE MAY ANCHOR `elapsed` AND MAY NEVER SUPPORT A SLIP CLAIM.** It says when work COULD
+    start, not when it did. Every job active before `activatedOn` shipped is in that case, and the strip
+    says *"(from the deposit)"* on screen rather than passing it off as a recorded start.
+  - **⚠ IT NAMES EXACTLY WHAT IT COMPARED.** The app records no room-level progress this derivation can see,
+    so the halfway flag says *"past the halfway point and the midpoint invoice has not gone out"* — it never
+    says the WORK is half done.
+  - **⚠ NEVER "Working day 0 of 6" — FOUND IN A BROWSER, NOT REASONED ABOUT.** `elapsed` is 0 whenever today
+    is before the recorded start (an activation stamped ahead of the calendar, a clock-skewed device), and a
+    job cannot be on day zero of itself. It falls back to the proposed length.
+- **⚠⚠ A PLANNED DATE IS NOT AN ACTUAL AND MUST NEVER SHARE THE `at` SLOT.** Every `at` on this rail is
+  something that HAPPENED and `_jtAt` formats it as one, so a projection sitting there is indistinguishable
+  from a record — on the one surface whose entire contract is what has happened. Its own field (`plan`), its
+  own element (`.jt-plan`), the word **"Planned"** always in front of it, and **withheld the instant the row
+  has its actual**. The track shows a plan only when it is LATE: a 150px column already carries three lines.
+- **`JT_ROW_DOC` IS THE ONE ROW→DOCUMENT MAP** and `jobTimelineDoc` the one definition of *the document in
+  play right now*, mirroring `jobTimelineNext`. **Twelve of sixteen rows map to a document; four do not
+  (intake, walkthrough, job_active, work_complete) and that is stated by ABSENCE** — those are steps where
+  the thing to do is RECORD something, not read something.
+  - **⚠⚠ ITS BACKWARD WALK ACCEPTS ONLY A DOCUMENT THAT WAS ACTUALLY SENT, AND `done` IS NOT `sent`.**
+    `estimate_built.done` means an estimate EXISTS and `estimate_approved.done` means a manager approved it;
+    `markEstimateSent` is a skippable manual button this file already records as non-monotonic. Without the
+    `docSentAt` test the Complete band reads *"Last sent — Client Estimate"* over a document that never left
+    the building — the exact false claim the whole gating exercise exists to close.
+  - **`_jtDocSecondaries` COLLAPSED THE THREE BUILDERS FROM FIVE CALL SITES EACH TO ONE.** Five sites meant
+    five places to forget a gate, and five is precisely what happened.
+  - **⚠ EDIT ESTIMATE IS A DOCUMENT ACTION AND BELONGS BESIDE THE DOCUMENT.** It used to be pushed only on
+    the `estimate_built` row while that row was `done`, so on the state in the screenshot it rendered at the
+    **foot of the page** in the quick strip rather than under the estimate it edits.
+- **⚠ THE BAND HAS ONE RENDER PATH NOW, AND THAT IS WHAT MADE THE TRAY POSSIBLE.** There were two — a
+  live-row branch and a separate Complete branch — so anything added to the band had to be written twice or
+  silently existed on only one of them. State resolves into one `{cls, lbl, step}` triple before any markup.
+  - **TRAY BEFORE THE PRIMARY**, which is Anthony's order and the real reading order: you consult the
+    document, then act. The band still OPENS with `NEXT / <step>`.
+  - **⚠ EXACTLY ONE FILLED BUTTON IN THE BAND.** The tray's View/Print/Edit are bronze OUTLINE `.jt-btn`;
+    the step primary is the only `.jt-btn-p`. Two filled buttons side by side make the reader choose between
+    two primaries, which costs the band its whole meaning.
+  - **⚠ `--bronze-dk`, NOT `--bronze`.** White on `#A67C45` is ~3.1:1 at 12px; on `#7a5a2e` it is ~6.4:1 and
+    still reads unambiguously brown against the band's `--tan`.
+- **⚠ THE QUICK STRIP IS KEPT, AND SEEDED FROM THE BAND BEFORE IT SWEEPS.** That seeding is what makes *no
+  control renders twice* **structural rather than a coincidence**: the strip skips only the LIT row, but
+  twelve rows map onto five documents, so a done row and the live row legitimately name the same one. It
+  survives as the job's ARCHIVE — the only on-screen route to a document from an earlier stage — while the
+  tray is the CURRENT document. **Measured: on the screenshot's job the strip now renders NOTHING**, because
+  every one of its nine links was either refused by the gate or moved into the tray.
+- **`estWorkingDays` IS THE ONE PROPOSED-LENGTH DEFINITION, AND THERE WERE TWO THAT DISAGREED.** The client
+  estimate took `max(TC leg, PS leg)`; the Job Plan header took **the TC leg alone**. On any estimate saved
+  without `days` where the specialist leg is larger, the document the client holds and the header the crew
+  works from printed **different projected completion dates for one job**. The client-facing form wins.
+  **⚠ Prep returns 0 through an EXPLICIT branch**, so nobody "fixes" the zero later.
+- **`workingDaysBetween` CLAMPS ITS START TO TODAY and no elapsed measurement may use it** — it returns a
+  confident, silent **0** for any window that has already closed. `workingDaysInclusive` is the pure counter.
+- **`_todayStr()` IS THE ONE WALL-CLOCK READ, IN LOCAL CALENDAR TERMS.** `toISOString().slice(0,10)` is UTC
+  and rolls over at **8pm Eastern**, so an evening close stamped TOMORROW'S date on tonight's work.
+  `applyJobTransition`'s `deliveredOn` is repointed here; `deliveredAt` keeps its full ISO timestamp.
+- **`job.activatedOn` IS WRITE-ONCE, AND THE GUARD IS LOAD-BEARING.** `JOB_TRANSITIONS.closed` is `'active'`,
+  so re-opening a closed job IS an `active` transition and would otherwise reset the date the job really
+  started. **Before this there was no activation date anywhere in the file**, so "how far into the job are
+  we" had no left end. No redeploy — the Jobs sheet stores `JSON.stringify(job)` and the per-key job merge
+  already carries `deliveredOn` the same way.
+- **⚠ `dateChainGuard` IS ONE WEEKEND / MIN-CHAIN RULE, now that both forms carry these dates.** They became
+  editable in two places the day the strip made them prominent. **Every element access is guarded** —
+  `ec-walkthrough` does not exist. Edit Client **flags and never refuses**: changing a date after the
+  estimate or the packet went out makes a document in somebody's hands wrong, and the app can say so at the
+  one moment somebody can still act on it.
+- **4753 committed checks** (`tests/dashboard-schedule.test.js`, 161 new — the first coverage of the
+  schedule, the tray or the readiness gate at all). **All 24 changes revert-verified individually** — the
+  rail's plan fields fail **5**, withholding Print on a draft **6**, the quick-strip seeding 4, the shared
+  weekend rule 4, Edit estimate's move 3, and the rest 1–2.
+  - **⚠⚠ FIVE REVERTS CAME BACK GREEN ON THE FIRST SWEEP AND FOUR WERE THE TEST'S FAULT.** `halfway` floored
+    instead of ceiling — **on a SIX-day job `floor` and `ceil` are both 3**, so the case passed either way;
+    it needs an ODD length. The deposit-slip rule — the fixture's deposit date **equalled** the target start,
+    so the slip was 0 whether the rule fired or not. `jobTimelineDoc`'s sent-not-done walk and the red em
+    dash had **no test at all**. Caught by reverting, not by reading: the sixteenth and seventeenth times
+    this file records an assertion that could not fail.
+  - **⚠ AND THE FIFTH WAS THE REVERT ITSELF** — it added a dead function beside the live one instead of
+    removing live behaviour. Green, and it proved nothing. The same shape this file already records once.
+  - **⚠ THE SWEEP SNAPSHOTS THE FILE AND NEVER `git checkout`s IT**, asserts the replacement text is present
+    after each edit, and prints `NEEDLE x0` when a needle fails to match — all three guards this file has
+    paid for. **⚠ And `| tail -3` MISSES THE COUNT on a failing run**, because `run.js` prints the Failures
+    detail after it; every revert read `-1 fails` until that was fixed.
+- **⚠ NOTED, NOT INTRODUCED, NOT FIXED: `jobTimeline` reads the clock in exactly one pre-existing place** —
+  `walked`, which tests whether the walkthrough date has passed. Unrelated to the schedule; pinned at ONE so
+  the schedule cannot quietly add a second.
+- **⚠ TEN PRE-EXISTING ASSERTIONS BROKE CORRECTLY AND ALL TEN ARE RESTATED, not deleted.** Two pinned a
+  function's whole ARGUMENT LIST (`jobTimeline(job, estRec, logs, cos)`, `blocker(spec)`) and broke on a true
+  parameter addition — the eleventh and twelfth times this file records a byte-sequence pin. Three counted
+  `_jtDocViews(` / `_jtDriveLink(` at **5** and are now **0 in the rows, 1 in the assembler**, which is the
+  tightening. One pinned the band's exact opening expression; one pinned `jt-btn-p` over a body that was not
+  comment-stripped and tripped on the comment explaining why there is only one — **the sixth time a needle
+  has tripped on the text explaining the fix**.
+- **Verified end to end in headless Chromium on the real page**, driving the real nav, the real room grid and
+  the real Save button:
+
+  | | old build | new build |
+  |---|---|---|
+  | Save Estimate | form blanked, **stayed on Build Estimate** | lands on `panel-jobs`, drilldown open on that client, summary carried across |
+  | chips | a row BELOW the name | beside the name, all four, `chipsBesideName` true |
+  | Hard target, none set | **red bold em dash** | plain `—`, no `.dfv-alert` |
+  | the schedule | Target start · Hard target, and nothing measuring them | *Target start Sep 21 · 6 working days · Halfway Sep 23 · Target end Sep 28* |
+  | the band | *Estimate approved* + Submit | + tray *Client Estimate — DRAFT* · View · Edit, brown primary `rgb(122,90,46)` |
+  | the strip at the foot | **9 links**, incl. a printable invoice off the draft | **0** |
+  | duplicate onclicks | 0 | 0 |
+  | on an ACTIVE job | — | tray becomes *Invoice — Deposit* · View · Print |
+
+  Planned dates read *"Planned start / halfway point / end"* on the rail and drop the moment the row is done.
+  Overflow **0** at 1440 and 390px; no page errors.
+- **⚠ BOTH DOCUMENTS NEED A PASS, AND THE PLAYBOOK MORE THAN THE MANUAL.** Manual §9a (the rail) does not
+  describe the schedule strip, the planned dates or the tray; §9b (the five documents) describes the quick
+  strip as the route to every document, which is now the tray for the current one and the strip for the
+  archive; §5/§7 describe Save Estimate landing on the Client Estimate tab. Playbook Step 3 tells the reader
+  where Save lands. **Not done in this commit** — flagged rather than half-done.
+
 ## ⚠⚠ THE JOB RECORD WAS THE NEXT WHOLE-RECORD MERGE, AND IT DESTROYED A CHEQUE (FIXED 2026-09-12)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-12a`. Anthony, right after
 confirming the plan fix: *"Are there any other obvious locking issues that would keep things from propagating
@@ -1063,7 +1242,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/festive-noether-ggr0fn`
+- Active feature branch: `claude/admiring-tesla-7ysggp`
+  (was `claude/festive-noether-ggr0fn`)
   (`claude/busy-heisenberg-h24ya9` shipped alongside it on 2026-09-11 — two sessions ran
   concurrently and both are on `main`; neither is stale.)
   (was `claude/trusting-allen-iadbqe`, then `claude/fervent-tesla-7dd43r`, then `claude/practical-knuth-tp2twr`, then `claude/hopeful-hamilton-5sw4wm`, then `claude/eloquent-ptolemy-cagox5`, then `claude/trusting-edison-jh2sht`, then `claude/editable-job-type-estimates-90hbj5`, then `claude/ecstatic-feynman-b3j90u`, before that `claude/eager-euler-u5lt65`, then `claude/kind-hawking-j7iugr`, then `claude/home-transition-terminology-elllih`, then `claude/estate-settlement-pricing-3wmldo`, then `claude/vendor-save-error-pa0kib`, then `claude/box-formatting-alignment-c3z6h7`, then `claude/code-audit-document-review-jilk87`, then `claude/app-build-status-testing-mf5nq2`, then
@@ -1073,7 +1253,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/festive-noether-ggr0fn:main`
+  `git push origin claude/admiring-tesla-7ysggp:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

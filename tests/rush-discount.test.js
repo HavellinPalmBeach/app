@@ -60,9 +60,12 @@ const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'fmt', 'esc', 'payme
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection',
                 'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'discountOnLabor',
                 // proposedPlanRow's prep narrative reads the rate rather than printing a 30.
-                'prepFeeRate'];
+                'prepFeeRate',
+                // The client's stated job length is the shared definition now, not a second
+                // fallback of its own that disagreed with the Job Plan header's.
+                'estWorkingDays'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
-                 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'];
+                 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
 function ceDoc(e) {
   return sandbox({ fns: CE_FNS, vars: CE_VARS }).clientEstimateHtml(e, CE_JOB);
