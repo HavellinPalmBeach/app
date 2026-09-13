@@ -1,5 +1,101 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ HAVELLIN MAY CARRY A FIREARM NOW — AND `flagNFA` BECAME THE GATE IT WAS NEVER WIRED TO BE (2026-09-13)
+Anthony, after checking with a dealer: *"for me to take from a home to a licensed gun dealer for purposes of
+purchase or consignment isn't it fine?"* Then: *"let's just limit it to me transporting for any job … let's
+build out our process rather than lock it down needlessly."* App-only, no redeploy.
+
+- **⚠⚠ THE STANDING RULE WAS TOO BROAD, AND THE RESEARCH IS WHY.** *"Havellin never transports; the dealer
+  collects from the property"* was written as one rule over two very different questions. For a **non-NFA**
+  firearm the pieces line up: `Fla. Stat. §790.25(5)` covers a securely-encased firearm in a private
+  conveyance; `§733.607` puts possession and control in the personal representative's hands with a duty to
+  take "all steps reasonably necessary for the management, protection, and preservation of the estate"; and
+  ATF treats temporary custody where **title and ultimate control stay with the owner** as not a GCA
+  transfer. Destination is an FFL, which is the most protected recipient in the statute. That is what estate
+  liquidators do.
+- **⚠⚠ FOR NFA IT IS NOT CLOSE, AND THE NARROWED QUESTION MAKES IT WORSE.** `27 CFR §479.11` defines transfer
+  as *"selling, assigning, pledging, leasing, loaning, giving away, or otherwise disposing of"*, and its only
+  temporary-conveyance exception reaches **a qualified manufacturer or dealer**, for the **sole purpose** of
+  repair / identification / evaluation / research / testing / calibration, **and return to the same lawful
+  possessor** — three separate misses for us. `§479.90a` carves out *"an executor, administrator, personal
+  representative, or other person authorized under state law to dispose of property in an estate"*: a
+  fiduciary category, not a vendor they engage. `26 U.S.C. §5861` is ten years. **"Purchase or consignment"
+  makes it worse, not better** — a real transfer is then contemplated and our possession is an unapproved
+  intermediate link in it.
+- **⚠⚠ AND THE RISK THAT MATTERS IS NOT THE DRIVE, IT IS THE FEE.** `18 U.S.C. §922(a)(1)(A)` — engaging in
+  the business of dealing without a licence. BSCA 2022 broadened the test from *"livelihood and profit"* to
+  **"predominantly earn a profit"**; ATF's 2024 presumptions are proposed for rescission (RIN 1140-AB01,
+  Fed. Reg. 6 May 2026, comments closed 4 Aug) but the statutory definition stands. **The test is keyed to
+  PURCHASE AND RESALE**, so a courier paid its logged hours is clear — and two things would cross it, both
+  now written into policy: **never buy an estate firearm**, and **never take a percentage of firearm
+  proceeds**. Havellin bills hours today, so it is structurally fine; the hazard is somebody later
+  "simplifying" firearms into a commission the way prep carries 30%.
+- **⚠⚠ `invTransportBlocked` IS THE GATE, AND `nfa` HAS NO OVERRIDE — THE SECOND SUCH GATE IN THE APP.**
+  Four arms in order: `nfa` → `authority` → `serial` → `dealer`. The first is categorically different and
+  must never grow an override, for the same reason the hours-log deposit gate has none: **there is no person
+  with standing to unlock it.** A representative cannot authorise it because the registration is federal and
+  not theirs to assign. Reverting that one arm fails **9**.
+  - **⚠ `serial` IS A GATE RATHER THAN A NICETY.** The authorisation names each firearm **by serial**, so an
+    item with none cannot have been named in the document that makes carrying it lawful — and the dealer's
+    receipt comes back serial by serial and has to reconcile against the manifest.
+  - **⚠ IT IS STRICTER THAN `invReleaseBlocked`, NOT A RENAME OF IT.** Release asks whether the item may
+    leave at all; transport asks who carries it. An authorised NFA item is releasable **to the dealer** and
+    never transportable by us, and a test drives exactly that pair.
+- **⚠⚠ AND `flagNFA` GATED NOTHING UNTIL TODAY.** Since 2026-08-24 it printed a worklist notice and decided
+  no behaviour anywhere. It is load-bearing now — which is the whole reason the flag's reason **(3)
+  recognition** was always the real one: a suppressor reads as a plain metal tube, so the risk was never
+  mishandling it, it was never categorising it as a firearm at all, in which case every gate downstream
+  stays shut and it rides in the trunk anyway.
+- **⚠⚠ MY OWN TEST CAUGHT ME SHIPPING A PREDICATE WITH NO READER.** The first cut built the gate and wired it
+  to nothing — it existed, it was correct, and no screen asked it. `_apprTransport` + the worklist block are
+  the reader, and the assertion **names the reader** rather than counting occurrences, because a count passes
+  on the definition plus its own helpers, which is exactly the state that was wrong.
+- **THE SERIAL COLUMN — 29 columns and not one recorded the world's identifier for the object.** Every
+  document that leaves our hands on a firearm is written serial by serial (the dealer's receipt, an
+  insurance claim, a police report) and none of them could be reconciled against the manifest.
+  - **⚠ NOT FIREARMS-GATED, deliberately** — a vehicle has a VIN, a watch and an instrument have serials —
+    so unlike `flagNFA` it is not refused in `_invColEditable`; it is simply blank where it does not apply.
+  - **⚠ ON THE `savePhotoRefs` WHITELIST**, or it is dropped silently on every save. The third time this
+    file records that risk.
+  - **⚠ AND ON `INV_STICKY_FIELDS`**: once the object has left the property nobody can re-read it, so a
+    merge that drops it destroys the only link between our manifest and the dealer's receipt.
+- **⚠ TWO NOTICES WERE FALSE AND BOTH ARE CORRECTED.** The withheld-firearms notice closed *"Havellin does
+  not transport firearms"*, true until today. And the NFA notice said Form 5 *"runs in months, not days"* —
+  **stale**: Form 5 eForms clear in about **2 days** in 2026, paper about 9. It put a closing-timeline worry
+  in front of the representative that no longer exists.
+- **4935 committed checks** (`tests/firearms-transport.test.js`, 37 new — the first coverage of what may be
+  carried). **All twelve changes revert-verified individually, ZERO green** — the NFA arm fails **9**, the
+  serial gate / authority gate / non-firearm early return 3 each, the column and the NFA notice 2 each, and
+  the rest 1.
+- **⚠ FOUR SUITES PINNED EXPLICIT `fns:` / `vars:` LISTS AND BROKE CORRECTLY** when `printAppraisalWorklist`
+  grew a call to `_apprTransport`. Mechanical, and the right failure — **and one file had TWO sandboxes
+  lifting the worklist**, so a single-occurrence replace fixed one and left the other throwing.
+- **Verified end to end in headless Chromium on the real page**, five seeded rows through the real worklist:
+
+  | row | gate | on the worklist |
+  |---|---|---|
+  | Remington 870 — authority, serial, dealer | `''` | **1 cleared to carry**, serial `RS12345678` printed |
+  | Suppressor — **everything else complete** | `nfa` | blocked, *transfers on ATF paperwork* |
+  | Colt Python — no serial | `serial` | blocked, *the authorisation names each firearm by serial* |
+  | Winchester 70 — no authority | `authority` | blocked, *record Authorized By and Approval Date* |
+  | Chesterfield sofa — **stale `flagNFA` tick** | `''` | absent; the firearms gate does not touch it |
+
+  A serial round-trips through a real `savePhotoRefs`; `months, not days` and `does not transport firearms`
+  both gone; overflow **0** at 1440 and 390px, no page errors.
+- **The protocol document is the deliverable, not the code.** `Estate Firearms Protocol` — six stages, the
+  NFA recognition check, seven nevers, the kit, the client-facing claim language and three questions for
+  counsel. Published as an artifact and filed in Drive at `03_Operations / SOPs & Playbooks`. **⚠ It is a
+  draft for counsel review and says so on its face** — several primary sources (ecfr.gov, atf.gov,
+  law.cornell.edu, flsenate.gov) were **blocked by the network egress proxy** during drafting and were read
+  through secondary summaries; the operative text still needs verifying before it is adopted.
+- **⚠ NOT BUILT, AND IT IS THE NEXT THING: nothing enforces "named principal only."** The policy says one
+  person carries and the app has no concept of who is driving. Today that is a document rather than a gate,
+  which is the honest state; if this becomes a service line rather than something Anthony does, the crew
+  screening question (`§922(g)`, `Fla. Stat. §790.23`) needs a real answer first.
+- **Both documents need a pass** — the manual's §10a describes the firearms track and the playbook's Step 10f
+  is the field procedure, and **both still say the dealer collects everything**. Flagged rather than
+  half-done.
+
 ## ⚠⚠ THE SCHEDULE STRIP READS REAL PROGRESS NOW — AND THE CLAIM IT REPLACED WAS MINE, AND WRONG (2026-09-13)
 Anthony, reading the strip shipped hours earlier: *"the app should know if half the work has been done by how
 many hours have been logged. Even in a fixed price contract the hours are tracked, I hope, to monitor job

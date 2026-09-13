@@ -29,7 +29,7 @@ const noComments = (s) => String(s)
 const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', '_invHasAppraisal',
                   '_jobAppraisers', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
                   'invIsIntrinsic', 'invCatMeta', '_invJob'];
-const APPR_VARS = ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'];
+const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler' };
@@ -587,7 +587,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: '', condition: 'Good' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['printAppraisalWorklist', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
@@ -616,7 +616,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the empty state no longer names an action the app does not offer');
   {
     const s = sandbox({
-      fns: APPR_FNS.concat(['printAppraisalWorklist', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',

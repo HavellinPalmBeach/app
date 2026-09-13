@@ -444,12 +444,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('appraisal worklist: the permanent item number, not the row position');
   {
     const WL_FNS = INV_FNS.concat([
-      'printAppraisalWorklist', '_apprEstimateFlags', '_invRoomName', '_invMoney',
+      'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
       'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat', 'invMAIVCategory',
       'isDecedentJob', '_gate706',
     ]);
     const WL_VARS = INV_VARS.concat([
+      'INV_TRANSPORT_REASONS',
       'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
       'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INVENTORY_COLUMNS',
     ]);

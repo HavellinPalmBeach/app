@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 3:08pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 4:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -16014,7 +16014,7 @@ function savePhotoRefs(jobId) {
     var refs = (_photoRefs[jobId] || []).map(function(r) {
       return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId, manual:r.manual,
                seq:r.seq, itemNo:r.itemNo, objectName:r.objectName, category:r.category, disposition:r.disposition,
-               qty:r.qty, condition:r.condition, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
+               qty:r.qty, condition:r.condition, serial:r.serial, fmv:r.fmv, valDate:r.valDate, valSource:r.valSource,
                apprDoc:r.apprDoc, flagExempt:r.flagExempt, flagBequest:r.flagBequest, flagDisputed:r.flagDisputed, flagNFA:r.flagNFA,
                flagMAIV:r.flagMAIV, maivCat:r.maivCat,
                channel:r.channel, authBy:r.authBy, approvalDate:r.approvalDate, gross:r.gross, fees:r.fees,
@@ -16647,6 +16647,13 @@ var INVENTORY_COLUMNS = [
   {key:'driveFileUrl', header:'Photo Link',          kind:'capture', group:'val'},
   {key:'qty',          header:'Qty',                 kind:'manage',  edit:'number',    group:'val'},
   {key:'condition',    header:'Condition',           kind:'manage',  edit:'select',    group:'val'},
+  // ⚠ THE SERIAL IS THE WORLD'S IDENTIFIER FOR THIS OBJECT; `itemNo` is only ours. Every
+  // document that leaves our hands on a firearm is written serial by serial — the dealer's
+  // receipt, an insurance claim, a police report — and until 2026-09-13 the manifest could
+  // not record one, so none of those could be reconciled against it. It is not firearms-only
+  // (a vehicle has a VIN, a watch and an instrument have serials) and is therefore NOT gated
+  // in `_invColEditable`; it is simply blank on the objects that do not carry one.
+  {key:'serial',       header:'Serial Number',       kind:'manage',  edit:'text',      group:'val'},
   {key:'fmv',          header:'Estimated FMV',       kind:'manage',  edit:'currency',  group:'val'},
   {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date',      group:'val'},
   {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select',    group:'val'},
@@ -16921,7 +16928,10 @@ function _invTouch(ref) { if (ref) ref.updatedAt = Date.now(); return ref; }
 // materialised twice, which this file already records as six rows numbered 1,2,1,2,3,1.
 // **`fmv` is deliberately NOT on it**: a value is a judgement somebody revises, and the newer
 // judgement should win. Nor is `reviewed`, where un-reviewing is a real operation.
-var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc',
+// ⚠ `serial` IS ON THIS LIST because it is a reading taken off the object itself. Once the
+// item has left the property nobody can go back and re-read it, so a merge that drops it
+// destroys the only link between our manifest and the dealer's receipt.
+var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc', 'serial',
                          'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId'];
 function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
 // ⚠⚠ "NEVER SAW A VALUE" AND "DELIBERATELY EMPTIED IT" ARE DIFFERENT ANSWERS, and without
@@ -17453,8 +17463,11 @@ function removeInventoryManualItem(jobId, stableId) {
 // together and they have to stay apart:
 //   AUTHORITY  — who decides what happens. The PR, on counsel's advice. That is what
 //                "route it to the attorney" means: route the DECISION, not the object.
-//   CUSTODY    — who may lawfully possess and move it. Only an FFL. Havellin never
-//                transports; the dealer collects from the property.
+//   CUSTODY    — who may lawfully possess and move it. The destination is always an FFL.
+//                ⚠ REVISED 2026-09-13: Havellin's named principal may carry a NON-NFA firearm
+//                to that dealer once the representative has authorised it in writing, the
+//                serial is on the record and the dealer is named — `invTransportBlocked`.
+//                An NFA item is still collected by the dealer and is never in our hands.
 // So FFL routing is right and stays. What was missing is the gate in front of it:
 // `printAppraisalWorklist` would print a Firearms packet on day one, which is a
 // printed instruction to hand over a firearm nobody has authorised releasing.
@@ -17467,6 +17480,44 @@ function invFirearmAuthorized(ref) {
   return !!(ref && String(ref.authBy || '').trim() && String(ref.approvalDate || '').trim());
 }
 function invReleaseBlocked(ref) { return invIsFirearm(ref) && !invFirearmAuthorized(ref); }
+
+// ⚠⚠ WHO MAY CARRY IT, WHICH IS A DIFFERENT QUESTION FROM WHO MAY RELEASE IT.
+// `invReleaseBlocked` asks whether the representative has authorised the item leaving at all.
+// This asks the narrower question the 2026-09-13 protocol turns on: may the named Havellin
+// principal put this particular object in a car and drive it to the dealer. Four gates, and
+// the first is categorically different from the other three.
+//
+// ⚠⚠ `nfa` HAS NO OVERRIDE AND MUST NEVER GROW ONE. A registered NFA item moves estate → dealer
+// on ATF paperwork; the estate carve-out at 27 CFR 479.90a names the executor, administrator or
+// personal representative and does not reach a vendor they engage, and 479.11's temporary-
+// conveyance exception reaches only a qualified dealer for repair or evaluation WITH RETURN TO
+// THE SAME POSSESSOR — which is three separate misses for us. No representative's authority can
+// cure it, because the registration is federal and not theirs to assign. This is the one gate in
+// the app besides the hours-log deposit rule that nobody can unlock, and for the same reason:
+// there is no person with standing to unlock it. 26 U.S.C. 5861 is ten years.
+//
+// The other three are ordinary preconditions and clear themselves the moment the record is
+// complete. `serial` is on the list because the authorisation names each firearm BY serial, so
+// an item with none cannot have been named in the document that makes carrying it lawful — and
+// because the dealer's receipt comes back serial by serial and has to reconcile against this.
+function invTransportBlocked(ref) {
+  if (!invIsFirearm(ref)) return '';
+  if (ref.flagNFA) return 'nfa';
+  if (!invFirearmAuthorized(ref)) return 'authority';
+  if (!String(ref.serial || '').trim()) return 'serial';
+  if (!String(ref.channel || '').trim()) return 'dealer';
+  return '';
+}
+// Kept beside the predicate rather than at the render sites: four call sites each writing their
+// own sentence is how the screen and the gate come to disagree about what is wrong.
+var INV_TRANSPORT_REASONS = {
+  nfa:       'NFA item — never transported by Havellin. It transfers from the estate to the dealer on ATF paperwork.',
+  authority: 'No written authority on file — record Authorized By and Approval Date.',
+  serial:    'No serial number recorded — the authorisation names each firearm by serial.',
+  dealer:    'No dealer named — record the receiving dealer in Channel / Recipient.'
+};
+function invTransportReason(ref) { return INV_TRANSPORT_REASONS[invTransportBlocked(ref)] || ''; }
+function invTransportable(ref) { return invIsFirearm(ref) && !invTransportBlocked(ref); }
 
 // Group every manifest item flagged for a specialist by its appraiser type, so each
 // appraiser can be handed a clean packet of just their items (photos + condition +
@@ -17507,6 +17558,20 @@ function _apprWithheld(jobId) {
 // Reason 3 is why the crew checklist in Phase 1 names them by appearance.
 function _apprNFA(jobId) {
   return _jobInvRefs(jobId).filter(function(r){ return invIsFirearm(r) && r.flagNFA; });
+}
+
+// What may actually go in the case on this run, and what is holding the rest up. A predicate
+// with no reader is decorative, and the person loading the car is the one who needs the answer
+// — so `invTransportBlocked` is asked here, per item, and never re-derived from its inputs.
+function _apprTransport(jobId) {
+  var out = { ready: [], blocked: [] };
+  _jobInvRefs(jobId).forEach(function(r) {
+    if (!invIsFirearm(r)) return;
+    var why = invTransportBlocked(r);
+    if (why) out.blocked.push({ ref: r, why: why });
+    else out.ready.push(r);
+  });
+  return out;
 }
 
 // Items flagged at the estimate (collections marked appraise/firearms, collector
@@ -18409,17 +18474,40 @@ function printAppraisalWorklist(jobId) {
   if (nfa.length) {
     html += '<div style="margin-top:14px;border:1px solid #8a6d3b;border-radius:3px;padding:10px 12px;">'
       + '<div style="font-size:12px;font-weight:700;color:#8a6d3b;margin-bottom:4px;">'
-      + nfa.length + ' NFA item' + (nfa.length > 1 ? 's' : '') + ' &mdash; tell the dealer before they come out</div>'
-      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Registered NFA items transfer on a different path (ATF Form 5 to the estate) and it runs in months, not days. Confirm the dealer holds the right licence to take them, and put the timeline in front of the representative and counsel now rather than at handover &mdash; an estate trying to close does not want to discover this last.</div>'
+      + nfa.length + ' NFA item' + (nfa.length > 1 ? 's' : '') + ' &mdash; the dealer collects these, we never carry them</div>'
+      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;"><strong>Havellin does not transport an NFA item under any authority.</strong> A registered item transfers from the estate to the dealer on ATF paperwork, and the estate carve-out names the personal representative rather than anyone they engage &mdash; so there is no written authority that makes carrying one lawful. Confirm the dealer holds the right licence to take them, and tell them before they come out: not every FFL can, and a wasted collection trip is a real cost.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + nfa.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
+  }
+  var tr = _apprTransport(jobId);
+  if (tr.ready.length || tr.blocked.length) {
+    html += '<div style="margin-top:14px;border:1px solid var(--border);border-radius:3px;padding:10px 12px;">'
+      + '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">Transport to the dealer</div>';
+    if (tr.ready.length) {
+      html += '<div style="font-size:11px;color:#3c3228;line-height:1.5;"><strong>' + tr.ready.length
+        + ' cleared to carry.</strong> Non-NFA, authorised in writing, serial and dealer on the record. '
+        + 'Locked case, unloaded, not on your person, direct route &mdash; and an itemised receipt signed at the counter before you leave.</div>'
+        + '<div style="font-size:11px;color:#666;margin-top:6px;">'
+        + tr.ready.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)')
+            + ' &middot; <span style="font-family:monospace;">' + esc(r.serial) + '</span>'; }).join('<br>')
+        + '</div>';
+    }
+    if (tr.blocked.length) {
+      html += '<div style="font-size:11px;color:#666;margin-top:' + (tr.ready.length ? '8px' : '0') + ';">'
+        + tr.blocked.map(function(b){
+            return '<div style="margin-top:3px;"><strong>#' + esc(_invItemNo(b.ref)) + ' '
+              + esc(b.ref.objectName || '(unnamed)') + '</strong> &mdash; ' + esc(invTransportReason(b.ref)) + '</div>';
+          }).join('')
+        + '</div>';
+    }
+    html += '</div>';
   }
   if (withheld.length) {
     html += '<div style="margin-top:14px;border:1px solid #A32D2D;border-radius:3px;padding:10px 12px;">'
       + '<div style="font-size:12px;font-weight:700;color:#A32D2D;margin-bottom:4px;">'
       + withheld.length + ' firearm' + (withheld.length > 1 ? 's are' : ' is') + ' awaiting written authority</div>'
-      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until the personal representative has authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the authority on the item — Authorized By and Approval Date, with the dealer in Channel / Recipient — and the item joins this worklist. The dealer collects from the property; Havellin does not transport firearms.</div>'
+      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until the personal representative has authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the authority on the item — Authorized By and Approval Date, with the dealer in Channel / Recipient — and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + withheld.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
