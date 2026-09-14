@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.13 · 5:42pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.14 · 6:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1698,6 +1698,21 @@ body.no-smf .smf-col{display:none;}
           <option value="350">Home Editing / Transition Standard — $350</option>
           <option value="550">Home Editing / Transition Premium — $550</option>
         </select>
+      </div>
+      <!-- ⚠ PLACED AFTER THE MATERIALS CARD, NOT BETWEEN IT AND THE VENDORS CARD, AND THE
+           REASON IS MECHANICAL: applyEstimateServiceMode restores the vendor card on a non-prep
+           job with `vendCard.nextElementSibling !== matCard`, so a card inserted between those
+           two makes that test true on every calcAll — which re-inserts the vendor card on every
+           keystroke and destroys the cost <input> being typed in. That is the documented
+           "can't get past the first digit" bug, and this is the position that cannot cause it.
+           On a prep job the rooms, pair and materials cards are all hidden and the vendors card
+           has moved up beside the Job details, so this is the one card left in this column. -->
+      <div class="card" id="est-declutter-card" style="margin-top:1rem;display:none;">
+        <div class="sec">Pre-Prep Declutter — Concierge Hours</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Hands-on decluttering by the concierge while the trades work around them &mdash; clearing the rooms a buyer will see. Billed hourly at the Transition Concierge rate, <strong>on top of</strong> the vendor management fee. Leave at 0 if the house only needs the vendors.</div>
+        <label>Concierge hours <span class="lbl-hint">estimate what it takes; 0 if none</span></label>
+        <input type="number" id="e-declutter-hrs" min="0" max="40" step="0.5" value="0" placeholder="0" oninput="calcAll()">
+        <div id="e-declutter-hint" style="font-size:11px;color:var(--gray);margin-top:6px;"></div>
       </div>
     </div>
 
@@ -4732,7 +4747,9 @@ function addWorkingDays(startDateStr, days) {
 // one job. The client-facing form wins: it is the number a client was actually sent.
 // ⚠ PREP RETURNS 0 THROUGH AN EXPLICIT BRANCH, not incidentally because `days` is 0. That
 // engagement runs on the vendors' schedule and the app has no defensible day count for it;
-// saying so here is what stops somebody "fixing" the zero later.
+// saying so here is what stops somebody "fixing" the zero later. Declutter hours (2026-09-14) do
+// NOT change this: half a day of concierge work sits inside a schedule the trades set, so the
+// hours are real and the day count is still not ours to state.
 function estWorkingDays(est) {
   if (!est) return 0;
   if (est.svc === 'prep') return 0;
@@ -5415,8 +5432,29 @@ function applyEstimateServiceMode(isPrep) {
   // est-vehicles-card joined this list on 2026-08-03. A standalone prep job has no estate
   // assets to schedule — the client still owns the house and everything in it — and it was
   // the last thing left to tick on a tab that is otherwise just the vendor list.
-  var hide = ['est-adjustments','est-crew-col','est-rooms-card','est-collections-card','est-vehicles-card','est-materials-card','s-hours-table','s-tc-fee-row','s-ps-fee-row','s-pkg-row','s-smf-row','s-vendor-row'];
+  // ⚠ s-tc-fee-row IS OFF THIS LIST SINCE 2026-09-14 and is resolved separately below: a prep job
+  // that books declutter hours has a concierge fee line and must show it, so a blanket hide would
+  // print a grand total with an invisible component in it.
+  var hide = ['est-adjustments','est-crew-col','est-rooms-card','est-collections-card','est-vehicles-card','est-materials-card','s-hours-table','s-ps-fee-row','s-pkg-row','s-smf-row','s-vendor-row'];
   hide.forEach(function(id){ var el = document.getElementById(id); if (el) el.style.display = isPrep ? 'none' : ''; });
+  // The declutter card is the inverse — prep only. It is the one place on this tab where a
+  // standalone prep engagement can book Havellin labour; see getDeclutterTCHrs.
+  var _dcCard = document.getElementById('est-declutter-card');
+  if (_dcCard) _dcCard.style.display = isPrep ? '' : 'none';
+  var _dcHrs = isPrep ? getDeclutterTCHrs() : 0;
+  var _tcFeeRow = document.getElementById('s-tc-fee-row');
+  if (_tcFeeRow) _tcFeeRow.style.display = (!isPrep || _dcHrs > 0) ? '' : 'none';
+  // The hint REPORTS rather than instructs — at 0 the engagement genuinely is fee-only and there
+  // is nothing to do about it, so telling somebody to act would be asking for an action that
+  // changes nothing. It names the consequence instead, because flipping out of fee-only rewrites
+  // the estimate Terms, agreement §3.3 and the invoice's hours gates (see estimateIsFeeOnly).
+  var _dcHint = document.getElementById('e-declutter-hint');
+  if (_dcHint) {
+    var _dcRate = document.getElementById('e-prem') && document.getElementById('e-prem').checked ? 185 : 150;
+    _dcHint.innerHTML = _dcHrs > 0
+      ? '<strong>' + _dcHrs.toFixed(1) + ' hrs</strong> &times; $' + _dcRate + ' = <strong>$' + Math.round(_dcHrs * _dcRate).toLocaleString() + '</strong>, billed on top of the ' + Math.round(prepFeeRate()*100) + '% vendor management fee. These hours are logged on the Job Plan and the final invoice trues up to what is actually logged.'
+      : 'No declutter hours &mdash; this engagement is the ' + Math.round(prepFeeRate()*100) + '% management fee alone, and the client documents say so.';
+  }
   // The Third-Party Vendors card IS the Home Prep card on a prep job — renderVendorGroupCards
   // collapses to the single Property Preparation group, so the heading has to follow or it
   // reads as a third-party section that happens to contain the whole engagement.
@@ -5766,6 +5804,12 @@ function calcAll() {
   // hands-on pool, exactly like prep coordination. Zero on standalone prep: that engagement
   // bills no hours at all, and its fee already covers the coordination.
   var vendorTCHrs = isPrep ? 0 : getVendorTCHrs();
+  // Hands-on decluttering on a standalone prep job — the estimator's own observation, typed in
+  // the house. Zero on every other service (the accessor refuses outright), and deliberately NOT
+  // folded into coordTC beside prepTCHrs / vendorTCHrs: those are off-site vendor coordination
+  // that the 30% fee already pays for, and this is on-site labour it does not. See
+  // getDeclutterTCHrs for why it is an input rather than a derivation.
+  var declutterTCHrs = isPrep ? getDeclutterTCHrs() : 0;
   if (isPrep) { baseTCHrs = 0; basePSHrs = 0; workPool = 0; coordTC = 0; colOnsiteTC = 0; }
   // Fold vendor + bundled-prep coordination and the move-management destination hours in.
   // All sit OUTSIDE the origin-property work pool: coordination is off-site vendor
@@ -5810,7 +5854,13 @@ function calcAll() {
     _sup = computeWorkingSupervisor(workPool, coordTC, svcKey, _actualPS, colOnsiteTC);
   }
   var tcOnsiteHrs = isPrep ? 0 : _sup.onsiteTC;
-  totTC = isPrep ? 0 : _sup.tcHrs;
+  // ⚠ THE DECLUTTER HOURS ENTER THROUGH totTC, WHICH IS THE WHOLE REASON THIS CHANGE IS SMALL.
+  // tcFee, havellinTotal, paymentSplit, the deposit basis, the midpoint and final invoice bases,
+  // the ±15% variance gate and estimateIsFeeOnly all already read totTC / tcFee, so billing them
+  // correctly everywhere needed no second money path. A parallel "prep labour" total added
+  // alongside havellinTotal is how the estimate and the invoice come to disagree — the defect
+  // this file records more often than any other.
+  totTC = isPrep ? declutterTCHrs : _sup.tcHrs;
   totPS = isPrep ? 0 : Math.round((_sup.psHrs + destPS) * 10) / 10;
   // Share of the hands-on pool each side carries. The per-room breakdown is split by
   // the same ratio as the job totals, so the two always reconcile.
@@ -6494,6 +6544,11 @@ function calcAll() {
     psBlendedCost: Math.round(getBlendedPSCost()*100)/100,
     prepEnabled: prepEnabled, prepItems: JSON.parse(JSON.stringify(prepItems)),
     prepCost: prepCost, prepFee: prepFee, prepTCHrs: prepTCHrs,
+    // Hands-on declutter hours on a standalone prep job. Pinned for the same reason tcAlpha is:
+    // the client estimate, the agreement and the Job Plan all read it back, and it is what tells
+    // a prep estimate saved after 2026-09-14 from one saved before (which priced none and told
+    // the client so). ⚠ NOT interchangeable with prepTCHrs on the line above — see getDeclutterTCHrs.
+    declutterTCHrs: declutterTCHrs,
     // Recorded for the same reason prepTCHrs is: the hours are already inside totTC, but
     // without the component the Estimate Summary cannot say where they came from when a
     // saved estimate is reopened, and neither can anyone auditing why a vendor-heavy job
@@ -6966,8 +7021,71 @@ function getPrepCost() { return prepItems.reduce(function(a,p){ return a+p.cost;
 // AND the coordination hours is the double charge that took SMF_PCT to zero in the first place,
 // and it would be invisible: the hours land inside coordTC alongside every other coordination
 // figure. Do not restore one without the other.
+//
+// ⚠⚠ AND DECLUTTER HOURS ARE NOT A COUNTER-EXAMPLE TO THAT RULE — see getDeclutterTCHrs.
+// Those are HANDS-ON work in rooms no vendor touches; prepTCHrs is VENDOR COORDINATION, which is
+// what this fee pays for. Billing the second one hourly as well is the double charge; billing the
+// first one is not, because nothing else covers it. Keep them separate.
 var PREP_FEE_RATE = 0.30;
 function prepFeeRate() { return PREP_FEE_RATE; }
+
+// ─── DECLUTTER HOURS ON A PREP JOB ────────────────────────────────────────────
+// Anthony, 2026-09-14: *"we could walk into a home where they said they wanted us to prep for
+// sale, and we could figure out it's a complete mess … it would likely just be Ashley as the TC
+// coming in, spending four or five hours cleaning out the house while she's also orchestrating
+// painters or landscapers."*
+//
+// ⚠⚠ THE OBVIOUS ANSWER — re-type the job as Home Editing and score the four messy rooms — IS
+// THE WRONG ONE, AND IT WAS MEASURED BEFORE THIS WAS BUILT. The engine anchors on TOTAL UNDER-AIR
+// SQFT (`interiorLoad = sqft * ENGINE_K * volFactor`), and marking the other rooms ✕ out of scope
+// drops them from the volume AVERAGE without shrinking the sqft. Driven on the real
+// `computeEngineV3`, a 3,500 sqft house:
+//
+//     4 rooms scored, rest marked ✕      TC 25  PS 52   = $8,950
+//     the whole 12-room interior scored  TC 24  PS 52   = $8,950
+//
+// Identical. There is no room-scoring path that expresses "half a day in four rooms" — the floor
+// is the house, not the work — so re-typing would have put ~$8,000 of phantom crew labour on a
+// job that needs about $750 of concierge time, and renamed the product on the client's paperwork
+// into the bargain.
+//
+// ⚠ SO THIS IS A DIRECT OBSERVATION, NOT A DERIVATION, and that is the whole design. The
+// estimator standing in the house says "four hours"; nothing computes it from sqft, room weights
+// or vendor count. That is also why it is CONCIERGE ONLY: the engagement has no crew — `est-crew-col`
+// is hidden on prep, so there is no specialist count to size, and the work Anthony described is one
+// person decluttering while the trades work around her.
+//
+// ⚠⚠ IT IS NOT `prepTCHrs` AND MUST NEVER BE MERGED INTO IT. That one is VENDOR COORDINATION —
+// phoning the painter, scheduling the stager — and it is deliberately zero on every engagement
+// because the 30% fee already covers it (see the note above). This is HANDS-ON DECLUTTERING, work
+// the 30% does not pay for and which happens in rooms no vendor touches. Collapsing the two would
+// resurrect the exact double charge that took SMF_PCT to zero.
+//
+// ⚠ AND IT FLIPS THE ENGAGEMENT OUT OF FEE-ONLY — see estimateIsFeeOnly. A prep job that books
+// hours can no longer tell the client "no hours are billed on this engagement", in the estimate
+// Terms, in agreement §3.3, or on the invoice. Those three read the predicate rather than the
+// service key for exactly this reason.
+var DECLUTTER_MAX_HRS = 40;
+// ⚠ ZERO ON EVERY NON-PREP SERVICE, unconditionally, and the guard is here rather than at the call
+// site. `#e-declutter-hrs` lives in a card that is merely HIDDEN on a labour job, so a value typed
+// on a prep estimate and then re-typed to Home Editing would otherwise add phantom concierge hours
+// to a job whose engine already priced its own — invisibly, because they land inside totTC beside
+// the engine's. Same shape as the `_volPreset` leak: a stale field that only became dangerous the
+// day something started reading it.
+function getDeclutterTCHrs() {
+  if (currentSvc() !== 'prep') return 0;
+  var el = document.getElementById('e-declutter-hrs');
+  if (!el) return 0;
+  var v = parseFloat(el.value);
+  if (!isFinite(v) || v <= 0) return 0;
+  return Math.min(DECLUTTER_MAX_HRS, Math.round(v * 10) / 10);
+}
+// Does this estimate bill declutter hours? Reads the SNAPSHOT, so every client document and the
+// Job Plan can ask the question about a saved estimate rather than about the live form.
+function estDeclutterHrs(e) {
+  var h = e && e.declutterTCHrs;
+  return (typeof h === 'number' && isFinite(h) && h > 0) ? h : 0;
+}
 
 // ─── THE VENDOR FIGURES ARE GOOD FAITH, AND THE DOCUMENT HAS TO SAY SO ─────────
 // Every vendor number on a client estimate is a walkthrough figure — what the trade is
@@ -7071,9 +7189,18 @@ function _invVendorFeeSentence(smf, prepFee) {
 // and it is why this takes the estimate rather than just the key. Keep the two in step —
 // they were out of step until 2026-09-08 and the estimate was the one telling the client
 // something untrue.
+// ⚠⚠ THE PREP ARM IS CONDITIONAL SINCE 2026-09-14 AND THAT IS THE LOAD-BEARING HALF OF THE
+// DECLUTTER BUILD. It used to return true on the service key alone, which was right while prep
+// could not book an hour; a prep estimate carrying declutter hours is NOT fee-only, and three
+// client-facing surfaces state the opposite in so many words — the estimate Terms ("It is not
+// billed hourly"), agreement §3.3 ("No Transition Concierge or Property Specialist hours are
+// billed on this engagement") and the invoice, which exempts a fee-only final from every hours
+// gate and so would have let one final with an empty log over hours somebody actually worked.
+// ⚠ `e` NULL STILL READS FEE-ONLY on prep — that is the blank agreement template, which prices
+// nothing and must print the management-fee clause rather than an hourly rate card.
 function estimateIsFeeOnly(e, job) {
   var svc = (e && e.svc) || (job && job.svc);
-  if (svc === 'prep') return true;
+  if (svc === 'prep') return estDeclutterHrs(e) === 0;
   return !!e && ((e.totTC || 0) + (e.totPS || 0)) === 0;
 }
 function currentSvc() { var el = document.getElementById('e-svc'); return el ? el.value : 'cleanout'; }
@@ -7957,6 +8084,11 @@ function resetEstimateExtras() {
   // no checkbox to untick and no separate section to collapse.
   prepItems = [];
   renderPrepItems();
+  // ⚠ AND THE DECLUTTER HOURS, for the same reason the fullness preset is dropped in
+  // neutralizeEstimateView: a prep job opened straight after another prep job would otherwise
+  // inherit the last property's answer and price hours nobody walked. restoreEstimateToUI re-pins
+  // it from the saved record when the job being opened has one.
+  var _dcReset = document.getElementById('e-declutter-hrs'); if (_dcReset) _dcReset.value = '0';
 }
 
 
@@ -7972,8 +8104,16 @@ function saveEstimateAndPreview() {
   // on "at least one prep vendor with a cost" instead of the room-scoring path below.
   var isPrepEst = (currentEstimate.svc === 'prep');
   if (isPrepEst) {
-    if (!currentEstimate.prepEnabled || (currentEstimate.havellinTotal || 0) === 0) {
-      showFB('e-fb','warn','Add at least one Home Prep vendor with a cost before saving — the estimate is the ' + Math.round(prepFeeRate()*100) + '% management fee on those managed vendors.');
+    // ⚠⚠ THE VENDOR TEST IS ON prepCost, NOT ON havellinTotal, SINCE 2026-09-14. Declutter
+    // hours land in havellinTotal (see calcAll), so the old `havellinTotal === 0` test would let a
+    // prep estimate with NO VENDORS AT ALL through on the strength of a few concierge hours — and
+    // a Home Prep for Sale engagement with nothing to manage is not a prep job, it is a Home
+    // Editing job wearing the wrong name on the agreement, the invoice header and the client's
+    // Drive folder. The declutter hours ride ON a prep engagement; they do not constitute one.
+    if (!currentEstimate.prepEnabled || (currentEstimate.prepCost || 0) === 0) {
+      showFB('e-fb','warn','Add at least one Home Prep vendor with a cost before saving — this engagement is the '
+        + Math.round(prepFeeRate()*100) + '% management fee on managed vendors, with declutter hours on top where the house needs them. '
+        + 'If there are no vendors and the job is only decluttering, re-type it as Home Editing on the Service line above.');
       return;
     }
   } else {
@@ -8019,7 +8159,10 @@ function saveEstimateAndPreview() {
   if (isPrepEst) {
     var _prepVendorCount = (currentEstimate.prepItems||[]).length;
     saveMsg = 'Saved: Home Prep for Sale · ' + _prepVendorCount + ' managed vendor' + (_prepVendorCount === 1 ? '' : 's')
-      + ' · ' + Math.round(prepFeeRate()*100) + '% fee $' + currentEstimate.havellinTotal.toLocaleString();
+      + ' · ' + Math.round(prepFeeRate()*100) + '% fee $' + (currentEstimate.prepFee || 0).toLocaleString()
+      + (estDeclutterHrs(currentEstimate) > 0
+          ? ' + ' + estDeclutterHrs(currentEstimate).toFixed(1) + ' declutter hrs · total $' + currentEstimate.havellinTotal.toLocaleString()
+          : '');
   } else {
     saveMsg = 'Saved: ' + currentEstimate.rooms.length + ' rooms'
       + (roomsWithNotes > 0 ? ', ' + roomsWithNotes + ' with notes' : '')
@@ -8116,6 +8259,7 @@ function resetEstimate() {
   if (_tcReset) _tcReset.value = '1';
   _tc2UserSet = false;
   _fixedAmountUserSet = false;
+  var _dcR = document.getElementById('e-declutter-hrs'); if (_dcR) _dcR.value = '0';
   vendors=[]; renderVendors(); calcAll();
 }
 
@@ -8698,14 +8842,34 @@ function buildPrepEstimateBody(e, job) {
     '</table>' +
     '<div style="margin-bottom:1.25rem;"></div>' +
 
-    // 2) Then Havellin\'s 30% management fee on that spend
-    '<div class="ce-band" style="margin-top:1.25rem;">Havellin Management Fee</div>' +
-    '<table class="ce-tbl"><tbody>' +
-    '<tr><td>GC / Site Management Fee — sourcing, scheduling, on-site oversight &amp; quality control (' + Math.round(prepFeeRate()*100) + '% of vendor spend)</td><td class="r">' + fmt(e.prepFee || e.havellinTotal) + '</td></tr>' +
-    '</tbody>' +
-    '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
-    '</table>' +
-    '<div class="ce-note" style="margin-top:6px;">The final fee is ' + Math.round(prepFeeRate()*100) + '% of actual vendor spend. We review each vendor’s quote with you before booking, so the cost is confirmed before any work begins.</div>' +
+    // 2) Then what Havellin is paid — the management fee, plus declutter hours when the
+    //    walkthrough found the house needs them.
+    //
+    // ⚠⚠ THE LABOUR ROW IS A RECONCILIATION REQUIREMENT, NOT A NICETY. The subtotal is
+    // e.havellinTotal, which is tcFee + psFee + pkgCost + smf + prepFee — so the moment declutter
+    // hours exist it is LARGER than the management fee, and a table printing the fee alone above
+    // that subtotal visibly fails to add up on the document the client is asked to accept. Same
+    // shape as the empty-third-party-section defect: a column that does not reconcile reads as an
+    // error whatever the numbers are.
+    // ⚠ AND `e.prepFee || e.havellinTotal` IS GONE. That fallback was safe only while the two were
+    // equal by construction; with hours on the record a prep estimate whose vendors had not been
+    // priced yet would have printed the LABOUR total on the management-fee row.
+    (function(){
+      var _dc = estDeclutterHrs(e);
+      var _rate = e.tcRate || 150;
+      var _labour = Math.round(_dc * _rate);
+      return '<div class="ce-band" style="margin-top:1.25rem;">Havellin Services</div>' +
+      '<table class="ce-tbl"><tbody>' +
+      '<tr><td>GC / Site Management Fee — sourcing, scheduling, on-site oversight &amp; quality control (' + Math.round(prepFeeRate()*100) + '% of vendor spend)</td><td class="r">' + fmt(e.prepFee || 0) + '</td></tr>' +
+      (_dc > 0
+        ? '<tr><td>Pre-prep declutter — Transition Concierge, hands-on clearing of the rooms (' + _dc.toFixed(1) + ' hrs &times; ' + fmt(_rate) + '/hr)</td><td class="r">' + fmt(_labour) + '</td></tr>'
+        : '') +
+      '</tbody>' +
+      '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
+      '</table>' +
+      '<div class="ce-note" style="margin-top:6px;">The final fee is ' + Math.round(prepFeeRate()*100) + '% of actual vendor spend. We review each vendor’s quote with you before booking, so the cost is confirmed before any work begins.' +
+        (_dc > 0 ? ' The declutter hours are an estimate and are billed as actually worked.' : '') + '</div>';
+    })() +
 
     // 3) Then the combined total — a single grand-total line. The vendor spend and fee
     // are already itemized in the two sections above, and the "grand" row carries its
@@ -8871,6 +9035,17 @@ function clientEstimateHtml(e, job) {
   // Fee-only (standalone Home Prep): no hours are billed, so the payment schedule and the
   // Terms take their own arms. See estimateIsFeeOnly.
   var _isFeeOnlyEst = estimateIsFeeOnly(e, job);
+  // ⚠⚠ THE PAYMENT MILESTONES ARE A PROPERTY OF THE ENGAGEMENT, NOT OF WHETHER HOURS ARE BILLED,
+  // and keying them on _isFeeOnlyEst stopped being safe the day a prep job could book declutter
+  // hours (2026-09-14). A prep job still has no "project midpoint" to bill against whatever its
+  // labour looks like — the vendors invoice the client directly and there are no phases to sit
+  // between — so its milestones follow the SERVICE. Keyed on the fee-only test instead, a prep
+  // job with hours would have printed "Due at project midpoint" against an event that does not
+  // exist on it, and disagreed with agreement §3.2, which names the vendor-schedule trigger off
+  // its own service test. That is the one-staple-two-answers defect fixed on 2026-09-11, and this
+  // is the line it would have come back through.
+  var _isPrepEst   = ((e && e.svc) || (job && job.svc)) === 'prep';
+  var _prepDcHrs   = _isPrepEst ? estDeclutterHrs(e) : 0;
   var _subHdrStyle = 'padding:6px 10px;font-size:11px;font-weight:600;color:var(--bronze);text-transform:uppercase;letter-spacing:.05em;';
   var vendorSMF = e.smf || 0;
   var prepGcFee = e.prepFee || 0;
@@ -9115,12 +9290,19 @@ function clientEstimateHtml(e, job) {
     // spend, the vendors invoice the client directly, and there are no phases to sit
     // between. Its milestones are the ones that actually exist on that engagement — the
     // schedule is agreed, the work runs, the house is handed over show-ready.
-    (_isFeeOnlyEst
-      ? '<table class="pay-tbl">' +
-        '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Management fee only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
-        '<tr><td><strong>25%</strong> — Due once the vendor schedule is booked</td><td style="font-style:italic;color:var(--gray);">Management fee only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
-        '<tr><td><strong>25% Final</strong> — Due at show-ready handover</td><td style="font-style:italic;color:var(--gray);">Management fee only</td><td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
-        '</table>'
+    (_isPrepEst
+      ? (function(){
+          // The caption says what the percentage is charged ON, so it has to name the concierge
+          // hours once they exist — otherwise the schedule bills 50% of a figure it describes as
+          // "management fee only" while the fee table two inches above shows two components.
+          var _cap = _prepDcHrs > 0 ? 'Management fee + concierge hours' : 'Management fee only';
+          var _capC = '<td style="font-style:italic;color:var(--gray);">' + _cap + '</td>';
+          return '<table class="pay-tbl">' +
+        '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td>' + _capC + '<td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
+        '<tr><td><strong>25%</strong> — Due once the vendor schedule is booked</td>' + _capC + '<td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
+        '<tr><td><strong>25% Final</strong> — Due at show-ready handover</td>' + _capC + '<td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
+        '</table>';
+        })()
       : '<table class="pay-tbl">' +
         '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
         '<tr><td><strong>25% Midpoint</strong> — Due at project midpoint</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
@@ -9132,8 +9314,8 @@ function clientEstimateHtml(e, job) {
     // ⚠ A FEE-ONLY ENGAGEMENT BILLS NO HOURS, SO THE HOURLY TERMS ARE FALSE ON IT.
     // Standalone Home Prep gets its whole revenue from the 30% fee on managed vendor
     // spend: computeEngineV3 zeroes baseTCHrs, basePSHrs and coordTC on svc === 'prep',
-    // and loadJobPlanTab hides the hours log outright, so no hours can be logged even in
-    // principle. Until 2026-09-08 a prep client nonetheless read "Final charges reflect
+    // and loadJobPlanTab hides the hours log unless the estimate quoted declutter hours, so on a
+    // pure vendor-management prep job no hours can be logged even in principle. Until 2026-09-08 a prep client nonetheless read "Final charges reflect
     // actual hours worked", "if actual hours exceed the estimate by more than 15% we will
     // notify you" and a 25% moving-materials handling fee — three promises about
     // quantities that do not exist on the engagement, one of them a change-order trigger
@@ -9142,6 +9324,20 @@ function clientEstimateHtml(e, job) {
     // equivalent, so one surface was right and the other was not. Same test, same shape.
     (_isFeeOnlyEst
       ? '<li>Havellin\'s fee for this project is a <strong>' + Math.round(prepFeeRate()*100) + '% management fee on actual vendor spend</strong> — sourcing, scheduling, on-site oversight and quality control. It is not billed hourly.</li>' +
+        '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins. The fee trues up to what the vendors actually invoice.</li>' +
+        '<li>' + vendorFeeNote(e, {feeAlreadyStated:true}) + '</li>' +
+        '<li>Adding or removing work changes the vendor scope, so it is re-quoted and agreed with you in writing before that work proceeds.</li>'
+      // ⚠ PREP WITH DECLUTTER HOURS IS ITS OWN ARM AND MUST NOT FALL THROUGH TO THE T&M ONE.
+      // That arm is wrong here twice: it tells the client "the concierge time spent sourcing,
+      // scheduling and supervising vendors is billed hourly like all other concierge time" — on
+      // an engagement where the 30% fee covers exactly that and billing it hourly as well is the
+      // double charge that took SMF_PCT to zero — and it closes with a moving-materials basis
+      // note on a job that has no materials package. This arm states the TWO bases the client is
+      // actually charged on, in the order they appear in the fee table above.
+      : _isPrepEst
+      ? '<li>Havellin is paid on two bases for this project, both shown above: a <strong>' + Math.round(prepFeeRate()*100) + '% management fee on actual vendor spend</strong>, and <strong>concierge hours at $' + (e.tcRate || 150) + '/hour</strong> for the hands-on decluttering described in the estimate.</li>' +
+        '<li>The management fee is not billed hourly and covers sourcing, scheduling, on-site oversight and quality control of the trades. The concierge hours are separate from it and cover hands-on work in the rooms themselves.</li>' +
+        '<li>The declutter hours shown are an estimate. Final charges reflect actual hours worked, and if they exceed the estimate by more than ' + estTolerancePctTxt() + ' Havellin will notify you before proceeding.</li>' +
         '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins. The fee trues up to what the vendors actually invoice.</li>' +
         '<li>' + vendorFeeNote(e, {feeAlreadyStated:true}) + '</li>' +
         '<li>Adding or removing work changes the vendor scope, so it is re-quoted and agreed with you in writing before that work proceeds.</li>'
@@ -10281,6 +10477,11 @@ function restoreEstimateToUI(est) {
   // Restore moving materials package
   var pkgEl = document.getElementById('e-pkg');
   if (pkgEl && est.pkgCost != null) pkgEl.value = est.pkgCost;
+
+  // Declutter hours on a prep estimate. A record saved before 2026-09-14 carries no field and
+  // restores as 0, which is exactly what it was priced at and what its client documents said.
+  var dcEl = document.getElementById('e-declutter-hrs');
+  if (dcEl) dcEl.value = String(estDeclutterHrs(est) || 0);
 
   // Restore discount
   var discEl = document.getElementById('e-discount');
@@ -11825,9 +12026,14 @@ function jobSchedule(job, est, todayStr, prog) {
   // is no next action and a date to chase would be an instruction that cannot be followed.
   if (job.status === 'lost' || job.status === 'closed_retained') { S.state = 'dead'; return S; }
 
-  // Home Prep for Sale books no concierge hours and runs on the vendors' calendar, so the
-  // app has no defensible day count for it. Its own state, and the strip says so positively
-  // rather than printing an apology for a missing number.
+  // Home Prep for Sale runs on the vendors' calendar, so the app has no defensible day count
+  // for it. Its own state, and the strip says so positively rather than printing an apology for
+  // a missing number.
+  // ⚠ THE REASON IS THE CALENDAR, NOT THE ABSENCE OF HOURS, and the distinction became real on
+  // 2026-09-14: this used to open "books no concierge hours", which a prep job with declutter
+  // hours no longer does. A few hours of decluttering inside a vendor-driven schedule still gives
+  // nothing to project an end date from — the painter's availability decides it — so the
+  // behaviour stands unchanged and only the stated reason was wrong.
   if (job.svc === 'prep' || (est && est.svc === 'prep')) { S.state = 'vendor'; return S; }
 
   if (!est) { S.why = 'no-estimate'; return S; }
@@ -21127,6 +21333,20 @@ function plannedPSCount(jobId, crew) {
   if (crew && crew.ps) {
     crew.ps.forEach(function(p, idx){ if (p && p.name) assigned = idx + 1; });
   }
+  // ⚠⚠ HOME PREP PRICES NO SPECIALISTS AND MUST NOT DEMAND ANY. calcAll holds totPS at
+  // zero on that service, but `psCount` is read off `ps-crew-size` — a select that is merely
+  // HIDDEN on prep and still reads "2" — so every prep estimate carries psCount 2. That was
+  // inert while the prep Job Plan had no hours log at all; the moment declutter hours opened
+  // one (2026-09-14) it would have rendered two specialist rows on a one-person engagement AND
+  // made confirmJobTeam demand two names through unfilledPlannedPS, which is an unsatisfiable
+  // gate — there is nobody to name. A stale hidden field that only became dangerous the day
+  // something started reading it, exactly like the `_volPreset` leak.
+  // ⚠ `assigned` STILL COUNTS, so a specialist genuinely added beyond plan keeps their row
+  // and their hours rather than vanishing on the next render.
+  var _psvc = (est && est.svc) || (function(){
+    var j = jobs.find(function(x){ return x.id === jobId; }); return j ? j.svc : '';
+  })();
+  if (_psvc === 'prep') return Math.min(6, assigned);
   // No approved estimate yet → 2, matching seedCrewFromEstimate's floor.
   if (!planned) planned = 2;
   return Math.max(1, Math.min(6, Math.max(planned, assigned)));
@@ -21746,14 +21966,23 @@ function invoiceHtml(job, stage) {
   // Fixed-price finals are exempt — they never consult the log (see the _fixed branch
   // below), so an unlogged fixed job still invoices the agreed fee correctly.
   // A job that never priced any labor legitimately finals with an empty log, and must
-  // not be blocked. Home Prep for Sale is the live case: it is fee-only (30% GC on
-  // vendor actuals, no room/labor engine — see isPrep in calcAll), and renderJobPlan
-  // hides plan-log-section for it outright, so there is no way to log hours even if
-  // you wanted to. Blocking it would be an inescapable dead end. Test the hours the
-  // estimate actually priced rather than the service code alone, so any future
-  // fee-only configuration is covered without another edit here.
-  var _feeOnly = (((est && est.svc) || job.svc) === 'prep') ||
-                 (!!est && ((est.totTC || 0) + (est.totPS || 0)) === 0);
+  // not be blocked. Home Prep for Sale is the live case: with no declutter hours it is fee-only
+  // (30% GC on vendor actuals, no room/labor engine — see isPrep in calcAll), and
+  // loadJobPlanTab hides plan-log-section for it, so there is no way to log hours even if you
+  // wanted to. Blocking it would be an inescapable dead end.
+  // ⚠⚠ AND A PREP JOB THAT DID PRICE DECLUTTER HOURS IS CORRECTLY BLOCKED, which is the whole
+  // point of gating on the PRICED HOURS rather than on the service code. Since 2026-09-14 that
+  // engagement's Job Plan opens the hours log precisely when the estimate quoted hours, so an
+  // empty log on its final means the work was done and never recorded — and the final trues
+  // labour to the log, so it would bill zero for it. There is an escape and it is the right one:
+  // log the hours.
+  // ⚠ ONE DEFINITION NOW, NOT TWO KEPT IN STEP BY HAND. This was a byte-for-byte copy of
+  // estimateIsFeeOnly under a comment instructing the next reader to keep them matching — and on
+  // 2026-09-14 they would have diverged, because a prep job that books declutter hours stopped
+  // being fee-only and only one of the two copies would have learned it. The estimate and the
+  // invoice disagreeing about whether an engagement bills hours is exactly the drift the shared
+  // predicate exists to prevent.
+  var _feeOnly = estimateIsFeeOnly(est, job);
   var _noHours = (stage === 'final') && !_fixed && !_feeOnly && (actTC + actPS) === 0;
   // Crew hours with no concierge hours is almost always a logging slip rather than a
   // real shift: under the working-supervisor model the concierge is on site for every
@@ -22710,16 +22939,31 @@ function loadJobPlanTab() {
   // copy renders immediately either way, so this never blocks the plan appearing.
   refreshPhotoRefs(jobId, function(changed){ if (changed) loadJobPlanTab(); });
 
-  // Home Prep for Sale gets a stripped-down plan: no hours log, PS crew, room phases, or
-  // end-of-job logistics — just vendor sourcing, budget, and a coordination checklist.
-  if (job.svc === 'prep') {
-    var logSectionP = document.getElementById('plan-log-section');
-    if (logSectionP) logSectionP.style.display = 'none';
+  // Home Prep for Sale gets a stripped-down plan: no PS crew, room phases, or end-of-job
+  // logistics — just vendor sourcing, budget, and a coordination checklist.
+  //
+  // ⚠⚠ THE HOURS LOG IS NO LONGER HIDDEN UNCONDITIONALLY, AND THAT IS THE HALF OF THE
+  // DECLUTTER BUILD THAT MAKES IT REAL. Quoting declutter hours the concierge then cannot log
+  // is worse than not quoting them: the final invoice trues labour to the log, so an engagement
+  // that priced 5 hours and can record none bills zero for work somebody actually did. It opens
+  // only when the estimate ACTUALLY PRICED hours — a prep job that is pure vendor management
+  // still gets no log, because there is nothing it could honestly hold.
+  // ⚠ AND IT FALLS THROUGH to the shared wiring below rather than repeating it. That block
+  // sets log-job, resets the beyond-plan slots, builds the team rows and seeds the date; a prep
+  // branch with its own copy is how the two forms come to disagree about which job they are
+  // writing to — and writing hours to the wrong job is not a defect anything downstream notices.
+  var _isPrepPlan = (job.svc === 'prep');
+  var _prepDcHrs  = _isPrepPlan ? estDeclutterHrs(est) : 0;
+  if (_isPrepPlan) {
     content.innerHTML = renderPrepJobPlan(jobId, job, est);
-    return;
+    if (_prepDcHrs === 0) {
+      var logSectionP = document.getElementById('plan-log-section');
+      if (logSectionP) logSectionP.style.display = 'none';
+      return;
+    }
+  } else {
+    content.innerHTML = renderJobPlan(jobId, job, est);
   }
-
-  content.innerHTML = renderJobPlan(jobId, job, est);
 
   // Show log section and wire log-job hidden input to this job
   var logSection = document.getElementById('plan-log-section');
@@ -25474,13 +25718,32 @@ function renderPrepJobPlan(jobId, job, est) {
   var _jpHeader = document.getElementById('job-plan-header');
   if (_jpHeader) _jpHeader.innerHTML = hdr;
 
+  // Declutter hours quoted on this engagement, and what has actually been logged against
+  // them. The concierge doing the work is the person who needs to see the gap, and this card
+  // is the only budget readout on a prep job.
+  var _dcQuoted = estDeclutterHrs(est);
+  var _dcRate = est.tcRate || (job.premium ? 185 : 150);
+  var _dcLogged = 0;
+  if (_dcQuoted > 0) {
+    jobLogEntries(jobId).forEach(function(entry){
+      (entry.members || []).forEach(function(m){ if (m.role === 'TC') _dcLogged += (m.hours || 0); });
+    });
+    _dcLogged = Math.round(_dcLogged * 10) / 10;
+  }
+  var _dcOver = _dcQuoted > 0 && _dcLogged > _dcQuoted * (1 + EST_TOLERANCE_PCT);
+
   var budgetCard = '<div class="card" style="margin-bottom:1rem;">' +
     '<div class="sec">Budget &amp; Fee</div>' +
     '<table class="stbl">' +
     '<tr><td class="muted">Estimated vendor spend (budget)</td><td class="num">$' + totalBudget.toLocaleString() + '</td></tr>' +
     '<tr><td class="muted">Quoted to date (' + quotedCount + ' of ' + prepLines.length + ' vendors)</td><td class="num"' + (overBudget?' style="color:var(--err-tx);font-weight:600;"':'') + '>$' + totalQuoted.toLocaleString() + '</td></tr>' +
     '<tr><td class="muted">Havellin ' + Math.round(prepFeeRate()*100) + '% fee (on quoted actuals)</td><td class="num">$' + feeActual.toLocaleString() + '</td></tr>' +
+    (_dcQuoted > 0
+      ? '<tr><td class="muted">Declutter hours quoted (' + _dcQuoted.toFixed(1) + ' hrs &times; $' + _dcRate + ')</td><td class="num">$' + Math.round(_dcQuoted * _dcRate).toLocaleString() + '</td></tr>' +
+        '<tr><td class="muted">Logged to date</td><td class="num"' + (_dcOver?' style="color:var(--err-tx);font-weight:600;"':'') + '>' + _dcLogged.toFixed(1) + ' hrs</td></tr>'
+      : '') +
     '</table>' +
+    (_dcOver ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">⚠ Logged declutter hours are more than ' + estTolerancePctTxt() + ' over the ' + _dcQuoted.toFixed(1) + ' quoted. Tell the homeowner before going further — the estimate’s terms promise notice at that threshold.</div>' : '') +
     (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the ' + Math.round(prepFeeRate()*100) + '% fee follows actual vendor spend.</div>' : '') +
     (allQuoted ? '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">All prep vendors have quotes — the fee shown is final at these quotes.</div>' : '') +
     '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s ' + Math.round(prepFeeRate()*100) + '% GC / Site Management Fee is billed on the actual vendor spend logged here.</div>' +
@@ -25495,6 +25758,7 @@ function renderPrepJobPlan(jobId, job, est) {
     '<div class="sec">Coordination Checklist</div>' +
     chkGrid(
       planChk(jobId, 'prep_wt', 'Scope of prep work confirmed with homeowner') +
+      (_dcQuoted > 0 ? planChk(jobId, 'prep_declutter', 'Pre-prep declutter complete (' + _dcQuoted.toFixed(1) + ' hrs quoted) &mdash; log the hours below') : '') +
       planChk(jobId, 'prep_quotes', 'Quotes collected from all prep vendors') +
       planChk(jobId, 'prep_booked', 'Vendors booked and scheduled') +
       planChk(jobId, 'prep_progress', 'Work underway — site checks &amp; quality control') +
@@ -27490,6 +27754,15 @@ function agreementHtml(job, est) {
   };
   var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
   var isPrepAgr = (job.svc === 'prep');   // Home Prep for Sale — fee-only vendor management; Client is the homeowner
+  // Declutter hours make a prep engagement NOT fee-only, and three clauses below say outright
+  // that it is. See estimateIsFeeOnly. Zero on a blank template (no estimate yet), which is the
+  // state that must keep printing the management-fee-only form.
+  var _agrDcHrs = isPrepAgr ? estDeclutterHrs(est) : 0;
+  // ⚠ NO PROPERTY SPECIALIST HOURS ON PREP, EVER, AND THE CLAUSES SAY SO. calcAll injects the
+  // declutter hours into totTC only; totPS stays hard-zero on that service because the engagement
+  // has no crew to size (est-crew-col is hidden). If a prep job ever books specialist hours, §3.3
+  // below becomes false and has to change with it.
+  var _agrDcAmt = Math.round(_agrDcHrs * tcRate);
 
   var _split = paymentSplit(havTotal);
   var dep  = _split.deposit.toLocaleString();
@@ -27568,7 +27841,7 @@ function agreementHtml(job, est) {
   content += agrSection('1. Scope of Services',
     (isPrepAgr
       ? p(b('1.1 Services.')+'  Contractor will provide home sale preparation project-management services (the "Services") as described in the written estimate or work order (the "Estimate"), which is attached as Exhibit A and incorporated by reference. The Services consist of sourcing, coordinating, and overseeing the third-party vendors and tradespeople engaged to prepare the Property for sale.')+
-        p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and a written preparation plan; sourcing and scheduling of vendors and tradespeople (including painting, repairs, cleaning, landscaping, pressure washing, handyman work, and staging); on-site oversight, quality control, and coordination of that work through completion; and management of vendor scheduling and Property access. Third-party vendors are engaged for and invoiced to Client at cost; Contractor\'s fee for the Services is a management fee equal to '+_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this Agreement. Contractor does not provide real estate brokerage, listing, or transactional representation.')
+        p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and a written preparation plan; sourcing and scheduling of vendors and tradespeople (including painting, repairs, cleaning, landscaping, pressure washing, handyman work, and staging); on-site oversight, quality control, and coordination of that work through completion; and management of vendor scheduling and Property access. Third-party vendors are engaged for and invoiced to Client at cost; Contractor\'s fee for the Services is a management fee equal to '+_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this Agreement.'+(_agrDcHrs > 0 ? '  Where the Estimate provides for it, Contractor also performs hands-on decluttering and clearing of the Property by a Transition Concierge, billed hourly as set out in Section 3.3; that work is separate from the management fee and is not covered by it.' : '')+' Contractor does not provide real estate brokerage, listing, or transactional representation.')
       : p(b('1.1 Services.')+'  Contractor will provide estate cleanout, contents sorting, packing, home editing, home transition and move-management, property preparation, and related coordination services (the "Services") as described in the written estimate or work order (the "Estimate"), which is attached as Exhibit A and incorporated by reference.')+
         p(b('1.2 Service Description.')+'  Services may include, as applicable: on-site assessment and project planning; sorting, organizing, and packing of personal property and household goods; coordination of appraisers, auction houses, estate sale providers, movers, junk removal, art/antique handlers, and other third-party vendors; move-management, scheduling, and oversight; limited assistance identifying items that may have value for referral to qualified third parties; and basic home preparation and staging in anticipation of sale (excluding real estate brokerage services unless covered under a separate written brokerage agreement).')
     )+
@@ -27617,7 +27890,15 @@ function agreementHtml(job, est) {
     // isFixedAgr is false on prep — the fixed-price toggle is not reachable there — so the
     // hourly arm was what every prep client signed.
     (isPrepAgr
-      ? p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.')
+      ? (_agrDcHrs > 0
+        // ⚠⚠ A PREP ENGAGEMENT THAT BOOKS DECLUTTER HOURS CANNOT SIGN THE CLAUSE BELOW IT. That
+        // one states in bold that no concierge hours are billed, and this is a SIGNED CONTRACT
+        // whose Exhibit A prices those very hours on its face — the same class of defect as the
+        // $150/hour rate card that shipped on a fee-only prep agreement until 2026-09-11, in the
+        // same clause, running the other way. Both bases are stated here, and the specialist half
+        // survives because it stays true: calcAll holds totPS at zero on prep unconditionally.
+        ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the management fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(_agrDcHrs.toFixed(1)+' hours')+' ('+b('$'+_agrDcAmt.toLocaleString())+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.')
+        : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
       : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+havTotal.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.')
       : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'))+
@@ -27647,7 +27928,7 @@ function agreementHtml(job, est) {
     // and prep books none, so on that engagement this mechanism describes nothing. The
     // estimate's prep Terms already say a scope change is RE-QUOTED; this says the same.
     (isPrepAgr
-      ? p(b('3.8 Changes to Scope.')+'  Contractor\'s fee follows the third-party vendor costs actually incurred, so a change in the work to be done changes the fee only through those costs. Contractor will review each vendor\'s quote with Client before that vendor is booked, and any work added after that is quoted and agreed with Client in writing before it proceeds.')
+      ? p(b('3.8 Changes to Scope.')+'  Contractor\'s fee follows the third-party vendor costs actually incurred, so a change in the vendor work to be done changes that part of the fee only through those costs. Contractor will review each vendor\'s quote with Client before that vendor is booked, and any work added after that is quoted and agreed with Client in writing before it proceeds.'+(_agrDcHrs > 0 ? '  If the decluttering described in Section 3.3 is reasonably projected to exceed the hours stated in the Estimate by more than '+estTolerancePctTxt()+', Contractor will notify Client in writing before proceeding.' : '')+'')
       : isFixedAgr
       ? p(b('3.8 Changes to Scope.')+'  The fixed price covers the scope of work described in the Estimate. If Client requests, or conditions require, work beyond that scope, Contractor will notify Client in writing before proceeding, and any resulting price adjustment will be documented in a written Change Order signed by both Parties.')
       : p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.'))+

@@ -1,5 +1,138 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A PREP JOB CAN BOOK CONCIERGE HOURS — AND THE OBVIOUS ANSWER WAS MEASURED AND REJECTED (BUILT 2026-09-14)
+Anthony, on the service catalogue: *"we could walk into a home where they said they wanted us to prep for sale, and we
+could figure out it's a complete mess … it would likely just be Ashley as the TC coming in, spending four or five hours
+cleaning out the house while she's also orchestrating painters or landscapers."* App-only, no redeploy — `declutterTCHrs`
+rides the existing estimate snapshot.
+
+- **⚠⚠ THE OBVIOUS FIX — RE-TYPE IT AS HOME EDITING AND SCORE THE FOUR MESSY ROOMS — IS THE WRONG ONE, AND IT WAS
+  MEASURED BEFORE ANYTHING WAS BUILT.** `interiorLoad = sqft * ENGINE_K * volFactor` anchors on **total under-air
+  square footage**, and marking the rest of the house ✕ out of scope drops those rooms from the volume AVERAGE
+  without shrinking the sqft — `calcAll` pushes only `st === 'in'` rooms to the engine. Driven on the real
+  `computeEngineV3`, a 3,500 sqft house:
+
+  | what is scored | TC | PS | at $150/$100 |
+  |---|---|---|---|
+  | **4 rooms**, the rest marked ✕ | 25 | 52 | **$8,950** |
+  | the **whole 12-room interior** | 24 | 52 | **$8,950** |
+
+  **Identical.** Scoring the four rooms as light as the app allows still lands at $6,200. There is no room-scoring path
+  that expresses half a day in four rooms — **the floor is the house, not the work** — so re-typing would have put
+  ~$8,000 of phantom crew labour on a job needing about $750 of concierge time, and renamed the product on the client's
+  agreement, invoice header and Drive folder. That measurement is a TEST (`prep-declutter.test.js`), because it is the
+  whole reason this is an input and somebody will propose the re-type again.
+- **SO IT IS A DIRECT OBSERVATION, NOT A DERIVATION.** The estimator standing in the house types "four hours"; nothing
+  computes it from sqft, room weights or vendor count. **Concierge only** — the engagement has no crew to size
+  (`est-crew-col` is hidden on prep) and the work described is one person clearing rooms while the trades work around
+  them. `totPS` stays hard zero.
+- **⚠⚠ IT IS NOT `prepTCHrs` AND MUST NEVER BE MERGED INTO IT.** That one is **vendor coordination** — phoning the
+  painter, scheduling the stager — and is deliberately zero on every engagement because the 30% fee covers it. This is
+  **hands-on decluttering** in rooms no vendor touches, which nothing else covers. Collapsing them resurrects the exact
+  double charge that took `SMF_PCT` to zero. Both notes now cross-reference each other.
+- **⚠⚠ THE LOAD-BEARING HALF IS THAT A PREP JOB BOOKING HOURS STOPS BEING FEE-ONLY, AND THREE CLIENT SURFACES SAID THE
+  OPPOSITE IN SO MANY WORDS.** `estimateIsFeeOnly` returned true on the service key alone. Now
+  `if (svc === 'prep') return estDeclutterHrs(e) === 0;` — and that one line moves the estimate Terms (*"It is not
+  billed hourly"*), **agreement §3.3** (*"No Transition Concierge or Property Specialist hours are billed on this
+  engagement"*, in bold, on a signed contract whose Exhibit A prices those very hours) and the invoice's three hours
+  gates. **⚠ `e` null still reads fee-only on prep** — that is the blank agreement template, which prices nothing and
+  must print the management-fee clause rather than an hourly rate card.
+- **⚠ THE INVOICE KEPT A BYTE-FOR-BYTE COPY OF THAT RULE, under a comment telling the next reader to keep the two
+  matching by hand — and they would have diverged today.** One `estimateIsFeeOnly(est, job)` call now. Two
+  pre-existing assertions pinned the old copy and broke correctly; both restated.
+- **⚠ THE HOURS ENTER THROUGH `totTC`, WHICH IS WHY THE CHANGE IS SMALL.** `tcFee`, `havellinTotal`, `paymentSplit`,
+  the deposit basis, the midpoint and final invoice bases and the ±15% variance gate all already read `totTC`/`tcFee`,
+  so the money path needed **no second copy**. A parallel "prep labour" total beside `havellinTotal` is how the
+  estimate and the invoice come to disagree.
+- **⚠ THE PAYMENT MILESTONES FOLLOW THE SERVICE, NEVER THE FEE-ONLY TEST — and that line would have brought back a
+  defect fixed on 2026-09-11.** A prep job has no "project midpoint" whatever its labour looks like (the vendors
+  invoice the client directly; there are no phases to sit between). Keyed on `_isFeeOnlyEst`, the hours version would
+  have printed that event and disagreed with agreement §3.2 on one staple. `_isPrepEst` decides the milestones; only
+  the CAPTION follows the hours (*Management fee + concierge hours*).
+- **⚠ THE CLIENT ESTIMATE'S LABOUR ROW IS A RECONCILIATION REQUIREMENT, NOT A NICETY.** The subtotal is
+  `havellinTotal`, so the moment hours exist it is LARGER than the management fee and a table printing the fee alone
+  above it visibly fails to add up. `e.prepFee || e.havellinTotal` is gone with it — that fallback was safe only while
+  the two were equal by construction.
+- **⚠ THE TERMS GET A THIRD ARM RATHER THAN FALLING THROUGH TO T&M.** That arm is wrong on prep twice: it promises
+  vendor coordination bills hourly (the 30% covers exactly that) and closes with a moving-materials basis note on an
+  engagement with no package. The prep-with-hours arm states both bases and keeps the vendor-review promise.
+- **⚠⚠ QUOTING HOURS NOBODY CAN LOG IS WORSE THAN NOT QUOTING THEM, so `loadJobPlanTab` opens the hours log — and only
+  when the estimate actually priced hours.** The final trues labour to the log, so an engagement that quoted 5 hours
+  and could record none would bill **zero** for work somebody did. It **falls through to the shared wiring** rather
+  than repeating it; a prep branch with its own copy of the log setup is how two forms come to disagree about which
+  job they are writing to.
+- **⚠⚠ AND `plannedPSCount` HAD TO LEARN PREP, OR THE TEAM GATE BECOMES UNSATISFIABLE.** `psCount` is read off
+  `ps-crew-size` — a select merely HIDDEN on prep that still reads "2" — so every prep estimate carries `psCount 2`.
+  Inert while the prep plan had no log; the moment one opened it would render two specialist rows on a one-person
+  engagement **and** make `confirmJobTeam` demand two names through `unfilledPlannedPS`, with nobody to name. A stale
+  hidden field that only became dangerous the day something started reading it — the `_volPreset` leak exactly.
+  **`assigned` still counts**, so a specialist genuinely added beyond plan keeps their row.
+- **⚠ THE ACCESSOR REFUSES ON EVERY SERVICE BUT PREP, and the guard is in the accessor rather than at the call site.**
+  The card is HIDDEN on a labour job, not emptied, so a value typed on a prep estimate and then re-typed to Home
+  Editing would otherwise add phantom concierge hours to a job whose engine already priced its own — invisibly,
+  because they land inside `totTC` beside the engine's.
+- **⚠ A PREP ESTIMATE STILL NEEDS VENDORS, and the save test moved from `havellinTotal` to `prepCost` to keep it that
+  way.** Hours land in `havellinTotal`, so the old test would have let a prep estimate with **no vendors at all**
+  through on the strength of a few concierge hours — a Home Editing job wearing the wrong name on the agreement, the
+  invoice header and the Drive folder. The refusal names Home Editing.
+- **5065 committed checks** (`tests/prep-declutter.test.js`, 112 new — the first coverage of what a prep engagement
+  bills at all). **All twenty-one changes revert-verified individually, ZERO green** — the fee-only arm and the Terms
+  arm fail **7** each, §3.3 **6**, the shared invoice predicate 5, the milestones 4, and the rest 1–3.
+  - **⚠⚠ SIX REVERTS CAME BACK GREEN ON THE FIRST SWEEP AND FIVE WERE THE SAME GAP: every check drove a DERIVATION or
+    a DOCUMENT and NOTHING DROVE THE FORM.** Breaking the card's display toggle, the fee row, the job-switch clear and
+    the reopen each changed nothing any test could see — and those four are the difference between a control that
+    exists and a control somebody can use. There are driven groups for all of them now.
+  - **⚠ AND THE SIXTH WAS A NEEDLE MATCHING ITS NEIGHBOUR.** `has(aW, 'hands-on decluttering and clearing of the
+    Property')` is carried by **§1.2 AND §3.3**, so reverting §1.2 left it green on §3.3's copy. Pinned on §1.2's own
+    surrounding words. Fourth time this file records that shape.
+  - **⚠ `calcAll` STILL CANNOT BE DRIVEN IN THE HARNESS** (three dozen DOM reads plus the pricing tree — the standing
+    open item). The snapshot write and the reopen are therefore pinned as a **CONTRACT** rather than a byte sequence —
+    the key the writer writes must be the key the reader reads, so reverting either end fails and only renaming both
+    together passes — and the driven proof is the browser run.
+- **⚠ FIVE SUITES PINNED EXPLICIT `fns:` LISTS AND BROKE CORRECTLY** when `agreementHtml`, `clientEstimateHtml`,
+  `buildPrepEstimateBody`, `renderPrepJobPlan` and `estimateIsFeeOnly` grew a call to `estDeclutterHrs`. Mechanical.
+  **⚠ And `estimate-delivery.test.js` has THREE sandboxes** — a single-occurrence replace would have fixed one and
+  left two throwing, which this file already records costing a round.
+- **⚠ ONE PRE-EXISTING ASSERTION'S SLICE ANCHOR MOVED AND THE REQUIREMENT DID NOT.** `estimate-delivery` located the
+  fee-only Terms arm as *everything up to `: (e.fixedPrice`*; a third arm now sits between them, and that arm names
+  actual hours and the 15% threshold **legitimately**. Re-anchored on `: _isPrepEst`, so it reads its own arm again.
+- **Verified end to end in headless Chromium on the real page**, driving the real form, the real `calcAll`, the real
+  Save button and the real Job Plan:
+
+  | | 0 declutter hrs | 5 declutter hrs |
+  |---|---|---|
+  | `havellinTotal` | $13,500 | **$14,250** |
+  | `totTC` / `totPS` / `prepTCHrs` | 0 / 0 / 0 | **5** / 0 / 0 |
+  | `estimateIsFeeOnly` | true | **false** |
+  | concierge fee row | hidden | *Transition Concierge fee (5.0 hrs × $150)* · $750 |
+  | client estimate | fee alone | + *Pre-prep declutter* row, services total **$14,250** |
+  | estimate Terms | *"not billed hourly"* | *"Havellin is paid on two bases"* + the 15% threshold |
+  | agreement §3.3 | *"No TC or PS hours are billed"* | *two bases · $150/hour · 5.0 hours · $750* |
+  | payment milestone | *vendor schedule booked* | **the same** (never *project midpoint*) |
+  | Job Plan hours log | absent | present, **1 row** (concierge only) |
+  | final invoice, empty log | issues | **blocked** — log the hours, then $750 |
+
+  Re-typed to Home Editing with **5 still in the field**: card hidden, `getDeclutterTCHrs()` returns **0**, snapshot
+  carries 0. Deposit asks $7,125; final variance 0.0%, no PIN. Overflow **0** at 1440 and 390px, no page errors.
+- **⚠ FOUND IN THE BROWSER, NOT BY A TEST: the save confirmation read *"30% fee $14,250"* over a fee of $13,500.** It
+  printed `havellinTotal`, which now carries the hours — labelling the concierge labour as part of the management fee
+  on the one line that confirms what was just saved. It names the fee, the hours and the total separately now.
+- **⚠ NOTED, NOT CHANGED: `estWorkingDays` and `jobSchedule` still report no day count on prep, and that is right.**
+  Both comments opened *"books no concierge hours"*, which stopped being true today; the REASON is the calendar, not
+  the absence of hours. Half a day of decluttering inside a schedule the trades set gives nothing to project an end
+  date from. Comments corrected, behaviour untouched.
+- Manual **§1 · §6 · new §6a-i · §6b · §6c · §8 · §9a-i** (the hours-log list said the one service with no log is Home
+  Prep, full stop); playbook the intake note, **Step 1's re-type `.stop`** (which now names the other answer, or
+  somebody re-types a job that only needed hours), a new **Step 3**, Step 5's log `.stop`, the quick-reference row,
+  the sourcing note, the final-invoice `.stop`, and **seven** symptom→cause rows. Both `.md` copies hand-edited and
+  **26 claims parity-checked, 0 mismatches**; tag balance verified on both HTML files (`manual.html`'s `<code>` delta
+  is still the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 48 tables
+  full-width under `print`**.
+- **⚠ OPEN, AND IT IS THE NEXT QUESTION RATHER THAN A DEFECT: Home Editing and Home Cleanout may be one service.**
+  Raised with Anthony in the same exchange. The only real difference in `JOB_STEPS` is where the contents GO —
+  editing is weighted to `pack` (0.85) and cleanout to `disposition` (0.76) — and that is an item-level decision made
+  on the job, not a service type. Not touched here; it is a pricing-model conversation, not a refactor.
+
 ## ⚠⚠ HAVELLIN MAY CARRY A FIREARM NOW — AND `flagNFA` BECAME THE GATE IT WAS NEVER WIRED TO BE (2026-09-13)
 Anthony, after checking with a dealer: *"for me to take from a home to a licensed gun dealer for purposes of
 purchase or consignment isn't it fine?"* Then: *"let's just limit it to me transporting for any job … let's
@@ -1483,7 +1616,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/admiring-tesla-7ysggp`
+- Active feature branch: `claude/gifted-babbage-wnzm7w`
+  (was `claude/admiring-tesla-7ysggp`)
   (was `claude/festive-noether-ggr0fn`)
   (`claude/busy-heisenberg-h24ya9` shipped alongside it on 2026-09-11 — two sessions ran
   concurrently and both are on `main`; neither is stale.)
@@ -1494,7 +1628,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/admiring-tesla-7ysggp:main`
+  `git push origin claude/gifted-babbage-wnzm7w:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

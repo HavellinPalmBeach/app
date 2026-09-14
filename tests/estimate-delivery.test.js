@@ -98,7 +98,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 3. HOME PREP: NO HOURS, SO NO HOURLY TERMS ─────────────────────────────
   group('estimateIsFeeOnly is the same test the invoice already used');
   {
-    const ctx = sandbox({ fns: ['estimateIsFeeOnly'] });
+    const ctx = sandbox({ fns: ['estimateIsFeeOnly', 'estDeclutterHrs'] });
     const f = ctx.estimateIsFeeOnly;
     eq(f({ svc: 'prep' }), true, 'standalone Home Prep is fee-only');
     eq(f({ svc: 'cleanout', totTC: 40, totPS: 120 }), false, 'an estate job is not');
@@ -106,10 +106,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(f(null, { svc: 'prep' }), true, 'the job answers when there is no estimate yet');
     eq(f({ svc: 'probate', totTC: 10, totPS: 0 }), false, 'concierge hours alone still count as hours');
 
-    // The invoice's copy of the rule, so a future edit to one shows up against the other.
+    // ⚠ THE INVOICE KEPT A BYTE-FOR-BETTER COPY OF THIS RULE UNTIL 2026-09-14, under a comment
+    // telling the next reader to keep the two matching by hand. These two assertions pinned that
+    // copy. They broke on the declutter build — correctly — because a prep job that books hours
+    // stopped being fee-only and only ONE of the two copies would have learned it. Restated as
+    // the requirement rather than deleted: there is one definition, and the invoice asks it.
     const invoice = fn('invoiceHtml', 'jobLogEntries');
-    has(invoice, "=== 'prep')", 'the invoice still keys fee-only off the same service');
-    has(invoice, '(est.totTC || 0) + (est.totPS || 0)) === 0', 'and the same zero-hours arm');
+    has(invoice, 'estimateIsFeeOnly(est, job)', 'the invoice asks the shared predicate');
+    lacks(invoice, "((est && est.svc) || job.svc) === 'prep') ||",
+          'and keeps no inline copy of it that could drift');
   }
 
   group('a prep estimate no longer promises hours it can never bill');
@@ -134,7 +139,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // block between them, and that comment quotes all three phrases while explaining why
     // they are wrong here. A test that reads its own rationale as evidence proves nothing.
     const armStart = ce.indexOf("'<li>Havellin\\'s fee for this project is a <strong>");
-    const armEnd = ce.indexOf(': (e.fixedPrice', armStart);
+    // ⚠ THE END ANCHOR MOVED ON 2026-09-14 AND THE REQUIREMENT DID NOT. A third arm now sits
+    // between this one and the fixed-price one — prep WITH declutter hours — and that arm names
+    // actual hours and the 15% threshold legitimately, because on it they are true. Anchoring on
+    // `: (e.fixedPrice` swept it into the slice and read its correct sentences as this arm's
+    // defect. The fee-only arm ends where the prep-with-hours arm begins.
+    const armEnd = ce.indexOf(': _isPrepEst', armStart);
     ok(armStart > -1 && armEnd > armStart, 'the fee-only Terms arm is locatable');
     const branch = ce.slice(armStart, armEnd);
     lacks(branch, 'actual hours worked', 'the fee-only arm never mentions actual hours worked');
@@ -288,7 +298,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
-            'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
+            'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             // Both emails state the vendor-fee rule through the one shared sentence (2026-09-10).
             'vendorFeeNote', 'prepFeeRate'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
@@ -352,7 +362,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A phase list that throws must not take the email down with it.
     const ctx2 = sandbox({
-      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'estimateIsFeeOnly', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
+      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             'vendorFeeNote', 'prepFeeRate'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
       stubs: {

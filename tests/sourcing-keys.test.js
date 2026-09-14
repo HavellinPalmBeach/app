@@ -131,7 +131,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // not match its shape — so the card could go back to summing by position with the
     // whole suite passing. It is the concierge's own fee readout, in the field, on money.
     const plan = (est, job) => sandbox({
-      fns: ['renderPrepJobPlan', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid'],
+      fns: ['renderPrepJobPlan', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
+            'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt'],
       vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
                standingFlagsBlock: () => '', planChk: () => '', renderVendorSourcing: () => '',

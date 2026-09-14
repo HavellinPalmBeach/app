@@ -113,7 +113,7 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts �
 
 **Staffing sits in the waiting period on purpose.** Once the agreement is out for signature there's usually a few days of dead time — that's when you confirm who is actually available and name the crew on the Job Plan. **Save & Confirm Job Team** is what unlocks hours logging, so a job can't reach its first working day with an unnamed crew (Section 11).
 
-**Home Prep for Sale** follows a streamlined variant of this flow — no room scoring, no labor/hours, no crew. See Section 6.
+**Home Prep for Sale** follows a streamlined variant of this flow — no room scoring and no crew. Since 2026-09-14 it can carry **declutter hours** for the concierge; see Section 6.
 
 ## 4. New Client Intake
 
@@ -478,16 +478,37 @@ Indicative, not a rule — the app does the real arithmetic per job. Heavier roo
 
 ## 6. Home Prep for Sale (Standalone Service)
 
-A show-ready, sell-side service offered primarily through **Douglas Elliman referral agents**. Havellin manages every trade needed to get a property market-ready — paint, repairs, landscaping, deep cleaning, staging — and charges a flat **30% GC / Site Management Fee** on the managed vendor spend. There is no room scoring, no in-house labor, and no crew.
+A show-ready, sell-side service offered primarily through **Douglas Elliman referral agents**. Havellin manages every trade needed to get a property market-ready — paint, repairs, landscaping, deep cleaning, staging — and charges a flat **30% GC / Site Management Fee** on the managed vendor spend. There is no room scoring and no crew. Since 2026-09-14 it can also carry **concierge declutter hours** where the house needs clearing as well as trades — see 6a-i.
 
 > **Who the contract is with:** the agreement is directly with the **homeowner**. The referring agent is a referral channel only — never our client. No document should suggest otherwise.
 
 ### 6a. Building the estimate
 
-- Select the job (Service Type = *Home Prep for Sale*). **The tab empties out** — room scoring, crew, labor, Notable Collections, Vehicles & Watercraft and Moving Materials all disappear, and so do the five vendor cards that are not Property Preparation. What is left is one card, **Home Prep for Sale — Managed Vendors**, sitting beside the Job details. There is nothing else on the tab to fill in.
+- Select the job (Service Type = *Home Prep for Sale*). **The tab empties out** — room scoring, crew, labor, Notable Collections, Vehicles & Watercraft and Moving Materials all disappear, and so do the five vendor cards that are not Property Preparation. What is left is two cards: **Home Prep for Sale — Managed Vendors**, sitting beside the Job details, and **Pre-Prep Declutter — Concierge Hours** below it (6a-i).
 - Add each prep trade with an estimated cost. The card footer shows the vendor total and the running 30% fee. The dropdown is the *Property Preparation* categories from the Vendor Directory, so a newly-added prep specialty (e.g. Floor Refinishing) appears automatically (Section 13a).
 - **Scope notes:** each vendor line has a scope field — capture on the walkthrough exactly what to tell that trade (e.g. "5 bedrooms + hallway, walls & ceilings; front & back landscaping"). These carry through to the Job Plan sourcing.
 - No property value is required.
+
+### 6a-i. Pre-Prep Declutter — Concierge Hours (new 2026-09-14)
+
+Anthony: *"we could walk into a home where they said they wanted us to prep for sale, and we could figure out it's a complete mess … it would likely just be Ashley as the TC coming in, spending four or five hours cleaning out the house while she's also orchestrating painters or landscapers."*
+
+Type the hours into the **Pre-Prep Declutter** card on Build Estimate. They are billed at the Transition Concierge rate ($150, or $185 on a premium job) **on top of** the 30% vendor management fee, and the hint under the box prices them as you type. Leave it at **0** if the house only needs the trades.
+
+| What you type | What the client is charged | What the documents say |
+| --- | --- | --- |
+| **0 hours** | 30% management fee alone | "It is not billed hourly." The engagement is fee-only, exactly as before. |
+| **5 hours** | 30% fee **+** 5 × $150 = $750 | "Havellin is paid on two bases" — the fee, and the hours. The 15% notice threshold applies to the hours. |
+
+> **⚠⚠ WHY THIS IS NOT "JUST RE-TYPE IT AS HOME EDITING" — measured, not argued.** That was the obvious answer and it was tested first. The pricing engine anchors on **total under-air square footage** (`interiorLoad = sqft × ENGINE_K × volFactor`), and marking the rooms you are not touching **✕ out of scope** drops them from the volume *average* without shrinking the sqft. Driven on the real engine, a 3,500 sqft house: scoring **four rooms** gives 25 TC / 52 PS and scoring the **whole twelve-room interior** gives 24 TC / 52 PS — the same **$8,950** either way. There is no room-scoring path that expresses half a day in four rooms; the floor is the house, not the work. Re-typing would have put roughly $8,000 of phantom crew labour on a job that needs about $750 of concierge time, and renamed the product on the client's agreement, invoice header and Drive folder. **Do not re-propose it.**
+
+> **⚠ It is CONCIERGE ONLY, and that is deliberate.** A prep engagement has no crew to size — the specialist column is hidden on that service — and the work Anthony described is one person clearing rooms while the trades work around them. The specialist count on a prep job is **zero**, so the hours form shows the concierge row alone and the team sign-off does not demand specialist names it has nobody to fill.
+
+> **⚠ It is NOT the same thing as prep coordination hours, and the two must never be merged.** *Coordination* — phoning the painter, scheduling the stager — is what the 30% fee pays for, and it is deliberately billed at zero hours on every engagement (§5e). *Declutter* is hands-on work in rooms no vendor touches, which nothing else covers. Billing coordination hourly *as well as* the 30% is the double charge that took the old Service Management Fee to zero; billing declutter is not.
+
+> **⚠ Typing hours changes three client documents, so check them before sending.** A prep job that books hours stops being a fee-only engagement, and the estimate Terms, agreement §3.3 and the invoice all branch on that. See 6b and §8.
+
+> **⚠ A prep estimate still needs at least one vendor.** Hours alone will not save — the refusal says so and points you at Home Editing. A "Home Prep for Sale" job with nothing to manage is a Home Editing job wearing the wrong name on the agreement and the invoice.
 
 > **Why the other five vendor cards are hidden — changed 2026-08-03.** They were on screen and they should not have been: the client estimate for a prep job itemizes prep vendors, the 30% fee and one total and nothing else, and the prep Job Plan sources nothing else — so a dumpster added here landed in the grand total while appearing on no document the client or the crew ever saw, and the client estimate stopped adding up. If a prep job genuinely needs a hauler, book it as a Property Preparation trade or run the job as a Cleanout with prep bundled (§5e).
 
@@ -497,21 +518,27 @@ The client estimate reads vendors-first: the itemized prep vendor estimates (bil
 
 **Timeline:** Home Prep runs on the vendors' schedules, so no completion date is projected. The estimate shows the Target Start plus a note that the schedule is confirmed once vendors are booked — the client never sees a blank completion date.
 
-> **⚠ ITS TERMS AND ITS PAYMENT SCHEDULE ARE ITS OWN, because this engagement bills no hours (corrected 2026-09-08).** Anthony: *"the terms and conditions for a home prep job need to change in the estimate because there are no hours. So we can't have a change order for being fifteen percent over hours or rectifying the final bill based on final hours because that doesn't exist."* He was right on all three. The document was printing the standard hourly Terms, so a prep client read *"final charges reflect actual hours worked"*, *"if actual hours exceed the estimate by more than 15% we will notify you"* and a *25% moving-materials handling fee* — two promises about a quantity that does not exist on the engagement (the engine zeroes every hour on `svc === 'prep'` and the Job Plan hides the hours log outright), and one about packing work that is not in scope. The 15% clause was a change-order trigger that could never fire.
+> **⚠⚠ SINCE 2026-09-14 THIS DEPENDS ON WHETHER YOU TYPED DECLUTTER HOURS.** Everything below describes a prep job with **no** declutter hours, which is still the common case and still fee-only. **With hours the Terms change:** they open *“Havellin is paid on two bases for this project”*, name the 30% fee and the concierge rate separately, and carry the **15% notice threshold** against the hours — which reaches a prep engagement for the first time. The payment milestones do **not** change (they follow the service, not the billing basis), but the caption beside them reads *Management fee + concierge hours* instead of *Management fee only*. The fee table gains a **Pre-prep declutter** row, and the *Havellin Services Total* is then the fee **plus** the hours — check the column adds up before sending.
+
+> **⚠ ITS TERMS AND ITS PAYMENT SCHEDULE ARE ITS OWN, because a fee-only engagement bills no hours (corrected 2026-09-08).** Anthony: *"the terms and conditions for a home prep job need to change in the estimate because there are no hours. So we can't have a change order for being fifteen percent over hours or rectifying the final bill based on final hours because that doesn't exist."* He was right on all three. The document was printing the standard hourly Terms, so a prep client read *"final charges reflect actual hours worked"*, *"if actual hours exceed the estimate by more than 15% we will notify you"* and a *25% moving-materials handling fee* — two promises about a quantity that does not exist on the engagement (the engine zeroes every hour on `svc === 'prep'` and the Job Plan hides the hours log outright), and one about packing work that is not in scope. The 15% clause was a change-order trigger that could never fire.
 >
 > **Prep now states what it actually charges:** a 30% management fee on *actual* vendor spend, not billed hourly; every vendor quote reviewed with the client before the vendor is booked; vendors invoicing the client directly at cost; and scope changes handled as a **re-quote agreed in writing** rather than as an hours change order. The payment schedule keeps 50 / 25 / 25 but against milestones this engagement has — acceptance, *the vendor schedule booked*, and *show-ready handover* — instead of a "project midpoint" that does not exist, and the rows are labelled *Management fee only*.
 >
-> **The invoice already knew this and the estimate did not** — `renderInvoice` has exempted prep from every hours gate since it was written. One test, `estimateIsFeeOnly`, now answers for both, and it fires on the prep service *or* on any saved estimate that priced no hours at all.
+> **The invoice already knew this and the estimate did not** — `renderInvoice` has exempted prep from every hours gate since it was written. One test, `estimateIsFeeOnly`, now answers for both. Since 2026-09-14 it fires on a prep job **only when that job booked no declutter hours**, or on any saved estimate that priced no hours at all — so a prep engagement that does bill hours correctly stops taking the fee-only arm on all three surfaces at once.
 
 > **Its internal worksheet lists the vendors, not an empty room table (fixed 2026-09-08).** The Drive worksheet renders rooms, volume, complexity and hours — a fee-only job has none of those, so it came out as a single *Job-level work · 0.0 TC / 0.0 PS* row above a total. Anthony sent one: a $4,560 Home Prep worksheet that said nothing, sitting in the client's Estimate folder because the two files still shared a filename. On a fee-only estimate it now lists each prep vendor line with its scope note and cost, and the footer states the vendor spend and the fee rate. Room-based jobs are untouched.
 
 ### 6c. Job Plan (streamlined)
 
-A Home Prep job opens a stripped-down Job Plan — no hours log, no PS crew, no room phases, no end-of-job logistics. It shows only:
+A Home Prep job opens a stripped-down Job Plan — no PS crew, no room phases, no end-of-job logistics. It shows only:
 
 - **Budget & Fee** — estimated vendor spend, quoted-to-date, and the running 30% fee on actual quotes (flags any over-budget).
 - **Home Prep Vendors — Sourcing & Status** — assign a partner from the Vendor Directory, set status, and log the actual quote per item (with the scope note shown for reference).
 - **Coordination Checklist** — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices + fee billed.
+
+> **⚠⚠ THE HOURS LOG OPENS IF — AND ONLY IF — THE ESTIMATE QUOTED DECLUTTER HOURS (2026-09-14).** A pure vendor-management prep job still has no log, because there is nothing it could honestly hold. A job that quoted hours gets the ordinary log, with the **concierge row alone** and no specialist rows. The Budget & Fee card gains two lines — *Declutter hours quoted* and *Logged to date* — and flags in red once the logged hours run more than 15% past the quote, because the estimate's own Terms promise the client notice at that point.
+>
+> **⚠ LOG THE HOURS.** The final invoice trues labour to the log, so hours worked and never recorded bill **nothing**. The app refuses a final invoice on a prep job that quoted hours and logged none, and the only way through is to record them — which is the right answer, not an obstacle.
 
 ## 7. Client Estimate & Approval
 
@@ -650,6 +677,10 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 > It is real now and behaves like the estimate's: a formatted HTML email as a **draft in your own Gmail**, **CC'd to agreements@havellinpalmbeach.com**, falling back to a plain-text email (also CC'd) when Gmail is not configured. The body carries the payment schedule off the approved estimate; a job with no approved estimate prints no schedule rather than one full of zeroes.
 >
 > **It attaches the SIGNING PACKET, not the agreement alone** — the agreement by itself refers to an Exhibit A the client does not have. The button appears in exactly the states *Print / Save PDF* appears in, so it cannot be a way past the approval gates; a test asserts the two counts match.
+
+> **⚠⚠ THE STANDALONE HOME PREP FORM GAINS AN HOURS ARM WHEN THE ESTIMATE QUOTES DECLUTTER HOURS (2026-09-14).** Its **§3.3 Basis of Fee** has said in bold, since 2026-09-11, that *"no Transition Concierge or Property Specialist hours are billed on this engagement"*. That is still what a pure vendor-management prep job signs. On a job that quotes declutter hours it would be **false on a signed contract whose Exhibit A prices those very hours on its face** — the same class of defect as the $150/hour rate card that shipped on the fee-only form until 2026-09-11, running the other way. §3.3 now states **both bases**: the management fee, and Transition Concierge services at the estimate's own rate, naming the hours and the amount. **"No Property Specialist hours are billed" survives**, because it stays true — prep books no specialist hours at any time. **§1.2** names the decluttering as a second service and points at §3.3; **§3.8** carries the 15% notice threshold against the hours, which reaches a prep engagement for the first time.
+>
+> A blank template — a prep job with no estimate built yet — still prints the fee-only clause, which is correct: it prices nothing, so it must not print an hourly rate card. **Re-generate any prep agreement after changing the declutter hours**, or the contract and Exhibit A state different bases.
 
 ### Generate & Send
 
@@ -791,7 +822,7 @@ Above the timeline, one line: **Target start · N working days · Halfway · Tar
 
 > **It stays quiet early, on purpose.** No verdict about the *rate* is offered until at least one crew-day of hours (7 combined) has been logged **and** a fifth of the work is done. On day one, one room of twelve finished projects to a thirteen-day job — a strip that cried "behind" every Monday morning is a strip nobody reads by the second week. The two percentages still print; only the projection is withheld.
 
-> **Fixed price changes none of this.** The hours log is open on every engagement that books hours — it gates on the job being won and the deposit being recorded, and on nothing else. A flat fee decides how hours are *billed* (the final never trues up to the timesheet), never whether they are *recorded*. The one service with no hours log at all is **Home Prep for Sale**, which books no concierge or specialist hours and is scheduled around the vendors; its strip says so rather than inventing a day count.
+> **Fixed price changes none of this.** The hours log is open on every engagement that books hours — it gates on the job being won and the deposit being recorded, and on nothing else. A flat fee decides how hours are *billed* (the final never trues up to the timesheet), never whether they are *recorded*. The one service with no hours log at all is **Home Prep for Sale with no declutter hours quoted** — and since 2026-09-14 a prep job that *does* quote them gets the ordinary log, concierge row only (6a-i). **Either way its strip still reports no day count**, because that engagement is scheduled around the vendors and half a day of decluttering inside a schedule the trades set gives nothing to project an end date from.
 
 #### The flags
 

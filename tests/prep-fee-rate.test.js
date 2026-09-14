@@ -92,7 +92,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = (rate, build) => {
       const c = sandbox({
         fns: ['estTolerancePctTxt', 'prepFeeRate', 'buildPrepEstimateBody', 'proposedPlanRow', 'fmt', 'esc',
-              'paymentSplit', 'estimateIsFeeOnly', 'clientJobPlanSection', '_cePhases',
+              'paymentSplit', 'estimateIsFeeOnly', 'estDeclutterHrs', 'clientJobPlanSection', '_cePhases',
               'materialsBasisNote', 'vendorEstimateNote', 'vendorFeeNote', '_pctWords',
               'conciergePhones', 'conciergePhonesText', 'prepLineTCHrs', 'coordHrsFor'],
         vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',

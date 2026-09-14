@@ -80,7 +80,7 @@ Then tick what is in the house and **write down what you are told** — the tick
 
 > **The plain *Notes* box is still there, at the bottom.** The questions above cover the house; Notes is for everything else — family dynamics, urgency, who actually makes the decisions, which sibling will be difficult on site.
 
-> **Home Prep for Sale runs a shorter version of this whole playbook** — no room scoring, no crew, no hours. Skip to the Home Prep section near the end once intake is saved.
+> **Home Prep for Sale runs a shorter version of this whole playbook** — no room scoring, no crew, and hours only if the house needs decluttering as well as trades. Skip to the Home Prep section near the end once intake is saved.
 
 ## Step 2 · Build the estimate — Build Estimate tab
 
@@ -89,6 +89,8 @@ Select the job from the dropdown. This is desk or iPad work — the room tables 
 The tab reads top to bottom in three bands. **Top card:** *Job* on the left (job, **service type — a dropdown, not a label**, target start date, who prepared it), *Crew* on the right (crew size, the "client needs it sooner" planner, and the adjustment toggles). **Middle:** vendors, then the rooms two across, then collections beside vehicles, then moving materials. **Bottom:** the summary, then the pricing reference check beside the three price levers — discount, rush, fixed price. Scope decisions at the top, price decisions at the bottom next to the price.
 
 > **⚠** **If the walkthrough tells you the job is not what intake said it was, change the service type here.** The commonest one: you were called out for Home Prep and the house actually needs editing first — closets, the garage, forty years of a dining room. Pick *Home Editing* in the service dropdown and say yes to the confirmation. The rooms appear, hours start pricing, and **the prep vendors you already entered stay exactly where they are and still earn their 30%**. Everything you have scored is kept.
+>
+> **⚠ But do this only when the house genuinely needs editing as a job.** If it is a prep job that just needs a few rooms cleared before the painters arrive, **stay on Home Prep and type the hours into *Pre-Prep Declutter*** instead (2026-09-14). Re-typing prices off the whole property's square footage, not the rooms you tick — on a 3,500 sqft house four rooms and twelve rooms both come out near **$8,950** — so you would quote a full editing job for half a day of your own time. The test is simple: *is this a decluttering job that also needs trades, or a prep job that also needs a few hours?*
 >
 > The dropdown only offers the services on the same side of the living/deceased line, so you cannot turn a living client into an estate matter by accident. If you genuinely need to cross it, that is Client Intake or Edit Client — the estate form asks for a representative and a date of death, and this screen does not.
 >
@@ -406,7 +408,7 @@ Open the client and the line above the timeline reads the whole schedule at once
 
 > **A job that started late keeps the date the client was given, and adds a second one.** The plan is always measured from the *target start* — that is what their estimate and their agreement both say. If the job activated late you also get *now ending &lt;date&gt;*. That is the date to renegotiate; the first one is the date you promised.
 
-> **Home Prep for Sale has no day count and says so.** That engagement books no concierge or specialist hours and runs on the vendors' calendar, so its line reads *"scheduled around vendor availability"* rather than inventing a number.
+> **Home Prep for Sale has no day count and says so.** That engagement is scheduled around the vendors, and even with declutter hours quoted it books no specialist hours and runs on the vendors' calendar, so its line reads *"scheduled around vendor availability"* rather than inventing a number.
 
 
 > **⚠ The Job Plan keeps itself current while it is open (new 2026-09-12).** Two people work this tab at once — one in the house, one at the desk — and until this date it only read the plan **when the page loaded**. So a room locked in the house did not appear at the desk until somebody reloaded. It now re-reads roughly **every 20 seconds**, and again the moment you open the tab. Two things it will not do, both on purpose: it **never refreshes while you are typing in the plan** (a refresh redraws the whole tab and would take your half-written note with it), and it **stands down entirely while the red unsaved-changes chip is showing** — your own work has not reached the sheet yet, so pulling the sheet in would undo the room you just locked. In both cases it simply waits. Nothing else in the app refreshes by itself; for a current **Client Dashboard**, reload the page.
@@ -451,7 +453,7 @@ Log *your own* hours as well as the crew's. You are on site for every crew hour;
 
 ### c. Source the vendors — Job Plan tab
 
-Assign a directory vendor to each estimate line, set its status, and **record the actual quote**. Actual quotes on **Home Prep** lines are what the 30% fee is charged on at the midpoint and final — on a standalone prep job and, since 2026-09-10, on prep bundled into any other job too. Every other vendor line carries nothing for Havellin; those are recorded so the client's costs and the job's real margin are known. You will notice prep lines have **no *Coord hrs* box** — prep books no hours now, so there is nothing to compare against. A line with no logged quote falls back to the estimate and gets tagged "est." on the client's invoice.
+Assign a directory vendor to each estimate line, set its status, and **record the actual quote**. Actual quotes on **Home Prep** lines are what the 30% fee is charged on at the midpoint and final — on a standalone prep job and, since 2026-09-10, on prep bundled into any other job too. Every other vendor line carries nothing for Havellin; those are recorded so the client's costs and the job's real margin are known. You will notice prep lines have **no *Coord hrs* box** — prep books no *coordination* hours, so there is nothing to compare against. (Declutter hours are a different thing and are logged in the hours log, not here.) A line with no logged quote falls back to the estimate and gets tagged "est." on the client's invoice.
 
 Only **Active** vendors appear in the picker. An assigned vendor's phone is a tap-to-dial link, because you're usually standing in the house when you need them.
 
@@ -614,7 +616,7 @@ Open the client. **Each invoice has its own row on the timeline** — *Deposit i
 
 **Most invoices need no PIN.** Deposit and midpoint are formulaic from the approved estimate, so they print straight out and show *No approval required*. Only the **final** asks for a manager PIN, and only when it lands more than **±15%** away from the estimate — the banner names the percentage and the direction. Accepted change orders are left out of that comparison, since the client already agreed to those separately.
 
-> **⚠** **No hours logged = no final invoice.** No PIN, no PDF, no email, and no manager can unlock it. This is the one thing most likely to bite a practice run: skip the daily logging and the final simply will not issue. Go log the hours, then reprint. (Fixed-price and Home Prep jobs are exempt — their labour total doesn't come from the log.)
+> **⚠** **No hours logged = no final invoice.** No PIN, no PDF, no email, and no manager can unlock it. This is the one thing most likely to bite a practice run: skip the daily logging and the final simply will not issue. Go log the hours, then reprint. (Fixed-price jobs are exempt — their total doesn't come from the log. **A Home Prep job is exempt only if it quoted no declutter hours;** one that did is gated like any other, and rightly, because the final bills what is logged.)
 
 ### Things you'll see on an invoice
 
@@ -656,15 +658,23 @@ The **✕** on the job card opens closeout, and what it does depends on whether 
 
 ## Home Prep for Sale — the short version
 
-A sell-side, show-ready service, mostly through Douglas Elliman referral agents. Havellin manages every trade — paint, repairs, landscaping, deep cleaning, staging — and charges a flat **30% GC / Site Management Fee** on the managed vendor spend. No room scoring, no in-house labour, no crew, no hours log.
+A sell-side, show-ready service, mostly through Douglas Elliman referral agents. Havellin manages every trade — paint, repairs, landscaping, deep cleaning, staging — and charges a flat **30% GC / Site Management Fee** on the managed vendor spend. No room scoring, no crew. **Since 2026-09-14 it can also carry concierge declutter hours** where the house needs clearing as well as trades — see step 3 below.
 
 > **⚠** **The agreement is with the homeowner.** The referring agent is a referral channel, never our client. No document should suggest otherwise.
 
 1. **Intake** with Service Type = *Home Prep for Sale*. No property value needed.
-2. **Build Estimate** empties out — rooms, crew, labour, collections, vehicles and moving materials all disappear, and so do the five vendor cards that aren't Property Preparation. **One card is left**, sitting beside the Job details: *Home Prep for Sale — Managed Vendors*. Add each trade with an estimated cost; the footer shows the vendor total and the running 30%. **Fill in the scope note on every line** while you're on the walkthrough: exactly what you'll tell that trade ("5 bedrooms + hallway, walls & ceilings; front and back landscaping"). It carries through to sourcing.
-3. **Client estimate** reads vendors-first: itemised vendor estimates at cost, then the 30% fee, then one total. Same 50 / 25 / 25 schedule on the Havellin fee. No completion date is projected — the schedule is confirmed once vendors are booked, and the estimate says so.
-4. Approve → send → Mark Won → agreement → deposit, exactly as above.
-5. **Job Plan** is stripped down to three things: *Budget & Fee* (estimated spend, quoted-to-date, the running 30% on actual quotes, with an over-budget flag), *Home Prep Vendors — Sourcing & Status* (assign the vendor, set status, log the actual quote against the scope note), and a *Coordination Checklist* — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices and fee billed.
+2. **Build Estimate** empties out — rooms, crew, labour, collections, vehicles and moving materials all disappear, and so do the five vendor cards that aren't Property Preparation. **Two cards are left**: *Home Prep for Sale — Managed Vendors*, sitting beside the Job details, and *Pre-Prep Declutter — Concierge Hours* below it (step 3). Add each trade with an estimated cost; the footer shows the vendor total and the running 30%. **Fill in the scope note on every line** while you're on the walkthrough: exactly what you'll tell that trade ("5 bedrooms + hallway, walls & ceilings; front and back landscaping"). It carries through to sourcing.
+3. **The house is a mess as well? Type the hours.** Anthony's case exactly: you were called out to prep for sale and the living room, the master, the dining room and the kitchen all need clearing first. Put the hours you think it takes into *Pre-Prep Declutter* — four, five, whatever you are standing there looking at. They bill at your concierge rate **on top of** the 30%, and the line under the box prices them as you type. **Leave it at 0 if the house only needs the trades.**
+
+   > **⚠ Do NOT re-type the job as Home Editing to get the hours.** That was the obvious move and it was measured: the price is driven by the whole house's square footage, not by the rooms you tick, so marking the other rooms ✕ out of scope changes almost nothing. On a 3,500 sqft house, scoring four rooms and scoring all twelve both come out at about **$8,950**. You would be quoting eight thousand dollars of crew labour for half a day of your own time — and the client's agreement, invoice and Drive folder would all change name. Type the hours instead.
+
+   > **Typing hours changes what the client signs, so re-read it.** The estimate Terms stop saying "not billed hourly" and start saying Havellin is paid on two bases; the agreement's §3.3 does the same; and the **15%** over-estimate notice now applies to your hours. That is all correct — just do not send a document you have not looked at since you changed the number. **And a prep estimate still needs at least one vendor:** hours alone will not save, and the refusal tells you to use Home Editing instead. It is right.
+
+4. **Client estimate** reads vendors-first: itemised vendor estimates at cost, then the 30% fee, then one total. Same 50 / 25 / 25 schedule on the Havellin fee. No completion date is projected — the schedule is confirmed once vendors are booked, and the estimate says so.
+5. Approve → send → Mark Won → agreement → deposit, exactly as above.
+6. **Job Plan** is stripped down to three things (four if you quoted declutter hours): *Budget & Fee* (estimated spend, quoted-to-date, the running 30% on actual quotes, with an over-budget flag), *Home Prep Vendors — Sourcing & Status* (assign the vendor, set status, log the actual quote against the scope note), and a *Coordination Checklist* — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices and fee billed.
+
+   > **⚠ If you quoted declutter hours, the hours log is there — use it.** It opens only on a prep job that quoted hours, and it shows your concierge row alone (there is no crew on this engagement). **The final invoice bills what is in the log, not what you quoted**, so hours you worked and never recorded bill nothing at all. The app will refuse the final until something is logged, which is the right answer. The Budget & Fee card shows *quoted* against *logged to date* and turns red if you are more than 15% past — at that point ring the homeowner, because the estimate promised them that call.
 
 ## Quick reference
 
@@ -677,7 +687,8 @@ A sell-side, show-ready service, mostly through Douglas Elliman referral agents.
 | Service Management Fee (third-party vendors) | **None — billed at cost** | **None** |
 | Vendor coordination, per line you add | **touches × 0.5** — estate sale 4 hrs · mover 3 · auction 3 · appraiser / staging / GC 2 · painting 1.5 · hauler / dumpster / cleaning 1 · shredding 0.5 | Same hours, premium rate |
 | Home Prep GC / Site Management Fee | **30%** of prep vendor spend — standalone *or* bundled | 30% |
-| Home Prep coordination hours | **None** — they are inside the 30% *(changed 2026-09-10; this row used to say “None — at cost, plus 0.5–2 coordination hrs per trade”, which contradicted the row above it)* | **None** |
+| Home Prep **declutter** hours (new 2026-09-14) | Concierge rate, **on top of** the 30% — typed on the estimate, billed as logged | Premium rate |
+| Home Prep *coordination* hours | **None** — they are inside the 30% *(changed 2026-09-10; this row used to say “None — at cost, plus 0.5–2 coordination hrs per trade”, which contradicted the row above it)* | **None** |
 | Moving Materials | **Fixed package price** — you pick a tier on the estimate ($200–$1,500). *Not* cost-plus, no handling fee, no receipts *(corrected 2026-09-11)* | Same packages |
 | Preferred Client Discount | Havellin labour only · **max 15%** | max 15% |
 | Expedited delivery (rush) | +20% of Havellin services | +20% |
@@ -705,6 +716,13 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| **A Home Prep job needs a few rooms cleared and you are about to re-type it as Home Editing** | Don't. Stay on Home Prep and type the hours into *Pre-Prep Declutter* on Build Estimate. Re-typing prices off the whole property's square footage, not the rooms you tick — on a 3,500 sqft house, four rooms and twelve rooms both come out near **$8,950**, so you would quote a full editing job for half a day of your own time. Re-type only when it really is an editing job that also needs trades. |
+| **A prep estimate won't save** — "add at least one Home Prep vendor with a cost" | Declutter hours alone are not a prep engagement. If there are genuinely no vendors and the job is only decluttering, re-type it as **Home Editing**; the refusal says so. Otherwise add the trades. |
+| **A prep job's final invoice is blocked and you thought prep was exempt** | It is exempt only when it quoted **no** declutter hours. You quoted hours, so the final bills what is in the log — and an empty log would bill nothing for work you did. Log the hours on the Job Plan, then reprint. |
+| **The prep Job Plan has an hours log now and it did not before** | It opens only when the estimate quoted declutter hours. Your concierge row is the only one — there is no crew on this engagement, so no specialist rows and no specialist names to fill in at team sign-off. |
+| **Budget & Fee on a prep job has gone red on the declutter line** | Logged hours are more than 15% past what was quoted. Ring the homeowner before going further — the estimate's own Terms promise them that call at exactly that point. |
+| **A prep agreement says "no Transition Concierge hours are billed" and the estimate prices some** | The agreement was generated before the hours were typed. Re-generate it — §3.3 states both bases once the estimate carries hours, and a contract that disagrees with its own Exhibit A must not go out. |
+| **A Home Editing job is pricing concierge hours you did not expect** | Not the declutter box — that reads zero on every service but Home Prep, even with a number left in it. Check the room scores and the crew size instead. |
 | **The dashboard says "no room marked done yet, so there is no progress reading"** | Hours are going in and nobody has set a room status on the Job Plan. Set each room to **locked** when the decisions are final and **packed** when it is physically done. The percentage appears as soon as one room is done. It withholds the figure rather than printing *0% of the work done*, because that would be a much stronger claim than the app can actually make. |
 | The schedule line shows no percentages, or no verdict about the pace | It stays quiet until at least one crew-day of hours (7 combined) is logged *and* a fifth of the work is done. On the first morning the rate means nothing — one room of twelve projects to a thirteen-day job. Keep logging; it fills in. |
 | A job on a **fixed price** shows no hours and no progress | Nothing about fixed price hides the hours log — it opens on any won job once the deposit is recorded. Either the hours have not been logged or the job is **Home Prep for Sale**, which books no hours at all and is scheduled around the vendors instead. |
