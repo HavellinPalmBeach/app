@@ -34,10 +34,10 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-12a';
+var BACKEND_VERSION = '2026-09-17a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
-  'getThumbnails', 'shareFolder', 'unshareFolder'
+  'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus'
 ];
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
@@ -118,6 +118,8 @@ function doPost(e) {
     if (data.action === 'getThumbnails')  { return jsonOut(getDriveThumbnails(data.fileIds)); }
     if (data.action === 'shareFolder')   { return jsonOut(shareFolder(data.folderId, data.email)); }
     if (data.action === 'unshareFolder') { return jsonOut(unshareFolder(data.folderId, data.email)); }
+    if (data.action === 'esignSend')     { return jsonOut(esignSendEnvelope(data)); }
+    if (data.action === 'esignStatus')   { return jsonOut(esignEnvelopeStatus(data)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -1574,4 +1576,324 @@ function unshareFolder(folderId, email) {
   } catch (e) {
     return { ok: false, success: false, error: String(e) };
   }
+}
+
+// ══ DOCUSIGN — JWT GRANT, ENVELOPE SEND, STATUS POLL ════════════════════════════
+// Anthony, 2026-09-17: *"I want to start wiring up DocuSign so we can actually send out an
+// agreement for signature."* The app-side signature RECORD shipped 2026-09-11 (Slice 6)
+// shaped for exactly this; what follows is the provider behind it.
+//
+// ⚠⚠ THIS IS IN main-sync.gs RATHER THAN ITS OWN FILE, AND THAT IS A DELIBERATE REVERSAL OF
+// THE quo-sync.gs PRECEDENT. Quo is a second file in the same project and that is right for
+// it: nothing in the app calls it, it runs on a trigger, and it can be a version behind
+// without the app ever noticing. THIS is on the app's REQUEST PATH, so it must move in
+// lockstep with BACKEND_VERSION, BACKEND_ACTIONS and the dispatch-parity test. A second
+// file somebody has to remember to paste is precisely the failure this project already
+// paid six weeks for — see DEPLOYMENT IDENTITY at the top of this file.
+//
+// ⚠⚠ EVERY SECRET IS IN SCRIPT PROPERTIES AND NONE IS IN THIS FILE. This repo is public and
+// havellin.html is served from GitHub Pages, so a private key in either is not a key. Same
+// place QUO_API_KEY lives. Set these five (Project Settings ▸ Script Properties):
+//     DS_INTEGRATION_KEY  the app's client id — a GUID, semi-public like any OAuth client id
+//     DS_USER_ID          the user the integration impersonates (API Username on Apps & Keys)
+//     DS_ACCOUNT_ID       API Account ID
+//     DS_BASE_URI         https://demo.docusign.net  (sandbox)  or the production base URI
+//     DS_PRIVATE_KEY      the RSA private key, INCLUDING the BEGIN/END lines
+//
+// ⚠ THE ENVIRONMENT IS DERIVED FROM DS_BASE_URI, NEVER CONFIGURED SEPARATELY. Two fields
+// that must agree is two fields that can disagree, and the failure mode is silent: a demo
+// key against the production auth host answers `consent_required` forever, which reads as
+// "consent was never granted" rather than "you are pointed at the wrong environment".
+var DS_AUTH_HOST_DEMO = 'account-d.docusign.com';
+var DS_AUTH_HOST_PROD = 'account.docusign.com';
+var DS_JWT_SCOPES     = 'signature impersonation';
+var DS_TOKEN_TTL_SEC  = 3600;   // DocuSign's own ceiling for a JWT assertion
+
+// ⚠ THE ANCHOR STRINGS, AND THEY MUST MATCH havellin.html's `esignAnchor` EXACTLY. These
+// are the invisible markers DocuSign finds in the PDF text layer to place each signature
+// box. Two copies of one string is how the tab silently stops being placed, so a test in
+// tests/esign-docusign.test.js asserts this table and the app's agree, key for key.
+var DS_ANCHORS = {
+  clientSig:  '/hsc/',
+  clientDate: '/hdc/',
+  havSig:     '/hsh/',
+  havDate:    '/hdh/'
+};
+
+// ⚠ ONE PLACE TO TUNE THE TAB POSITION, AND IT NEEDS ONE VISUAL CHECK IN THE SANDBOX BEFORE
+// ANYTHING GOES TO A CLIENT. The anchor sits at the TOP of a 36px `.sig-line` box whose
+// visible rule is at its foot, so the tab has to be pushed DOWN to land on the line. The
+// figure below is a considered first guess and nothing more — it cannot be derived, because
+// it depends on how Apps Script's HTML-to-PDF conversion lays the box out. Send one envelope
+// to yourself, look at where the box lands, change this number, send another.
+var DS_TAB_Y_OFFSET = '14';
+
+function _dsProp(name) {
+  return (PropertiesService.getScriptProperties().getProperty(name) || '').trim();
+}
+function _dsIsDemo()   { return _dsProp('DS_BASE_URI').indexOf('demo.') !== -1; }
+function _dsAuthHost() { return _dsIsDemo() ? DS_AUTH_HOST_DEMO : DS_AUTH_HOST_PROD; }
+
+// Which of the five are missing, named. A single "not configured" is what turns a
+// twenty-second fix into a support thread — this file already records that lesson on the
+// PDF-conversion error, which took three rounds because it carried no cause.
+function _dsMissingProps() {
+  return ['DS_INTEGRATION_KEY', 'DS_USER_ID', 'DS_ACCOUNT_ID', 'DS_BASE_URI', 'DS_PRIVATE_KEY']
+    .filter(function (k) { return !_dsProp(k); });
+}
+
+// ─── ACCESS TOKEN ────────────────────────────────────────────────────────────────
+// ⚠ CACHED, AND THAT IS NOT AN OPTIMISATION. The status poll runs every five minutes, so an
+// uncached mint is ~288 assertions a day against an endpoint DocuSign rate-limits, and a
+// throttled token failure would surface as "the envelope vanished". Held 50 minutes against
+// a 60-minute token, so a request can never set off with a token that expires mid-flight.
+function _dsAccessToken() {
+  var missing = _dsMissingProps();
+  if (missing.length) return { ok: false, error: 'DocuSign is not configured — missing Script Properties: ' + missing.join(', ') };
+
+  var cache = CacheService.getScriptCache();
+  try {
+    var hit = cache.get('ds_access_token');
+    if (hit) return { ok: true, token: hit, cached: true };
+  } catch (e) { /* a cache miss must never be fatal — fall through and mint */ }
+
+  var now = Math.floor(Date.now() / 1000);
+  var header = { alg: 'RS256', typ: 'JWT' };
+  var claims = {
+    iss:   _dsProp('DS_INTEGRATION_KEY'),
+    sub:   _dsProp('DS_USER_ID'),
+    aud:   _dsAuthHost(),          // the HOST alone, no scheme and no trailing slash
+    iat:   now,
+    exp:   now + DS_TOKEN_TTL_SEC,
+    scope: DS_JWT_SCOPES
+  };
+
+  var signingInput = _dsB64Url(JSON.stringify(header)) + '.' + _dsB64Url(JSON.stringify(claims));
+  var sig;
+  try {
+    sig = Utilities.base64EncodeWebSafe(
+      Utilities.computeRsaSha256Signature(signingInput, _dsProp('DS_PRIVATE_KEY'))
+    ).replace(/=+$/, '');
+  } catch (e) {
+    // Almost always the key itself: pasted without the BEGIN/END lines, or with the line
+    // breaks eaten by a copy through a chat window. Say so rather than echoing a stack.
+    return { ok: false, error: 'Could not sign the JWT — check DS_PRIVATE_KEY is the full key including the BEGIN and END lines. (' + e + ')' };
+  }
+
+  var res = UrlFetchApp.fetch('https://' + _dsAuthHost() + '/oauth/token', {
+    method: 'post',
+    payload: {
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: signingInput + '.' + sig
+    },
+    muteHttpExceptions: true
+  });
+
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); } catch (e) {}
+
+  if (code !== 200 || !body.access_token) {
+    // ⚠ `consent_required` IS THE ONE ERROR WITH A SPECIFIC, ACTIONABLE FIX, so it gets the
+    // consent URL built from the live values rather than a generic failure. Everything else
+    // prescribes nothing — the rule this project already learned on _pdfFailAdvice.
+    if (String(body.error || '') === 'consent_required') {
+      return { ok: false, needsConsent: true, consentUrl: dsConsentUrl(),
+               error: 'DocuSign has not been granted consent to impersonate this user yet. Open the consent URL once and click Allow.' };
+    }
+    return { ok: false, error: 'DocuSign auth failed (HTTP ' + code + '): ' + (body.error_description || body.error || res.getContentText().slice(0, 300)) };
+  }
+
+  try { cache.put('ds_access_token', body.access_token, 3000); } catch (e) {}
+  return { ok: true, token: body.access_token, cached: false };
+}
+
+// Base64url with the padding stripped — a JWT segment is not standard base64 and a trailing
+// '=' is rejected outright by the token endpoint.
+function _dsB64Url(str) {
+  return Utilities.base64EncodeWebSafe(Utilities.newBlob(str).getBytes()).replace(/=+$/, '');
+}
+
+// The one-time consent URL, built from the live properties so it can never name a different
+// integration key than the one actually failing.
+function dsConsentUrl(redirectUri) {
+  var redirect = redirectUri || 'https://havellinpalmbeach.github.io/app/';
+  return 'https://' + _dsAuthHost() + '/oauth/auth'
+       + '?response_type=code'
+       + '&scope=' + encodeURIComponent(DS_JWT_SCOPES)
+       + '&client_id=' + encodeURIComponent(_dsProp('DS_INTEGRATION_KEY'))
+       + '&redirect_uri=' + encodeURIComponent(redirect);
+}
+
+function _dsApi(method, path, payload) {
+  var tok = _dsAccessToken();
+  if (!tok.ok) return { ok: false, code: 0, body: tok };
+
+  var opts = {
+    method: method,
+    headers: { Authorization: 'Bearer ' + tok.token },
+    contentType: 'application/json',
+    muteHttpExceptions: true
+  };
+  if (payload) opts.payload = JSON.stringify(payload);
+
+  var url = _dsProp('DS_BASE_URI').replace(/\/+$/, '')
+          + '/restapi/v2.1/accounts/' + _dsProp('DS_ACCOUNT_ID') + path;
+  var res = UrlFetchApp.fetch(url, opts);
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); } catch (e) { body = { raw: res.getContentText().slice(0, 300) }; }
+  return { ok: res.getResponseCode() < 300, code: res.getResponseCode(), body: body };
+}
+
+// ─── SEND FOR SIGNATURE ──────────────────────────────────────────────────────────
+// ⚠⚠ TWO RECIPIENTS WITH A ROUTING ORDER, NOT ONE, AND THE DOCUMENT IS WHY. Both agreement
+// forms carry a Havellin signature block beside the client's, and the probate form states
+// outright that *"No work will begin until both signatures are obtained"*. A client-only
+// envelope would come back `completed` over a contract Havellin never signed — and
+// applyEsignStatus would then record it as signed, which is the exact false claim the
+// signature record exists to prevent. Client signs first (order 1), Havellin countersigns
+// (order 2); DocuSign only reports `completed` when BOTH are done, so the app-side rule
+// "only `completed` is a signature" carries the countersignature for free.
+//
+// ⚠ TABS ARE PLACED BY ANCHOR, NEVER BY x/y. The signing packet's length varies with the
+// estimate attached as Exhibit A, so a fixed page-and-coordinate would drift onto the wrong
+// page the moment a job has one more room than the last one.
+function esignSendEnvelope(data) {
+  try {
+    if (!data || !data.pdfBase64) return { ok: false, error: 'No document supplied to send.' };
+    if (!data.signerEmail || !data.signerName) return { ok: false, error: 'The envelope needs the signer name and email.' };
+
+    var havEmail = data.havellinEmail || 'agreements@havellinpalmbeach.com';
+    var havName  = data.havellinName  || 'Anthony Graziano';
+
+    var env = {
+      emailSubject: data.subject || ('Havellin Services Agreement — ' + (data.hvlId || '')),
+      emailBlurb: data.blurb || '',
+      documents: [{
+        documentBase64: data.pdfBase64,
+        name: data.filename || 'Havellin Services Agreement.pdf',
+        fileExtension: 'pdf',
+        documentId: '1'
+      }],
+      recipients: {
+        signers: [
+          {
+            email: data.signerEmail,
+            name: data.signerName,
+            recipientId: '1',
+            routingOrder: '1',
+            roleName: 'Client',
+            tabs: _dsTabs(DS_ANCHORS.clientSig, DS_ANCHORS.clientDate)
+          },
+          {
+            email: havEmail,
+            name: havName,
+            recipientId: '2',
+            routingOrder: '2',
+            roleName: 'Havellin',
+            tabs: _dsTabs(DS_ANCHORS.havSig, DS_ANCHORS.havDate)
+          }
+        ]
+      },
+      status: 'sent'
+    };
+
+    var res = _dsApi('post', '/envelopes', env);
+    if (!res.ok) {
+      var b = res.body || {};
+      if (b.needsConsent) return b;   // carries the consent URL through untouched
+      return { ok: false, error: 'DocuSign refused the envelope (HTTP ' + res.code + '): '
+                                 + (b.message || b.error || JSON.stringify(b).slice(0, 300)) };
+    }
+    return { ok: true, envelopeId: res.body.envelopeId, status: res.body.status || 'sent',
+             sentAt: res.body.statusDateTime || '' };
+  } catch (error) {
+    Logger.log('esignSendEnvelope error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+function _dsTabs(sigAnchor, dateAnchor) {
+  return {
+    signHereTabs: [{
+      anchorString: sigAnchor, anchorUnits: 'pixels',
+      anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
+    }],
+    dateSignedTabs: [{
+      anchorString: dateAnchor, anchorUnits: 'pixels',
+      anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
+    }]
+  };
+}
+
+// ─── STATUS ──────────────────────────────────────────────────────────────────────
+// ⚠ THE SIGNER IS READ OFF ROUTING ORDER 1, NOT "whoever signed last". Order 2 is Havellin
+// countersigning, and recording OUR name as the person who bound the estate is byte for
+// byte the defect Slice 6 exists to undo (`agrSignedBy` holding the manager who approved
+// the price). A test drives a two-signer envelope and asserts the client comes back.
+function esignEnvelopeStatus(data) {
+  try {
+    var id = data && data.envelopeId;
+    if (!id) return { ok: false, error: 'No envelope id supplied.' };
+
+    var res = _dsApi('get', '/envelopes/' + encodeURIComponent(id) + '?include=recipients', null);
+    if (!res.ok) {
+      var b = res.body || {};
+      if (b.needsConsent) return b;
+      return { ok: false, error: 'DocuSign status check failed (HTTP ' + res.code + '): '
+                                 + (b.message || b.error || '') };
+    }
+
+    var signers = ((res.body.recipients || {}).signers) || [];
+    var client = null;
+    for (var i = 0; i < signers.length; i++) {
+      if (String(signers[i].routingOrder) === '1') { client = signers[i]; break; }
+    }
+
+    return {
+      ok: true,
+      envelopeId: id,
+      status: res.body.status || '',
+      completedAt: res.body.completedDateTime || '',
+      signerName: (client && client.name) || '',
+      signerEmail: (client && client.email) || '',
+      signedAt: (client && client.signedDateTime) || ''
+    };
+  } catch (error) {
+    Logger.log('esignEnvelopeStatus error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ─── RUN THIS FIRST ──────────────────────────────────────────────────────────────
+// ⚠ EDITOR-ONLY, AND IT TAKES NO ARGUMENTS — the Apps Script Run menu passes none, which is
+// the same rule testQuoAuth and previewDeletedJobs already follow. Read-only: it proves the
+// five properties, the key and the consent in one call WITHOUT creating an envelope, so an
+// auth failure can never masquerade as a sending bug. That distinction is why testQuoAuth
+// exists, and this file records the cost of not having had one.
+function testEsignAuth() {
+  var missing = _dsMissingProps();
+  if (missing.length) {
+    Logger.log('NOT CONFIGURED — add these Script Properties: ' + missing.join(', '));
+    return false;
+  }
+  Logger.log('Environment : ' + (_dsIsDemo() ? 'DEMO / sandbox' : 'PRODUCTION') + '  (' + _dsProp('DS_BASE_URI') + ')');
+  Logger.log('Auth host   : ' + _dsAuthHost());
+
+  var tok = _dsAccessToken();
+  if (!tok.ok) {
+    Logger.log('FAILED — ' + tok.error);
+    if (tok.needsConsent) Logger.log('Consent URL (open once, click Allow):\n' + tok.consentUrl);
+    return false;
+  }
+  Logger.log('Token       : OK (' + (tok.cached ? 'from cache' : 'freshly minted') + ')');
+
+  var res = _dsApi('get', '', null);   // the account itself — the cheapest authenticated read
+  if (!res.ok) {
+    Logger.log('Token minted but the API refused it (HTTP ' + res.code + '): ' + JSON.stringify(res.body).slice(0, 300));
+    return false;
+  }
+  Logger.log('Account     : ' + (res.body.accountName || _dsProp('DS_ACCOUNT_ID')));
+  Logger.log('ALL GOOD — DocuSign is reachable and consented.');
+  return true;
 }

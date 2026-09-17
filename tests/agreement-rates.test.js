@@ -25,9 +25,9 @@ const { sandbox, source, fn } = require('./harness');
 const AGR_FNS = ['estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
-                 '_agrMidpointTrigger', '_agrProbateCompliance'];
+                 '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor'];
 const AGR_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved', 'HAVELLIN_OFFICE_PHONE',
-                  'JOB_STEPS', 'DOC_SCOPES'];
+                  'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS'];
 
 const EST = {
   jobId: 1, tcFee: 18500, psFee: 12500, pkgCost: 1500, pkgLabel: 'Estate Premium — $1,500',

@@ -1,5 +1,99 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ DOCUSIGN IS WIRED — AND THE HALF THAT WAS MISSING WAS ALL OF IT (BUILT 2026-09-17)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-17a`.
+Anthony: *"Where do we stand with DocuSign integration? … I want to start wiring up DocuSign so we can
+actually send out an agreement for signature."*
+
+- **⚠⚠ THE SHAPE FROM SLICE 6 HELD, AND THAT IS THE ONLY REASON THIS WAS SMALL.** The signature RECORD
+  (`docState.agreement.sig`), `ESIGN_PROVIDERS`, `applyEsignStatus` and `outstandingEnvelopes` all
+  shipped 2026-09-11 against no provider, deliberately. Every one of them took a real provider without
+  changing. **What was missing was not "some plumbing" — it was everything on the wire:** nothing
+  anywhere created an envelope, so `outstandingEnvelopes()` returned `[]` on every job forever and the
+  poll it was written for had nothing to poll. Measured before anything was built: zero DocuSign code
+  in `apps-script/`, and `hav_esign_provider` read at load with **no input anywhere in the app**.
+- **⚠⚠ IT IS IN `main-sync.gs` RATHER THAN ITS OWN FILE, WHICH REVERSES THE `quo-sync.gs` PRECEDENT
+  ON PURPOSE.** Quo is a second file in the same project and that is right for it: nothing in the app
+  calls it, it runs on a trigger, and it can sit a version behind unnoticed. **This is on the app's
+  REQUEST PATH**, so it has to move in lockstep with `BACKEND_VERSION`, `BACKEND_ACTIONS` and the
+  dispatch-parity test. A second file somebody must remember to paste is precisely the failure this
+  project already paid **six weeks** for.
+- **⚠⚠ THE ENVELOPE CARRIES TWO SIGNERS, AND A CLIENT-ONLY ENVELOPE WOULD HAVE BEEN A FALSE RECORD.**
+  Both agreement forms print a Havellin signature block beside the client's and the probate form says
+  outright *"No work will begin until both signatures are obtained"*. One signer comes back
+  `completed` over a contract Havellin never signed — and `applyEsignStatus` would then write that as
+  signed, which is byte for byte the defect Slice 6 exists to undo. Client is routing order **1**,
+  Havellin countersigns at **2**, and DocuSign only reports `completed` when both are done — so the
+  existing rule *only `completed` is a signature* carries the countersignature for free.
+- **⚠⚠ AND THE SIGNER IS READ OFF ROUTING ORDER 1, NEVER "whoever signed last".** Order 2 is us.
+  Recording OUR name as the person who bound the estate is the original `agrSignedBy` defect wearing a
+  provider's hat. A test drives a two-signer envelope whose list has Havellin FIRST and asserts the
+  client comes back. Reverting it fails 1.
+- **⚠⚠ THE ANCHORS ARE WHITE TEXT, AND `display:none` IS THE ONE THING THAT CANNOT WORK.** DocuSign
+  places each signature box by finding a string in the PDF **text layer**, so the anchor must be
+  RENDERED and merely invisible — a hidden element is not rendered into the PDF at all, so the anchor
+  would not exist. Driven in a real browser on both real documents: 4 anchors each, `rgb(255,255,255)`,
+  none hidden, non-zero font, **present in `innerText`**, and every `.sig-line` still exactly **36px**,
+  so nothing shifts. Reverting the white text fails **3**.
+  - **⚠ A MISSING ANCHOR REFUSES THE ENVELOPE RATHER THAN PLACING NOTHING.**
+    `anchorIgnoreIfNotPresent:'false'` — the loud failure is the one we want, because the silent
+    version mails a client an agreement with nowhere to sign. Reverting it fails 1.
+  - **⚠ TABS ARE PLACED BY ANCHOR, NEVER BY PAGE AND COORDINATE.** The signing packet's length varies
+    with the estimate attached as Exhibit A, so a fixed x/y drifts onto the wrong page the moment a job
+    has one more room than the last one.
+  - **⚠ THE ANCHOR TABLE EXISTS TWICE AND A TEST PINS THE TWO KEY FOR KEY** (`ESIGN_ANCHORS` in the app,
+    `DS_ANCHORS` in the backend). Two copies of one string is how the box silently stops being placed.
+    **⚠ Note the app-side occurrence test reads the anchor from the same place it renders it, so it
+    cannot catch a VALUE drift — the parity test is the one that can.** Both are needed.
+  - **⚠ THE CO-SIGNER BLOCK IS DELIBERATELY BARE.** It is the optional second beneficiary or co-PR, and
+    an anchor there needs a THIRD recipient whose name and email nothing in the app records. An envelope
+    built for a co-signer who does not exist waits at `sent` on nobody — which reads on the rail as a
+    client dragging their feet. Wet-sign line until intake captures a second signer; add the anchor and
+    the recipient **together** or not at all.
+- **⚠ THE ENVIRONMENT IS DERIVED FROM `DS_BASE_URI`, NEVER A SECOND PROPERTY.** Two fields that must
+  agree is two fields that can disagree, and this one fails silently: a demo key against the production
+  auth host answers `consent_required` forever, which reads as *"consent was never granted"* rather than
+  *"you are pointed at the wrong environment"*. Reverting it fails **3**.
+- **⚠ EVERY SECRET IS IN SCRIPT PROPERTIES AND A TEST ASSERTS NONE IS IN THE REPO.** Five:
+  `DS_INTEGRATION_KEY` · `DS_USER_ID` · `DS_ACCOUNT_ID` · `DS_BASE_URI` · `DS_PRIVATE_KEY`. This repo is
+  public and `havellin.html` is served from GitHub Pages, so a private key in either is not a key — the
+  lesson this file already records from a Google client secret pasted into a chat on 2026-09-08.
+- **⚠ A MISSING PROPERTY IS NAMED INDIVIDUALLY, not reported as "not configured".** A single unhelpful
+  failure is what turned *"still no PDF"* into three rounds. Reverting it fails **5**.
+- **⚠ `testEsignAuth()` IS EDITOR-ONLY, ARGUMENT-FREE AND READ-ONLY — the `testQuoAuth` pattern, and it
+  is the thing to run first.** The Apps Script Run menu passes no arguments. It proves the five
+  properties, the key and the consent in one call **without creating an envelope**, so an auth failure
+  can never masquerade as a sending bug. A `consent_required` prints the consent URL built from the live
+  values, so it can never name a different integration key than the one actually failing.
+- **5145 committed checks** (`tests/esign-docusign.test.js`, 80 new — the first coverage of a provider
+  at all). **All eleven changes revert-verified individually, ZERO green** — the missing-property naming
+  fails 5, the white text and the environment derivation 3 each, two recipients and the probate anchors
+  2 each, and the rest 1.
+  - **⚠ ONE NEEDLE MATCHED NOTHING AND THE `NEEDLE x0` GUARD CAUGHT IT** — the standard-form anchor
+    revert never applied and would have read as a green revert. Re-done against the exact rendered
+    string, and each FORM reverted separately: probate fails 2, standard fails 1.
+- **⚠ THREE SUITES PINNED EXPLICIT `fns:` LISTS AND BROKE CORRECTLY** when the agreement builders grew a
+  call to `esignAnchor` — `agreement-fees`, `agreement-rates` and `prep-declutter`. Mechanical, and the
+  right failure. **⚠ They were found by SEARCHING every pinned list for the builders rather than by
+  re-running and fixing one failure at a time**, which this file records costing a round.
+- **⚠⚠ WHAT IS NOT PROVEN, AND IT IS THE NEXT THING: NOTHING HERE HAS EVER TALKED TO DOCUSIGN.** The
+  egress proxy blocks `docusign.com` from the build environment, so the JWT, the envelope and the status
+  read are verified in SHAPE and not against the live API. Two things specifically cannot be asserted
+  from here and need one sandbox run: whether Apps Script's `getAs('application/pdf')` preserves white
+  text in the PDF **text layer** (if it does not, the fallback is absolute positioning, and the anchor
+  strings are already in one constant so it is a small change), and where the signature box actually
+  lands — `DS_TAB_Y_OFFSET` is one tunable constant and a considered first guess, nothing more.
+- **⚠ NOT BUILT YET, AND THE FEATURE IS NOT USABLE WITHOUT IT:** the app side. No Settings field for
+  `hav_esign_provider` (it is still a localStorage key with no input), no *Send for signature* verb, and
+  nothing writes the returned `envelopeId` onto `docState.agreement.esign`. `ESIGN_PROVIDERS.docusign`
+  stays `live:false` until it does — flipping it early stands the manual *Record the signed agreement*
+  button down and replaces it with nothing.
+- **⚠ FOUND IN PASSING, NOT FIXED, AND IT IS ON A SIGNED CONTRACT:** the probate form's Havellin
+  signature block prints **Ashley Jerome's name and phone number over a *Date* line** while Anthony gets
+  the Signature line. It reads as Ashley signing the date. Pre-existing, unrelated to this build, and
+  flagged rather than swept into a commit about e-signature.
+
+
 ## ⚠⚠ A PREP JOB CAN BOOK CONCIERGE HOURS — AND THE OBVIOUS ANSWER WAS MEASURED AND REJECTED (BUILT 2026-09-14)
 Anthony, on the service catalogue: *"we could walk into a home where they said they wanted us to prep for sale, and we
 could figure out it's a complete mess … it would likely just be Ashley as the TC coming in, spending four or five hours
@@ -1616,7 +1710,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/gifted-babbage-wnzm7w`
+- Active feature branch: `claude/sharp-allen-1cc2ur`
+  (was `claude/gifted-babbage-wnzm7w`)
   (was `claude/admiring-tesla-7ysggp`)
   (was `claude/festive-noether-ggr0fn`)
   (`claude/busy-heisenberg-h24ya9` shipped alongside it on 2026-09-11 — two sessions ran
@@ -1628,7 +1723,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/gifted-babbage-wnzm7w:main`
+  `git push origin claude/sharp-allen-1cc2ur:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

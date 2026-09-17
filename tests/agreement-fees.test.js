@@ -66,10 +66,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                    '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
                    'estimateDocScope', 'svcHasDocStep', 'fmt', 'esc', 'paymentSplit',
                    'conciergePhones', 'assignedTCContact', 'samePerson', 'canonPersonName',
-                   'svcLabelOf', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection'];
+                   'svcLabelOf', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection', 'esignAnchor'];
   const AGR_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'SVC_LABELS', 'DECEDENT_SERVICES', '_PCT_WORDS',
                     'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
-                    'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'JOB_STEPS', 'agrApproved'];
+                    'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'JOB_STEPS', 'agrApproved', 'ESIGN_ANCHORS'];
   function agrDoc(svc, over) {
     const c = sandbox({ fns: AGR_FNS, vars: AGR_VARS });
     const job = { id: 900, name: 'Client', hvlId: 'HVL-0900', svc: svc, addr: '1 A St' };

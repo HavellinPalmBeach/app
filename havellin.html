@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.14 · 6:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 5:30pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12782,6 +12782,25 @@ var AGR_SIG_METHODS = {
   esign:    { label: 'Electronic signature',  hint: 'Completed through the e-signature provider' }
 };
 var AGR_SIG_MANUAL_METHODS = ['wet', 'scanned'];
+
+// ⚠⚠ THE E-SIGNATURE ANCHORS, AND THEY MUST MATCH `DS_ANCHORS` IN main-sync.gs KEY FOR KEY.
+// DocuSign places every signature box by finding these strings in the PDF TEXT LAYER, so
+// each one has to be PRESENT in the rendered document and INVISIBLE on it.
+//
+// ⚠ WHITE TEXT, NEVER `display:none`, `visibility:hidden` OR `font-size:0`. A hidden element
+// is not rendered into the PDF at all, so the anchor would not exist and the tab would be
+// placed nowhere. That failure is deliberately made LOUD rather than silent: the backend
+// sends `anchorIgnoreIfNotPresent:'false'`, so a missing anchor makes DocuSign refuse the
+// whole envelope instead of mailing the client an agreement with no signature box on it.
+//
+// ⚠ THEY RENDER ON EVERY AGREEMENT, INCLUDING WET-SIGNED ONES, and that is correct — white
+// on white is invisible on screen and on paper, and a document whose anchors depend on how
+// it is going to be signed is a document with two versions.
+var ESIGN_ANCHORS = { clientSig: '/hsc/', clientDate: '/hdc/', havSig: '/hsh/', havDate: '/hdh/' };
+
+function esignAnchor(tag) {
+  return '<span style="color:#fff;font-size:6px;line-height:0;">' + tag + '</span>';
+}
 
 // ⚠ ONE PROVIDER TABLE, AND `manual` IS THE ONLY LIVE ONE TODAY. `docusign` is declared
 // rather than built: there is no account, no credentials and no backend action for it, and
@@ -27663,10 +27682,16 @@ function probateAgreementHtml(job, est) {
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+executorName+'</div></div>';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">'+(esc(job.executorRole)||'Personal Representative &middot; Executor &middot; POA &middot; Other')+'</div></div>';
-  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
-  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
+  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientSig)+'</div></div>';
+  content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientDate)+'</div></div>';
   content += '</div></div>';
   // Co-signer
+  // ⚠ NO E-SIGNATURE ANCHOR ON THIS BLOCK, DELIBERATELY. It is the optional second
+  // beneficiary or co-PR, and an anchor here would need a THIRD DocuSign recipient whose
+  // name and email nothing in the app records. An envelope built for a co-signer who does
+  // not exist sits at `sent` forever waiting on nobody, which reads on the rail as a client
+  // who has not got round to signing. It stays a wet-sign line until intake captures a
+  // second signer; if that is ever built, add the anchor and the recipient together.
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Co-Signer <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">(if applicable — second beneficiary or co-PR)</span></div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
@@ -27679,8 +27704,8 @@ function probateAgreementHtml(job, est) {
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:12px;">Havellin Palm Beach, LLC</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;">';
-  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Anthony Graziano</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(617) 650-6588 &middot; anthony@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
-  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Ashley Jerome</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(978) 857-5374 &middot; ashley@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
+  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Anthony Graziano</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(617) 650-6588 &middot; anthony@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havSig)+'</div></div>';
+  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Ashley Jerome</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(978) 857-5374 &middot; ashley@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havDate)+'</div></div>';
   content += '</div></div>';
   // Office use
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;background:var(--tan);margin-bottom:12px;">';
@@ -28051,10 +28076,10 @@ function agreementHtml(job, est) {
   content += p('Client acknowledges that Client has read this Agreement, understands its terms, has had the opportunity to consult independent legal counsel, and voluntarily agrees to be bound by it.');
 
   content += '<div class="sig-grid" style="margin-top:1rem;">';
-  content += '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Havellin Palm Beach LLC</div><div class="sig-line"></div><div class="sig-label">Anthony Graziano &nbsp;·&nbsp; Managing Member</div></div>';
-  content += '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">&nbsp;</div><div class="sig-line"></div><div class="sig-label">Date</div></div>';
-  content += '<div style="margin-top:1.25rem;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Client</div><div class="sig-line"></div><div class="sig-label">'+clientName+' &nbsp;·&nbsp; Signature</div></div>';
-  content += '<div style="margin-top:1.25rem;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">&nbsp;</div><div class="sig-line"></div><div class="sig-label">Date</div></div>';
+  content += '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Havellin Palm Beach LLC</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havSig)+'</div><div class="sig-label">Anthony Graziano &nbsp;·&nbsp; Managing Member</div></div>';
+  content += '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">&nbsp;</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havDate)+'</div><div class="sig-label">Date</div></div>';
+  content += '<div style="margin-top:1.25rem;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Client</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientSig)+'</div><div class="sig-label">'+clientName+' &nbsp;·&nbsp; Signature</div></div>';
+  content += '<div style="margin-top:1.25rem;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">&nbsp;</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientDate)+'</div><div class="sig-label">Date</div></div>';
   content += '</div>';
   content += '<div style="margin-top:.8rem;font-size:11px;color:var(--gray);">Role / Authority: &nbsp;<strong>&#9744; Client</strong> &nbsp;&nbsp;&nbsp; <strong>&#9744; Personal Representative</strong></div>';
 

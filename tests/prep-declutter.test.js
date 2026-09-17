@@ -31,11 +31,11 @@ const DOC_FNS = ['estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', '
   'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance',
   '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc', 'gateDispute',
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',
-  'agrSection', 'approvedEstimateFor', 'materialsBasisNote'];
+  'agrSection', 'approvedEstimateFor', 'materialsBasisNote', 'esignAnchor'];
 const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT',
   'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
   'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
-  'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', '_PCT_WORDS'];
+  'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', '_PCT_WORDS', 'ESIGN_ANCHORS'];
 
 const text = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&')
                              .replace(/&times;/g, 'x').replace(/&mdash;/g, '-')
