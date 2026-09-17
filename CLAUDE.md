@@ -1,5 +1,35 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ WHAT HAVELLIN ACTUALLY SELLS — THE FOUR LINES, IN ORDER (DECIDED 2026-09-17)
+Anthony, closing the catalogue conversation the declutter build came out of: *"we just might not take a home edit
+job that's going to be basically decluttering. That's not really our focus. But I guess if somebody asked us to do
+it and it was a friend or a relative, we'd do it. Really, we're focused on the home transition, which is downsizing
+and move management, as well as a clean outs and estate work."* **No code changed and none should.** This is the
+positioning every future catalogue question gets answered against.
+
+- **Home Transition** (`downsizing_move` — downsizing **with** move management). The lead product.
+- **Home Cleanout · Estate Settlement · Probate · Contested Probate** — the disposal side, and the volume.
+- **Home Prep for Sale** — the realtor product, deliberately standalone because it is the one service a
+  **referral source** buys rather than a family. As of 2026-09-14 it books concierge declutter hours when the house
+  needs them.
+- **Home Editing** (`downsizing` — downsizing with no move) — **stays in the catalogue, is not promoted.**
+  Taken as a favour, not sold.
+
+- **⚠⚠ THE DECLUTTER BUILD SERVES THIS POSITIONING RATHER THAN WORKING AGAINST IT, AND THAT IS WHY IT WAS
+  THE RIGHT ANSWER.** The alternative on the table was re-typing a messy prep job as Home Editing and adding prep to
+  it — which would have made the one product they do not want to sell the **name on the agreement, the invoice
+  header and the Drive folder** of a realtor engagement. A prep job that needs four hours of decluttering stays a
+  prep job. Measured separately in the section below: the re-type also priced ~$8,000 of phantom crew labour on a
+  job needing about $750 of concierge time.
+- **⚠ IT ALSO CLOSES THE OPEN QUESTION BELOW: Home Editing and Home Cleanout are NOT merging.** The answer is
+  not a pricing-model refactor, it is that one of the two is simply not led with. Both keep their keys, their
+  coefficients and their documents; nothing is deprecated, because a service you would still do for a friend has to
+  stay quotable.
+- **⚠ DO NOT READ THIS AS LICENCE TO DELETE A SERVICE TYPE.** `svc` is stored on every job, estimate and
+  snapshot, and `JOB_STEPS` / `PRICING_REF` / `isDecedentJob` / `svcFamily` / the Win/Loss filter / both agreement
+  maps all key on it — the 2026-09-10 sweep that removed the retired `estate` alias records what that costs.
+  **Not promoted is a marketing decision; removed is a data migration.** They are not the same change.
+
 ## ⚠⚠ A PREP JOB CAN BOOK CONCIERGE HOURS — AND THE OBVIOUS ANSWER WAS MEASURED AND REJECTED (BUILT 2026-09-14)
 Anthony, on the service catalogue: *"we could walk into a home where they said they wanted us to prep for sale, and we
 could figure out it's a complete mess … it would likely just be Ashley as the TC coming in, spending four or five hours
@@ -128,10 +158,14 @@ rides the existing estimate snapshot.
   **26 claims parity-checked, 0 mismatches**; tag balance verified on both HTML files (`manual.html`'s `<code>` delta
   is still the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 48 tables
   full-width under `print`**.
-- **⚠ OPEN, AND IT IS THE NEXT QUESTION RATHER THAN A DEFECT: Home Editing and Home Cleanout may be one service.**
-  Raised with Anthony in the same exchange. The only real difference in `JOB_STEPS` is where the contents GO —
-  editing is weighted to `pack` (0.85) and cleanout to `disposition` (0.76) — and that is an item-level decision made
-  on the job, not a service type. Not touched here; it is a pricing-model conversation, not a refactor.
+- ~~**⚠ OPEN, AND IT IS THE NEXT QUESTION RATHER THAN A DEFECT: Home Editing and Home Cleanout may be one
+  service.**~~ **ANSWERED 2026-09-17 — THEY ARE NOT MERGING; see the positioning section at the top of this
+  file.** Anthony's answer was not the pricing-model conversation this expected: Home Editing keeps its key and
+  its coefficients and is simply **not promoted**. *Kept rather than deleted, per the standing rule that a fixed
+  flag left standing reads as outstanding work.* The original note follows, because the measurement in it is
+  still true and is the reason the question was worth asking. The only real difference in `JOB_STEPS` is where
+  the contents GO — editing is weighted to `pack` (0.85) and cleanout to `disposition` (0.76) — and that is an
+  item-level decision made on the job, not a service type.
 
 ## ⚠⚠ HAVELLIN MAY CARRY A FIREARM NOW — AND `flagNFA` BECAME THE GATE IT WAS NEVER WIRED TO BE (2026-09-13)
 Anthony, after checking with a dealer: *"for me to take from a home to a licensed gun dealer for purposes of
