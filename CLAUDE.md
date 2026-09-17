@@ -65,27 +65,42 @@ actually send out an agreement for signature."*
   properties, the key and the consent in one call **without creating an envelope**, so an auth failure
   can never masquerade as a sending bug. A `consent_required` prints the consent URL built from the live
   values, so it can never name a different integration key than the one actually failing.
-- **⚠⚠ THE FIRST REAL RUN FAILED ON THE KEY FORMAT, AND THE ERROR MESSAGE POINTED AT THE WRONG THING
-  — MY DEFECT, FOUND BY ANTHONY ON THE FIRST ATTEMPT.** DocuSign's *+ GENERATE RSA* hands back
-  **PKCS#1** (`-----BEGIN RSA PRIVATE KEY-----`); `Utilities.computeRsaSha256Signature` accepts only
-  **PKCS#8** (`-----BEGIN PRIVATE KEY-----`) and throws on the other. Nothing in Apps Script converts
-  between them. The setup instructions said *"include the BEGIN and END lines"* and the catch said the
-  same, **so the one person hitting it was sent to inspect the one thing that was already correct** —
-  the *"a sentence with no cause in it"* failure this file records on `htmlToPdf`, committed again by
-  the person who wrote that entry.
-  - The format is now checked **before** the throw and answered with the exact command:
-    `openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in ds.key -out ds8.key`.
-  - **⚠ THE MESSAGE SAYS "do not convert a private key on a website", and that sentence is
-    load-bearing.** The obvious move for somebody stuck on a PEM format is an online converter, which
-    is handing the signing key to a stranger. Reverting that one line fails 1.
-  - **⚠ DRIVEN, NOT GREPPED**: a PKCS#1 key goes through the real `_dsAccessToken` and the refusal is
-    read back, plus the converse so the guard cannot start refusing the key that works.
-  - **⚠ AND IT TRIPPED MY OWN `lacks(GS, 'BEGIN RSA PRIVATE KEY')` — the seventh time this file
-    records a needle matching the text that explains the fix.** The guard has to NAME the header to be
-    worth reading. Restated as the real requirement: no PEM header **followed by an actual base64
-    body**. The words alone are how a person is told what went wrong.
-- **5154 committed checks** (`tests/esign-docusign.test.js`, 89 new — the first coverage of a provider
-  at all). **All fourteen changes revert-verified individually, ZERO green** — the missing-property naming
+- **⚠⚠ THE FIRST REAL RUN FAILED ON THE KEY FORMAT, AND MY FIRST TWO ANSWERS WERE BOTH WRONG.**
+  DocuSign's *+ GENERATE RSA* issues **PKCS#1** (`-----BEGIN RSA PRIVATE KEY-----`);
+  `Utilities.computeRsaSha256Signature` accepts only **PKCS#8** (`-----BEGIN PRIVATE KEY-----`) and
+  throws on the other.
+  - **Answer 1 was a wrong diagnosis.** The setup instructions and the catch both said *"check the
+    BEGIN and END lines"*, so the one person hitting it was sent to inspect the one thing that was
+    already correct — the *"a sentence with no cause in it"* failure this file records on `htmlToPdf`,
+    committed again by whoever wrote that entry.
+  - **⚠⚠ ANSWER 2 WAS A CORRECT DIAGNOSIS AND STILL THE WRONG ANSWER: it REFUSED the key and printed
+    an `openssl` command.** True, safe, and it put a terminal session and a three-way clipboard dance
+    between a person and a working integration. **It failed in practice within minutes:** the key and
+    the command went onto the same line, bash executed the key line by line, and a private key ended
+    up in `~/.bash_history`. *A correct instruction a person cannot follow is not a fix* — and the
+    tell was that the instructions needed the clipboard twice for two different things.
+  - **THE ANSWER IS THAT THE SCRIPT CONVERTS IT ITSELF (`_dsSigningKey`).** PKCS#1 → PKCS#8 is a
+    fixed ASN.1 wrap — `SEQUENCE { INTEGER 0, SEQUENCE { OID rsaEncryption, NULL }, OCTET STRING {
+    <the PKCS#1 DER> } }` — so **no key material is touched, only a header added**. Paste whatever
+    DocuSign gives you. A PKCS#8 key passes through untouched.
+  - **⚠ VERIFIED BYTE-FOR-BYTE AGAINST `openssl pkcs8 -topk8` ON A REAL 2048-BIT KEY**, driving the
+    real `.gs` function through signed-byte stubs, and the output re-validated with
+    `openssl rsa -check` → *RSA key ok*. **No private key is committed to prove it**: the wrap is
+    pure ASN.1, so the suite pins the arithmetic on a known `DEADBEEF` payload and the real-key check
+    was run once out of band. To repeat it: `openssl genrsa -traditional -out t1.pem 2048` then
+    `openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in t1.pem -out t8.pem`.
+  - **⚠⚠ AND TWO REVERTS CAME BACK GREEN ON THE SIGNED-BYTE HANDLING — THE HIGHEST-RISK LINE IN IT.**
+    Apps Script's `Byte[]` is **signed, -128..127**, while DER is unsigned and every byte of the
+    algorithm identifier is above 127. My stub normalised anything it was handed, so removing the
+    conversion was invisible. **A stub that does not match the real contract is worse than no stub** —
+    the second time this file records that. The stub now THROWS on an out-of-range byte, as the real
+    runtime does, and that revert fails 3.
+  - **⚠ THE SECOND GREEN REVERT WAS DEAD CODE, NOT A WEAK TEST.** Normalising at the INPUT edge as
+    well is a round trip that cancels itself out — a signed `-34` and an unsigned `222` are the same
+    byte and encode identically — so it read as a safeguard while testing nothing. Removed rather
+    than covered: one normalisation, at the output edge, where it is load-bearing.
+- **5162 committed checks** (`tests/esign-docusign.test.js`, 97 new — the first coverage of a provider
+  at all). **All sixteen changes revert-verified individually, ZERO green** — the missing-property naming
   fails 5, the white text and the environment derivation 3 each, two recipients and the probate anchors
   2 each, and the rest 1.
   - **⚠ ONE NEEDLE MATCHED NOTHING AND THE `NEEDLE x0` GUARD CAUGHT IT** — the standard-form anchor

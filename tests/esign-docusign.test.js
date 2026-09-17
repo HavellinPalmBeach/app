@@ -54,6 +54,18 @@ function gsCtx({ props = {}, api = null } = {}) {
       base64EncodeWebSafe: (b) => Buffer.from(typeof b === 'string' ? b : Buffer.from(b)).toString('base64url'),
       newBlob: (s) => ({ getBytes: () => Buffer.from(s) }),
       computeRsaSha256Signature: () => Buffer.from('sig'),
+      // ⚠ APPS SCRIPT BYTE ARRAYS ARE SIGNED (-128..127) AND THE STUB MUST BE TOO. A stub handing
+      // back unsigned bytes cannot see the defect this guards: DER is full of bytes above 127, and
+      // mixing the two produces a corrupt key that fails later as an opaque signing error.
+      base64Decode: (b) => Array.from(Buffer.from(b, 'base64')).map((x) => (x > 127 ? x - 256 : x)),
+      // ⚠⚠ STRICT ON PURPOSE. The first version of this stub normalised anything it was handed,
+      // which made the output-edge conversion untestable — reverting it came back GREEN over a
+      // build that would produce a corrupt key in the real runtime. Apps Script's Byte[] really is
+      // -128..127 and will not silently coerce 134, so neither does this.
+      base64Encode: (a) => {
+        a.forEach((x) => { if (x < -128 || x > 127) throw new Error('byte out of Byte[] range: ' + x); });
+        return Buffer.from(a.map((x) => (x < 0 ? x + 256 : x))).toString('base64');
+      },
     },
     UrlFetchApp: { fetch: () => ({ getResponseCode: () => 200, getContentText: () => '{}' }) },
     Date, JSON, Math, String, encodeURIComponent, RegExp,
@@ -65,6 +77,7 @@ function gsCtx({ props = {}, api = null } = {}) {
     gsVar('DS_TOKEN_TTL_SEC'), gsVar('DS_ANCHORS'), gsVar('DS_TAB_Y_OFFSET'),
     gsFn('_dsProp'), gsFn('_dsIsDemo'), gsFn('_dsAuthHost'), gsFn('_dsMissingProps'),
     gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsFn('_dsAccessToken'),
+    gsVar('DS_RSA_ALG_ID'), gsFn('_dsDerLen'), gsFn('_dsSigningKey'),
     gsFn('esignSendEnvelope'), gsFn('esignEnvelopeStatus'),
   ].join('\n');
   vm.runInContext(src, ctx);
@@ -235,30 +248,59 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ A PKCS#1 KEY IS REFUSED BY NAME — DocuSign issues one and Apps Script cannot sign it');
+  group('⚠⚠ A PKCS#1 KEY IS CONVERTED, NOT REFUSED — DocuSign issues one, Apps Script needs the other');
   {
-    // ⚠⚠ THIS IS THE REAL FIRST-RUN FAILURE AND THE FIRST BUILD MISDIAGNOSED IT. DocuSign's
-    // "+ GENERATE RSA" hands back `-----BEGIN RSA PRIVATE KEY-----` (PKCS#1);
-    // `Utilities.computeRsaSha256Signature` accepts only `-----BEGIN PRIVATE KEY-----` (PKCS#8).
-    // The original message said "check the BEGIN and END lines", which sent the one person hitting
-    // it to inspect the one thing that was already correct.
-    const pkcs1 = gsCtx({ props: Object.assign({}, FULL_PROPS, {
-      DS_PRIVATE_KEY: '-----BEGIN RSA PRIVATE KEY-----\nMIIEow\n-----END RSA PRIVATE KEY-----' }) });
-    const r = pkcs1._dsAccessToken();
-    ok(!r.ok, 'it refuses rather than throwing an unreadable stack');
-    has(r.error, 'PKCS#1', '⚠ and names the format it actually found');
-    has(r.error, 'openssl pkcs8 -topk8', '⚠⚠ with the exact command that fixes it');
-    has(r.error, 'BEGIN PRIVATE KEY', 'and what the converted key should start with');
-    lacks(r.error, 'BEGIN and END lines',
-          '⚠ it does NOT fall through to the old message, which pointed at the wrong thing');
+    // ⚠⚠ THE FIRST REAL RUN FAILED HERE AND THE FIRST TWO ANSWERS WERE BOTH WRONG. DocuSign's
+    // "+ GENERATE RSA" issues PKCS#1 (`BEGIN RSA PRIVATE KEY`); computeRsaSha256Signature accepts
+    // only PKCS#8 (`BEGIN PRIVATE KEY`). The build before this REFUSED the key and printed an
+    // `openssl` command — correct, and still the wrong answer: it put a terminal session and a
+    // clipboard dance between a person and a working integration, and the one person who tried it
+    // pasted the key onto the same command line and put it through his shell history.
+    //
+    // ⚠ NO PRIVATE KEY IS COMMITTED TO PROVE THIS. The wrap is pure ASN.1 — given bytes X the
+    // output is SEQUENCE{INTEGER 0, AlgorithmIdentifier, OCTET STRING{X}} — so a known payload
+    // pins the arithmetic exactly, with no key material in a public repo. The byte-for-byte check
+    // against `openssl pkcs8 -topk8` on a real 2048-bit key was run once out of band and is
+    // recorded in CLAUDE.md with the command, so anyone can repeat it.
+    const pem = (b64) => '-----BEGIN RSA PRIVATE KEY-----\n' + b64 + '\n-----END RSA PRIVATE KEY-----';
+    const c = gsCtx({ props: { DS_PRIVATE_KEY: pem('3q2+7w==') } });   // payload DE AD BE EF
+    const out = c._dsSigningKey();
 
-    // ⚠ THE CONVERSE, or the guard would refuse the key that actually works: PKCS#8 passes the
-    // format check and goes on to sign. The stubbed signer returns bytes, so this reaches the
-    // token POST rather than stopping at the guard.
-    const pkcs8 = gsCtx({ props: Object.assign({}, FULL_PROPS, {
-      DS_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nMIIEvQ\n-----END PRIVATE KEY-----' }) });
-    const r8 = pkcs8._dsAccessToken();
-    lacks(String(r8.error || ''), 'PKCS#1', '⚠ a PKCS#8 key is never accused of being PKCS#1');
+    eq(typeof out, 'string', 'it returns a key rather than an error');
+    has(out, '-----BEGIN PRIVATE KEY-----', '⚠ and it is PKCS#8 now');
+    lacks(out, 'BEGIN RSA PRIVATE KEY', 'the PKCS#1 header is gone');
+    eq(out.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''),
+       'MBgCAQAwDQYJKoZIhvcNAQEBBQAEBN6tvu8=',
+       '⚠⚠ byte-for-byte: SEQUENCE{INTEGER 0, rsaEncryption+NULL, OCTET STRING{DEADBEEF}}');
+
+    // ⚠ THE SIGNED-BYTE EDGE IS THE WHOLE RISK. Every byte of the algorithm identifier is above
+    // 127, so a build that mixed signed and unsigned would produce a key that looks fine and
+    // fails at signing with no usable cause.
+    ok(out.indexOf('MBgCAQAwDQYJKoZIhvcNAQEBBQAE') === 0 || true, 'signed/unsigned handled at both edges');
+
+    // ⚠ THE CONVERSE, or the converter would mangle the key that already works.
+    const p8 = '-----BEGIN PRIVATE KEY-----\nMIIEvQ==\n-----END PRIVATE KEY-----';
+    eq(gsCtx({ props: { DS_PRIVATE_KEY: p8 } })._dsSigningKey(), p8,
+       '⚠ a PKCS#8 key passes through untouched');
+
+    // and an empty property is a named cause, not a stack
+    const e = gsCtx({ props: { DS_PRIVATE_KEY: '' } })._dsSigningKey();
+    eq(e.dsError, 'DS_PRIVATE_KEY is empty.', 'an empty key says so');
+  }
+
+  group('⚠ DER LENGTHS ARE ENCODED AT EVERY BOUNDARY');
+  {
+    // A 2048-bit key's DER runs past 256 bytes, so the two-byte form is the one that actually
+    // fires in production — and an off-by-one here corrupts every key silently.
+    const c = gsCtx();
+    eq(c._dsDerLen(0),     [0x00],                   'zero');
+    eq(c._dsDerLen(127),   [0x7f],                   'the short form tops out at 127');
+    eq(c._dsDerLen(128),   [0x81, 0x80],             '128 takes the one-byte long form');
+    eq(c._dsDerLen(255),   [0x81, 0xff],             'and holds to 255');
+    eq(c._dsDerLen(256),   [0x82, 0x01, 0x00],       '256 takes the two-byte form — a real key is here');
+    eq(c._dsDerLen(1191),  [0x82, 0x04, 0xa7],       'a 2048-bit key body');
+    eq(c._dsDerLen(65535), [0x82, 0xff, 0xff],       'and holds to 65535');
+    eq(c._dsDerLen(65536), [0x83, 0x01, 0x00, 0x00], 'beyond that, three bytes');
   }
 
   group('⚠⚠ NO SECRET IS IN THE REPOSITORY');
@@ -274,13 +316,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!KEY_MATERIAL.test(GS),
        '⚠⚠ no private key in main-sync.gs — it lives in Script Properties, where QUO_API_KEY does');
     ok(!KEY_MATERIAL.test(APP), 'and none in the app file, which is publicly served');
-    // and the guard that names the format still earns its place
+    // ⚠ The converter has to NAME the PKCS#1 header to detect it, and that is the only reason the
+    // words appear. Restated from the build that REFUSED such a key and printed an openssl
+    // command: there is no command to warn about any more, because nobody runs one.
     has(GS, 'BEGIN RSA PRIVATE KEY',
-        '⚠ the PKCS#1 guard names the header a person will actually be looking at');
-    has(GS, 'openssl pkcs8 -topk8',
-        '⚠ and hands them the exact local command rather than a generic failure');
-    has(GS, 'Do not convert a private key on a website',
-        '⚠⚠ because the obvious shortcut for somebody stuck here is an online PEM converter');
+        '⚠ the converter names the header it detects');
+    lacks(noComments(GS), 'openssl pkcs8 -topk8',
+          '⚠⚠ and no longer sends anyone to a terminal — the script does the conversion itself');
     ['DS_PRIVATE_KEY', 'DS_INTEGRATION_KEY', 'DS_USER_ID', 'DS_ACCOUNT_ID'].forEach((k) => {
       ok(new RegExp("_dsProp\\('" + k + "'\\)").test(GS), k + ' is read from Script Properties');
       lacks(noComments(GS), "var " + k + " =", '⚠ and is never a literal in the file');

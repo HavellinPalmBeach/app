@@ -1670,22 +1670,16 @@ function _dsAccessToken() {
 
   var signingInput = _dsB64Url(JSON.stringify(header)) + '.' + _dsB64Url(JSON.stringify(claims));
 
-  // ⚠⚠ DOCUSIGN ISSUES A PKCS#1 KEY AND APPS SCRIPT CANNOT SIGN WITH ONE. "+ GENERATE RSA" hands
-  // back `-----BEGIN RSA PRIVATE KEY-----` (PKCS#1); `Utilities.computeRsaSha256Signature` accepts
-  // only `-----BEGIN PRIVATE KEY-----` (PKCS#8) and throws on the other. Nothing in Apps Script can
-  // convert between them, so this is caught BEFORE the throw and answered with the exact command —
-  // the first build shipped a generic "check the BEGIN and END lines", which sent the one person
-  // hitting it to inspect the one thing that was already correct.
-  //
-  // ⚠ THE COMMAND IS LOCAL ON PURPOSE AND THE MESSAGE SAYS SO. The obvious shortcut for somebody
-  // stuck here is an online PEM converter, which is handing a signing key to a stranger.
-  var key = _dsProp('DS_PRIVATE_KEY');
-  if (key.indexOf('BEGIN RSA PRIVATE KEY') !== -1) {
-    return { ok: false, error: 'DS_PRIVATE_KEY is in PKCS#1 format (it starts BEGIN RSA PRIVATE KEY), '
-           + 'which Apps Script cannot sign with. Convert it to PKCS#8 on your own machine:  '
-           + 'openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in ds.key -out ds8.key  '
-           + 'The converted key starts BEGIN PRIVATE KEY. Do not convert a private key on a website.' };
-  }
+  // ⚠⚠ DOCUSIGN ISSUES PKCS#1 AND APPS SCRIPT SIGNS ONLY WITH PKCS#8, SO THE SCRIPT CONVERTS IT
+  // ITSELF. "+ GENERATE RSA" hands back `-----BEGIN RSA PRIVATE KEY-----`;
+  // `Utilities.computeRsaSha256Signature` accepts only `-----BEGIN PRIVATE KEY-----` and throws on
+  // the other. The first build REFUSED a PKCS#1 key and printed an `openssl` command — correct, and
+  // the wrong answer: it put a terminal session and a clipboard dance between a person and a
+  // working integration, and the one person who tried it pasted the key onto the same line as the
+  // command and put it through his shell history. Converting is a fixed ASN.1 wrap, so the script
+  // does it and the property holds whatever DocuSign gave you.
+  var key = _dsSigningKey();
+  if (key && key.dsError) return { ok: false, error: key.dsError };
 
   var sig;
   try {
@@ -1730,6 +1724,55 @@ function _dsAccessToken() {
 // '=' is rejected outright by the token endpoint.
 function _dsB64Url(str) {
   return Utilities.base64EncodeWebSafe(Utilities.newBlob(str).getBytes()).replace(/=+$/, '');
+}
+
+// ─── PKCS#1 → PKCS#8 ─────────────────────────────────────────────────────────────
+// A PKCS#1 RSAPrivateKey becomes a PKCS#8 PrivateKeyInfo by wrapping it, unchanged, in:
+//   SEQUENCE { INTEGER 0, SEQUENCE { OID rsaEncryption, NULL }, OCTET STRING { <the PKCS#1 DER> } }
+// No key material is touched — only a header is added — so this cannot alter or weaken the key.
+// Verified byte-for-byte against `openssl pkcs8 -topk8` on a real 2048-bit key, and the output
+// re-validated with `openssl rsa -check`.
+//
+// ⚠ APPS SCRIPT BYTE ARRAYS ARE SIGNED (-128..127). `Utilities.base64Decode` returns signed bytes
+// and `Utilities.base64Encode` expects them, while DER is naturally unsigned 0..255 — every byte in
+// the fixed prefix below is above 127. Everything is built unsigned and converted once at each
+// edge; mixing the two silently produces a corrupt key that fails as an opaque signing error.
+var DS_RSA_ALG_ID = [0x30,0x0d,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x01,0x05,0x00];
+
+function _dsDerLen(n) {
+  if (n < 0x80)    return [n];
+  if (n < 0x100)   return [0x81, n];
+  if (n < 0x10000) return [0x82, (n >> 8) & 0xff, n & 0xff];
+  return [0x83, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+// The key the signer actually uses. A PKCS#8 key is handed back untouched; a PKCS#1 one is wrapped.
+// Returns {dsError} rather than throwing, so the caller can report a cause instead of a stack.
+function _dsSigningKey() {
+  var pem = _dsProp('DS_PRIVATE_KEY');
+  if (!pem) return { dsError: 'DS_PRIVATE_KEY is empty.' };
+  if (pem.indexOf('BEGIN RSA PRIVATE KEY') === -1) return pem;   // already PKCS#8, or not a PEM
+
+  try {
+    var der = Utilities.base64Decode(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
+    var i, body = [0x02, 0x01, 0x00].concat(DS_RSA_ALG_ID, [0x04], _dsDerLen(der.length));
+    // ⚠ THE DECODED BYTES GO IN AS THEY CAME — SIGNED — AND ARE NOT NORMALISED FIRST. Doing it at
+    // both edges is a round trip that cancels itself out (a signed -34 and an unsigned 222 are the
+    // same byte and encode identically), so it reads as a safeguard while testing nothing. One
+    // normalisation, at the output edge, where it is the only thing standing between the fixed
+    // prefix below and a corrupt key.
+    for (i = 0; i < der.length; i++) body.push(der[i]);
+    var out = [0x30].concat(_dsDerLen(body.length), body);
+    // Every byte of DS_RSA_ALG_ID and most DER lengths are above 127; Utilities.base64Encode takes
+    // a SIGNED Byte[] and an out-of-range value is not silently coerced.
+    for (i = 0; i < out.length; i++) if (out[i] > 127) out[i] -= 256;
+    return '-----BEGIN PRIVATE KEY-----\n'
+         + (Utilities.base64Encode(out).match(/.{1,64}/g) || []).join('\n')
+         + '\n-----END PRIVATE KEY-----';
+  } catch (e) {
+    return { dsError: 'DS_PRIVATE_KEY could not be read. Paste the whole key from DocuSign, '
+           + 'including the BEGIN and END lines. (' + e + ')' };
+  }
 }
 
 // The one-time consent URL, built from the live properties so it can never name a different
