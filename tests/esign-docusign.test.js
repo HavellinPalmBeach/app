@@ -64,7 +64,7 @@ function gsCtx({ props = {}, api = null } = {}) {
     gsVar('DS_AUTH_HOST_DEMO'), gsVar('DS_AUTH_HOST_PROD'), gsVar('DS_JWT_SCOPES'),
     gsVar('DS_TOKEN_TTL_SEC'), gsVar('DS_ANCHORS'), gsVar('DS_TAB_Y_OFFSET'),
     gsFn('_dsProp'), gsFn('_dsIsDemo'), gsFn('_dsAuthHost'), gsFn('_dsMissingProps'),
-    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'),
+    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsFn('_dsAccessToken'),
     gsFn('esignSendEnvelope'), gsFn('esignEnvelopeStatus'),
   ].join('\n');
   vm.runInContext(src, ctx);
@@ -235,13 +235,52 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ A PKCS#1 KEY IS REFUSED BY NAME — DocuSign issues one and Apps Script cannot sign it');
+  {
+    // ⚠⚠ THIS IS THE REAL FIRST-RUN FAILURE AND THE FIRST BUILD MISDIAGNOSED IT. DocuSign's
+    // "+ GENERATE RSA" hands back `-----BEGIN RSA PRIVATE KEY-----` (PKCS#1);
+    // `Utilities.computeRsaSha256Signature` accepts only `-----BEGIN PRIVATE KEY-----` (PKCS#8).
+    // The original message said "check the BEGIN and END lines", which sent the one person hitting
+    // it to inspect the one thing that was already correct.
+    const pkcs1 = gsCtx({ props: Object.assign({}, FULL_PROPS, {
+      DS_PRIVATE_KEY: '-----BEGIN RSA PRIVATE KEY-----\nMIIEow\n-----END RSA PRIVATE KEY-----' }) });
+    const r = pkcs1._dsAccessToken();
+    ok(!r.ok, 'it refuses rather than throwing an unreadable stack');
+    has(r.error, 'PKCS#1', '⚠ and names the format it actually found');
+    has(r.error, 'openssl pkcs8 -topk8', '⚠⚠ with the exact command that fixes it');
+    has(r.error, 'BEGIN PRIVATE KEY', 'and what the converted key should start with');
+    lacks(r.error, 'BEGIN and END lines',
+          '⚠ it does NOT fall through to the old message, which pointed at the wrong thing');
+
+    // ⚠ THE CONVERSE, or the guard would refuse the key that actually works: PKCS#8 passes the
+    // format check and goes on to sign. The stubbed signer returns bytes, so this reaches the
+    // token POST rather than stopping at the guard.
+    const pkcs8 = gsCtx({ props: Object.assign({}, FULL_PROPS, {
+      DS_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nMIIEvQ\n-----END PRIVATE KEY-----' }) });
+    const r8 = pkcs8._dsAccessToken();
+    lacks(String(r8.error || ''), 'PKCS#1', '⚠ a PKCS#8 key is never accused of being PKCS#1');
+  }
+
   group('⚠⚠ NO SECRET IS IN THE REPOSITORY');
   {
     // This repo is public and havellin.html is served from GitHub Pages. A private key in either
     // is not a key. This file already records a Google client secret being pasted into a chat.
-    lacks(GS, 'BEGIN RSA PRIVATE KEY',
-          '⚠⚠ no private key in main-sync.gs — it lives in Script Properties, where QUO_API_KEY does');
-    lacks(APP, 'BEGIN RSA PRIVATE KEY', 'and none in the app file, which is publicly served');
+    // ⚠ THE NEEDLE IS KEY MATERIAL, NOT THE PEM HEADER — and the first version of this check was
+    // the header, which tripped the moment the code grew a guard that has to NAME the PKCS#1
+    // header to be worth reading. Seventh time this project records a needle matching the text
+    // that explains the fix. What must never be here is a header followed by an actual base64
+    // body; the words alone are fine and are how a person is told what went wrong.
+    const KEY_MATERIAL = /BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]{0,40}[A-Za-z0-9+/]{40,}/;
+    ok(!KEY_MATERIAL.test(GS),
+       '⚠⚠ no private key in main-sync.gs — it lives in Script Properties, where QUO_API_KEY does');
+    ok(!KEY_MATERIAL.test(APP), 'and none in the app file, which is publicly served');
+    // and the guard that names the format still earns its place
+    has(GS, 'BEGIN RSA PRIVATE KEY',
+        '⚠ the PKCS#1 guard names the header a person will actually be looking at');
+    has(GS, 'openssl pkcs8 -topk8',
+        '⚠ and hands them the exact local command rather than a generic failure');
+    has(GS, 'Do not convert a private key on a website',
+        '⚠⚠ because the obvious shortcut for somebody stuck here is an online PEM converter');
     ['DS_PRIVATE_KEY', 'DS_INTEGRATION_KEY', 'DS_USER_ID', 'DS_ACCOUNT_ID'].forEach((k) => {
       ok(new RegExp("_dsProp\\('" + k + "'\\)").test(GS), k + ' is read from Script Properties');
       lacks(noComments(GS), "var " + k + " =", '⚠ and is never a literal in the file');

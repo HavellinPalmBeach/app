@@ -1669,14 +1669,32 @@ function _dsAccessToken() {
   };
 
   var signingInput = _dsB64Url(JSON.stringify(header)) + '.' + _dsB64Url(JSON.stringify(claims));
+
+  // ⚠⚠ DOCUSIGN ISSUES A PKCS#1 KEY AND APPS SCRIPT CANNOT SIGN WITH ONE. "+ GENERATE RSA" hands
+  // back `-----BEGIN RSA PRIVATE KEY-----` (PKCS#1); `Utilities.computeRsaSha256Signature` accepts
+  // only `-----BEGIN PRIVATE KEY-----` (PKCS#8) and throws on the other. Nothing in Apps Script can
+  // convert between them, so this is caught BEFORE the throw and answered with the exact command —
+  // the first build shipped a generic "check the BEGIN and END lines", which sent the one person
+  // hitting it to inspect the one thing that was already correct.
+  //
+  // ⚠ THE COMMAND IS LOCAL ON PURPOSE AND THE MESSAGE SAYS SO. The obvious shortcut for somebody
+  // stuck here is an online PEM converter, which is handing a signing key to a stranger.
+  var key = _dsProp('DS_PRIVATE_KEY');
+  if (key.indexOf('BEGIN RSA PRIVATE KEY') !== -1) {
+    return { ok: false, error: 'DS_PRIVATE_KEY is in PKCS#1 format (it starts BEGIN RSA PRIVATE KEY), '
+           + 'which Apps Script cannot sign with. Convert it to PKCS#8 on your own machine:  '
+           + 'openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in ds.key -out ds8.key  '
+           + 'The converted key starts BEGIN PRIVATE KEY. Do not convert a private key on a website.' };
+  }
+
   var sig;
   try {
     sig = Utilities.base64EncodeWebSafe(
-      Utilities.computeRsaSha256Signature(signingInput, _dsProp('DS_PRIVATE_KEY'))
+      Utilities.computeRsaSha256Signature(signingInput, key)
     ).replace(/=+$/, '');
   } catch (e) {
-    // Almost always the key itself: pasted without the BEGIN/END lines, or with the line
-    // breaks eaten by a copy through a chat window. Say so rather than echoing a stack.
+    // Past the format check, so this is the other half: BEGIN/END lines missing outright, or the
+    // line breaks eaten by a copy through a chat window.
     return { ok: false, error: 'Could not sign the JWT — check DS_PRIVATE_KEY is the full key including the BEGIN and END lines. (' + e + ')' };
   }
 

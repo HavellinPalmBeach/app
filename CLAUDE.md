@@ -65,8 +65,27 @@ actually send out an agreement for signature."*
   properties, the key and the consent in one call **without creating an envelope**, so an auth failure
   can never masquerade as a sending bug. A `consent_required` prints the consent URL built from the live
   values, so it can never name a different integration key than the one actually failing.
-- **5145 committed checks** (`tests/esign-docusign.test.js`, 80 new — the first coverage of a provider
-  at all). **All eleven changes revert-verified individually, ZERO green** — the missing-property naming
+- **⚠⚠ THE FIRST REAL RUN FAILED ON THE KEY FORMAT, AND THE ERROR MESSAGE POINTED AT THE WRONG THING
+  — MY DEFECT, FOUND BY ANTHONY ON THE FIRST ATTEMPT.** DocuSign's *+ GENERATE RSA* hands back
+  **PKCS#1** (`-----BEGIN RSA PRIVATE KEY-----`); `Utilities.computeRsaSha256Signature` accepts only
+  **PKCS#8** (`-----BEGIN PRIVATE KEY-----`) and throws on the other. Nothing in Apps Script converts
+  between them. The setup instructions said *"include the BEGIN and END lines"* and the catch said the
+  same, **so the one person hitting it was sent to inspect the one thing that was already correct** —
+  the *"a sentence with no cause in it"* failure this file records on `htmlToPdf`, committed again by
+  the person who wrote that entry.
+  - The format is now checked **before** the throw and answered with the exact command:
+    `openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in ds.key -out ds8.key`.
+  - **⚠ THE MESSAGE SAYS "do not convert a private key on a website", and that sentence is
+    load-bearing.** The obvious move for somebody stuck on a PEM format is an online converter, which
+    is handing the signing key to a stranger. Reverting that one line fails 1.
+  - **⚠ DRIVEN, NOT GREPPED**: a PKCS#1 key goes through the real `_dsAccessToken` and the refusal is
+    read back, plus the converse so the guard cannot start refusing the key that works.
+  - **⚠ AND IT TRIPPED MY OWN `lacks(GS, 'BEGIN RSA PRIVATE KEY')` — the seventh time this file
+    records a needle matching the text that explains the fix.** The guard has to NAME the header to be
+    worth reading. Restated as the real requirement: no PEM header **followed by an actual base64
+    body**. The words alone are how a person is told what went wrong.
+- **5154 committed checks** (`tests/esign-docusign.test.js`, 89 new — the first coverage of a provider
+  at all). **All fourteen changes revert-verified individually, ZERO green** — the missing-property naming
   fails 5, the white text and the environment derivation 3 each, two recipients and the probate anchors
   2 each, and the rest 1.
   - **⚠ ONE NEEDLE MATCHED NOTHING AND THE `NEEDLE x0` GUARD CAUGHT IT** — the standard-form anchor
