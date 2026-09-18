@@ -45,7 +45,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docDraftedAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
-      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'],
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
     vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
     // ⚠ `SHEETS_SYNC_URL` IS A REAL TOP-LEVEL VAR, so the rail reads it bare rather than

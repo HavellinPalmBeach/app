@@ -1,5 +1,96 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ DOCUSIGN SENT THE AGREEMENT, THE CLIENT SIGNED, AND THE APP NEVER NOTICED (FIXED 2026-09-18)
+Anthony, mid-Stripe-setup, on a real envelope both parties had signed: *"I just sent them the signing packet
+through DocuSign and we both signed it and the agreement came back signed through DocuSign, but the job
+doesn't move past a signing packet. So it doesn't move to any payment options."* App-only, no redeploy.
+**Reproduced against the real functions before anything was changed** — the rule this file records paying for
+on the room-status report, and the reason this was a one-line diagnosis rather than a hunt.
+
+- **⚠⚠ ONE OMITTED WRITE, AND THE SEQUENCE AFTER IT IS THE WHOLE DEFECT.** `docRecordSent` writes
+  `docState.agreement.sentAt` when the provider has `needsHumanSend:false` — and **never `job.agrSent`**.
+  `markAgreementSent()` is the only other writer of that field, and it is reached only through
+  `markDocSent`, which is the confirming tap, **which is deliberately withheld for exactly this provider
+  because it already sent the packet itself**. So on the DocuSign route nothing writes it, ever. Then, in
+  order, each silent:
+  1. **`outstandingEnvelopes()` refused to watch the envelope** (`if (!j.agrSent …) return false`), so the
+     status was never asked for at all.
+  2. Had it been, **`recordAgreementSignature` answers `'notsent'`** on the same field.
+  3. **`applyEsignStatus`'s caller discards that return value**, so nothing on screen would have said so.
+  4. The rail's `agreement_sent` row is `done: !!job.agrSent`, so the band sat on *Signing packet sent*
+     **forever**, which is the report verbatim.
+- **⚠⚠ AND THE BAND WENT ON OFFERING *Send signing packet*, WHICH IS THE PART THAT COULD HAVE COST REAL
+  MONEY.** `_jtSendAction` falls through to the send whenever `sentAt` is set, and it is only withdrawn
+  because the row goes `done` and the band moves on — which it never did. **Pressing it again mints a SECOND
+  DocuSign envelope for one agreement**, the exact thing this file's *no automatic retry* rule exists to
+  prevent. Both documents now tell anyone with a stuck job to check DocuSign for a duplicate.
+- **⚠⚠ THE FIX IS THE RULE THIS FILE ALREADY STATES FOR THE SIGNATURE, APPLIED ONE FIELD ACROSS: THE RECORD
+  IS THE TRUTH AND THE BOOLEAN IS THE MIRROR.** `isAgreementSent(job)` is `job.agrSent || docSentAt(job,
+  'agreement')`, and nine readers route through it. `docRecordSent` also writes the mirror, so the legacy
+  field stops being a lie — the same *mirrored, not replaced* reasoning `agrSigned` carries.
+  - **⚠ READING THE RECORD FIRST IS WHAT REPAIRS A JOB ALREADY STUCK, AND THAT IS WHY IT IS A DERIVATION
+    RATHER THAN A MIGRATION.** Every agreement DocuSign has ever sent is missing the mirror. A migration
+    needs a writer, a version gate and a sweep of every device; a derivation fixes them all on the next
+    paint with nothing to run. Driven: a job carrying `sentAt` and no `agrSent` reads sent, is picked up by
+    the poll, records its signature and **files the executed copy and the certificate** — which had never
+    filed, because `esignArchiveSigned` was never reached.
+  - **⚠ ONE READER DELIBERATELY DOES NOT USE IT, AND IT IS NAMED IN THE TEST.** `markDocSent`'s
+    `if (!job.agrSent) return;` is asking whether `markAgreementSent()` *itself* succeeded — reading that
+    function's own output, not the world. Routing it through the shared predicate would make a refusal read
+    as a success.
+- **5500 committed checks.** **All nine changes revert-verified individually, ZERO green** — the record-first
+  read fails **10**, the rail row and the signature recorder **5** each, the mirror write 3, and the rest 1–2.
+  The two halves reverted together (the original defect) fail 5 and throw.
+  - **⚠⚠ SIX OF THE NINE CAME BACK GREEN ON THE FIRST SWEEP AND THE REASON IS WORTH MORE THAN THE FIX.**
+    With the mirror being written on new sends, every reader that falls back to the boolean still worked —
+    so repointing six of them back at `job.agrSent` broke nothing any test could see. **They are load-bearing
+    only for a job already in the broken state**, which is the case the report was about and the one nothing
+    drove. There is a group that drives Anthony's job — sent, unmirrored, envelope outstanding — through the
+    real rail, the real poll and the real recorder, and asks what the BAND says at the end.
+  - **⚠ THE LAST THREE SIT IN DOM CODE AND ARE PINNED BY A NET RATHER THAN NINE DRIVEN CASES.** The
+    requirement was never "these nine call sites" — it is that a TENTH cannot be added reading the raw
+    boolean, which is precisely how this existed. A comment-stripped scan asserts **every live read of
+    `.agrSent` is either the definition itself or the one named exception**. Reverting any of the three
+    fails it.
+- **⚠⚠ THE ASSERTION THAT COULD NOT FAIL WAS A FIXTURE, AND IT IS THE OLDEST SHAPE IN THIS FILE.**
+  `esign-docusign.test.js` has driven the real send chain end to end since 2026-09-17 — and its job fixture
+  carried **`agrSent: true`**, pre-supplying the one field the path under test fails to write. So the group
+  exercised a state production never produces and was green through a live defect for a day. **A fixture
+  that hands the code the thing being tested tests the fixture.** It is gone, and the group now asserts the
+  mirror is written by the send itself.
+- **⚠ AND TWO OF MY OWN NEW ASSERTIONS FAILED ON CORRECT CODE, BOTH FOR THE SAME REASON: THE FIXTURE WAS
+  SHORT OF THE ROW BEING MEASURED.** `jobTimelineNext` lights the **earliest** gap, so a job with no
+  `created` lands on `intake` and a job whose estimate has no scored rooms lands on `estimate_built` —
+  neither of which says anything about the agreement. A rail assertion has to satisfy every row before the
+  one it is about, or it measures the fixture.
+- **⚠ A FRESHLY SENT ENVELOPE IS CORRECTLY INSIDE THE 20-MINUTE GATE**, so the first version of the driven
+  test asked immediately and got zero calls. Ageing `checkedAt` by 21 minutes is not a workaround — a client
+  signing the next day IS the scenario, and asking again seconds after sending is what that floor exists to
+  refuse.
+- **⚠ SEVEN SUITES PINNED EXPLICIT `fns:` LISTS AND BROKE CORRECTLY** when six functions grew a call to
+  `isAgreementSent`. Mechanical, and the right failure. **⚠ Found by SEARCHING every pinned list for the
+  affected callers rather than re-running and fixing one failure at a time** — this file records that costing
+  a round, and two of the seven (`dashboard-utility-bar`, `job-progress`) build their lists as a shared
+  `const` a per-file grep would have missed.
+- **Verified end to end in headless Chromium on the real page**, driving the real dashboard against a job
+  seeded in exactly the reported state:
+
+  | | old build | new build |
+  |---|---|---|
+  | `job.agrSent` | absent | absent — **nothing was migrated** |
+  | `isAgreementSent(job)` | *function absent* | **true**, off the record |
+  | the *Signing packet sent* row | **not done** | **done**, dated Sep 18, attributed |
+  | its sub-line | *"Drafted — read it, send it, then confirm"* | **none** |
+  | the band | **stuck on *Signing packet sent*** | *Agreement signed* |
+  | the envelope | **not watched at all** | watched |
+  | after the signature returns | — | signed · *Tripp Butler* · band reaches **Deposit invoice** |
+
+- Manual **§8a** (a note: what happened, that nothing was lost, that the repair is reload-and-open, and the
+  duplicate-envelope check); playbook **two** symptom→cause rows placed beside the two they will be confused
+  with. Both `.md` copies hand-edited and **10 claims parity-checked, 0 mismatches**; tag balance verified on
+  both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
+  1440/390 with **0 overflow** and **all 50 tables full-width under `print`**.
+
 ## ⚠⚠ A CLIENT CAN PAY BY BANK TRANSFER, AND IT RECORDS ITSELF (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18a`.
 Anthony: *"what needs to be done to integrate Stripe payments? i only want to accept ACH to avoid the 3% fee,

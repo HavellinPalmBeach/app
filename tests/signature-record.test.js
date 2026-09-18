@@ -27,7 +27,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const box = (stubs) => sandbox({
     fns: ['agreementSignature', 'isAgreementSigned', 'recordAgreementSignature', 'expectedSignerName',
-          'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'applyEsignStatus', 'outstandingEnvelopes', '_actor'],
+          'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'applyEsignStatus', 'outstandingEnvelopes', '_actor', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
     vars: ['AGR_SIG_METHODS', 'AGR_SIG_MANUAL_METHODS', 'ESIGN_PROVIDERS'],
     stubs: Object.assign({
       saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
@@ -163,7 +163,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimeline', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
             'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
-            'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor'],
+            'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],
       vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual', REQUIRE_WALKTHROUGH_NOTES: false },
     });

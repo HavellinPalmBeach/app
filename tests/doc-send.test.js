@@ -110,7 +110,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the record is written before anything else can fail, and it writes draftedAt');
   {
     const ctx = sandbox({
-      fns: ['docState', '_jobTouch', 'docRecordSent'],
+      fns: ['docState', '_jobTouch', 'docRecordSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp'],
       stubs: { saveJobs() { ctx.__saved = (ctx.__saved || 0) + 1; },
                syncJobToSheets() { ctx.__synced = (ctx.__synced || 0) + 1; },
                _actor: () => 'Ashley Graziano',
@@ -137,7 +137,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // No actor and no concierge must not write `undefined` onto a client record.
     const bare = sandbox({
-      fns: ['docState', '_jobTouch', 'docRecordSent'],
+      fns: ['docState', '_jobTouch', 'docRecordSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _actor: () => '',
                DOC_SEND_PROVIDERS: { gmail: { needsHumanSend: true } } },
     });

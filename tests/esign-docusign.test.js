@@ -387,7 +387,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let posted = null;
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
-            'docState', '_jobTouch', '_actor', 'esignSigner'],
+            'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp'],
       vars: ['DOC_SEND_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -395,7 +395,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs() {}, syncJobToSheets() {}, agrApprovedBy: 'Anthony Graziano',
       },
     });
-    const job = { id: 5, hvlId: 'HVL-0007', agrSent: true, name: 'Jane Doe', email: 'jane@x.com' };
+    // ⚠⚠ NO `agrSent` HERE, AND ITS ABSENCE IS THE WHOLE POINT. This fixture carried
+    // `agrSent: true` until 2026-09-18 — pre-supplying the ONE field the send path failed to
+    // write — so the group drove the real chain over a state production never produces and was
+    // green through a live defect. A fixture that assumes the thing under test is the oldest
+    // shape in this repo.
+    const job = { id: 5, hvlId: 'HVL-0007', name: 'Jane Doe', email: 'jane@x.com' };
     c.jobs = [job];
     const spec = { job: job, kind: 'agreement', key: 'agreement',
                    names: { attachment: 'Agreement.pdf' }, cfg: { subject: () => 'Your agreement' } };
@@ -413,9 +418,211 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠⚠ and sentAt is written IMMEDIATELY — needsHumanSend is false, so there is no tap to wait for');
     eq(job.docState.agreement.sentAt, job.docState.agreement.draftedAt, 'both stamps are the same moment');
 
+    // ⚠⚠ AND THE LEGACY MIRROR. `markAgreementSent()` is the only other writer of this field and
+    // it is unreachable on this route by design — the confirming tap is withheld precisely because
+    // DocuSign has already sent it. Without this line six readers key on a boolean nothing wrote.
+    ok(job.agrSent === true, '⚠⚠ job.agrSent is written by the send itself');
+    ok(!!job.agrSentAt, 'with a date');
+    eq(job.agrSentBy, job.docState.agreement.sentBy, 'and the same actor as the record');
+
     const out = c.outstandingEnvelopes();
     eq(out.length, 1, '⚠⚠ AND THE POLL FINDS IT — this returned [] on every job before today');
     eq(out[0].envelopeId, 'env-99', 'by the id the send recorded');
+  }
+
+  group('⚠⚠ A DOCUSIGN SIGNATURE COMES ALL THE WAY BACK — THE JOIN NOTHING DROVE');
+  {
+    // ⚠⚠ REPORTED LIVE 2026-09-18, on a real envelope both parties had signed: *"the job doesn't
+    // move past signing packet ... it doesn't move to any payment options."* Every piece was
+    // tested and NOTHING DROVE THE WHOLE CHAIN, so the break sat between two green halves.
+    //
+    // `docRecordSent` wrote `docState.agreement.sentAt` and never `job.agrSent` — the confirming
+    // tap that calls `markAgreementSent()` is deliberately withheld for a provider that sends by
+    // itself, and that function is the only other writer. Three things then failed in sequence,
+    // each silent: `outstandingEnvelopes()` refused to WATCH the envelope, so the status was never
+    // asked for; had it been, `recordAgreementSignature` answered `'notsent'`; and
+    // `applyEsignStatus`'s caller discards that return value, so nothing on screen said a word.
+    // The rail sat on "Signing packet sent" forever and the primary button offered to send the
+    // packet AGAIN — a second envelope for one agreement.
+    //
+    // ⚠ SO THIS DRIVES IT FROM A JOB WITH NOTHING ON IT, through the real send, the real poll and
+    // the real recorder, and asks what the JOB says at the end.
+    const posts = [];
+    const c = sandbox({
+      fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
+            'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
+            'esignSigner', 'esignRefresh', '_esignDue', 'applyEsignStatus',
+            'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'jobTimeline',
+            'jobTimelineNext', 'docDraftedAt', 'paymentSplit', 'unscoredRoomNames',
+            'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
+      vars: ['DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
+             'JT_ROW_DOC', 'JT_SHORT'],
+      stubs: {
+        SHEETS_SYNC_URL: 'https://script.example/exec',
+        _appsScriptPost: (url, body, cb) => {
+          posts.push(body);
+          if (body.action === 'esignSend') return cb(true, { ok: true, envelopeId: 'env-77', status: 'sent' });
+          cb(true, { ok: true, envelopeId: 'env-77', status: 'completed',
+                     signerName: 'Tripp Butler', completedAt: '2026-09-18T15:00:00Z' });
+        },
+        saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {}, _docNotice() {},
+        esignArchiveSigned() {}, agrApprovedBy: 'Anthony Graziano',
+        ESIGN_PROVIDER_KEY: 'docusign',
+      },
+    });
+    const job = { id: 11, hvlId: 'HVL-0011', name: 'Tripp Butler', email: 't@x.com', won: true };
+    c.jobs = [job];
+    const spec = { job, kind: 'agreement', key: 'agreement',
+                   names: { attachment: 'Agreement.pdf' }, cfg: { subject: () => 'Your agreement' } };
+
+    let got = null;
+    c.DOC_SEND_PROVIDERS.docusign.send(spec, 'JVBERi0=', (ok, e, u, extra) => { got = { ok, extra }; });
+    c.docRecordSent(spec, { provider: 'docusign', draftUrl: '', pdfOk: true, extra: got.extra });
+
+    eq(c.outstandingEnvelopes().length, 1,
+       '⚠⚠ the envelope is WATCHED — it was not, so the status was never even asked for');
+
+    // ⚠ AGE THE STAMP. `docRecordSent` sets `checkedAt` at the moment of sending, so a freshly
+    // sent envelope is correctly inside the 20-minute gate and asking again immediately is the
+    // thing that floor exists to prevent. The real case is a client signing the next day, so the
+    // test has to be that case — this is not a workaround, it is the scenario.
+    job.docState.agreement.esign.checkedAt = new Date(Date.now() - 21 * 60000).toISOString();
+
+    c.esignRefresh({}, () => {});
+    eq(posts.filter((b) => b.action === 'esignStatus').length, 1, 'one status call goes out');
+    ok(c.isAgreementSigned(job), '⚠⚠ AND THE JOB READS SIGNED — it read unsigned forever');
+    // ⚠ READ DEFENSIVELY. This file already records two reverts CRASHING it instead of failing,
+    // which reports one throw rather than the assertions actually broken.
+    eq((c.agreementSignature(job) || {}).signedBy, 'Tripp Butler', 'naming the client, not us');
+    eq(c.outstandingEnvelopes().length, 0, 'and it stops being asked about');
+
+    // ⚠ THE REPORTED SYMPTOM WAS ON THE RAIL, so the rail is what the assertion reads. Driving
+    // the record alone is what let this through: every piece was right and the screen was wrong.
+    const rows = c.jobTimeline(job, { estimate: {}, approved: true }, [], []);
+    const sent = rows.find((r) => r.key === 'agreement_sent');
+    ok(sent.done, '⚠⚠ THE RAIL ROW IS DONE — this is the row the band was stuck on');
+    ok(!sent.sub, 'and it does not tell you to read and send a packet that has gone');
+    ok(rows.find((r) => r.key === 'agreement_signed').done, 'and the row after it is done too');
+  }
+
+  group('⚠⚠ A JOB ALREADY STUCK REPAIRS ITSELF — A DERIVATION, NOT A MIGRATION');
+  {
+    // ⚠⚠ EVERY AGREEMENT EVER SENT THROUGH DOCUSIGN IS IN THIS STATE, so the fix has to reach
+    // them with nothing to run. `isAgreementSent` reads the RECORD first and falls back to the
+    // legacy boolean — the same "record is the truth, boolean is the mirror" rule the signature
+    // already follows — so a job carrying `sentAt` and no `agrSent` corrects on the next paint.
+    // A migration would have needed a writer, a version gate and a device sweep.
+    const c = sandbox({
+      fns: ['isAgreementSent', 'docSentAt', 'docKeyFor', 'outstandingEnvelopes',
+            'isAgreementSigned', 'agreementSignature'],
+    });
+    const stuck = { id: 9, docState: { agreement: { sentAt: '2026-09-18T12:00:00.000Z',
+                                                    esign: { envelopeId: 'env-live-1', status: 'sent' } } } };
+    c.jobs = [stuck];
+    ok(stuck.agrSent === undefined, 'the legacy boolean was never written, and stays unwritten');
+    ok(c.isAgreementSent(stuck), '⚠⚠ and it still reads as sent, off the record');
+    eq(c.outstandingEnvelopes().length, 1, '⚠⚠ so the envelope is picked up and asked about');
+
+    // ⚠ THE CONVERSE, or the predicate would answer true for every job in the app. A drafted
+    // packet is not a sent one — that is the whole reason the confirming tap exists on the
+    // routes that need it.
+    ok(!c.isAgreementSent({ id: 1, docState: { agreement: { draftedAt: '2026-09-18T12:00:00Z' } } }),
+       'a DRAFTED packet is not a sent one');
+    ok(!c.isAgreementSent({ id: 2 }), 'and a job with no agreement record is not sent');
+    ok(!c.isAgreementSent(null), 'nor is nothing at all');
+    ok(c.isAgreementSent({ id: 3, agrSent: true }), 'the legacy boolean alone still counts');
+  }
+
+  group('⚠⚠ AND THE STUCK JOB IS DRIVEN ALL THE WAY, NOT JUST THE PREDICATE');
+  {
+    // ⚠⚠ THE FIRST VERSION OF THE GROUP ABOVE STOPPED AT `outstandingEnvelopes`, AND SIX REVERTS
+    // CAME BACK GREEN BECAUSE OF IT. With the mirror being written on new sends, every reader
+    // that falls back to the boolean still worked — so repointing them back at `job.agrSent`
+    // broke nothing any test could see. They are load-bearing ONLY for a job already in the
+    // broken state, which is every agreement DocuSign has ever sent, so that is the job to drive.
+    const c = sandbox({
+      fns: ['isAgreementSent', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'outstandingEnvelopes',
+            'isAgreementSigned', 'agreementSignature', 'recordAgreementSignature', 'applyEsignStatus',
+            'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
+            'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+            'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
+      vars: ['ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT'],
+      stubs: { saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
+               esignArchiveSigned() {}, ESIGN_PROVIDER_KEY: 'docusign' },
+    });
+    // Anthony's job, exactly: sent through DocuSign on the old build.
+    // ⚠ THE EARLIER ROWS HAVE TO BE SATISFIED OR `jobTimelineNext` LANDS ON `intake` AND THE
+    // ASSERTION BELOW MEASURES THE FIXTURE RATHER THAN THE FIX. The band lights the EARLIEST
+    // gap, so a fixture missing `created` or a walkthrough date never reaches the agreement at all.
+    const j = { id: 91, hvlId: 'HVL-0011', name: 'Tripp Butler', won: true, status: 'won',
+                created: '2026-09-01', walkthrough: '2026-09-05', wonBy: 'Anthony Graziano',
+                approved: true, estimateSentDate: 'Sep 15, 2026', agrApproved: true,
+                docState: { agreement: { draftedAt: '2026-09-18T12:00:00.000Z',
+                                         sentAt: '2026-09-18T12:00:00.000Z', sentBy: 'Anthony Graziano',
+                                         provider: 'docusign',
+                                         esign: { envelopeId: 'env-live-1', status: 'sent' } } },
+                payments: [] };
+    c.jobs = [j];
+    const rec = { estimate: { havellinTotal: 25715, jobId: 91,                              // ⚠ `estBuilt` wants ROOMS AND MONEY, not just a record — an
+                             // estimate with no rooms scored is not a built estimate.
+                             rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }] },
+                  savedAt: 1789000000000, approved: true, approvedBy: 'Anthony Graziano',
+                  submitted: true };
+
+    // ── the rail, which is the surface the report came in on ──
+    const rows = c.jobTimeline(j, rec, [], []);
+    const sent = rows.find((r) => r.key === 'agreement_sent');
+    ok(sent.done, '⚠⚠ the rail row is DONE on a job whose mirror was never written');
+    eq(sent.at, '2026-09-18', '⚠ and dated off the record, sliced to yyyy-mm-dd for atKind:date');
+    eq(sent.by, 'Anthony Graziano', 'attributed off the record too');
+    ok(!sent.sub, '⚠⚠ and it does NOT say "Drafted — read it, send it, then confirm"');
+    eq(c.jobTimelineNext(rows).key, 'agreement_signed',
+       '⚠⚠ SO THE BAND MOVES ON — it sat on "Signing packet sent" forever');
+
+    // ── and the signature really lands ──
+    eq(c.applyEsignStatus(91, { ok: true, envelopeId: 'env-live-1', status: 'completed',
+                                signerName: 'Tripp Butler', completedAt: '2026-09-18T15:00:00Z' }), '',
+       '⚠⚠ applyEsignStatus does not answer "notsent" — it did, silently, on every DocuSign job');
+    ok(c.isAgreementSigned(j), 'the job reads signed');
+    eq((c.agreementSignature(j) || {}).signedBy, 'Tripp Butler', 'naming the client');
+
+    // ── and the band reaches the money, which is what the report actually asked for ──
+    const after = c.jobTimeline(j, rec, [], []);
+    eq(c.jobTimelineNext(after).key, 'deposit_invoiced',
+       '⚠⚠ AND THE NEXT STEP IS THE DEPOSIT INVOICE — "it doesn\'t move to any payment options"');
+  }
+
+  group('⚠⚠ THERE IS ONE DEFINITION OF "THE AGREEMENT HAS BEEN SENT", AND THIS IS THE NET');
+  {
+    // ⚠⚠ A SOURCE NET RATHER THAN NINE DRIVEN CASES, DELIBERATELY. Three of the readers sit deep
+    // in DOM code (`updateAgrUI`, `saveClientEdit`) where driving them costs more than it proves,
+    // and the requirement is not "these nine call sites" — it is that a TENTH cannot be added
+    // reading the raw boolean. That is what let the defect exist: `job.agrSent` looked like the
+    // answer and was only ever the mirror.
+    //
+    // ⚠ THREE EXEMPTIONS, EACH NAMED RATHER THAN PATTERN-MATCHED AWAY.
+    const src = source().replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    const readers = [];
+    for (const m of src.matchAll(/[\w.$\]]\.agrSent\b(?!\s*=[^=])/g)) {
+      readers.push((src.slice(0, m.index).split('\n').pop()
+                    + src.slice(m.index).split('\n')[0]).trim());
+    }
+    const allowed = [
+      // 1. THE DEFINITION ITSELF. `isAgreementSent` is the one thing allowed to read the mirror —
+      //    that is what makes it the mirror rather than a second source of truth.
+      "return !!(job.agrSent || docSentAt(job, 'agreement'));",
+      // 2. `markDocSent` asks whether `markAgreementSent()` ITSELF succeeded. It is reading that
+      //    function's own output rather than asking whether the agreement is sent, and on that
+      //    route (`needsHumanSend`) the record carries no `sentAt` to consult in any case. Routing
+      //    it through the shared predicate would make a refusal read as a success.
+      "if (!job.agrSent) return;",
+    ];
+    const stray = readers.filter((r) => allowed.indexOf(r) === -1);
+    eq(stray.join(' | '), '',
+       '⚠⚠ every live read of job.agrSent goes through isAgreementSent — a tenth cannot be added');
+    ok(readers.length >= 1, 'and the net is actually finding reads, not matching nothing');
   }
 
   group('⚠⚠ AN ENVELOPE IS NEVER SENT WITHOUT A DOCUMENT OR A RECIPIENT');
@@ -570,7 +777,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'applyEsignStatus',
             'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature', 'docState',
-            '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable'],
+            '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -609,7 +816,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and fails only at production go-live review. That is why this is a test and not a comment.
     let posts = 0;
     const c = sandbox({
-      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature'],
+      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['ESIGN_RECHECK_MINS'],
       // ⚠ applyEsignStatus is STUBBED here on purpose: this group is about how many requests go
       // out, not about what the answer does. The join is driven in the group above.
@@ -638,7 +845,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // which this project's standing rule says is worse than a failure.
     const said = [];
     const c = sandbox({
-      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature'],
+      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['ESIGN_RECHECK_MINS'],
       stubs: { SHEETS_SYNC_URL: 'u',
                _appsScriptPost: (u, b, cb) => cb(false, { error: 'network died', clientError: true }),

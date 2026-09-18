@@ -794,6 +794,12 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 
 > **Havellin countersigns second, and the envelope is not complete until we do.** The client signs first (routing order 1), then the agreement comes to Havellin. DocuSign only reports *completed* when both are done, so the app cannot mark a job signed off a half-executed contract. **An envelope sitting at *signed* is usually waiting on us** — check the DocuSign inbox.
 
+> **⚠⚠ FIXED 2026-09-18 — AN AGREEMENT SENT THROUGH DOCUSIGN BEFORE THIS DATE GOT STUCK, AND IT REPAIRS ITSELF.** Reported live, on an envelope both parties had already signed: the job sat on *Signing packet sent* and never moved on to the deposit. The send really did go out and the signature really did come back — **nothing was ever lost, and nothing in DocuSign was wrong**. The app recorded the send on the document but not on the job, and three things then failed in silence: it stopped watching the envelope, so it never asked DocuSign for the status; it would have refused the signature if it had; and nothing on screen said so.
+>
+> **What to do: reload the app, then open the client.** That is the whole repair — the app now reads the document record rather than the flag, so a stuck job corrects on sight, asks DocuSign, records the signature, and files the executed copy and the certificate of completion to Drive as it should have done at the time. There is nothing to re-send and nothing to re-sign.
+>
+> **⚠ One thing to check on a job that was stuck:** while it was stuck the band went on offering *Send signing packet*. If anybody pressed it a second time, **look in DocuSign for a duplicate envelope on that client** and void the one nobody signed. One agreement must not have two envelopes against it.
+
 ### Switching it on
 
 **Settings → Signature provider**: *Recorded by hand* (the default) or *DocuSign*. It is per device, and it only decides whether the DocuSign button is *offered* — it changes nothing about a job already sent. Five values must also be set in the Apps Script project's **Script Properties**, where the Quo key lives:

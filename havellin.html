@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 9:40am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 4:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11025,7 +11025,7 @@ function markAgreementSigned() {
 function openSignatureModal(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  if (!job.agrSent) { _docNotice('warn', 'Record the agreement as sent first — there is nothing out to be signed yet.', jobId); return; }
+  if (!isAgreementSent(job)) { _docNotice('warn', 'Record the agreement as sent first — there is nothing out to be signed yet.', jobId); return; }
   if (esignJobWatches(job)) {
     _docNotice('warn', ESIGN_PROVIDERS[esignProviderKey()].label
       + ' has this agreement out for signature, so the app records it from there rather than by hand.'
@@ -12332,12 +12332,17 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     // rather than a step, and a rail step nobody decides is a step that should not exist.
     // ⚠ Long form here too — `agrSentAt` is written by `_stamp()`. Same reason as above.
     row({ key: 'agreement_sent', group: 'Agreement', label: 'Signing packet sent',
-      done: !!job.agrSent, at: job.agrSentAt || '', atKind: 'date', by: job.agrSentBy || '',
+      // ⚠ `at` FALLS BACK TO THE RECORD, SLICED. `agrSentAt` is long form (`_stamp()`) and the
+      // record's `sentAt` is a full ISO timestamp — two different shapes through one `atKind`. The
+      // slice makes the fallback yyyy-mm-dd, which `atKind:'date'` already formats correctly.
+      done: isAgreementSent(job),
+      at: job.agrSentAt || docSentAt(job, 'agreement').slice(0, 10), atKind: 'date',
+      by: job.agrSentBy || (job.docState && job.docState.agreement && job.docState.agreement.sentBy) || '',
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
-      sub: (!job.agrSent && job.agrRevokedBy === 'estimate-edited')
+      sub: (!isAgreementSent(job) && job.agrRevokedBy === 'estimate-edited')
         ? 'The estimate was edited after this was prepared — re-approve it and send a fresh packet'
-        : ((!job.agrSent && docDraftedAt(job, 'agreement'))
+        : ((!isAgreementSent(job) && docDraftedAt(job, 'agreement'))
           ? 'Drafted \u2014 read it, send it, then confirm' : '') }),
 
     // ⚠ `by` IS THE SIGNER NOW, NOT THE RECORDER. It read `agrSignedBy`, which holds the
@@ -13002,6 +13007,23 @@ function agreementSignature(job) {
 }
 function isAgreementSigned(job) { return !!agreementSignature(job); }
 
+// ⚠⚠ THE RECORD IS THE TRUTH AND `agrSent` IS THE MIRROR — the same rule stated above for the
+// signature, and it had to be stated here too because DOCUSIGN NEVER WROTE THE MIRROR. A provider
+// with `needsHumanSend:false` sends the packet itself, so there is no confirming tap, so
+// `markAgreementSent()` — the ONLY writer of `job.agrSent` — never runs. `docRecordSent` wrote
+// `docState.agreement.sentAt` and the boolean stayed false, and six readers keyed on the boolean:
+// the rail row never went done, `outstandingEnvelopes()` refused to watch the envelope at all, and
+// `recordAgreementSignature` answered `'notsent'` to a contract DocuSign had already reported
+// `completed` — silently, because `applyEsignStatus`'s caller discards that return value.
+//
+// ⚠ IT READS THE RECORD FIRST, which is what repairs a job already stuck in that state. A
+// migration would not: the mirror is missing on every agreement ever sent through DocuSign, and a
+// derivation fixes them all on the next paint with nothing to run.
+function isAgreementSent(job) {
+  if (!job) return false;
+  return !!(job.agrSent || docSentAt(job, 'agreement'));
+}
+
 // Who the signature is expected FROM, so the recorder prefills a name rather than asking
 // somebody to retype it. The estate's authorized representative signs for the estate; on a
 // living-client job the client signs for themselves.
@@ -13019,7 +13041,10 @@ function expectedSignerName(job) {
 function recordAgreementSignature(jobId, sig) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return 'nojob';
-  if (!job.agrSent) return 'notsent';
+  // ⚠⚠ THIS LINE REFUSED EVERY DOCUSIGN SIGNATURE. It read the legacy boolean, which that route
+  // never writes, so a completed envelope came back and was thrown away — and `applyEsignStatus`'s
+  // caller discards this return value, so nothing on screen said so.
+  if (!isAgreementSent(job)) return 'notsent';
   var st = docState(job, 'agreement');
   st.sig = {
     how: sig.how || '',
@@ -13234,7 +13259,11 @@ function esignArchiveSigned(jobId) {
 // the backend side can be written against it and the tests can read it.
 function outstandingEnvelopes() {
   return (jobs || []).filter(function (j) {
-    if (!j.agrSent || isAgreementSigned(j)) return false;
+    // ⚠⚠ AND THIS ONE MEANT THE ENVELOPE WAS NEVER ASKED ABOUT AT ALL, so the refusal above was
+    // not even reached. `esignJobWatches` (the rail's own "DocuSign is watching for it") keys on
+    // the envelope and NOT on this, so the two disagreed outright: the row claimed a watch that
+    // did not exist.
+    if (!isAgreementSent(j) || isAgreementSigned(j)) return false;
     var st = (j.docState && j.docState.agreement) || {};
     return !!(st.esign && st.esign.envelopeId);
   }).map(function (j) {
@@ -13493,6 +13522,17 @@ function docRecordSent(spec, res) {
   if (!DOC_SEND_PROVIDERS[res.provider].needsHumanSend) {
     st.sentAt = st.draftedAt;
     st.sentBy = st.draftedBy;
+    // ⚠⚠ AND THE LEGACY MIRROR, or the agreement reads unsent forever on the one route that
+    // never asks a person to confirm. `markAgreementSent()` is the only other writer and it is
+    // unreachable here BY DESIGN — the confirming tap is withheld precisely because this provider
+    // has already sent it. This is not a door around that function's gate: `docAction` runs
+    // `ensureAgreementApproved` on every verb but `view`, so the approval is already stamped and
+    // both documents already filed by the time a send can succeed.
+    if (spec.key === 'agreement') {
+      spec.job.agrSent = true;
+      spec.job.agrSentBy = st.sentBy;
+      spec.job.agrSentAt = _stamp();
+    }
   }
   saveJobs(); syncJobToSheets(spec.job);
 }
@@ -28650,7 +28690,7 @@ function updateAgrUI() {
   var bSent   = document.getElementById('btn-agr-sent');
   var bSigned = document.getElementById('btn-agr-signed');
   var bDep    = document.getElementById('btn-deposit-received');
-  var _sent   = !!(_agrJ && _agrJ.agrSent);
+  var _sent   = isAgreementSent(_agrJ);
   var _signed = !!(_agrJ && _agrJ.agrSigned);
   // Funded, not "a payment exists" — a part-paid deposit must keep the button available
   // so the second cheque can be recorded.
@@ -29764,7 +29804,7 @@ function saveClientEdit(jobId) {
     var _stale = [];
     if (docSentAt(job, 'estimate')) _stale.push('the client estimate');
     if (job.agrSigned) _stale.push('the signed agreement');
-    else if (job.agrSent) _stale.push('the signing packet');
+    else if (isAgreementSent(job)) _stale.push('the signing packet');
     if (_stale.length) alert('The dates on this job have changed.\n\n' + _stale.join(' and ')
       + ' state the old target start. Agree the new dates with the client, and re-send the estimate if it has not been accepted yet.');
   }

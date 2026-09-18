@@ -758,6 +758,19 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     first (routing order 1), then the agreement comes to Havellin. DocuSign only reports <em>completed</em> when both are done, so
     the app cannot mark a job signed off a half-executed contract. <strong>An envelope sitting at <em>signed</em> is usually waiting
     on us</strong> &mdash; check the DocuSign inbox.</div>
+  <div class="note"><strong>&#9888;&#9888; FIXED 2026-09-18 &mdash; AN AGREEMENT SENT THROUGH DOCUSIGN BEFORE THIS DATE GOT STUCK, AND IT
+    REPAIRS ITSELF.</strong> Reported live, on an envelope both parties had already signed: the job sat on <em>Signing packet sent</em>
+    and never moved on to the deposit. The send really did go out and the signature really did come back &mdash; <strong>nothing was
+    ever lost, and nothing in DocuSign was wrong</strong>. The app recorded the send on the document but not on the job, and three
+    things then failed in silence: it stopped watching the envelope, so it never asked DocuSign for the status; it would have refused
+    the signature if it had; and nothing on screen said so.
+    <br><br><strong>What to do: reload the app, then open the client.</strong> That is the whole repair &mdash; the app now reads the
+    document record rather than the flag, so a stuck job corrects on sight, asks DocuSign, records the signature, and files the
+    executed copy and the certificate of completion to Drive as it should have done at the time. There is nothing to re-send and
+    nothing to re-sign.
+    <br><br><strong>&#9888; One thing to check on a job that was stuck:</strong> while it was stuck the band went on offering
+    <em>Send signing packet</em>. If anybody pressed it a second time, <strong>look in DocuSign for a duplicate envelope on that
+    client</strong> and void the one nobody signed. One agreement must not have two envelopes against it.</div>
   <h3>Switching it on</h3>
   <p><strong>Settings &rarr; Signature provider</strong>: <em>Recorded by hand</em> (the default) or <em>DocuSign</em>. It is per
     device, and it only decides whether the DocuSign button is <em>offered</em> &mdash; it changes nothing about a job already sent.
