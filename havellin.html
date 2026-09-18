@@ -1020,7 +1020,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 5:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 5:24pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13390,11 +13390,34 @@ function applyEsignStatus(jobId, status) {
 // to unblock recording a deposit, which arrives days later by cheque and is keyed in by a person.
 var ESIGN_RECHECK_MINS = 20;   // DocuSign's 15-minute floor plus their own suggested margin
 
+// ⚠⚠ THE GATE IS SILENT, AND THAT SILENCE IS ITS OWN DEFECT — reported 2026-09-18 minutes after
+// the send half was fixed: *"ok, so now i've completed the signature and nothing has happened"*,
+// over a DocuSign envelope reading **Completed** with both signatures on it. Reproduced against the
+// real functions before anything was changed: an envelope checked seven minutes earlier makes
+// **ZERO network calls**, and the whole of what a person sees is an unchanged screen. Correct, and
+// indistinguishable from a broken integration.
+//
+// ⚠⚠ AND IT IS THE ONE ROW WHERE BOTH ROUTES CLOSE AT ONCE, WHICH IS WHY THERE WAS NOTHING TO DO.
+// `esignJobWatches` deliberately stands the manual *Record the signed agreement* button down while
+// an envelope is out — a reachable manual write past a live provider is the defect Slice 6 exists
+// to prevent — so between that withdrawal and this gate the row offered NO action at all. The
+// Stripe rows are stranded by nothing for exactly the opposite reason: the payment RECORDER is
+// always their primary, so a person who knows the money landed can always say so.
+//
+// ⚠ IT RETURNS THE MOMENT, NOT A BOOLEAN, so a refusal can NAME it. A button that silently does
+// nothing inside the window is the same silence wearing a control's face. Anything unparseable, or
+// a stamp from a device whose clock runs ahead, reads as due — the safe direction, and byte for
+// byte what the old expression did.
+function esignNextCheckAt(st) {
+  if (!st || !st.esign || !st.esign.checkedAt) return 0;
+  var age = Date.now() - new Date(st.esign.checkedAt).getTime();
+  if (!(age >= 0 && age < ESIGN_RECHECK_MINS * 60000)) return 0;   // 0 = may ask now
+  return Date.now() + (ESIGN_RECHECK_MINS * 60000 - age);
+}
+
 function _esignDue(st) {
   if (!st || !st.esign || !st.esign.envelopeId) return false;
-  if (!st.esign.checkedAt) return true;
-  var age = Date.now() - new Date(st.esign.checkedAt).getTime();
-  return !(age >= 0 && age < ESIGN_RECHECK_MINS * 60000);
+  return !esignNextCheckAt(st);
 }
 
 // ⚠ SEQUENTIAL, NEVER Promise.all. Every store write on the server takes the GLOBAL Apps Script
@@ -13416,7 +13439,18 @@ function esignRefresh(opts, cb) {
     _appsScriptPost(SHEETS_SYNC_URL, { action: 'esignStatus', envelopeId: e.envelopeId }, function (ok, d) {
       if (ok && d && d.ok) {
         var was = isAgreementSigned(jobs.find(function (x) { return x.id === e.jobId; }));
-        applyEsignStatus(e.jobId, d);
+        // ⚠⚠ THIS RETURN VALUE WAS THROWN AWAY, and CLAUDE.md records that discard as step 3 of the
+        // defect fixed earlier today: DocuSign reported a signature, the recorder refused it, and
+        // nothing on screen said so. Both refusals reachable today are now closed — which is
+        // precisely when a silent channel gets left alone, and precisely why the next one added
+        // would be silent for the same reason. It speaks.
+        var blk = applyEsignStatus(e.jobId, d);
+        if (blk) {
+          _docNotice('err', ESIGN_PROVIDERS[esignProviderKey()].label + ' reports '
+                     + (e.hvlId || 'this agreement') + ' as signed, but the app could not record it — '
+                     + _esignRecordBlockerText(blk) + '. The signature is safe in '
+                     + ESIGN_PROVIDERS[esignProviderKey()].label + '; nothing has been lost.', e.jobId);
+        }
         if (!was && isAgreementSigned(jobs.find(function (x) { return x.id === e.jobId; }))) changed++;
       } else {
         // ⚠⚠ IT SPEAKS WHEN IT FAILS. A silent failure here leaves a signed agreement reading
@@ -13435,6 +13469,14 @@ function esignRefresh(opts, cb) {
 // retrieval as a unique-resource request under the same 15-minute rule, and warns that
 // list-then-get-each trips the polling check even when polling was not intended. `filedAt` is the
 // gate; a later refresh cannot refetch.
+// The recorder answers in codes; a person reading a notice needs the consequence. An unknown code
+// prints raw rather than being swallowed — it is searchable, and a blank is not.
+function _esignRecordBlockerText(blk) {
+  if (blk === 'nojob') return 'the client record is no longer on this device';
+  if (blk === 'notsent') return 'the app has no record of the signing packet going out';
+  return blk;
+}
+
 function esignArchiveSigned(jobId) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return;
@@ -14329,6 +14371,16 @@ function jobTimelineActions(row, job, estRec) {
       // a provider is wired — the control simply stops being offered, exactly the way
       // Slice 4's confirming tap disappears on a provider with `needsHumanSend:false`.
       if (live && !esignJobWatches(job)) out.primary = { label: '&#10003; Record the signed agreement', call: 'dashMarkAgreementSigned(' + id + ')' };
+      // ⚠⚠ AND WHILE A PROVIDER WAS WATCHING, THIS ROW OFFERED NOTHING AT ALL — a lit step with no
+      // action, on the one band whose entire contract is *the one thing to do next*. That is what
+      // stranded Anthony on 2026-09-18: DocuSign read **Completed**, the manual recorder was
+      // correctly withdrawn, the poll was inside its 20-minute floor, and there was no third thing.
+      // ⚠ THIS DOES NOT REOPEN THE DOOR THE LINE ABOVE CLOSES. It never writes a signature — it
+      // asks the PROVIDER and records only what the provider says, so the app and DocuSign cannot
+      // come to disagree about whether a contract exists. What it adds is the one thing the app
+      // cannot know on its own: that a person has just watched the envelope complete.
+      else if (live) out.primary = { label: '&#8635; Check ' + ESIGN_PROVIDERS[esignProviderKey()].label + ' now',
+                                     call: 'dashCheckEsign(' + id + ')' };
       break;
 
     case 'deposit_invoiced':
@@ -14571,6 +14623,54 @@ function dashMarkAgreementSent(jobId) {
 function dashMarkAgreementSigned(jobId) {
   if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
   markAgreementSigned();
+}
+
+// ⚠⚠ THE ONE WAY A PERSON CAN ACT ON SOMETHING THE APP CANNOT KNOW: that the envelope has just
+// completed. The check is otherwise wired to ARRIVAL alone, so the only way to trigger one was to
+// close the client and open it again — undiscoverable — and even that is refused for 20 minutes.
+// ⚠ IT CANNOT EXCEED DOCUSIGN'S FLOOR, and that is what makes offering it safe: it goes through the
+// SAME `esignNextCheckAt` the poll does, so pressing it ten times in a minute is ten refusals and
+// one request at most. A refusal NAMES the time it can ask again; a disabled button, or one that
+// quietly did nothing, would be the silence this exists to end.
+function dashCheckEsign(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { dashNotice('warn', 'Could not open this job.'); _dashRedraw(jobId); return; }
+  var label = ESIGN_PROVIDERS[esignProviderKey()].label;
+  var st = (job.docState && job.docState.agreement) || null;
+
+  var wait = esignNextCheckAt(st);
+  if (wait) {
+    dashNotice('warn', label + ' allows one status check per agreement every ' + ESIGN_RECHECK_MINS
+      + ' minutes, and asking more often puts the firm’s API access at risk — so this one is held '
+      + 'until ' + new Date(wait).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      + '. Nothing is lost by waiting: the signature is recorded in full the moment it is asked for.');
+    _dashRedraw(jobId); return;
+  }
+  if (!SHEETS_SYNC_URL) {
+    dashNotice('warn', 'This device has no Apps Script URL in Settings, so it cannot reach ' + label + '.');
+    _dashRedraw(jobId); return;
+  }
+
+  var before = (st && st.esign && st.esign.checkedAt) || '';
+  dashNotice('ok', 'Asking ' + label + '…');
+  _dashRedraw(jobId);
+
+  esignRefresh({ jobId: jobId }, function (n) {
+    if (n) { dashNotice('ok', 'Signed — recorded from ' + label + '.'); _dashRedraw(jobId); return; }
+    // ⚠ "answered, still out" and "could not reach DocuSign" are different answers, and only the
+    // first is this function's to give. `applyEsignStatus` stamps `checkedAt` ONLY on an answer, so
+    // the stamp moving is the proof one arrived — and a failure has already spoken for itself
+    // through `_docNotice`, which this must never overwrite with a cheerful "still out".
+    var j2 = jobs.find(function (x) { return x.id === jobId; });
+    var st2 = (j2 && j2.docState && j2.docState.agreement) || {};
+    var now = (st2.esign && st2.esign.checkedAt) || '';
+    if (!now || now === before) return;
+    dashNotice('warn', label + ' has the envelope and does not report it complete'
+      + ((st2.esign && st2.esign.status) ? ' — it reads “' + st2.esign.status + '”' : '')
+      + '. EVERY signer has to finish, Havellin’s own countersignature included — open the '
+      + 'envelope in ' + label + ' to see who is still outstanding.');
+    _dashRedraw(jobId);
+  });
 }
 
 function dashRecordPayment(jobId, stage) {

@@ -140,8 +140,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const env = { id: 8, agrSent: true,
                   docState: { agreement: { provider: 'docusign', sentAt: '2026-09-17T20:00:00Z',
                                            esign: { envelopeId: 'env-1', status: 'sent' } } } };
-    eq(rail.jobTimelineActions(row, env, null).primary, null,
-      '⚠⚠ THAT job loses the button, because a hand-typed signature would disagree with the envelope');
+    // ⚠⚠ RESTATED 2026-09-18, NOT WEAKENED. This pinned `primary === null`, and the requirement was
+    // never "no button" — it was NO HAND-TYPED SIGNATURE while a provider is watching. The literal
+    // version is what left the row with no action at all, which stranded a real job whose envelope
+    // read Completed. The rule is stated twice, both directions, so neither half can be lost.
+    const envAct = rail.jobTimelineActions(row, env, null);
+    lacks(JSON.stringify(envAct), 'dashMarkAgreementSigned',
+      '⚠⚠ THAT job loses the hand-typed recorder, because it would disagree with the envelope');
+    ok(!!envAct.primary && /dashCheckEsign\(8\)/.test(envAct.primary.call),
+      '⚠⚠ and gets the provider check in its place — a lit step with nothing to press is the defect');
 
     // ⚠ AND IT COMES BACK ONCE SIGNED — a completed job must not go on suppressing a control it
     // no longer needs while reporting itself as watched.

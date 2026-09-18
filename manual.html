@@ -650,8 +650,9 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <li><strong>The signature comes back.</strong> Which button you see depends on how the packet went out, and the app decides,
       not you:
       <ul style="margin:4px 0 0 18px;">
-        <li><strong>Sent through DocuSign</strong> — <em>nothing to press</em>. The row reads <em>DocuSign is watching for it</em>
-          and the signature arrives on its own (§8a).</li>
+        <li><strong>Sent through DocuSign</strong> — the row reads <em>DocuSign is watching for it</em> and the signature
+          arrives on its own. <strong>&#8635; Check DocuSign now</strong> is there for the moment you have watched the envelope
+          complete and want the app to look straight away (§8a).</li>
         <li><strong>Sent as a PDF</strong> — <strong>&#10003; Record the signed agreement</strong>, below.</li>
       </ul>
       <em>Signing does not imply payment</em>; these are separate facts and the app keeps them separate.</li>
@@ -717,7 +718,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td><strong>What you press</strong></td><td><strong>Send for signature &mdash; DocuSign</strong> on the <em>Signing packet sent</em> row. <strong>The button names the route it will take</strong>, so the two are never confused at the moment of pressing.</td><td><strong>Send as a PDF to sign by hand</strong>, beside it.</td></tr>
     <tr><td><strong>Who sends it</strong></td><td>DocuSign emails the client directly.</td><td>You do &mdash; a Gmail draft with the packet attached, which you read and send yourself.</td></tr>
     <tr><td><strong>&#10003; I&rsquo;ve sent it</strong></td><td><strong>Not shown.</strong> There is nothing to confirm.</td><td>Shown. Press it once the email has gone.</td></tr>
-    <tr><td><strong>The signature</strong></td><td>Arrives <strong>on its own</strong>. The row reads <em>DocuSign is watching for it</em>.</td><td><strong>&#10003; Record the signed agreement</strong>, by hand (&sect;8).</td></tr>
+    <tr><td><strong>The signature</strong></td><td>Arrives <strong>on its own</strong>. The row reads <em>DocuSign is watching for it</em>, over <strong>&#8635; Check DocuSign now</strong>.</td><td><strong>&#10003; Record the signed agreement</strong>, by hand (&sect;8).</td></tr>
     <tr><td><strong>Who is named as signer</strong></td><td>Whoever authenticated to DocuSign &mdash; their name and email, from DocuSign.</td><td>Whoever you type in.</td></tr>
     <tr><td><strong>The executed copy</strong></td><td>Filed to the client&rsquo;s <strong>Agreement</strong> folder automatically, with its <strong>certificate of completion</strong>.</td><td>Yours to file.</td></tr>
   </table>
@@ -816,6 +817,11 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <li><strong>It asks at most once every 20 minutes per agreement.</strong> DocuSign&rsquo;s published limit is one request per
       document per 15 minutes and <strong>the penalty is losing API access altogether</strong>, not a warning. Opening the same
       client six times in a row asks once.</li>
+    <li><strong>&#8635; Check DocuSign now is the one way to make it look, and it obeys the same 20 minutes.</strong> It sits on
+      the <em>Agreement signed</em> row while an envelope is out. Press it inside the window and it does not ask &mdash; it tells
+      you <strong>the time it can ask again</strong> and says nothing is lost by waiting. Pressing it ten times sends nothing.
+      <strong>It never writes a signature itself</strong>; it asks DocuSign and records only what DocuSign says, which is the
+      same rule that withdraws the manual button.</li>
     <li><strong>Only <em>completed</em> counts as signed.</strong> DocuSign reports <em>delivered</em> when the client opens the
       email and <em>signed</em> when one recipient is done &mdash; the agreement has two signers (the client, then Havellin), so
       neither of those is an executed contract and neither marks the job signed.</li>
