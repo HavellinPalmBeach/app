@@ -27,7 +27,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const box = (stubs) => sandbox({
     fns: ['agreementSignature', 'isAgreementSigned', 'recordAgreementSignature', 'expectedSignerName',
-          'esignProviderKey', 'esignWatches', 'docState', '_jobTouch', 'applyEsignStatus', 'outstandingEnvelopes', '_actor'],
+          'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'applyEsignStatus', 'outstandingEnvelopes', '_actor'],
     vars: ['AGR_SIG_METHODS', 'AGR_SIG_MANUAL_METHODS', 'ESIGN_PROVIDERS'],
     stubs: Object.assign({
       saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
@@ -90,31 +90,65 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // provider is wired — the control simply stops being offered, the same way Slice 4's
     // confirming tap disappears on a provider with `needsHumanSend:false`.
     const acts = noComments(fn('jobTimelineActions'));
-    has(acts, 'if (live && !esignWatches())', 'the rail offers the manual recorder only while nothing is watching');
+    // ⚠⚠ RESTATED 2026-09-17. This pinned the GLOBAL form, `!esignWatches()`, which turned out to
+    // be a live defect: switching DocuSign on removed this button from every job, including one
+    // posted to a client last week who is mailing a wet signature back. That job has no envelope
+    // and never will. The gate is per-JOB now — an agreement out for e-signature suppresses it,
+    // a paper one keeps it, and a setting changed today cannot reach back and strand either.
+    has(acts, 'if (live && !esignJobWatches(job))',
+        '⚠⚠ the recorder is gated on THIS JOB having an envelope out, never on the global setting');
+    // ⚠ SCOPED TO THE ROW, because `esignAvailable()` legitimately appears elsewhere in this
+    // function — it is what offers the "send as PDF" button on the row ABOVE. The requirement is
+    // that the RECORDER does not read it, not that the word is absent from the file.
+    const signedCase = acts.slice(acts.indexOf("case 'agreement_signed'"), acts.indexOf("case 'deposit_received'"));
+    lacks(signedCase, 'esignAvailable()',
+          '⚠ the recorder never reads the capability question, which says nothing about this job');
+
     // And the door itself refuses, so it cannot be reached around by another surface.
     const open = noComments(fn('openSignatureModal'));
-    has(open, 'if (esignWatches())', 'the recorder refuses under a provider');
-    has(open, 'records them from there rather than by hand', 'and says why rather than doing nothing');
-    ok(open.indexOf('esignWatches()') < open.indexOf('_sigJobId = jobId'),
+    has(open, 'if (esignJobWatches(job))', 'the recorder refuses on a job with an envelope out');
+    lacks(open, 'esignAvailable()', '⚠ and not on the global setting either');
+    has(open, 'records it from there rather than by hand', 'and says why rather than doing nothing');
+    has(open, 'A client signing on paper keeps this button',
+        '⚠ and says the choice is per job, so somebody hitting this does not go changing Settings');
+    ok(open.indexOf('esignJobWatches(job)') < open.indexOf('_sigJobId = jobId'),
       'before it opens anything');
 
     // Driven: flip the provider and watch the primary disappear.
     const rail = sandbox({
       fns: ['jobTimelineActions', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
         'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'agreementReady', 'isJobWon',
-            'docKeyFor', 'esignWatches', 'esignProviderKey'],
+            'docKeyFor', 'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
       vars: ['ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual' },
     });
     const row = { key: 'agreement_signed', state: 'current' };
-    const j = { id: 7, agrSent: true };
-    ok(!!rail.jobTimelineActions(row, j, null).primary, 'with no provider, the button is offered');
-    has(rail.jobTimelineActions(row, j, null).primary.label, 'Record the signed agreement',
+    const paper = { id: 7, agrSent: true,
+                    docState: { agreement: { provider: 'gmail', sentAt: '2026-09-10T10:00:00Z' } } };
+    ok(!!rail.jobTimelineActions(row, paper, null).primary, 'a paper job offers the button');
+    has(rail.jobTimelineActions(row, paper, null).primary.label, 'Record the signed agreement',
       'and it asks for the signed agreement rather than announcing a receipt');
-    rail.ESIGN_PROVIDERS.docusign.live = true;
+
+    // ⚠⚠ THE DEFECT THIS GROUP NOW GUARDS. Turning DocuSign on must NOT reach back and strip the
+    // recorder from a job already out for a wet signature — that client is mailing paper back and
+    // there would be nowhere to log it. The global flip is the exact action that broke it.
     rail.ESIGN_PROVIDER_KEY = 'docusign';
-    eq(rail.jobTimelineActions(row, j, null).primary, null,
-      '⚠ and the moment a provider is live and watching, it is gone');
+    ok(!!rail.jobTimelineActions(row, paper, null).primary,
+      '⚠⚠ and STILL offers it after DocuSign is switched on globally — the paper job is not stranded');
+
+    // A job that really did go out through DocuSign has an envelope, and that is what suppresses it.
+    const env = { id: 8, agrSent: true,
+                  docState: { agreement: { provider: 'docusign', sentAt: '2026-09-17T20:00:00Z',
+                                           esign: { envelopeId: 'env-1', status: 'sent' } } } };
+    eq(rail.jobTimelineActions(row, env, null).primary, null,
+      '⚠⚠ THAT job loses the button, because a hand-typed signature would disagree with the envelope');
+
+    // ⚠ AND IT COMES BACK ONCE SIGNED — a completed job must not go on suppressing a control it
+    // no longer needs while reporting itself as watched.
+    const done = JSON.parse(JSON.stringify(env));
+    done.agrSigned = true;
+    done.docState.agreement.sig = { signedBy: 'Tripp Butler', signedOn: '2026-09-18' };
+    eq(rail.esignJobWatches(done), false, 'a signed agreement is no longer being watched');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -127,7 +161,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // something else.
     const rail = sandbox({
       fns: ['jobTimeline', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
-            'esignProviderKey', 'esignWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
+            'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor'],
       vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
@@ -177,11 +211,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(un.by, '', 'with no signer');
     eq(un.sub, '', 'and nothing to say about a provider that does not exist');
 
-    // ⚠ Under a provider the row says what is watching for it, so silence is not mistaken
-    // for nothing happening.
+    // ⚠ WITH AN ENVELOPE OUT the row says what is watching for it, so silence is not mistaken for
+    // nothing happening.
     rail.ESIGN_PROVIDERS.docusign.live = true;
     rail.ESIGN_PROVIDER_KEY = 'docusign';
-    has(rowOf(base()).sub, 'DocuSign is watching for it', 'under a provider the row says what is watching');
+    const outForSig = base();
+    outForSig.docState = { agreement: { provider: 'docusign', sentAt: '2026-09-17T20:00:00Z',
+                                        esign: { envelopeId: 'env-1', status: 'sent' } } };
+    has(rowOf(outForSig).sub, 'DocuSign is watching for it',
+        'a job with an envelope out says what is watching');
+
+    // ⚠⚠ RESTATED 2026-09-17: this used to flip the GLOBAL and expect every job to claim it was
+    // being watched. A job sent on paper is not being watched by anything, whatever Settings says,
+    // and a row telling its reader DocuSign has it would be a plain false statement about where
+    // that contract is.
+    const onPaper = base();
+    onPaper.docState = { agreement: { provider: 'gmail', sentAt: '2026-09-10T10:00:00Z' } };
+    eq(rowOf(onPaper).sub, '',
+       '⚠⚠ while a paper job says NOTHING — DocuSign being switched on does not mean it has this one');
     eq(rowOf(properly).sub.indexOf('watching'), -1, 'and stops once it is actually signed');
     rail.ESIGN_PROVIDERS.docusign.live = false;
     rail.ESIGN_PROVIDER_KEY = 'manual';
@@ -212,7 +259,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // working control down. A typo in Settings must not make signatures unrecordable.
     const typo = box({ ESIGN_PROVIDER_KEY: 'docsign' });
     eq(typo.esignProviderKey(), 'manual', 'a typo falls back to manual');
-    eq(typo.esignWatches(), false, 'and nothing stands down on it');
+    eq(typo.esignAvailable(), false, 'and nothing stands down on it');
     eq(box({ ESIGN_PROVIDER_KEY: '' }).esignProviderKey(), 'manual', 'so does an empty setting');
     eq(box({ ESIGN_PROVIDER_KEY: 'docusign' }).esignProviderKey(), 'docusign',
        '⚠ and a real, live provider IS selected — this is the line that turns DocuSign on');

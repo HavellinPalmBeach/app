@@ -131,6 +131,54 @@ actually send out an agreement for signature."*
   text in the PDF **text layer** (if it does not, the fallback is absolute positioning, and the anchor
   strings are already in one constant so it is a small change), and where the signature box actually
   lands — `DS_TAB_Y_OFFSET` is one tunable constant and a considered first guess, nothing more.
+- **⚠⚠ HOW A CLIENT SIGNS IS A PER-JOB CHOICE, NOT A SETTING — AND THE GLOBAL VERSION WAS A LIVE
+  DEFECT FOR ABOUT AN HOUR.** Anthony, reading the build above: *"should this setting be in the
+  settings or should it be somewhere where we're creating the client agreement? That way, if
+  somebody is old school and we need to just send them a PDF to sign, we can do that. But we don't
+  need to go into the app and change the settings overall. It's just sort of a one-off."*
+  - **⚠⚠ HE WAS RIGHT, AND IT WAS WORSE THAN A PREFERENCE. Measured in a browser before anything
+    was changed:** a job emailed to a client LAST WEEK, waiting on a wet signature by post, has no
+    envelope and never will. Switching DocuSign on removed **Record the signed agreement** from it
+    — so when the signed paper arrived there was nowhere to log it. **A setting changed today
+    reached back and stranded a job sent last week.** One global flag answering *how does this firm
+    send agreements* when the real question is *how does THIS client sign*.
+  - **THE FIX IS THE RULE THE ESTIMATE ALREADY FOLLOWS: the value that decided a job is pinned to
+    the job.** `est.tcAlpha` exists so changing Settings cannot retroactively reprice a quote; this
+    is the same shape on the signature route.
+  - **⚠ TWO FUNCTIONS, AND COLLAPSING THEM IS THE DEFECT.** `esignAvailable()` is the capability —
+    *is DocuSign set up for this firm* — and is all Settings decides. `esignJobWatches(job)` is the
+    per-job fact, and is **the only one allowed to gate the manual recorder**. A test `lacks()`
+    each one any reference to the other's concern.
+  - **⚠ IT KEYS ON THE ENVELOPE, NOT THE PROVIDER NAME OR THE SETTING.** An envelope id exists only
+    on a job whose agreement actually went out through DocuSign AND whose send succeeded, so a
+    paper job answers false however Settings is configured, today or next year. Reverting it to
+    read the setting fails **8**. **⚠ And it stops once signed**, or a finished job would go on
+    suppressing a control it no longer needs.
+  - **THE OLD-SCHOOL ROUTE IS A BUTTON ON THE ROW**: `📄 Send as PDF to sign by hand`, an outline
+    secondary beside the filled primary — which keeps the band's one-filled-button rule. Offered
+    only while DocuSign would otherwise take the send, and **withdrawn once the packet has gone**,
+    because re-sending by the other route puts the same agreement in front of the client twice with
+    two things to sign.
+  - **⚠ THE DEFAULT IS THE E-SIGNATURE ROUTE and `paper` is the deliberate opt-out**, so a caller
+    that names no route gets the normal path rather than silently dropping to email.
+  - **⚠⚠ AND THE JOIN CAME BACK GREEN ON THE REVERT — the same gap this file records six times.**
+    `has(fn('docSpec'), 'via:')` matches whether the field carries the caller's choice or a
+    hardcoded `''`, and that is not cosmetic: **with `via` dropped, the paper button still renders,
+    still looks like a choice, and sends through DocuSign anyway** — an e-signature request the
+    concierge deliberately opted out of. Re-done driving the real `docSpec` into the real
+    `docProvider`, it fails 1.
+  - **5220 committed checks** (148 in `esign-docusign`). **All nine changes revert-verified, ZERO
+    green** — the envelope key fails 8, the per-job recorder gate 3, and the rest 1–2.
+  - **⚠ FIVE PRE-EXISTING ASSERTIONS PINNED THE GLOBAL MODEL AND BROKE CORRECTLY**, all in
+    `signature-record`: the rail gate, the modal guard and the driven row test each flipped the
+    global and expected every job to follow. Restated per-job — and the rewritten group now drives
+    **the stranded paper job specifically**, which is the case that was broken.
+  - **Verified in a browser**: with DocuSign on for the firm, the week-old paper job **keeps**
+    *Record the signed agreement* and its row says nothing about being watched; the envelope job
+    loses the button and its row reads *DocuSign is watching for it*; a fresh job offers both send
+    buttons whose real routes are `docusign` and `gmail`; switched off, the second button is absent
+    entirely. Overflow 0 at 1440 and 390, no page errors.
+
 - **⚠⚠ THE APP SIDE IS WIRED, AND IT COST ONE PROVIDER ENTRY — SLICE 4 PREDICTED THIS EXACT LINE.**
   Anthony, asked whether DocuSign should sit beside the Gmail route or take it over:
   *"docusign should replace it entirely."* So `docProvider` routes the agreement to a new

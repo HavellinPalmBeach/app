@@ -337,7 +337,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
-      'agreementReady', 'esignProviderKey', 'esignWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
+      'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal'];
     const DVARS = ['ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
@@ -429,7 +429,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'jobStageDoc', 'docReadiness',
             'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
-            'esignWatches', 'esignProviderKey'],
+            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
     });
     const REC = { estimate: { jobId: 7 }, approved: true };
@@ -576,7 +576,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = sandbox({
       fns: ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
-            'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignWatches',
+            'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'docSentAt', 'docDraftedAt', 'docKeyFor'],
       vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false },

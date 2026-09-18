@@ -41,7 +41,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // lifted verbatim from havellin.html — nothing is stubbed that the page itself has.
   const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
     'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'depositPaidTotal', 'depositTargetFor',
-    'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignWatches', 'field', 'fmtMoney',
+    'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
     'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
     // The document tray: the step's document comes from the ONE row→document map, behind the

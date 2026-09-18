@@ -59,7 +59,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // Slice 4: the rail reads where each document has been.
       'docSentAt', 'docDraftedAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
-      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignWatches',
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
     ],
     // The short names the horizontal track uses. A top-level var, so the sandbox has to
     // be told about it — without it `row()` throws and every check in the file is lost.

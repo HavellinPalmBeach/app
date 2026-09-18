@@ -341,7 +341,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // through an envelope asks for a signature on a document with no signature block and starts a
     // poll that can never complete.
     const pv = (key, gmail) => sandbox({
-      fns: ['docProvider', 'esignWatches', 'esignProviderKey'], vars: ['ESIGN_PROVIDERS'],
+      fns: ['docProvider', 'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'], vars: ['ESIGN_PROVIDERS'],
       stubs: { ESIGN_PROVIDER_KEY: key, gmailConfigured: () => gmail } });
     const on = pv('docusign', true);
     eq(on.docProvider({ kind: 'agreement' }), 'docusign', 'the agreement goes to DocuSign');
@@ -457,6 +457,106 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(call.slice(0, call.indexOf('}, function') + 400), '}, true)',
           '⚠⚠ the esignSend post passes no allowRetry');
   }
+
+  group('⚠⚠ THE OLD-SCHOOL ROUTE IS A PER-JOB BUTTON, NOT A SETTING');
+  {
+    // Anthony: *"if somebody is old school and we need to just send them a PDF to sign, we can do
+    // that. But we don't need to go into the app and change the settings overall. It's just sort of
+    // a one-off."* Right, and the global version was a live defect for about an hour — see the
+    // stranded-paper-job group below.
+    const rail = (key) => sandbox({
+      fns: ['jobTimelineActions', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+            'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+            'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
+            'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
+      vars: ['ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
+      stubs: { ESIGN_PROVIDER_KEY: key } });
+    const row = { key: 'agreement_sent', state: 'current' };
+    const job = { id: 9, agrSent: false, name: 'Jane', email: 'j@x.com' };
+
+    const on = rail('docusign').jobTimelineActions(row, job, null);
+    const paperBtn = on.secondary.filter((a) => /sign by hand/.test(a.label));
+    eq(paperBtn.length, 1, '⚠ with DocuSign available, the paper route is offered beside the primary');
+    has(paperBtn[0].call, "via:'paper'", 'and it names the route explicitly');
+    has(on.primary.label, 'Send', 'while the primary stays the normal send');
+
+    const off = rail('manual').jobTimelineActions(row, job, null);
+    eq(off.secondary.filter((a) => /sign by hand/.test(a.label)).length, 0,
+       '⚠ with DocuSign not set up there is no second button — one route means no choice to make');
+
+    // ⚠ ONCE IT HAS GONE, THE CHOICE HAS BEEN MADE. Re-sending by the other route would put the
+    // same agreement in front of the client twice, by two routes, with two things to sign.
+    const sent = { id: 9, agrSent: true, name: 'Jane', email: 'j@x.com',
+                   docState: { agreement: { provider: 'docusign', sentAt: '2026-09-17T20:00:00Z',
+                                            esign: { envelopeId: 'e1' } } } };
+    eq(rail('docusign').jobTimelineActions(row, sent, null).secondary
+         .filter((a) => /sign by hand/.test(a.label)).length, 0,
+       '⚠⚠ and it is withdrawn the moment the packet has gone');
+  }
+
+  group('⚠⚠ A SETTING CHANGED TODAY MUST NOT STRAND A JOB SENT LAST WEEK');
+  {
+    // ⚠⚠ THIS WAS LIVE FOR ABOUT AN HOUR AND ANTHONY'S QUESTION IS WHAT FOUND IT. With one global
+    // flag, switching DocuSign on removed *Record the signed agreement* from EVERY job — including
+    // one emailed to a client last week who is mailing a wet signature back. That job has no
+    // envelope and never will, so there was nowhere to log the signature when it arrived.
+    const c = sandbox({
+      fns: ['esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignAvailable', 'esignProviderKey'],
+      vars: ['ESIGN_PROVIDERS'], stubs: { ESIGN_PROVIDER_KEY: 'docusign' } });
+
+    ok(c.esignAvailable(), 'DocuSign is switched on for the firm');
+    eq(c.esignJobWatches({ id: 1, docState: { agreement: { provider: 'gmail', sentAt: 'x' } } }), false,
+       '⚠⚠ yet a job sent on paper is NOT being watched — it keeps its recorder');
+    eq(c.esignJobWatches({ id: 2 }), false, 'nor is a job with no agreement record at all');
+    eq(c.esignJobWatches(null), false, 'and a missing job does not throw');
+    eq(c.esignJobWatches({ id: 3, docState: { agreement: { esign: { envelopeId: 'e1' } } } }), true,
+       '⚠ only a job with a real envelope out is watched');
+
+    // ⚠ AND IT STOPS ONCE SIGNED, or a finished job would go on suppressing a control it no longer
+    // needs while reporting itself as watched.
+    eq(c.esignJobWatches({ id: 4, agrSigned: true,
+        docState: { agreement: { esign: { envelopeId: 'e1' },
+                                 sig: { signedBy: 'Tripp', signedOn: '2026-09-18' } } } }), false,
+       'a signed agreement is no longer being watched');
+
+    // ⚠ THE CAPABILITY QUESTION CANNOT ANSWER THE PER-JOB ONE, and a test pins that they are two
+    // functions rather than one with a parameter bolted on.
+    lacks(noComments(fn('esignJobWatches')), 'esignAvailable',
+          '⚠⚠ esignJobWatches never consults the global setting — that is the whole fix');
+    lacks(noComments(fn('esignAvailable')), 'docState',
+          'and the capability question never looks at a job');
+  }
+
+  group('⚠ docProvider FOLLOWS THE ROUTE CHOSEN FOR THIS SEND');
+  {
+    const c = sandbox({ fns: ['docProvider', 'esignAvailable', 'esignProviderKey'],
+                        vars: ['ESIGN_PROVIDERS'],
+                        stubs: { ESIGN_PROVIDER_KEY: 'docusign', gmailConfigured: () => true } });
+    eq(c.docProvider({ kind: 'agreement', via: 'paper' }), 'gmail',
+       '⚠⚠ paper forces the email route even with DocuSign on');
+    eq(c.docProvider({ kind: 'agreement', via: 'esign' }), 'docusign', 'esign takes the envelope');
+    eq(c.docProvider({ kind: 'agreement', via: '' }), 'docusign',
+       '⚠ and no named route defaults to the NORMAL path rather than silently dropping to email');
+    // ⚠⚠ DRIVEN THROUGH THE REAL docSpec, BECAUSE THE SOURCE CHECK HERE CAME BACK GREEN ON THE
+    // REVERT. `has(fn('docSpec'), 'via:')` matches whether the field carries the caller's choice or
+    // a hardcoded ''. And that is not a cosmetic gap: if docSpec drops `via`, the paper button
+    // still renders, still looks like a choice, and SENDS THROUGH DOCUSIGN ANYWAY — the client
+    // gets an e-signature request the concierge deliberately opted out of. The button and the
+    // router agreeing is the whole feature, so the test drives both ends.
+    const joined = sandbox({
+      fns: ['docSpec', 'docProvider', 'esignAvailable', 'esignProviderKey', 'docKeyFor', 'docNames',
+            'bestClientEmail', 'approvedEstimateFor'],
+      vars: ['ESIGN_PROVIDERS', 'DOC_ACTIONS', 'DOC_KIND_WORD', 'DOC_STAGE_WORD'],
+      stubs: { ESIGN_PROVIDER_KEY: 'docusign', gmailConfigured: () => true,
+               estimateStore: {}, currentInvStage: 'final', fmtDate2: (d) => String(d || '') } });
+    joined.jobs = [{ id: 12, hvlId: 'HVL-0012', name: 'Jane Doe', email: 'j@x.com' }];
+
+    eq(joined.docProvider(joined.docSpec('agreement', 12, { via: 'paper' })), 'gmail',
+       '⚠⚠ the paper button really does reach the email route — end to end through the real docSpec');
+    eq(joined.docProvider(joined.docSpec('agreement', 12, {})), 'docusign',
+       'and the normal send still takes the envelope');
+  }
+
 
   group('⚠⚠ NO SECRET IS IN THE REPOSITORY');
   {

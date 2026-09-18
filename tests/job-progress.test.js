@@ -378,7 +378,7 @@ const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
-      'agreementReady', 'esignProviderKey', 'esignWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
+      'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal'];
     const DVARS = ['ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',

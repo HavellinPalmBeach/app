@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 9:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 9:54pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2300,12 +2300,12 @@ body.no-smf .smf-col{display:none;}
 
     <div class="sec" style="margin-top:14px;">Agreement Signatures</div>
 
-    <label>How signed agreements come back</label>
+    <label>E-signature</label>
     <select id="set-esign-provider">
-      <option value="manual">Recorded by hand &mdash; wet or scanned signature</option>
-      <option value="docusign">DocuSign &mdash; sent for e-signature</option>
+      <option value="manual">Not set up &mdash; agreements go out by email</option>
+      <option value="docusign">DocuSign is set up for this firm</option>
     </select>
-    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">On <strong>DocuSign</strong>, pressing <strong>Send</strong> on the agreement mails the signing packet to the client for signature directly &mdash; there is no Gmail draft to review first, because DocuSign sends it. You countersign after they do, and the timeline turns green on its own when both signatures are in. <strong>Record the signed agreement</strong> disappears while this is on: a signature typed by hand would disagree with the envelope. Leave it on <strong>Recorded by hand</strong> to keep sending agreements by email and logging signatures yourself.</div>
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">This only says whether DocuSign is <strong>available</strong>. <strong>How each client signs is chosen per job</strong>, on the agreement step of the client&rsquo;s timeline: <strong>Send for signature</strong> mails the signing packet through DocuSign, or <strong>Send as PDF to sign by hand</strong> emails it the old way for a client who would rather sign on paper. Neither needs you to come back here. On a job sent through DocuSign the timeline turns green on its own once both signatures are in, and <strong>Record the signed agreement</strong> is hidden on <em>that job</em> &mdash; a signature typed by hand would disagree with the envelope. Every other job keeps it.</div>
 
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
 
@@ -11029,9 +11029,10 @@ function openSignatureModal(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   if (!job.agrSent) { _docNotice('warn', 'Record the agreement as sent first — there is nothing out to be signed yet.', jobId); return; }
-  if (esignWatches()) {
+  if (esignJobWatches(job)) {
     _docNotice('warn', ESIGN_PROVIDERS[esignProviderKey()].label
-      + ' is handling signatures on this account, so the app records them from there rather than by hand.', jobId);
+      + ' has this agreement out for signature, so the app records it from there rather than by hand.'
+      + ' A client signing on paper keeps this button — that is decided per job, when you send it.', jobId);
     return;
   }
   _sigJobId = jobId;
@@ -12319,7 +12320,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       sub: _jtSig
         ? (_jtSig.legacy ? 'Signed before the signature record — who signed it is not on file'
            : ((AGR_SIG_METHODS[_jtSig.how] || {}).label || ''))
-        : (esignWatches() ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it' : '') }),
+        : (esignJobWatches(job) ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it' : '') }),
 
     // ⚠ THESE THREE WERE DELIBERATELY ABSENT UNTIL NOW. Slice 0: "a row whose `done`
     // cannot be answered honestly is worse than no row" — nothing recorded that an
@@ -12723,7 +12724,10 @@ var DOC_SEND_PROVIDERS = {
 // signature block and start a poll that can never complete. The key test is deliberately
 // `spec.kind`, not a per-document flag, so a document added later has to opt in on purpose.
 function docProvider(spec) {
-  if (spec.kind === 'agreement' && esignWatches()) return 'docusign';
+  // ⚠ THE E-SIGNATURE ROUTE IS THE DEFAULT and `paper` is the deliberate opt-out, so a caller that
+  // names no route gets the normal path rather than silently dropping to email. The old-school
+  // client is a decision somebody makes on purpose, at the moment they press send.
+  if (spec.kind === 'agreement' && esignAvailable() && spec.via !== 'paper') return 'docusign';
   return gmailConfigured() ? 'gmail' : 'mailto';
 }
 
@@ -12902,7 +12906,29 @@ function esignProviderKey() {
   var p = ESIGN_PROVIDERS[k];
   return (p && p.live) ? k : 'manual';
 }
-function esignWatches() { return !!ESIGN_PROVIDERS[esignProviderKey()].watches; }
+// ⚠⚠ TWO QUESTIONS, AND COLLAPSING THEM INTO ONE WAS A LIVE DEFECT FOR ABOUT AN HOUR.
+// `esignAvailable()` asks *is DocuSign set up for this firm* — a standing fact, set once in
+// Settings. `esignJobWatches(job)` asks *is THIS agreement out for e-signature right now* — a
+// per-job fact, and the only one that may gate the manual recorder.
+//
+// ⚠⚠ THE DEFECT, FOUND BY ANTHONY ASKING WHY THE CHOICE WAS IN SETTINGS AT ALL: with one global
+// flag, turning DocuSign on REMOVED *Record the signed agreement* from every job — including one
+// posted to a client last week who is mailing a wet signature back. That job has no envelope and
+// never will, so there was no way to record the signature when it arrived. **A setting changed
+// today must never reach back and strand a job sent last week**, which is the same rule `tcAlpha`
+// already follows on the estimate: the value that priced a job is pinned to the job.
+function esignAvailable() { return !!ESIGN_PROVIDERS[esignProviderKey()].watches; }
+
+// ⚠ IT KEYS ON THE ENVELOPE, NOT ON THE SETTING. An envelope id only exists on a job whose
+// agreement actually went out through DocuSign and whose send succeeded — so a paper job answers
+// false however Settings is configured, today or next year, and keeps its recorder.
+// ⚠ AND IT STOPS ONCE THE AGREEMENT IS SIGNED, or a completed job would go on suppressing a
+// control it no longer needs while reporting itself as watched.
+function esignJobWatches(job) {
+  var st = (job && job.docState && job.docState.agreement) || null;
+  if (!st || !st.esign || !st.esign.envelopeId) return false;
+  return !isAgreementSigned(job);
+}
 
 // ⚠⚠ THE NAME AND THE EMAIL MUST COME FROM THE SAME PERSON, AND THIS IS NOT A STYLE POINT.
 // On an estate job the named client is DECEASED and has no email, which is why
@@ -13420,6 +13446,9 @@ function docSpec(kind, jobId, opt) {
     // flag and the documentation scope that `job.havellinEst` does not.
     est: approvedEstimateFor(jobId) || (rec && rec.estimate) || null,
     cfg: DOC_ACTIONS[kind],
+    // How this particular send should go out — 'paper' forces the email route on an agreement.
+    // Read by `docProvider` and by nothing else.
+    via: (opt && opt.via) || '',
     to: bestClientEmail(job),
     names: docNames(job, kind, { stage: stage })
   };
@@ -13680,7 +13709,19 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'agreement_sent':
-      if (live) out.primary = _jtSendAction(id, job, 'agreement', '', 'signing packet');
+      if (live) {
+        out.primary = _jtSendAction(id, job, 'agreement', '', 'signing packet');
+        // ⚠⚠ THE OLD-SCHOOL ROUTE IS A BUTTON, NOT A SETTING. Anthony: *"if somebody is old school
+        // and we need to just send them a PDF to sign, we can do that. But we don't need to go into
+        // the app and change the settings overall. It's just sort of a one-off."* Offered only
+        // while DocuSign would otherwise take this send, and only before it has gone — once an
+        // envelope is out, the choice has been made and re-sending by email would put the same
+        // agreement in front of the client twice by two routes.
+        if (esignAvailable() && !docSentAt(job, 'agreement')) {
+          out.secondary.push({ label: '&#128196; Send as PDF to sign by hand',
+                               call: 'docAction(' + id + ",'agreement','send',{via:'paper'})" });
+        }
+      }
       break;
 
     case 'agreement_signed':
@@ -13691,7 +13732,7 @@ function jobTimelineActions(row, job, estRec) {
       // provider disagree about whether a contract exists. Nothing on screen changes when
       // a provider is wired — the control simply stops being offered, exactly the way
       // Slice 4's confirming tap disappears on a provider with `needsHumanSend:false`.
-      if (live && !esignWatches()) out.primary = { label: '&#10003; Record the signed agreement', call: 'dashMarkAgreementSigned(' + id + ')' };
+      if (live && !esignJobWatches(job)) out.primary = { label: '&#10003; Record the signed agreement', call: 'dashMarkAgreementSigned(' + id + ')' };
       break;
 
     case 'deposit_invoiced':
