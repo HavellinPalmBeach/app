@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-17b';
+var BACKEND_VERSION = '2026-09-18a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive'
@@ -2132,3 +2132,127 @@ function testEsignAuth() {
   Logger.log('ALL GOOD — DocuSign is reachable and consented.');
   return true;
 }
+
+// ─── WHAT WILL THIS ACCOUNT ACTUALLY ACCEPT? ─────────────────────────────────────
+// ⚠⚠ THIS EXISTS BECAUSE A SCREENSHOT OF THE FIELD PALETTE IS NOT AN ANSWER, AND THE
+// THREE QUESTIONS IT LOOKS LIKE IT ANSWERS ARE DIFFERENT QUESTIONS.
+//   (1) which FIELD TYPES the drag-and-drop sender UI offers;
+//   (2) which TAB TYPES the REST API accepts on this plan;
+//   (3) whether CONDITIONAL LOGIC on a tab is permitted.
+// Nothing here ever touches the drag-and-drop palette — every envelope in this file is built
+// by API — so (1) is at best a proxy for (2). And (3) is not a field type at all: it is a
+// property ON a tab, so it appears in no palette screenshot either way. Measure it.
+//
+// ⚠ ONE CAPABILITY PER ENVELOPE, DELIBERATELY. Putting all four in one draft and reading a
+// single pass/fail says nothing about WHICH one the account refused — the same reason
+// `testDriveThumbnails` probes its three sources separately and prints the size of each.
+// The baseline case is the control: if IT fails, the probe is broken, not the account.
+//
+// ⚠ TABS ARE PLACED BY x/y HERE AND BY ANCHOR EVERYWHERE ELSE, AND THAT IS THE POINT.
+// This asks ONE question — will the account take this tab type — so the anchor text layer is
+// deliberately removed as a variable. Anchor placement is a separate question answered by a
+// real envelope on a real agreement.
+//
+// ⚠ EVERY ENVELOPE IS status:'created' — A DRAFT. Nothing is mailed to anyone, so this is
+// safe against a live account, and each draft is deleted again at the end. Editor-only and
+// argument-free, like testEsignAuth: the Run menu passes no arguments.
+function testEsignTabs() {
+  var missing = _dsMissingProps();
+  if (missing.length) {
+    Logger.log('NOT CONFIGURED — add these Script Properties: ' + missing.join(', '));
+    return false;
+  }
+  Logger.log('Environment : ' + (_dsIsDemo() ? 'DEMO / sandbox' : 'PRODUCTION'));
+
+  var pdf = htmlToPdfBase64('<html><body><p>Havellin tab capability probe.</p></body></html>');
+  if (!pdf.ok) { Logger.log('FAILED to build the probe PDF — ' + pdf.error); return false; }
+
+  // ⚠ ADDRESSED TO OURSELVES, NOT A PLACEHOLDER. A draft can be sent by hand from the
+  // DocuSign web console by anyone who finds it; addressed to the firm, the worst case is
+  // an odd email to ourselves rather than a probe document reaching a client.
+  var me = { email: 'agreements@havellinpalmbeach.com', name: 'Havellin Palm Beach' };
+
+  function tabsFor(kind) {
+    var base = { signHereTabs: [{ documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' }] };
+    if (kind === 'baseline') return base;
+
+    if (kind === 'optional signature') {
+      return { signHereTabs: [
+        { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' },
+        { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '300', optional: 'true' }
+      ]};
+    }
+
+    if (kind === 'radio group') {
+      return {
+        signHereTabs: base.signHereTabs,
+        radioGroupTabs: [{
+          documentId: '1', groupName: 'marketing_consent', requireInitialOnSharedChange: 'false',
+          radios: [
+            { pageNumber: '1', xPosition: '100', yPosition: '350', value: 'authorize', required: 'true' },
+            { pageNumber: '1', xPosition: '100', yPosition: '380', value: 'decline',   required: 'true' }
+          ]
+        }]
+      };
+    }
+
+    if (kind === 'conditional signature') {
+      return {
+        signHereTabs: [
+          { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' },
+          { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '420',
+            tabLabel: 'marketing_signature', optional: 'true',
+            conditionalParentLabel: 'marketing_consent', conditionalParentValue: 'authorize' }
+        ],
+        radioGroupTabs: [{
+          documentId: '1', groupName: 'marketing_consent',
+          radios: [
+            { pageNumber: '1', xPosition: '100', yPosition: '350', value: 'authorize', required: 'true' },
+            { pageNumber: '1', xPosition: '100', yPosition: '380', value: 'decline',   required: 'true' }
+          ]
+        }]
+      };
+    }
+    return base;
+  }
+
+  var KINDS = ['baseline', 'optional signature', 'radio group', 'conditional signature'];
+  var drafts = [], verdict = {};
+
+  KINDS.forEach(function (kind) {
+    var env = {
+      emailSubject: 'Havellin capability probe — ' + kind + ' (draft, never sent)',
+      documents: [{ documentBase64: pdf.base64, name: 'probe.pdf', fileExtension: 'pdf', documentId: '1' }],
+      recipients: { signers: [{
+        email: me.email, name: me.name, recipientId: '1', routingOrder: '1', tabs: tabsFor(kind)
+      }]},
+      status: 'created'   // ⚠ DRAFT. Never 'sent'.
+    };
+    var res = _dsApi('post', '/envelopes', env);
+    if (res.ok) {
+      verdict[kind] = 'ACCEPTED';
+      if (res.body.envelopeId) drafts.push(res.body.envelopeId);
+    } else {
+      var b = res.body || {};
+      verdict[kind] = 'REFUSED (HTTP ' + res.code + ') — ' + (b.message || b.errorCode || JSON.stringify(b).slice(0, 200));
+    }
+    Logger.log(_pad(kind, 24) + ' : ' + verdict[kind]);
+  });
+
+  // ⚠ CLEAN UP, AND SAY SO IF IT FAILS. A probe that leaves drafts behind on every run turns
+  // the account's envelope list into a bin nobody trusts.
+  drafts.forEach(function (id) {
+    var del = _dsApi('put', '/envelopes/' + encodeURIComponent(id), { status: 'voided', voidedReason: 'Capability probe — never sent' });
+    if (!del.ok) Logger.log('  (could not void draft ' + id + ' — remove it by hand)');
+  });
+
+  Logger.log('');
+  if (verdict['baseline'] !== 'ACCEPTED') {
+    Logger.log('⚠ THE BASELINE FAILED, so read nothing into the other three — the probe itself is the problem, not the plan.');
+    return false;
+  }
+  Logger.log('Baseline passed, so the three results above are real answers about this account.');
+  return verdict;
+}
+
+function _pad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
