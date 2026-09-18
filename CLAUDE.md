@@ -110,7 +110,21 @@ actually send out an agreement for signature."*
   call to `esignAnchor` — `agreement-fees`, `agreement-rates` and `prep-declutter`. Mechanical, and the
   right failure. **⚠ They were found by SEARCHING every pinned list for the builders rather than by
   re-running and fixing one failure at a time**, which this file records costing a round.
-- **⚠⚠ WHAT IS NOT PROVEN, AND IT IS THE NEXT THING: NOTHING HERE HAS EVER TALKED TO DOCUSIGN.** The
+- **✅ AUTH IS PROVEN LIVE (2026-09-17, 8:47pm ET).** `testEsignAuth` returns *ALL GOOD — DocuSign is
+  reachable and consented*, resolving **Havellin Palm Beach, LLC** against the demo environment. So the
+  JWT, the RS256 signature, the PKCS#1→PKCS#8 conversion, the token exchange and the consent grant are
+  all confirmed against the real service, not just in shape.
+  - **⚠ THE ROAD THERE WAS FOUR WRONG GUESSES, AND THE ORDER MATTERS FOR ANYONE DEBUGGING THIS AGAIN.**
+    `no_valid_keys_or_signatures` persisted through a keypair regeneration, so it read as a code fault.
+    It was not: the signature was genuinely failing against a stale public key, and **the error changed
+    to `consent_required` the moment a truly fresh keypair was in place** — which is how we learned the
+    signing half had started working. **Two gates, one error message each, and the second is invisible
+    until the first clears.** Do not read a persistent signature error as proof the code is wrong.
+  - **⚠ WHAT FINALLY SETTLED IT WAS MEASUREMENT, NOT REASONING.** `dsKeyReport` (the key is intact,
+    2048-bit, here is the public half) plus a local end-to-end crypto check proving the signing chain
+    verifies against its own derived public key. Both were built only after three serial guesses had
+    each been wrong, which is three rounds later than they should have been.
+- **⚠⚠ WHAT IS STILL NOT PROVEN: NO ENVELOPE HAS EVER BEEN SENT.** The
   egress proxy blocks `docusign.com` from the build environment, so the JWT, the envelope and the status
   read are verified in SHAPE and not against the live API. Two things specifically cannot be asserted
   from here and need one sandbox run: whether Apps Script's `getAs('application/pdf')` preserves white
