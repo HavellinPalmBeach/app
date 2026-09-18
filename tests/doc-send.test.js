@@ -82,8 +82,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(decl('GMAIL_SCOPE'), 'gmail.compose', 'the scope creates drafts');
     lacks(decl('GMAIL_SCOPE'), 'gmail.send', 'and cannot put mail on the wire');
     const prov = decl('DOC_SEND_PROVIDERS');
-    eq((prov.match(/needsHumanSend: true/g) || []).length, 2, 'both providers of today need a person');
-    lacks(prov, 'needsHumanSend: false', 'and none claims otherwise');
+    eq((prov.match(/needsHumanSend: true/g) || []).length, 2,
+       'both EMAIL providers need a person — neither Gmail nor mailto can put mail on the wire');
+
+    // ⚠⚠ RESTATED 2026-09-17, WHEN DOCUSIGN LANDED. This asserted `needsHumanSend: false` appeared
+    // NOWHERE, which was true while every provider was an email client. It is no longer the
+    // requirement, and the comment above this group predicted exactly that: *"when an e-signature
+    // or a server-side sender arrives, that provider sets needsHumanSend:false and the tap
+    // disappears on its own."* The real rule is the CONVERSE — a provider may only claim `false`
+    // if it genuinely delivers without a person, which for now is DocuSign alone.
+    const selfSending = [...prov.matchAll(/(\w+): \{\n\s*needsHumanSend: false/g)].map((m) => m[1]);
+    eq(selfSending, ['docusign'],
+       '⚠⚠ exactly one provider sends without a human, and it is the e-signature one. A mail '
+       + 'client claiming this would turn the rail green over a draft nobody opened');
 
     // ⚠ IT IS A PROPERTY OF THE PROVIDER, NEVER OF THE DOCUMENT — which is what makes the
     // tap disappear on its own when a server-side sender or an e-signature provider

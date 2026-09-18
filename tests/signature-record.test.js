@@ -188,20 +188,34 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('the provider table, and why only one of them is live');
+  group('the provider table, and what `live` is allowed to mean');
   {
     const t = decl('ESIGN_PROVIDERS');
     has(t, 'manual:', 'manual is a provider like any other');
     has(t, 'watches: false', 'and does not watch');
     has(t, 'docusign:', 'DocuSign is declared');
-    has(t, 'live: false', '⚠ and NOT live — there is no account, no credentials, no backend action');
-    // ⚠ An unknown or not-live key falls back to manual rather than standing the only
+
+    // ⚠⚠ RESTATED 2026-09-17, WHEN DOCUSIGN WENT LIVE. This pinned `live: false` with the
+    // reason "there is no account, no credentials, no backend action" — all three of which
+    // now exist, and testEsignAuth resolves the Havellin account against the sandbox. The
+    // requirement was never the literal `false`; it is that a provider which STANDS THE
+    // MANUAL BUTTON DOWN can actually deliver in its place. That is what is asserted now.
+    const provs = new Function('return ' + decl('ESIGN_PROVIDERS').replace(/^var\s+\w+\s*=\s*/, '').replace(/;\s*$/, ''))();
+    Object.keys(provs).filter((k) => provs[k].live && provs[k].watches).forEach((k) => {
+      has(src, k + ': {\n    needsHumanSend: false',
+          '⚠⚠ live provider `' + k + '` watches for signatures, so it must have a send path that '
+          + 'actually delivers — standing the manual control down and replacing it with nothing is '
+          + 'the one state this table must never produce');
+    });
+
+    // ⚠ An unknown or not-live key still falls back to manual rather than standing the only
     // working control down. A typo in Settings must not make signatures unrecordable.
-    const ctx = box({ ESIGN_PROVIDER_KEY: 'docusign' });
-    eq(ctx.esignProviderKey(), 'manual', 'a declared-but-not-live provider falls back to manual');
-    eq(ctx.esignWatches(), false, 'so nothing is standing down on a provider that cannot deliver');
     const typo = box({ ESIGN_PROVIDER_KEY: 'docsign' });
-    eq(typo.esignProviderKey(), 'manual', 'and so does a typo');
+    eq(typo.esignProviderKey(), 'manual', 'a typo falls back to manual');
+    eq(typo.esignWatches(), false, 'and nothing stands down on it');
+    eq(box({ ESIGN_PROVIDER_KEY: '' }).esignProviderKey(), 'manual', 'so does an empty setting');
+    eq(box({ ESIGN_PROVIDER_KEY: 'docusign' }).esignProviderKey(), 'docusign',
+       '⚠ and a real, live provider IS selected — this is the line that turns DocuSign on');
     // Flipping it on is one field.
     has(src, "localStorage.getItem('hav_esign_provider')", 'the key is a Settings value, not a constant');
     has(src, 'hav_esign_provider', 'kept through a device clear, like the other endpoint settings');

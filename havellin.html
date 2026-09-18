@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 8:48pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 9:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2297,6 +2297,15 @@ body.no-smf .smf-col{display:none;}
     <label>Google OAuth Client ID</label>
     <input type="text" id="set-gmail-client-id" placeholder="1234567890-abc123.apps.googleusercontent.com">
     <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Lets <strong>Email to Client</strong> build the estimate as a formatted HTML email with the PDF attached, as a <strong>draft in your own Gmail</strong> — so it sends from whoever is signed in on this device and lands in their Sent folder. The firm&rsquo;s client is already filled in &mdash; leave it alone unless you are pointing this device at a different Google Workspace. Clearing the box restores the default. <em>This is not a secret; a browser client id is public by design and the authorized origin is what protects it.</em></div>
+
+    <div class="sec" style="margin-top:14px;">Agreement Signatures</div>
+
+    <label>How signed agreements come back</label>
+    <select id="set-esign-provider">
+      <option value="manual">Recorded by hand &mdash; wet or scanned signature</option>
+      <option value="docusign">DocuSign &mdash; sent for e-signature</option>
+    </select>
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">On <strong>DocuSign</strong>, pressing <strong>Send</strong> on the agreement mails the signing packet to the client for signature directly &mdash; there is no Gmail draft to review first, because DocuSign sends it. You countersign after they do, and the timeline turns green on its own when both signatures are in. <strong>Record the signed agreement</strong> disappears while this is on: a signature typed by hand would disagree with the envelope. Leave it on <strong>Recorded by hand</strong> to keep sending agreements by email and logging signatures yourself.</div>
 
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
 
@@ -12641,6 +12650,55 @@ var DOC_SEND_PROVIDERS = {
   // failed draft all land here, and a plain compose window that definitely opens beats a
   // button that reports an error. It carries no attachment — RFC 6068 cannot — so the
   // notice says so rather than letting the body claim one.
+  // ⚠⚠ DOCUSIGN REPLACES GMAIL ON THE AGREEMENT ENTIRELY — Anthony, 2026-09-17, asked
+  // whether it should sit beside the Gmail route or take it over: *"docusign should replace it
+  // entirely."* So `docProvider` routes the agreement here and there is no choice on screen. The
+  // Gmail entry above is not deleted: it is what runs when the e-signature provider is `manual`,
+  // which is the default and the fallback if DocuSign is ever unconfigured or switched off.
+  //
+  // ⚠ `needsHumanSend:false` IS THE WHOLE INTEGRATION, and Slice 4 predicted this exact line:
+  // DocuSign sends the envelope itself, so there is nothing for a person to press afterwards and
+  // the confirming tap disappears on its own. `docRecordSent` already writes `sentAt` directly
+  // when this is false, and `_jtSendAction` already withholds the tap. No screen changed.
+  docusign: {
+    needsHumanSend: false,
+    carriesAttachment: true,
+    send: function (spec, pdf, cb) {
+      // ⚠⚠ NO PDF MEANS NO ENVELOPE, AND THIS ARM MUST NOT BE MADE LENIENT. Gmail can honestly
+      // create a draft with the attachment missing and say so — a person reads it before it goes.
+      // An envelope with no document is a signature request for nothing, mailed to the client
+      // automatically with nobody in between. Refuse instead.
+      if (!pdf) { cb(false, 'the agreement PDF could not be built, so there is no document to send for signature'); return; }
+      var who = esignSigner(spec.job);
+      if (!who.email) { cb(false, 'no client email on this job'); return; }
+      if (!who.name)  { cb(false, 'no client or representative name on this job — DocuSign needs someone to address the envelope to'); return; }
+
+      if (!SHEETS_SYNC_URL) { cb(false, 'No Apps Script URL configured — add it in Settings.'); return; }
+
+      // ⚠⚠ NO AUTOMATIC RETRY, AND THIS IS THE SAME RULE `addVendor` FOLLOWS FOR THE SAME REASON:
+      // a failed POST never reveals whether it reached Google. Re-sending an append duplicates a
+      // directory row; re-sending this MAILS THE CLIENT A SECOND SIGNATURE REQUEST for the same
+      // agreement. The fourth argument is deliberately omitted, so `_appsScriptPost` does not retry.
+      _appsScriptPost(SHEETS_SYNC_URL, {
+        action: 'esignSend',
+        pdfBase64: pdf,
+        filename: spec.names.attachment,
+        subject: spec.cfg.subject(spec),
+        signerName: who.name,
+        signerEmail: who.email,
+        hvlId: spec.job.hvlId || ''
+      }, function (ok, d) {
+        if (!ok || !d || !d.ok) {
+          var why = (d && (d.error || d.message)) || 'the request did not reach DocuSign';
+          // ⚠ A CONSENT FAILURE CARRIES ITS OWN FIX AND MUST NOT BE FLATTENED INTO "it failed".
+          if (d && d.needsConsent && d.consentUrl) why += ' — open this once and click Allow: ' + d.consentUrl;
+          cb(false, why);
+          return;
+        }
+        cb(true, null, '', { envelopeId: d.envelopeId || '', esignStatus: d.status || 'sent' });
+      });
+    }
+  },
   mailto: {
     needsHumanSend: true,
     // ⚠ RFC 6068 CARRIES PLAIN TEXT AND NOTHING ELSE, and this is not a detail to leave
@@ -12659,7 +12717,15 @@ var DOC_SEND_PROVIDERS = {
   }
 };
 
-function docProvider(spec) { return gmailConfigured() ? 'gmail' : 'mailto'; }
+// ⚠⚠ ONLY THE AGREEMENT GOES THROUGH DOCUSIGN, and that is not an oversight. DocuSign is a
+// SIGNATURE service; an estimate and an invoice are things a client reads, not things they sign,
+// and routing them through an envelope would ask for a signature on a document that has no
+// signature block and start a poll that can never complete. The key test is deliberately
+// `spec.kind`, not a per-document flag, so a document added later has to opt in on purpose.
+function docProvider(spec) {
+  if (spec.kind === 'agreement' && esignWatches()) return 'docusign';
+  return gmailConfigured() ? 'gmail' : 'mailto';
+}
 
 // ─── SENDING ─────────────────────────────────────────────────────────────────
 var _docBusy = null;   // {jobId, docKey} — one send at a time, app-wide
@@ -12682,13 +12748,18 @@ function docSend(spec) {
   var watchdog = setTimeout(function () {
     if (!_docBusy) return;
     _docBusy = null;
-    _docNotice('warn', 'That took too long to answer. A draft may already have been created — check your Gmail drafts before pressing send again.', spec.job.id);
+    // ⚠ THE WATCHDOG NAMES WHERE TO LOOK, AND THAT DIFFERS BY PROVIDER. Pressing send again after
+    // a DocuSign timeout mails the client a SECOND signature request, so it says to check DocuSign
+    // rather than a Gmail drafts folder that will be empty.
+    _docNotice('warn', provider === 'docusign'
+      ? 'That took too long to answer. An envelope may already have been created and sent — check DocuSign before pressing send again, or the client gets a second signature request.'
+      : 'That took too long to answer. A draft may already have been created — check your Gmail drafts before pressing send again.', spec.job.id);
   }, 45000);
 
   docPdfBase64(spec, html, function (pdf, pdfErr, pdfErrKind) {
     if (!_docBusy) return;   // the watchdog already gave up and said so
     _dashSendState(spec.key, 'Creating draft…');
-    DOC_SEND_PROVIDERS[provider].send(spec, pdf, function (ok, err, draftUrl) {
+    DOC_SEND_PROVIDERS[provider].send(spec, pdf, function (ok, err, draftUrl, extra) {
       clearTimeout(watchdog);
       _docBusy = null;
       if (!ok) {
@@ -12715,15 +12786,22 @@ function docSend(spec) {
       // A mailto: cannot carry one however well the conversion went, and telling somebody
       // the document is attached when it is not is worse than telling them nothing.
       var attached = DOC_SEND_PROVIDERS[provider].carriesAttachment && !!pdf;
-      var msg = (provider === 'gmail'
+      // ⚠ DOCUSIGN IS PAST TENSE AND THE OTHER TWO ARE NOT. Gmail leaves a draft for a person to
+      // read and send; DocuSign has already emailed the client by the time this runs. A message
+      // that said "draft created" over a sent envelope would invite somebody to go looking for a
+      // draft that does not exist — and worse, to send the agreement a second time by hand.
+      var msg = (provider === 'docusign'
+          ? ('Sent to ' + esignSigner(spec.job).name + ' for signature through DocuSign')
+        : provider === 'gmail'
           ? ('Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox'))
           : 'Email opened')
-        + (attached ? ' with the PDF attached'
+        + (provider === 'docusign' ? ''
+           : attached ? ' with the PDF attached'
            : (DOC_SEND_PROVIDERS[provider].carriesAttachment
               ? ' — WITHOUT the PDF. ' + _pdfFailAdviceText(pdfErrKind) + (pdfErr ? ' The server said: ' + pdfErr + '.' : '')
               : ' — a plain email carries NO attachment, so attach a printed copy before sending'))
         + '. ' + (needsTap ? 'Read it, send it, then tap “I’ve sent it”.' : '');
-      docRecordSent(spec, { provider: provider, draftUrl: draftUrl || '', pdfOk: attached });
+      docRecordSent(spec, { provider: provider, draftUrl: draftUrl || '', pdfOk: attached, extra: extra || null });
       // ⚠ SENDING FILES IT. A document that has gone to a client is one the firm must be
       // able to produce afterwards, and until Slice 5 only the estimate managed that: the
       // agreement and packet filed on approval, and the INVOICE filed nowhere unless
@@ -12739,7 +12817,7 @@ function docSend(spec) {
                 spec.stage ? { stage: spec.stage, auto: true } : { auto: true });
       _docNotice(attached ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
-      showSyncBadge(provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
+      showSyncBadge(provider === 'docusign' ? 'Sent for signature ✓' : provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
     });
   });
   return true;
@@ -12808,9 +12886,13 @@ function esignAnchor(tag) {
 // already records once (`generateStripeLink`, 2026-07-30). What it IS for is the SHAPE —
 // `watches:true` is what stands the manual button down, so wiring a real provider changes
 // this table and nothing else.
+// ⚠ `live:true` DOES NOT TURN DOCUSIGN ON — `hav_esign_provider` does, and it defaults to
+// `manual`. This flag only says the integration EXISTS and may be selected; a device that has
+// not opted in behaves exactly as it did before. Proven against the sandbox 2026-09-17:
+// testEsignAuth returns ALL GOOD and resolves the Havellin account.
 var ESIGN_PROVIDERS = {
   manual:   { label: 'Recorded by hand', watches: false, live: true },
-  docusign: { label: 'DocuSign',         watches: true,  live: false }
+  docusign: { label: 'DocuSign',         watches: true,  live: true }
 };
 
 // ⚠ READS SETTINGS, SO IT IS ONE FLIP TO TURN ON — and falls back to `manual` for any value
@@ -12821,6 +12903,30 @@ function esignProviderKey() {
   return (p && p.live) ? k : 'manual';
 }
 function esignWatches() { return !!ESIGN_PROVIDERS[esignProviderKey()].watches; }
+
+// ⚠⚠ THE NAME AND THE EMAIL MUST COME FROM THE SAME PERSON, AND THIS IS NOT A STYLE POINT.
+// On an estate job the named client is DECEASED and has no email, which is why
+// `bestClientEmail` falls back to the representative and then to counsel. Pairing that
+// address with `job.name` would put a dead person's name on a signature request for their
+// own estate, delivered to their executor's inbox. So this walks the SAME ladder in the SAME
+// order and returns both halves together — the rule `bestClientGreetingName` already exists
+// to enforce on the greeting line, applied where it decides who a contract is addressed to.
+//
+// ⚠ IT RETURNS A FULL NAME, NOT A FIRST NAME. `bestClientGreetingName` is for "Hi Tripp";
+// DocuSign prints this on the envelope and on the certificate of completion.
+//
+// ⚠ AND NO ROLE SUFFIX — `expectedSignerName` appends "(Trustee)" for the recorder's prefill,
+// which is right on our own screen and wrong as a recipient name on a legal envelope.
+function esignSigner(job) {
+  if (!job) return { name: '', email: '' };
+  if (job.email && job.email.trim())
+    return { name: (job.name || '').trim(), email: job.email.trim() };
+  if (job.executorEmail && job.executorEmail.trim())
+    return { name: (job.executor || '').trim(), email: job.executorEmail.trim() };
+  if (job.probateAttyEmail && job.probateAttyEmail.trim())
+    return { name: (job.probateAttyName || '').trim(), email: job.probateAttyEmail.trim() };
+  return { name: '', email: '' };
+}
 
 // The record itself. Returns null when nothing is signed — a caller asking "who signed
 // this?" on an unsigned agreement must get nothing, not an empty shape that reads as one.
@@ -13022,6 +13128,15 @@ function docRecordSent(spec, res) {
   st.provider = res.provider;
   st.draftUrl = res.draftUrl || '';
   st.pdfOk = !!res.pdfOk;
+  // ⚠⚠ THE ENVELOPE ID IS WRITTEN HERE AND NOWHERE ELSE, because this is the one place that
+  // already knows a send SUCCEEDED. `outstandingEnvelopes()` has filtered on `st.esign.envelopeId`
+  // since Slice 6 and, until this line existed, nothing anywhere wrote one — so it returned `[]`
+  // on every job forever and the status poll it was built for had nothing to poll.
+  if (res.extra && res.extra.envelopeId) {
+    st.esign = { envelopeId: res.extra.envelopeId,
+                 status: res.extra.esignStatus || 'sent',
+                 checkedAt: st.draftedAt };
+  }
   if (!DOC_SEND_PROVIDERS[res.provider].needsHumanSend) {
     st.sentAt = st.draftedAt;
     st.sentBy = st.draftedBy;
@@ -27090,6 +27205,10 @@ function openSettings() {
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
   var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
   var gcEl = document.getElementById('set-gmail-client-id'); if (gcEl) gcEl.value = GMAIL_CLIENT_ID;
+  // ⚠ IT SHOWS WHAT IS ACTUALLY IN EFFECT, NOT WHAT IS STORED. `esignProviderKey()` falls back to
+  // `manual` for any key the table does not know or that is not live, so a stale or misspelt
+  // setting must not render as though DocuSign were running.
+  var esEl = document.getElementById('set-esign-provider'); if (esEl) esEl.value = esignProviderKey();
   setVendorDirStatus(VENDOR_SYNC_URL ? (vendorDirectory.length ? ('✓ ' + vendorDirectory.length + ' vendors loaded') : 'URL set — click Reload directory to load') : 'No URL set yet', false);
   var rUrlEl = document.getElementById('set-referral-url'); if (rUrlEl) rUrlEl.value = REFERRAL_SYNC_URL;
   setReferralDirStatus(REFERRAL_SYNC_URL ? (referralDirectory.length ? ('✓ ' + referralDirectory.length + ' partners loaded') : 'URL set — click Reload partners to load') : 'No URL set yet', false);
@@ -27169,6 +27288,8 @@ function saveSettings() {
   // reads as "use the normal one", and someone who really wants it off can say so in Settings.
   var gcEl2 = document.getElementById('set-gmail-client-id');
   if (gcEl2) GMAIL_CLIENT_ID = gcEl2.value.trim() || GMAIL_CLIENT_ID_DEFAULT;
+  var esEl2 = document.getElementById('set-esign-provider');
+  if (esEl2) ESIGN_PROVIDER_KEY = ESIGN_PROVIDERS[esEl2.value] ? esEl2.value : 'manual';
   var rUrlEl2 = document.getElementById('set-referral-url'); if (rUrlEl2) REFERRAL_SYNC_URL = rUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
@@ -27194,6 +27315,7 @@ function saveSettings() {
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
     localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
     localStorage.setItem('hav_gmail_client_id', GMAIL_CLIENT_ID);
+    localStorage.setItem('hav_esign_provider', ESIGN_PROVIDER_KEY);
     localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
     localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));

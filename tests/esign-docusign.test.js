@@ -23,7 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { sandbox, source, fn, matchBrace } = require('./harness');
+const { sandbox, source, fn, decl, matchBrace } = require('./harness');
 
 const GS = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8');
 
@@ -331,6 +331,131 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c._dsDerLen(1191),  [0x82, 0x04, 0xa7],       'a 2048-bit key body');
     eq(c._dsDerLen(65535), [0x82, 0xff, 0xff],       'and holds to 65535');
     eq(c._dsDerLen(65536), [0x83, 0x01, 0x00, 0x00], 'beyond that, three bytes');
+  }
+
+  group('⚠⚠ ONLY THE AGREEMENT GOES THROUGH DOCUSIGN');
+  {
+    // Anthony, 2026-09-17, asked whether DocuSign should sit beside the Gmail route or take it
+    // over: *"docusign should replace it entirely."* So the agreement routes here and there is no
+    // choice on screen — but an estimate and an invoice are documents a client READS. Routing one
+    // through an envelope asks for a signature on a document with no signature block and starts a
+    // poll that can never complete.
+    const pv = (key, gmail) => sandbox({
+      fns: ['docProvider', 'esignWatches', 'esignProviderKey'], vars: ['ESIGN_PROVIDERS'],
+      stubs: { ESIGN_PROVIDER_KEY: key, gmailConfigured: () => gmail } });
+    const on = pv('docusign', true);
+    eq(on.docProvider({ kind: 'agreement' }), 'docusign', 'the agreement goes to DocuSign');
+    eq(on.docProvider({ kind: 'estimate' }), 'gmail', '⚠⚠ the estimate does NOT — it is read, not signed');
+    eq(on.docProvider({ kind: 'invoice' }), 'gmail', '⚠⚠ nor an invoice');
+    eq(pv('manual', true).docProvider({ kind: 'agreement' }), 'gmail',
+       '⚠ with the provider off the agreement goes back to Gmail — the path is unreachable, not deleted');
+    eq(pv('manual', false).docProvider({ kind: 'agreement' }), 'mailto',
+       'and the mailto fallback still survives beneath it');
+  }
+
+  group('⚠⚠ THE SIGNER NAME AND EMAIL COME FROM THE SAME PERSON');
+  {
+    // ⚠⚠ ON AN ESTATE JOB THE NAMED CLIENT IS DECEASED. bestClientEmail correctly falls back to the
+    // representative, then counsel — so pairing that address with job.name would put a dead
+    // person's name on a signature request for their own estate, sent to their executor's inbox.
+    const c = sandbox({ fns: ['esignSigner'], vars: [] });
+    eq(c.esignSigner({ name: 'Jane Doe', email: 'jane@x.com' }),
+       { name: 'Jane Doe', email: 'jane@x.com' }, 'a living client signs for themselves');
+
+    const sig = c.esignSigner({ name: 'William Butler', email: '', executor: 'Tripp Butler',
+                                executorRole: 'Trustee', executorEmail: 'tripp@x.com' });
+    eq(sig.email, 'tripp@x.com', 'the estate envelope goes to the representative');
+    eq(sig.name, 'Tripp Butler', '⚠⚠ addressed to the REPRESENTATIVE, never the deceased client');
+    lacks(sig.name, 'Trustee',
+          '⚠ and with no role suffix — expectedSignerName appends one for our own prefill, which is '
+          + 'wrong as a recipient name on a legal envelope');
+
+    eq(c.esignSigner({ name: 'X', email: '', executorEmail: '', probateAttyName: 'A. Counsel',
+                       probateAttyEmail: 'a@law.com' }),
+       { name: 'A. Counsel', email: 'a@law.com' }, 'counsel is the last rung, name and address together');
+    eq(c.esignSigner({ name: 'X' }), { name: '', email: '' },
+       '⚠ no email means no signer at all rather than a name with nowhere to send it');
+    eq(c.esignSigner(null), { name: '', email: '' }, 'a missing job does not throw');
+  }
+
+  group('⚠⚠ THE SEND WRITES AN ENVELOPE ID THAT outstandingEnvelopes ACTUALLY FINDS');
+  {
+    // ⚠⚠ THIS IS THE JOIN AND IT IS THE WHOLE POINT. outstandingEnvelopes() has filtered on
+    // st.esign.envelopeId since Slice 6 and NOTHING WROTE ONE, so it returned [] on every job
+    // forever and the poll it was built for had nothing to poll. Driving the sender and the reader
+    // separately would not have noticed; this drives the real chain end to end.
+    let posted = null;
+    const c = sandbox({
+      fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
+            'docState', '_jobTouch', '_actor', 'esignSigner'],
+      vars: ['DOC_SEND_PROVIDERS'],
+      stubs: {
+        SHEETS_SYNC_URL: 'https://script.example/exec',
+        _appsScriptPost: (url, body, cb) => { posted = body; cb(true, { ok: true, envelopeId: 'env-99', status: 'sent' }); },
+        saveJobs() {}, syncJobToSheets() {}, agrApprovedBy: 'Anthony Graziano',
+      },
+    });
+    const job = { id: 5, hvlId: 'HVL-0007', agrSent: true, name: 'Jane Doe', email: 'jane@x.com' };
+    c.jobs = [job];
+    const spec = { job: job, kind: 'agreement', key: 'agreement',
+                   names: { attachment: 'Agreement.pdf' }, cfg: { subject: () => 'Your agreement' } };
+
+    let got = null;
+    c.DOC_SEND_PROVIDERS.docusign.send(spec, 'JVBERi0=', (ok, err, url, extra) => { got = { ok, err, extra }; });
+    ok(got.ok, 'the send succeeds');
+    eq(posted.action, 'esignSend', 'it calls the esignSend backend action');
+    eq(posted.signerName, 'Jane Doe', 'addressed to the resolved signer');
+    eq(got.extra.envelopeId, 'env-99', 'and hands the envelope id back');
+
+    c.docRecordSent(spec, { provider: 'docusign', draftUrl: '', pdfOk: true, extra: got.extra });
+    eq(job.docState.agreement.esign.envelopeId, 'env-99', '⚠⚠ which lands on the record');
+    ok(!!job.docState.agreement.sentAt,
+       '⚠⚠ and sentAt is written IMMEDIATELY — needsHumanSend is false, so there is no tap to wait for');
+    eq(job.docState.agreement.sentAt, job.docState.agreement.draftedAt, 'both stamps are the same moment');
+
+    const out = c.outstandingEnvelopes();
+    eq(out.length, 1, '⚠⚠ AND THE POLL FINDS IT — this returned [] on every job before today');
+    eq(out[0].envelopeId, 'env-99', 'by the id the send recorded');
+  }
+
+  group('⚠⚠ AN ENVELOPE IS NEVER SENT WITHOUT A DOCUMENT OR A RECIPIENT');
+  {
+    // ⚠⚠ THIS ARM MUST NOT BE MADE LENIENT. Gmail can honestly create a draft with the attachment
+    // missing and say so — a person reads it before it goes. An envelope with no document is a
+    // signature request for nothing, mailed to the client automatically with nobody in between.
+    const mk = (over) => sandbox({
+      fns: ['esignSigner'], vars: ['DOC_SEND_PROVIDERS'],
+      stubs: Object.assign({ SHEETS_SYNC_URL: 'https://script.example/exec',
+                             _appsScriptPost: (u, b, cb) => cb(true, { ok: true, envelopeId: 'e' }) }, over) });
+    const spec = (job) => ({ job, kind: 'agreement', key: 'agreement',
+                             names: { attachment: 'a.pdf' }, cfg: { subject: () => 's' } });
+    const live = { id: 1, name: 'Jane', email: 'j@x.com' };
+    let r = null;
+
+    mk().DOC_SEND_PROVIDERS.docusign.send(spec(live), '', (ok, err) => { r = { ok, err }; });
+    eq(r.ok, false, '⚠⚠ no PDF refuses outright');
+    has(r.err, 'no document to send for signature', 'and says why');
+
+    mk().DOC_SEND_PROVIDERS.docusign.send(spec({ id: 1, name: 'Jane' }), 'PDF', (ok, err) => { r = { ok, err }; });
+    eq(r.ok, false, 'no recipient refuses');
+
+    mk().DOC_SEND_PROVIDERS.docusign.send(spec({ id: 1, name: '', email: 'j@x.com' }), 'PDF', (ok, err) => { r = { ok, err }; });
+    eq(r.ok, false, '⚠ and so does an address with nobody named on it');
+
+    // ⚠ A CONSENT FAILURE CARRIES ITS OWN FIX RATHER THAN BEING FLATTENED INTO "it failed".
+    mk({ _appsScriptPost: (u, b, cb) => cb(true, { ok: false, needsConsent: true, error: 'not consented',
+         consentUrl: 'https://account-d.docusign.com/oauth/auth?x=1' }) })
+      .DOC_SEND_PROVIDERS.docusign.send(spec(live), 'PDF', (ok, err) => { r = { ok, err }; });
+    eq(r.ok, false, 'a consent failure fails');
+    has(r.err, 'account-d.docusign.com', '⚠ and carries the URL that fixes it');
+
+    // ⚠⚠ NO AUTOMATIC RETRY — the same rule addVendor follows, for the same reason: a failed POST
+    // never reveals whether it landed. A re-sent append duplicates a directory row; a re-sent
+    // envelope mails the client a SECOND signature request for one agreement.
+    const dsBody = noComments(decl('DOC_SEND_PROVIDERS'));
+    const call = dsBody.slice(dsBody.indexOf("action: 'esignSend'"));
+    lacks(call.slice(0, call.indexOf('}, function') + 400), '}, true)',
+          '⚠⚠ the esignSend post passes no allowRetry');
   }
 
   group('⚠⚠ NO SECRET IS IN THE REPOSITORY');

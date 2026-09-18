@@ -131,6 +131,60 @@ actually send out an agreement for signature."*
   text in the PDF **text layer** (if it does not, the fallback is absolute positioning, and the anchor
   strings are already in one constant so it is a small change), and where the signature box actually
   lands — `DS_TAB_Y_OFFSET` is one tunable constant and a considered first guess, nothing more.
+- **⚠⚠ THE APP SIDE IS WIRED, AND IT COST ONE PROVIDER ENTRY — SLICE 4 PREDICTED THIS EXACT LINE.**
+  Anthony, asked whether DocuSign should sit beside the Gmail route or take it over:
+  *"docusign should replace it entirely."* So `docProvider` routes the agreement to a new
+  `DOC_SEND_PROVIDERS.docusign` and there is **no choice on screen**. The Gmail entry is NOT deleted
+  — it is what runs when the provider is `manual`, which is the default and the fallback.
+  - **`needsHumanSend:false` IS THE WHOLE INTEGRATION.** That flag's own comment, written on
+    2026-09-11 before any provider existed, said *"when an e-signature or a server-side sender
+    arrives, that provider sets `needsHumanSend:false` and the tap disappears on its own — no
+    screen changes."* It did. `docRecordSent` already wrote `sentAt` directly on that flag and
+    `_jtSendAction` already withheld the confirming tap. **Nothing about either had to change.**
+  - **⚠⚠ ONLY THE AGREEMENT ROUTES THERE, AND THE TEST KEYS ON `spec.kind` ON PURPOSE.** DocuSign is
+    a SIGNATURE service; an estimate and an invoice are documents a client READS. Routing one
+    through an envelope asks for a signature on a document with no signature block and starts a poll
+    that can never complete. Widening it to every document fails 2.
+  - **⚠⚠ THE ENVELOPE ID IS WRITTEN IN `docRecordSent` AND THAT LINE IS THE WHOLE FEATURE.**
+    `outstandingEnvelopes()` has filtered on `st.esign.envelopeId` since Slice 6 and **nothing
+    anywhere wrote one**, so it returned `[]` on every job forever and the poll had nothing to poll.
+    A test drives the real chain end to end — send → record → poll finds it — because driving the
+    sender and the reader separately is exactly what would not have noticed.
+  - **⚠⚠ NO PDF MEANS NO ENVELOPE, AND THAT ARM MUST NOT BE MADE LENIENT.** Gmail can honestly
+    create a draft with the attachment missing and say so, because a person reads it before it goes.
+    An envelope with no document is a signature request for nothing, **mailed to the client
+    automatically with nobody in between**. Reverting it fails 2.
+  - **⚠⚠ AND NO AUTOMATIC RETRY — the rule `addVendor` already follows, for the same reason.** A
+    failed POST never reveals whether it landed. Re-sending an append duplicates a directory row;
+    re-sending this **mails the client a second signature request** for one agreement. The
+    `allowRetry` argument is deliberately omitted and the watchdog says to check DocuSign rather
+    than a Gmail drafts folder that will be empty.
+  - **⚠⚠ `esignSigner` PAIRS THE NAME AND THE EMAIL, AND ON AN ESTATE THAT IS NOT COSMETIC.** The
+    named client is DECEASED, which is why `bestClientEmail` falls back to the representative and
+    then counsel — so pairing that address with `job.name` would put **a dead person's name on a
+    signature request for their own estate**, delivered to their executor's inbox. It walks the same
+    ladder in the same order and returns both halves together. It also drops the role suffix:
+    `expectedSignerName` appends *"(Trustee)"* for our own prefill, which is right on our screen and
+    wrong as a recipient name on a legal envelope.
+  - **⚠ `live:true` DOES NOT TURN DOCUSIGN ON.** `hav_esign_provider` does, and it defaults to
+    `manual`. Verified in a browser: a device that has not opted in reports `manual` / `watches
+    false` / agreement routed to **gmail** — byte-for-byte its old behaviour.
+  - **The Settings control is the missing half of a key that had no input anywhere.** Driven through
+    the real `saveSettings()`: choosing DocuSign persists, takes effect, routes the agreement, and
+    **removes *Record the signed agreement* from the rail**; choosing Recorded by hand puts it back.
+  - **⚠ TWO PRE-EXISTING SUITES PINNED THE OLD WORLD AND BROKE CORRECTLY.**
+    `signature-record` pinned `live: false` *"there is no account, no credentials, no backend
+    action"* — all three now exist. Restated as the requirement that was always meant: a provider
+    which STANDS THE MANUAL BUTTON DOWN must be able to deliver in its place. And `doc-send` pinned
+    that `needsHumanSend: false` appeared **nowhere**, true while every provider was an email
+    client; restated as the converse, that exactly one provider may claim it and it is the
+    e-signature one.
+  - **5196 committed checks** (130 in `esign-docusign`). **All eight app-side changes
+    revert-verified, ZERO green** — `needsHumanSend` fails 5, the widened route and the no-PDF
+    refusal and the live flag 2 each, the rest 1.
+- ~~**⚠ NOT BUILT YET, AND THE FEATURE IS NOT USABLE WITHOUT IT:** the app side.~~ **DONE — see
+  above.** *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
+  outstanding work.* Original note follows.
 - **⚠ NOT BUILT YET, AND THE FEATURE IS NOT USABLE WITHOUT IT:** the app side. No Settings field for
   `hav_esign_provider` (it is still a localStorage key with no input), no *Send for signature* verb, and
   nothing writes the returned `envelopeId` onto `docState.agreement.esign`. `ESIGN_PROVIDERS.docusign`
