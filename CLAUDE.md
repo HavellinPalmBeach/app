@@ -1996,7 +1996,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/sharp-allen-1cc2ur`
+- Active feature branch: `claude/magical-keller-koqpwl`
+  (was `claude/sharp-allen-1cc2ur`)
   (was `claude/gifted-babbage-wnzm7w`)
   (was `claude/admiring-tesla-7ysggp`)
   (was `claude/festive-noether-ggr0fn`)
@@ -2009,7 +2010,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/sharp-allen-1cc2ur:main`
+  `git push origin claude/magical-keller-koqpwl:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
