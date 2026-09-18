@@ -215,13 +215,32 @@ Settings already says *"configure after EIN + account setup"*, so this is gated 
 3. Open the limit-increase request, citing $6k–$25k tickets.
 4. Decide cards: **off** (recommended) / on absorbing the fee / on with a 2.9% surcharge.
 
-### ⚠ Phase 1 — restrict to ACH · **BLOCKED, and this is the literal answer to the question asked**
-The change is one setting — `payment_method_types: ['us_bank_account']` on the Checkout Session or
-Payment Link — **and it is in a file this repo does not have.** `STRIPE_SCRIPT_URL` points at a
-separate Apps Script that is not in `apps-script/`. Its source has to be recovered from the Apps
-Script editor before Phase 1 can even be estimated, let alone written.
+### Phase 1 — restrict to ACH · **NOT blocked** (⚠️ redeploy)
+The change itself is one setting — `payment_method_types: ['us_bank_account']` on the Checkout
+Session or Payment Link.
 
-**This is the first thing to unblock.** Until then, "only accept ACH" cannot be implemented at all.
+**⚠⚠ AND IT GOES INTO `main-sync.gs`, NOT THE SEPARATE STRIPE SCRIPT — the same call made for
+DocuSign on 2026-09-17, for the same reason.** Today `STRIPE_SCRIPT_URL` points at a separate Apps
+Script project that is not in this repo and never has been (verified: five `.gs` files tracked,
+none carries the string `stripe`). That was fine while the payment link was fire-and-forget. It
+stops being fine the moment anything reads back, because **read-back is on the app's request
+path** and has to move in lockstep with `BACKEND_VERSION`, `BACKEND_ACTIONS` and the
+dispatch-parity test.
+
+- **⚠ Its source does NOT need recovering.** Nothing in it is worth keeping — it mints a payment
+  link, which is thirty lines. Rewriting it into `main-sync.gs` is less work than retrieving it,
+  and it is the only version that can be version-checked.
+- **⚠ A SECOND FILE SOMEBODY MUST REMEMBER TO PASTE IS THE FAILURE THIS PROJECT ALREADY PAID SIX
+  WEEKS FOR** — see the dead-branch section in `CLAUDE.md`. A separate deployment cannot be
+  reached by `checkBackendVersion`, so a stale Stripe script would fail exactly the way the
+  stale `main-sync.gs` did: silently, and read as an app bug.
+- **This deletes `STRIPE_SCRIPT_URL` from Settings** and drops `SYNC_TARGETS` from four entries to
+  three. One less URL to paste onto a new device, one less field that can point at the wrong script.
+  ⚠ Keep reading the old key for one release so a device that has not reloaded is not stranded.
+
+Also here: Financial Connections for instant verification, with the microdeposit fallback (1–2 days)
+for institutions it does not cover, and a decision on whether a client waiting two days to verify is
+acceptable on a deposit that gates the job start.
 
 Also here: Financial Connections for instant verification, with the microdeposit fallback (1–2 days)
 for institutions it does not cover, and a decision on whether a client waiting two days to verify is
@@ -295,7 +314,11 @@ New `tests/stripe-payments.test.js`, in the same commit as the code:
    case — no firm delays a job two months. ⚠ **It still wants an agreement clause**, and it sits
    next to the retained-deposit clause `LIFECYCLE_AUDIT.md` §8.6 already flags as needing counsel.
    Nothing in the app can fix it, and nothing in the app now pretends to.
-3. **Is the separate Stripe Apps Script recoverable?** ⚠ Phase 1 is blocked without its source, and
-   Phase 1 is the literal answer to "only accept ACH". **This is the one open blocker.**
+3. ~~**Is the separate Stripe Apps Script recoverable?**~~ **MOOT — it does not need to be.** It is
+   rewritten into `main-sync.gs` and the separate project is retired (§7 Phase 1). *Kept rather
+   than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
+   **⚠ The real question in its place: should deploying stop being a copy-and-paste?** `clasp`
+   (Google's official Apps Script CLI) pushes and deploys from the repo, which would have made the
+   six-week dead-branch defect impossible — the source and the deployment could not diverge.
 4. **Microdeposit fallback acceptable?** A client whose bank is not on Financial Connections waits
    1–2 days to verify before the deposit can even be paid, which delays the job start.
