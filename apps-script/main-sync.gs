@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-18b';
+var BACKEND_VERSION = '2026-09-18c';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -1622,13 +1622,14 @@ var DS_ANCHORS = {
   clientDate: '/hdc/',
   havSig:     '/hsh/',
   havDate:    '/hdh/',
-  mktYes:     '/mky/',
-  mktNo:      '/mkn/',
-  mktSig:     '/mks/'
+  mktOptOut:  '/mko/'
 };
-// The radio group's name, which a conditional tab points at as its parent. Declared once and
-// mirrored in the app as ESIGN_MKT_GROUP; the anchor-parity test pins the two.
-var DS_MKT_GROUP = 'marketing_consent';
+// ⚠⚠ THE FOUR THAT ARE ON EVERY AGREEMENT, AND THE ONE THAT IS NOT. `mktOptOut` renders on the
+// living-client form and on no estate one — Havellin does not market estate work — so placing it
+// blind would make DocuSign refuse every estate envelope over an anchor that is correctly absent.
+// The APP measures the document it is sending (`esignAnchorsPresent`) and names what it carries;
+// this list is what gets placed regardless, because their absence really is a defect.
+var DS_REQUIRED_ANCHORS = ['clientSig', 'clientDate', 'havSig', 'havDate'];
 
 // ⚠ ONE PLACE TO TUNE THE TAB POSITION, AND IT NEEDS ONE VISUAL CHECK IN THE SANDBOX BEFORE
 // ANYTHING GOES TO A CLIENT. The anchor sits at the TOP of a 36px `.sig-line` box whose
@@ -1865,7 +1866,7 @@ function esignSendEnvelope(data) {
             recipientId: '1',
             routingOrder: '1',
             roleName: 'Client',
-            tabs: _dsClientTabs()
+            tabs: _dsClientTabs(data.anchors)
           },
           {
             email: havEmail,
@@ -1925,44 +1926,44 @@ function _dsTabs(sigAnchor, dateAnchor) {
   };
 }
 
-// ⚠⚠ THE CLIENT CARRIES THE MARKETING CONSENT AND HAVELLIN DOES NOT, and that asymmetry is the
+// ⚠⚠ THE CLIENT CARRIES THE MARKETING OPT-OUT AND HAVELLIN DOES NOT, and that asymmetry is the
 // whole reason this is a separate builder rather than an argument to _dsTabs. A media release is
-// the client's decision about their own home; putting the same tabs on the countersignature would
-// ask Havellin to consent to Havellin, and — worse — an unanswered REQUIRED radio on recipient 2
-// would block our own countersignature and strand a contract the client had already signed.
+// the client's decision about their own home; putting the same tab on the countersignature would
+// ask Havellin to consent to Havellin.
 //
-// ⚠ THE RADIO PAIR IS REQUIRED AND THE SIGNATURE IS NOT. Required means the envelope cannot
-// complete until the question is answered either way, which is the only thing that guarantees the
-// client SEES it: DocuSign's guided navigation steps through required fields and jumps past
-// optional ones. The signature is optional AND conditional — it appears only on `authorize`, so a
-// client who declines is never shown a signature line they would have to ignore to finish.
+// ⚠⚠ IT IS ONE OPTIONAL CHECKBOX, AND THE REQUIRED RADIO PAIR IT REPLACED DID NOT RENDER ON A
+// REAL ENVELOPE. Anthony, off the first one DocuSign actually sent: *"docusign did not recognize
+// the marketing tic boxes or the required signature."* `testEsignTabs` had come back ACCEPTED on
+// all four shapes — but it created DRAFTS (`status:'created'`), and **a draft accepting a field
+// definition does not prove the field survives SENDING**. That is the lesson; the field type is
+// only the consequence. `checkboxTabs` is the most basic field DocuSign has.
 //
-// ⚠ ALL THREE SHAPES WERE MEASURED AGAINST THE REAL ACCOUNT BEFORE THIS WAS WRITTEN
-// (`testEsignTabs`, 2026-09-18: optional signature, radio group and conditional signature all
-// ACCEPTED). The plan's field palette does not answer this — it lists what the drag-and-drop
-// sender UI offers, and nothing here uses that UI.
-function _dsClientTabs() {
+// ⚠ OPTIONAL IS CORRECT HERE AND WOULD HAVE BEEN WRONG BEFORE. DocuSign's guided navigation steps
+// through required fields and jumps past optional ones, which under an OPT-IN meant a consent
+// nobody was ever asked for. Under an opt-out, a box nobody reaches lands on the documented default
+// — authorized — which is exactly what §10.2 says happens when nothing is ticked. Making it
+// required would instead block the client's own signature on a question the contract says they need
+// not answer.
+//
+// ⚠⚠ AND IT IS PLACED ONLY WHEN THE DOCUMENT CARRIES THE ANCHOR. The estate form has no marketing
+// clause at all, so `anchorIgnoreIfNotPresent:'false'` would make DocuSign refuse every estate
+// envelope. `anchors` is the list the app measured off the very html it converted, so what is
+// placed follows the document rather than a second copy of the rule that renders it. A caller that
+// names nothing gets the four required tabs and no optional one — the safe direction, because a
+// missing opt-out box leaves the stated default in place while a refused envelope sends nothing.
+function _dsClientTabs(anchors) {
   var t = _dsTabs(DS_ANCHORS.clientSig, DS_ANCHORS.clientDate);
+  var has = {};
+  (anchors || []).forEach(function (k) { has[k] = true; });
 
-  t.radioGroupTabs = [{
-    groupName: DS_MKT_GROUP,
-    documentId: '1',
-    radios: [
-      { anchorString: DS_ANCHORS.mktYes, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0',
-        anchorIgnoreIfNotPresent: 'false', value: 'authorize', required: 'true' },
-      { anchorString: DS_ANCHORS.mktNo,  anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0',
-        anchorIgnoreIfNotPresent: 'false', value: 'decline',   required: 'true' }
-    ]
-  }];
-
-  t.signHereTabs.push({
-    anchorString: DS_ANCHORS.mktSig, anchorUnits: 'pixels',
-    anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false',
-    tabLabel: 'marketing_signature',
-    optional: 'true',
-    conditionalParentLabel: DS_MKT_GROUP,
-    conditionalParentValue: 'authorize'
-  });
+  if (has.mktOptOut) {
+    t.checkboxTabs = [{
+      anchorString: DS_ANCHORS.mktOptOut, anchorUnits: 'pixels',
+      anchorXOffset: '0', anchorYOffset: '0', anchorIgnoreIfNotPresent: 'false',
+      tabLabel: 'marketing_opt_out', name: 'Do not authorize marketing use',
+      selected: 'false', required: 'false'
+    }];
+  }
 
   return t;
 }
@@ -2235,6 +2236,16 @@ function testEsignAuth() {
 // ⚠ EVERY ENVELOPE IS status:'created' — A DRAFT. Nothing is mailed to anyone, so this is
 // safe against a live account, and each draft is deleted again at the end. Editor-only and
 // argument-free, like testEsignAuth: the Run menu passes no arguments.
+//
+// ⚠⚠ CORRECTED 2026-09-18, AND THE CORRECTION MATTERS MORE THAN THE RESULT: THIS PROBE PROVED
+// LESS THAN IT LOOKED LIKE IT PROVED. All four came back ACCEPTED, so the marketing consent
+// shipped as a required radio pair plus a conditional signature — and on the first envelope
+// DocuSign really SENT, the radios were not on the page. A draft accepts a field DEFINITION;
+// whether that field survives the transition to `status:'sent'` is a different question and this
+// function does not ask it. It is still the right tool for "will the account take this shape at
+// all", and its answer is still a floor rather than a guarantee. **If a capability has to be
+// certain, send one real envelope and look at it.** The marketing consent is now one
+// `checkboxTabs` — the most basic field DocuSign has — chosen for exactly that reason.
 function testEsignTabs() {
   var missing = _dsMissingProps();
   if (missing.length) {

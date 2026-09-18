@@ -1,6 +1,181 @@
 # Havellin Palm Beach — App Notes
 
-<<<<<<< HEAD
+## ⚠⚠ THE MARKETING RADIOS NEVER RENDERED, AND MY PROBE HAD SAID THEY WOULD (FIXED 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18c`. Two messages from
+Anthony off the first envelope DocuSign really sent. On its face: *"the top banner is not needed and sounds
+amateurish. the second is duplicated on the actual exhibit header, so unneeded. should we have a page break at
+the end of the agreement so the signature page is always it's own page?"* Then, on its fields: *"docusign did
+not recognize the marketing tic boxes or the required signature. why don't we just simplify that as one 'I do
+not authorize' and change the langauge above it when you fix this. allow them to opt out, but use for marketing
+is assumed unless tic'ed. for estate work this should never be allowed."*
+
+- **⚠⚠ THE PROBE PROVED LESS THAN IT LOOKED LIKE IT PROVED, AND THAT IS THE ENTRY — THE FIELD TYPE IS ONLY
+  THE CONSEQUENCE.** `testEsignTabs` was built that morning for exactly this question and this file records it
+  approvingly: *"a capability question is answered by one cheap probe, not by reading a pricing page."* It
+  created **four DRAFT envelopes** (`status:'created'`), all four came back **ACCEPTED**, and the marketing
+  consent shipped as a required radio pair plus a conditional signature on the strength of it. The envelope
+  that reached a client was `status:'sent'` — and the radios were simply **not on the page**. **A draft
+  accepting a field DEFINITION does not prove the field survives SENDING.** The probe is kept, because the
+  alternative is having no cheap way to ask at all, and its header now says what it can and cannot answer.
+  - **⚠ AND IT WAS NOT REFUSED, WHICH IS THE DIAGNOSTIC WORTH REMEMBERING.** Every radio carried
+    `anchorIgnoreIfNotPresent:'false'`, so a MISSING ANCHOR would have made DocuSign reject the whole
+    envelope. It did not reject it; it sent it and dropped the tabs. So the anchor mechanism was never in
+    doubt — the client signature landed on its anchor on the same document — and the fault is in the field
+    type, not the text layer. **A tab that vanishes silently is a tab DocuSign accepted and then ignored.**
+  - The replacement is one `checkboxTabs`, the most basic field DocuSign has and the one on the *Basic
+    fields* palette Anthony sent in the first place.
+- **⚠⚠ THE OPT-OUT SHAPE FAILS SAFE IN A WAY THE OPT-IN COULD NOT, and that is a reason rather than a
+  consolation.** Under the opt-in, a field that silently failed to place left a **required** question unasked
+  and the record blank — the app would have believed a consent question had been answered when the client
+  never saw it. Under the opt-out, a box nobody reaches lands on the **documented default** (authorized),
+  which is exactly what §10.2 says happens when nothing is ticked. **So the correct behaviour no longer
+  depends on DocuSign rendering anything.**
+  - **⚠ AND THE CLIENT'S ROUTE OUT DOES NOT EITHER.** §10.2 states that written notice at any time has the
+    same effect, *whether or not the box below was checked*, and the block repeats it. That sentence is what
+    stands behind a box a client misses or a tab that fails to place — **a consent whose only exit is one
+    checkbox on one page is one rendering bug from being no exit.** It is stated BEFORE the box, so a reader
+    who stops at the tick has already been told.
+- **⚠⚠ THE ESTATE FORM HAS NO CHOICE AT ALL, AND §7.2 IS A PROHIBITION RATHER THAN A DEFAULT.** Anthony:
+  *"for estate work this should never be allowed."* It reads *Marketing & Promotional Use — Not Permitted*,
+  says the Agreement grants no such right and that **none is available under it by consent** (so it cannot be
+  arranged off-document), binds our vendors, and survives the engagement. The reasoning, written down because
+  somebody will propose "just ask the representative": on a living-client job the person deciding owns the
+  home and is alive to decide; on an estate the subject is a decedent's house, the people in the photographs
+  are grieving heirs, and the only person who could consent is a **fiduciary consenting on somebody else's
+  behalf**. Offering the choice invites them to trade what is not theirs. **⚠ §7.1 is untouched and must
+  stay** — documentation media is most of what the documentation step charges for, and where it lives and who
+  can reach it is the half a representative genuinely cannot infer. Only the marketing half went.
+- **⚠⚠ `esignAnchorsPresent` MEASURES THE DOCUMENT; NOTHING RE-DERIVES THE RULE.** The opt-out anchor is on
+  the living-client form and on no estate one, so the backend may not place its tab blind:
+  `anchorIgnoreIfNotPresent:'false'` would make DocuSign **REFUSE every estate envelope** over a marker that
+  is correctly absent — on the matter type Havellin runs most. `docSend` already holds the very html it is
+  about to convert, so it walks `ESIGN_ANCHORS` over that html and the send names what it found. The tab list
+  and the document therefore cannot disagree, which a `job.svc` test beside the renderer could not promise.
+  **`ESIGN_REQUIRED_ANCHORS` / `DS_REQUIRED_ANCHORS` are the four placed regardless** — their absence really
+  is a defect worth refusing an envelope over — and anything outside that list is optional by construction, so
+  the next optional anchor needs no new mechanism. **A caller that names nothing gets no optional tab**, which
+  is the safe direction: a missing box leaves the stated default in place, a refused envelope sends nothing.
+- **⚠ `mktYes` / `mktNo` / `mktSig` / `ESIGN_MKT_GROUP` / `DS_MKT_GROUP` ARE DELETED, NOT LEFT DEAD.** A
+  retired field shape that still compiles is how one comes back; a test pins that neither `radioGroupTabs` nor
+  `conditionalParentLabel` survives **in `_dsClientTabs` or `esignSendEnvelope`**. ⚠ Scoped to those two
+  functions on purpose — `testEsignTabs` still probes both shapes, which is its job, and a file-wide needle
+  matches the probe and proves nothing.
+
+### ⚠⚠ THE SIGNATURE PAGE STARTS A FRESH PAGE, AND THE RULE HAD TO GO IN THE BASE STYLESHEET
+- **The defect was real and it was measured on the envelope that went out, not inferred.** Rendered to Letter
+  under print emulation: the standard form put the **Havellin block on page 6 and the client's on page 7**,
+  and the estate form split **7/8**. A signature line separated from the name above it is the one place on a
+  contract where the layout must be unambiguous.
+- **⚠⚠ `.agr-sig-page` IS DECLARED IN THE BASE STYLESHEET, AND THAT IS WHAT MAKES IT REACH DOCUSIGN.**
+  `_exportDoc` inlines **every `<style>` block in the page** into the html it hands to `htmlToPdf`, and that
+  PDF is the envelope's document. A rule living only under `@media print` would paginate the Print button and
+  do nothing to the document the client signs. Three sites, the pattern `.packet-exhibit` already follows:
+  base stylesheet, the print block, and the agreement kind's own `pdfCss`.
+- **⚠ NO `break-inside:avoid`, AND THE FIRST COMMENT I WROTE ABOUT IT WAS FALSE.** It said the estate block
+  is taller than a Letter page; measured, it is **~756px against ~893px usable**, so it fits — and the test I
+  wrote in the same hour said so correctly while the source comment contradicted it. Corrected in place. The
+  real reason is the 140px of headroom: a longer representative name or one more clause eats it, and a block
+  that demands to be unbreakable and then cannot fit is worse than one that breaks. **The break-BEFORE is what
+  was asked for; staying whole is not something the page can promise.**
+- **Measured after: standard 7 pages with the whole signature block on p7; estate 7 pages rather than 8** —
+  dropping the consent block from it saved a sheet.
+
+### The banner and the trailing Exhibit A block are gone, and nothing legal went with them
+- **The banner said two things the document already says better.** *"IMPORTANT: Read carefully. Both parties
+  must sign before any work begins."* — the signature page states the no-work-until-both-signatures rule, and
+  the acknowledgment clause carries the read-and-understood line. The standing client-copy rule: a line
+  restating what the reader has already been told is costing rather than earning.
+- **⚠ THE TRAILING EXHIBIT A PARAGRAPH RESTATED THE PACKET'S OWN BAND ONE PAGE EARLY.** The agreement never
+  goes out alone — `DOC_ACTIONS.agreement` resolves to the signing packet on every verb — and the packet opens
+  the estimate under `.packet-exhibit-hdr`, which prints *Exhibit A — Service Estimate · \<HVL id\>* over
+  *Incorporated by reference into the Agreement as Exhibit A*. **⚠ THE INCORPORATION IS STILL IN §1.1 ON BOTH
+  ARMS, and a test pins it at exactly 2** — removing the trailing block and the §1.1 sentence together would
+  leave the agreement silent about what Exhibit A is. The estate form never had a trailing block, so both
+  forms now end the same way.
+- **⚠ §10.1's CROSS-REFERENCE WENT FALSE AND WAS CORRECTED WITH IT.** It promised media is not used for
+  marketing *"without the separate written consent described in Section 10.2"*. Under an opt-out there is no
+  consent to obtain, so a clause describing a step that no longer exists would have been a false statement on
+  a signed contract. It now says the use is governed by §10.2, **which the Client may decline**.
+
+- **6202 committed checks** (`tests/esign-docusign.test.js` and `tests/signing-packet.test.js`). **All 23
+  changes revert-verified individually, ZERO green** — the estate prohibition fails **10**,
+  `esignAnchorsPresent` **5**, both signature-page wrappers **4** each, a second AUTHORIZE box 3, the
+  `docSend` measurement 3, the `pdfCss` rule 3, and the rest 1–2.
+  - **⚠⚠ A CRASHED SWEEP LEFT THE FILE MODIFIED AND THE NEXT SWEEP READ THAT AS ITS BASELINE — a new shape,
+    and it masked two reverts as green.** The first run asserted before restoring, so `havellin.html` kept the
+    banner the revert had put back; the second run's `orig` snapshot was therefore the CORRUPTED file, every
+    count came back one high, and the two reverts that should have failed 1 read **0**. Caught by the printed
+    `baseline fails: 1` rather than by the counts. **A sweep must restore in a `finally`, and a baseline that
+    is not zero invalidates every number under it.**
+  - **⚠ AND THE GUARD ITSELF WAS WRONG FOR AN INSERTION.** The house sweep asserts `needle not in chk` after
+    each edit — correct for a deletion and false for a revert that PUTS SOMETHING BACK, because the
+    replacement legitimately contains the needle. That is what crashed it. It asserts the replacement text is
+    present when there is one, and absence only for a pure deletion.
+  - **⚠ `BACKEND_VERSION` CAME BACK GREEN AND THE FLOOR IS RAISED WITH ITS CONSEQUENCE NAMED**, not as a
+    did-you-bump-it check: `_dsClientTabs` began taking the anchor list in `2026-09-18c`, so **an older
+    deployment places the opt-out tab blind and DocuSign refuses every ESTATE envelope.** Nothing about that
+    reads as a stale deployment from the app, so the banner has to be able to say it.
+- **⚠⚠ THE JOIN IS DRIVEN, NOT GREPPED, AND IT IS THE ONE A SOURCE CHECK CANNOT SEE.** A build that measures
+  the html and never puts the result on the payload contains every string a grep would look for, and its
+  failure is silent: the box simply never appears on any envelope. So a group drives the **real `docSend`**
+  over the **real `agreementHtml`** and reads the payload back, and another hands the real
+  `esignAnchorsPresent` output to the **real `esignSendEnvelope`** and reads the recipients. The estate case
+  is driven end to end too, because that is the one that would have refused every send.
+- **⚠ FOUR PINNED `fns:` LISTS BROKE CORRECTLY** when `marketingConsentBlock` became `marketingOptOutBlock`
+  — `agreement-fees`, `agreement-rates`, `prep-declutter`, `esign-docusign`. **Found by searching every
+  pinned list at once** rather than re-running and fixing one failure at a time.
+- **⚠ AND `estimate-delivery` PINNED THE WHOLE `pdfCss:` LINE AS A BYTE SEQUENCE**, so it broke on a true
+  change to a line it had no opinion about — the twelfth time this file records that shape. Restated as the
+  requirement: the line carries the exhibit rule and the signature-page rule.
+- **Verified end to end in headless Chromium on both real builders**, and measured against the pre-change tree
+  rather than asserted:
+
+  | | |
+  |---|---|
+  | banner on either form | **0** |
+  | trailing Exhibit A paragraph · §1.1 incorporation | **0** · **1** |
+  | `.agr-sig-page` wrapper, each form | **1**, closing last, footer inside it |
+  | `I DO NOT AUTHORIZE`, standard · estate | **1** · **0** |
+  | `I AUTHORIZE` as a second box | **0** |
+  | `/mko/`, standard · estate | **1** · **0** |
+  | `esignAnchorsPresent`, standard · estate | five keys · **four**, marketing absent |
+  | retired `/mky/` `/mkn/` `/mks/` anywhere | **0, 0, 0** |
+  | every anchor | `rgb(255,255,255)` · `display:inline` · `visible` · 6px · **in the text layer** |
+  | every `.sig-line` | still exactly **36px** |
+  | pages, standard · estate | **7 · 7** (was 7 · 8), signature block whole on the last page of each |
+  | overflow at 1440 · 390px | **0** · unchanged from the pre-change tree (16 / 99, pre-existing) |
+  | page errors | **0** |
+
+  The app's `<style>` block grew by exactly **15 lines** — 14 comment lines and one rule, plus one in the
+  print block — and every diff hunk lands in an expected region. The 368-line CSS deletion rule, applied by
+  reading the diff.
+- **⚠⚠ STILL NOT PROVEN, AND IT IS ANTHONY'S TO DO: send one more sandbox envelope and look at the box.**
+  The egress proxy blocks `docusign.com`, so the checkbox is verified in SHAPE and against stubs. **The whole
+  point of this entry is that a draft-create probe is not that proof.** What needs seeing on a real SENT
+  envelope: that the opt-out checkbox renders at all, and where `DS_TAB_Y_OFFSET` puts it relative to its box.
+- Manual **§8a** — the fills-in table rebuilt (two required fields, one optional box, and a row saying the
+  estate form has none), the required/optional mechanism note replaced by the opt-out note **with the
+  one-day-old reversal and why**, a new note on the estate prohibition and why the two forms differ, the
+  *"Both forms carry both clauses now"* claim corrected, and a **new subsection on the document's face** with
+  the three changes and the pagination measurement. Playbook: the *three things* section becomes **two things
+  and one box they can ignore**, the `.stop` rewritten around the opt-out plus the estate prohibition, a note
+  on the one-day-old version, and **five** symptom→cause rows — including the two that will actually happen
+  (*a client signed without ticking and now objects* → take it in writing, it has the same effect; *a
+  representative offers to let us post* → there is no box and the answer is no). Both `.md` copies
+  hand-edited and **48 claims parity-checked, 0 mismatches** — ⚠ one apparent miss was a line wrap, verified
+  rather than assumed. A stale sweep for the retired wordings returns **0** in all four files except
+  `I AUTHORIZE`, whose two survivors are **the sentences explaining the change**. Tag balance verified on both
+  HTML files (`manual.html`'s `<code>` delta is still the documented false positive at **1**;
+  `concierge-guide.html` clean on every tag), rendered at 1440/390 with **0 overflow** and **all 54 tables
+  full-width under `print`**.
+
+### ⚠ CLAUDE.md WAS COMMITTED TO `main` WITH UNRESOLVED MERGE MARKERS, AND THIS COMMIT RESOLVES THEM
+`41c7c65` landed `<<<<<<< HEAD` / `=======` / `>>>>>>> origin/main` in this file, spanning lines 3–545 — two
+concurrent sessions' 2026-09-18 sections, both legitimate and neither lost. The resolution is to keep **both**
+and delete only the three marker lines. **Worth knowing for next time: a merge that touches only this file
+still needs the file read afterwards** — nothing in the test suite looks at it, and a green run says nothing
+about whether the project's own notes are readable.
+
 ## ⚠⚠ DOCUSIGN SENT THE AGREEMENT, THE CLIENT SIGNED, AND THE APP NEVER NOTICED (FIXED 2026-09-18)
 Anthony, mid-Stripe-setup, on a real envelope both parties had signed: *"I just sent them the signing packet
 through DocuSign and we both signed it and the agreement came back signed through DocuSign, but the job
@@ -91,7 +266,6 @@ on the room-status report, and the reason this was a one-line diagnosis rather t
   with. Both `.md` copies hand-edited and **10 claims parity-checked, 0 mismatches**; tag balance verified on
   both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
   1440/390 with **0 overflow** and **all 50 tables full-width under `print`**.
-=======
 ## ⚠⚠ DOCUSIGN IS THE FIRM'S ROUTE, AND THE MARKETING CONSENT IS A REAL SIGNATURE (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18b`. Anthony, after Ashley
 created an agreement and the old HTML email went out with no DocuSign anywhere: *"that should not be a device by
@@ -542,7 +716,6 @@ to include a title per contact and **not** to copy the vendor shape onto partner
   (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at 1440/390
   with **0 overflow** and **all 52 tables full-width under `print`**.
 
->>>>>>> origin/main
 
 ## ⚠⚠ A CLIENT CAN PAY BY BANK TRANSFER, AND IT RECORDS ITSELF (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18a`.
@@ -2791,10 +2964,13 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/determined-keller-wa6ero`
+- Active feature branch: `claude/sharp-allen-1cc2ur`
+  ⚠ This session was ASSIGNED that branch, which is an older name still in the list below — a
+  session's assignment wins over whatever is recorded here, so it is promoted rather than
+  duplicated. Everything is on `main` either way; Pages serves `main`.
+  (was `claude/determined-keller-wa6ero`)
   (was `claude/busy-maxwell-q7zrpd`)
   (was `claude/magical-keller-koqpwl`)
-  (was `claude/sharp-allen-1cc2ur`)
   (was `claude/gifted-babbage-wnzm7w`)
   (was `claude/admiring-tesla-7ysggp`)
   (was `claude/festive-noether-ggr0fn`)
@@ -2807,7 +2983,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/determined-keller-wa6ero:main`
+  `git push origin claude/sharp-allen-1cc2ur:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

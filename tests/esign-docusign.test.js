@@ -76,7 +76,7 @@ function gsCtx({ props = {}, api = null } = {}) {
     gsVar('DS_AUTH_HOST_DEMO'), gsVar('DS_AUTH_HOST_PROD'), gsVar('DS_JWT_SCOPES'),
     gsVar('DS_TOKEN_TTL_SEC'), gsVar('DS_ANCHORS'), gsVar('DS_TAB_Y_OFFSET'),
     gsFn('_dsProp'), gsFn('_dsIsDemo'), gsFn('_dsAuthHost'), gsFn('_dsMissingProps'),
-    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsVar('DS_MKT_GROUP'), gsFn('_dsClientTabs'), gsFn('_dsAccessToken'),
+    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsVar('DS_REQUIRED_ANCHORS'), gsFn('_dsClientTabs'), gsFn('_dsAccessToken'),
     gsVar('DS_RSA_ALG_ID'), gsFn('_dsDerLen'), gsFn('_dsSigningKey'), gsFn('dsKeyReport'),
     gsFn('esignSendEnvelope'), gsFn('esignEnvelopeStatus'),
   ].join('\n');
@@ -97,13 +97,14 @@ const FULL_PROPS = {
 };
 
 // ── the app side ──────────────────────────────────────────────────────────────
-const AGR_FNS = ['marketingConsentBlock', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
+const AGR_FNS = ['marketingOptOutBlock', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
                  'materialsBasisNote', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
-                 'estTolerancePctTxt'];
+                 'estTolerancePctTxt', 'esignAnchorsPresent'];
 const AGR_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved',
-                  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS'];
+                  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
+                  'ESIGN_REQUIRED_ANCHORS'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
 
 const EST = { jobId: 1, tcFee: 18500, psFee: 12500, pkgCost: 1500, pkgLabel: 'Estate Premium — $1,500',
@@ -125,12 +126,108 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const A = appCtx().ESIGN_ANCHORS;
     [['standard', appCtx().agreementHtml(LIVING, EST)],
      ['probate',  appCtx().probateAgreementHtml(PROBATE, EST)]].forEach(([which, doc]) => {
-      ['clientSig', 'clientDate', 'havSig', 'havDate'].forEach((k) => {
+      appCtx().ESIGN_REQUIRED_ANCHORS.forEach((k) => {
         const n = doc.split(A[k]).length - 1;
         eq(n, 1, '⚠ the ' + which + ' form carries ' + k + ' (' + A[k] + ') exactly once — '
                  + 'a second copy places a second signature box on the same contract');
       });
     });
+    // ⚠⚠ AND THE OPTIONAL ONE IS ON EXACTLY ONE FORM. Havellin does not market estate work, so
+    // the estate form has no marketing clause and therefore no marker — which is precisely why the
+    // backend may not place that tab blind: `anchorIgnoreIfNotPresent:'false'` would refuse every
+    // estate envelope over an anchor that is correctly absent.
+    eq(appCtx().agreementHtml(LIVING, EST).split(A.mktOptOut).length - 1, 1,
+       '⚠ the living-client form carries the marketing opt-out anchor once');
+    eq(appCtx().probateAgreementHtml(PROBATE, EST).split(A.mktOptOut).length - 1, 0,
+       '⚠⚠ and the estate form carries it ZERO times — there is nothing to opt out of');
+    // The four that must always be there are named once, and it is the list the backend places
+    // regardless. A key drifting off it silently makes an always-anchor optional.
+    eq(appCtx().ESIGN_REQUIRED_ANCHORS.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig',
+       '⚠ the required four are exactly the two signatures and their two dates');
+    eq(gsCtx().DS_REQUIRED_ANCHORS.slice().sort().join(','),
+       appCtx().ESIGN_REQUIRED_ANCHORS.slice().sort().join(','),
+       '⚠ and the backend agrees about which are required');
+  }
+
+  group('⚠⚠ THE DOCUMENT IS MEASURED, NEVER RE-DERIVED — esignAnchorsPresent');
+  {
+    const c = appCtx();
+    const std = c.esignAnchorsPresent(c.agreementHtml(LIVING, EST));
+    const pro = c.esignAnchorsPresent(c.probateAgreementHtml(PROBATE, EST));
+    eq(std.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig,mktOptOut',
+       '⚠ the living-client agreement reports all five');
+    eq(pro.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig',
+       '⚠⚠ the estate agreement reports four, and the marketing one is absent because the clause is');
+    eq(c.esignAnchorsPresent('').length, 0, 'nothing in, nothing out');
+    eq(c.esignAnchorsPresent(null).length, 0, 'and a null document does not throw');
+    // ⚠ IT READS THE ANCHOR TABLE RATHER THAN A SECOND LIST OF STRINGS. A hand-written list here
+    // is the same drift the app/backend parity test exists to catch, one layer in.
+    lacks(noComments(fn('esignAnchorsPresent')), "'/",
+          '⚠ no anchor string is typed into the measurer — it walks ESIGN_ANCHORS');
+  }
+
+  group('⚠⚠ THE SIGNATURE PAGE IS ONE BLOCK ON A PAGE OF ITS OWN — driven on both forms');
+  {
+    // Anthony, off a real DocuSign envelope: *"should we have a page break at the end of the
+    // agreement so the signature page is always it's own page? it would avoid issues like this
+    // where the signatures awkwardly span 2 pages."* Measured on Letter under print emulation
+    // before and after: the standard form put the Havellin block on p6 and the client block on p7,
+    // and the estate form p7/p8. Both now land whole on one page, with no extra sheet.
+    const c = appCtx();
+    [['standard', c.agreementHtml(LIVING, EST)],
+     ['probate',  c.probateAgreementHtml(PROBATE, EST)]].forEach(function (pair) {
+      const which = pair[0], doc = pair[1];
+      eq(doc.split('class="agr-sig-page"').length - 1, 1,
+         '⚠ ' + which + ': exactly one signature-page wrapper — a second would break twice');
+      // ⚠ THE INDEX OF THE OPENING TAG, NOT OF THE ATTRIBUTE — starting the walk mid-tag puts the
+      // block's own <div at a negative depth and every count below reads one short.
+      const at = doc.indexOf('<div class="agr-sig-page"');
+      ok(at > 0, which + ': and it is there at all');
+
+      // ⚠⚠ EVERY SIGNATURE ANCHOR IS INSIDE IT. That is the requirement stated as a fact about the
+      // document rather than about the stylesheet: if a signature marker fell outside the wrapper
+      // it would sit on the previous page however the CSS paginates.
+      ['clientSig', 'clientDate', 'havSig', 'havDate'].forEach(function (k) {
+        ok(doc.indexOf(c.ESIGN_ANCHORS[k]) > at,
+           '⚠ ' + which + ': ' + k + ' is inside the wrapper, so it cannot land on the page before');
+      });
+
+      // ⚠ AND THE WRAPPER CLOSES LAST, so the footer rides on the signature page rather than being
+      // orphaned overleaf. Walked rather than assumed — an unbalanced open would render as the rest
+      // of the document being swallowed into the block.
+      const tail = doc.slice(at);
+      let depth = 0, closedAt = -1;
+      tail.replace(/<div\b|<\/div>/g, function (m, i) {
+        depth += (m === '<\/div>' ? -1 : 1);
+        if (depth === 0 && closedAt < 0) closedAt = i + m.length;
+        return m;
+      });
+      eq(depth, 0, '⚠ ' + which + ': the document’s divs balance');
+      eq(closedAt, tail.length,
+         '⚠⚠ ' + which + ': the wrapper is the LAST thing to close — the footer is on the '
+         + 'signature page, not stranded on a sheet of its own');
+      has(tail, 'Insured', which + ': and the footer really is in there');
+    });
+  }
+
+  group('⚠ THE OPT-OUT READS AS A TICK BOX ON PAPER, NOT AS ANYTHING DOCUSIGN-SHAPED');
+  {
+    // The same markup is what a wet-sign client prints, so the anchor has to sit inside an
+    // ordinary empty ballot box. A client who never sees DocuSign must be able to tick it with a pen.
+    const c = appCtx();
+    const blk = c.marketingOptOutBlock();
+    const at = blk.indexOf('&#9744;');
+    ok(at > 0, 'there is an empty ballot box');
+    ok(blk.indexOf(c.ESIGN_ANCHORS.mktOptOut) > at &&
+       blk.indexOf(c.ESIGN_ANCHORS.mktOptOut) < at + 80,
+       '⚠ and the anchor sits immediately inside it, so the tab lands on the box rather than in prose');
+    eq(blk.split('&#9744;').length - 1, 1, '⚠ exactly one box — nothing to choose between');
+    lacks(blk, 'sig-line',
+          '⚠⚠ and no signature rule. The conditional marketing signature is gone: it never rendered '
+          + 'on a real envelope, and a wet-sign client would have been shown a line to sign for '
+          + 'something the contract now says is theirs by default');
+    has(blk, 'written notice',
+        '⚠ the block itself names the route that does not depend on this box rendering at all');
   }
 
   group('⚠⚠ INVISIBLE, BUT RENDERED — the distinction the whole mechanism rests on');
@@ -1026,11 +1123,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(GS, "data.action === 'esignSend'", 'and dispatched');
     has(GS, "data.action === 'esignStatus'", 'both of them');
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
-    // ⚠ A FLOOR, NOT A "did you bump it" CHECK — it states what THIS feature needs. esignArchive
-    // landed in 2026-09-17b, so a deployment older than that cannot file an executed agreement and
-    // the banner must be able to say so. Raise it only when esign itself needs a newer backend.
-    ok(bv >= '2026-09-17b',
-       '⚠ the deployment is at least the one that added esignArchive');
+    // ⚠ A FLOOR, NOT A "did you bump it" CHECK — it states what THIS feature needs, so it survives
+    // the next real bump instead of breaking on it. Raise it only when esign itself needs a newer
+    // backend, and say what breaks below the line.
+    // ⚠⚠ RAISED TO 2026-09-18c, AND THE CONSEQUENCE IS NOT COSMETIC: `_dsClientTabs` began taking
+    // the anchor list in that version. An older deployment ignores it and places the marketing
+    // opt-out checkbox blind — against `anchorIgnoreIfNotPresent:'false'` — so DocuSign REFUSES
+    // every ESTATE envelope, on the matter type Havellin runs most. Nothing about that reads as a
+    // stale deployment from the app, so the banner has to be able to say it.
+    // (2026-09-17b added esignArchive, without which an executed agreement cannot be filed; that
+    // requirement is still true and is covered by this floor being at or above it.)
+    ok(bv >= '2026-09-18c',
+       '⚠⚠ the deployment is at least the one whose _dsClientTabs reads the anchor list — below it, '
+       + 'every estate envelope is refused');
+    ok('2026-09-18c' >= '2026-09-17b', 'and that floor is at or above the esignArchive one it replaced');
+    has(GS, '_dsClientTabs(data.anchors)',
+        '⚠ and the send really does hand the list over — the floor describes a behaviour, not a string');
   }
 
 
@@ -1044,29 +1152,53 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // first pass of this build was reverted eight ways and stayed green — a whole consent mechanism
   // with nothing asserting it existed.
 
-  group('⚠⚠ THE CONSENT BLOCK IS ON BOTH FORMS AND NAMES THE RIGHT PERSON');
+  group('⚠⚠ ONE OPT-OUT BOX, ON THE LIVING-CLIENT FORM, AND NONE AT ALL ON THE ESTATE ONE');
   {
+    // Anthony, off the first envelope DocuSign actually sent: *"why don't we just simplify that as
+    // one 'I do not authorize' … allow them to opt out, but use for marketing is assumed unless
+    // tic'ed. for estate work this should never be allowed."*
     const c = appCtx();
     const std = c.agreementHtml(LIVING, EST);
     const pro = c.probateAgreementHtml(PROBATE, EST);
 
-    [['standard', std], ['probate', pro]].forEach(function (pair) {
-      const which = pair[0], doc = pair[1];
-      has(doc, 'I AUTHORIZE', which + ': the authorize option is offered');
-      has(doc, 'I DO NOT AUTHORIZE',
-          '⚠ ' + which + ': and so is DECLINE — a single "I agree" box somebody must tick to finish '
-          + 'the envelope is a toll gate, not a consent');
-      has(doc, 'does not affect the Services',
-          '⚠ ' + which + ': declining is stated to cost them nothing, or the choice is not free');
-    });
+    eq(std.split('I DO NOT AUTHORIZE').length - 1, 1,
+       '⚠ exactly one box on the living-client form');
+    lacks(std, 'I AUTHORIZE</strong>',
+          '⚠⚠ and NO opposite box — silence is the authorization, so a second option to tick would '
+          + 'be two ways to say the same thing and a client could tick both');
+    has(std, 'Leave this box unchecked to authorize',
+        '⚠⚠ the default is STATED on the page. An opt-out whose default is only in the clause above '
+        + 'is a box whose meaning depends on having read a paragraph');
+    has(std, 'changes nothing about the Services',
+        '⚠ declining is stated to cost them nothing, or the choice is not free');
+    has(std, 'may decline it in full by checking the box',
+        '⚠ §10.2 itself points at the box, so the clause and the control are one instruction');
+    has(std, 'whether or not the box below was checked',
+        '⚠⚠ AND WRITTEN NOTICE IS AN EQUAL ROUTE OUT. This is the sentence standing behind a box a '
+        + 'client misses or a tab that fails to place — a consent whose only exit is one checkbox on '
+        + 'one page is one rendering bug from being no exit');
 
-    // ⚠ ONE BLOCK, TWO READERS, AND ONLY THE SIGNER LABEL DIFFERS. On an estate the person
-    // choosing is the personal representative; a block saying "Client" there would be addressing
-    // somebody who is deceased.
-    has(std, 'Client&rsquo;s Choice', 'the living-client form asks the Client');
-    has(pro, 'Personal Representative&rsquo;s Choice',
-        '⚠ and the estate form asks the Personal Representative, never the decedent');
-    lacks(pro, 'Client&rsquo;s Choice', 'the estate form does not also say Client');
+    // ⚠⚠ THE ESTATE FORM IS A PROHIBITION, NOT A CHOICE, AND THAT IS THE HALF WORTH PINNING. The
+    // subject is a decedent's house and the person who could consent is a fiduciary consenting on
+    // somebody else's behalf; offering the choice invites them to trade what is not theirs.
+    lacks(pro, 'I DO NOT AUTHORIZE', '⚠⚠ no tick box anywhere on the estate form');
+    lacks(pro, 'I AUTHORIZE', '⚠ and nothing to authorize either');
+    has(pro, '7.2 Marketing &amp; Promotional Use &mdash; Not Permitted',
+        '⚠ the subsection says so in its own heading, where a skimming reader meets it');
+    has(pro, 'Havellin does not use media captured during an estate engagement for marketing',
+        '⚠ stated flatly rather than as a default that could be varied');
+    has(pro, 'none is available under it by consent',
+        '⚠⚠ and it is not waivable — otherwise a representative could simply be asked off-document');
+    has(pro, 'It survives completion or termination',
+        '⚠ and it outlives the engagement, which is when the temptation to publish arrives');
+
+    // ⚠ §10.1 MUST NOT GO ON DESCRIBING A SEPARATE WRITTEN CONSENT. It cross-referenced §10.2 as
+    // the thing that had to be obtained; under an opt-out there is nothing to obtain, and a clause
+    // promising a consent step that no longer exists is a false statement on a signed contract.
+    lacks(std, 'without the separate written consent described in Section 10.2',
+          '⚠ the §10.1 cross-reference follows the new §10.2');
+    has(std, 'governed by Section 10.2 below, which the Client may decline',
+        'and points at the real mechanism');
   }
 
   group('⚠⚠ THE ESTATE FORM HAS A PHOTOGRAPHY SECTION AT ALL, WHICH IT NEVER DID');
@@ -1099,42 +1231,156 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           '⚠ the Client / Personal Representative tick boxes are gone — authority is settled at intake');
   }
 
-  group('⚠⚠ THE CLIENT CARRIES THE CONSENT TABS AND HAVELLIN DOES NOT');
+  group('⚠⚠ THE CLIENT CARRIES THE OPT-OUT TAB AND HAVELLIN DOES NOT');
   {
+    // ⚠⚠ DRIVEN END TO END, DOCUMENT → MEASUREMENT → ENVELOPE, because the two halves living in
+    // two sandboxes is exactly how they come to disagree. The real `agreementHtml` is measured by
+    // the real `esignAnchorsPresent` and the result is handed to the real `esignSendEnvelope`.
+    const app = appCtx();
+    const anchors = app.esignAnchorsPresent(app.agreementHtml(LIVING, EST));
+
     const c = gsCtx({ props: FULL_PROPS });
-    c.esignSendEnvelope({ pdfBase64: 'x', signerName: 'Tripp Butler', signerEmail: 'tripp@example.com' });
+    c.esignSendEnvelope({ pdfBase64: 'x', signerName: 'Tripp Butler',
+                          signerEmail: 'tripp@example.com', anchors: anchors });
     const r = c.calls[0].payload.recipients;
     const client = r.signers[0], hav = r.signers[1];
 
-    ok(!!client.tabs.radioGroupTabs, '⚠⚠ the client is asked the marketing question');
-    ok(!hav.tabs.radioGroupTabs,
-       '⚠⚠ and Havellin is NOT — a media release is the client’s decision about their own home, '
-       + 'and a REQUIRED radio on recipient 2 would block our own countersignature on a contract '
-       + 'the client had already signed');
+    ok(!!client.tabs.checkboxTabs, '⚠⚠ the client gets the marketing opt-out box');
+    ok(!hav.tabs.checkboxTabs,
+       '⚠⚠ and Havellin does NOT — a media release is the client’s decision about their own home, '
+       + 'and asking Havellin to consent to Havellin is not a thing');
     eq(hav.tabs.signHereTabs.length, 1, 'the countersignature is one signature and nothing else');
+    eq(client.tabs.signHereTabs.length, 1,
+       '⚠ and the client signs once — the conditional marketing signature is gone with the radios');
 
-    const grp = client.tabs.radioGroupTabs[0];
-    eq(grp.groupName, c.DS_MKT_GROUP, 'the group is named from the shared constant');
-    eq(grp.radios.length, 2, 'two options');
-    eq(grp.radios.map(function (x) { return x.value; }).sort().join(','), 'authorize,decline',
-       'authorize and decline, both real answers');
-    grp.radios.forEach(function (x) {
-      eq(x.required, 'true',
-         '⚠⚠ REQUIRED — this is the only thing that guarantees the client SEES it. DocuSign’s '
-         + 'guided navigation steps through required fields and jumps past optional ones, so an '
-         + 'optional signature alone is a consent nobody is ever asked for');
+    const box = client.tabs.checkboxTabs[0];
+    eq(box.anchorString, c.DS_ANCHORS.mktOptOut, 'placed on the shared anchor, not a typed string');
+    eq(box.selected, 'false',
+       '⚠⚠ UNCHECKED, and that IS the authorization. Shipping it pre-ticked would make the default '
+       + 'decline, which is the opposite of what §10.2 says happens when nothing is marked');
+    eq(box.required, 'false',
+       '⚠⚠ OPTIONAL, and this is correct only because it is an opt-out. DocuSign’s guided navigation '
+       + 'jumps past optional fields, so a box nobody reaches lands on the documented default — '
+       + 'authorized. Required would instead block the client’s own signature on a question the '
+       + 'contract says they need not answer');
+    eq(box.anchorIgnoreIfNotPresent, 'false',
+       '⚠ and when it IS placed, a missing marker still refuses loudly rather than silently '
+       + 'dropping the one control that decides whether a client’s home is published');
+  }
+
+  group('⚠⚠ THE SEND CARRIES WHAT THE DOCUMENT CARRIES — docSend → payload, driven');
+  {
+    // ⚠⚠ THIS IS THE JOIN, AND A SOURCE CHECK CANNOT SEE IT. A build that measures the html and
+    // then never puts the result on the payload contains every string a grep would look for, and
+    // its failure is SILENT: the opt-out box simply never appears on any envelope and the client
+    // has no way to decline in DocuSign at all. So the real `docSend` runs over a REAL agreement
+    // and the payload is read back.
+    const real = { standard: appCtx().agreementHtml(LIVING, EST),
+                   probate:  appCtx().probateAgreementHtml(PROBATE, EST) };
+
+    function driveSend(html) {
+      let posted = null;
+      const c = sandbox({
+        fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
+              'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent'],
+        vars: ['DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS'],
+        stubs: {
+          SHEETS_SYNC_URL: 'https://script.example/exec',
+          _appsScriptPost: (url, body, cb) => { posted = body; cb(true, { ok: true, envelopeId: 'e1', status: 'sent' }); },
+          _docBusy: null, _docNotice() {}, _dashSendState() {}, _pdfFailAdviceText: () => '',
+          docProvider: () => 'docusign',
+          docPdfBase64: (spec, h, cb) => cb('JVBERi0='),
+          setTimeout: () => 0, clearTimeout() {}, showSyncBadge() {}, open() {}, docAction() {},
+          saveJobs() {}, syncJobToSheets() {}, agrApprovedBy: 'Anthony Graziano',
+        },
+      });
+      const job = { id: 5, hvlId: 'HVL-0007', name: 'Jane Doe', email: 'jane@x.com' };
+      c.jobs = [job];
+      c.docSend({ job: job, kind: 'agreement', key: 'agreement', to: 'jane@x.com',
+                  names: { attachment: 'Agreement.pdf' },
+                  cfg: { subject: () => 'Your agreement', html: () => html } });
+      return posted;
+    }
+
+    const std = driveSend(real.standard);
+    eq(std.action, 'esignSend', 'the living-client agreement goes out through esignSend');
+    ok(Array.isArray(std.anchors), '⚠ and the payload names the markers the document carries');
+    ok(std.anchors.indexOf('mktOptOut') !== -1,
+       '⚠⚠ including the marketing opt-out — without this line on the payload the box is never '
+       + 'placed on any envelope and nobody can decline in DocuSign at all');
+    ok(std.anchors.indexOf('clientSig') !== -1, 'and the client signature');
+
+    const pro = driveSend(real.probate);
+    ok(pro.anchors.indexOf('mktOptOut') === -1,
+       '⚠⚠ and an estate agreement names it NOT, because its document does not carry it');
+    ok(pro.anchors.indexOf('havSig') !== -1, 'while still naming the four that are always there');
+
+    // ⚠ AND IT IS MEASURED OFF THE DOCUMENT, NOT THE JOB. Handing docSend a document with no
+    // marketing block must produce no marketing anchor whatever the job looks like — that is what
+    // makes this a measurement rather than a second copy of the rendering rule.
+    const bare = driveSend('<p>nothing here</p>');
+    eq(bare.anchors.length, 0, '⚠ a document with no anchors names none');
+  }
+
+  group('⚠⚠ AN ESTATE ENVELOPE GETS NO MARKETING TAB, AND IS NOT REFUSED FOR IT');
+  {
+    // ⚠⚠ THIS IS THE CASE THAT WOULD HAVE BROKEN EVERY ESTATE SEND. The estate form carries no
+    // marketing clause, so it carries no anchor; a backend that placed the tab blind would hand
+    // DocuSign `anchorIgnoreIfNotPresent:'false'` against a marker that is deliberately absent and
+    // the whole envelope would be REFUSED — on the matter type Havellin runs most.
+    const app = appCtx();
+    const anchors = app.esignAnchorsPresent(app.probateAgreementHtml(PROBATE, EST));
+    ok(anchors.indexOf('mktOptOut') === -1, 'the estate document really does not carry it');
+
+    const c = gsCtx({ props: FULL_PROPS });
+    const res = c.esignSendEnvelope({ pdfBase64: 'x', signerName: 'Tripp Butler',
+                                      signerEmail: 'tripp@example.com', anchors: anchors });
+    ok(res.ok, '⚠⚠ the estate envelope is still built');
+    const client = c.calls[0].payload.recipients.signers[0];
+    ok(!client.tabs.checkboxTabs, '⚠ and carries no marketing checkbox at all');
+    eq(client.tabs.signHereTabs.length, 1, 'just the signature');
+    eq(client.tabs.dateSignedTabs.length, 1, 'and the date');
+
+    // ⚠ A CALLER THAT NAMES NOTHING GETS NOTHING OPTIONAL, which is the safe direction: a missing
+    // opt-out box leaves the stated default in place, while a refused envelope sends nothing at all.
+    const c2 = gsCtx({ props: FULL_PROPS });
+    c2.esignSendEnvelope({ pdfBase64: 'x', signerName: 'A', signerEmail: 'a@b.c' });
+    ok(!c2.calls[0].payload.recipients.signers[0].tabs.checkboxTabs,
+       '⚠ no anchors named → no optional tab placed');
+    eq(c2.calls[0].payload.recipients.signers[0].tabs.signHereTabs.length, 1,
+       '⚠ but the four required tabs are placed regardless — their absence really is a defect');
+  }
+
+  group('⚠⚠ THE RADIO GROUP AND THE CONDITIONAL SIGNATURE ARE GONE, NOT DISABLED');
+  {
+    // ⚠⚠ THE PROBE THAT APPROVED THEM WAS MEASURING THE WRONG THING, and that is the lesson worth
+    // keeping rather than the field type. `testEsignTabs` created four DRAFT envelopes
+    // (`status:'created'`) and all four shapes came back ACCEPTED — so the marketing consent shipped
+    // as a required radio pair plus a conditional signature. The envelope that reached a client was
+    // `status:'sent'`, and the radios were not on it. A draft accepting a field DEFINITION does not
+    // prove the field survives SENDING.
+    const gs = noComments(GS);
+    // ⚠ SCOPED TO THE REAL BUILDERS, NOT THE WHOLE FILE. `testEsignTabs` still probes both shapes
+    // — that is its job, and throwing away the only cheap way to ask the account a capability
+    // question would be the wrong correction. What must not survive is either shape on the path a
+    // client's envelope takes. A file-wide needle here matches the probe and proves nothing.
+    const tabs = noComments(gsFn('_dsClientTabs')) + noComments(gsFn('esignSendEnvelope'));
+    lacks(tabs, 'radioGroupTabs',
+          '⚠ no radio group is built for a real envelope any more');
+    lacks(tabs, 'conditionalParentLabel',
+          '⚠ nor a conditional tab — dead code that still compiles is how a retired shape comes back');
+    lacks(gs, 'DS_MKT_GROUP', '⚠ and the group name it pointed at is deleted with it');
+    lacks(noComments(APP), 'ESIGN_MKT_GROUP', '⚠ the app’s mirror of that constant is gone too');
+    ['mktYes', 'mktNo', 'mktSig'].forEach(function (k) {
+      lacks(noComments(APP), k + ':', '⚠ the retired anchor ' + k + ' is removed from the app table');
+      lacks(gs, k + ':', '⚠ and from the backend table');
     });
-
-    const mkt = client.tabs.signHereTabs.filter(function (t) { return t.tabLabel === 'marketing_signature'; })[0];
-    ok(!!mkt, 'the marketing signature exists');
-    eq(mkt.optional, 'true', '⚠ and is OPTIONAL — a client who declines is never made to sign it');
-    eq(mkt.conditionalParentLabel, c.DS_MKT_GROUP, 'shown only under the marketing radio');
-    eq(mkt.conditionalParentValue, 'authorize',
-       '⚠ and only on authorize, so declining never shows a signature line to ignore');
-    // ⚠ MEASURED BEFORE IT WAS BUILT. testEsignTabs drove all three shapes against the real
-    // account on 2026-09-18 and all three came back ACCEPTED; the plan's field palette does not
-    // answer this, because nothing here uses the drag-and-drop sender UI it describes.
-    ok(/function testEsignTabs\(\s*\)/.test(GS), 'and the probe that proved the account takes them is committed');
+    // ⚠ THE PROBE ITSELF SURVIVES AND SAYS WHAT IT CAN AND CANNOT PROVE. Deleting it would throw
+    // away the only cheap way to ask the account a capability question; leaving it unqualified is
+    // what produced this defect.
+    ok(/function testEsignTabs\(\s*\)/.test(GS), 'the probe is still committed');
+    has(GS, 'does not prove the field survives SENDING',
+        '⚠⚠ and it now records that a draft-create probe proves less than it looks like it proves');
   }
 
   group('⚠⚠ A PERSON COUNTERSIGNS, AND THE DEPARTMENT GROUP GETS A COPY INSTEAD');
@@ -1247,7 +1493,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const at = doc.indexOf('Role / Authority');
       if (at < 0) return;
       const near = doc.slice(at, at + 400);
-      ['mktYes', 'mktNo', 'mktSig', 'clientSig'].forEach(function (k) {
+      ['mktOptOut', 'clientSig'].forEach(function (k) {
         lacks(near, c.ESIGN_ANCHORS[k],
           '⚠ no e-signature anchor sits on the role row — it is stated, never asked');
       });

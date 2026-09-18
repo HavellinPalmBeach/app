@@ -781,25 +781,45 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 
 ### What the client actually fills in
 
-**Three things, and only three**: their signature, the date, and a **marketing choice**. Nothing else is a field — no initials, no role tick box.
+**Two things, plus one optional box**: their signature, the date, and — on a living-client agreement only — a marketing opt-out they may leave alone. Nothing else is a field: no initials, no role tick box, no second signature.
 
 | Field | Required? | Where it is |
 |---|---|---|
-| Client signature and date | **Yes** | The signature block at the end. |
-| *I AUTHORIZE* / *I DO NOT AUTHORIZE* marketing use | **Yes — one of the two** | §10.2 on the standard form, §7.2 on the estate/probate form. |
-| Marketing signature | **Only if they authorize** | Directly beneath the two boxes; DocuSign hides it entirely unless *I AUTHORIZE* is picked. |
+| Client signature and date | **Yes** | The signature block at the end, which is now a page of its own. |
+| *I DO NOT AUTHORIZE* marketing use | **No — leaving it blank authorizes** | §10.2, at the end of the section. **Standard form only.** |
+| Anything on an estate or probate agreement | **Signature and date, and nothing else.** There is no marketing box on that form at all — see below. | |
 
-> **⚠⚠ THE CHOICE IS REQUIRED; THE SIGNATURE IS NOT. THAT PAIRING IS THE WHOLE MECHANISM AND IT IS NOT A COMPROMISE.** DocuSign's guided navigation walks a signer through the *required* fields and jumps *past* optional ones. So an optional signature on its own is a consent nobody is ever asked for — the client clicks Finish having never seen it. Making the **pick** required is what puts the question in front of them; making the **signature** conditional on answering *yes* is what stops a client who declines being asked to sign something they just refused. Declining takes one click and no signature.
+> **⚠⚠ IT IS AN OPT-OUT AND SILENCE MEANS YES. Say that plainly if a client asks.** §10.2 authorizes marketing use by default; the box at the end of it is how they decline, and leaving it alone is what authorizes. Ticking it changes nothing about the work, the fee, or any other term, and the section says so on its face. **They can also decline, or withdraw an authorization already given, at any time in writing** — the box is a convenience, not the only way, and that sentence is in §10.2 as well.
+>
+> **⚠⚠ THIS REVERSED A BUILD THAT WAS ONE DAY OLD, AND THE REASON IS WORTH KNOWING BEFORE ANYBODY PROPOSES CHANGING IT BACK.** For a few hours on 2026-09-18 it was an opt-in: a required *I AUTHORIZE* / *I DO NOT AUTHORIZE* pair with a signature that appeared only under *authorize*. The reasoning was sound — DocuSign's guided navigation jumps past optional fields, so an optional consent is one nobody is ever asked for. What went wrong was not the reasoning but the fields: **on the first envelope DocuSign really sent, the radio buttons and the conditional signature were simply not on the page.** Anthony: *"docusign did not recognize the marketing tic boxes or the required signature. why don't we just simplify that as one 'I do not authorize' … allow them to opt out, but use for marketing is assumed unless tic'ed."* A single checkbox is the most basic field DocuSign has.
+>
+> **⚠ AND THE OPT-OUT FAILS SAFE IN A WAY THE OPT-IN COULD NOT.** Under the opt-in, a field that silently failed to place left a required question unasked and the record blank. Under the opt-out, a box nobody sees lands on the documented default — authorized — which is exactly what the clause says happens when nothing is ticked, and the client's written-notice route survives either way.
 
-> **⚠ IT IS OPT-IN NOW, AND IT USED TO BE OPT-OUT.** The old clause published a client's home *unless they ticked a box saying not to* — silence read as consent. It reads the other way round now: nothing is published unless the client affirmatively authorizes it and signs for it, and **an unanswered agreement means no**. Anthony's reason: *"with respect to using photos in social media, I do think they're going to need to sign that."*
+> **⚠⚠ THERE IS NO MARKETING BOX ON AN ESTATE OR PROBATE AGREEMENT, AND THAT IS A PROHIBITION RATHER THAN A DEFAULT.** Anthony: *"for estate work this should never be allowed."* §7.2 on that form now reads *Marketing & Promotional Use — Not Permitted* and says outright that Havellin does not use estate media for marketing, that the Agreement grants no such right, and that **none is available under it by consent** — so it cannot be arranged off-document either. It binds our vendors too and survives the engagement.
+>
+> **Why the two forms differ:** on a living-client job the person deciding owns the home and is alive to decide. On an estate the subject is a decedent's house, the people in the photographs are grieving heirs, and the only person who could consent is a fiduciary consenting on somebody else's behalf. Offering the choice at all invites a Personal Representative to trade something that is not theirs.
 
 > **Documentation photography is not a choice and is not asked about.** We photograph the property and its contents because that is how the inventory, the appraisal support and the chain of custody are built — a client paying us to inventory their home is not separately consenting to the inventory. It used to carry an *initials* box, which was removed on 2026-09-18: *"if they are paying us to inventory their home, we're obviously going to inventory their home. Let's just state what we do and how we treat that confidential information."* The clause now says plainly where the media is stored, who can see it, and that it is never sold or shared (§10.1a standard, §7.1 estate).
 >
-> **⚠ The estate/probate form had no photography or marketing section at all until 2026-09-18**, and it is the form on the matters where the media is most sensitive. Both forms carry both clauses now.
+> **⚠ The estate/probate form had no photography or marketing section at all until 2026-09-18**, and it is the form on the matters where the media is most sensitive. It carries **§7.1 Documentation Media** now — where the images live, who can reach them, the seven-year retention, never sold or shared — and **§7.2 as a flat prohibition on marketing use**. So both forms say what happens to the media; only the living-client one offers a marketing choice.
 
 > **Nothing asks the signer to classify themselves any more.** Who has authority to sign is established at intake and we are talking to that person, so a pick-one on the contract was a question with no reader.
 >
 > **⚠ THE ESTATE FORM STILL STATES THE ROLE, AND THAT IS NOT THE SAME THING.** *Role / Authority* at §1.2 and *Title / Role* on its signature page are the **capacity that lets that person bind the estate** — exactly what *Managing Member* does on our side of the block, and what counsel queries on a court-reviewed matter. They print **the role recorded at intake**. What came off is the **four-option menu** they used to fall back to (*Personal Representative · Executor · POA · Other*), which on an executed contract — and on the signature page, beside the line the representative signs — reads as a pick-one they are meant to answer. No e-signature field was ever placed on it.
+
+### What the document itself looks like — three changes off a real envelope
+
+Anthony read the first agreement DocuSign actually sent and flagged three things on its face. All three are fixed, and an agreement generated before 2026-09-18 will not match what is described here — regenerate it rather than reconciling it.
+
+| What went | Why |
+|---|---|
+| The boxed banner at the top — *"IMPORTANT: Read carefully. Both parties must sign before any work begins."* | *"the top banner is not needed and sounds amateurish."* Both halves of it are said better further down: the signature page states that no work begins until both signatures are obtained, and the acknowledgment clause carries the read-and-understood line. |
+| The *Exhibit A — Service Estimate* paragraph at the very end of the standard form | *"the second is duplicated on the actual exhibit header, so unneeded."* The agreement never goes out alone — it is always the signing packet — and the packet already opens the estimate under its own *Exhibit A* band. **The incorporation is still stated in §1.1**, which is where a contract states it. |
+| The signature block sharing a page with the last clause | *"should we have a page break at the end of the agreement so the signature page is always it's own page?"* It was real: measured on the envelope that went out, the standard form put our block on page 6 and the client's on page 7, and the estate form split 7/8. Both now land whole on one page. |
+
+> **The signature page is a page of its own on both forms, on paper and in DocuSign alike.** Measured after the change: the standard form is 7 pages with the whole signature block on page 7, and the estate form is **7 pages rather than 8** — dropping the marketing consent block from it saved a sheet.
+>
+> **⚠ The rule lives in the app's main stylesheet, not just in the print block, and that is what makes it reach DocuSign.** The PDF the envelope carries is built by inlining every stylesheet in the page; a rule that only existed under `@media print` would paginate the Print button and do nothing to the document the client signs.
 
 ### How the signature gets back
 

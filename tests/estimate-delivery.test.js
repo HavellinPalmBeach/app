@@ -799,8 +799,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('docPdfBase64'), "action: 'htmlToPdf'", 'through the same conversion as everything else');
     // ⚠ AND IT PAGINATES. The exhibit has to start on a fresh page, or the estimate runs
     // on from the signature block — which is what "attached as Exhibit A" has to look like.
-    has(src, "pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}',",
+    // ⚠ STATED AS THE REQUIREMENT RATHER THAN PINNED AS A BYTE SEQUENCE. This used to assert the
+    // whole `pdfCss:` line verbatim and broke on 2026-09-18 when the signature-page rule was added
+    // beside the exhibit rule — a true change to a line it had no opinion about. Twelfth time this
+    // project records that shape.
+    const pdfCss = src.slice(src.indexOf("pdfCss: '.ce-page{max-width:800px"));
+    const pdfCssLine = pdfCss.slice(0, pdfCss.indexOf('\n'));
+    has(pdfCssLine, '.packet-exhibit{break-before:page;page-break-before:always;}',
       'and the packet carries its own print CSS so the exhibit starts a new page');
+    has(pdfCssLine, '.agr-sig-page{break-before:page;page-break-before:always;}',
+      '⚠ and the signature page starts one too, so the signatures never span two sheets');
 
     // The fallback carries the CC too — that is the whole point of this group.
     const fb = fn('buildAgreementMailto');

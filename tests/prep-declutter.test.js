@@ -22,7 +22,7 @@
 
 const { fn, sandbox, domStub, source } = require('./harness');
 
-const DOC_FNS = ['marketingConsentBlock', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'fmtDate2',
+const DOC_FNS = ['marketingOptOutBlock', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'fmtDate2',
   'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText',
   'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
   'clientEstimateHtml', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',

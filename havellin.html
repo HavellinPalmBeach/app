@@ -543,6 +543,24 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 /* Signing packet: the agreement, then the approved estimate as Exhibit A on a new page.
    The band is the only thing the packet adds to either document. */
 .packet-exhibit{break-before:page;page-break-before:always;}
+/* ⚠⚠ THE SIGNATURE PAGE ALWAYS STARTS A FRESH PAGE, ON BOTH AGREEMENT FORMS. Anthony, off a
+   real DocuSign envelope: *"should we have a page break at the end of the agreement so the
+   signature page is always it's own page? it would avoid issues like this where the signatures
+   awkwardly span 2 pages."* Without it the break lands wherever the last clause happens to end,
+   so a client can meet the Havellin block at the foot of one page and their own at the head of
+   the next — and a signature line split from the name above it is the one place on a contract
+   where the layout has to be unambiguous.
+   ⚠ IT IS DECLARED HERE RATHER THAN ONLY IN @media print, AND THAT IS WHAT MAKES IT REACH
+   DOCUSIGN. `_exportDoc` inlines every <style> block in the page into the html it hands to
+   `htmlToPdf`, and that PDF is the envelope's document. A rule living only in the print block
+   would paginate the Print button and do nothing to the document the client actually signs.
+   ⚠ NO break-inside:avoid, AND THAT IS MEASURED RATHER THAN ASSUMED. The estate block renders
+   ~756px against ~893px of usable Letter page, so it fits today — but only by about 140px, and a
+   longer representative name, a second clause or a bigger deposit figure eats that. A block that
+   asks to be unbreakable and then cannot fit is worse than one that breaks: the renderer either
+   ignores the request or pushes the whole thing onto a page it still overruns. The break-BEFORE is
+   what Anthony asked for; staying whole is not something the page can promise. */
+.agr-sig-page{break-before:page;page-break-before:always;}
 .packet-exhibit-hdr{border-top:2px solid var(--bronze);border-bottom:1px solid var(--border);padding:8px 0 6px;margin-bottom:1rem;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--bronze);}
 .packet-exhibit-hdr span{display:block;margin-top:2px;font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--gray);}
 .ce-tbl{width:100%;border-collapse:collapse;margin-bottom:0;}
@@ -914,6 +932,7 @@ body.field-mode #sync-pending{bottom:calc(72px + env(safe-area-inset-bottom,0px)
      so the page-1 header rides up a little rather than sitting an inch down. */
   .ce-page{padding:.1in .15in;max-width:100%;font-size:10px;line-height:1.4;}
   .packet-exhibit{break-before:page;page-break-before:always;}
+  .agr-sig-page{break-before:page;page-break-before:always;}
   /* Force background colors to print */
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
   .ce-brand{font-size:30px;}
@@ -1001,7 +1020,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 4:08pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 5:21pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12810,7 +12829,11 @@ var DOC_SEND_PROVIDERS = {
         subject: spec.cfg.subject(spec),
         signerName: who.name,
         signerEmail: who.email,
-        hvlId: spec.job.hvlId || ''
+        hvlId: spec.job.hvlId || '',
+        // The markers this document really carries. The backend places the four required tabs
+        // regardless — their absence is a defect worth refusing an envelope over — and every
+        // optional one only when it is named here.
+        anchors: spec.anchors || []
       }, function (ok, d) {
         if (!ok || !d || !d.ok) {
           var why = (d && (d.error || d.message)) || 'the request did not reach DocuSign';
@@ -12864,6 +12887,13 @@ function docSend(spec) {
 
   var html = spec.cfg.html(spec);
   if (!html) { _docNotice('warn', 'There is nothing to send on this document yet.', spec.job.id); return false; }
+  // ⚠⚠ WHAT THE E-SIGNATURE PROVIDER MAY PLACE IS MEASURED OFF THIS DOCUMENT, not re-derived from
+  // the job. `marketingOptOutBlock` renders on the living-client form and on no estate one, and
+  // DocuSign REFUSES an envelope whose named anchor is missing (`anchorIgnoreIfNotPresent:'false'`,
+  // which is the right behaviour for the four that must always be there). Asking the html which
+  // markers it actually carries is what lets an optional anchor exist at all without giving the
+  // backend a second opinion of when the block renders.
+  spec.anchors = esignAnchorsPresent(html);
 
   var provider = docProvider(spec);
   _docBusy = { jobId: spec.job.id, docKey: spec.key };
@@ -13015,57 +13045,87 @@ var AGR_SIG_MANUAL_METHODS = ['wet', 'scanned'];
 // ⚠ THEY RENDER ON EVERY AGREEMENT, INCLUDING WET-SIGNED ONES, and that is correct — white
 // on white is invisible on screen and on paper, and a document whose anchors depend on how
 // it is going to be signed is a document with two versions.
-// ⚠⚠ THE MARKETING CONSENT IS A RADIO GROUP PLUS A CONDITIONAL SIGNATURE, AND AN OPTIONAL
-// SIGNATURE ON ITS OWN WOULD HAVE BEEN THE WRONG ANSWER. DocuSign's guided navigation steps a
-// signer through REQUIRED fields only, so an optional signature is jumped straight past — the
-// client clicks FINISH having never seen it. That reads as a clean opt-out and is really a
-// consent nobody was ever asked for. `mktYes`/`mktNo` are a REQUIRED radio pair, so the envelope
-// cannot complete until the question has an answer either way, and `mktSig` is a signature that
-// only appears when they pick authorize. Measured against the real account by `testEsignTabs`
-// on 2026-09-18 — all three accepted, so this is what the plan allows rather than what it
-// might allow.
+// ⚠⚠ THE MARKETING CONSENT IS ONE OPT-OUT CHECKBOX, AND THE RADIO PAIR IT REPLACED DID NOT
+// RENDER ON A REAL ENVELOPE. Anthony, reading the first one DocuSign actually sent: *"docusign did
+// not recognize the marketing tic boxes or the required signature. why don't we just simplify that
+// as one 'I do not authorize' … allow them to opt out, but use for marketing is assumed unless
+// tic'ed. for estate work this should never be allowed."*
+// ⚠⚠ AND THE PROBE THAT SAID IT WOULD WORK WAS MEASURING THE WRONG THING — this is the lesson,
+// not the field type. `testEsignTabs` created four DRAFT envelopes (`status:'created'`) and all
+// four came back ACCEPTED, radio group and conditional signature included. The envelope that went
+// to a client was `status:'sent'`, and the radios were simply not on it. **A draft accepting a
+// field definition does not prove the field survives SENDING**, so the probe proved less than it
+// looked like it proved. `checkboxTabs` is the most basic field DocuSign has — it is on the
+// *Basic fields* palette of the plan we are on — and it is what ships.
+// ⚠⚠ THE OPT-OUT SHAPE ALSO FAILS SAFE IN A WAY THE OPT-IN COULD NOT, which is worth stating
+// because it is the reason this is not merely a simplification. Under the opt-in, a tab that
+// silently failed to place left a REQUIRED question unasked and the record blank; under the
+// opt-out, an unplaced box lands on the documented default — authorized — which is exactly what
+// the clause says happens when nothing is ticked. The client's route out survives either way,
+// because §10.2 also gives them written notice at any time.
 // ⚠ DOCUMENTATION PHOTOGRAPHY CARRIES NO TAB AT ALL, deliberately. Anthony: *"if they are paying
 // us to inventory their home, we're obviously going to inventory their home."* Asking a client to
 // initial the thing they have just hired us to do is ceremony, and every extra required field is
 // one more place a signature stalls.
+// ⚠⚠ `mktOptOut` IS OPTIONAL IN A SENSE THE OTHER FOUR ARE NOT: IT IS ON THE LIVING-CLIENT FORM
+// AND ON NO ESTATE ONE. So the backend may not place it blind — `anchorIgnoreIfNotPresent:'false'`
+// would make DocuSign REFUSE every estate envelope over an anchor that is deliberately absent.
+// `esignAnchorsPresent` reads the anchors out of the document that becomes the PDF and the send
+// names them, so what is placed is decided by MEASURING the document rather than by a second copy
+// of the rule that renders it.
 var ESIGN_ANCHORS = { clientSig: '/hsc/', clientDate: '/hdc/', havSig: '/hsh/', havDate: '/hdh/',
-                      mktYes: '/mky/', mktNo: '/mkn/', mktSig: '/mks/' };
-// The radio group's name is the parent a conditional tab points at, so it is declared once here
-// and read by the backend's tab builder rather than typed at either end.
-var ESIGN_MKT_GROUP = 'marketing_consent';
+                      mktOptOut: '/mko/' };
+// ⚠ THE FOUR THAT MUST BE ON EVERY AGREEMENT. Anything outside this list is optional by
+// construction: the backend places it only when the document is measured to carry it, and these
+// four are the ones whose absence is a defect worth refusing an envelope over.
+var ESIGN_REQUIRED_ANCHORS = ['clientSig', 'clientDate', 'havSig', 'havDate'];
+
+// ⚠⚠ THE DOCUMENT IS MEASURED, NEVER RE-DERIVED. This runs over the very html that is about to
+// be converted to the PDF the envelope carries, so the tab list and the document cannot disagree
+// about what is on the page — the two-copies-of-one-rule drift this file records more often than
+// anything else, here on the one control that decides whether a client's home is published.
+function esignAnchorsPresent(html) {
+  var out = [];
+  if (!html) return out;
+  Object.keys(ESIGN_ANCHORS).forEach(function (k) {
+    if (html.indexOf(ESIGN_ANCHORS[k]) !== -1) out.push(k);
+  });
+  return out;
+}
 
 function esignAnchor(tag) {
   return '<span style="color:#fff;font-size:6px;line-height:0;">' + tag + '</span>';
 }
 
-// ⚠⚠ ONE CONSENT BLOCK, READ BY BOTH AGREEMENT FORMS. Two copies of a consent is how the
-// living-client form and the estate form come to ask for different things in different words
-// over the same photographs — the second-renderer drift this file records more than any other
-// single failure. `signerLabel` is the ONLY thing that differs: on an estate the person choosing
-// is the personal representative, and a block that said "Client" there would be asking somebody
-// who is deceased.
+// ⚠⚠ ONE OPT-OUT BOX, ON THE LIVING-CLIENT FORM ONLY — AND THE ESTATE FORM DOES NOT CALL THIS.
+// It used to be a shared block with a `signerLabel` argument, because two copies of one consent is
+// how two forms come to ask different things in different words over the same photographs. That
+// reasoning is dead in the best way: the estate form has no marketing clause to keep in step with,
+// because Havellin does not market estate work at all. Anthony: *"for estate work this should never
+// be allowed."* §7.2 there is a flat prohibition with nothing to tick, so a block reaching for a
+// signer label would be asking a Personal Representative a question the contract forbids.
 //
-// ⚠⚠ IT IS AN OPT-IN, AND THE ONE IT REPLACED WAS AN OPT-OUT. The old §10.2 gave Havellin
-// marketing rights UNLESS the client found a tick box and initialled it — so silence, or simply
-// not noticing, read as consent to publish a client's home. Anthony: *"with respect to using
-// photos in social media, I do think they're going to need to sign that."* Silence now means NO.
+// ⚠⚠ IT IS AN OPT-OUT AND SILENCE MEANS YES, WHICH REVERSES THE 2026-09-18 MORNING BUILD.
+// That one was an opt-in over a REQUIRED radio pair plus a conditional signature, on the reasoning
+// that DocuSign's guided navigation jumps past optional fields so an unanswered question reads as a
+// consent nobody was asked for. The reasoning was sound and the field types did not survive the
+// send — see the note on `ESIGN_ANCHORS`. Anthony's answer is the shape that does not depend on
+// them: assume authorization, print one box, and give a real route out that does not depend on
+// DocuSign rendering anything at all.
 //
-// ⚠ BOTH OPTIONS ARE OFFERED AND NEITHER IS PRE-SELECTED. A single "I agree" box a client must
-// tick to finish the envelope is not consent, it is a toll gate; DECLINE has to be a real answer
-// that costs them nothing, or the record is worthless on the day it matters.
+// ⚠ SO THE BOX IS NOT THE ONLY WAY TO DECLINE, AND THE CLAUSE SAYS SO. §10.2 gives written
+// notice at any time the same effect, which is what stands behind a tick box a client misses, a
+// tab that fails to place, or a wet-signed copy that comes back with nothing marked. A consent
+// mechanism whose only exit is one checkbox on one page is one rendering bug from being no exit.
 //
 // ⚠ AND IT READS CORRECTLY ON PAPER. The same markup is what a wet-sign client prints, so the
-// anchors sit inside ordinary tick boxes and a signature rule rather than anything DocuSign-shaped.
-function marketingConsentBlock(signerLabel) {
-  var who = signerLabel || 'Client';
+// anchor sits inside an ordinary tick box rather than anything DocuSign-shaped.
+function marketingOptOutBlock() {
   var h = '<div style="margin-top:.75rem;border:1.5px solid var(--bronze);border-radius:4px;overflow:hidden;">';
-  h += '<div style="background:var(--tan);padding:6px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);">Marketing &amp; Promotional Use &mdash; ' + esc(who) + '&rsquo;s Choice</div>';
+  h += '<div style="background:var(--tan);padding:6px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);">Marketing &amp; Promotional Use &mdash; Optional Opt-Out</div>';
   h += '<div style="padding:10px 12px;font-size:11px;line-height:1.6;color:var(--gray-dk);">';
-  h += '<div style="margin-bottom:8px;">Choose one. This is optional and does not affect the Services, the fee, or any other term of this Agreement.</div>';
-  h += '<div style="margin-bottom:6px;">&#9744;' + esignAnchor(ESIGN_ANCHORS.mktYes) + ' &nbsp;<strong>I AUTHORIZE</strong> Havellin to use media from this engagement for marketing and promotional purposes, on the restrictions in Section 10.2.</div>';
-  h += '<div style="margin-bottom:10px;">&#9744;' + esignAnchor(ESIGN_ANCHORS.mktNo) + ' &nbsp;<strong>I DO NOT AUTHORIZE</strong> any marketing or promotional use. Media is used only to deliver and document the Services.</div>';
-  h += '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Signature &mdash; required only if authorizing</div>';
-  h += '<div class="sig-line">' + esignAnchor(ESIGN_ANCHORS.mktSig) + '</div>';
+  h += '<div style="margin-bottom:8px;">&#9744;' + esignAnchor(ESIGN_ANCHORS.mktOptOut) + ' &nbsp;<strong>I DO NOT AUTHORIZE</strong> any marketing or promotional use of media from this engagement.</div>';
+  h += '<div style="font-size:10px;color:var(--gray);line-height:1.5;">Leave this box unchecked to authorize the use described in Section 10.2, on the restrictions stated there. Checking it changes nothing about the Services, the fee, or any other term of this Agreement. You may also decline, or withdraw an authorization, at any time by written notice &mdash; the box is a convenience, not the only way.</div>';
   h += '</div></div>';
   return h;
 }
@@ -13798,7 +13858,7 @@ var DOC_ACTIONS = {
     emailHtml: function (spec) { return buildAgreementEmailHtml(spec.job); },
     mailto: function (spec) { return buildAgreementMailto(spec.job); },
     // The packet paginates: the exhibit starts on a fresh page.
-    pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;}',
+    pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;} .agr-sig-page{break-before:page;page-break-before:always;}',
     // ⚠ THE PACKET, NEVER THE BARE AGREEMENT. Both forms incorporate the Estimate as
     // Exhibit A and the estate form says the agreement is not valid without it, so a
     // client sent the agreement alone is signing against an exhibit they do not have.
@@ -28283,9 +28343,12 @@ function probateAgreementHtml(job, est) {
   content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Engagement Agreement</div>';
   content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs '+svcLabel+' services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
   content += '</div>';
-  content += '<div style="border:1px solid var(--bronze-lt);border-radius:4px;padding:8px 14px;margin-bottom:1rem;background:#fef9f0;">';
-  content += '<span style="font-size:11px;font-weight:700;color:var(--bronze-dk);">IMPORTANT: Read carefully. Both parties must sign before any work begins.</span>';
-  content += '</div>';
+  // ⚠ NO "IMPORTANT: READ CAREFULLY" BANNER, AND IT IS NOT COMING BACK. Anthony: *"the top
+  // banner is not needed and sounds amateurish."* A contract that opens by telling the reader it
+  // is a contract reads as though it doubts they can tell — and both halves of it were already
+  // said better further down: the signature page states that no work begins until both signatures
+  // are obtained, which is the operative term, and the standard form's §18 states the
+  // read-and-understood acknowledgment where a court looks for it.
   // SECTION 1: PARTIES
   content += secHdr(1,'Parties');
   content += subHdr('1.1 Service Provider');
@@ -28525,10 +28588,21 @@ function probateAgreementHtml(job, est) {
   content += subHdr('7.1 Documentation Media');
   content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, the &sect;733.604 inventory, appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how the estate is accounted for.');
   content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained for seven years as part of the fiduciary record. It is never sold, licensed, or shared with any third party except a vendor performing Services on this engagement, or as required by law or court order.');
-  content += subHdr('7.2 Marketing &amp; Promotional Use &mdash; Optional');
-  content += pp('Separately, and <strong>only if the Personal Representative affirmatively authorizes it below</strong>, Havellin may use media captured during this engagement for marketing, promotional, and educational purposes. Declining changes nothing about the Services, the fee, or any other term, and it is the default if the choice is left unanswered.');
-  content += pp('If authorized, the following restrictions apply without exception: no street address or unit number is disclosed; no name of the decedent, the Personal Representative, any family member, heir, or beneficiary appears; no image or likeness of any identifiable individual is published; no document, financial record, or item bearing identifying information is shown; and Havellin uses reasonable care to avoid publishing anything that could identify the residence or the family&rsquo;s circumstances. Authorization may be revoked prospectively at any time by written notice, which does not require removal of media already published.');
-  content += marketingConsentBlock('Personal Representative');
+  // ⚠⚠ ON AN ESTATE THIS IS A PROHIBITION, NOT A CHOICE, AND THERE IS DELIBERATELY NOTHING TO
+  // TICK. Anthony: *"for estate work this should never be allowed."* The living-client form offers
+  // an opt-out box because the person deciding owns the home and is alive to decide; here the
+  // subject is a decedent's house and the people in the photographs are grieving heirs, and the
+  // person who could consent is a FIDUCIARY consenting on somebody else's behalf. Offering the
+  // choice at all invites a Personal Representative to trade something that is not theirs.
+  // ⚠ SO THE ESTATE FORM CARRIES NO MARKETING ANCHOR, which is why the backend may not place the
+  // opt-out tab blind — `anchorIgnoreIfNotPresent:'false'` would refuse every estate envelope over
+  // a marker that is correctly absent. `esignAnchorsPresent` measures the document instead.
+  // ⚠ §7.1 IS UNTOUCHED AND MUST STAY. Documentation media is most of what the documentation step
+  // charges for; saying where it lives and who can reach it is the half a representative genuinely
+  // cannot infer. What went is only the marketing half.
+  content += subHdr('7.2 Marketing &amp; Promotional Use &mdash; Not Permitted');
+  content += pp('Havellin does not use media captured during an estate engagement for marketing, promotional, or educational purposes. This Agreement grants no such right, and none is available under it by consent: there is nothing for the Personal Representative to authorize and nothing to opt out of. Documentation Media from this engagement is used only to deliver, document, and account for the Services as described in Section 7.1.');
+  content += pp('This restriction binds Havellin&rsquo;s personnel and any vendor engaged on this matter. It survives completion or termination of this Agreement.');
   // SECTION 8: TERMINATION
   content += secHdr(8,'Termination');
   content += subHdr('8.1 Termination by Client');
@@ -28570,6 +28644,16 @@ function probateAgreementHtml(job, est) {
   ];
   gen.forEach(function(g){ content += pp(bb(g[0]+'.')+'  '+g[1]); });
   // SIGNATURE PAGE
+  // ⚠⚠ THE WHOLE SIGNATURE PAGE IS ONE BLOCK AND IT STARTS A FRESH PAGE. Anthony, off a real
+  // DocuSign envelope: *"should we have a page break at the end of the agreement so the signature
+  // page is always it's own page? it would avoid issues like this where the signatures awkwardly
+  // span 2 pages."* Without the break the split lands wherever the last clause happens to end, so
+  // the client can meet one signature block at the foot of a page and their own at the head of the
+  // next. The rule is `.agr-sig-page` and it is declared in the BASE stylesheet, not only in
+  // @media print — `_exportDoc` inlines every <style> block into the html handed to `htmlToPdf`,
+  // and that PDF is the envelope's document, so a print-only rule would paginate the Print button
+  // and do nothing to the document the client signs.
+  content += '<div class="agr-sig-page">';
   content += '<div class="ce-divider" style="margin-top:1.5rem;"></div>';
   content += '<div style="text-align:center;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-dk);margin:.8rem 0 .4rem;">Signature Page</div>';
   content += pp('By signing below, both parties acknowledge they have read, understood, and agreed to all terms of this Agreement. No work will begin until both signatures are obtained and the deposit has been received.');
@@ -28632,6 +28716,7 @@ function probateAgreementHtml(job, est) {
   content += 'Havellin Palm Beach, LLC &nbsp;&middot;&nbsp; FL LLC L26000216712 &nbsp;&middot;&nbsp; ' + HAVELLIN_OFFICE_PHONE + ' &nbsp;&middot;&nbsp; agreements@havellinpalmbeach.com &nbsp;&middot;&nbsp; havellinpalmbeach.com<br>';
   content += 'Insured &amp; Bonded &nbsp;&middot;&nbsp; NASMM Member &nbsp;&middot;&nbsp; Confidential &nbsp;&middot;&nbsp; '+monthYear;
   content += '</div>';
+  content += '</div>'; // /.agr-sig-page
   return content;
 }
 
@@ -28740,9 +28825,12 @@ function agreementHtml(job, est) {
   content += '<div style="font-size:17px;font-weight:700;color:var(--gray-dk);margin-bottom:.4rem;">Client Services Agreement</div>';
   content += '<div style="font-size:11px;color:var(--gray);max-width:480px;margin:0 auto;">This Agreement governs all services provided by Havellin Palm Beach, LLC to the Client identified below.</div>';
   content += '</div>';
-  content += '<div style="border:1px solid var(--bronze-lt);border-radius:4px;padding:8px 14px;margin-bottom:1rem;background:#fef9f0;">';
-  content += '<span style="font-size:11px;font-weight:700;color:var(--bronze-dk);">IMPORTANT: Read carefully. Both parties must sign before any work begins.</span>';
-  content += '</div>';
+  // ⚠ NO "IMPORTANT: READ CAREFULLY" BANNER, AND IT IS NOT COMING BACK. Anthony: *"the top
+  // banner is not needed and sounds amateurish."* A contract that opens by telling the reader it
+  // is a contract reads as though it doubts they can tell — and both halves of it were already
+  // said better further down: the signature page states that no work begins until both signatures
+  // are obtained, which is the operative term, and the standard form's §18 states the
+  // read-and-understood acknowledgment where a court looks for it.
 
   // ── PARTIES TABLE ─────────────────────────────────────────────────────────
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:1rem;font-size:11.5px;">';
@@ -28919,7 +29007,7 @@ function agreementHtml(job, est) {
 
   // ── SECTION 10 ────────────────────────────────────────────────────────────
   content += agrSection('10. Photography Authorization',
-    p(b('10.1 Documentation Photography.')+'  As part of the Services, Contractor will photograph and/or record video of the property, its contents, and all significant assets for the purposes of condition documentation, asset identification, work progress records, and service record-keeping ("Documentation Media"). Client hereby authorizes this documentation as a necessary component of the engagement. All Documentation Media is stored securely in the Client\'s designated Google Drive folder and is not used for any marketing or promotional purpose without the separate written consent described in Section 10.2 below.')+
+    p(b('10.1 Documentation Photography.')+'  As part of the Services, Contractor will photograph and/or record video of the property, its contents, and all significant assets for the purposes of condition documentation, asset identification, work progress records, and service record-keeping ("Documentation Media"). Client hereby authorizes this documentation as a necessary component of the engagement. All Documentation Media is stored securely in the Client\'s designated Google Drive folder, and any marketing or promotional use of it is governed by Section 10.2 below, which the Client may decline.')+
     // ⚠ NO INITIALS HERE, AND REMOVING THEM IS THE POINT RATHER THAN TIDYING. Anthony:
     // *"I don't think they need to initial to say that we're going to document their property for
     // purposes of executing the contract. If they are paying us to inventory their home, we're
@@ -28929,13 +29017,26 @@ function agreementHtml(job, est) {
     // below earns its place saying is where the media LIVES and who can reach it, which is the
     // part a client genuinely cannot infer.
     p(b('10.1a Custody of Documentation Media.')+'  Documentation Media is stored in the Client&rsquo;s own project folder on Havellin&rsquo;s Google Drive, is accessible only to Havellin personnel assigned to this engagement and to anyone the Client authorizes in writing, and is retained for seven years as part of the service record. It is never sold, licensed, or shared with any third party except a vendor performing Services on this engagement, or as required by law or court order.')+
-    p(b('10.2 Marketing &amp; Promotional Use &mdash; Optional.')+'  Separately, and <strong>only if Client affirmatively authorizes it below</strong>, Contractor may use Documentation Media or other media captured during the engagement for marketing, promotional, and educational purposes, including social media, website, print collateral, and presentations, subject to the following restrictions:')+
+    // ⚠⚠ AN OPT-OUT, AND THE OPT-IN IT REPLACED LASTED ONE DAY. Anthony, off the first envelope
+    // DocuSign actually sent: *"allow them to opt out, but use for marketing is assumed unless
+    // tic'ed."* The clause below therefore AUTHORIZES by default and the box at the end is how a
+    // client declines — the reverse of the 2026-09-18 morning build, whose required radio pair and
+    // conditional signature did not render on a real sent envelope (see `ESIGN_ANCHORS`).
+    // ⚠ THE RESTRICTIONS ARE NOT A CONDITION OF THE AUTHORIZATION, THEY ARE THE AUTHORIZATION'S
+    // WHOLE SCOPE. Under the opt-in they read as terms somebody was agreeing to; under an opt-out
+    // they have to read as limits that bind Contractor whether or not the client reads them, or the
+    // default consent is broader than anything the client was shown. Hence *"without exception"*.
+    // ⚠ AND WRITTEN NOTICE IS AN EQUAL ROUTE OUT, which is the sentence that stands behind a box a
+    // client misses or a tab that fails to place. It is stated BEFORE the box rather than after, so
+    // a reader who stops at the tick has already been told.
+    p(b('10.2 Marketing &amp; Promotional Use.')+'  Contractor may use Documentation Media or other media captured during the engagement for marketing, promotional, and educational purposes, including social media, website, print collateral, and presentations. This authorization is subject without exception to the restrictions below, and <strong>Client may decline it in full by checking the box at the end of this Section</strong>. Declining changes nothing about the Services, the fee, or any other term of this Agreement.')+
     p('(a) No specific street address or unit number shall be disclosed in any published media.')+
     p('(b) No names of Client, family members, or estate beneficiaries shall appear in published media.')+
     p('(c) No images or likenesses of Client, family members, or any identifiable individual shall be published without a separate written release.')+
-    p('(d) Contractor will use reasonable care to avoid publishing media that could clearly identify a specific individual\'s residence or personal circumstances.')+
-    p('Client may revoke this marketing authorization prospectively at any time by delivering written notice to Contractor. Revocation does not require removal of media already published prior to receipt.')+
-    marketingConsentBlock()
+    p('(d) No document, financial record, or item bearing identifying information shall be shown.')+
+    p('(e) Contractor will use reasonable care to avoid publishing media that could clearly identify a specific individual\'s residence or personal circumstances.')+
+    p('Client may decline, or withdraw an authorization already given, at any time by delivering written notice to Contractor, whether or not the box below was checked. Withdrawal applies prospectively and does not require removal of media already published prior to receipt.')+
+    marketingOptOutBlock()
   );
 
   // ── SECTION 11 ────────────────────────────────────────────────────────────
@@ -28990,6 +29091,16 @@ function agreementHtml(job, est) {
   );
 
   // ── SECTION 18 — SIGNATURES ───────────────────────────────────────────────
+  // ⚠⚠ THE WHOLE SIGNATURE PAGE IS ONE BLOCK AND IT STARTS A FRESH PAGE. Anthony, off a real
+  // DocuSign envelope: *"should we have a page break at the end of the agreement so the signature
+  // page is always it's own page? it would avoid issues like this where the signatures awkwardly
+  // span 2 pages."* Without the break the split lands wherever the last clause happens to end, so
+  // the client can meet one signature block at the foot of a page and their own at the head of the
+  // next. The rule is `.agr-sig-page` and it is declared in the BASE stylesheet, not only in
+  // @media print — `_exportDoc` inlines every <style> block into the html handed to `htmlToPdf`,
+  // and that PDF is the envelope's document, so a print-only rule would paginate the Print button
+  // and do nothing to the document the client signs.
+  content += '<div class="agr-sig-page">';
   content += '<div class="ce-divider"></div>';
   content += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:.5rem;">18. Acknowledgment &amp; Signatures</div>';
   content += p('Client acknowledges that Client has read this Agreement, understands its terms, has had the opportunity to consult independent legal counsel, and voluntarily agrees to be bound by it.');
@@ -29001,18 +29112,23 @@ function agreementHtml(job, est) {
   content += '<div style="margin-top:1.25rem;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">&nbsp;</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientDate)+'</div><div class="sig-label">Date</div></div>';
   content += '</div>';
 
-  // ── EXHIBIT A ─────────────────────────────────────────────────────────────
-  content += '<div class="ce-divider" style="margin-top:1.5rem;"></div>';
-  content += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:.5rem;">Exhibit A — Service Estimate</div>';
-  // Was a bracketed "attach the estimate" instruction, which read as a note-to-self on a
-  // signing document, and sat directly above the estimate itself once the
-  // signing packet attached it. A statement now, true standalone and true in the packet.
-  content += p('The approved Service Estimate, reference <strong>'+hvlId+'</strong>, is attached to this Agreement as Exhibit A. Its date, line-item breakdown, payment schedule, and total fees are incorporated into this Agreement by reference.');
+  // ⚠⚠ NO TRAILING EXHIBIT A BLOCK, AND REMOVING IT LOSES NOTHING — CHECK BOTH BEFORE PUTTING
+  // ONE BACK. The agreement never goes out alone: `DOC_ACTIONS.agreement` resolves to the SIGNING
+  // PACKET on every verb, and the packet opens the estimate on its own page under
+  // `.packet-exhibit-hdr`, which prints *Exhibit A — Service Estimate · <HVL id>* over
+  // *Incorporated by reference into the Agreement as Exhibit A*. So this block restated that
+  // heading one page earlier, on the page the client signs. Anthony, off a real envelope:
+  // *"the second is duplicated on the actual exhibit header, so unneeded."*
+  // ⚠ THE INCORPORATION IS STILL STATED IN THE BODY, WHICH IS WHERE A CONTRACT STATES IT —
+  // §1.1 Services, on both arms: the Estimate *"is attached as Exhibit A and incorporated by
+  // reference"*. The estate form says the same at §3.4 and has never carried a trailing block,
+  // so the two forms now end the same way.
 
   content += '<div style="text-align:center;margin-top:1.5rem;font-size:9px;color:var(--gray);letter-spacing:.05em;border-top:1px solid var(--border);padding-top:.6rem;">';
   content += 'Havellin Palm Beach, LLC  &middot;  FL LLC L26000216712  &middot;  ' + HAVELLIN_OFFICE_PHONE + '  &middot;  agreements@havellinpalmbeach.com  &middot;  havellinpalmbeach.com<br>';
   content += 'Insured &amp; Bonded  &middot;  NASMM Member  &middot;  Confidential  &middot;  '+monthYear;
   content += '</div>';
+  content += '</div>'; // /.agr-sig-page
 
   return content;
 }

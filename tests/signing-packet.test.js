@@ -117,15 +117,73 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((ui.match(/btnPdf\.style\.display='(none|inline-block)'(?!; if \(btnPacket\))/g) || []).length, 0, 'no bare toggle survives');
   }
 
-  group('no bracketed instruction survives on a signing document');
+  group('⚠⚠ THE TRAILING EXHIBIT A BLOCK IS GONE, AND THE INCORPORATION IS NOT');
   {
+    // ⚠⚠ IT RESTATED THE PACKET’S OWN BAND ONE PAGE EARLY, ON THE PAGE THE CLIENT SIGNS. The
+    // agreement never goes out alone — `DOC_ACTIONS.agreement` resolves to the packet on every verb
+    // — and the packet opens the estimate under `.packet-exhibit-hdr`, which prints *Exhibit A —
+    // Service Estimate · <HVL id>* over *Incorporated by reference into the Agreement as Exhibit A*.
+    // Anthony, off a real envelope: *"the second is duplicated on the actual exhibit header, so
+    // unneeded."*
     const agr = fn('agreementHtml');
     lacks(agr, '[Attach the approved Service Estimate', 'the Exhibit A block is a statement, not a note-to-self');
-    has(agr, 'is attached to this Agreement as Exhibit A. Its date, line-item breakdown, payment schedule, and total fees are incorporated', 'and it says the estimate is attached, which the packet makes true');
+    lacks(agr, 'Exhibit A &mdash; Service Estimate',
+          '⚠ and the heading is not printed a second time on the signature page');
+    lacks(agr, 'is attached to this Agreement as Exhibit A. Its date, line-item breakdown',
+          '⚠ the trailing paragraph is deleted, not hidden');
+    // ⚠⚠ THE CONVERSE, AND IT IS THE HALF THAT MATTERS: THE INCORPORATION IS STILL IN THE BODY,
+    // where a contract states it. Removing the trailing block and the §1.1 sentence together would
+    // leave the agreement silent about what Exhibit A is.
+    eq((agr.match(/attached as Exhibit A and incorporated by reference/g) || []).length, 2,
+       '⚠ §1.1 says it on both standard-form arms');
+    has(fn('probateAgreementHtml'), 'Exhibit A',
+        '⚠ and the estate form still names it too — it never carried a trailing block, so both forms '
+        + 'now end the same way');
+    has(fn('buildSigningPacketHtml'), 'Incorporated by reference into the Agreement as Exhibit A',
+        '⚠ the packet’s own band is where the heading lives now');
   }
 
-  group('print CSS');
+  group('⚠⚠ THE AMATEURISH TOP BANNER IS OFF BOTH FORMS');
   {
-    has(src, '.packet-exhibit{break-before:page;page-break-before:always;}', 'the exhibit starts a new page');
+    // Anthony, off a real envelope: *"the top banner is not needed and sounds amateurish."* Both
+    // halves of it are said better further down — the signature page states that no work begins
+    // until both signatures are obtained, and §18 / the estate acknowledgment carry the
+    // read-and-understood line. A box at the top shouting READ CAREFULLY says neither.
+    ['agreementHtml', 'probateAgreementHtml'].forEach(function (f) {
+      lacks(fn(f), 'IMPORTANT: Read carefully',
+            '⚠ ' + f + ' no longer opens with the banner');
+    });
+    has(fn('probateAgreementHtml'), 'No work will begin until both signatures are obtained',
+        '⚠ and the estate form still says it where it belongs — on the signature page');
+  }
+
+  group('⚠⚠ PAGINATION — the exhibit and the signature page each start a fresh page');
+  {
+    // ⚠⚠ THE BASE STYLESHEET IS THE LOAD-BEARING SITE, NOT THE PRINT BLOCK. `_exportDoc` inlines
+    // every <style> block in the page into the html it hands to `htmlToPdf`, and that PDF is what
+    // the DocuSign envelope carries — so a rule declared only inside @media print would paginate
+    // the Print button and do nothing to the document a client actually signs.
+    const styleBlock = src.slice(src.indexOf('<style'), src.indexOf('</style>'));
+    ['.packet-exhibit{break-before:page;page-break-before:always;}',
+     '.agr-sig-page{break-before:page;page-break-before:always;}'].forEach(function (rule) {
+      has(styleBlock, rule, '⚠ ' + rule.split('{')[0] + ' is declared in the BASE stylesheet');
+      eq((src.match(new RegExp(rule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length, 3,
+         '⚠ ' + rule.split('{')[0] + ' is declared at all THREE sites — base stylesheet, @media print '
+         + 'and the agreement’s pdfCss — which is the pattern .packet-exhibit already followed');
+    });
+    has(src, "pdfCss: '.ce-page{max-width:800px;margin:0 auto;}",
+        'and the agreement kind carries its own pdfCss');
+    ['.packet-exhibit', '.agr-sig-page'].forEach(function (cls) {
+      const line = src.slice(src.indexOf("pdfCss: '.ce-page{max-width:800px"));
+      has(line.slice(0, line.indexOf('\n')), cls + '{break-before:page;page-break-before:always;}',
+          '⚠ ' + cls + ' rides the pdfCss too, so the packet paginates on the send path as well');
+    });
+    // ⚠⚠ NO break-inside:avoid ON THE SIGNATURE PAGE, AND THAT IS MEASURED RATHER THAN GUESSED:
+    // the probate block renders ~756px tall against ~893px of usable Letter page, so it fits — but
+    // it is close enough that a renderer asked to keep it whole has nowhere to go if a longer
+    // executor name or role pushes it over. The break-BEFORE is what Anthony asked for; keeping it
+    // whole is not something the page can promise.
+    lacks(src, '.agr-sig-page{break-before:page;page-break-before:always;break-inside:avoid',
+          '⚠ the signature page starts a page; it does not also demand to be unbreakable');
   }
 };
