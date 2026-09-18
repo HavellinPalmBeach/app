@@ -1,5 +1,141 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE ESTATE PROHIBITION IS REVERSED — ONE MARKETING CLAUSE AND ONE BOX, BOTH FORMS (2026-09-18)
+App-only, **no Apps Script redeploy** — and that is a property of the design rather than luck: `docSend` measures
+the html it is about to convert and names what it found, so the backend places the tab off the measurement and
+never off a rule of its own. Anthony, hours after the prohibition shipped that morning: *"Am I overthinking this
+marketing thing? … what if we get an estate clean out and they don't care? … estate sale companies take pictures
+at estate sales, of people's houses and all the stuff they're selling … I just assume an executor is going to want
+a level of anonymity, but as long as we're not disclosing the client's name or their address or showing a living
+room with like pictures of their family in it so people can identify them, maybe it's fine. And all the documents
+should just provide the opt-out."*
+
+- **⚠⚠ HE IS RIGHT AND I WAS OVER-CAUTIOUS, AND THE REASON THE MORNING'S ARGUMENT FAILS IS THAT IT ARGUED AGAINST A
+  CLAUSE THE DOCUMENT DOES NOT CONTAIN.** The anonymity standard he describes was **already** §10.2(a)–(e): no
+  street address, no name of any client or family member or heir, no identifiable likeness without a separate
+  release, no document or record bearing identifying information. The morning's entry reasoned as though the
+  representative were being asked to authorise an identifiable publication; they are being asked to authorise an
+  anonymised one, and that is a materially smaller act.
+  - **⚠ THE FIDUCIARY ARGUMENT INVERTS ON ITS OWN AUTHORITY.** `Fla. Stat. §733.607` puts possession and control
+    of estate property in the personal representative's hands, and they may **SELL the contents outright**.
+    Authorising an anonymised photograph of a sideboard is strictly less than selling the sideboard. A clause that
+    says a representative may liquidate the estate but may not consent to a photograph of it is not protecting
+    anybody — it is refusing a decision the statute already gives them.
+  - **⚠ AND THE INDUSTRY SETTLES THE MARKET QUESTION.** Estate sale companies publish room-by-room photographs
+    with the address attached, weekly, and families sign for it. Havellin offering less than that, under
+    restrictions stricter than that, is not a conservative reading of the norm — it is outside it.
+  - **WHAT SURVIVES OF THE MORNING'S ARGUMENT, and it is one sentence:** an executor who skims §7.2 consents by
+    silence on behalf of heirs who never saw the contract. That is a reason to be careful about **what** is
+    published — which is exactly what (a)–(e) already handle — and not a reason to withhold the question.
+- **⚠⚠ TWO THINGS ARE DELIBERATELY *NOT* IN THE CONTRACT, AND THE DISTINCTION IS THE POINT: THEY ARE OPERATING
+  RULES.** Both are in the playbook and neither is a clause.
+  - **Nothing is published until the house has closed or been fully cleared.** An empty Palm Beach estate whose
+    contents were posted last week is a targeting problem, and no consent clause makes it not one.
+  - **A contested matter is never published at all**, whatever the box says. Anything posted becomes an exhibit in
+    a dispute between people who are already litigating.
+  - **They are rules rather than clauses because a contract term binds us to a judgement we would want to make
+    case by case**, and because a client cannot waive their way past either — which is what putting them in the
+    document would imply they could.
+- **⚠⚠ THE REAL FIND WAS THREE CONTRACT SELF-CONTRADICTIONS, ONE OF THEM LIVE ON THE FORM ALREADY GOING OUT.**
+  Reading the two forms end to end for this change rather than editing §7.2 in place is what surfaced them, and a
+  contract stating both things is construed **against the drafter** — so the practical effect was operating under
+  the stricter rule while believing we had the looser one.
+  - **Standard §10.1a and estate §7.1 each said documentation media is *"never sold, licensed, or shared with any
+    third party except a vendor…"* — an ABSOLUTE, sitting three paragraphs above a clause authorising
+    publication.** Both now separate the two ideas: never sold or licensed; not shared except a vendor on this
+    engagement or as required by law; **and not published except as §10.2 / §7.2 permits**. The custody promise is
+    unweakened; it simply stops denying the clause below it.
+  - **⚠ THE ESTATE FORM'S §7 CONFIDENTIALITY BULLET WAS AN OPT-IN SITTING OVER AN OPT-OUT.** It bound us to *"not
+    photograph, film, or post … without express written consent"* — i.e. the exact opt-in model this file records
+    being deliberately reversed that morning, still live one section above the reversal. It now says we will not
+    post or publish **except as expressly authorized under §7.2 below**. ⚠ Note it no longer forbids
+    *photographing*: §7.1 is the documentation step the client is paying for, and a confidentiality bullet
+    forbidding the thing the engagement charges for was always wrong.
+- **⚠⚠ ONE CLAUSE BODY, ONE RENDERER THAT OWNS THE ORDER, TWO THIN WRAPPERS — because two forms asking the same
+  question in their own words is the drift this file records more than anything else.** `marketingUseParas(us)`
+  returns the eight paragraphs and **only the obligated party is substituted**; `_mktClause(pFn, leadPrefix, us,
+  sectionRef)` emits them and then the box. A test compares the shared paragraphs **verbatim** between the two
+  rendered forms rather than checking each against a fixture — a fixture drifting with the source proves nothing.
+  - **⚠ `Client` NEEDS NO SUBSTITUTION AND THAT IS WHY THE SIGNATURE IS ONE ARGUMENT RATHER THAN TWO.** Both forms
+    already call the other side *Client*; only our own noun differs (*Contractor* on the standard form, *Havellin*
+    on the estate one). A second parameter for the client side would be a parameter every caller passes the same
+    value to, which is how a shared function quietly becomes two.
+  - **⚠ RESTRICTION (b) SAYS *"the property owner"*, NEVER *"the decedent"*.** One wording has to be true on a
+    living-client contract and on an estate one, and printing *decedent* on a downsizing agreement is the kind of
+    line a client reads twice. Reverting it to the narrow wording fails 2.
+  - **⚠⚠ `_mktClause` EXISTS TO OWN THE ORDER, WHICH IS A CORRECTNESS CONSTRAINT AND NOT LAYOUT.** The box says
+    the client declines *the use described in the Section above, on the restrictions stated there* — so a form
+    that printed the box **above** (a)–(e) would be asking somebody to decline a thing they have not read yet.
+    Reverting the order fails 4.
+  - **⚠ AND THE WITHDRAWAL SENTENCE IS STATED BEFORE THE BOX, DELIBERATELY** — written notice at any time has the
+    same effect *whether or not the box below was checked*. A consent whose only exit is one checkbox on one page
+    is one rendering bug from being no exit, which is the rule the morning's entry established and this build does
+    not get to drop. Dropping the binding-and-survival sentence fails 4.
+- **⚠ `marketingOptOutBlock(sectionRef)` TAKES ITS SECTION AND DEGRADES TO A TRUE PHRASE.** It hardcoded `10.2`,
+  which on the estate form would cite a section **that form does not have**. With no argument it reads *"the
+  Section above"* — still true wherever it is placed — rather than defaulting to a number that is right on one
+  form and wrong on the other. The hardcode fails 3; defaulting to `10.2` instead of degrading fails 1.
+- **⚠⚠ `esignAnchorsPresent` IS STILL LOAD-BEARING ALTHOUGH BOTH FORMS NOW CARRY EVERY ANCHOR, AND THE COMMENT
+  SAYING WHY WAS THE PART THAT NEEDED WRITING.** The motivating case is gone — there is no longer a form that
+  omits `mktOptOut` — so the obvious reading is that the measurement can be replaced by the constant list. It
+  cannot: `docSend` carries **every** document kind, and the requirement is that a form which stops rendering the
+  block degrades to *no box, stated default* rather than to a **refused envelope**
+  (`anchorIgnoreIfNotPresent:'false'` makes a missing anchor reject the whole send). Both stale comments now
+  record that. **The test is what keeps this falsifiable now that nothing naturally lacks the marker**: it drives
+  a real agreement with the optional marker **stripped** and asserts the four required anchors come back and the
+  send is not refused. Hardcoding the five fails 5.
+- **6285 committed checks** (`tests/esign-docusign.test.js`, 411). **All eleven changes revert-verified
+  individually, ZERO green** — the estate prohibition restored fails **23**, the estate form hand-writing its own
+  clause (the drift) **14**, hardcoding the anchor list 5, the box printed above the restrictions 4, the
+  binding-and-survival sentence 4, and the rest 1–3. Baseline **0** before and after, no unmatched needles.
+- **⚠ ELEVEN PRE-EXISTING ASSERTIONS PINNED THE ONE-DAY-OLD PROHIBITION AND BROKE CORRECTLY; ALL RESTATED, NONE
+  DELETED.** The requirement was never *"the estate form refuses marketing"* — it was that **neither form asks a
+  consent question the client cannot answer, and neither publishes by silence without stating the limits**. Both
+  forms now satisfy that the same way. **⚠ FOUR PINNED `fns:` LISTS BROKE** when the builders grew a call to
+  `marketingUseParas` / `_mktClause` — `agreement-fees`, `agreement-rates`, `prep-declutter`, `esign-docusign` —
+  **found by searching every pinned list at once** rather than re-running and fixing one failure at a time.
+- **Verified end to end in headless Chromium on both real builders**, and the pagination measured against the
+  pre-change tree through the **real `_exportDoc` + the agreement kind's own `pdfCss`** rather than on a bare
+  document (a bare render is missing the base stylesheet, so `.agr-sig-page` reads `break-before:auto` and every
+  page count off it is a different document):
+
+  | | |
+  |---|---|
+  | `I DO NOT AUTHORIZE`, standard · estate | **1** · **1** (was 1 · 0) |
+  | `I AUTHORIZE` as a second box, either form | **0** |
+  | `Not Permitted` anywhere | **0** |
+  | `never sold, licensed, or shared` anywhere | **0** |
+  | `esignAnchorsPresent`, standard · estate | **five keys each**, `mktOptOut` included |
+  | every anchor, both forms | ×1 · `rgb(255,255,255)` · `display:inline` · `visible` · 6px · **in the text layer** |
+  | every `.sig-line` (4 standard, 10 estate) | still exactly **36px** |
+  | pages, standard · estate | **7 · 8** (was 7 · 7) |
+  | `.agr-sig-page` | `break-before:page`, last element, whole — 309px standard, 781px estate |
+  | overflow at 1440 · 390px | **0** · **0**, **0 page errors** |
+
+  **⚠ THE ESTATE FORM GAINS A SHEET AND THAT IS THE STATED COST, NOT A DEFECT.** This file records the morning's
+  prohibition taking estate from 8 to 7 *"— dropping the consent block from it saved a sheet"*. Replacing the
+  prohibition with the full clause spends it again. The app's own `<style>` block is **byte-identical at 75,023
+  bytes** across both trees and **all ten diff hunks land in an expected region** — the 368-line CSS deletion
+  rule, applied by reading the diff.
+- Manual **§8a** — the fills-in table row now reads *Both forms*, the estate-has-no-box row deleted, the
+  prohibition note replaced by the reversal with Anthony's own words and the three reasons, a new note on the two
+  **operating rules** and why they are not clauses, a new note on the contract self-contradiction, and the custody
+  wording and page-count claim corrected. Playbook: the opening covers both forms, the *NO BOX AND NO CHOICE*
+  `.stop` is replaced by one carrying the two operating rules, and there is a new symptom→cause row for the case
+  that will actually happen (*you want to post an estate job you have the signed authorization for* → check the
+  house has closed, check it is not contested, then the restrictions). Both `.md` copies hand-edited and **26
+  claims parity-checked, 0 mismatches** — ⚠ one apparent miss was my needle dropping the `&sect;`/`§` prefix,
+  **verified rather than assumed**. A stale sweep for the retired wordings returns **0** except `Not Permitted`
+  and `never sold, licensed, or shared`, whose only survivors are **the sentences explaining the change** — the
+  shape this file records over and over, where a note has to QUOTE the retired wording to be worth reading. Tag balance verified on
+  both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at **1**;
+  `concierge-guide.html` clean on every tag), rendered at 1440/390 with **0 overflow** and **all 54 tables
+  full-width under `print`**.
+- **⚠⚠ STILL NOT PROVEN, AND IT IS UNCHANGED FROM THIS MORNING: send one sandbox envelope and look at the box.**
+  The egress proxy blocks `docusign.com`, so the checkbox is verified in SHAPE and against stubs. What needs
+  seeing on a real SENT envelope: that the opt-out checkbox renders at all, and where `DS_TAB_Y_OFFSET` puts it
+  relative to its box. **The estate form is now worth checking too** — it carries the same tab for the first time.
+
 ## ⚠⚠ THE MARKETING RADIOS NEVER RENDERED, AND MY PROBE HAD SAID THEY WOULD (FIXED 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18c`. Two messages from
 Anthony off the first envelope DocuSign really sent. On its face: *"the top banner is not needed and sounds

@@ -781,13 +781,12 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 
 ### What the client actually fills in
 
-**Two things, plus one optional box**: their signature, the date, and — on a living-client agreement only — a marketing opt-out they may leave alone. Nothing else is a field: no initials, no role tick box, no second signature.
+**Two things, plus one optional box**: their signature, the date, and a marketing opt-out they may leave alone. **The box is on both forms** — living-client and estate. Nothing else is a field: no initials, no role tick box, no second signature.
 
 | Field | Required? | Where it is |
 |---|---|---|
 | Client signature and date | **Yes** | The signature block at the end, which is now a page of its own. |
-| *I DO NOT AUTHORIZE* marketing use | **No — leaving it blank authorizes** | §10.2, at the end of the section. **Standard form only.** |
-| Anything on an estate or probate agreement | **Signature and date, and nothing else.** There is no marketing box on that form at all — see below. | |
+| *I DO NOT AUTHORIZE* marketing use | **No — leaving it blank authorizes** | §10.2 on the living-client form, §7.2 on the estate one, at the end of the section. **Both forms.** |
 
 > **⚠⚠ IT IS AN OPT-OUT AND SILENCE MEANS YES. Say that plainly if a client asks.** §10.2 authorizes marketing use by default; the box at the end of it is how they decline, and leaving it alone is what authorizes. Ticking it changes nothing about the work, the fee, or any other term, and the section says so on its face. **They can also decline, or withdraw an authorization already given, at any time in writing** — the box is a convenience, not the only way, and that sentence is in §10.2 as well.
 >
@@ -795,13 +794,28 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 >
 > **⚠ AND THE OPT-OUT FAILS SAFE IN A WAY THE OPT-IN COULD NOT.** Under the opt-in, a field that silently failed to place left a required question unasked and the record blank. Under the opt-out, a box nobody sees lands on the documented default — authorized — which is exactly what the clause says happens when nothing is ticked, and the client's written-notice route survives either way.
 
-> **⚠⚠ THERE IS NO MARKETING BOX ON AN ESTATE OR PROBATE AGREEMENT, AND THAT IS A PROHIBITION RATHER THAN A DEFAULT.** Anthony: *"for estate work this should never be allowed."* §7.2 on that form now reads *Marketing & Promotional Use — Not Permitted* and says outright that Havellin does not use estate media for marketing, that the Agreement grants no such right, and that **none is available under it by consent** — so it cannot be arranged off-document either. It binds our vendors too and survives the engagement.
+> **⚠⚠ THE ESTATE FORM ASKS THE SAME QUESTION, AND THE PROHIBITION IT REPLACES LASTED ONE DAY.** For a few hours on 2026-09-18, §7.2 read *Marketing & Promotional Use — Not Permitted* and offered nothing to tick, on the reasoning that a personal representative consenting to publish a decedent's house is a fiduciary trading something that is not theirs. Anthony pushed back the same evening and was right: *"what if we get an estate clean out and they don't care? … estate sale companies take pictures at estate sales … as long as we're not disclosing the client's name or their address or showing a living room with like pictures of their family in it so people can identify them, maybe it's fine. And all the documents should just provide the opt-out."* Three things settled it:
+>
+> - **The anonymity standard he described was already the clause.** (a)–(e) forbid the street address, the names, images of identifiable people, anything bearing identifying information, and media that would clearly identify a residence. The question was never whether we can anonymise.
+> - **A personal representative may SELL the contents outright** under §733.607. Authorising a photograph is the smaller act, not the larger one.
+> - **Estate sale companies publish room-by-room photographs with the address attached**, and families sign that every week. It is industry-normal.
+>
+> **So it is one clause and one box on both forms.** Two contracts saying different things about the same photographs is how the rule governing a client's own home comes to depend on which form they happened to sign.
+
+> **⚠⚠ TWO RULES SURVIVE THE REVERSAL AND NEITHER IS IN THE CONTRACT — they are ours to follow, and nothing in the app enforces them.**
+>
+> - **Do not publish until the house has closed or been cleared.** The risk is not legal, it is that an empty Palm Beach estate whose contents were just posted is a targeting problem a living-client job does not have. Estate sale companies accept that because getting buyers to the address on Saturday is the entire point; we would be accepting it for nothing.
+> - **Never publish a contested matter at all.** A representative's discretionary acts are exactly what gets challenged, and *"you put our mother's house on Instagram"* is free ammunition even where it is perfectly lawful. The signed box does not help you here.
+>
+> Neither is a contract clause, deliberately. Both are judgement calls made after the document is signed, and writing them into one form and not the other is exactly the drift the shared clause exists to prevent.
+
+> **⚠ AND NEITHER FORM MAY CONTRADICT ITS OWN OPT-OUT.** Both did, briefly, and both are corrected. The custody clause (§10.1a / §7.1) said Documentation Media *"is never sold, licensed, or shared with any third party"* — an absolute, a few paragraphs above a section authorising publication. The estate form's §7 confidentiality list separately forbade posting *"without express written consent"*, which is an opt-IN sitting over an opt-out. **A contract stating both is construed against whoever drafted it**, so the practical effect would have been that we operated under the stricter rule while believing we had the looser one. Each now names the marketing section as its one stated exception.
 >
 > **Why the two forms differ:** on a living-client job the person deciding owns the home and is alive to decide. On an estate the subject is a decedent's house, the people in the photographs are grieving heirs, and the only person who could consent is a fiduciary consenting on somebody else's behalf. Offering the choice at all invites a Personal Representative to trade something that is not theirs.
 
-> **Documentation photography is not a choice and is not asked about.** We photograph the property and its contents because that is how the inventory, the appraisal support and the chain of custody are built — a client paying us to inventory their home is not separately consenting to the inventory. It used to carry an *initials* box, which was removed on 2026-09-18: *"if they are paying us to inventory their home, we're obviously going to inventory their home. Let's just state what we do and how we treat that confidential information."* The clause now says plainly where the media is stored, who can see it, and that it is never sold or shared (§10.1a standard, §7.1 estate).
+> **Documentation photography is not a choice and is not asked about.** We photograph the property and its contents because that is how the inventory, the appraisal support and the chain of custody are built — a client paying us to inventory their home is not separately consenting to the inventory. It used to carry an *initials* box, which was removed on 2026-09-18: *"if they are paying us to inventory their home, we're obviously going to inventory their home. Let's just state what we do and how we treat that confidential information."* The clause now says plainly where the media is stored, who can see it, that it is never sold or licensed, and that it is not published except as the marketing section permits (§10.1a standard, §7.1 estate).
 >
-> **⚠ The estate/probate form had no photography or marketing section at all until 2026-09-18**, and it is the form on the matters where the media is most sensitive. It carries **§7.1 Documentation Media** now — where the images live, who can reach them, the seven-year retention, never sold or shared — and **§7.2 as a flat prohibition on marketing use**. So both forms say what happens to the media; only the living-client one offers a marketing choice.
+> **⚠ The estate/probate form had no photography or marketing section at all until 2026-09-18**, and it is the form on the matters where the media is most sensitive. It carries **§7.1 Documentation Media** now — where the images live, who can reach them, the seven-year retention, never sold or licensed — and **§7.2 carrying the same marketing clause and the same opt-out box as the living-client form**. Both forms say what happens to the media, and both offer the same choice.
 
 > **Nothing asks the signer to classify themselves any more.** Who has authority to sign is established at intake and we are talking to that person, so a pick-one on the contract was a question with no reader.
 >
@@ -817,7 +831,9 @@ Anthony read the first agreement DocuSign actually sent and flagged three things
 | The *Exhibit A — Service Estimate* paragraph at the very end of the standard form | *"the second is duplicated on the actual exhibit header, so unneeded."* The agreement never goes out alone — it is always the signing packet — and the packet already opens the estimate under its own *Exhibit A* band. **The incorporation is still stated in §1.1**, which is where a contract states it. |
 | The signature block sharing a page with the last clause | *"should we have a page break at the end of the agreement so the signature page is always it's own page?"* It was real: measured on the envelope that went out, the standard form put our block on page 6 and the client's on page 7, and the estate form split 7/8. Both now land whole on one page. |
 
-> **The signature page is a page of its own on both forms, on paper and in DocuSign alike.** Measured after the change: the standard form is 7 pages with the whole signature block on page 7, and the estate form is **7 pages rather than 8** — dropping the marketing consent block from it saved a sheet.
+> **The signature page is a page of its own on both forms, on paper and in DocuSign alike.** Measured after the change: the standard form is 7 pages with the whole signature block on page 7, and the estate form is **7 pages rather than 8**.
+
+> **⚠ The reason given for the estate form's saved sheet was that the marketing consent block had been dropped from it, and that block came back the same evening** when §7.2 became the shared opt-out. Re-measured before and after that change with one method on both sides: **restoring the clause added no sheet to either form** — the block is one short paragraph run plus a tick box, and it lands inside space the page already had.
 >
 > **⚠ The rule lives in the app's main stylesheet, not just in the print block, and that is what makes it reach DocuSign.** The PDF the envelope carries is built by inlining every stylesheet in the page; a rule that only existed under `@media print` would paginate the Print button and do nothing to the document the client signs.
 

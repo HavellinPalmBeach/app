@@ -1020,7 +1020,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 5:24pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 6:07pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12888,11 +12888,16 @@ function docSend(spec) {
   var html = spec.cfg.html(spec);
   if (!html) { _docNotice('warn', 'There is nothing to send on this document yet.', spec.job.id); return false; }
   // ⚠⚠ WHAT THE E-SIGNATURE PROVIDER MAY PLACE IS MEASURED OFF THIS DOCUMENT, not re-derived from
-  // the job. `marketingOptOutBlock` renders on the living-client form and on no estate one, and
-  // DocuSign REFUSES an envelope whose named anchor is missing (`anchorIgnoreIfNotPresent:'false'`,
-  // which is the right behaviour for the four that must always be there). Asking the html which
-  // markers it actually carries is what lets an optional anchor exist at all without giving the
-  // backend a second opinion of when the block renders.
+  // the job. DocuSign REFUSES an envelope whose named anchor is missing
+  // (`anchorIgnoreIfNotPresent:'false'`, which is the right behaviour for the four that must always
+  // be there), so naming a marker the page does not carry is not a cosmetic error — it sends
+  // nothing at all.
+  // ⚠ THE CASE THAT MOTIVATED THIS IS GONE AND THE MEASUREMENT IS STILL RIGHT, which is worth
+  // saying rather than leaving a comment to rot: it was built on 2026-09-18 because the estate form
+  // carried no marketing anchor, and that evening the estate form gained the same clause and the
+  // same box. What keeps it load-bearing is that `docSend` carries EVERY document kind — an
+  // estimate or an invoice down this path carries no anchors at all — and that a form which ever
+  // stops rendering the block degrades to *no box, stated default* instead of *envelope refused*.
   spec.anchors = esignAnchorsPresent(html);
 
   var provider = docProvider(spec);
@@ -13067,12 +13072,16 @@ var AGR_SIG_MANUAL_METHODS = ['wet', 'scanned'];
 // us to inventory their home, we're obviously going to inventory their home."* Asking a client to
 // initial the thing they have just hired us to do is ceremony, and every extra required field is
 // one more place a signature stalls.
-// ⚠⚠ `mktOptOut` IS OPTIONAL IN A SENSE THE OTHER FOUR ARE NOT: IT IS ON THE LIVING-CLIENT FORM
-// AND ON NO ESTATE ONE. So the backend may not place it blind — `anchorIgnoreIfNotPresent:'false'`
-// would make DocuSign REFUSE every estate envelope over an anchor that is deliberately absent.
-// `esignAnchorsPresent` reads the anchors out of the document that becomes the PDF and the send
-// names them, so what is placed is decided by MEASURING the document rather than by a second copy
-// of the rule that renders it.
+// ⚠⚠ `mktOptOut` IS OPTIONAL IN A SENSE THE OTHER FOUR ARE NOT, AND BOTH AGREEMENT FORMS CARRY
+// IT AS OF 2026-09-18 EVENING — the estate form's flat prohibition lasted a day (see
+// `marketingUseParas`). It stays OPTIONAL rather than joining the required four because
+// `esignAnchorsPresent` runs over every document `docSend` carries, agreements and invoices alike,
+// and because a form that ever stops rendering the block must degrade to *no box, stated default*
+// rather than to an envelope DocuSign refuses outright. The four below are the ones whose absence
+// really is a defect worth refusing a send over.
+// ⚠ SO WHAT IS PLACED IS DECIDED BY MEASURING THE DOCUMENT, never by a second copy of the rule
+// that renders it — `esignAnchorsPresent` reads the anchors out of the very html that becomes the
+// PDF and the send names what it found.
 var ESIGN_ANCHORS = { clientSig: '/hsc/', clientDate: '/hdc/', havSig: '/hsh/', havDate: '/hdh/',
                       mktOptOut: '/mko/' };
 // ⚠ THE FOUR THAT MUST BE ON EVERY AGREEMENT. Anything outside this list is optional by
@@ -13097,13 +13106,75 @@ function esignAnchor(tag) {
   return '<span style="color:#fff;font-size:6px;line-height:0;">' + tag + '</span>';
 }
 
-// ⚠⚠ ONE OPT-OUT BOX, ON THE LIVING-CLIENT FORM ONLY — AND THE ESTATE FORM DOES NOT CALL THIS.
-// It used to be a shared block with a `signerLabel` argument, because two copies of one consent is
-// how two forms come to ask different things in different words over the same photographs. That
-// reasoning is dead in the best way: the estate form has no marketing clause to keep in step with,
-// because Havellin does not market estate work at all. Anthony: *"for estate work this should never
-// be allowed."* §7.2 there is a flat prohibition with nothing to tick, so a block reaching for a
-// signer label would be asking a Personal Representative a question the contract forbids.
+// ⚠⚠ ONE MARKETING CLAUSE, RENDERED BY TWO FORMS — the paragraphs are here and nowhere else.
+// Two copies of a publication rule is how the standard agreement and the estate agreement come to
+// govern the same photographs differently, and the client never knows which rule their own home is
+// under. So the BODY is one list and each form only wraps it: the standard form in `p()` under an
+// inline §10.2 heading, the estate form in `pp()` under a `subHdr('7.2 ...')`.
+// ⚠ ONLY THE OBLIGATED PARTY IS AN ARGUMENT. `Client` is a term BOTH forms already use, so the
+// client side needs no substitution; the standard form calls us *Contractor* (its defined term)
+// and the estate form calls us *Havellin*, and forcing either to adopt the other's noun would
+// change settled contract language for tidiness.
+// ⚠⚠ THE RESTRICTIONS ARE NOT A CONDITION OF THE AUTHORISATION, THEY ARE ITS WHOLE SCOPE. Under
+// an opt-out they have to bind whether or not the client reads them, or the default consent is
+// broader than anything the client was shown. Hence *without exception*.
+// ⚠ (b) SAYS *property owner* RATHER THAN *decedent*, deliberately. It has to cover the deceased
+// owner on an estate form without printing the word *decedent* on a contract handed to a living
+// client, which is the cost of sharing one list — and the cheaper cost than two lists.
+function marketingUseParas(us) {
+  return [
+    us + ' may use Documentation Media or other media captured during the engagement for marketing, '
+      + 'promotional, and educational purposes, including social media, website, print collateral, and '
+      + 'presentations. This authorization is subject without exception to the restrictions below, and '
+      + '<strong>Client may decline it in full by checking the box at the end of this Section</strong>. '
+      + 'Declining changes nothing about the Services, the fee, or any other term of this Agreement.',
+    '(a) No specific street address or unit number shall be disclosed in any published media.',
+    '(b) No name of the Client, the property owner, or any family member, heir, or beneficiary shall '
+      + 'appear in published media.',
+    '(c) No image or likeness of any identifiable individual shall be published without a separate '
+      + 'written release.',
+    '(d) No document, financial record, or item bearing identifying information shall be shown.',
+    '(e) ' + us + ' will use reasonable care to avoid publishing media that could clearly identify a '
+      + 'specific residence, family, or estate.',
+    'The restrictions in this Section bind ' + us + '&rsquo;s personnel and any vendor engaged on this '
+      + 'matter, and survive completion or termination of this Agreement.',
+    'Client may decline, or withdraw an authorization already given, at any time by delivering written '
+      + 'notice to ' + us + ', whether or not the box below was checked. Withdrawal applies prospectively '
+      + 'and does not require removal of media already published prior to receipt.'
+  ];
+}
+
+// ⚠ AND ONE RENDERER, so the ORDER is decided once too. The restrictions have to be read before
+// the box and the written-notice route before both — a form that assembled the pieces itself could
+// print the tick box above the limits it is subject to, which is the one arrangement that makes the
+// default consent look narrower than it is.
+function _mktClause(pFn, leadPrefix, us, sectionRef) {
+  var ps = marketingUseParas(us), out = pFn(leadPrefix + ps[0]);
+  for (var i = 1; i < ps.length; i++) out += pFn(ps[i]);
+  return out + marketingOptOutBlock(sectionRef);
+}
+
+// ⚠⚠ ONE CLAUSE AND ONE BOX, ON BOTH FORMS — AND THE ESTATE PROHIBITION IT REPLACES LASTED
+// ONE DAY. Anthony, the same evening: *"what if we get an estate clean out and they don't care?
+// Wouldn't we want social media pictures? ... estate sale companies take pictures at estate sales
+// ... as long as we're not disclosing the client's name or their address or showing a living room
+// with like pictures of their family in it so people can identify them, maybe it's fine. And all
+// the documents should just provide the opt-out."* He is right, and the morning's reasoning was
+// over-cautious in a way worth naming rather than quietly reversing:
+//   • The anonymity standard he describes WAS ALREADY THE CLAUSE. `marketingUseParas` (a)–(e)
+//     forbid the address, the names, identifiable people, identifying documents, and anything that
+//     would clearly identify a residence. The question was never whether we can anonymise.
+//   • The legal asymmetry the prohibition rested on is weaker than it read. A personal
+//     representative under §733.607 has possession and control and may SELL the contents outright;
+//     authorising a photograph is a smaller act than selling the thing photographed.
+//   • And estate sale companies publish room-by-room photographs WITH the address attached, which
+//     families sign every week. It is industry-normal, not an edge we would be pioneering.
+// ⚠⚠ THE TWO THINGS THAT SURVIVE ARE OPERATING RULES, NOT CONTRACT CLAUSES, and they are in the
+// playbook rather than here: do not publish until the house has closed or been cleared (an empty
+// Palm Beach estate whose contents were just posted is a targeting risk a living-client job is
+// not), and do not publish a CONTESTED matter at all (a representative's discretionary acts are
+// exactly what gets challenged). Neither belongs in the contract — two forms saying different
+// things about one subject is the drift this file records more often than anything else.
 //
 // ⚠⚠ IT IS AN OPT-OUT AND SILENCE MEANS YES, WHICH REVERSES THE 2026-09-18 MORNING BUILD.
 // That one was an opt-in over a REQUIRED radio pair plus a conditional signature, on the reasoning
@@ -13120,12 +13191,17 @@ function esignAnchor(tag) {
 //
 // ⚠ AND IT READS CORRECTLY ON PAPER. The same markup is what a wet-sign client prints, so the
 // anchor sits inside an ordinary tick box rather than anything DocuSign-shaped.
-function marketingOptOutBlock() {
+function marketingOptOutBlock(sectionRef) {
+  // ⚠ THE SECTION NUMBER IS AN ARGUMENT BECAUSE THE TWO FORMS NUMBER IT DIFFERENTLY (§10.2 and
+  // §7.2) and a box citing the wrong one sends a reader to a clause about something else. It
+  // degrades to *the Section above*, which is TRUE on any form, rather than to either number — a
+  // default of '10.2' is how an estate form silently cites a section it does not have.
+  var ref = sectionRef ? 'Section ' + sectionRef : 'the Section above';
   var h = '<div style="margin-top:.75rem;border:1.5px solid var(--bronze);border-radius:4px;overflow:hidden;">';
   h += '<div style="background:var(--tan);padding:6px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);">Marketing &amp; Promotional Use &mdash; Optional Opt-Out</div>';
   h += '<div style="padding:10px 12px;font-size:11px;line-height:1.6;color:var(--gray-dk);">';
   h += '<div style="margin-bottom:8px;">&#9744;' + esignAnchor(ESIGN_ANCHORS.mktOptOut) + ' &nbsp;<strong>I DO NOT AUTHORIZE</strong> any marketing or promotional use of media from this engagement.</div>';
-  h += '<div style="font-size:10px;color:var(--gray);line-height:1.5;">Leave this box unchecked to authorize the use described in Section 10.2, on the restrictions stated there. Checking it changes nothing about the Services, the fee, or any other term of this Agreement. You may also decline, or withdraw an authorization, at any time by written notice &mdash; the box is a convenience, not the only way.</div>';
+  h += '<div style="font-size:10px;color:var(--gray);line-height:1.5;">Leave this box unchecked to authorize the use described in ' + ref + ', on the restrictions stated there. Checking it changes nothing about the Services, the fee, or any other term of this Agreement. You may also decline, or withdraw an authorization, at any time by written notice &mdash; the box is a convenience, not the only way.</div>';
   h += '</div></div>';
   return h;
 }
@@ -28668,7 +28744,12 @@ function probateAgreementHtml(job, est) {
   var conf = [
     'Require all team members and contractors to sign a Non-Disclosure Agreement before accessing the property',
     'Not disclose any information about the Client, property, estate, or family to any third party without written consent, except as required by law',
-    'Not photograph, film, or post any content related to the property or estate on social media or any public platform without express written consent',
+    // ⚠⚠ THIS BULLET USED TO END *without express written consent*, WHICH IS AN OPT-IN — and it
+    // sits three paragraphs above an opt-out §7.2. A contract that states both is construed against
+    // its drafter, so the practical effect would have been that we operated under the opt-in while
+    // believing we had an opt-out. It defers to §7.2 by name instead. The general rule survives:
+    // this is still a flat bar on publishing, with one stated exception.
+    'Not post or publish content related to the property or estate on social media or any public platform, except as expressly authorized under Section 7.2 below',
     'Maintain all Client and estate records in secure storage with access limited to authorized Havellin personnel only',
     'Destroy or return all Client documents upon project completion or written request'
   ];
@@ -28687,22 +28768,19 @@ function probateAgreementHtml(job, est) {
   // agreements already issued citing those numbers.
   content += subHdr('7.1 Documentation Media');
   content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, the &sect;733.604 inventory, appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how the estate is accounted for.');
-  content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained for seven years as part of the fiduciary record. It is never sold, licensed, or shared with any third party except a vendor performing Services on this engagement, or as required by law or court order.');
-  // ⚠⚠ ON AN ESTATE THIS IS A PROHIBITION, NOT A CHOICE, AND THERE IS DELIBERATELY NOTHING TO
-  // TICK. Anthony: *"for estate work this should never be allowed."* The living-client form offers
-  // an opt-out box because the person deciding owns the home and is alive to decide; here the
-  // subject is a decedent's house and the people in the photographs are grieving heirs, and the
-  // person who could consent is a FIDUCIARY consenting on somebody else's behalf. Offering the
-  // choice at all invites a Personal Representative to trade something that is not theirs.
-  // ⚠ SO THE ESTATE FORM CARRIES NO MARKETING ANCHOR, which is why the backend may not place the
-  // opt-out tab blind — `anchorIgnoreIfNotPresent:'false'` would refuse every estate envelope over
-  // a marker that is correctly absent. `esignAnchorsPresent` measures the document instead.
-  // ⚠ §7.1 IS UNTOUCHED AND MUST STAY. Documentation media is most of what the documentation step
-  // charges for; saying where it lives and who can reach it is the half a representative genuinely
-  // cannot infer. What went is only the marketing half.
-  content += subHdr('7.2 Marketing &amp; Promotional Use &mdash; Not Permitted');
-  content += pp('Havellin does not use media captured during an estate engagement for marketing, promotional, or educational purposes. This Agreement grants no such right, and none is available under it by consent: there is nothing for the Personal Representative to authorize and nothing to opt out of. Documentation Media from this engagement is used only to deliver, document, and account for the Services as described in Section 7.1.');
-  content += pp('This restriction binds Havellin&rsquo;s personnel and any vendor engaged on this matter. It survives completion or termination of this Agreement.');
+  content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained for seven years as part of the fiduciary record. It is never sold or licensed. It is not shared with any third party except a vendor performing Services on this engagement, or as required by law or court order, and is not published except as Section 7.2 permits.');
+  // ⚠⚠ THE SAME CLAUSE AND THE SAME BOX AS THE LIVING-CLIENT FORM'S §10.2, and the flat
+  // prohibition this replaces lasted one day — the reasoning for the reversal is written out on
+  // `marketingUseParas`, because it is a judgement about the business rather than about this form.
+  // ⚠ §7.1 IS UNTOUCHED APART FROM ITS PUBLICATION CARVE-OUT. Documentation media is most of what
+  // the documentation step charges for, and saying where it lives and who can reach it is the half
+  // a representative genuinely cannot infer. Only the marketing half changed.
+  // ⚠ AND THE BINDING-AND-SURVIVAL SENTENCE DID NOT DIE WITH THE PROHIBITION — it moved into the
+  // SHARED list, because it was the half of it still true under an opt-out and the standard form
+  // never had it at all: restrictions (a)–(e) are worth nothing if a vendor on the matter is not
+  // bound by them, and the temptation to publish arrives after the engagement rather than during it.
+  content += subHdr('7.2 Marketing &amp; Promotional Use');
+  content += _mktClause(pp, '', 'Havellin', '7.2');
   // SECTION 8: TERMINATION
   content += secHdr(8,'Termination');
   content += subHdr('8.1 Termination by Client');
@@ -29116,7 +29194,7 @@ function agreementHtml(job, est) {
     // it asks the client to consent to the thing they have just engaged us for. What the sentence
     // below earns its place saying is where the media LIVES and who can reach it, which is the
     // part a client genuinely cannot infer.
-    p(b('10.1a Custody of Documentation Media.')+'  Documentation Media is stored in the Client&rsquo;s own project folder on Havellin&rsquo;s Google Drive, is accessible only to Havellin personnel assigned to this engagement and to anyone the Client authorizes in writing, and is retained for seven years as part of the service record. It is never sold, licensed, or shared with any third party except a vendor performing Services on this engagement, or as required by law or court order.')+
+    p(b('10.1a Custody of Documentation Media.')+'  Documentation Media is stored in the Client&rsquo;s own project folder on Havellin&rsquo;s Google Drive, is accessible only to Havellin personnel assigned to this engagement and to anyone the Client authorizes in writing, and is retained for seven years as part of the service record. It is never sold or licensed. It is not shared with any third party except a vendor performing Services on this engagement, or as required by law or court order, and is not published except as Section 10.2 permits.')+
     // ⚠⚠ AN OPT-OUT, AND THE OPT-IN IT REPLACED LASTED ONE DAY. Anthony, off the first envelope
     // DocuSign actually sent: *"allow them to opt out, but use for marketing is assumed unless
     // tic'ed."* The clause below therefore AUTHORIZES by default and the box at the end is how a
@@ -29129,14 +29207,7 @@ function agreementHtml(job, est) {
     // ⚠ AND WRITTEN NOTICE IS AN EQUAL ROUTE OUT, which is the sentence that stands behind a box a
     // client misses or a tab that fails to place. It is stated BEFORE the box rather than after, so
     // a reader who stops at the tick has already been told.
-    p(b('10.2 Marketing &amp; Promotional Use.')+'  Contractor may use Documentation Media or other media captured during the engagement for marketing, promotional, and educational purposes, including social media, website, print collateral, and presentations. This authorization is subject without exception to the restrictions below, and <strong>Client may decline it in full by checking the box at the end of this Section</strong>. Declining changes nothing about the Services, the fee, or any other term of this Agreement.')+
-    p('(a) No specific street address or unit number shall be disclosed in any published media.')+
-    p('(b) No names of Client, family members, or estate beneficiaries shall appear in published media.')+
-    p('(c) No images or likenesses of Client, family members, or any identifiable individual shall be published without a separate written release.')+
-    p('(d) No document, financial record, or item bearing identifying information shall be shown.')+
-    p('(e) Contractor will use reasonable care to avoid publishing media that could clearly identify a specific individual\'s residence or personal circumstances.')+
-    p('Client may decline, or withdraw an authorization already given, at any time by delivering written notice to Contractor, whether or not the box below was checked. Withdrawal applies prospectively and does not require removal of media already published prior to receipt.')+
-    marketingOptOutBlock()
+    _mktClause(p, b('10.2 Marketing &amp; Promotional Use.')+'  ', 'Contractor', '10.2')
   );
 
   // ── SECTION 11 ────────────────────────────────────────────────────────────

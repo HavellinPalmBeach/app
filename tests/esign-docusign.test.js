@@ -97,7 +97,7 @@ const FULL_PROPS = {
 };
 
 // ── the app side ──────────────────────────────────────────────────────────────
-const AGR_FNS = ['marketingOptOutBlock', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
+const AGR_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
                  'materialsBasisNote', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
@@ -132,14 +132,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  + 'a second copy places a second signature box on the same contract');
       });
     });
-    // ⚠⚠ AND THE OPTIONAL ONE IS ON EXACTLY ONE FORM. Havellin does not market estate work, so
-    // the estate form has no marketing clause and therefore no marker — which is precisely why the
-    // backend may not place that tab blind: `anchorIgnoreIfNotPresent:'false'` would refuse every
-    // estate envelope over an anchor that is correctly absent.
+    // ⚠⚠ AND THE OPTIONAL ONE IS NOW ON BOTH, EXACTLY ONCE EACH. The estate form's flat
+    // prohibition lasted one day; Anthony: *"as long as we're not disclosing the client's name or
+    // their address ... maybe it's fine. And all the documents should just provide the opt-out."*
+    // ONCE is the assertion that matters either way — DocuSign places a tab at EVERY occurrence of
+    // an anchor string, so a second copy is a second tick box for one decision on one contract.
     eq(appCtx().agreementHtml(LIVING, EST).split(A.mktOptOut).length - 1, 1,
        '⚠ the living-client form carries the marketing opt-out anchor once');
-    eq(appCtx().probateAgreementHtml(PROBATE, EST).split(A.mktOptOut).length - 1, 0,
-       '⚠⚠ and the estate form carries it ZERO times — there is nothing to opt out of');
+    eq(appCtx().probateAgreementHtml(PROBATE, EST).split(A.mktOptOut).length - 1, 1,
+       '⚠⚠ and so does the estate form — one clause, one box, both forms');
     // The four that must always be there are named once, and it is the list the backend places
     // regardless. A key drifting off it silently makes an always-anchor optional.
     eq(appCtx().ESIGN_REQUIRED_ANCHORS.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig',
@@ -156,8 +157,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pro = c.esignAnchorsPresent(c.probateAgreementHtml(PROBATE, EST));
     eq(std.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig,mktOptOut',
        '⚠ the living-client agreement reports all five');
-    eq(pro.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig',
-       '⚠⚠ the estate agreement reports four, and the marketing one is absent because the clause is');
+    eq(pro.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig,mktOptOut',
+       '⚠ and the estate agreement reports all five too, now that it carries the same clause');
+    // ⚠⚠ THE MEASUREMENT HAS TO STAY FALSIFIABLE NOW THAT BOTH FORMS CARRY ALL FIVE. With every
+    // real document reporting the same list, a build that stopped measuring and returned a hardcoded
+    // five would pass every assertion above it — so this drives a REAL agreement with the one
+    // optional marker taken out, which is exactly the degraded case the mechanism exists for.
+    const stripped = c.esignAnchorsPresent(c.agreementHtml(LIVING, EST).replace(c.ESIGN_ANCHORS.mktOptOut, ''));
+    eq(stripped.slice().sort().join(','), 'clientDate,clientSig,havDate,havSig',
+       '⚠⚠ a real agreement whose opt-out marker is gone reports FOUR — the four are named, the '
+       + 'fifth is measured, and nothing is assumed from the fact that today both forms render it');
     eq(c.esignAnchorsPresent('').length, 0, 'nothing in, nothing out');
     eq(c.esignAnchorsPresent(null).length, 0, 'and a null document does not throw');
     // ⚠ IT READS THE ANCHOR TABLE RATHER THAN A SECOND LIST OF STRINGS. A hand-written list here
@@ -1152,7 +1161,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // first pass of this build was reverted eight ways and stayed green — a whole consent mechanism
   // with nothing asserting it existed.
 
-  group('⚠⚠ ONE OPT-OUT BOX, ON THE LIVING-CLIENT FORM, AND NONE AT ALL ON THE ESTATE ONE');
+  group('⚠⚠ ONE MARKETING CLAUSE AND ONE OPT-OUT BOX, ON BOTH FORMS — driven on both builders');
   {
     // Anthony, off the first envelope DocuSign actually sent: *"why don't we just simplify that as
     // one 'I do not authorize' … allow them to opt out, but use for marketing is assumed unless
@@ -1178,19 +1187,95 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         + 'client misses or a tab that fails to place — a consent whose only exit is one checkbox on '
         + 'one page is one rendering bug from being no exit');
 
-    // ⚠⚠ THE ESTATE FORM IS A PROHIBITION, NOT A CHOICE, AND THAT IS THE HALF WORTH PINNING. The
-    // subject is a decedent's house and the person who could consent is a fiduciary consenting on
-    // somebody else's behalf; offering the choice invites them to trade what is not theirs.
-    lacks(pro, 'I DO NOT AUTHORIZE', '⚠⚠ no tick box anywhere on the estate form');
-    lacks(pro, 'I AUTHORIZE', '⚠ and nothing to authorize either');
-    has(pro, '7.2 Marketing &amp; Promotional Use &mdash; Not Permitted',
-        '⚠ the subsection says so in its own heading, where a skimming reader meets it');
-    has(pro, 'Havellin does not use media captured during an estate engagement for marketing',
-        '⚠ stated flatly rather than as a default that could be varied');
-    has(pro, 'none is available under it by consent',
-        '⚠⚠ and it is not waivable — otherwise a representative could simply be asked off-document');
-    has(pro, 'It survives completion or termination',
-        '⚠ and it outlives the engagement, which is when the temptation to publish arrives');
+    // ⚠⚠ THE ESTATE FORM ASKS THE SAME QUESTION NOW, AND THE PROHIBITION IT REPLACES LASTED ONE
+    // DAY. Anthony: *"what if we get an estate clean out and they don't care? ... estate sale
+    // companies take pictures at estate sales ... And all the documents should just provide the
+    // opt-out."* The anonymity standard he described was already (a)–(e); a personal representative
+    // under §733.607 may SELL the contents, so authorising a photograph is the smaller act.
+    eq(pro.split('I DO NOT AUTHORIZE').length - 1, 1,
+       '⚠⚠ exactly one box on the estate form too');
+    lacks(pro, 'I AUTHORIZE</strong>', '⚠ and no opposite box here either');
+    has(pro, '7.2 Marketing &amp; Promotional Use',
+        '⚠ under its own subsection heading, where a skimming reader meets it');
+    lacks(pro, 'Not Permitted',
+          '⚠⚠ and the heading no longer says the opposite of the clause under it');
+    has(pro, 'Leave this box unchecked to authorize',
+        '⚠ the default is stated on the estate page as well');
+
+    // ⚠⚠ THE CLAUSE ITSELF IS ONE TEXT, RENDERED TWICE — this is the assertion that stops the two
+    // forms governing the same photographs by different rules, which is the whole reason the body
+    // moved into `marketingUseParas`. Restriction (b) is the one a client would actually be harmed
+    // by losing, so it is compared verbatim rather than by shape.
+    appCtx().marketingUseParas('Havellin').forEach(function (para, i) {
+      has(pro, para, '⚠ the estate form renders shared paragraph ' + i + ' verbatim');
+    });
+    appCtx().marketingUseParas('Contractor').forEach(function (para, i) {
+      has(std, para, '⚠ and the living-client form renders the same paragraph ' + i);
+    });
+    ['No specific street address', 'No name of the Client, the property owner',
+     'No image or likeness of any identifiable individual',
+     'bearing identifying information'].forEach(function (needle) {
+      has(std, needle, 'living-client form states: ' + needle);
+      has(pro, needle, '⚠⚠ and the estate form states the SAME restriction: ' + needle);
+    });
+
+    // ⚠⚠ NEITHER FORM MAY CONTRADICT ITS OWN OPT-OUT, AND BOTH DID. This is the half of the build
+    // that was a live defect rather than a change of mind:
+    //   • §10.1a said Documentation Media *"is never sold, licensed, or shared with any third
+    //     party"* — absolute, three paragraphs above a §10.2 authorising publication. That shipped
+    //     this morning and was on the form Anthony was already sending.
+    //   • the estate form's §7 confidentiality list forbade posting *"without express written
+    //     consent"*, which is an opt-IN, directly against an opt-out §7.2.
+    // A contract stating both is construed against its drafter, so the practical effect is that we
+    // would have been operating under the stricter rule while believing we had the looser one.
+    lacks(std, 'never sold, licensed, or shared with any third party',
+          '⚠⚠ the living-client custody sentence no longer forbids what §10.2 permits');
+    has(std, 'is not published except as Section 10.2 permits',
+        '⚠ it names the carve-out instead, so the two clauses read as one rule');
+    lacks(pro, 'never sold, licensed, or shared with any third party',
+          '⚠⚠ and neither does the estate one');
+    has(pro, 'is not published except as Section 7.2 permits',
+        '⚠ pointing at its own section number, not the other form\'s');
+    lacks(pro, 'public platform without express written consent',
+          '⚠⚠ and the §7 confidentiality bullet no longer demands an opt-IN over an opt-out clause');
+    has(pro, 'except as expressly authorized under Section 7.2 below',
+        '⚠ the general bar on publishing survives with §7.2 as its one stated exception');
+
+    // ⚠ THE BOX CITES ITS OWN SECTION. A shared block defaulting to one number would print
+    // *Section 10.2* on an estate agreement, sending a reader to a clause that form does not have.
+    has(std, 'the use described in Section 10.2', '⚠ the living-client box cites §10.2');
+    has(pro, 'the use described in Section 7.2', '⚠⚠ and the estate box cites §7.2');
+    lacks(pro, 'Section 10.2', '⚠ with no trace of the other form\'s numbering');
+    eq(appCtx().marketingOptOutBlock().indexOf('the Section above') !== -1, true,
+       '⚠⚠ and a caller naming no section degrades to a phrase that is TRUE on any form, rather '
+       + 'than to either number — a default of 10.2 is how an estate form cites a section it lacks');
+
+    // ⚠ THE RESTRICTIONS BIND PERSONNEL AND VENDORS, AND SURVIVE. This sentence was the estate
+    // prohibition's second paragraph and is the half of it still true under an opt-out — (a)–(e)
+    // are worth nothing if a vendor on the matter is not bound, and the temptation to publish
+    // arrives after the engagement rather than during it. It is on BOTH forms now; the living-client
+    // form never had it at all.
+    ['bind Havellin&rsquo;s personnel and any vendor engaged on this matter'].forEach(function (n) {
+      has(pro, n, '⚠ the estate form binds its vendors');
+    });
+    has(std, 'bind Contractor&rsquo;s personnel and any vendor engaged on this matter',
+        '⚠⚠ and so does the living-client form, which never carried this before');
+    [std, pro].forEach(function (doc, i) {
+      has(doc, 'survive completion or termination of this Agreement',
+          '⚠ and it outlives the engagement on form ' + i);
+    });
+
+    // ⚠⚠ THE ORDER IS A REQUIREMENT, NOT A LAYOUT PREFERENCE. The limits the default consent is
+    // subject to have to be read BEFORE the tick box, or the box reads as a broader authorisation
+    // than the clause actually gives. `_mktClause` owns the order so neither form can assemble it.
+    [['standard', std], ['probate', pro]].forEach(function (pair) {
+      const which = pair[0], doc = pair[1];
+      ok(doc.indexOf('No specific street address') < doc.indexOf('I DO NOT AUTHORIZE'),
+         '⚠⚠ ' + which + ': the restrictions are printed above the box they bind');
+      ok(doc.indexOf('whether or not the box below was checked') < doc.indexOf('I DO NOT AUTHORIZE'),
+         '⚠ ' + which + ': and so is the written-notice route, so a reader who stops at the tick '
+         + 'has already been told there is another way out');
+    });
 
     // ⚠ §10.1 MUST NOT GO ON DESCRIBING A SEPARATE WRITTEN CONSENT. It cross-referenced §10.2 as
     // the thing that had to be obtained; under an opt-out there is nothing to obtain, and a clause
@@ -1208,7 +1293,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         '⚠⚠ the form that photographs the MOST was the one that never said what happens to the images');
     has(pro, '7.2 Marketing', 'and the marketing use is its own subsection');
     has(pro, 'seven years', 'the retention period is stated');
-    has(pro, 'never sold, licensed, or shared', 'and so is the limit on who else can ever see it');
+    has(pro, 'never sold or licensed',
+        '⚠ and so is the limit on who else can ever see it — restated when §7.2 became an opt-out, '
+        + 'because an absolute *never shared with any third party* contradicted the clause below it');
     // ⚠ SUBSECTIONS OF 7, NOT A NEW SECTION 8. Inserting a numbered section would renumber
     // Termination, Dispute Resolution and General Provisions on a contract a court may read.
     has(pro, "secHdr(8,'Termination')".replace(/.*/, 'Termination'), 'Termination is still section 8');
@@ -1311,8 +1398,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(std.anchors.indexOf('clientSig') !== -1, 'and the client signature');
 
     const pro = driveSend(real.probate);
-    ok(pro.anchors.indexOf('mktOptOut') === -1,
-       '⚠⚠ and an estate agreement names it NOT, because its document does not carry it');
+    ok(pro.anchors.indexOf('mktOptOut') !== -1,
+       '⚠ and an estate agreement names it too, now that its document carries the same clause');
     ok(pro.anchors.indexOf('havSig') !== -1, 'while still naming the four that are always there');
 
     // ⚠ AND IT IS MEASURED OFF THE DOCUMENT, NOT THE JOB. Handing docSend a document with no
@@ -1322,20 +1409,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(bare.anchors.length, 0, '⚠ a document with no anchors names none');
   }
 
-  group('⚠⚠ AN ESTATE ENVELOPE GETS NO MARKETING TAB, AND IS NOT REFUSED FOR IT');
+  group('⚠⚠ A DOCUMENT WITHOUT THE OPT-OUT MARKER SENDS FINE AND IS NOT REFUSED FOR IT');
   {
-    // ⚠⚠ THIS IS THE CASE THAT WOULD HAVE BROKEN EVERY ESTATE SEND. The estate form carries no
-    // marketing clause, so it carries no anchor; a backend that placed the tab blind would hand
-    // DocuSign `anchorIgnoreIfNotPresent:'false'` against a marker that is deliberately absent and
-    // the whole envelope would be REFUSED — on the matter type Havellin runs most.
+    // ⚠⚠ THIS IS THE CASE THAT WOULD BREAK A SEND OUTRIGHT, and it is still reachable even though
+    // both agreement forms now carry the clause: `docSend` carries every document kind, and a form
+    // that ever stops rendering the block must degrade to *no box* rather than to an envelope
+    // DocuSign refuses. A backend placing the tab blind would hand it
+    // `anchorIgnoreIfNotPresent:'false'` against a marker that is not on the page, and the whole
+    // envelope is rejected — nothing sent, on a contract somebody is waiting for.
+    // ⚠ IT IS DRIVEN OFF A REAL AGREEMENT WITH THE ONE OPTIONAL MARKER REMOVED, rather than off a
+    // hand-written stub, so what is exercised is a real document in a degraded state.
     const app = appCtx();
-    const anchors = app.esignAnchorsPresent(app.probateAgreementHtml(PROBATE, EST));
-    ok(anchors.indexOf('mktOptOut') === -1, 'the estate document really does not carry it');
+    const anchors = app.esignAnchorsPresent(
+      app.probateAgreementHtml(PROBATE, EST).replace(app.ESIGN_ANCHORS.mktOptOut, ''));
+    ok(anchors.indexOf('mktOptOut') === -1, 'the measured document really does not carry it');
+    eq(anchors.length, 4, '⚠ and still carries the four that are always required');
 
     const c = gsCtx({ props: FULL_PROPS });
     const res = c.esignSendEnvelope({ pdfBase64: 'x', signerName: 'Tripp Butler',
                                       signerEmail: 'tripp@example.com', anchors: anchors });
-    ok(res.ok, '⚠⚠ the estate envelope is still built');
+    ok(res.ok, '⚠⚠ the envelope is still built rather than refused');
     const client = c.calls[0].payload.recipients.signers[0];
     ok(!client.tabs.checkboxTabs, '⚠ and carries no marketing checkbox at all');
     eq(client.tabs.signHereTabs.length, 1, 'just the signature');
