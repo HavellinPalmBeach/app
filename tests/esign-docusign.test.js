@@ -49,7 +49,7 @@ function gsCtx({ props = {}, api = null } = {}) {
   const ctx = {
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null) }) },
     CacheService: { getScriptCache: () => ({ get: () => null, put: () => {} }) },
-    Logger: { log: () => {} },
+    Logger: { log: (m) => calls.push({ log: String(m) }) },
     Utilities: {
       base64EncodeWebSafe: (b) => Buffer.from(typeof b === 'string' ? b : Buffer.from(b)).toString('base64url'),
       newBlob: (s) => ({ getBytes: () => Buffer.from(s) }),
@@ -77,7 +77,7 @@ function gsCtx({ props = {}, api = null } = {}) {
     gsVar('DS_TOKEN_TTL_SEC'), gsVar('DS_ANCHORS'), gsVar('DS_TAB_Y_OFFSET'),
     gsFn('_dsProp'), gsFn('_dsIsDemo'), gsFn('_dsAuthHost'), gsFn('_dsMissingProps'),
     gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsFn('_dsAccessToken'),
-    gsVar('DS_RSA_ALG_ID'), gsFn('_dsDerLen'), gsFn('_dsSigningKey'),
+    gsVar('DS_RSA_ALG_ID'), gsFn('_dsDerLen'), gsFn('_dsSigningKey'), gsFn('dsKeyReport'),
     gsFn('esignSendEnvelope'), gsFn('esignEnvelopeStatus'),
   ].join('\n');
   vm.runInContext(src, ctx);
@@ -286,6 +286,36 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and an empty property is a named cause, not a stack
     const e = gsCtx({ props: { DS_PRIVATE_KEY: '' } })._dsSigningKey();
     eq(e.dsError, 'DS_PRIVATE_KEY is empty.', 'an empty key says so');
+  }
+
+  group('⚠⚠ THE DIAGNOSTIC MEASURES THE PROPERTY RATHER THAN GUESSING AT IT');
+  {
+    // ⚠⚠ THIS EXISTS BECAUSE I GUESSED THREE TIMES AND WAS WRONG THREE TIMES. DocuSign's
+    // `no_valid_keys_or_signatures` says only "the signature did not verify", which is equally
+    // consistent with a truncated paste, a key from a deleted keypair, and a bug in the converter —
+    // and nothing on either screen tells them apart.
+    const rep = (key) => {
+      const c = gsCtx({ props: { DS_PRIVATE_KEY: key } });
+      c.dsKeyReport();
+      return c.calls.map((x) => x.log).join('\n');
+    };
+    const body = (n) => 'A'.repeat(n);
+
+    has(rep(''), 'DS_PRIVATE_KEY is empty.', 'an empty property says so');
+    has(rep('not a key at all'), 'NONE FOUND', 'a non-PEM value is named as such');
+    has(rep('-----BEGIN RSA PRIVATE KEY-----\n' + body(40)),
+        'the paste is truncated', '⚠ a missing END line is called out');
+
+    // ⚠ THE OUTER SEQUENCE DECLARES ITS OWN LENGTH, which catches a partial paste that KEPT its
+    // END line — the case the header check cannot see, and the likeliest cause of a key that
+    // parses and then fails to verify.
+    const short = '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA6PsRv1IbiAmTNB57\n-----END RSA PRIVATE KEY-----';
+    has(rep(short), 'TRUNCATED', '⚠⚠ a short body is caught by its own declared length');
+
+    // ⚠ AND THE PRIVATE HALF MUST NEVER REACH A LOG. Execution logs are retained and shared.
+    const full = rep(short);
+    lacks(full, 'BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA',
+          '⚠⚠ the report never echoes the private key back into the execution log');
   }
 
   group('⚠ DER LENGTHS ARE ENCODED AT EVERY BOUNDARY');

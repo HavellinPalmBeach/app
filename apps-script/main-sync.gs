@@ -1926,6 +1926,90 @@ function esignEnvelopeStatus(data) {
   }
 }
 
+// ─── WHAT IS ACTUALLY IN DS_PRIVATE_KEY ──────────────────────────────────────────
+// ⚠⚠ THIS EXISTS BECAUSE I GUESSED THREE TIMES AND WAS WRONG THREE TIMES. `no_valid_keys_or_
+// signatures` says only "the signature did not verify", which is consistent with a truncated
+// paste, a key from a deleted keypair, or a bug in the conversion above — and nothing on either
+// screen tells them apart. This measures the property instead: how much of it arrived, what the
+// DER really is, and what public key it implies. Editor-only and argument-free, like testEsignAuth.
+//
+// ⚠ IT PRINTS THE PUBLIC HALF ONLY. The public key is not a secret (DocuSign displays it), and the
+// private half must never reach an execution log, which is retained and shared.
+function dsKeyReport() {
+  var raw = _dsProp('DS_PRIVATE_KEY');
+  if (!raw) { Logger.log('DS_PRIVATE_KEY is empty.'); return; }
+
+  Logger.log('Property length : ' + raw.length + ' chars');
+  var isP1 = raw.indexOf('BEGIN RSA PRIVATE KEY') !== -1;
+  var isP8 = raw.indexOf('BEGIN PRIVATE KEY') !== -1 && !isP1;
+  Logger.log('Header          : ' + (isP1 ? 'PKCS#1 (BEGIN RSA PRIVATE KEY) — will be converted'
+                                    : isP8 ? 'PKCS#8 (BEGIN PRIVATE KEY) — used as-is'
+                                    : 'NONE FOUND — this is not a PEM private key'));
+  Logger.log('END line present: ' + (raw.indexOf('END') !== -1 ? 'yes' : 'NO — the paste is truncated'));
+
+  var b64 = raw.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  var der;
+  try { der = Utilities.base64Decode(b64); }
+  catch (e) { Logger.log('Body            : NOT VALID BASE64 — the paste is damaged. (' + e + ')'); return; }
+  Logger.log('Body            : ' + b64.length + ' base64 chars -> ' + der.length + ' DER bytes');
+  Logger.log('                  (a 2048-bit PKCS#1 key is about 1190 DER bytes)');
+
+  if (!isP1) { Logger.log('Stopping — the modulus check below reads PKCS#1 only.'); return; }
+
+  // RSAPrivateKey ::= SEQUENCE { version INTEGER, modulus INTEGER, publicExponent INTEGER, ... }
+  var u = [], i;
+  for (i = 0; i < der.length; i++) u.push(der[i] < 0 ? der[i] + 256 : der[i]);
+  var p = { i: 0 };
+  function readLen() {
+    var b = u[p.i++];
+    if (b < 0x80) return b;
+    var n = b & 0x7f, v = 0;
+    while (n-- > 0) v = (v << 8) | u[p.i++];
+    return v;
+  }
+  function expect(tag) {
+    if (u[p.i] !== tag) throw new Error('expected tag 0x' + tag.toString(16) + ' at ' + p.i);
+    p.i++;
+    return readLen();
+  }
+  try {
+    // ⚠ THE OUTER SEQUENCE DECLARES ITS OWN LENGTH, so comparing that against what actually
+    // arrived catches a partial paste outright — including one that kept its END line, which the
+    // check above cannot see. This is the single most likely cause of a key that parses and then
+    // fails to verify.
+    var declared = expect(0x30);            // SEQUENCE
+    var actual = der.length - p.i;
+    if (actual < declared) {
+      Logger.log('*** TRUNCATED: the key declares ' + declared + ' bytes of content and only '
+                 + actual + ' arrived. Re-copy the WHOLE private key block from DocuSign. ***');
+      return;
+    }
+    var vlen = expect(0x02); p.i += vlen;   // version
+    var mlen = expect(0x02);                // modulus
+    var lead = (u[p.i] === 0x00) ? 1 : 0;   // DER sign byte
+    Logger.log('Modulus         : ' + ((mlen - lead) * 8) + ' bits');
+    Logger.log('                  (DocuSign generates 2048)');
+    var mod = u.slice(p.i, p.i + mlen); p.i += mlen;
+    var elen = expect(0x02);
+    var exp = u.slice(p.i, p.i + elen);
+
+    // SubjectPublicKeyInfo { AlgorithmIdentifier, BIT STRING { SEQUENCE { n, e } } }
+    var inner = [0x02].concat(_dsDerLen(mod.length), mod, [0x02], _dsDerLen(exp.length), exp);
+    var seq = [0x30].concat(_dsDerLen(inner.length), inner);
+    var bits = [0x03].concat(_dsDerLen(seq.length + 1), [0x00], seq);
+    var spki = [0x30].concat(_dsDerLen(DS_RSA_ALG_ID.length + bits.length), DS_RSA_ALG_ID, bits);
+    for (i = 0; i < spki.length; i++) if (spki[i] > 127) spki[i] -= 256;
+    Logger.log('\nThe PUBLIC key this private key implies — compare it with the one DocuSign shows\n'
+      + 'for the keypair on your integration key. If they differ, the wrong key is in the property.\n\n'
+      + '-----BEGIN PUBLIC KEY-----\n'
+      + (Utilities.base64Encode(spki).match(/.{1,64}/g) || []).join('\n')
+      + '\n-----END PUBLIC KEY-----');
+  } catch (e) {
+    Logger.log('Could not parse the key structure: ' + e);
+    Logger.log('That almost always means the paste is partial — re-copy the WHOLE private key block.');
+  }
+}
+
 // ─── RUN THIS FIRST ──────────────────────────────────────────────────────────────
 // ⚠ EDITOR-ONLY, AND IT TAKES NO ARGUMENTS — the Apps Script Run menu passes none, which is
 // the same rule testQuoAuth and previewDeletedJobs already follow. Read-only: it proves the
