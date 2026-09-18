@@ -1,5 +1,130 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ DOCUSIGN IS THE FIRM'S ROUTE, AND THE MARKETING CONSENT IS A REAL SIGNATURE (BUILT 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18b`. Anthony, after Ashley
+created an agreement and the old HTML email went out with no DocuSign anywhere: *"that should not be a device by
+device setting. It should be the default and then there should be an option to send an agreement the old fashioned
+way."*
+
+- **⚠⚠ THE ROOT CAUSE WAS A PER-DEVICE `localStorage` KEY DEFAULTING TO `manual`.** `ESIGN_PROVIDER_KEY` read
+  `hav_esign_provider` **per browser**, so `esignAvailable()` was false on any device nobody had opened Settings on
+  and `docProvider` fell through to `gmail`. The integration was live, correct, and **off on the machine the
+  agreement was actually sent from**. **How a firm signs is not a per-browser preference** — it is a constant now,
+  and the Settings control, both read/write sites, the `localStorage` write and the `LOCAL_KEEP_KEYS` entry are all
+  gone. **⚠ THE PER-JOB CHOICE IS UNTOUCHED AND MUST STAY**: `📄 Send as a PDF to sign by hand` is still on every
+  unsent agreement, and the 2026-09-17 rule that the route is pinned to the job the moment it is pressed is
+  unchanged.
+- **⚠⚠ AND THE BUTTON READ THE SAME EITHER WAY, WHICH IS WHY NOBODY NOTICED.** It said *Send signing packet*
+  whether the press would create a DocuSign envelope or a Gmail draft — the one control that decides how a contract
+  is executed, silent about which it would do. It names its route now (*Send for signature — DocuSign* /
+  *Send signing packet by email*). Reverting it fails 1.
+
+### ⚠⚠ THE MARKETING CONSENT IS OPT-IN, SIGNED, AND ON BOTH FORMS
+Anthony: *"with respect to using photos in social media, I do think they're going to need to sign that. So I don't
+know if we just make it a full signature block instead of a tick box."*
+- **⚠⚠ THE OLD §10.2 WAS AN OPT-OUT, AND THAT IS THE DEFECT RATHER THAN THE TICK BOX.** It published a
+  client's home **unless they ticked a box saying not to** — silence read as consent, on a document most people
+  sign without reading every clause. It reads the other way round now: nothing is published unless the client
+  affirmatively authorizes it **and signs for it**, and **an unanswered agreement means no**.
+- **⚠⚠ THE CHOICE IS REQUIRED AND THE SIGNATURE IS OPTIONAL, AND THAT PAIRING IS THE MECHANISM RATHER THAN A
+  COMPROMISE.** DocuSign's guided navigation steps a signer through the **required** fields and **jumps past
+  optional ones**. So an optional signature on its own is **a consent nobody is ever asked for** — the client
+  clicks Finish having never seen it. Making the **radio pair** required is what puts the question in front of
+  them; making the **signature** conditional on `authorize` is what stops a client who declines being asked to sign
+  what they just refused. Making the pair optional fails 2; dropping the conditional parent fails 2.
+- **⚠⚠ IT WAS MEASURED AGAINST THE REAL API, NOT INFERRED FROM A SCREENSHOT.** Anthony sent DocuSign's *Basic
+  fields* panel to show what the plan includes — it lists field TYPES, says nothing about radio groups or
+  conditional logic, and describes the drag-and-drop UI we never use. `testEsignTabs()` is the answer: editor-only,
+  argument-free, it creates **four DRAFT envelopes** (`status:'created'`, x/y positioned, addressed to the firm),
+  one capability each, and **voids them all**. All four came back **ACCEPTED**. *A capability question is answered
+  by one cheap probe, not by reading a pricing page.*
+- **`marketingConsentBlock(signerLabel)` IS ONE BLOCK WITH TWO READERS** and only the signer label differs. Two
+  copies of one consent is how the standard form and the estate form come to ask different questions.
+- **⚠⚠ THE ESTATE FORM HAD NO PHOTOGRAPHY OR MARKETING SECTION AT ALL, and it is the form on the matters where
+  the media is most sensitive.** It carries **§7.1 Documentation Media** and **§7.2 Marketing & Promotional Use**
+  now — **as subsections of 7, deliberately**, so Termination, Dispute Resolution and General Provisions are not
+  renumbered against agreements already issued citing those numbers. Dropping §7.2 fails 1; dropping the block
+  itself fails 4.
+- **⚠ DOCUMENTATION PHOTOGRAPHY LOSES ITS INITIALS BOX AND GAINS A STATEMENT.** Anthony: *"I don't think they
+  need to initial to say that we're going to document their property… if they are paying us to inventory their
+  home, we're obviously going to inventory their home. Let's just state what we do and how we treat that
+  confidential information."* §10.1a / §7.1 now say where the media is stored, who can see it, the seven-year
+  retention, and that it is never sold or shared.
+
+### ⚠⚠ A PERSON COUNTERSIGNS, AND THE DEPARTMENT GROUP IS COPIED INSTEAD
+- **⚠⚠ `agreements@` AS SIGNATORY WAS THE DEFECT.** It is a Google Group: whoever opened it first would sign,
+  and **the certificate of completion would record that signature under a name that may not be the person who
+  clicked**. On a contract, the audit trail naming the wrong human is the one failure it exists to prevent.
+  Anthony: *"Let's make it simple and have me responsible for signing all agreements on behalf of Havellin."*
+  Routing order 2 is `anthony@havellinpalmbeach.com`. Reverting it fails 2.
+- **⚠ `agreements@` IS A CARBON COPY AT ROUTING ORDER 3, AFTER BOTH SIGNATURES.** A copy at order 1 mails the
+  firm an **unsigned** agreement the moment it goes out, which reads in the inbox exactly like an executed one.
+  DocuSign mails every recipient the completed envelope, so the client, Anthony and the file copy all receive it.
+  Reverting it fails 2.
+- **⚠ ANTHONY DIAGNOSED THE DELIVERY HALF HIMSELF, AND IT WAS NOT AN APP FAULT:** *"agreements was not set up to
+  receive posts outside the organization. And I've now changed that."* Worth recording because the app-side
+  symptom (no countersignature request) had two independent causes and only one of them was ours.
+
+### ⚠ THE ROLE MENU CAME OFF BOTH PLACES IT APPEARED, AND THE ROW ITSELF STAYS
+Anthony: *"we don't need the role or authority tick boxes — that will have been established at intake and we will
+be conversing with the person who has the authority to sign the agreement."*
+- The standard form's tick box is **gone**.
+- **⚠⚠ THE PROBATE FORM KEEPS THE ROW, AND DELETING IT WOULD BE THE OPPOSITE DEFECT.** `Role / Authority` at
+  §1.2 and `Title / Role` on its signature page are the **capacity that lets that person bind the estate** — byte
+  for byte what `Managing Member` does on our side of the block, and the thing counsel queries on a court-reviewed
+  matter. **The 2026-09-18 signature-block fix exists to ADD a stated capacity; removing one here would undo it.**
+  They print the role recorded at intake.
+- **⚠ WHAT WENT IS THE FOUR-OPTION FALLBACK MENU** (`Personal Representative · Executor · POA · Other`), which
+  on an executed contract — and on the **signature page, beside the line the representative signs** — reads as a
+  pick-one they are meant to answer. Nothing asks it and no e-signature field is placed on it. **⚠ IT EXISTED
+  TWICE and the first pass found only one**; the browser check is what caught the second. Each fails 1.
+
+### ⚠⚠ A WET SIGNATURE IS NEVER STAMPED DOCUSIGN-ISSUED — and the line that created the risk is not the line that changed
+`recordAgreementSignature` has always ended its provider field in a fallback. While the firm's provider was a
+per-device key **defaulting to `manual`**, inheriting it was harmless: the fallback and the default were the same
+word. **Making DocuSign the constant moved that fallback's blast radius underneath a line nobody touched** — the
+`assignedTCContact` shape this file already records once. It is `sig.provider || 'manual'` now: reaching the
+fallback means no caller named a provider, and the only path that does that is somebody recording a wet or scanned
+signature **by hand**. Recording a paper signature as DocuSign-issued is a **false claim about how a contract was
+executed**, on the one record that answers that question. Reverting it fails 2.
+- **⚠ THE TEST LIFTS THE REAL `ESIGN_PROVIDER_KEY` RATHER THAN STUBBING IT.** `signature-record` stubs it to
+  `'manual'` — which is exactly the value that cannot tell the two implementations apart, and is why that suite
+  was green through it.
+
+- **6102 committed checks** (`tests/esign-docusign.test.js`, 244). **All thirteen changes revert-verified
+  individually, ZERO green** — the provider constant fails **6**, both consent blocks **4** each, and the rest 1–2.
+  - **⚠⚠ EIGHT OF NINE REVERTS CAME BACK GREEN ON THE FIRST SWEEP — THE WHOLE CONSENT MECHANISM, THE
+    COUNTERSIGNER AND THE CARBON COPY, WITH NO COVERAGE AT ALL.** Every check drove a **piece** (the anchor
+    constants, the block's own output, the gs source text) and **nothing drove the outcome**. The groups now build
+    the real envelope through the real `esignSendEnvelope` and **read its recipients and tabs back**, and drive the
+    real `agreementHtml` / `probateAgreementHtml`. Same gap this file records more than any other; this is the
+    time it was the author's own build.
+  - **⚠ FOUR NEEDLES IN THE SWEEP MATCHED NOTHING AND THE `NEEDLE x0` GUARD CAUGHT ALL FOUR** — hand-written
+    spellings against real source whitespace. One of them (`required: 'true' }`) matched **three** times, because
+    `testEsignTabs`'s own probe carries the same literal. Scope a needle to the function, not the file.
+- **⚠ FIVE SUITES PINNED EXPLICIT `fns:` / `vars:` LISTS OR THE OLD MODEL AND BROKE CORRECTLY.**
+  `agreement-fees`, `agreement-rates` and `prep-declutter` when the builders grew a call to
+  `marketingConsentBlock`; `dashboard-actions` on the button label; and **`signature-record`'s three assertions
+  pinning the per-device setting**, restated as four asserting the converse. **Found by searching every pinned
+  list at once** rather than re-running and fixing one failure at a time.
+- **Verified end to end in headless Chromium on both real builders**: **7 anchors × 1 each** on each form, all
+  `rgb(255,255,255)` / `display:inline` / `visibility:visible` / 6px / **present in the text layer**, every
+  `.sig-line` still exactly **36px**, one `I AUTHORIZE` and one `I DO NOT AUTHORIZE` per form, no initials box, no
+  role menu, no opt-out box, the recorded role printing and the blank appearing only when nothing was recorded.
+  `ESIGN_PROVIDER_KEY` reads `docusign` and `esignAvailable()` true with no device setup. Overflow **0** at 1440
+  and 390px, **no page errors**.
+- **Manual §8a rewritten** — the firm-wide default and why the Settings control went, **What the client actually
+  fills in** (three fields, with the required/optional table), the guided-navigation reasoning, opt-in vs opt-out,
+  the documentation-is-not-a-choice note, the estate form's missing section, the role-row distinction, and the
+  countersigner plus the file copy. Playbook **Step 6** and **Step 8** plus **seven** symptom→cause rows. Both
+  `.md` copies hand-edited and **35 claims parity-checked, 0 mismatches**; a stale sweep for the three retired
+  wordings returns **0** in all four files. Tag balance verified on both HTML files (`manual.html`'s `<code>`
+  delta is still the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 53 tables
+  full-width under `print`**.
+- **⚠ STILL NOT PROVEN, AND IT IS ANTHONY'S TO DO: send one real sandbox envelope and look at it.** Anchor
+  placement is resolved by DocuSign against the **text layer of the generated PDF**, so where `DS_TAB_Y_OFFSET`
+  puts each box relative to its line cannot be asserted from here — only seen. Everything up to the PDF is proven.
+
 ## ⚠ ONE POOL HOUSE, ONE ROW — AND THE WEIGHT WAS THE DECISION, NOT THE LABEL (2026-09-18)
 Anthony, off two screenshots of the room grid: *"let's remove the first two from outbuildings and guest
 houses, and modify poolhouse/cabana no living quarters to read Poolhouse - with living quarters."*
@@ -828,6 +953,12 @@ actually send out an agreement for signature."*
     two things to sign.
   - **⚠ THE DEFAULT IS THE E-SIGNATURE ROUTE and `paper` is the deliberate opt-out**, so a caller
     that names no route gets the normal path rather than silently dropping to email.
+  - **⚠⚠ SUPERSEDED IN PART 2026-09-18 — `esignAvailable()` NO LONGER READS A PER-DEVICE SETTING.**
+    Everything above about the PER-JOB route is unchanged and still live. What changed is the
+    CAPABILITY half: `hav_esign_provider` was a `localStorage` key defaulting to `manual`, so the
+    firm's own integration was off on any browser nobody had configured — and an agreement really
+    did go out as a plain email because of it. `ESIGN_PROVIDER_KEY` is a constant now. See the
+    section at the top of this file.
   - **⚠⚠ AND THE JOIN CAME BACK GREEN ON THE REVERT — the same gap this file records six times.**
     `has(fn('docSpec'), 'via:')` matches whether the field carries the caller's choice or a
     hardcoded `''`, and that is not cosmetic: **with `via` dropped, the paper button still renders,
@@ -881,12 +1012,19 @@ actually send out an agreement for signature."*
     ladder in the same order and returns both halves together. It also drops the role suffix:
     `expectedSignerName` appends *"(Trustee)"* for our own prefill, which is right on our screen and
     wrong as a recipient name on a legal envelope.
-  - **⚠ `live:true` DOES NOT TURN DOCUSIGN ON.** `hav_esign_provider` does, and it defaults to
-    `manual`. Verified in a browser: a device that has not opted in reports `manual` / `watches
-    false` / agreement routed to **gmail** — byte-for-byte its old behaviour.
+  - **⚠ `live:true` SAYS THE INTEGRATION EXISTS, NOT THAT IT IS SELECTED.** Until 2026-09-18
+    selection was `hav_esign_provider`, a per-device key defaulting to `manual` — **which is the
+    defect fixed at the top of this file**. `ESIGN_PROVIDER_KEY` is now the firm's constant, so
+    every device reports `docusign` and routes the agreement to DocuSign. **`manual` is NOT dead:**
+    it is the label and the provider stamped on a signature RECORDED BY HAND, which is still a
+    button on every paper-route job. A sweep removing it as unreachable would leave every wet-signed
+    contract recording its provider as DocuSign.
   - **The Settings control is the missing half of a key that had no input anywhere.** Driven through
     the real `saveSettings()`: choosing DocuSign persists, takes effect, routes the agreement, and
     **removes *Record the signed agreement* from the rail**; choosing Recorded by hand puts it back.
+    **⚠⚠ THAT CONTROL WAS REMOVED ON 2026-09-18 AND MUST NOT COME BACK.** Giving a per-device
+    dropdown the answer to *does this firm use DocuSign* is what sent a real agreement out the old
+    way. The capability is a constant; only the PER-JOB route is a choice.
   - **⚠ TWO PRE-EXISTING SUITES PINNED THE OLD WORLD AND BROKE CORRECTLY.**
     `signature-record` pinned `live: false` *"there is no account, no credentials, no backend
     action"* — all three now exist. Restated as the requirement that was always meant: a provider
@@ -3972,8 +4110,11 @@ workflow."* App-only, no redeploy.
   account, no credentials and no backend action, and a half-built integration reporting
   success on an opaque response is a defect this file already records once
   (`generateStripeLink`). An unknown or not-live key **falls back to `manual`** rather than
-  standing the only working control down on a typo. Turning it on is one Settings field
-  (`hav_esign_provider`, on `LOCAL_KEEP_KEYS`).
+  standing the only working control down on a typo. ~~Turning it on is one Settings field
+  (`hav_esign_provider`, on `LOCAL_KEEP_KEYS`).~~ **⚠ THAT FIELD WAS REMOVED 2026-09-18 and the
+  key with it** — a per-device dropdown answering *does this firm use DocuSign* sent a real
+  agreement out the old way. `ESIGN_PROVIDER_KEY` is a constant. *Kept rather than deleted, per the
+  standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ `esign` IS NEVER OFFERED TO A PERSON.** The picker is built from
   `AGR_SIG_MANUAL_METHODS` (`wet`, `scanned`) and `confirmAgreementSignature` rejects anything
   outside it, so a human cannot claim an electronic signature that no provider issued.
