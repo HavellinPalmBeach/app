@@ -131,6 +131,25 @@ actually send out an agreement for signature."*
   text in the PDF **text layer** (if it does not, the fallback is absolute positioning, and the anchor
   strings are already in one constant so it is a small change), and where the signature box actually
   lands — `DS_TAB_Y_OFFSET` is one tunable constant and a considered first guess, nothing more.
+- **THE PLAN, AND WHY THE CHEAP ONE IS THE RIGHT ONE (decided 2026-09-17).** Anthony asked what tier
+  this needs before committing: **the basic DocuSign API plan, ~$75/month or $600/year, 40 envelopes
+  a month.** That is the correct tier and the reason is architectural rather than lucky.
+  - **⚠ WHAT WE BUILT IS *REMOTE* SIGNING, AND THE EXPENSIVE TIER IS FOR *EMBEDDED* SIGNING.** The
+    envelope goes out `status: 'sent'` with each recipient identified by email, so DocuSign mails
+    them and they sign on DocuSign's own page. There is **no `clientUserId`, no
+    `createRecipientView`, no embedded signing anywhere** in `main-sync.gs` or `havellin.html` —
+    grep both before assuming otherwise. Embedded signing (signing inside our own app or site) is
+    what pushes you up the price list, and nothing here wants it.
+  - **⚠ 40 ENVELOPES A MONTH IS FAR MORE HEADROOM THAN IT SOUNDS, because only the AGREEMENT routes
+    through DocuSign.** `docProvider` keys on `spec.kind === 'agreement'`; estimates, invoices and
+    change orders all still go by email. So the allowance is 40 NEW SIGNED CLIENTS a month against a
+    realistic year-one volume of 2–10. **If anything ever starts consuming envelopes faster than one
+    per engagement, that is a defect to look at, not a plan to upgrade.**
+  - **⚠ AND THEY ARE NOT LOCKED IN.** The provider sits behind one `ESIGN_PROVIDERS` entry plus one
+    `DOC_SEND_PROVIDERS.send` function, so swapping to a cheaper service is a contained change. The
+    anchors, the two-signer envelope, the per-job routing and the signature record are all
+    provider-agnostic and would survive it.
+
 - **⚠⚠ HOW A CLIENT SIGNS IS A PER-JOB CHOICE, NOT A SETTING — AND THE GLOBAL VERSION WAS A LIVE
   DEFECT FOR ABOUT AN HOUR.** Anthony, reading the build above: *"should this setting be in the
   settings or should it be somewhere where we're creating the client agreement? That way, if
