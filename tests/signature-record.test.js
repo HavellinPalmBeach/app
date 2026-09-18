@@ -263,10 +263,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(box({ ESIGN_PROVIDER_KEY: '' }).esignProviderKey(), 'manual', 'so does an empty setting');
     eq(box({ ESIGN_PROVIDER_KEY: 'docusign' }).esignProviderKey(), 'docusign',
        '⚠ and a real, live provider IS selected — this is the line that turns DocuSign on');
-    // Flipping it on is one field.
-    has(src, "localStorage.getItem('hav_esign_provider')", 'the key is a Settings value, not a constant');
-    has(src, 'hav_esign_provider', 'kept through a device clear, like the other endpoint settings');
-    ok(/LOCAL_KEEP_KEYS[^\n]*hav_esign_provider/.test(src), 'explicitly on the keep list');
+    // ⚠⚠ THESE THREE USED TO ASSERT THE OPPOSITE, AND THEY BROKE CORRECTLY ON 2026-09-18.
+    // They pinned the provider as a per-device Settings value read from localStorage and kept
+    // through a device clear — which is exactly the shape that shipped the defect: Ashley created
+    // an agreement on a device that had never been switched on, the app emailed a PDF, and the
+    // button said the same words it says where DocuSign is live. The CREDENTIALS were always
+    // firm-level (five Script Properties on one Apps Script deployment), so the capability never
+    // was per-device; only the flag pretended. Restated as the requirement that now holds.
+    ok(!/localStorage\.getItem\('hav_esign_provider'\)/.test(src),
+       '⚠ the provider is NOT read from localStorage — a firm-level capability must not depend on which browser pressed send');
+    ok(!/LOCAL_KEEP_KEYS[^\n]*hav_esign_provider/.test(src),
+       '⚠ and there is no such device key to keep through a clear');
+    ok(/var ESIGN_PROVIDER_KEY = 'docusign';/.test(src),
+       '⚠⚠ DocuSign is the firm default, stated as a constant — Anthony: "it should be the default"');
+    // ⚠ AND THE PAPER ROUTE SURVIVES, which is what makes the default safe to hardcode. It is a
+    // per-JOB button rather than a setting, so an old-school client is still a one-press decision.
+    ok(/Send as PDF to sign by hand/.test(src),
+       '⚠ the old-fashioned route is still offered on the job itself');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

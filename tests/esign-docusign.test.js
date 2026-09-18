@@ -76,7 +76,7 @@ function gsCtx({ props = {}, api = null } = {}) {
     gsVar('DS_AUTH_HOST_DEMO'), gsVar('DS_AUTH_HOST_PROD'), gsVar('DS_JWT_SCOPES'),
     gsVar('DS_TOKEN_TTL_SEC'), gsVar('DS_ANCHORS'), gsVar('DS_TAB_Y_OFFSET'),
     gsFn('_dsProp'), gsFn('_dsIsDemo'), gsFn('_dsAuthHost'), gsFn('_dsMissingProps'),
-    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsFn('_dsAccessToken'),
+    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsVar('DS_MKT_GROUP'), gsFn('_dsClientTabs'), gsFn('_dsAccessToken'),
     gsVar('DS_RSA_ALG_ID'), gsFn('_dsDerLen'), gsFn('_dsSigningKey'), gsFn('dsKeyReport'),
     gsFn('esignSendEnvelope'), gsFn('esignEnvelopeStatus'),
   ].join('\n');
@@ -97,7 +97,7 @@ const FULL_PROPS = {
 };
 
 // ── the app side ──────────────────────────────────────────────────────────────
-const AGR_FNS = ['agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
+const AGR_FNS = ['marketingConsentBlock', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
                  'materialsBasisNote', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
@@ -824,6 +824,227 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the banner must be able to say so. Raise it only when esign itself needs a newer backend.
     ok(bv >= '2026-09-17b',
        '⚠ the deployment is at least the one that added esignArchive');
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE MARKETING CONSENT — AN OPT-IN THE CLIENT CANNOT SCROLL PAST (2026-09-18)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Anthony: *"with respect to using photos in social media, I do think they're going to need to
+  // sign that."* The §10.2 this replaced was an OPT-OUT: Havellin got marketing rights unless the
+  // client found a tick box and initialled it, so not noticing read as consent to publish a
+  // client's home. Every check below drives the real builder or the real envelope, because the
+  // first pass of this build was reverted eight ways and stayed green — a whole consent mechanism
+  // with nothing asserting it existed.
+
+  group('⚠⚠ THE CONSENT BLOCK IS ON BOTH FORMS AND NAMES THE RIGHT PERSON');
+  {
+    const c = appCtx();
+    const std = c.agreementHtml(LIVING, EST);
+    const pro = c.probateAgreementHtml(PROBATE, EST);
+
+    [['standard', std], ['probate', pro]].forEach(function (pair) {
+      const which = pair[0], doc = pair[1];
+      has(doc, 'I AUTHORIZE', which + ': the authorize option is offered');
+      has(doc, 'I DO NOT AUTHORIZE',
+          '⚠ ' + which + ': and so is DECLINE — a single "I agree" box somebody must tick to finish '
+          + 'the envelope is a toll gate, not a consent');
+      has(doc, 'does not affect the Services',
+          '⚠ ' + which + ': declining is stated to cost them nothing, or the choice is not free');
+    });
+
+    // ⚠ ONE BLOCK, TWO READERS, AND ONLY THE SIGNER LABEL DIFFERS. On an estate the person
+    // choosing is the personal representative; a block saying "Client" there would be addressing
+    // somebody who is deceased.
+    has(std, 'Client&rsquo;s Choice', 'the living-client form asks the Client');
+    has(pro, 'Personal Representative&rsquo;s Choice',
+        '⚠ and the estate form asks the Personal Representative, never the decedent');
+    lacks(pro, 'Client&rsquo;s Choice', 'the estate form does not also say Client');
+  }
+
+  group('⚠⚠ THE ESTATE FORM HAS A PHOTOGRAPHY SECTION AT ALL, WHICH IT NEVER DID');
+  {
+    const pro = appCtx().probateAgreementHtml(PROBATE, EST);
+    has(pro, '7.1 Documentation Media',
+        '⚠⚠ the form that photographs the MOST was the one that never said what happens to the images');
+    has(pro, '7.2 Marketing', 'and the marketing use is its own subsection');
+    has(pro, 'seven years', 'the retention period is stated');
+    has(pro, 'never sold, licensed, or shared', 'and so is the limit on who else can ever see it');
+    // ⚠ SUBSECTIONS OF 7, NOT A NEW SECTION 8. Inserting a numbered section would renumber
+    // Termination, Dispute Resolution and General Provisions on a contract a court may read.
+    has(pro, "secHdr(8,'Termination')".replace(/.*/, 'Termination'), 'Termination is still section 8');
+    const at7 = pro.indexOf('7.1 Documentation Media');
+    const at8 = pro.indexOf('Termination');
+    ok(at7 > 0 && at8 > at7, 'and the new material sits before it rather than displacing it');
+  }
+
+  group('⚠ DOCUMENTATION PHOTOGRAPHY CARRIES NO FIELD, AND THAT IS THE POINT');
+  {
+    // Anthony: *"I don't think they need to initial to say that we're going to document their
+    // property... if they are paying us to inventory their home, we're obviously going to
+    // inventory their home."* Every required field is one more place a signature stalls.
+    const c = appCtx();
+    [c.agreementHtml(LIVING, EST), c.probateAgreementHtml(PROBATE, EST)].forEach(function (doc) {
+      ok(!/Initials:\s*_+/.test(doc), '⚠ no initials line survives on either agreement');
+      lacks(doc, 'elects to OPT OUT', '⚠ and the opt-out box is gone — silence is no longer consent');
+    });
+    lacks(c.agreementHtml(LIVING, EST), 'Role / Authority',
+          '⚠ the Client / Personal Representative tick boxes are gone — authority is settled at intake');
+  }
+
+  group('⚠⚠ THE CLIENT CARRIES THE CONSENT TABS AND HAVELLIN DOES NOT');
+  {
+    const c = gsCtx({ props: FULL_PROPS });
+    c.esignSendEnvelope({ pdfBase64: 'x', signerName: 'Tripp Butler', signerEmail: 'tripp@example.com' });
+    const r = c.calls[0].payload.recipients;
+    const client = r.signers[0], hav = r.signers[1];
+
+    ok(!!client.tabs.radioGroupTabs, '⚠⚠ the client is asked the marketing question');
+    ok(!hav.tabs.radioGroupTabs,
+       '⚠⚠ and Havellin is NOT — a media release is the client’s decision about their own home, '
+       + 'and a REQUIRED radio on recipient 2 would block our own countersignature on a contract '
+       + 'the client had already signed');
+    eq(hav.tabs.signHereTabs.length, 1, 'the countersignature is one signature and nothing else');
+
+    const grp = client.tabs.radioGroupTabs[0];
+    eq(grp.groupName, c.DS_MKT_GROUP, 'the group is named from the shared constant');
+    eq(grp.radios.length, 2, 'two options');
+    eq(grp.radios.map(function (x) { return x.value; }).sort().join(','), 'authorize,decline',
+       'authorize and decline, both real answers');
+    grp.radios.forEach(function (x) {
+      eq(x.required, 'true',
+         '⚠⚠ REQUIRED — this is the only thing that guarantees the client SEES it. DocuSign’s '
+         + 'guided navigation steps through required fields and jumps past optional ones, so an '
+         + 'optional signature alone is a consent nobody is ever asked for');
+    });
+
+    const mkt = client.tabs.signHereTabs.filter(function (t) { return t.tabLabel === 'marketing_signature'; })[0];
+    ok(!!mkt, 'the marketing signature exists');
+    eq(mkt.optional, 'true', '⚠ and is OPTIONAL — a client who declines is never made to sign it');
+    eq(mkt.conditionalParentLabel, c.DS_MKT_GROUP, 'shown only under the marketing radio');
+    eq(mkt.conditionalParentValue, 'authorize',
+       '⚠ and only on authorize, so declining never shows a signature line to ignore');
+    // ⚠ MEASURED BEFORE IT WAS BUILT. testEsignTabs drove all three shapes against the real
+    // account on 2026-09-18 and all three came back ACCEPTED; the plan's field palette does not
+    // answer this, because nothing here uses the drag-and-drop sender UI it describes.
+    ok(/function testEsignTabs\(\s*\)/.test(GS), 'and the probe that proved the account takes them is committed');
+  }
+
+  group('⚠⚠ A PERSON COUNTERSIGNS, AND THE DEPARTMENT GROUP GETS A COPY INSTEAD');
+  {
+    const c = gsCtx({ props: FULL_PROPS });
+    c.esignSendEnvelope({ pdfBase64: 'x', signerName: 'Tripp Butler', signerEmail: 'tripp@example.com' });
+    const r = c.calls[0].payload.recipients;
+
+    // ⚠⚠ THE GROUP ADDRESS AS SIGNATORY WAS THE DEFECT. agreements@ is a Google Group: whoever
+    // opened it first would sign, and the certificate of completion would record that signature as
+    // Anthony Graziano regardless of who clicked. On a contract, the audit trail naming the wrong
+    // human is the one failure it exists to prevent.
+    ok(r.signers[1].email.indexOf('agreements@') !== 0,
+       '⚠⚠ the countersigner is not the department group');
+    eq(r.signers[1].email, 'anthony@havellinpalmbeach.com',
+       'it is the named person responsible for signing on behalf of Havellin');
+
+    ok(!!r.carbonCopies && r.carbonCopies.length === 1, '⚠ and the firm still gets a copy');
+    eq(r.carbonCopies[0].email, 'agreements@havellinpalmbeach.com', 'at agreements@, on file');
+    eq(r.carbonCopies[0].routingOrder, '3',
+       '⚠⚠ AFTER both signatures. A carbon copy at order 1 mails the firm an UNSIGNED agreement the '
+       + 'moment it goes out, which reads in the inbox exactly like an executed one');
+    ok(Number(r.carbonCopies[0].routingOrder) > Number(r.signers[1].routingOrder),
+       'strictly after the countersignature, not merely last in the list');
+  }
+
+
+  group('⚠⚠ A WET SIGNATURE IS NEVER STAMPED DOCUSIGN-ISSUED');
+  {
+    // ⚠⚠ THIS ONLY BECAME A DEFECT ON 2026-09-18, AND THE LINE THAT CREATED IT IS NOT THIS ONE.
+    // `recordAgreementSignature` has always ended its provider field in a fallback. While the firm's
+    // provider was a per-device localStorage key DEFAULTING TO `manual`, inheriting it was harmless:
+    // the fallback and the default were the same word. Making DocuSign the firm constant moved that
+    // fallback's blast radius underneath a line nobody touched — the `assignedTCContact` shape this
+    // file already records once. Recording a paper signature as DocuSign-issued is a FALSE CLAIM
+    // ABOUT HOW A CONTRACT WAS EXECUTED, on the one record that answers that question, and on a
+    // probate matter it is the record counsel reads.
+    // ⚠ THE SANDBOX LIFTS THE REAL `ESIGN_PROVIDER_KEY` RATHER THAN STUBBING IT. signature-record
+    // stubs it to 'manual', which is exactly the value that cannot tell the two implementations apart.
+    const c = sandbox({
+      fns: ['recordAgreementSignature', 'agreementSignature', 'isAgreementSigned', 'docState',
+            '_jobTouch', '_actor', 'esignProviderKey', 'esignAvailable', 'applyEsignStatus',
+            'esignJobWatches'],
+      vars: ['ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'AGR_SIG_MANUAL_METHODS'],
+      stubs: {
+        saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
+        esignArchiveSigned() {}, agrApprovedBy: 'Anthony Graziano',
+      },
+    });
+    eq(c.esignProviderKey(), 'docusign',
+       'the firm is on DocuSign — which is the state that makes the fallback dangerous');
+
+    // The paper route: a job whose agreement went out as a PDF, signed by hand, typed in afterwards.
+    const paper = { id: 1, agrSent: true, docState: { agreement: { provider: 'gmail', sentAt: 'x' } } };
+    c.jobs = [paper];
+    eq(c.recordAgreementSignature(1, { how: 'wet', signedBy: 'Tripp Butler', signedOn: '2026-09-18' }), '',
+       'a wet signature records');
+    eq(c.agreementSignature(paper).provider, 'manual',
+       '⚠⚠ AND IT READS `manual`, NOT THE FIRM PROVIDER — nobody named one, so nothing issued it');
+    ok(c.agreementSignature(paper).provider !== c.esignProviderKey(),
+       'the record does not inherit the firm setting, which is the whole assertion');
+    eq(c.agreementSignature(paper).envelopeId, '',
+       'and it carries no envelope id, because there is no envelope');
+
+    // The converse, or the fix would be a blanket "always manual" that lies the other way.
+    const env = { id: 2, agrSent: true, docState: { agreement: { provider: 'docusign', sentAt: 'x' } } };
+    c.jobs.push(env);
+    c.applyEsignStatus(2, { envelopeId: 'env-4', status: 'completed',
+                            signerName: 'Tripp Butler', completedAt: '2026-09-18T14:02:00Z' });
+    eq(c.agreementSignature(env).provider, 'docusign',
+       '⚠ A GENUINE ENVELOPE STILL RECORDS DOCUSIGN — the provider NAMES itself when it is the one signing');
+    eq(c.agreementSignature(env).envelopeId, 'env-4', 'with the envelope it came back on');
+  }
+
+
+  group('⚠ NEITHER FORM ASKS THE SIGNER TO CLASSIFY THEMSELVES');
+  {
+    // Anthony: "we don't need the role or authority tick boxes — that will have been established at
+    // intake and we will be conversing with the person who has the authority to sign the agreement."
+    const c = appCtx();
+    const std = c.agreementHtml(LIVING, EST);
+    const pro = c.probateAgreementHtml(PROBATE, EST);
+
+    lacks(std, 'Role / Authority',
+      '⚠ the standard form has no role tick box — a question nobody reads the answer to');
+    lacks(std, 'Personal Representative &middot; Executor',
+      'and no pick-one menu anywhere on it');
+
+    // ⚠⚠ THE PROBATE FORM KEEPS THE ROW, AND DELETING IT WOULD BE THE OPPOSITE DEFECT. `Role /
+    // Authority` at §1.2 is the CAPACITY that lets this person bind the estate — the same thing
+    // `Managing Member` does on our side of the signature block, and the thing counsel queries on a
+    // court-reviewed matter. It is a stated fact, not a field: intake records it and nothing on the
+    // signing screen asks it.
+    has(pro, 'Role / Authority',
+      '⚠⚠ BUT THE PROBATE FORM STILL STATES THE CAPACITY — it is what binds the estate');
+    has(pro, 'Tripp Butler', 'naming the authorized representative');
+    lacks(pro, 'Personal Representative &middot; Executor &middot; POA &middot; Other',
+      '⚠ AND IT NEVER PRINTS THE FOUR-OPTION MENU — a pick-one list on an executed contract reads as a '
+      + 'question the signer is meant to answer, and no e-signature field is placed on it');
+
+    // The recorded value wins; only a job with nothing recorded gets the blank.
+    const rec = c.probateAgreementHtml(
+      Object.assign({}, PROBATE, { executorRole: 'Successor Trustee' }), EST);
+    has(rec, 'Successor Trustee', 'a recorded role prints as recorded');
+    lacks(rec, 'Role / Authority</td><td>____',
+      'and the blank is not printed beside it');
+
+    // ⚠ NO TAB IS PLACED ON IT, on either form — the converse of the consent block, which is a field.
+    [std, pro].forEach(function (doc) {
+      const at = doc.indexOf('Role / Authority');
+      if (at < 0) return;
+      const near = doc.slice(at, at + 400);
+      ['mktYes', 'mktNo', 'mktSig', 'clientSig'].forEach(function (k) {
+        lacks(near, c.ESIGN_ANCHORS[k],
+          '⚠ no e-signature anchor sits on the role row — it is stated, never asked');
+      });
+    });
   }
 
   group('⚠ testEsignAuth IS EDITOR-ONLY, ARGUMENT-FREE AND READ-ONLY');

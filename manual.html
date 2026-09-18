@@ -713,8 +713,8 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     not in Settings</strong>. Anthony&rsquo;s reason: <em>&ldquo;if somebody is old school and we need to just send them a PDF to sign,
     we can do that &mdash; but we don&rsquo;t need to go into the app and change the settings overall.&rdquo;</em></p>
   <table>
-    <tr><th></th><th>DocuSign (the default once it is switched on)</th><th>Send as a PDF</th></tr>
-    <tr><td><strong>What you press</strong></td><td><strong>Send for signature</strong> on the <em>Signing packet sent</em> row.</td><td><strong>Send as a PDF to sign by hand</strong>, beside it.</td></tr>
+    <tr><th></th><th>DocuSign (the default, firm-wide)</th><th>Send as a PDF</th></tr>
+    <tr><td><strong>What you press</strong></td><td><strong>Send for signature &mdash; DocuSign</strong> on the <em>Signing packet sent</em> row. <strong>The button names the route it will take</strong>, so the two are never confused at the moment of pressing.</td><td><strong>Send as a PDF to sign by hand</strong>, beside it.</td></tr>
     <tr><td><strong>Who sends it</strong></td><td>DocuSign emails the client directly.</td><td>You do &mdash; a Gmail draft with the packet attached, which you read and send yourself.</td></tr>
     <tr><td><strong>&#10003; I&rsquo;ve sent it</strong></td><td><strong>Not shown.</strong> There is nothing to confirm.</td><td>Shown. Press it once the email has gone.</td></tr>
     <tr><td><strong>The signature</strong></td><td>Arrives <strong>on its own</strong>. The row reads <em>DocuSign is watching for it</em>.</td><td><strong>&#10003; Record the signed agreement</strong>, by hand (&sect;8).</td></tr>
@@ -731,6 +731,44 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     recorder is withdrawn and refuses to open on a job with a live envelope. Without that, somebody ticks it while DocuSign still
     says <em>sent</em> and the two records disagree about a contract. <strong>If the client says they signed and the app has not
     caught up, open the client</strong> &mdash; that is what triggers the check.</div>
+  <h3>What the client actually fills in</h3>
+  <p><strong>Three things, and only three</strong>: their signature, the date, and a <strong>marketing choice</strong>. Nothing
+    else is a field &mdash; no initials, no role tick box.</p>
+  <table>
+    <tr><th>Field</th><th>Required?</th><th>Where it is</th></tr>
+    <tr><td>Client signature and date</td><td><strong>Yes</strong></td><td>The signature block at the end.</td></tr>
+    <tr><td><em>I AUTHORIZE</em> / <em>I DO NOT AUTHORIZE</em> marketing use</td><td><strong>Yes &mdash; one of the two</strong></td><td>&sect;10.2 on the standard form, &sect;7.2 on the estate/probate form.</td></tr>
+    <tr><td>Marketing signature</td><td><strong>Only if they authorize</strong></td><td>Directly beneath the two boxes; DocuSign hides it entirely unless <em>I AUTHORIZE</em> is picked.</td></tr>
+  </table>
+  <div class="note"><strong>&#9888;&#9888; THE CHOICE IS REQUIRED; THE SIGNATURE IS NOT. THAT PAIRING IS THE WHOLE MECHANISM AND IT
+    IS NOT A COMPROMISE.</strong> DocuSign&rsquo;s guided navigation walks a signer through the <em>required</em> fields and jumps
+    <em>past</em> optional ones. So an optional signature on its own is a consent nobody is ever asked for &mdash; the client
+    clicks Finish having never seen it. Making the <strong>pick</strong> required is what puts the question in front of them;
+    making the <strong>signature</strong> conditional on answering <em>yes</em> is what stops a client who declines being asked to
+    sign something they just refused. Declining takes one click and no signature.</div>
+  <div class="note"><strong>&#9888; IT IS OPT-IN NOW, AND IT USED TO BE OPT-OUT.</strong> The old clause published a client&rsquo;s
+    home <em>unless they ticked a box saying not to</em> &mdash; silence read as consent. It reads the other way round now:
+    nothing is published unless the client affirmatively authorizes it and signs for it, and <strong>an unanswered agreement means
+    no</strong>. Anthony&rsquo;s reason: <em>&ldquo;with respect to using photos in social media, I do think they&rsquo;re going to
+    need to sign that.&rdquo;</em></div>
+  <div class="note"><strong>Documentation photography is not a choice and is not asked about.</strong> We photograph the property
+    and its contents because that is how the inventory, the appraisal support and the chain of custody are built &mdash; a client
+    paying us to inventory their home is not separately consenting to the inventory. It used to carry an <em>initials</em> box,
+    which was removed on 2026-09-18: <em>&ldquo;if they are paying us to inventory their home, we&rsquo;re obviously going to
+    inventory their home. Let&rsquo;s just state what we do and how we treat that confidential information.&rdquo;</em> The clause
+    now says plainly where the media is stored, who can see it, and that it is never sold or shared
+    (&sect;10.1a standard, &sect;7.1 estate).
+    <br><br><strong>&#9888; The estate/probate form had no photography or marketing section at all until 2026-09-18</strong>, and
+    it is the form on the matters where the media is most sensitive. Both forms carry both clauses now.</div>
+  <div class="note"><strong>Nothing asks the signer to classify themselves any more.</strong> Who has authority to sign is
+    established at intake and we are talking to that person, so a pick-one on the contract was a question with no reader.
+    <br><br><strong>&#9888; THE ESTATE FORM STILL STATES THE ROLE, AND THAT IS NOT THE SAME THING.</strong> <em>Role / Authority</em>
+    at &sect;1.2 and <em>Title / Role</em> on its signature page are the <strong>capacity that lets that person bind the estate</strong>
+    &mdash; exactly what <em>Managing Member</em> does on our side of the block, and what counsel queries on a court-reviewed matter.
+    They print <strong>the role recorded at intake</strong>. What came off is the <strong>four-option menu</strong> they used to fall
+    back to (<em>Personal Representative &middot; Executor &middot; POA &middot; Other</em>), which on an executed contract &mdash; and
+    on the signature page, beside the line the representative signs &mdash; reads as a pick-one they are meant to answer. No
+    e-signature field was ever placed on it.</div>
   <h3>How the signature gets back</h3>
   <p><strong>There is no timer and nothing runs in the background.</strong> The app asks DocuSign when somebody is looking: on a page
     load, and when you open a client. So <strong>opening the client is the refresh</strong> &mdash; if you are waiting on a
@@ -757,11 +795,22 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   <div class="note"><strong>Havellin countersigns second, and the envelope is not complete until we do.</strong> The client signs
     first (routing order 1), then the agreement comes to Havellin. DocuSign only reports <em>completed</em> when both are done, so
     the app cannot mark a job signed off a half-executed contract. <strong>An envelope sitting at <em>signed</em> is usually waiting
-    on us</strong> &mdash; check the DocuSign inbox.</div>
+    on us</strong> &mdash; check the DocuSign inbox.
+    <br><br><strong>&#9888; THE COUNTERSIGNATURE GOES TO ANTHONY PERSONALLY, NOT TO <code>agreements@</code>, AND THE REASON IS THE
+    AUDIT TRAIL.</strong> A department address is a Google Group: whoever opened it first would sign, and the certificate of
+    completion would record that signature under a name that may not be the person who clicked. On a contract, the audit trail
+    naming the wrong human is the one failure it exists to prevent. <strong><code>agreements@</code> is copied instead</strong>,
+    at routing order 3 &mdash; so the firm gets the executed agreement on file <em>after</em> both signatures, never an unsigned
+    one that reads in the inbox like an executed one. The client and Anthony both receive the completed copy from DocuSign as
+    well.</div>
   <h3>Switching it on</h3>
-  <p><strong>Settings &rarr; Signature provider</strong>: <em>Recorded by hand</em> (the default) or <em>DocuSign</em>. It is per
-    device, and it only decides whether the DocuSign button is <em>offered</em> &mdash; it changes nothing about a job already sent.
-    Five values must also be set in the Apps Script project&rsquo;s <strong>Script Properties</strong>, where the Quo key lives:</p>
+  <p><strong>There is nothing to switch on in Settings, and the control that used to be there was removed on 2026-09-18.</strong>
+    DocuSign is the firm&rsquo;s route for every agreement, on every device. <em>It used to be a per-device dropdown defaulting to
+    &ldquo;Recorded by hand&rdquo;</em>, which meant a concierge who had never opened Settings sent agreements the old way without
+    knowing there was another &mdash; and that is exactly what happened: an agreement went out as a plain email on one browser
+    while another was on DocuSign. <strong>How a firm signs is not a per-browser preference.</strong> The per-job choice is
+    unaffected: <strong>Send as a PDF to sign by hand</strong> is still on every unsent agreement.</p>
+  <p>Five values must be set in the Apps Script project&rsquo;s <strong>Script Properties</strong>, where the Quo key lives:</p>
   <table>
     <tr><th>Property</th><th>Where it comes from</th></tr>
     <tr><td><code>DS_INTEGRATION_KEY</code></td><td>DocuSign &rarr; Settings &rarr; Apps and Keys &rarr; the app&rsquo;s <em>Integration Key</em>.</td></tr>

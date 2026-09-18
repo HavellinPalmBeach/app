@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 2:53pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 3:46pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2301,12 +2301,7 @@ body.no-smf .smf-col{display:none;}
 
     <div class="sec" style="margin-top:14px;">Agreement Signatures</div>
 
-    <label>E-signature</label>
-    <select id="set-esign-provider">
-      <option value="manual">Not set up &mdash; agreements go out by email</option>
-      <option value="docusign">DocuSign is set up for this firm</option>
-    </select>
-    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">This only says whether DocuSign is <strong>available</strong>. <strong>How each client signs is chosen per job</strong>, on the agreement step of the client&rsquo;s timeline: <strong>Send for signature</strong> mails the signing packet through DocuSign, or <strong>Send as PDF to sign by hand</strong> emails it the old way for a client who would rather sign on paper. Neither needs you to come back here. On a job sent through DocuSign the timeline turns green on its own once both signatures are in, and <strong>Record the signed agreement</strong> is hidden on <em>that job</em> &mdash; a signature typed by hand would disagree with the envelope. Every other job keeps it.</div>
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;"><strong>Agreements go out through DocuSign. There is nothing to switch on here, and there used to be.</strong> The choice was a per-device setting that defaulted to off, so whether a client got a signature request depended on which laptop pressed send &mdash; which is exactly what happened on 18 Sep. The credentials live in the Apps Script, one deployment shared by every device, so it is a firm-level fact and is now treated as one.<br><br><strong>How each client signs is still chosen per job</strong>, on the agreement step of the client&rsquo;s timeline: <strong>Send for signature</strong> mails the signing packet through DocuSign, or <strong>Send as PDF to sign by hand</strong> emails it the old way for a client who would rather print it, or for one you are going to sit down with in person. On a DocuSign job the timeline turns green on its own once both signatures are in, and <strong>Record the signed agreement</strong> is hidden on <em>that job</em> &mdash; a signature typed by hand would disagree with the envelope. Every other job keeps it.</div>
 
     <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— nothing to set here</span></div>
 
@@ -12979,7 +12974,21 @@ function docSend(spec) {
 // redeploy, and turning it OFF again is the same field. Kept through a device clear
 // (`LOCAL_KEEP_KEYS`), because re-typing it on a phone after every clear is the pain this
 // file already records about the Apps Script URLs.
-var ESIGN_PROVIDER_KEY = (function(){ try { return localStorage.getItem('hav_esign_provider') || 'manual'; } catch(e){ return 'manual'; } })();
+// ⚠⚠ DOCUSIGN IS THE DEFAULT AND IS NO LONGER A PER-DEVICE SETTING, AND THE OLD SHAPE WAS A
+// LIVE DEFECT RATHER THAN a preference. This read `localStorage` and defaulted to `manual`, so
+// whether an agreement went out for e-signature depended on which BROWSER pressed send. On
+// 2026-09-18 Ashley created an agreement from a device that had never been switched on; the app
+// emailed a PDF, the button said the same words it says on a device where DocuSign is live, and
+// nothing anywhere reported a choice had been made. Two people, two laptops, and one of them was
+// always going to be wrong.
+// ⚠ THE CREDENTIALS WERE ALWAYS FIRM-LEVEL, WHICH IS WHY THIS IS THE CORRECT PLACE FOR IT. The
+// five DocuSign properties live in Apps Script Script Properties — one deployment, shared by every
+// device — so the CAPABILITY was never per-device; only this flag pretended it was.
+// ⚠ AND THE OLD-SCHOOL ROUTE IS UNTOUCHED: `Send as PDF to sign by hand` is a button on the job,
+// which is where that decision belongs. Anthony: *"it should be the default and then there should
+// be an option to send an agreement the old fashioned way… if we want to print it and bring it to
+// a client and have them sign it, we should just be able to do that."*
+var ESIGN_PROVIDER_KEY = 'docusign';
 
 var AGR_SIG_METHODS = {
   wet:      { label: 'Signed in person',      hint: 'Paper signed in front of you, or handed back at the property' },
@@ -13001,10 +13010,59 @@ var AGR_SIG_MANUAL_METHODS = ['wet', 'scanned'];
 // ⚠ THEY RENDER ON EVERY AGREEMENT, INCLUDING WET-SIGNED ONES, and that is correct — white
 // on white is invisible on screen and on paper, and a document whose anchors depend on how
 // it is going to be signed is a document with two versions.
-var ESIGN_ANCHORS = { clientSig: '/hsc/', clientDate: '/hdc/', havSig: '/hsh/', havDate: '/hdh/' };
+// ⚠⚠ THE MARKETING CONSENT IS A RADIO GROUP PLUS A CONDITIONAL SIGNATURE, AND AN OPTIONAL
+// SIGNATURE ON ITS OWN WOULD HAVE BEEN THE WRONG ANSWER. DocuSign's guided navigation steps a
+// signer through REQUIRED fields only, so an optional signature is jumped straight past — the
+// client clicks FINISH having never seen it. That reads as a clean opt-out and is really a
+// consent nobody was ever asked for. `mktYes`/`mktNo` are a REQUIRED radio pair, so the envelope
+// cannot complete until the question has an answer either way, and `mktSig` is a signature that
+// only appears when they pick authorize. Measured against the real account by `testEsignTabs`
+// on 2026-09-18 — all three accepted, so this is what the plan allows rather than what it
+// might allow.
+// ⚠ DOCUMENTATION PHOTOGRAPHY CARRIES NO TAB AT ALL, deliberately. Anthony: *"if they are paying
+// us to inventory their home, we're obviously going to inventory their home."* Asking a client to
+// initial the thing they have just hired us to do is ceremony, and every extra required field is
+// one more place a signature stalls.
+var ESIGN_ANCHORS = { clientSig: '/hsc/', clientDate: '/hdc/', havSig: '/hsh/', havDate: '/hdh/',
+                      mktYes: '/mky/', mktNo: '/mkn/', mktSig: '/mks/' };
+// The radio group's name is the parent a conditional tab points at, so it is declared once here
+// and read by the backend's tab builder rather than typed at either end.
+var ESIGN_MKT_GROUP = 'marketing_consent';
 
 function esignAnchor(tag) {
   return '<span style="color:#fff;font-size:6px;line-height:0;">' + tag + '</span>';
+}
+
+// ⚠⚠ ONE CONSENT BLOCK, READ BY BOTH AGREEMENT FORMS. Two copies of a consent is how the
+// living-client form and the estate form come to ask for different things in different words
+// over the same photographs — the second-renderer drift this file records more than any other
+// single failure. `signerLabel` is the ONLY thing that differs: on an estate the person choosing
+// is the personal representative, and a block that said "Client" there would be asking somebody
+// who is deceased.
+//
+// ⚠⚠ IT IS AN OPT-IN, AND THE ONE IT REPLACED WAS AN OPT-OUT. The old §10.2 gave Havellin
+// marketing rights UNLESS the client found a tick box and initialled it — so silence, or simply
+// not noticing, read as consent to publish a client's home. Anthony: *"with respect to using
+// photos in social media, I do think they're going to need to sign that."* Silence now means NO.
+//
+// ⚠ BOTH OPTIONS ARE OFFERED AND NEITHER IS PRE-SELECTED. A single "I agree" box a client must
+// tick to finish the envelope is not consent, it is a toll gate; DECLINE has to be a real answer
+// that costs them nothing, or the record is worthless on the day it matters.
+//
+// ⚠ AND IT READS CORRECTLY ON PAPER. The same markup is what a wet-sign client prints, so the
+// anchors sit inside ordinary tick boxes and a signature rule rather than anything DocuSign-shaped.
+function marketingConsentBlock(signerLabel) {
+  var who = signerLabel || 'Client';
+  var h = '<div style="margin-top:.75rem;border:1.5px solid var(--bronze);border-radius:4px;overflow:hidden;">';
+  h += '<div style="background:var(--tan);padding:6px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);">Marketing &amp; Promotional Use &mdash; ' + esc(who) + '&rsquo;s Choice</div>';
+  h += '<div style="padding:10px 12px;font-size:11px;line-height:1.6;color:var(--gray-dk);">';
+  h += '<div style="margin-bottom:8px;">Choose one. This is optional and does not affect the Services, the fee, or any other term of this Agreement.</div>';
+  h += '<div style="margin-bottom:6px;">&#9744;' + esignAnchor(ESIGN_ANCHORS.mktYes) + ' &nbsp;<strong>I AUTHORIZE</strong> Havellin to use media from this engagement for marketing and promotional purposes, on the restrictions in Section 10.2.</div>';
+  h += '<div style="margin-bottom:10px;">&#9744;' + esignAnchor(ESIGN_ANCHORS.mktNo) + ' &nbsp;<strong>I DO NOT AUTHORIZE</strong> any marketing or promotional use. Media is used only to deliver and document the Services.</div>';
+  h += '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Signature &mdash; required only if authorizing</div>';
+  h += '<div class="sig-line">' + esignAnchor(ESIGN_ANCHORS.mktSig) + '</div>';
+  h += '</div></div>';
+  return h;
 }
 
 // ⚠ ONE PROVIDER TABLE. It was written on 2026-09-11 with `docusign` DECLARED and NOT
@@ -13013,10 +13071,14 @@ function esignAnchor(tag) {
 // rebuilt; see stripePaymentLink). Both entries are live as of 2026-09-17. What the table is
 // FOR is the SHAPE — `watches:true` is what stands the manual button down, so wiring a real
 // provider changes this table and nothing else, which is exactly what happened.
-// ⚠ `live:true` DOES NOT TURN DOCUSIGN ON — `hav_esign_provider` does, and it defaults to
-// `manual`. This flag only says the integration EXISTS and may be selected; a device that has
-// not opted in behaves exactly as it did before. Proven against the sandbox 2026-09-17:
-// testEsignAuth returns ALL GOOD and resolves the Havellin account.
+// ⚠ BOTH ENTRIES SURVIVE, AND `manual` IS NOT DEAD NOW THAT DOCUSIGN IS THE DEFAULT. It is the
+// label and the provider stamped on a signature RECORDED BY HAND — the paper route, which is
+// still a button on every unsent agreement. A sweep that removed it as unreachable would leave
+// every wet-signed contract recording its provider as DocuSign.
+// ⚠ `live:true` SAYS THE INTEGRATION EXISTS, NOT THAT IT IS SELECTED. Until 2026-09-18 selection
+// was `hav_esign_provider`, a per-device localStorage key defaulting to `manual`; that key is gone
+// and the firm's provider is a constant. Proven against the sandbox 2026-09-17: testEsignAuth
+// returns ALL GOOD and resolves the Havellin account.
 var ESIGN_PROVIDERS = {
   manual:   { label: 'Recorded by hand', watches: false, live: true },
   docusign: { label: 'DocuSign',         watches: true,  live: true }
@@ -13119,7 +13181,12 @@ function recordAgreementSignature(jobId, sig) {
     signedBy: sig.signedBy || '',
     signedOn: sig.signedOn || new Date().toISOString().slice(0, 10),
     note: sig.note || '',
-    provider: sig.provider || esignProviderKey(),
+    // ⚠ THE FALLBACK IS `manual`, NOT THE FIRM'S PROVIDER, AND THAT MATTERS NOW THAT DOCUSIGN IS
+    // THE DEFAULT. Reaching this fallback means no caller named a provider, and the only path that
+    // does that is somebody recording a wet or scanned signature by hand. Inheriting
+    // `esignProviderKey()` here would stamp a paper signature as DocuSign-issued — a false claim
+    // about how a contract was executed, on the one record that answers that question.
+    provider: sig.provider || 'manual',
     envelopeId: sig.envelopeId || '',
     recordedBy: sig.recordedBy || _actor(job) || '',
     recordedAt: new Date().toISOString()
@@ -14130,7 +14197,16 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'agreement_sent':
       if (live) {
-        out.primary = _jtSendAction(id, job, 'agreement', '', 'signing packet');
+        // ⚠⚠ THE LABEL NAMES THE ROUTE, AND A LABEL THAT DID NOT IS WHAT COST A DAY ON 2026-09-18.
+        // This read `Send signing packet` on every device. On one it created a DocuSign envelope;
+        // on another, where the old per-device setting had never been switched on, it emailed a
+        // PDF. Same words, same screen, two different things happening to a client's contract,
+        // and nothing anywhere said which. The provider setting is gone now — so this can only
+        // read one way on the automatic route — but the label states it regardless, because the
+        // paper button beside it is a real fork and the reader has to be able to tell them apart
+        // BEFORE pressing, not from what turns up in the client's inbox afterwards.
+        out.primary = _jtSendAction(id, job, 'agreement', '',
+          esignAvailable() ? 'for signature &mdash; DocuSign' : 'signing packet by email');
         // ⚠⚠ THE OLD-SCHOOL ROUTE IS A BUTTON, NOT A SETTING. Anthony: *"if somebody is old school
         // and we need to just send them a PDF to sign, we can do that. But we don't need to go into
         // the app and change the settings overall. It's just sort of a one-off."* Offered only
@@ -27856,7 +27932,6 @@ function openSettings() {
   // ⚠ IT SHOWS WHAT IS ACTUALLY IN EFFECT, NOT WHAT IS STORED. `esignProviderKey()` falls back to
   // `manual` for any key the table does not know or that is not live, so a stale or misspelt
   // setting must not render as though DocuSign were running.
-  var esEl = document.getElementById('set-esign-provider'); if (esEl) esEl.value = esignProviderKey();
   setVendorDirStatus(VENDOR_SYNC_URL ? (vendorDirectory.length ? ('✓ ' + vendorDirectory.length + ' vendors loaded') : 'URL set — click Reload directory to load') : 'No URL set yet', false);
   var rUrlEl = document.getElementById('set-referral-url'); if (rUrlEl) rUrlEl.value = REFERRAL_SYNC_URL;
   setReferralDirStatus(REFERRAL_SYNC_URL ? (referralDirectory.length ? ('✓ ' + referralDirectory.length + ' partners loaded') : 'URL set — click Reload partners to load') : 'No URL set yet', false);
@@ -27898,7 +27973,7 @@ var COST_RATE_FIELDS = [
 var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
 // contractor roster (your crew, not practice data), and the two directory caches.
-var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_esign_provider|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
@@ -27934,8 +28009,6 @@ function saveSettings() {
   // reads as "use the normal one", and someone who really wants it off can say so in Settings.
   var gcEl2 = document.getElementById('set-gmail-client-id');
   if (gcEl2) GMAIL_CLIENT_ID = gcEl2.value.trim() || GMAIL_CLIENT_ID_DEFAULT;
-  var esEl2 = document.getElementById('set-esign-provider');
-  if (esEl2) ESIGN_PROVIDER_KEY = ESIGN_PROVIDERS[esEl2.value] ? esEl2.value : 'manual';
   var rUrlEl2 = document.getElementById('set-referral-url'); if (rUrlEl2) REFERRAL_SYNC_URL = rUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
@@ -27959,7 +28032,6 @@ function saveSettings() {
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
     localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
     localStorage.setItem('hav_gmail_client_id', GMAIL_CLIENT_ID);
-    localStorage.setItem('hav_esign_provider', ESIGN_PROVIDER_KEY);
     localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
     localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));
@@ -27981,9 +28053,6 @@ function loadSettings() {
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
     VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
     GMAIL_CLIENT_ID   = localStorage.getItem('hav_gmail_client_id') || GMAIL_CLIENT_ID_DEFAULT;
-    // ⚠ An unknown key falls back to `manual` in `esignProviderKey`, not here — so a typo
-    // leaves the only working control standing rather than silently disabling it.
-    ESIGN_PROVIDER_KEY = localStorage.getItem('hav_esign_provider') || 'manual';
     REFERRAL_SYNC_URL = localStorage.getItem('hav_referral_url')  || '';
     try { var _rd = localStorage.getItem('hav_referral_dir'); if (_rd) referralDirectory = JSON.parse(_rd); } catch(e) {}
     REQUIRE_WALKTHROUGH_NOTES = localStorage.getItem('hav_require_notes') === '1';
@@ -28192,7 +28261,15 @@ function probateAgreementHtml(job, est) {
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += dRow('Estate', bb(estateName));
   content += dRow('Authorized Representative', bb(executorName));
-  content += dRow('Role / Authority', esc(job.executorRole) || 'Personal Representative &middot; Executor &middot; POA &middot; Other');
+  // ⚠ THE ROLE STAYS ON THIS FORM, AND IT IS NOT THE TICK BOX THAT CAME OFF THE STANDARD ONE.
+  // It is the CAPACITY that lets this person bind the estate — the same thing `Managing Member`
+  // does on our side of the signature block, and the thing counsel queries on a court-reviewed
+  // matter. Intake records it (a required field), so the recorded value is what prints.
+  // ⚠ THE FALLBACK USED TO PRINT A MENU — `Personal Representative · Executor · POA · Other` —
+  // which on an executed contract reads as a pick-one the signer is meant to answer. Nothing
+  // asks it and no e-signature field is placed on it, so it was a question with no reader, on the
+  // one line that states who is authorized. A blank to complete is the honest form of not knowing.
+  content += dRow('Role / Authority', esc(job.executorRole) || '_______________________________________________');
   content += dRow('Date','_______________________________________________');
   content += dRow('Mailing Address', clientAddr);
   content += dRow('Email', clientEmail);
@@ -28396,6 +28473,22 @@ function probateAgreementHtml(job, est) {
   conf.forEach(function(c){ content += '<li style="margin-bottom:.2rem;">'+c+'</li>'; });
   content += '</ul>';
   content += pp('The Client acknowledges that Havellin may use anonymized, non-identifying project data (e.g., square footage, job type, general scope) for internal business analysis and planning purposes only.');
+  // ⚠⚠ THE ESTATE FORM HAD NO PHOTOGRAPHY SECTION AT ALL, AND IT PHOTOGRAPHS MORE THAN THE
+  // LIVING-CLIENT FORM DOES. Every estate engagement builds a valued, photographed manifest —
+  // that is most of what the documentation step charges for — so the one contract that never
+  // said what happens to those images was the one generating the most. Anthony: *"The estate
+  // probate agreement should definitely have a photography and marketing section."*
+  // ⚠ IT IS SUBSECTIONS OF 7 RATHER THAN A NEW SECTION 8, deliberately. Media custody IS a
+  // confidentiality question, and inserting a numbered section here would renumber Termination,
+  // Dispute Resolution and General Provisions — on a contract a court may read, against
+  // agreements already issued citing those numbers.
+  content += subHdr('7.1 Documentation Media');
+  content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, the &sect;733.604 inventory, appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how the estate is accounted for.');
+  content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained for seven years as part of the fiduciary record. It is never sold, licensed, or shared with any third party except a vendor performing Services on this engagement, or as required by law or court order.');
+  content += subHdr('7.2 Marketing &amp; Promotional Use &mdash; Optional');
+  content += pp('Separately, and <strong>only if the Personal Representative affirmatively authorizes it below</strong>, Havellin may use media captured during this engagement for marketing, promotional, and educational purposes. Declining changes nothing about the Services, the fee, or any other term, and it is the default if the choice is left unanswered.');
+  content += pp('If authorized, the following restrictions apply without exception: no street address or unit number is disclosed; no name of the decedent, the Personal Representative, any family member, heir, or beneficiary appears; no image or likeness of any identifiable individual is published; no document, financial record, or item bearing identifying information is shown; and Havellin uses reasonable care to avoid publishing anything that could identify the residence or the family&rsquo;s circumstances. Authorization may be revoked prospectively at any time by written notice, which does not require removal of media already published.');
+  content += marketingConsentBlock('Personal Representative');
   // SECTION 8: TERMINATION
   content += secHdr(8,'Termination');
   content += subHdr('8.1 Termination by Client');
@@ -28445,7 +28538,12 @@ function probateAgreementHtml(job, est) {
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Client / Personal Representative</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+executorName+'</div></div>';
-  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">'+(esc(job.executorRole)||'Personal Representative &middot; Executor &middot; POA &middot; Other')+'</div></div>';
+  // ⚠ THE LABEL UNDER THIS LINE PRINTS THE RECORDED ROLE AND NOTHING ELSE. It used to fall back
+  // to `Personal Representative · Executor · POA · Other` — a four-option menu, on the signature
+  // page, beside the line the representative signs, which reads as a pick-one they are meant to
+  // answer. Nothing asks it, no e-signature field is placed on it, and intake already recorded it.
+  // The §1.2 row carried the same fact and the same menu; both were removed together.
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">'+(esc(job.executorRole)||'')+'</div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientSig)+'</div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientDate)+'</div></div>';
   content += '</div></div>';
@@ -28782,15 +28880,22 @@ function agreementHtml(job, est) {
   // ── SECTION 10 ────────────────────────────────────────────────────────────
   content += agrSection('10. Photography Authorization',
     p(b('10.1 Documentation Photography.')+'  As part of the Services, Contractor will photograph and/or record video of the property, its contents, and all significant assets for the purposes of condition documentation, asset identification, work progress records, and service record-keeping ("Documentation Media"). Client hereby authorizes this documentation as a necessary component of the engagement. All Documentation Media is stored securely in the Client\'s designated Google Drive folder and is not used for any marketing or promotional purpose without the separate written consent described in Section 10.2 below.')+
-    '<div style="margin-top:.75rem;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--cream);">Client acknowledges and authorizes documentation photography and video as described in Section 10.1. &nbsp;&nbsp;Initials: _______</div>'+
-    p('&nbsp;')+
-    p(b('10.2 Marketing &amp; Promotional Use.')+'  Separately, Client authorizes Contractor to use Documentation Media or other media captured during the engagement for marketing, promotional, and educational purposes, including social media, website, print collateral, and presentations, subject to the following restrictions:')+
+    // ⚠ NO INITIALS HERE, AND REMOVING THEM IS THE POINT RATHER THAN TIDYING. Anthony:
+    // *"I don't think they need to initial to say that we're going to document their property for
+    // purposes of executing the contract. If they are paying us to inventory their home, we're
+    // obviously going to inventory their home. Let's just state what we do and how we treat that
+    // confidential information."* The documentation IS the service; a separate acknowledgement of
+    // it asks the client to consent to the thing they have just engaged us for. What the sentence
+    // below earns its place saying is where the media LIVES and who can reach it, which is the
+    // part a client genuinely cannot infer.
+    p(b('10.1a Custody of Documentation Media.')+'  Documentation Media is stored in the Client&rsquo;s own project folder on Havellin&rsquo;s Google Drive, is accessible only to Havellin personnel assigned to this engagement and to anyone the Client authorizes in writing, and is retained for seven years as part of the service record. It is never sold, licensed, or shared with any third party except a vendor performing Services on this engagement, or as required by law or court order.')+
+    p(b('10.2 Marketing &amp; Promotional Use &mdash; Optional.')+'  Separately, and <strong>only if Client affirmatively authorizes it below</strong>, Contractor may use Documentation Media or other media captured during the engagement for marketing, promotional, and educational purposes, including social media, website, print collateral, and presentations, subject to the following restrictions:')+
     p('(a) No specific street address or unit number shall be disclosed in any published media.')+
     p('(b) No names of Client, family members, or estate beneficiaries shall appear in published media.')+
     p('(c) No images or likenesses of Client, family members, or any identifiable individual shall be published without a separate written release.')+
     p('(d) Contractor will use reasonable care to avoid publishing media that could clearly identify a specific individual\'s residence or personal circumstances.')+
     p('Client may revoke this marketing authorization prospectively at any time by delivering written notice to Contractor. Revocation does not require removal of media already published prior to receipt.')+
-    '<div style="margin-top:.5rem;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:11px;">&#9744; &nbsp;<strong>Client elects to OPT OUT</strong> of marketing &amp; promotional use of media (Section 10.2 only). &nbsp;&nbsp;Initials: _______</div>'
+    marketingConsentBlock()
   );
 
   // ── SECTION 11 ────────────────────────────────────────────────────────────
@@ -28855,7 +28960,6 @@ function agreementHtml(job, est) {
   content += '<div style="margin-top:1.25rem;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Client</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientSig)+'</div><div class="sig-label">'+clientName+' &nbsp;·&nbsp; Signature</div></div>';
   content += '<div style="margin-top:1.25rem;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">&nbsp;</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientDate)+'</div><div class="sig-label">Date</div></div>';
   content += '</div>';
-  content += '<div style="margin-top:.8rem;font-size:11px;color:var(--gray);">Role / Authority: &nbsp;<strong>&#9744; Client</strong> &nbsp;&nbsp;&nbsp; <strong>&#9744; Personal Representative</strong></div>';
 
   // ── EXHIBIT A ─────────────────────────────────────────────────────────────
   content += '<div class="ce-divider" style="margin-top:1.5rem;"></div>';

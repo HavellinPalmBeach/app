@@ -1621,8 +1621,14 @@ var DS_ANCHORS = {
   clientSig:  '/hsc/',
   clientDate: '/hdc/',
   havSig:     '/hsh/',
-  havDate:    '/hdh/'
+  havDate:    '/hdh/',
+  mktYes:     '/mky/',
+  mktNo:      '/mkn/',
+  mktSig:     '/mks/'
 };
+// The radio group's name, which a conditional tab points at as its parent. Declared once and
+// mirrored in the app as ESIGN_MKT_GROUP; the anchor-parity test pins the two.
+var DS_MKT_GROUP = 'marketing_consent';
 
 // ⚠ ONE PLACE TO TUNE THE TAB POSITION, AND IT NEEDS ONE VISUAL CHECK IN THE SANDBOX BEFORE
 // ANYTHING GOES TO A CLIENT. The anchor sits at the TOP of a 36px `.sig-line` box whose
@@ -1828,8 +1834,19 @@ function esignSendEnvelope(data) {
     if (!data || !data.pdfBase64) return { ok: false, error: 'No document supplied to send.' };
     if (!data.signerEmail || !data.signerName) return { ok: false, error: 'The envelope needs the signer name and email.' };
 
-    var havEmail = data.havellinEmail || 'agreements@havellinpalmbeach.com';
+    // ⚠⚠ THE COUNTERSIGNATURE GOES TO A PERSON, NOT TO THE DEPARTMENT GROUP, AND THAT IS A
+    // CORRECTNESS RULE RATHER THAN A PREFERENCE. It used to default to agreements@, which is a
+    // Google Group: whoever opened it first would sign, and the certificate of completion would
+    // record that signature as *Anthony Graziano* regardless of who actually clicked. On a
+    // contract, the audit trail naming the wrong human is the one failure it exists to prevent.
+    // Anthony: *"let's make it simple and have me responsible for signing all agreements on
+    // behalf of Havellin."*
+    // ⚠ agreements@ IS STILL ON THE ENVELOPE — as a CARBON COPY below, which is what actually
+    // delivers the executed agreement to the firm's file. That is the half the group address was
+    // really doing, and a CC does it without also claiming to be a signatory.
+    var havEmail = data.havellinEmail || 'anthony@havellinpalmbeach.com';
     var havName  = data.havellinName  || 'Anthony Graziano';
+    var fileEmail = data.fileCopyEmail || 'agreements@havellinpalmbeach.com';
 
     var env = {
       emailSubject: data.subject || ('Havellin Services Agreement — ' + (data.hvlId || '')),
@@ -1848,7 +1865,7 @@ function esignSendEnvelope(data) {
             recipientId: '1',
             routingOrder: '1',
             roleName: 'Client',
-            tabs: _dsTabs(DS_ANCHORS.clientSig, DS_ANCHORS.clientDate)
+            tabs: _dsClientTabs()
           },
           {
             email: havEmail,
@@ -1857,6 +1874,23 @@ function esignSendEnvelope(data) {
             routingOrder: '2',
             roleName: 'Havellin',
             tabs: _dsTabs(DS_ANCHORS.havSig, DS_ANCHORS.havDate)
+          }
+        ],
+        // ⚠⚠ THIS IS WHAT PUTS THE EXECUTED AGREEMENT IN THE FIRM'S FILE, AND IT COSTS NOTHING
+        // TO RUN. DocuSign mails every recipient — signers and carbon copies alike — the completed
+        // envelope with the signed PDF attached the moment the last signature lands. So the client
+        // gets their copy, Anthony gets his, and agreements@ gets one for the record, with no
+        // second send path in this app to go wrong. The Drive archive still runs and is still the
+        // durable copy; this is the mailbox copy Anthony asked for.
+        // ⚠ ROUTING ORDER 3, AFTER BOTH SIGNATURES. A carbon copy at order 1 would mail the firm
+        // an UNSIGNED agreement the moment it went out, which reads in the inbox exactly like an
+        // executed one.
+        carbonCopies: [
+          {
+            email: fileEmail,
+            name: 'Havellin Palm Beach — Agreements',
+            recipientId: '3',
+            routingOrder: '3'
           }
         ]
       },
@@ -1889,6 +1923,48 @@ function _dsTabs(sigAnchor, dateAnchor) {
       anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
     }]
   };
+}
+
+// ⚠⚠ THE CLIENT CARRIES THE MARKETING CONSENT AND HAVELLIN DOES NOT, and that asymmetry is the
+// whole reason this is a separate builder rather than an argument to _dsTabs. A media release is
+// the client's decision about their own home; putting the same tabs on the countersignature would
+// ask Havellin to consent to Havellin, and — worse — an unanswered REQUIRED radio on recipient 2
+// would block our own countersignature and strand a contract the client had already signed.
+//
+// ⚠ THE RADIO PAIR IS REQUIRED AND THE SIGNATURE IS NOT. Required means the envelope cannot
+// complete until the question is answered either way, which is the only thing that guarantees the
+// client SEES it: DocuSign's guided navigation steps through required fields and jumps past
+// optional ones. The signature is optional AND conditional — it appears only on `authorize`, so a
+// client who declines is never shown a signature line they would have to ignore to finish.
+//
+// ⚠ ALL THREE SHAPES WERE MEASURED AGAINST THE REAL ACCOUNT BEFORE THIS WAS WRITTEN
+// (`testEsignTabs`, 2026-09-18: optional signature, radio group and conditional signature all
+// ACCEPTED). The plan's field palette does not answer this — it lists what the drag-and-drop
+// sender UI offers, and nothing here uses that UI.
+function _dsClientTabs() {
+  var t = _dsTabs(DS_ANCHORS.clientSig, DS_ANCHORS.clientDate);
+
+  t.radioGroupTabs = [{
+    groupName: DS_MKT_GROUP,
+    documentId: '1',
+    radios: [
+      { anchorString: DS_ANCHORS.mktYes, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0',
+        anchorIgnoreIfNotPresent: 'false', value: 'authorize', required: 'true' },
+      { anchorString: DS_ANCHORS.mktNo,  anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0',
+        anchorIgnoreIfNotPresent: 'false', value: 'decline',   required: 'true' }
+    ]
+  }];
+
+  t.signHereTabs.push({
+    anchorString: DS_ANCHORS.mktSig, anchorUnits: 'pixels',
+    anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false',
+    tabLabel: 'marketing_signature',
+    optional: 'true',
+    conditionalParentLabel: DS_MKT_GROUP,
+    conditionalParentValue: 'authorize'
+  });
+
+  return t;
 }
 
 // ─── STATUS ──────────────────────────────────────────────────────────────────────
