@@ -48,6 +48,8 @@ const LIVING = { id: 1, hvlId: 'HVL-0008', name: 'Jane Doe', svc: 'downsizing',
                  addr: '12 Ocean Blvd', city: 'Palm Beach', zip: '33480' };
 
 const text = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+// ⚠ read from the app rather than typed here, or this test pins a number the app can move.
+const HAVELLIN_OFFICE_PHONE_LITERAL = (source().match(/var HAVELLIN_OFFICE_PHONE = '([^']+)'/) || [])[1];
 const probateDoc = (job, e) => text(ctx().probateAgreementHtml(job, e));
 const standardDoc = (job, e) => text(ctx().agreementHtml(job, e));
 
@@ -194,5 +196,57 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(ce, 'handling fee', 'with no handling-fee claim anywhere in it');
     lacks(ce, 'Cost + 25%', 'and no cost-plus basis on the materials row');
     has(ce, '25% Midpoint', 'while the payment schedule still states its own 25% stages');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // ⚠⚠ THE PROBATE FORM PUT A SECOND PERSON'S NAME OVER THE DATE LINE. Its Havellin block ran a
+  // two-column grid carrying Anthony's name and contact above the SIGNATURE line and Ashley's
+  // above the DATE line, so the execution block read as Ashley signing the date — on a contract
+  // the personal representative signs and a court may read. Only ONE person executes for the LLC,
+  // and the envelope proves it: `esignSendEnvelope` builds exactly one Havellin recipient at
+  // routing order 2 holding BOTH the havSig and havDate tabs.
+  group('⚠⚠ THE HAVELLIN EXECUTION BLOCK NAMES ONE SIGNATORY, AND NOBODY OVER THE DATE LINE');
+  {
+    const full = probateDoc(PROBATE, est());
+    const at = full.indexOf('Signature Page');
+    // ⚠ BOUNDED AT 'For Office Use'. An unbounded slice runs on into the document FOOTER, which
+    // legitimately carries the office line — so the no-phone check below read as failing over a
+    // number that is correct where it sits. Measure the execution block, not the rest of the page.
+    const end = full.indexOf('For Office Use');
+    ok(at > 0 && end > at, 'the probate form has a signature page, and it ends where office use begins');
+    const sig = full.slice(at, end);
+    const count = (h, n) => h.split(n).length - 1;
+
+    eq(count(sig, 'Anthony Graziano'), 1,
+       '⚠⚠ exactly ONE Havellin signatory is named on the signature page');
+    lacks(sig, 'Ashley Jerome',
+          '⚠⚠ and it is NOT a second person — a name beside the date line reads as that person '
+          + 'signing the date, which is the defect this closes');
+    has(sig, 'Managing Member',
+        '⚠ the signatory carries the authority that lets them bind the LLC, as the standard form '
+        + 'has always printed');
+    ok(!/\(\d{3}\)\s*\d{3}-\d{4}/.test(sig),
+       '⚠ no phone number on the signature page — contact details are §1.1 Service Provider\'s '
+       + 'job, stated once, where the phone reads the shared office constant');
+
+    // ⚠ THE CONVERSE, AND IT IS WHY THIS GROUP IS NOT JUST A `lacks`. Removing a name from the
+    // execution block must never be read as removing her from the contract: §1.1 names both as
+    // the firm's contacts and is the one place that should.
+    has(full, 'Anthony Graziano / Ashley Jerome',
+        '⚠ §1.1 still names BOTH as Primary Contact — the signature block is about who executes, '
+        + 'not about who the client calls');
+    has(full, HAVELLIN_OFFICE_PHONE_LITERAL,
+        '⚠ and §1.1 still carries the office line from the shared constant');
+  }
+
+  // ⚠ The standard form was already correct and must stay that way: its name sits UNDER the
+  // signature line it belongs to, and the date column names nobody.
+  group('the standard form was already right, and is unchanged');
+  {
+    const sig = standardDoc(LIVING, est());
+    const seg = sig.slice(sig.indexOf('Acknowledgment'));
+    eq(seg.split('Anthony Graziano').length - 1, 1, 'one Havellin signatory there too');
+    lacks(seg, 'Ashley Jerome', 'and no second name in the block');
+    has(seg, 'Managing Member', 'with the same authority stated');
   }
 };

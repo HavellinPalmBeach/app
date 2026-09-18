@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 8:26am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 8:27am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -28043,10 +28043,20 @@ function probateAgreementHtml(job, est) {
   content += '</div></div>';
   // Havellin sig block
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
-  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:12px;">Havellin Palm Beach, LLC</div>';
+  // ⚠⚠ ONE SIGNATORY, AND THE NAME MUST NOT SIT INSIDE A COLUMN. This block used to run a
+  // two-column grid with Anthony's name and contact above the SIGNATURE line and Ashley's above
+  // the DATE line, so the page read as Ashley signing the date. Only one person executes for the
+  // LLC: the standard form has always printed `Anthony Graziano · Managing Member`, and the
+  // envelope carries exactly ONE Havellin recipient holding BOTH the havSig and havDate tabs
+  // (`esignSendEnvelope`, routing order 2). The signatory is now STATED above the grid, the way a
+  // corporate execution block reads, so neither column can be mistaken for a second signer.
+  // ⚠ The contact details that used to sit here belong to §1.1 Service Provider, which states
+  // them once and reads HAVELLIN_OFFICE_PHONE rather than hardcoding a mobile.
+  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:4px;">Havellin Palm Beach, LLC</div>';
+  content += '<div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:12px;">Anthony Graziano <span style="font-weight:400;color:var(--gray);">&middot; Managing Member</span></div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;">';
-  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Anthony Graziano</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(617) 650-6588 &middot; anthony@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havSig)+'</div></div>';
-  content += '<div><div style="font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:2px;">Ashley Jerome</div><div style="font-size:10px;color:var(--gray);margin-bottom:8px;">(978) 857-5374 &middot; ashley@havellinpalmbeach.com</div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havDate)+'</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havSig)+'</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.havDate)+'</div></div>';
   content += '</div></div>';
   // Office use
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;background:var(--tan);margin-bottom:12px;">';
