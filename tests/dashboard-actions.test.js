@@ -48,7 +48,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'],
     vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
-    stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
+    // ⚠ `SHEETS_SYNC_URL` IS A REAL TOP-LEVEL VAR, so the rail reads it bare rather than
+    // behind a `typeof` guard that could never fire in a browser. It is stubbed here because
+    // the sandbox lifts only what it is told to — and it is re-pointed at '' further down,
+    // which is what proves the ACH button is WITHHELD on a device with no backend configured.
+    stubs: { REQUIRE_WALKTHROUGH_NOTES: false, SHEETS_SYNC_URL: 'https://script.google.com/macros/s/x/exec' },
   });
 
   const room = (name, o) => Object.assign({ name, vol: 3, cplx: 3, note: 'seen' }, o || {});
@@ -195,7 +199,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // first line of three separate functions; a fourth door was one line away from having
     // no stamp at all. It is `DOC_ACTIONS.agreement.commit` now — run by `docAction` on
     // every verb but 'view' — so a door cannot be opened without going through it.
-    ['markAgreementSent()', 'generateStripeLink()'].forEach((sig) => {
+    // ⚠ `generateStripeLink()` became `stripePaymentLink()` on 2026-09-18 when Stripe moved
+    // onto the main backend. The DOOR did not move, so the requirement is restated rather than
+    // dropped: asking a client to wire the deposit asks for money the AGREEMENT defines.
+    ['markAgreementSent()', 'stripePaymentLink('].forEach((sig) => {
       has(noComments(body(sig)), 'ensureAgreementApproved(', `${sig} stamps on the way through`);
     });
     ['emailAgreementToClient()', 'printAgreement()', 'printSigningPacket()'].forEach((sig) => {
@@ -325,6 +332,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(sub.a.secondary[0].danger, 'and is marked destructive');
     const won = actFor({ approved: true, estimateSentDate: 'x' }, { estimate: EST(), approved: true });
     ok(won.a.secondary.some((x) => x.call === 'openCloseoutModal(7)'), 'Mark lost sits beside Mark won');
+
+    // ⚠⚠ THE ACH PAYMENT LINK IS OFFERED ONLY WHERE IT CAN WORK, AND THE CONVERSE IS WHAT
+    // MAKES THE GATE WORTH HAVING. Stripe moved onto the main backend on 2026-09-18, so a
+    // device with no Apps Script URL cannot mint a link — and a button that refuses the moment
+    // it is pressed is worse than one that is not there, the rule `job_active` already follows.
+    const depSent = { approved: true, estimateSentDate: 'Sep 8, 2026', won: true,
+      agrApproved: true, agrSent: true, agrSigned: true,
+      docState: { 'invoice:deposit': { draftedAt: '2026-09-11T10:00:00Z', sentAt: '2026-09-11T10:05:00Z' } } };
+    const depRec = { estimate: EST(), approved: true };
+    // The deposit_invoiced row is the one that carries it; the fixture above lands on
+    // deposit_received, so walk the rail and ask that row directly.
+    const rr = railFor(depSent, depRec);
+    const invRow = rr.rows.filter((x) => x.key === 'deposit_invoiced')[0];
+    ok(!!invRow, 'the deposit_invoiced row exists');
+    const withUrl = ctx.jobTimelineActions(Object.assign({}, invRow, { state: 'current' }), rr.job, rr.rec);
+    ok(withUrl.secondary.some((x) => /dashStripeLink\(7,'deposit'\)/.test(x.call)),
+      'with a backend configured the ACH link is offered, carrying the stage');
+    ok(!withUrl.primary || !/dashStripeLink/.test(withUrl.primary.call),
+      '⚠ and never as the primary — that slot is the payment RECORDER');
+    const prevUrl = ctx.SHEETS_SYNC_URL;
+    ctx.SHEETS_SYNC_URL = '';
+    const noUrl = ctx.jobTimelineActions(Object.assign({}, invRow, { state: 'current' }), rr.job, rr.rec);
+    ok(!noUrl.secondary.some((x) => /dashStripeLink/.test(x.call)),
+      '⚠ and withheld entirely on a device with no backend URL');
+    ctx.SHEETS_SYNC_URL = prevUrl;
 
     // ⚠ A blocked estimate points at where the fix is, rather than at nothing.
     const halfRec = { estimate: EST(), approved: false };

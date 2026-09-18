@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 2:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 2:53pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1086,8 +1086,8 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div id="i-deceased-note" style="display:none;font-size:11px;color:var(--gray);margin:6px 0 8px;padding:6px 10px;background:var(--tan);border-radius:4px;">Client is deceased — phone and email are disabled. Collect the authorized representative's contact below; that is where client documents will be sent.</div>
       <div class="row">
-        <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
-        <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email" placeholder="client@email.com"></div>
+        <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" oninput="formatPhone(this)" maxlength="14"></div>
+        <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email"></div>
       </div>
       <label>Property address <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-addr" placeholder="123 Ocean Blvd, Palm Beach FL">
       <div class="row">
@@ -1166,7 +1166,7 @@ body.no-smf .smf-col{display:none;}
           <div></div>
         </div>
         <div class="row">
-          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
+          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" oninput="formatPhone(this)" maxlength="14"></div>
           <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
         </div>
       </div>
@@ -1179,7 +1179,7 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div class="row">
           <div><label>Firm <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-firm" placeholder="Law firm name"></div>
-          <div><label>Attorney phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
+          <div><label>Attorney phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" oninput="formatPhone(this)" maxlength="14"></div>
         </div>
         <div class="row">
           <div><label>Attorney email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-probate-atty-email" placeholder="Direct email"></div>
@@ -1853,8 +1853,8 @@ body.no-smf .smf-col{display:none;}
     <label>Firm</label>
     <input type="text" id="qp-firm" placeholder="e.g. Comiter, Singer, Baseman &amp; Braun">
     <div class="row">
-      <div><label>Phone</label><input type="tel" id="qp-phone" placeholder="(561) 000-0000"></div>
-      <div><label>Email</label><input type="email" id="qp-email" placeholder="name@firm.com"></div>
+      <div><label>Phone</label><input type="tel" id="qp-phone"></div>
+      <div><label>Email</label><input type="email" id="qp-email"></div>
     </div>
     <div id="qp-fb"></div>
     <div style="display:flex;gap:8px;margin-top:14px;">
@@ -2163,7 +2163,7 @@ body.no-smf .smf-col{display:none;}
         <select id="agr-job" onchange="loadAgreement()" style="width:340px;font-size:12px;"><option value="">Select job</option></select>
         <span id="agr-approval-badge"></span>
         <button class="btn-s" id="btn-agr-approve" onclick="approveAgreementNow()" style="display:none;">Approve &amp; File</button>
-        <button class="btn-s" id="btn-agr-stripe" onclick="generateStripeLink()" style="display:none;">Generate Payment Link</button>
+        <button class="btn-s" id="btn-agr-stripe" onclick="stripePaymentLink(currentAgrJobId, 'deposit')" style="display:none;" title="ACH bank transfer only — cards are not accepted">&#127974; ACH Payment Link</button>
         <button class="btn-bronze" id="btn-agr-pdf" onclick="printAgreement()" style="display:none;">Print / Save PDF</button>
         <button class="btn-bronze" id="btn-agr-packet" onclick="printSigningPacket()" style="display:none;" title="The agreement with the approved estimate attached as Exhibit A — one document to sign">Print Signing Packet</button>
         <button class="btn-bronze" id="btn-agr-email" onclick="emailAgreementToClient()" style="display:none;" title="Signing packet, as a draft in your own Gmail — CC agreements@">&#9993; Email to Client</button>
@@ -2232,7 +2232,8 @@ body.no-smf .smf-col{display:none;}
       <option value="check">Personal cheque</option>
       <option value="cashiers_check">Cashier's cheque</option>
       <option value="wire">Wire transfer</option>
-      <option value="stripe">Card / Stripe</option>
+      <option value="stripe_ach">Bank transfer (ACH)</option>
+      <option value="stripe">Card</option>
       <option value="cash">Cash</option>
     </select>
 
@@ -2307,13 +2308,9 @@ body.no-smf .smf-col{display:none;}
     </select>
     <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">This only says whether DocuSign is <strong>available</strong>. <strong>How each client signs is chosen per job</strong>, on the agreement step of the client&rsquo;s timeline: <strong>Send for signature</strong> mails the signing packet through DocuSign, or <strong>Send as PDF to sign by hand</strong> emails it the old way for a client who would rather sign on paper. Neither needs you to come back here. On a job sent through DocuSign the timeline turns green on its own once both signatures are in, and <strong>Record the signed agreement</strong> is hidden on <em>that job</em> &mdash; a signature typed by hand would disagree with the envelope. Every other job keeps it.</div>
 
-    <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
+    <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— nothing to set here</span></div>
 
-    <label>Stripe Publishable Key</label>
-    <input type="text" id="set-stripe-pk" placeholder="pk_live_...">
-
-    <label>Stripe Secret Key — via Apps Script URL</label>
-    <input type="text" id="set-stripe-script" placeholder="https://script.google.com/macros/s/...">
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Stripe runs through the <strong>same Apps Script as everything else</strong>, so there is no second URL to paste. The secret key lives in that script&rsquo;s <strong>Script Properties</strong> as <code>STRIPE_SECRET_KEY</code> and <strong>never on a device</strong> — this page is served publicly, so a key typed here would be readable by anyone. Havellin accepts <strong>ACH bank transfer only</strong>; cards are switched off in the Stripe Dashboard and the app refuses to send a link that is not ACH-only.</div>
 
     <div class="sec" style="margin-top:14px;">Pricing Engine</div>
 
@@ -2413,7 +2410,7 @@ body.no-smf .smf-col{display:none;}
     <div id="cq-name" style="font-size:13px;font-weight:600;color:var(--bronze);margin-bottom:10px;"></div>
     <input type="hidden" id="cq-id" value="">
     <label>Phone</label>
-    <input type="tel" id="cq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="cq-phone" oninput="formatPhone(this)" maxlength="14">
     <label>Email</label>
     <input type="email" id="cq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Rate ($/hr — your cost)</label>
@@ -2446,8 +2443,8 @@ body.no-smf .smf-col{display:none;}
           <option value="TC">TC — Transition Concierge</option>
           <option value="PS">PS — Property Specialist</option>
         </select>
-        <label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="c-phone" placeholder="(561) 000-0000">
-        <label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="c-email" placeholder="contractor@email.com">
+        <label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="c-phone">
+        <label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="c-email">
       </div>
       <div>
         <label>Rate ($/hr — your cost)</label><input type="number" id="c-rate" placeholder="e.g. 60">
@@ -2557,20 +2554,14 @@ body.no-smf .smf-col{display:none;}
         </select>
       </div>
       <div class="fld-note"><strong>Category:</strong> a firm that does two things is <strong>one</strong> vendor — list both trades in the box above rather than adding a second row, so it keeps one rating, one status and one contact history.</div>
+
+      <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">The firm <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the office line and general inbox, not a person</span></div>
       <div class="fld">
-        <label>Contact first name</label>
-        <input type="text" id="v-contact-first">
-      </div>
-      <div class="fld">
-        <label>Contact last name</label>
-        <input type="text" id="v-contact-last">
-      </div>
-      <div class="fld">
-        <label>Phone</label>
+        <label>Office phone</label>
         <input type="tel" id="v-phone" oninput="formatPhone(this)" maxlength="14">
       </div>
       <div class="fld">
-        <label>Email</label>
+        <label>Office email</label>
         <input type="email" id="v-email">
       </div>
       <div class="fld">
@@ -2588,6 +2579,51 @@ body.no-smf .smf-col{display:none;}
       <div class="fld">
         <label>License / cert</label>
         <input type="text" id="v-license">
+      </div>
+
+      <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Contacts <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the people, with their own mobiles and addresses</span></div>
+      <div class="fld-note">The office line reaches the firm; these reach a person. Fill in whichever you have — a mobile with no name still earns its slot.</div>
+      <div class="fld-wide" style="margin-top:6px;font-size:11px;font-weight:700;color:var(--gray-dk);">Contact 1</div>
+      <div class="fld">
+        <label>First name</label>
+        <input type="text" id="v-contact-first">
+      </div>
+      <div class="fld">
+        <label>Last name</label>
+        <input type="text" id="v-contact-last">
+      </div>
+      <div class="fld">
+        <label>Title <span class="lbl-hint">— owner, dispatcher…</span></label>
+        <input type="text" id="v-contact-title">
+      </div>
+      <div class="fld">
+        <label>Mobile</label>
+        <input type="tel" id="v-contact-mobile" oninput="formatPhone(this)" maxlength="14">
+      </div>
+      <div class="fld">
+        <label>Email</label>
+        <input type="email" id="v-contact-email">
+      </div>
+      <div class="fld-wide" style="margin-top:6px;font-size:11px;font-weight:700;color:var(--gray-dk);">Contact 2</div>
+      <div class="fld">
+        <label>First name</label>
+        <input type="text" id="v-contact2-first">
+      </div>
+      <div class="fld">
+        <label>Last name</label>
+        <input type="text" id="v-contact2-last">
+      </div>
+      <div class="fld">
+        <label>Title</label>
+        <input type="text" id="v-contact2-title">
+      </div>
+      <div class="fld">
+        <label>Mobile</label>
+        <input type="tel" id="v-contact2-mobile" oninput="formatPhone(this)" maxlength="14">
+      </div>
+      <div class="fld">
+        <label>Email</label>
+        <input type="email" id="v-contact2-email">
       </div>
       <!-- Rating is not in this form: it's earned from completed jobs and can never be
            edited, so it has no business on an edit card. It renders on the vendor card
@@ -2656,14 +2692,33 @@ body.no-smf .smf-col{display:none;}
     <div class="sec" style="margin-bottom:2px;">Quick edit</div>
     <div id="vq-name" style="font-size:13px;font-weight:600;color:var(--bronze);margin-bottom:10px;"></div>
     <input type="hidden" id="vq-id" value="">
-    <label>Contact first name</label>
+    <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Contact 1</div>
+    <label>First name</label>
     <input type="text" id="vq-contact-first" autocomplete="off">
-    <label>Contact last name</label>
+    <label>Last name</label>
     <input type="text" id="vq-contact-last" autocomplete="off">
-    <label>Phone</label>
-    <input type="tel" id="vq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Title</label>
+    <input type="text" id="vq-contact-title" autocomplete="off">
+    <label>Mobile</label>
+    <input type="tel" id="vq-contact-mobile" oninput="formatPhone(this)" maxlength="14">
     <label>Email</label>
-    <input type="email" id="vq-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="owner@company.com">
+    <input type="email" id="vq-contact-email" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Contact 2</div>
+    <label>First name</label>
+    <input type="text" id="vq-contact2-first" autocomplete="off">
+    <label>Last name</label>
+    <input type="text" id="vq-contact2-last" autocomplete="off">
+    <label>Title</label>
+    <input type="text" id="vq-contact2-title" autocomplete="off">
+    <label>Mobile</label>
+    <input type="tel" id="vq-contact2-mobile" oninput="formatPhone(this)" maxlength="14">
+    <label>Email</label>
+    <input type="email" id="vq-contact2-email" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">The firm</div>
+    <label>Office phone</label>
+    <input type="tel" id="vq-phone" oninput="formatPhone(this)" maxlength="14">
+    <label>Office email</label>
+    <input type="email" id="vq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Website</label>
     <input type="text" id="vq-website" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Service area</label>
@@ -2857,10 +2912,12 @@ body.no-smf .smf-col{display:none;}
           <option>Wealth manager</option>
           <option>Other</option>
         </select>
-        <label>Phone</label>
-        <input type="tel" id="r-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <label>Direct line <span style="font-weight:400;color:var(--gray);">(their desk, not the switchboard)</span></label>
+        <input type="tel" id="r-phone" oninput="formatPhone(this)" maxlength="14">
+        <label>Mobile</label>
+        <input type="tel" id="r-mobile" oninput="formatPhone(this)" maxlength="14">
         <label>Email</label>
-        <input type="email" id="r-email" placeholder="partner@firm.com">
+        <input type="email" id="r-email">
       </div>
       <div>
         <label>Status</label>
@@ -2890,6 +2947,24 @@ body.no-smf .smf-col{display:none;}
         <input type="date" id="r-lastcontacted">
       </div>
     </div>
+    <div class="sec" style="margin-top:14px;font-size:11px;">The firm's line, and the gatekeeper</div>
+    <div class="grid2">
+      <div>
+        <label>Office phone <span style="font-weight:400;color:var(--gray);">(the firm's main number)</span></label>
+        <input type="tel" id="r-officephone" oninput="formatPhone(this)" maxlength="14">
+        <label>Extension <span style="font-weight:400;color:var(--gray);">(theirs, on that line)</span></label>
+        <input type="text" id="r-phoneext" placeholder="e.g. 214">
+      </div>
+      <div>
+        <label>Assistant / gatekeeper <span style="font-weight:400;color:var(--gray);">(who books the meeting)</span></label>
+        <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
+        <label>Assistant phone</label>
+        <input type="tel" id="r-assistantphone" oninput="formatPhone(this)" maxlength="14">
+        <label>Assistant email</label>
+        <input type="email" id="r-assistantemail">
+      </div>
+    </div>
+
     <details style="margin-top:12px;">
       <summary style="cursor:pointer;font-size:11px;color:var(--bronze);font-weight:600;">Research details &amp; address <span style="font-weight:400;color:var(--gray);">(optional — outreach context)</span></summary>
       <div style="margin-top:10px;">
@@ -2899,11 +2974,9 @@ body.no-smf .smf-col{display:none;}
             <input type="text" id="r-channel" placeholder="e.g. Trust Officer - DECISION AUTHORITY">
             <label>Warm path <span style="font-weight:400;color:var(--gray);">(intro angle)</span></label>
             <input type="text" id="r-warmpath" placeholder="e.g. Family friend of Anthony">
-            <label>Primary contact <span style="font-weight:400;color:var(--gray);">(assistant, if any)</span></label>
-            <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
             <label>Website</label>
             <input type="text" id="r-website" placeholder="firm.com">
-            <label>Phone type</label>
+            <label>Phone type <span style="font-weight:400;color:var(--gray);">(what the Direct line really is)</span></label>
             <input type="text" id="r-phonetype" placeholder="Direct &middot; Main">
           </div>
           <div>
@@ -2965,8 +3038,12 @@ body.no-smf .smf-col{display:none;}
     <input type="text" id="rq-title" autocomplete="off">
     <label>Firm / brokerage</label>
     <input type="text" id="rq-firm" autocomplete="off">
-    <label>Phone</label>
-    <input type="tel" id="rq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Direct line</label>
+    <input type="tel" id="rq-phone" oninput="formatPhone(this)" maxlength="14">
+    <label>Mobile</label>
+    <input type="tel" id="rq-mobile" oninput="formatPhone(this)" maxlength="14">
+    <label>Office phone <span style="font-weight:400;color:var(--gray);">(the firm's main number)</span></label>
+    <input type="tel" id="rq-officephone" oninput="formatPhone(this)" maxlength="14">
     <label>Email</label>
     <input type="email" id="rq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Website</label>
@@ -3382,17 +3459,26 @@ var ROOMS = [
   {section:'Exterior & Auxiliary',rooms:[
     {name:'Balcony',tc:0.30,ps:0.55},
     {name:'Boat House',tc:0.85,ps:1.95},
-    // Casita moved to Outbuildings & Guest Quarters (2026-08-03) — it is guest
-    // accommodation, and sitting in this list beside the patio and the shed put it two
-    // sections away from the Guest House rows it has to be chosen against.
+    // Casita is gone from the grid entirely (2026-09-18). It moved from this list into
+    // Outbuildings & Guest Quarters on 2026-08-03 and came out altogether on Anthony's
+    // instruction: at 2.5 it sat between the pool house and the 1-bedroom guest house
+    // saying nothing either of them does not, and "casita" and "guest house" are the same
+    // building to most of the people describing one out loud. Score a genuine casita as
+    // Guest House — 1 bedroom.
     {name:'Furnished Patio',tc:0.55,ps:0.95},
     {name:'Outdoor Kitchen',tc:0.55,ps:0.95},
     {name:'Pool / Cabana Half Bath',tc:0.22,ps:0.30},
-    // Renamed from the bare "Pool House". There is a second pool-house row in Outbuildings
-    // for one WITH living quarters (4.5 vs 2.7), and with both called "Pool House" nothing
-    // on screen said which to pick — so ticking both silently double-counted the same
-    // building by 2.7 load units, about 7 PS hours on a mid-size estate.
-    {name:'Pool House / Cabana — no living quarters',tc:1.35,ps:2.70},
+    // ⚠ ONE pool-house row in the whole grid, and it is the one WITH living quarters
+    // (2026-09-18). There were two — this one at a cabana's 2.7 and a with-quarters one at
+    // 4.5 two sections down in Outbuildings — and with both reading "Pool House" on screen
+    // nothing said which to pick, so ticking both silently double-counted one building.
+    // This row is the survivor and it TAKES THE 4.5: the label promises living quarters, so
+    // it has to price like them, and leaving it at 2.7 would have put a cabana's weight
+    // under a label saying bedroom, kitchen and bath. The cabana-only variant went with it —
+    // a pool house with nothing in it is a changing room, already carried by the
+    // Pool / Cabana Half Bath row above and the patio rows. Never add a second row under
+    // this name; the double-count is the whole reason there is one.
+    {name:'Pool House — with living quarters',tc:1.35,ps:2.70},
     {name:'Screened Porch',tc:0.45,ps:0.85},
     {name:'Shed',tc:0.70,ps:1.65},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
@@ -3406,8 +3492,11 @@ var ROOMS = [
     //
     // Weights are the old per-building sub-room SUMS, so a fully-ticked building prices
     // exactly as before; each extra bedroom adds the old bedroom weight of 2.0.
-    {name:'Casita — bedroom & bath',tc:0.85,ps:1.30},
-    {name:'Pool House — with living quarters',tc:1.35,ps:2.70},
+    //
+    // 2026-09-18: the Casita and Pool House rows came out of this section. The pool house
+    // moved up to Exterior & Auxiliary as a single row, keeping the 4.5 it had here; the
+    // casita was removed outright (see the note in that section). What is left is the one
+    // thing this section is for — a detached dwelling, sized in bedrooms.
     {name:'Guest House — 1 bedroom',tc:1.60,ps:2.60},
     {name:'Guest House — 2 bedroom',tc:2.05,ps:3.35},
     {name:'Guest House — 3 bedroom',tc:2.50,ps:4.10},
@@ -3523,20 +3612,22 @@ var ROOM_WEIGHT = {
   // Half Bath (0.4, which only modulates the sqft baseline) and a full bath in guest
   // quarters. Exterior weights are absolute load, not a modulator.
   'Pool / Cabana Half Bath':0.5,
-  'Pool House / Cabana — no living quarters':2.7,'Screened Porch':1.0,'Shed':1.65,
+  // 4.5, not a cabana's 2.7 — this is the grid's only pool-house row and it names living
+  // quarters. Derivation is in the outbuildings block below, where the row used to live.
+  'Pool House — with living quarters':4.5,'Screened Porch':1.0,'Shed':1.65,
   // ── Outbuildings: ONE WEIGHT PER BUILDING, sized by bedroom count ──────────────
   // These replaced eleven per-sub-room rows on 2026-08-03. Each weight is the SUM of the
   // sub-rooms it replaces, so a fully-ticked building prices exactly as it did before:
   //   Guest House 2.0 bed + 2.0 living + 2.0 kitchen/bar + 1.0 bath = 7.0
   //   Cottage     2.0 bed + 2.5 living/kitchen + 1.0 bath          = 5.5
   //   Pool House  2.0 living/bed + 1.5 kitchen/bar + 1.0 bath      = 4.5
+  //               ↑ listed with the EXTERIOR rows above, where its one row now lives
   // Each additional bedroom adds the old bedroom weight, 2.0.
   //
-  // The ladder is meant to be read top to bottom — casita (a bed and a bath) → pool house
-  // with quarters → cottage → guest house. If a size is ever added, keep the +2.0 step or
-  // the ladder stops being predictable.
-  'Casita — bedroom & bath':2.5,
-  'Pool House — with living quarters':4.5,
+  // The ladder is meant to be read top to bottom — pool house with quarters (4.5, above)
+  // → cottage → guest house. The casita rung (2.5) came out on 2026-09-18; a genuine
+  // casita is Guest House — 1 bedroom. If a size is ever added, keep the +2.0 step or the
+  // ladder stops being predictable.
   'Guest House — 1 bedroom':7.0,'Guest House — 2 bedroom':9.0,'Guest House — 3 bedroom':11.0,
   "Caretaker's Cottage — 1 bedroom":5.5,"Caretaker's Cottage — 2 bedroom":7.5,"Caretaker's Cottage — 3 bedroom":9.5,
   'Additional Outbuilding Room':2.0
@@ -3545,8 +3636,7 @@ var ROOM_WEIGHT = {
 var EXTERIOR_ROOMS = {
   'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Balcony':1,'Boat House':1,
   'Furnished Patio':1,'Outdoor Kitchen':1,'Pool / Cabana Half Bath':1,
-  'Pool House / Cabana — no living quarters':1,'Screened Porch':1,'Shed':1,
-  'Casita — bedroom & bath':1,'Pool House — with living quarters':1,
+  'Pool House — with living quarters':1,'Screened Porch':1,'Shed':1,
   'Guest House — 1 bedroom':1,'Guest House — 2 bedroom':1,'Guest House — 3 bedroom':1,
   "Caretaker's Cottage — 1 bedroom":1,"Caretaker's Cottage — 2 bedroom":1,"Caretaker's Cottage — 3 bedroom":1,
   'Additional Outbuilding Room':1
@@ -11137,6 +11227,27 @@ function jobPayments(job) {
 var PAYMENT_STAGES = ['deposit', 'midpoint', 'final'];
 var PAYMENT_STAGE_LABELS = { deposit: 'Deposit (50%)', midpoint: 'Midpoint (25%)', final: 'Final (25%)' };
 
+// ⚠⚠ WHICH METHODS ARE MONEY THE MOMENT THEY ARE RECORDED. One list, because the rule
+// used to be an inline `||` chain at the one write site and the next rail added to it
+// would have been classified by whoever happened to be editing `saveDeposit`.
+//
+// ⚠⚠ `stripe_ach` IS DELIBERATELY ABSENT AND MUST NEVER BE ADDED. A card authorises
+// instantly; an ACH debit does NOT. It takes ~4 business days to settle, `R01`
+// (insufficient funds) returns inside ~2, and the unauthorised codes `R05`/`R07`/`R10`
+// carry a SIXTY-CALENDAR-DAY window on consumer accounts which under NACHA rules cannot
+// be re-presented. So an ACH deposit stamped cleared on receipt is the app asserting
+// money has landed when it has not, on the record that says what the firm is owed.
+//
+// ⚠ THIS DOES NOT GATE STARTING THE JOB, AND MUST NOT BE MADE TO. `isJobFunded` reads
+// `depositPaidTotal` — recorded AMOUNTS — and never consults `clearedOn`; work starts on
+// RECEIVED, deliberately, because waiting on clearing costs 3-5 days per job
+// (UNEARNED_REVENUE_SPEC.md §6). Anthony, 2026-09-18, on the 60-day return window:
+// *"we obviously can't wait 2 months to start a job ... that seems unlikely to me, so a
+// risk worth taking."* Correct, and it is not waitable in any case — the residual is an
+// agreement clause for counsel, not a gate here. All this list decides is whether the
+// payment reads `uncleared` on screen until it genuinely settles.
+var PAYMENT_METHODS_CLEAR_ON_RECEIPT = ['wire', 'stripe', 'cash'];
+
 // Paid on ONE stage. Every payment record carries a stage, and until now every record
 // was written with `stage: 'deposit'` hardcoded — so midpoint and final money was
 // invoiced and then never captured anywhere. See UNEARNED_REVENUE_SPEC.md §2a.
@@ -11177,7 +11288,7 @@ function depositClearedTotal(job) {
 
 function paymentMethodLabel(m) {
   return ({ check: 'Personal cheque', cashiers_check: "Cashier's cheque", wire: 'Wire transfer',
-            stripe: 'Card / Stripe', cash: 'Cash' })[m] || m || '—';
+            stripe_ach: 'Bank transfer (ACH)', stripe: 'Card', cash: 'Cash' })[m] || m || '—';
 }
 
 // Which stage the modal should open on: the first one that is not yet satisfied. The
@@ -11285,6 +11396,13 @@ function updateDepModalHints() {
       + fmt(amt) + ' is above the ' + fmt(LARGE_DEPOSIT_THRESHOLD) + ' threshold, where a wire or '
       + "cashier's cheque is the policy. It will be recorded and flagged as a policy exception — "
       + 'the funds are not final until the bank confirms.</div>';
+  } else if (method === 'stripe_ach') {
+    hint.innerHTML = '<div style="font-size:11px;color:var(--gray);">An ACH debit is not final on '
+      + 'receipt — it settles in about four business days and will read <strong>uncleared</strong> '
+      + 'until it does. Record it now; the job is funded on money received, not on money cleared.'
+      + (over ? ' Above ' + fmt(LARGE_DEPOSIT_THRESHOLD) + ' a wire is final on receipt and is the '
+               + 'safer instrument for an amount this size.' : '')
+      + '</div>';
   } else if (over) {
     hint.innerHTML = '<div style="font-size:11px;color:var(--gray);">Above ' + fmt(LARGE_DEPOSIT_THRESHOLD)
       + " a wire is preferred and a cashier's cheque is accepted.</div>";
@@ -11322,8 +11440,7 @@ function saveDeposit() {
         + 'Record it as a partial payment anyway? Work is not meant to start until the full '
         + '50% is in — this job will stay unfunded and hours cannot be logged against it.')) return;
 
-  // A cheque is not money until it clears. Wire, card and cash are final on receipt.
-  var clearsOnReceipt = (method === 'wire' || method === 'stripe' || method === 'cash');
+  var clearsOnReceipt = (PAYMENT_METHODS_CLEAR_ON_RECEIPT.indexOf(method) >= 0);
   var list = jobPayments(job);
 
   var payment = {
@@ -11548,6 +11665,7 @@ function openClientDashboard(jobId) {
   // lock keys on `agrSigned || depositReceived` — so a signed-but-unnoticed agreement leaves
   // re-pricing and re-typing unlocked on a job already under contract.
   try { esignRefresh({ jobId: jobId }, function (n) { if (n) _dashRedraw(jobId); }); } catch (e) {}
+  try { stripeRefresh({ jobId: jobId }, function (n) { if (n) _dashRedraw(jobId); }); } catch (e) {}
 }
 
 function closeClientDashboard() {
@@ -12889,12 +13007,12 @@ function esignAnchor(tag) {
   return '<span style="color:#fff;font-size:6px;line-height:0;">' + tag + '</span>';
 }
 
-// ⚠ ONE PROVIDER TABLE, AND `manual` IS THE ONLY LIVE ONE TODAY. `docusign` is declared
-// rather than built: there is no account, no credentials and no backend action for it, and
-// a half-built integration that reports success on an opaque response is a defect this file
-// already records once (`generateStripeLink`, 2026-07-30). What it IS for is the SHAPE —
-// `watches:true` is what stands the manual button down, so wiring a real provider changes
-// this table and nothing else.
+// ⚠ ONE PROVIDER TABLE. It was written on 2026-09-11 with `docusign` DECLARED and NOT
+// built — deliberately, because a half-built integration that reports success on an opaque
+// response is a defect this file records twice (the Stripe payment link, 2026-07-30, now
+// rebuilt; see stripePaymentLink). Both entries are live as of 2026-09-17. What the table is
+// FOR is the SHAPE — `watches:true` is what stands the manual button down, so wiring a real
+// provider changes this table and nothing else, which is exactly what happened.
 // ⚠ `live:true` DOES NOT TURN DOCUSIGN ON — `hav_esign_provider` does, and it defaults to
 // `manual`. This flag only says the integration EXISTS and may be selected; a device that has
 // not opted in behaves exactly as it did before. Proven against the sandbox 2026-09-17:
@@ -13215,6 +13333,161 @@ function outstandingEnvelopes() {
   }).map(function (j) {
     return { jobId: j.id, hvlId: j.hvlId || '', envelopeId: j.docState.agreement.esign.envelopeId };
   });
+}
+
+// ─── STRIPE: LEARNING THAT THE MONEY LANDED ──────────────────────────────────
+// ⚠⚠ NO WEBHOOK AND NO TIMER — the DocuSign shape, for one of the same two reasons and not
+// the other. `doPost(e)` exposes no request HEADERS and Stripe signs with `Stripe-Signature`,
+// so an Apps Script endpoint cannot authenticate a delivery: an open URL, on a public repo,
+// that marks a $12,858 deposit received. That reason carries over exactly.
+//
+// ⚠ WHAT DOES NOT CARRY OVER IS THE RATE LIMIT, and it is worth knowing so nobody copies the
+// 20-minute floor across as though it were a rule. DocuSign publishes one request per unique
+// resource per 15 minutes and names REVOCATION as the penalty; Stripe has no such rule. The
+// gate below exists only so a dashboard repaint and a 15-second remote tick do not each fire
+// a network call — not because a vendor would punish us for it.
+//
+// ⚠ AND NOTHING NEEDS THE ANSWER SOONER. An ACH debit takes about four business days to
+// settle, so checking when somebody opens the client loses nothing a webhook would have won.
+var STRIPE_RECHECK_MINS = 10;
+
+function _stripeDue(st) {
+  if (!st || !st.stripe || !st.stripe.linkId) return false;
+  if (!st.stripe.checkedAt) return true;
+  var age = Date.now() - new Date(st.stripe.checkedAt).getTime();
+  return !(age >= 0 && age < STRIPE_RECHECK_MINS * 60000);
+}
+
+// Every payment link the app is still waiting on, across every job. ⚠ A STAGE DROPS OFF ONCE
+// ITS TARGET IS MET, or a finished stage is asked about forever — the rule `esignJobWatches`
+// already follows on a signed agreement.
+function outstandingPayments() {
+  var out = [];
+  (jobs || []).forEach(function (j) {
+    var ds = j.docState || {};
+    Object.keys(ds).forEach(function (key) {
+      var st = ds[key] || {};
+      if (!st.stripe || !st.stripe.linkId) return;
+      var stage = key.indexOf('invoice:') === 0 ? key.slice(8) : '';
+      if (PAYMENT_STAGES.indexOf(stage) === -1) return;
+      if (stage === 'deposit' && isJobFunded(j)) return;   // the deposit is in; stop asking
+      out.push({ jobId: j.id, hvlId: j.hvlId || '', key: key, stage: stage, linkId: st.stripe.linkId });
+    });
+  });
+  return out;
+}
+
+// ⚠ SEQUENTIAL, NEVER Promise.all. Every store write takes the GLOBAL Apps Script lock, and
+// this file records in full what parallel sending cost on 2026-09-11: the retry manufactured
+// the condition it was retrying. One link at a time, best-effort.
+function stripeRefresh(opts, cb) {
+  var only = opts && opts.jobId;
+  var due = outstandingPayments().filter(function (e) {
+    if (only && e.jobId !== only) return false;
+    var j = jobs.find(function (x) { return x.id === e.jobId; });
+    return _stripeDue(j && j.docState && j.docState[e.key]);
+  });
+  if (!due.length || !SHEETS_SYNC_URL) { if (cb) cb(0); return; }
+
+  var i = 0, recorded = 0;
+  (function next() {
+    if (i >= due.length) { if (cb) cb(recorded); return; }
+    var e = due[i++];
+    _appsScriptPost(SHEETS_SYNC_URL, { action: 'stripeStatus', linkId: e.linkId }, function (ok, d) {
+      if (ok && d && d.ok) {
+        recorded += applyStripePayments(e.jobId, e.key, e.stage, d);
+      } else {
+        // ⚠⚠ IT SPEAKS WHEN IT FAILS, AND IT MUST NOT CLAIM THE MONEY IS ABSENT. A silent
+        // failure leaves a paid deposit reading unpaid — a state with no exit, which this
+        // file's standing rule calls worse than a failure. But "not paid" is also a CLAIM,
+        // and it would be false.
+        //
+        // ⚠ AND A FAILED CHECK DOES NOT STAMP `checkedAt` — see applyStripePayments. Stamping
+        // on an answer nobody got would make the app blind for ten minutes over a transient 502.
+        var why = (d && (d.error || d.message)) || 'the status check did not reach Stripe';
+        _docNotice('warn', 'Could not check the payment status for ' + (e.hvlId || 'this job')
+                   + ' — ' + why + '. Money may already have arrived; this is not a statement that it has not.', e.jobId);
+      }
+      next();
+    });
+  })();
+}
+
+// ⚠⚠ ONLY `succeeded` IS MONEY. On ACH the checkout session reads `complete` the moment the
+// client authorises, while the transfer is still ~4 business days out and can still fail —
+// `processing` is a promise, not a payment. Recording it early is byte-for-byte the defect
+// the whole clears-on-receipt split exists to undo.
+//
+// ⚠⚠ IDEMPOTENT ON THE PAYMENT-INTENT ID, NEVER ON A COUNTER. `payment.id` is max(id)+1 over
+// the payments THIS DEVICE holds, so two devices both mint the same number — this file records
+// that a union by id would then FUSE two real payments into one rather than merely losing one.
+// The intent id is Stripe's, unique, and the same on every device.
+function applyStripePayments(jobId, key, stage, d) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return 0;
+  var st = docState(job, key);
+  st.stripe = st.stripe || {};
+  st.stripe.checkedAt = new Date().toISOString();
+
+  var seen = {};
+  jobPayments(job).forEach(function (p) { if (p.stripePiId) seen[p.stripePiId] = true; });
+
+  var added = 0, landed = 0;
+  (d.payments || []).forEach(function (p) {
+    if (!p || p.status !== 'succeeded' || !p.piId) return;
+    if (seen[p.piId]) return;
+    seen[p.piId] = true;
+    _stripeRecordPayment(job, stage, p);
+    added++; landed += (p.amount || 0);
+  });
+
+  saveJobs(); syncJobToSheets(job);
+  if (added) {
+    _docNotice('ok', fmt(landed) + ' received by bank transfer on ' + (job.name || 'this job')
+               + ' (' + (PAYMENT_STAGE_LABELS[stage] || stage) + ') — recorded automatically from Stripe.', jobId);
+    renderJobs();
+  }
+  return added;
+}
+
+// ⚠ THIS IS THE ONE PLACE A STRIPE PAYMENT BECOMES A PAYMENT RECORD, and it writes the same
+// shape `saveDeposit` writes by hand — same fields, same `uid` minting, same `_jobTouch`. A
+// second payment shape is how the hand-entered and the automatic records come to disagree.
+function _stripeRecordPayment(job, stage, p) {
+  var list = jobPayments(job);
+  var payment = {
+    id: (list.reduce(function (m, x) { return Math.max(m, x.id || 0); }, 0) + 1),
+    uid: _photoUid(),
+    stage: stage,
+    amount: p.amount,
+    receivedOn: (p.createdAt || new Date().toISOString()).slice(0, 10),
+    // ⚠ `stripe_ach`, NOT `stripe`. A card is final on receipt and this is not — see
+    // PAYMENT_METHODS_CLEAR_ON_RECEIPT. Recording it as a card would stamp clearedOn at once.
+    method: 'stripe_ach',
+    reference: p.piId,
+    payer: p.payer || '',
+    recordedBy: 'Stripe',
+    recordedAt: new Date().toISOString(),
+    // ⚠⚠ AND HERE clearedOn IS SET, WHICH LOOKS LIKE A CONTRADICTION AND IS NOT. The method
+    // says "not final when a person records it by hand", because then all anybody knows is
+    // that the client authorised it. This record only exists because STRIPE REPORTED THE
+    // INTENT `succeeded` — the money has genuinely settled. That is the one moment an ACH
+    // payment is cleared, and it is why read-back is worth building at all.
+    clearedOn: (p.createdAt || new Date().toISOString()).slice(0, 10),
+    policyException: false,
+    stripePiId: p.piId,
+    evidence: null,
+    qbMatchId: null
+  };
+  list.push(payment);
+  _jobTouch(job, 'payments', payment.uid);   // or the other device's save merges it away
+  delete job.deposit;
+
+  if (stage === 'deposit') {
+    job.depositReceived = isJobFunded(job);
+    job.depositReceivedAt = payment.receivedOn;
+    job.depositReceivedBy = 'Stripe';
+  }
 }
 
 // ─── FILING TO DRIVE ─────────────────────────────────────────────────────────
@@ -13884,10 +14157,10 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'deposit_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'deposit', 'deposit invoice');
-      // ⚠ Stripe is ONE-WAY — nothing reads back and `clearedOn` is never written — so it
-      // sends a link and records nothing. Beside the deposit, never as the primary.
-      if (live && typeof STRIPE_SCRIPT_URL !== 'undefined' && STRIPE_SCRIPT_URL) {
-        out.secondary.push({ label: '&#128179; Stripe link', call: 'dashStripeLink(' + id + ')' });
+      // ⚠ IT READS BACK NOW, so the label no longer promises only a link. Beside the deposit,
+      // never as the primary — the invoice is the thing to send, the link rides with it.
+      if (live && SHEETS_SYNC_URL) {
+        out.secondary.push({ label: '&#127974; ACH payment link', call: "dashStripeLink(" + id + ",'deposit')" });
       }
       break;
 
@@ -14063,12 +14336,15 @@ function dashApproveInvoice(jobId, stage) {
   openInvPinModal();
 }
 
-// The deposit link. ⚠ Stripe is ONE-WAY — nothing reads back, no webhook, and `clearedOn`
-// is never written — so this sends a link and records nothing. It sits beside the deposit
-// rather than as the primary, which is the payment RECORDER.
-function dashStripeLink(jobId) {
+// The ACH payment link. ⚠⚠ IT IS NO LONGER ONE-WAY — `stripeRefresh` reads the settled
+// payment back and records it — but this button still only CREATES the link. It sits beside
+// the deposit rather than as the primary, because the primary is the payment RECORDER and a
+// client paying by cheque must never be sent past it.
+// ⚠ THE STAGE IS PASSED THROUGH, NEVER ASSUMED. `invoiceHtml(job, stage).amtDue` is what
+// prices the link, so a midpoint link built as a deposit asks the client for the wrong money.
+function dashStripeLink(jobId, stage) {
   if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open this job.'); _dashRedraw(jobId); return; }
-  generateStripeLink();
+  stripePaymentLink(jobId, stage || 'deposit');
 }
 
 function dashSubmitEstimate(jobId) {
@@ -15361,6 +15637,8 @@ function _jobsLanded() {
   // Outstanding envelopes, checked when the jobs land — so any page load corrects the rail.
   // Non-blocking and best-effort; nothing on screen waits for it.
   if (typeof esignRefresh === 'function') { try { esignRefresh({}, function () {}); } catch (e) {} }
+  // Outstanding ACH payments, same reasoning: any page load corrects the rail.
+  if (typeof stripeRefresh === 'function') { try { stripeRefresh({}, function () {}); } catch (e) {} }
 }
 // Per-job estimate store
 var estimateStore = {};  // { jobId: { estimate, approved, approvedBy, approvedAt } }
@@ -20701,11 +20979,16 @@ function attachCollectionDoc(input, jobId, collId) {
 // rather than a URL and resolves it at send time. That matters: a write queued while
 // the URL was wrong or the deployment was down goes out against the CURRENT URL when
 // it retries, so pasting a corrected URL into Settings rescues the whole queue.
+// ⚠ THERE WAS A FOURTH, `stripe`, POINTING AT A SEPARATE PAYMENT-LINK SCRIPT, AND IT IS
+// GONE. Stripe is on the REQUEST PATH now — the link is priced from `invoiceHtml` and the
+// settled payment is read back — so it has to move in lockstep with `BACKEND_VERSION` and
+// the dispatch-parity test, which is the same call made for DocuSign on 2026-09-17. A second
+// deployment somebody must remember to paste is the failure this project already paid six
+// weeks for.
 var SYNC_TARGETS = {
-  main:     function(){ return SHEETS_SYNC_URL; },     // jobs, estimates, logs, plans, contractors
+  main:     function(){ return SHEETS_SYNC_URL; },     // jobs, estimates, logs, plans, contractors, Stripe, DocuSign
   vendor:   function(){ return VENDOR_SYNC_URL; },     // vendor directory sheet
-  referral: function(){ return REFERRAL_SYNC_URL; },   // referral partners sheet
-  stripe:   function(){ return STRIPE_SCRIPT_URL; }    // payment-link generator (send only)
+  referral: function(){ return REFERRAL_SYNC_URL; }    // referral partners sheet
 };
 function _targetUrl(target) {
   var f = SYNC_TARGETS[target || 'main'];
@@ -23441,13 +23724,58 @@ function vendorStatusOptions(sel) {
   }).join('');
 }
 function vendorIdOf(v) { return v && (v._row != null ? v._row : v.vendor_name); }
-// Display name for a vendor's primary contact — prefers the split first/last fields,
-// falls back to the legacy primary_contact for any row not yet migrated (safe to
-// keep after the primary_contact column is deleted; the fallback just yields '').
+// ⚠⚠ A VENDOR IS A FIRM, AND `phone` / `email` ARE THE FIRM'S. The office line and the
+// general inbox (southflorida@navismoving.com) belong to the company; a contact slot is a
+// PERSON, with their own mobile and their own address (andy@navismoving.com). Until
+// 2026-09-18 there was one of each, so the office number rendered under the contact's
+// name — a switchboard presented as somebody's direct line, which is the same defect the
+// 2026-09-09 office-phone build removed from our own signature blocks.
+// ⚠ SLOT 1 KEEPS THE ORIGINAL `contact_first` / `contact_last` KEYS, so no row migrates
+// and every reader of those two goes on working; slot 2 is `contact2_*`.
+var VENDOR_CONTACT_SLOTS = [
+  { n: 1, first: 'contact_first',  last: 'contact_last',  title: 'contact_title',  mobile: 'contact_mobile',  email: 'contact_email'  },
+  { n: 2, first: 'contact2_first', last: 'contact2_last', title: 'contact2_title', mobile: 'contact2_mobile', email: 'contact2_email' }
+];
+// Which vendor column keys hold a NUMBER. Derived from the slots rather than listed,
+// so a contact mobile can never be added to the form and forgotten here — which would
+// save its raw digits back over a formatted number on every quick edit.
+function isVendorPhoneKey(key) {
+  if (key === 'phone') return true;   // the firm's office line
+  for (var i = 0; i < VENDOR_CONTACT_SLOTS.length; i++) {
+    if (VENDOR_CONTACT_SLOTS[i].mobile === key) return true;
+  }
+  return false;
+}
+// THE ONE DEFINITION of who you can reach at a vendor — read by the card, the search
+// blob and the Quo sync's mirror of it. Two copies of this is how the card comes to
+// offer a number the search cannot find.
+function vendorContacts(v) {
+  if (!v) return [];
+  var out = [];
+  VENDOR_CONTACT_SLOTS.forEach(function(slot){
+    var first = String(v[slot.first] || '').trim();
+    var last  = String(v[slot.last]  || '').trim();
+    // The retired single-contact column only ever described slot 1.
+    var name = (first + ' ' + last).trim() || (slot.n === 1 ? String(v.primary_contact || '').trim() : '');
+    var c = {
+      slot: slot.n, first: first, last: last, name: name,
+      title:  String(v[slot.title]  || '').trim(),
+      mobile: String(v[slot.mobile] || '').trim(),
+      email:  String(v[slot.email]  || '').trim()
+    };
+    // ⚠ A NUMBER WITH NO NAME STILL COUNTS. That is a card somebody was handed and
+    // half-typed standing in a driveway, and requiring the name would throw away the
+    // one thing on the slot worth having. An entirely empty slot is not a person.
+    if (c.name || c.mobile || c.email) out.push(c);
+  });
+  return out;
+}
+// Display name for a vendor's primary contact — reads the shared slot definition, so it
+// cannot drift from the form. Prefers slot 1 and falls back to slot 2 when only the
+// second is filled in; a vendor with no named contact answers '' exactly as before.
 function _vendorContact(v) {
-  if (!v) return '';
-  var n = ((v.contact_first || '') + ' ' + (v.contact_last || '')).trim();
-  return n || v.primary_contact || '';
+  var named = vendorContacts(v).filter(function(c){ return c.name; });
+  return named.length ? named[0].name : '';
 }
 function lookupVendorById(id) {
   if (id == null || id === '') return null;
@@ -24504,14 +24832,20 @@ function populateJobMenus() {
 // is ~150 rows, so the scan is free, and a cached blob would go stale the moment a
 // card edit patched a field (and would get persisted into the localStorage cache).
 function vendorSearchBlob(v) {
-  return [
-    v.vendor_name, v.category, v.category_group, v.contact_first, v.contact_last,
+  var parts = [
+    v.vendor_name, v.category, v.category_group,
     v.email, v.website, v.physical_address, v.service_area, v.notes,
     v.status, v.license_cert, v.pricing_structure,
     // Fit label so typing "eager" pulls up the first-call shortlist.
     (VENDOR_FIT[vendorFit(v)] || {}).label,
     String(v.phone||'').replace(/\D/g,'')
-  ].filter(Boolean).join(' ').toLowerCase();
+  ];
+  // ⚠ READ THROUGH vendorContacts SO THE LIST CANNOT DRIFT FROM THE FORM. Typing a
+  // contact's mobile must find them, or the field reads as one that did not save.
+  vendorContacts(v).forEach(function(c){
+    parts.push(c.first, c.last, c.title, c.email, String(c.mobile||'').replace(/\D/g,''));
+  });
+  return parts.filter(Boolean).join(' ').toLowerCase();
 }
 function vendorMatchesQuery(v, q) {
   if (!q) return true;
@@ -24823,19 +25157,33 @@ function vendorCardHtml(v) {
   var idAttr = esc(String(id)).replace(/'/g, "\\'");
 
   // Highlighted contact + service-area block — the primary reason to open a card.
+  // ⚠ THE FIRM ROW CARRIES NO NAME. `phone` is the office line and `email` the general
+  // inbox, so putting the contact's name at the head of that row is what presented a
+  // switchboard as somebody's direct number. Each person gets their own row below.
   var cbits = [];
-  var _cname = _vendorContact(v);
-  if (_cname) cbits.push('<strong>' + esc(_cname) + '</strong>');
   var vph = fmtPhoneDisplay(v.phone);
-  if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a>');
+  if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a> <span style="color:var(--gray);">office</span>');
   if (v.email) cbits.push('✉ <a href="mailto:' + esc(v.email) + '" style="color:var(--bronze);">' + esc(v.email) + '</a>');
   var web = _vendorWebUrl(v.website);
   if (web) cbits.push('🌐 <a href="' + esc(web.href) + '" target="_blank" rel="noopener noreferrer" style="color:var(--bronze);">' + esc(web.label) + '</a>');
   var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
+  // One row per person, reading through the shared slot definition so the card can
+  // never offer a field the form does not write or the search cannot find.
+  var peopleRows = vendorContacts(v).map(function(c){
+    var bits = [];
+    if (c.name)  bits.push('<strong>' + esc(c.name) + '</strong>');
+    if (c.title) bits.push('<span style="color:var(--gray);">' + esc(c.title) + '</span>');
+    // A slot with a number and no name is a half-typed card, not a mistake — say so
+    // rather than rendering a bare number with nothing to attach it to.
+    if (!c.name) bits.push('<span style="color:var(--gray);font-style:italic;">name not recorded</span>');
+    if (c.mobile) bits.push('☎ <a href="tel:' + esc(c.mobile) + '" style="color:var(--bronze);text-decoration:none;font-weight:600;">' + esc(fmtPhoneDisplay(c.mobile) || c.mobile) + '</a> <span style="color:var(--gray);">mobile</span>');
+    if (c.email)  bits.push('✉ <a href="mailto:' + esc(c.email) + '" style="color:var(--bronze);">' + esc(c.email) + '</a>');
+    return '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + bits.join(' &nbsp;·&nbsp; ') + '</div>';
+  }).join('');
   var addrRow = v.physical_address ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Address</span> ' + esc(v.physical_address) + '</div>' : '';
   var areaRow = v.service_area ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Service area</span> <strong>' + esc(v.service_area) + '</strong></div>' : '';
-  var contactBlock = (contactRow || addrRow || areaRow)
-    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + contactRow + addrRow + areaRow + '</div>'
+  var contactBlock = (contactRow || peopleRows || addrRow || areaRow)
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + contactRow + peopleRows + addrRow + areaRow + '</div>'
     : '';
 
   var pricing = _vLine([['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]]);
@@ -24854,13 +25202,30 @@ function vendorCardHtml(v) {
   // The inline contact block above already carries tel:/mailto: links, but they're
   // 11px text — these are thumb-sized targets for calling from a job site. Text uses
   // sms: so a "where are you?" to a no-show vendor is one tap.
-  var tapBits = [];
-  if (v.phone) {
-    tapBits.push('<a href="tel:' + esc(v.phone) + '" class="btn-p" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">☎ Call</a>');
-    tapBits.push('<a href="sms:' + esc(v.phone) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">✉ Text</a>');
-  }
-  if (v.email) tapBits.push('<a href="mailto:' + esc(v.email) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">@ Email</a>');
-  var tapRow = tapBits.length ? '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + tapBits.join('') + '</div>' : '';
+  // ⚠ ONE ROW PER PARTY, AND EACH ROW SAYS WHO IT REACHES. A single unlabelled Call
+  // button over a firm with three numbers makes you guess which one it dials, which is
+  // the whole thing the contact split exists to answer.
+  var _tapBtn = function(href, cls, label){
+    return '<a href="' + esc(href) + '" class="' + cls + '" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">' + esc(label) + '</a>';
+  };
+  var tapRows = [];
+  var officeBits = [];
+  // ⚠ NO TEXT BUTTON ON THE OFFICE LINE. A switchboard does not receive SMS, and the
+  // "where are you?" that button exists for is a message to a PERSON — which is what
+  // the contact mobiles below are. Offering it here was only ever right while `phone`
+  // was the one number a vendor had.
+  if (v.phone) officeBits.push(_tapBtn('tel:' + v.phone, 'btn-p', '☎ Office'));
+  if (v.email) officeBits.push(_tapBtn('mailto:' + v.email, 'btn-s', '@ Office email'));
+  if (officeBits.length) tapRows.push(officeBits);
+  vendorContacts(v).forEach(function(c){
+    if (!c.mobile) return;   // nothing to dial; their email is a link in the block above
+    var who = c.first || c.name || 'Mobile';
+    tapRows.push([ _tapBtn('tel:' + c.mobile, 'btn-p', '☎ ' + who),
+                   _tapBtn('sms:' + c.mobile, 'btn-s', '✉ Text ' + who) ]);
+  });
+  var tapRow = tapRows.map(function(bits){
+    return '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + bits.join('') + '</div>';
+  }).join('');
 
   // Logging a contact is a deliberate event: type what you discussed, then log. It
   // overwrites the single latest note and stamps today's date (single-note model).
@@ -24902,7 +25267,13 @@ function vendorCardHtml(v) {
 // Map form-field ids → sheet column keys (as produced by the sync script's vendorKey).
 var VENDOR_FORM_MAP = {
   'v-name':'vendor_name', 'v-group':'category_group', 'v-category':'category',
-  'v-contact-first':'contact_first', 'v-contact-last':'contact_last', 'v-phone':'phone', 'v-email':'email',
+  // `phone` / `email` are the FIRM's office line and general inbox; a person's own
+  // mobile and address live on their contact slot. See VENDOR_CONTACT_SLOTS.
+  'v-phone':'phone', 'v-email':'email',
+  'v-contact-first':'contact_first', 'v-contact-last':'contact_last',
+  'v-contact-title':'contact_title', 'v-contact-mobile':'contact_mobile', 'v-contact-email':'contact_email',
+  'v-contact2-first':'contact2_first', 'v-contact2-last':'contact2_last',
+  'v-contact2-title':'contact2_title', 'v-contact2-mobile':'contact2_mobile', 'v-contact2-email':'contact2_email',
   'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
   'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity',
   'v-license':'license_cert',
@@ -24956,6 +25327,9 @@ function closeVendorForm(){ document.getElementById('add-vendor-modal').style.di
 // field edit can never blank out vetting data.
 var VENDOR_QUICK_MAP = {
   'vq-contact-first':'contact_first', 'vq-contact-last':'contact_last',
+  'vq-contact-title':'contact_title', 'vq-contact-mobile':'contact_mobile', 'vq-contact-email':'contact_email',
+  'vq-contact2-first':'contact2_first', 'vq-contact2-last':'contact2_last',
+  'vq-contact2-title':'contact2_title', 'vq-contact2-mobile':'contact2_mobile', 'vq-contact2-email':'contact2_email',
   'vq-phone':'phone', 'vq-email':'email', 'vq-website':'website',
   'vq-area':'service_area', 'vq-notes':'notes'
 };
@@ -24965,10 +25339,16 @@ function quickEditVendor(id) {
   document.getElementById('vq-id').value = String(id);
   document.getElementById('vq-name').textContent = v.vendor_name || 'Vendor';
   Object.keys(VENDOR_QUICK_MAP).forEach(function(fid){ _setV(fid, v[VENDOR_QUICK_MAP[fid]]); });
-  // Show the phone the way it reads on the card. Stored values are a mix of raw
+  // Show every number the way it reads on the card. Stored values are a mix of raw
   // digits (bulk import) and formatted (typed in) — saveVendorQuickEdit compares
-  // phones digit-wise so displaying it formatted never fabricates a change.
-  _setV('vq-phone', fmtPhoneDisplay(v.phone) || v.phone || '');
+  // phones digit-wise so displaying them formatted never fabricates a change.
+  // ⚠ DERIVED FROM THE MAP, never a list of ids: a contact mobile added to the slots
+  // and forgotten here would save its raw digits back over a formatted number.
+  Object.keys(VENDOR_QUICK_MAP).forEach(function(fid){
+    var key = VENDOR_QUICK_MAP[fid];
+    if (!isVendorPhoneKey(key)) return;
+    _setV(fid, fmtPhoneDisplay(v[key]) || v[key] || '');
+  });
   var fb = document.getElementById('vq-fb'); if (fb) fb.textContent = '';
   document.getElementById('v-quick-modal').style.display = 'flex';
 }
@@ -24991,9 +25371,11 @@ function saveVendorQuickEdit() {
     var key = VENDOR_QUICK_MAP[fid];
     var val = _getV(fid);
     var cur = String(v[key] == null ? '' : v[key]).trim();
-    // Phone is compared on digits only, so re-displaying "5615550100" as
-    // "(561) 555-0100" isn't mistaken for an edit.
-    if (key === 'phone') { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
+    // Every phone is compared on digits only, so re-displaying "5615550100" as
+    // "(561) 555-0100" isn't mistaken for an edit. Contact mobiles included — they are
+    // prefilled formatted above, so comparing them as strings would post a patch on
+    // every quick save that touched nothing.
+    if (isVendorPhoneKey(key)) { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
     else if (val === cur) return;
     patch[key] = val;
   });
@@ -25303,7 +25685,13 @@ function logVendorContact(btn, id) {
 // sync script's columns; _row is the sheet row for updates.
 var REFERRAL_FORM_MAP = {
   'r-fname':'first_name','r-lname':'last_name','r-type':'partner_type','r-firm':'firm',
+  // ⚠ A PARTNER IS A PERSON. `phone` is their DIRECT line and `mobile` their cell;
+  // `office_phone` is the FIRM's switchboard, which several partners at one firm
+  // legitimately share. `primary_contact` was always the assistant's name — it now sits
+  // beside that person's own number and address rather than in the research block.
   'r-contact':'primary_contact','r-phone':'phone','r-email':'email','r-website':'website',
+  'r-mobile':'mobile','r-officephone':'office_phone','r-phoneext':'phone_ext',
+  'r-assistantphone':'assistant_phone','r-assistantemail':'assistant_email',
   'r-status':'status','r-owner':'owner',
   'r-lastcontacted':'last_contacted','r-notes':'notes',
   // Prospecting intel (mirrors the source contact spreadsheet)
@@ -25312,6 +25700,22 @@ var REFERRAL_FORM_MAP = {
   'r-actec':'actec','r-council':'council','r-councilrole':'council_role',
   'r-channel':'channel','r-priority':'priority','r-warmpath':'warm_path'
 };
+// Which partner column keys hold a NUMBER, named once rather than tested field by
+// field — a number added to the quick card and missed here saves its raw digits back
+// over a formatted one on every edit.
+var REFERRAL_PHONE_KEYS = ['phone', 'mobile', 'office_phone', 'assistant_phone'];
+// ⚠ `phone_type` HAD NO READER IN THE APP UNTIL NOW — it was the workaround for having
+// one phone field, recording whether that number was the person's or the firm's. With a
+// real office_phone column it becomes the migration signal instead: a row whose stored
+// type says main/switchboard, and which has nothing in office_phone, is a switchboard
+// still sitting in the direct-line field. 32 of the 79 seed rows are in that state.
+// Filling in Office phone is what clears it; the flag never refuses anything.
+function referralPhoneIsMainLine(p) {
+  if (!p || !String(p.phone || '').trim()) return false;
+  if (String(p.office_phone || '').trim()) return false;   // already sorted out
+  return /main|switch|reception|general/i.test(String(p.phone_type || ''));
+}
+function isReferralPhoneKey(key) { return REFERRAL_PHONE_KEYS.indexOf(key) !== -1; }
 function _setR(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
 function _getR(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
 function referralIdOf(p){ return p._row!=null ? String(p._row) : ''; }
@@ -25397,7 +25801,16 @@ function referralSearchBlob(p) {
     p.partner_name, p.first_name, p.last_name, p.title, p.firm, p.partner_type,
     p.email, p.website, p.city, p.state, p.council, p.council_role, p.credentials,
     p.notes, p.warm_path, p.status, p.owner,
-    String(p.phone||'').replace(/\D/g,'')
+    // ⚠ EVERY NUMBER AND ADDRESS ON THE RECORD. Typing a partner's cell must find them,
+    // or the field reads as one that did not save. The assistant too — "who is Marie at
+    // Gunster" is a real search.
+    p.primary_contact, p.assistant_email, p.phone_ext, p.phone_type,
+    // So "main line" pulls up the rows whose direct-line field still holds a switchboard.
+    (referralPhoneIsMainLine(p) ? 'firm main line, not direct' : ''),
+    String(p.phone||'').replace(/\D/g,''),
+    String(p.mobile||'').replace(/\D/g,''),
+    String(p.office_phone||'').replace(/\D/g,''),
+    String(p.assistant_phone||'').replace(/\D/g,'')
   ].filter(Boolean).join(' ').toLowerCase();
 }
 function referralSearchQuery() {
@@ -25513,7 +25926,8 @@ function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferr
 // Contact-detail subset for working on the road, mirroring quickEditVendor. Status,
 // priority, channel and the prospecting intel stay on the full form.
 var REFERRAL_QUICK_MAP = {
-  'rq-title':'title', 'rq-firm':'firm', 'rq-phone':'phone', 'rq-email':'email',
+  'rq-title':'title', 'rq-firm':'firm', 'rq-phone':'phone', 'rq-mobile':'mobile',
+  'rq-officephone':'office_phone', 'rq-email':'email',
   'rq-website':'website', 'rq-city':'city', 'rq-notes':'notes'
 };
 function quickEditReferral(id) {
@@ -25522,7 +25936,14 @@ function quickEditReferral(id) {
   document.getElementById('rq-id').value = String(id);
   document.getElementById('rq-name').textContent = p.partner_name || 'Partner';
   Object.keys(REFERRAL_QUICK_MAP).forEach(function(fid){ _setR(fid, p[REFERRAL_QUICK_MAP[fid]]); });
-  _setR('rq-phone', fmtPhoneDisplay(p.phone) || p.phone || '');
+  // Every number shows formatted, and saveReferralQuickEdit compares them digit-wise,
+  // so re-displaying a bulk-imported "5615550100" never reads as an edit. Derived from
+  // the map rather than listed, so a number added to the quick card cannot miss this.
+  Object.keys(REFERRAL_QUICK_MAP).forEach(function(fid){
+    var key = REFERRAL_QUICK_MAP[fid];
+    if (!isReferralPhoneKey(key)) return;
+    _setR(fid, fmtPhoneDisplay(p[key]) || p[key] || '');
+  });
   document.getElementById('r-quick-modal').style.display = 'flex';
 }
 function closeReferralQuickEdit(){ document.getElementById('r-quick-modal').style.display = 'none'; }
@@ -25540,8 +25961,9 @@ function saveReferralQuickEdit() {
     var key = REFERRAL_QUICK_MAP[fid];
     var val = _getR(fid);
     var cur = String(p[key] == null ? '' : p[key]).trim();
-    // Phone compared digit-wise so re-displaying it formatted isn't seen as an edit.
-    if (key === 'phone') { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
+    // Every number compared digit-wise so re-displaying one formatted isn't seen as an
+    // edit — mobile and the office line included, since they are prefilled formatted.
+    if (isReferralPhoneKey(key)) { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
     else if (val === cur) return;
     patch[key] = val;
   });
@@ -25588,30 +26010,66 @@ function referralCardHtml(p){
   if (p.firm) roleBits.push(esc(p.firm));
   var roleRow = roleBits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + roleBits.join(' &middot; ') + '</div>' : '';
 
+  // ⚠⚠ `phone` IS THE PARTNER'S DIRECT LINE AND ON 32 OF 79 SEED ROWS IT IS NOT — it is
+  // the firm's switchboard, recorded before there was anywhere else to put it, and
+  // `phone_type` is what says so. Calling that "direct" on the card is the same defect
+  // as printing an office line as somebody's mobile, so the card reads the flag and says
+  // which it is. It is a prompt to move the number into Office phone, not a refusal.
+  var _mainish = referralPhoneIsMainLine(p);
   var cbits = [];
   var ph = fmtPhoneDisplay(p.phone);
-  if (ph) cbits.push('☎ <a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(ph) + '</a>');
+  if (ph) cbits.push('☎ <a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;font-weight:600;">' + esc(ph) + '</a> <span style="color:' + (_mainish ? 'var(--warn-tx)' : 'var(--gray)') + ';">' + (_mainish ? 'firm main line, not direct' : 'direct') + '</span>');
+  var mob = fmtPhoneDisplay(p.mobile);
+  if (mob) cbits.push('☎ <a href="tel:' + esc(p.mobile) + '" style="color:var(--bronze);text-decoration:none;font-weight:600;">' + esc(mob) + '</a> <span style="color:var(--gray);">mobile</span>');
+  var off = fmtPhoneDisplay(p.office_phone);
+  if (off) cbits.push('☎ <a href="tel:' + esc(p.office_phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(off) + '</a> <span style="color:var(--gray);">office' + (String(p.phone_ext||'').trim() ? ' ext ' + esc(String(p.phone_ext).trim()) : '') + '</span>');
   if (p.email) cbits.push('✉ <a href="mailto:' + esc(p.email) + '" style="color:var(--bronze);">' + esc(p.email) + '</a>');
   var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
+  // The gatekeeper gets their own line. At a firm this is who actually books the meeting,
+  // and until now their name sat in a research block with nowhere to record their number.
+  var _asstBits = [];
+  if (String(p.primary_contact||'').trim()) _asstBits.push('<strong>' + esc(String(p.primary_contact).trim()) + '</strong>');
+  var _ap = fmtPhoneDisplay(p.assistant_phone);
+  if (_ap) _asstBits.push('☎ <a href="tel:' + esc(p.assistant_phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(_ap) + '</a>');
+  if (String(p.assistant_email||'').trim()) _asstBits.push('✉ <a href="mailto:' + esc(String(p.assistant_email).trim()) + '" style="color:var(--bronze);">' + esc(String(p.assistant_email).trim()) + '</a>');
+  var asstRow = _asstBits.length
+    ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;"><span style="color:var(--gray);">Assistant</span> ' + _asstBits.join(' &nbsp;·&nbsp; ') + '</div>'
+    : '';
 
   var _loc = [p.city, p.state].filter(function(x){ return String(x||'').trim(); }).join(', ');
   var locRow = _loc ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Location</span> ' + esc(_loc) + '</div>' : '';
   var councilRow = String(p.council||'').trim()
     ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Council</span> ' + esc(p.council) + (String(p.council_role||'').trim() ? ' — <strong>' + esc(p.council_role) + '</strong>' : '') + '</div>'
     : '';
-  var contactBlock = (roleRow || contactRow || locRow || councilRow)
-    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + roleRow + contactRow + locRow + councilRow + '</div>'
+  var contactBlock = (roleRow || contactRow || asstRow || locRow || councilRow)
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + roleRow + contactRow + asstRow + locRow + councilRow + '</div>'
     : '';
 
   // Mobile-only tap-to-contact strip, same as the vendor card (.vc-tap is hidden
   // until the breakpoint) — thumb-sized targets for reaching a partner in the field.
-  var tapBits = [];
-  if (p.phone) {
-    tapBits.push('<a href="tel:' + esc(p.phone) + '" class="btn-p" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">☎ Call</a>');
-    tapBits.push('<a href="sms:' + esc(p.phone) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">✉ Text</a>');
+  // One row per party, each saying who it reaches — same rule as the vendor card. An
+  // unlabelled Call over a partner with a desk line, a cell and a switchboard makes you
+  // guess which it dials.
+  var _pTap = function(href, cls, label){
+    return '<a href="' + esc(href) + '" class="' + cls + '" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">' + esc(label) + '</a>';
+  };
+  var _pRows = [];
+  var _r1 = [];
+  // ⚠ NO TEXT BUTTON ON A DESK LINE OR A SWITCHBOARD — neither receives SMS. Texting is
+  // offered on the mobile row below, which is the only number that can take one.
+  if (p.phone) _r1.push(_pTap('tel:' + p.phone, 'btn-p', _mainish ? '☎ Main line' : '☎ Direct'));
+  else if (p.office_phone) _r1.push(_pTap('tel:' + p.office_phone, 'btn-p', '☎ Office'));
+  if (p.email) _r1.push(_pTap('mailto:' + p.email, 'btn-s', '@ Email'));
+  if (_r1.length) _pRows.push(_r1);
+  if (p.mobile) _pRows.push([ _pTap('tel:' + p.mobile, 'btn-p', '☎ Mobile'),
+                              _pTap('sms:' + p.mobile, 'btn-s', '✉ Text') ]);
+  if (p.assistant_phone) {
+    var _an = String(p.primary_contact||'').trim().split(/\s+/)[0] || 'assistant';
+    _pRows.push([ _pTap('tel:' + p.assistant_phone, 'btn-s', '☎ ' + _an) ]);
   }
-  if (p.email) tapBits.push('<a href="mailto:' + esc(p.email) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">@ Email</a>');
-  var tapRow = tapBits.length ? '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + tapBits.join('') + '</div>' : '';
+  var tapRow = _pRows.map(function(bits){
+    return '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + bits.join('') + '</div>';
+  }).join('');
 
   var warm = String(p.warm_path||'').trim() ? '<div style="font-size:11px;color:var(--bronze);margin-top:4px;">Warm path: ' + esc(p.warm_path) + '</div>' : '';
   var stats = _rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:4px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' · ' + _rst.won + ' won · $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '';
@@ -27376,9 +27834,10 @@ function populateAgrSelect() {
 
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
-var STRIPE_PK = '';
-var STRIPE_SCRIPT_URL = '';
-
+// ⚠ `STRIPE_PK` AND `STRIPE_SCRIPT_URL` ARE DELETED, NOT HIDDEN (2026-09-18). The
+// publishable key had ZERO readers in 28,000 lines — no Stripe.js is loaded anywhere — and
+// the "Secret Key — via Apps Script URL" box invited a real Stripe secret into localStorage on a
+// page served from public GitHub Pages. Both keys live in Script Properties now.
 var DRIVE_FOLDER_ID = '';
 var SHEETS_SYNC_URL = '';
 var VENDOR_SYNC_URL = '';   // separate web app — vendor directory sheet only
@@ -27390,8 +27849,6 @@ var REQUIRE_WALKTHROUGH_NOTES = false;
 
 function openSettings() {
   document.getElementById('settings-modal').style.display = 'flex';
-  document.getElementById('set-stripe-pk').value     = STRIPE_PK;
-  document.getElementById('set-stripe-script').value = STRIPE_SCRIPT_URL;
   document.getElementById('set-sheets-url').value    = SHEETS_SYNC_URL;
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
   var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
@@ -27441,7 +27898,7 @@ var COST_RATE_FIELDS = [
 var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
 // contractor roster (your crew, not practice data), and the two directory caches.
-var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_stripe_pk|hav_stripe_script|hav_gmail_client_id|hav_esign_provider|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_esign_provider|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
@@ -27470,8 +27927,6 @@ function clearLocalJobData() {
 }
 
 function saveSettings() {
-  STRIPE_PK          = document.getElementById('set-stripe-pk').value.trim();
-  STRIPE_SCRIPT_URL  = document.getElementById('set-stripe-script').value.trim();
   SHEETS_SYNC_URL    = document.getElementById('set-sheets-url').value.trim();
   DRIVE_FOLDER_ID    = document.getElementById('set-drive-id').value.trim();
   var vUrlEl2 = document.getElementById('set-vendor-url'); if (vUrlEl2) VENDOR_SYNC_URL = vUrlEl2.value.trim();
@@ -27500,8 +27955,6 @@ function saveSettings() {
     if (isFinite(v) && v > 0) COST_RATES[f.key] = v;
   });
   try {
-    localStorage.setItem('hav_stripe_pk',     STRIPE_PK);
-    localStorage.setItem('hav_stripe_script', STRIPE_SCRIPT_URL);
     localStorage.setItem('hav_sheets_url',    SHEETS_SYNC_URL);
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
     localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
@@ -27524,8 +27977,6 @@ function saveSettings() {
 
 function loadSettings() {
   try {
-    STRIPE_PK         = localStorage.getItem('hav_stripe_pk')     || '';
-    STRIPE_SCRIPT_URL = localStorage.getItem('hav_stripe_script') || '';
     SHEETS_SYNC_URL   = localStorage.getItem('hav_sheets_url')    || localStorage.getItem('havellin_sheets_url') || '';
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
     VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
@@ -28676,45 +29127,93 @@ function approveAgreementNow() {
 }
 
 
-function generateStripeLink() {
-  if (ensureAgreementApproved(currentAgrJobId)) { showFB(_dashFbTarget('agr-fb'),'warn','The estimate must be approved and the client\'s acceptance recorded first.'); return; }
-  var job = jobs.find(function(j){ return j.id===currentAgrJobId; });
-  if (!job) return;
-  var est = (currentEstimate && currentEstimate.jobId === job.id) ? currentEstimate : null;
-  var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
-  var deposit = Math.round(havTotal * 0.5);
-
-  if (!STRIPE_SCRIPT_URL) {
-    showFB('agr-fb','warn','Stripe not configured. Go to ⚙ Settings to add your Stripe Apps Script URL.');
+// ⚠⚠ ONE ENTRY POINT, AND IT TAKES THE JOB RATHER THAN READING A GLOBAL. The old version read
+// `currentAgrJobId`, which the drilldown never sets — the wrong-job hazard Slice 1 exists to
+// close, on the one control that mails a client a request for money.
+//
+// ⚠ AND IT POSTS TO THE MAIN BACKEND NOW, NOT A SECOND DEPLOYMENT. `STRIPE_SCRIPT_URL` is
+// retired: a separate Apps Script cannot be reached by `checkBackendVersion`, so a stale one
+// fails silently and reads as an app bug — the six-week defect this file already records.
+function stripePaymentLink(jobId, stage) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { _docNotice('warn', 'Select a client first.', jobId); return; }
+  stage = (PAYMENT_STAGES.indexOf(stage) >= 0) ? stage : 'deposit';
+  if (!SHEETS_SYNC_URL) {
+    _docNotice('warn', 'No Apps Script URL is set on this device — add it in Settings.', jobId);
     return;
   }
-  // This was the app's only `mode:'no-cors'` fetch, and no-cors makes the response
-  // OPAQUE — status unreadable, body unreadable. So `.then` fired on any completed
-  // request, including a 404 from a URL that was never deployed and a 500 from a script
-  // that threw, and the success message went out regardless. `.catch` only ever saw a
-  // DNS/offline failure. It reported a payment link had been generated and emailed when
-  // in fact nothing had happened at all, which during a dry run means sitting and waiting
-  // for a link that is never coming.
-  //
-  // Every other Apps Script call in this file posts `mode:'cors'` and reads the reply
-  // through _readAppsScriptJson, so a readable response is known to work against these
-  // deployments; there was no reason for this one to be different. Now a failure says so.
-  //
-  // NOTE this only makes the report honest. Nothing yet reads BACK from Stripe — no
-  // webhook, no clearedOn write, no auto-populated payment. Deliberately deferred to the
-  // QuickBooks work; recording a payment stays manual (§8).
-  showFB('agr-fb','info','Requesting Stripe payment link…');
-  postSyncTo('stripe', {type:'stripe_link', payload:{jobId:job.id, clientName:job.name, clientEmail:job.email, amount:deposit, description:'Havellin deposit — '+job.name}})
-    .then(function(res){
-      if (res && res.ok) {
-        showFB('agr-fb','ok','Stripe payment link generated and sent to billing@havellinpalmbeach.com. Copy it from there to send to the client.');
-      } else {
-        showFB('agr-fb','err','Stripe service rejected the request' + ((res && res.error) ? ' — ' + res.error : '') + '. No payment link was created. Send the client the deposit invoice instead, and record the payment by hand when it arrives.');
-      }
-    })
-    .catch(function(e){
-      showFB('agr-fb','err','Could not reach the Stripe service' + ((e && e.message) ? ' — ' + e.message : '') + '. No payment link was created. Check the Stripe Apps Script URL in ⚙ Settings.');
-    });
+
+  var key = docKeyFor('invoice', { stage: stage });
+  var st  = docState(job, key);
+  // ⚠ A SECOND LINK FOR ONE STAGE IS TWO WAYS TO PAY THE SAME INVOICE, and a client who pays
+  // both has overpaid by a deposit. Once minted, the same link comes back.
+  if (st.stripe && st.stripe.url) { _stripeShowLink(job, stage, st.stripe.url, false); return; }
+
+  // ⚠⚠ IT IS A DOOR INTO THE AGREEMENT, SO IT STAMPS ON THE WAY THROUGH — the rule
+  // `markAgreementSent` already follows, and the one the pre-existing dashboard-actions test
+  // caught this function breaking. Asking a client to wire money is asking for the deposit
+  // that the agreement DEFINES (50% of the contract total), so minting a link against an
+  // agreement nobody approved requests money under terms that were never signed off.
+  // ⚠ IT GATES THE MINT, NOT THE RE-SHOW ABOVE. A link already in a client's hands is a read;
+  // re-displaying it must not turn on an estimate that has since been reopened for editing.
+  if (ensureAgreementApproved(job.id)) {
+    _docNotice('warn', 'The estimate must be approved and the client\'s acceptance recorded before asking for payment.', jobId);
+    return;
+  }
+
+  // ⚠⚠ THE AMOUNT COMES FROM `invoiceHtml`, THE ONE THING THAT OWNS IT. Re-deriving it here
+  // would be a second copy of the money — the drift this file records more often than anything
+  // else — and it is the figure the client's own invoice states as due, so the link and the
+  // document cannot disagree about what is owed.
+  var inv = null;
+  try { inv = invoiceHtml(job, stage); } catch (e) { inv = null; }
+  if (!inv) { _docNotice('warn', 'Could not price the ' + (PAYMENT_STAGE_LABELS[stage] || stage) + ' on this job.', jobId); return; }
+  if (inv.blocked) {
+    _docNotice('warn', 'That invoice is blocked and cannot be sent for payment yet'
+               + (typeof inv.blocked === 'string' ? ' — ' + inv.blocked : '') + '.', jobId);
+    return;
+  }
+  var amt = Math.round(inv.amtDue || 0);
+  if (!(amt > 0)) {
+    _docNotice('warn', 'Nothing is outstanding on the ' + (PAYMENT_STAGE_LABELS[stage] || stage) + '.', jobId);
+    return;
+  }
+
+  _docNotice('info', 'Creating an ACH payment link for ' + fmt(amt) + '\u2026', jobId);
+
+  // ⚠⚠ NO AUTOMATIC RETRY — the rule `addVendor` and the DocuSign send already follow, for the
+  // same reason. A failed POST never reveals whether it landed, and re-sending mints a SECOND
+  // payment link against one stage. `allowRetry` is deliberately omitted.
+  _appsScriptPost(SHEETS_SYNC_URL, {
+    action: 'stripeLink',
+    jobId: String(job.id),
+    hvlId: job.hvlId || '',
+    stage: stage,
+    amount: amt,
+    description: 'Havellin Palm Beach \u2014 ' + (PAYMENT_STAGE_LABELS[stage] || stage)
+                 + (job.hvlId ? ' (' + job.hvlId + ')' : '')
+  }, function (ok, d) {
+    if (!ok || !d || !d.ok || !d.url) {
+      _docNotice('err', 'No payment link was created'
+                 + ((d && d.error) ? ' \u2014 ' + d.error : '') + '. Nothing was sent to the client.', jobId);
+      return;
+    }
+    var st2 = docState(job, key);
+    st2.stripe = { linkId: d.linkId || '', url: d.url, amount: amt,
+                   createdAt: new Date().toISOString(), checkedAt: '' };
+    saveJobs(); syncJobToSheets(job);
+    _stripeShowLink(job, stage, d.url, true);
+  });
+}
+
+// ⚠ THE LINK IS SHOWN, NEVER SENT BY THE APP. Anthony reviews and sends every client document
+// himself — the same requirement that makes `gmail.compose` deliberately unable to send. The
+// link rides the deposit invoice he is already sending.
+function _stripeShowLink(job, stage, url, fresh) {
+  _docNotice('ok', (fresh ? 'ACH payment link created' : 'ACH payment link for this stage')
+    + ' \u2014 bank transfer only, no card. Send it with the '
+    + (PAYMENT_STAGE_LABELS[stage] || stage) + ' invoice: ' + url
+    + '  \u00b7  It records itself here once the transfer settles (about four business days).', job.id);
 }
 
 

@@ -1,5 +1,510 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠ ONE POOL HOUSE, ONE ROW — AND THE WEIGHT WAS THE DECISION, NOT THE LABEL (2026-09-18)
+Anthony, off two screenshots of the room grid: *"let's remove the first two from outbuildings and guest
+houses, and modify poolhouse/cabana no living quarters to read Poolhouse - with living quarters."*
+App-only, no redeploy — `ROOMS` / `ROOM_WEIGHT` / `EXTERIOR_ROOMS` are three plain tables in
+`havellin.html`. Three edits: the **Casita — bedroom & bath** and **Pool House — with living quarters**
+rows out of Outbuildings & Guest Quarters, and the Exterior & Auxiliary
+**Pool House / Cabana — no living quarters** renamed **Pool House — with living quarters**.
+
+- **⚠⚠ THE INSTRUCTION WAS A RENAME AND THE CONSEQUENCE WAS A PRICE, WHICH IS THE ONLY THING WORTH
+  ASKING ABOUT HERE.** The two pool-house rows carried **different weights** — the Exterior one 2.7
+  (a cabana) and the Outbuildings one 4.5 (`2.0 living/bed + 1.5 kitchen/bar + 1.0 bath`). A straight
+  rename leaves the survivor **saying *with living quarters* while pricing a changing room**, silently,
+  on every estate with a pool house. Put to Anthony before anything was built; he took **4.5**.
+  - **Measured on the real engine, not asserted.** A 3,500 sqft Estate Settlement, three rooms scored
+    neutral: ticking the pool house adds **12 specialist hours** at 4.5 against **7** at 2.7. So the
+    decision is worth **5 PS hours per pool house**, and an estimator would have had no way to see it —
+    the row renders identically either way.
+- **⚠ THE SURVIVOR STAYS IN EXTERIOR & AUXILIARY, and that is coherent rather than arbitrary.** The net
+  effect is that the with-quarters pool house MOVED UP beside `Pool / Cabana Half Bath` and the
+  cabana-only variant went. A pool house with nothing in it is a changing room; that is the half-bath
+  row plus the patio rows, which already carry it.
+- **⚠ THE CASITA HAS NO REPLACEMENT ROW AND BOTH DOCUMENTS SAY WHAT TO TICK INSTEAD.** At 2.5 it sat
+  between the pool house and the 1-bedroom guest house saying nothing either of them does not, and
+  *casita* and *guest house* are the same building to most of the people describing one. **A bedroom and
+  a bath is the free-text `Additional Outbuilding Room` row renamed — 2.0, half a load unit under the old
+  row, so a genuinely small casita now prices about one PS hour lighter. Living space or a kitchenette
+  makes it `Guest House — 1 bedroom` at 7.0.** That 2.5→2.0 drift is stated rather than hidden; it is the
+  one place this change is not price-neutral by construction.
+- **⚠ NOTHING NEEDED AN ALIAS, AND IT IS WORTH KNOWING WHY.** `restoreEstimateToUI` matches a saved room
+  on **section+name** first, then idx-within-its-own-section, then plain name **only when the saved record
+  carries no section**. So a saved estimate holding either deleted row drops it silently — and, usefully,
+  the deleted Outbuildings pool house **cannot** fall through onto the Exterior row of the same name,
+  because its saved record has a section. Prelaunch, dummy data only. **If a real estimate ever predates a
+  row rename, add an alias instead** — a rename with no alias reprices downward with nothing on screen.
+- **6041 committed checks** (`tests/room-grid.test.js`, 45 new — **the first coverage in `tests/` of what
+  the room grid's three tables contain or what a room weighs**, which is why the two-section pool house
+  survived from the day it was written to the day somebody read the screen).
+  - **⚠⚠ THE NETS ARE RULES, NOT TODAY'S NAMES.** Every non-custom row has a `ROOM_WEIGHT` entry
+    (`engineRoomWeight` falls back to **2.0 silently**, so a row added without one prices as a generic
+    bedroom and the grid renders it perfectly); every `EXTERIOR_ROOMS` key has a weight and names a real
+    row; no name appears twice in one section (the `_claim` restore hands each saved record to exactly
+    one row, so a duplicate silently restores blank).
+  - **⚠ AND THE ONE THAT WOULD HAVE CAUGHT THE ORIGINAL DEFECT: ONE DETACHED STRUCTURE, ONE ROW.** Across
+    Exterior & Auxiliary and Outbuildings & Guest Quarters, no two rows may share a **stem** — the text up
+    to the first em-dash or slash. `Pool House / Cabana — no living quarters` and `Pool House — with
+    living quarters` both stem to `Pool House`, which is the collision a name-equality check can never
+    see: **the two rows had different names.** Size variants inside ONE section are allowed (Guest House
+    1/2/3 sit adjacent on screen and you obviously pick one); across sections is the state that produced
+    *"nothing on screen said which to pick"*. The test feeds it the old pair by hand so the rule is proven
+    able to fire rather than merely passing.
+  - **⚠⚠ THE WEIGHT REVERT FAILED ONLY *ONE* ON THE FIRST SWEEP — ON THE SINGLE MOST CONSEQUENTIAL LINE.**
+    Every check read a TABLE, so a build where `engineRoomWeight` stopped consulting `ROOM_WEIGHT` would
+    have passed the lot with the price silently wrong. The gap this file records more than any other.
+    There is a group that drives the **real `computeEngineV3`** now: ticking the pool house moves `load`
+    by exactly **4.500000**, is exactly **2.25×** a Boat House (2.0) — a RATIO, so it survives the next
+    `ENGINE_K` or step-table tune, where a pinned hour count would not — and books **12** `totPS`. Re-done,
+    the revert fails **4**.
+- **All seven changes revert-verified individually, ZERO green** — the rename undone fails 6, the Casita
+  row put back 5, a second pool house in Outbuildings 3, a row added with no weight 3, the cabana half
+  bath dropped 3, a row deleted with its weight left behind 1, and the weight 4.
+- **⚠ FOUND IN PASSING, NOT FIXED: `tc` and `ps` ON EVERY `ROOMS` ROW ARE DEAD.** The grid renderer reads
+  `r.name` and `r.custom`; the engine reads `ROOM_WEIGHT[name]`. Nothing anywhere reads a row's own
+  `tc`/`ps` — verified by extracting every `<ident>.tc|.ps` in the file, none of which is a room. They are
+  vestigial per-room hour hints from an older engine, and they **already disagreed with the weights**
+  (both pool-house rows read `tc:1.35,ps:2.70` while weighing 2.7 and 4.5). Left exactly as they were
+  rather than invented anew. `ROOM_WEIGHT` also carries **eight dead keys** naming no row — `Home Gym`,
+  `Home Office`, `Bedroom 5`, `Bedroom 6`, `Additional Bedroom(s)`, `Bonus Room`, `Additional Office`,
+  `Additional Sitting Room`. Harmless (nothing reads a weight for a row that does not exist) and
+  **pre-existing**, which is why the orphan test is scoped to `EXTERIOR_ROOMS`, where it is clean.
+- **Verified end to end in headless Chromium on the real page**, driving the real grid and the real
+  `calcAll`:
+
+  | | |
+  |---|---|
+  | Exterior & Auxiliary | `… Pool / Cabana Half Bath · Pool House — with living quarters · Screened Porch …` |
+  | Outbuildings & Guest Quarters | **7 rows** — three guest house sizes, three cottage sizes, one free-text |
+  | Casita rows anywhere | **0** |
+  | `Pool House` rows anywhere | **1**, rendered with a live scope box |
+  | ticking it on a 3,500 sqft estate | base 112 PS / $18,300 → **124 PS / $20,350** (+12 hrs, **+$2,050**) |
+  | a Boat House (2.0) for comparison | +5 PS hrs |
+
+  Overflow **0** at 1440 and 390px, **no page errors**, and the app's `<style>` block is
+  **byte-identical** at 74,147 bytes — the 368-line CSS deletion rule, applied by reading the diff.
+- Manual **§5b** (two rows out of the outbuildings table; the double-tick note **rewritten**, because it
+  said *"The Exterior row is now Pool House / Cabana — no living quarters and this section has Pool House
+  — with living quarters. **Pick one.**"* — an instruction to choose between two rows, one of which no
+  longer exists; plus a new casita note). Playbook **Step 2** (a `.stop` saying both buildings are NOT in
+  that section, so nobody hunts) and **two symptom→cause rows rewritten** — ⚠ one of them read *"Can't
+  find the casita → It moved from Exterior & Auxiliary into Outbuildings & Guest Quarters"*, which after
+  today sends a concierge standing in a driveway after a row that is not there. Both `.md` copies
+  hand-edited and **17 claims parity-checked, 0 mismatches** — ⚠ three apparent misses were markdown
+  emphasis markers, **verified rather than assumed**. A sweep for the retired wordings comes back with
+  **two hits and both are the sentence explaining the change** (the 2026-08-03 rename, quoted so the note
+  is worth reading) — the ninth time this file records a needle tripping on the prose explaining the fix.
+  Tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false
+  positive at **1**; `concierge-guide.html` clean on every tag), rendered at 1440/390 with **0 overflow**
+  and **all 52 tables full-width under `print`**.
+
+
+## ⚠⚠ THE SYNC REPORT NAMED A PROBLEM WITHOUT NAMING ENOUGH TO ACT ON IT (FIXED 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — `apps-script/quo-sync.gs` ONLY, and only before the next prune.**
+The partner backend was already redeployed for the section below; nothing in it changed again. Found by
+reading the first LIVE `pushQuoAll` log rather than by a test.
+
+- **✅ THE PUSH ITSELF IS PROVEN LIVE (2026-09-18, 12:41pm ET).**
+  `LIVE — pushed to Quo.  create=1  update=194  skip=22  conflict=1  failed=0`, over 79 partners and
+  **147 vendors**. **`update=194` against `create=1` is the one thing only a live read could confirm** —
+  the external-id scheme held and the existing contacts updated in place rather than duplicating. The
+  measurement this whole build was designed around also came back confirmed on the wire: **5 firm
+  contacts collapsing 13 partners** — Pressly (3), Comiter (4), Katz Baskies (2), Boyes Farina (2),
+  Northern Trust (2). That is the 2026-09-18 seed-data reading, live.
+- **⚠⚠ AND THE LOG WAS THEN UNREADABLE AT EXACTLY THE TWO POINTS SOMEBODY HAS TO DECIDE SOMETHING.**
+  - **16 STALE lines, each a bare 32-hex contact id and a uid.** `pruneQuoStaleConfirm` is the one
+    irreversible action in the file, and the list you read immediately before it identified nobody.
+    `_quoLoadExisting` **had the name and the number in hand and discarded both** — it built
+    `externalId -> id` and threw the rest of each record away.
+  - **The CONFLICT line printed the contact LABELS and not the thing that differed.** Two vendor rows
+    for one person under two business names rendered as *"David Schneider (vendor), David Schneider
+    (vendor)"* — identical twice, with nothing on the line saying what the conflict was. `companies`
+    was **computed into the plan and never printed**.
+- **⚠ THE LOADER NOW RETURNS `{ ids, meta }` RATHER THAN A SIDE-CHANNEL ON THE MAP.** `ids` still
+  decides POST vs PATCH and is untouched; `meta` exists only so the report can say who. A non-enumerable
+  property on the id map would have survived `for (var k in existing)` and needed no call-site changes,
+  which is precisely why it was the wrong answer — the contract change is the honest one, and **the test
+  stub broke on it, correctly**, which is how you know the contract is pinned.
+- **⚠ `_quoWho(e)` IS THE ONE RENDERING OF "WHICH CONTACT IS THIS"**, read by the push report AND the
+  prune preview. Two copies is how the list you READ and the list you DELETE come to describe the same
+  row differently. **An unnamed contact prints `(name not returned)` in words** — a bare id behind two
+  spaces reads as a formatting bug rather than as *Quo gave us nothing*.
+- **5996 committed checks** (89 new). **All nine changes revert-verified individually, ZERO green after
+  the three below were re-done** — the loader keeping the name fails 3, the plan carrying it 3, both
+  report lines 2 each, and the rest 1.
+  - **⚠⚠ THREE REVERTS CAME BACK GREEN ON THE FIRST SWEEP AND ALL THREE WERE THE SAME GAP: EVERY CHECK
+    DROVE A PIECE AND NOTHING DROVE THE END.** `_quoLoadExisting` is **stubbed in every other group**, so
+    the real loader could go back to discarding the name with the whole suite passing. `pruneQuoStale`
+    had **no coverage at all** — the list somebody reads before an irreversible delete, never once
+    driven. Both are driven now, the loader against a Quo-shaped response and the preview against a
+    `_quoFetch` that **throws if it is called**, because a preview that hits the API is not a preview.
+  - **⚠⚠ THE THIRD GREEN IS THE ONE WITH THE WORST BLAST RADIUS IN THE FILE, AND IT IS NOT A LOGGING
+    BUG.** A **live** push that cannot read Quo back sees an empty externalId map, so every contact looks
+    new: it would **create a duplicate of all ~210 and then report the originals STALE for deletion** —
+    the exact catastrophe the id scheme exists to make impossible. It only holds while that read is
+    allowed to FAIL LOUDLY. A **dry run may swallow it** (nothing to corrupt, and the plan is still worth
+    reading); a push must not. The asymmetry was correct by construction and untested, so a tidy-up could
+    have collapsed the two. Both directions are pinned now.
+- **⚠ THE REPORT IS DRIVEN, NOT GREPPED.** A build that carries the name on the plan object and then
+  prints a bare id contains every string a source check would look for. The tests capture `Logger` and
+  read **the lines a person would actually see**.
+
+### The greyed examples are gone from every phone and email box
+Anthony, on the vendor form: *"in the phone and email fields there are dummy grey'd out examples. they
+are confusing and it looks like the phone is (561)000-0000 and the email is andy@company.com."*
+App-only, no redeploy.
+
+- **⚠ THE DEFECT IS THE SHAPE, NOT THE WORDING.** A greyed string that is **itself a valid phone number
+  or a valid email address** is indistinguishable at a glance from a value already on file, in a box
+  whose entire job is holding which number reaches which person. An empty box says *nothing recorded*;
+  `(561) 000-0000` says `0000`.
+- **⚠ THE SWEEP FOUND SEVEN MORE THAN THE ONES HE WAS LOOKING AT**, in Client Intake (`i-phone`,
+  `i-email`, `i-executor-phone`, `i-probate-atty-phone`) and Contractors (`c-phone`, `c-email`,
+  `cq-phone`). Same defect, same fix, and **intake is the higher-stakes one** — that is the client's own
+  number and the personal representative's, read off a screen during the call that records them.
+  27 attributes removed across five forms.
+- **⚠ GUIDANCE SURVIVES AND THE CONVERSE IS TESTED.** `e.g. 214` on the extension (the `e.g.` prefix
+  cannot read as a recorded value) and `Direct · Main` on the phone type (a middot-separated pick-one).
+  A test asserts **more than ten placeholders remain**, or the rule would pass on a file stripped bare
+  and stop meaning anything.
+- **⚠⚠ THE TRIPWIRE IS A RULE ABOUT THE SHAPE, NEVER A LIST OF TODAY'S IDS — the fourth markup tripwire,
+  beside the orphaned `_private(` call, the orphaned DOM id and the `onclick=` name check.** No `<input>`
+  in the file may carry a placeholder matching a phone number or an email address. An id list would have
+  caught none of the seven above and nothing added next year: *a net woven from the cases you can think
+  of catches the cases you thought of.*
+- **Revert-verified**: putting back the vendor contact email fails 1, the intake phone 1, and stripping
+  the `e.g. 214` hint fails 1 (the converse).
+- **Verified in headless Chromium on the real page**: all 25 inputs present, **every one rendering an
+  empty box**, both deliberate hints intact, overflow **0** at 1440 / 768 / 390px, **no page errors**.
+  `git diff` is **27 insertions / 27 deletions and not one changed line outside an `<input>` tag**, so
+  the stylesheet is provably untouched — the 368-line CSS deletion rule, applied by reading the diff
+  rather than trusting a green suite.
+- **No document pass** — neither the manual nor the playbook describes a form's placeholder text.
+
+## ⚠⚠ THE OFFICE LINE WAS PRESENTED AS SOMEBODY'S DIRECT NUMBER (BUILT 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — THE PARTNER HALF ONLY.** `referral-partners-backend.gs`
+and `apps-script/quo-sync.gs` (one project, one deployment). **The vendor half is app-only and
+needs nothing.** Anthony: *"they'll be an email for let's say South Florida at navismoving.com and
+then we'll get the owner Andy's email and he's Andy at navismoving.com … office phone number,
+office email, and then two contacts per vendor with cell phone and personal email fields. And I
+guess just do the same thing for the referral partners."* Scoped first; he took the recommendation
+to include a title per contact and **not** to copy the vendor shape onto partners.
+
+- **⚠⚠ THE DEFECT IS NOT "A MISSING FIELD", IT IS A NUMBER PRESENTED AS SOMEBODY'S WHEN IT IS NOT —
+  and it was measured on the real seed data before anything was built.** Of the **79** partner rows,
+  **32 carry `phone_type: Main`**: the firm's switchboard sitting in the one phone field, which the
+  card renders under that person's name and the Call button dials. **13 partners share 5 numbers**
+  between them (Comiter alone is 4 people on one line). Byte-for-byte the 2026-09-09 defect that
+  would have printed the Havellin office line as a concierge's personal mobile, on the directory
+  rather than on our own signature block.
+- **⚠⚠ A VENDOR IS A FIRM AND A PARTNER IS A PERSON, AND COPYING ONE SHAPE ONTO THE OTHER WAS THE
+  WRONG ANSWER.** Anthony asked for the same two contact slots on both. A vendor has people inside
+  it, so two slots is right. **Four partners at Comiter are already four rows**, so a second contact
+  slot on each would model one firm five different ways. What a partner needs is their own line,
+  their cell, the firm's switchboard with their extension on it, and **the assistant who books the
+  meeting** — and `primary_contact` was already that person's name, buried in the research block
+  with nowhere to record their number. Put back to him before building; he took it.
+- **⚠⚠ NOTHING WAS RENAMED, WHICH IS WHY THE VENDOR HALF NEEDS NO REDEPLOY.** `phone` and `email`
+  keep their column names and become the office line and the general inbox **by label only**; slot 1
+  keeps `contact_first` / `contact_last`. 152 rows and ~20 readers are untouched. And
+  `addVendor`/`updateVendor` **create any column they are asked to write**, so the eight new vendor
+  columns appear on the existing sheet by themselves.
+- **⚠⚠ I BROKE THE APPEND-ONLY RULE ON THE PARTNER SHEET AND CAUGHT IT IN THE SAME SESSION.**
+  `COLUMNS` in `referral-partners-backend.gs` is read **by position** and its own comment says
+  *APPEND ONLY, never reorder*. The first cut slotted the five new keys in before the two historical
+  `quo_*` columns, moving `quo_contact_id` from index 33 to 38 — so every read of column 34 on the
+  **live** sheet would have handed back a Quo contact id as somebody's office phone, **and the dialer
+  would then have called it**. Moved to the true end. A test now pins all 35 legacy positions
+  individually and asserts the array length, so the next append cannot do it quietly.
+- **⚠ `phone_type` HAD NO READER IN 30,000 LINES AND IS LOAD-BEARING NOW.** It was the workaround for
+  having one phone field. `referralPhoneIsMainLine` reads it: a row typed Main with nothing in
+  `office_phone` is a switchboard still in the direct-line field, and the card says
+  *"firm main line, not direct"* with the button relabelled **☎ Main line**. **It flags and never
+  refuses** — that number is still the only way through — **and it clears the moment the number is
+  moved into Office phone**, so it is a cleanup somebody can finish rather than a permanent nag. The
+  flag text is in the search blob, so typing *main line* pulls up exactly the 32 rows.
+- **⚠ `vendorContacts(v)` IS THE ONE DEFINITION** of who you can reach at a vendor, read by the card,
+  the tap strip and the search blob. Two copies of that rule is how the card comes to offer a number
+  the search cannot find — the drift this file records more than anything else.
+  - **⚠ A NUMBER WITH NO NAME STILL COUNTS.** That is a card handed over in a driveway and
+    half-typed; requiring the name would throw away the only thing on the slot worth having. The card
+    says *name not recorded*. **A title alone does not count** — there is nobody to reach.
+  - **⚠ `isVendorPhoneKey` IS DERIVED FROM THE SLOTS, NEVER LISTED.** The quick card prefills every
+    number FORMATTED and compares it digit-wise; a mobile added to the slots and missed there would
+    compare `(561) 555-0111` against `5615550111`, read as an edit on every save, and write the
+    formatted string back over the stored digits.
+- **⚠ NO TEXT BUTTON ON A SWITCHBOARD OR A DESK LINE.** The tap strip's own comment says the Text
+  button exists for *"a 'where are you?' to a no-show vendor"* — that is a message to a PERSON, and
+  it was only ever on `phone` because `phone` was the one number a vendor had. It follows the
+  mobiles now. **One row per party, each naming who it reaches** (*☎ Office* · *☎ Andy* ·
+  *✉ Text Andy*), because an unlabelled Call button over a firm with three numbers makes you guess
+  which one it dials — the exact question the split exists to answer.
+- **⚠⚠ THE QUO SYNC IS THE PAYOFF, AND THE EXTERNAL IDs ARE THE WHOLE MIGRATION.** One vendor row now
+  produces up to three contacts, so Andy calling from his cell resolves as *Andy — Navis Moving*
+  instead of an unknown number. **The office record keeps its original `vendor:<uid>` and the person
+  record its bare `<uid>`**; only the new records are suffixed. Suffixing everything would leave all
+  **199 live contacts** matching nothing — the next run creates 199 duplicates **and reports the
+  originals STALE for deletion**.
+  - **⚠⚠ A NUMBER IS ATTRIBUTED TO A PERSON ONLY WHEN IT IS THE BEST WAY TO REACH THEM.** Once a
+    contact has their own mobile the office line goes back to being the FIRM's, because naming it
+    after them puts their name on the receptionist's calls. Until then it keeps the name it has
+    always had — **which is why this ships with ZERO churn**: no mobile is recorded on any of the 152
+    rows today, so every existing contact is left exactly as it reads.
+  - **⚠ A PARTNER'S DESK LINE AND CELL ARE ONE CARD, NOT TWO.** The rule this file is built on is
+    that a NUMBER resolves to one name — which forbids one number on two cards and says nothing
+    against two numbers on one. They are the same person; two cards would be the ambiguity.
+  - **⚠ THE FIRM RECORD IS KEYED `firm:<number>`, NOT `<uid>:office`.** Four partners at one firm
+    emit four identical ids that collapse to one contact; keying on a uid would make the surviving
+    contact depend on which partner happened to be first, and removing that partner would orphan it.
+    It is also the id `_firmPayload` already mints, so the five collapsed switchboard contacts Quo
+    holds today update in place.
+  - **⚠ AN EMAIL-ONLY CONTACT IS DELIBERATELY NOT SYNCED.** There is nothing to resolve on caller ID,
+    and a contact with no number is a row in the dialer that can never ring.
+- **5907 committed checks** (`tests/contact-fields.test.js`, 436 new — the first coverage of what a
+  directory record's contact fields ARE). **All 27 changes revert-verified individually, ZERO green
+  after the four below were re-done** — the office row losing its name fails 1, the contacts dropped
+  from the card 3, the search 7, the switchboard flag 6, the quick card's comparison 4, the column
+  positions 4, and the rest 1–4.
+  - **⚠⚠ TWO GREENS WERE THE SAME GAP AND IT IS THE ONE THIS FILE RECORDS MOST: EVERY CHECK DROVE A
+    PIECE AND NOTHING DROVE THE JOIN.** `isVendorPhoneKey` was tested alone and the map contents were
+    tested alone, and **nothing drove `quickEditVendor` → the form → the patch**. So breaking the
+    prefill, and breaking the digit-wise comparison, each changed nothing any check could see — on the
+    surface Anthony actually described using. There is a group that drives the real modal through a
+    `domStub` now: it asserts every number prefills formatted, that **opening and saving without
+    touching anything writes NOTHING**, and that a real edit writes only what changed.
+  - **⚠⚠ THE THIRD GREEN WAS MY REVERT BEING INVISIBLE TO MY OWN TEST.** The columns check parsed
+    with `/'([a-z_0-9]+)'/`, so the `office_phone_MOVED` sentinel I inserted to prove the position
+    test worked **carried a capital and was skipped entirely** — the array read as unchanged and the
+    check passed. Widened to any quoted token. **⚠ And widening it then matched the apostrophes in
+    my own explanatory comments** (*"a PARTNER IS A PERSON… vendor's"*), so the block is
+    comment-stripped — the sixth time this file records a needle tripping on the prose explaining
+    the fix.
+  - **⚠ THE FOURTH GREEN WAS THE COLLECTOR→PAYLOAD JOIN.** Deleting the line that copies `extras`
+    onto `phoneNumbers` broke nothing: a partner's cell was collected and then thrown away on the way
+    out of the door. Driven now.
+  - **⚠ AND A FIFTH APPEARED AFTER THE FIX: THE GUARD WAS DRIVEN AND NOTHING CHECKED IT WAS CALLED.**
+    Deleting `_pruneAmbiguousExtras(all, byPhone, plan)` from `syncQuoAll` passed. The real
+    `syncQuoAll` runs end to end in dry-run now, which also covers the grouping and the firm collapse.
+- **⚠ `_pruneAmbiguousExtras` WAS EXTRACTED SO IT COULD BE DRIVEN RATHER THAN GREPPED.** It lived
+  inline in `syncQuoAll`, so the only available check was that its source text was present — and a
+  guard that computes the right answer and then throws it away contains every string such a check
+  looks for. Same gap as the DocuSign certificate fetch.
+- **Verified end to end in headless Chromium on the real page:**
+
+  | | |
+  |---|---|
+  | Navis Moving, the firm row | `☎ (561) 555-0100 office · ✉ southflorida@navismoving.com · 🌐 navismoving.com`, **no name on it** |
+  | its two people | *Andy Ramirez · Owner · ☎ (561) 555-0111 mobile · ✉ andy@navismoving.com* and *Dave Chen · Dispatch · ☎ …0122 mobile* |
+  | its tap strip | `☎ Office` · `@ Office email` · `☎ Andy` · `✉ Text Andy` · `☎ Dave` · `✉ Text Dave` |
+  | a vendor with only an office line (today's 152 rows) | reads exactly as before — **no mobile row, no Text button** |
+  | `sms:` links on the whole page | **exactly the three mobiles**, none on any office or desk line |
+  | David Pratt | `☎ …9023 direct · ☎ …1212 mobile · ☎ …2000 office ext 214`, then *Assistant Marie Duval · ☎ · ✉* |
+  | Richard Comiter (the 32-row case) | *"☎ (561) 626-2101 **firm main line, not direct**"* · button **☎ Main line** |
+  | searching a contact's mobile digits | finds the firm · searching *owner* finds it · searching *main line* finds Comiter |
+  | the quick card | every number prefills formatted; open-and-save writes nothing |
+  | the vendor form | 29 `.fld` cells, **no control pushed away from its own label** |
+
+  Overflow **0** at 1440 / 768 / 390px on both tabs, **no page errors**. The app's `<style>` block is
+  **byte-identical** at 73,364 bytes.
+- **⚠ THE FORM GAINED A SECTION HEADER RATHER THAN MORE CELLS.** `.vform` rows stretch to their
+  tallest cell and push every control to the bottom, which is what dropped COI and Reciprocity 101px
+  on 2026-08-27. Contacts sit under their own `fld-wide` sub-headers — **an empty spacer cell was
+  tried first and is wrong at one column**, where it renders as a blank row.
+- **⚠ WHAT IS STILL NOT PROVEN, AND IT IS ANTHONY'S TO DO: NO CONTACT HAS BEEN PUSHED TO THE LIVE QUO
+  API.** The collectors, the ids, the grouping and the payload are driven against the real `.gs`
+  source in a vm, and the whole sync runs end to end in **dry run**. Run `dryRunQuoAll` and read the
+  plan before `pushQuoAll` — specifically that the 199 existing contacts come back as **update**
+  rather than **create**, which is the one thing the id scheme is protecting and the one thing only a
+  live read can confirm.
+- Manual **§13** (four bullets rewritten), **new §13b** (the firm/person split with the field table,
+  the defect it closes, the no-migration note and the half-typed-slot rule), **§14** (two bullets) and
+  **new §14a** (the partner model, the 32-row measurement with how to find them, `phone_type`'s new
+  job, and the redeploy); playbook **Step 2** two notes and **six** symptom→cause rows. Both `.md`
+  copies hand-edited and **48 claims parity-checked, 0 mismatches** — ⚠ two apparent misses were
+  markdown emphasis markers, verified rather than assumed. Tag balance verified on both HTML files
+  (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at 1440/390
+  with **0 overflow** and **all 52 tables full-width under `print`**.
+
+
+## ⚠⚠ A CLIENT CAN PAY BY BANK TRANSFER, AND IT RECORDS ITSELF (BUILT 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18a`.
+Anthony: *"what needs to be done to integrate Stripe payments? i only want to accept ACH to avoid the 3% fee,
+unless we can add a 3% 'convenience fee' to cover the credit card processing fee. otherwise it's too
+expensive. scope this out beofre doing anythign."* Scoped first (`STRIPE_PAYMENTS_SPEC.md`), then
+**"yes, start on phase 1 and 3"**. Phases 1 and 3 in one redeploy.
+
+- **⚠⚠ THE 3% CONVENIENCE FEE CANNOT BE BUILT AS DESCRIBED, AND THE ARITHMETIC IS WHY — measured, not
+  asserted.** Two separate failures and either one is fatal:
+  - **It is a SURCHARGE, not a convenience fee.** A convenience fee must be flat, must be for an
+    *alternative* channel, and cannot be card-not-present-only. Havellin fails all three.
+  - **A surcharge is capped at the LOWER of 3% or the actual cost of acceptance**, and Stripe's card
+    price is `2.9% + $0.30`, so the blended rate is `0.029 + 0.30/x` — **always above 2.9%**.
+    Solving `0.029 + 0.30/x ≥ 0.03` gives **x ≤ $300**. On the $25,715 worked example the deposit's
+    blended rate is **2.9023%** and 3% over-collects by **$12.56**. So the fee is compliant only on
+    tickets at or below $300, which is no Havellin payment that has ever existed.
+  - **The gap it was meant to close: $746.63 on a card against $16.50 on ACH**, on one job. Anthony,
+    asked directly: *"No cards at all."*
+- **⚠⚠ IT IS IN `main-sync.gs`, NOT THE SEPARATE STRIPE SCRIPT, AND THAT IS THE ARCHITECTURAL CALL.**
+  `STRIPE_SCRIPT_URL` pointed at an Apps Script project **not in this repo and never in it** (verified:
+  five `.gs` files tracked, none carries the string). Fine while the link was fire-and-forget; wrong the
+  moment anything reads back, because **read-back is on the app's REQUEST PATH** and has to move in
+  lockstep with `BACKEND_VERSION`, `BACKEND_ACTIONS` and the dispatch-parity test. `checkBackendVersion`
+  cannot reach a second deployment, so a stale one fails silently and reads as an app bug — the defect
+  this file records costing **six weeks**. Same call as DocuSign on 2026-09-17.
+  - **Its source did not need recovering.** Minting a link is thirty lines; rewriting is less work than
+    retrieving, and the rewrite is the only version that can be version-checked.
+  - **`STRIPE_SCRIPT_URL` AND `STRIPE_PK` ARE BOTH DELETED, and the second one is the interesting half:
+    it had ZERO readers in 28,000 lines.** No Stripe.js is loaded anywhere, so the *Stripe Publishable
+    Key* box stored a string nothing consumed. Worse, the box beside it read **"Stripe Secret Key — via
+    Apps Script URL"** — an invitation to paste a real secret into localStorage on a page served from
+    public GitHub Pages. `SYNC_TARGETS` goes four entries to three.
+- **⚠⚠ THE LINK IS VERIFIED AFTER IT IS CREATED, NOT ASSUMED FROM THE PARAMETER, AND THAT IS THE
+  LOAD-BEARING PART.** Whether `/v1/payment_links` honours `payment_method_types` **could not be
+  confirmed** — `docs.stripe.com` is blocked by the egress proxy. So `stripeCreatePaymentLink` reads the
+  link back, and one that would also take a card is **deactivated and never returned**, with the fix
+  named (Dashboard → Settings → Payments → Payment methods). This is the `DriveApp.getThumbnail()` rule:
+  the method name promised a thumbnail and returned a 130KB photograph. **Trust the measurement.**
+  - **⚠ AN EMPTY `payment_method_types` IS A FAILURE, NOT A PASS.** Stripe returns nothing there when it
+    defers to the Dashboard's own settings, which may include cards. ACH-only cannot be *proven* in that
+    case, and an unprovable claim about how a client may pay is the thing this verification exists to
+    refuse. Reverting that one arm fails 1.
+  - **⚠ THE TEST COUNTS THE DEACTIVATION CALL, NEVER GREPS FOR IT.** A build that reads the methods back,
+    notices the card and returns the link anyway contains every string a grep would look for — the same
+    gap this file records on the DocuSign certificate fetch, where a revert that fetched the file and
+    threw it away came back **green**. What matters is that a SECOND request goes out and no url comes back.
+- **⚠⚠ ONLY `succeeded` IS MONEY, AND ON ACH THAT IS NOT WHAT THE SESSION SAYS.** The checkout session
+  reads `complete` the instant the client authorises their bank, while the transfer is **about four
+  business days out and can still fail**. `stripePaymentsForLink` reads the **payment intent's** status,
+  never the session's, and a test drives a session at `complete` over an intent at `processing` and
+  asserts nothing is recorded. Recording the authorisation is byte-for-byte the defect the
+  clears-on-receipt split exists to undo, arriving by a different door.
+- **⚠ POLLING, AND THE WEBHOOK IS RULED OUT FOR ONE REASON RATHER THAN FOUR.** `doPost(e)` exposes no
+  request HEADERS and Stripe signs with `Stripe-Signature` with no query-param alternative, so an Apps
+  Script endpoint **cannot authenticate a delivery** — an open URL, on a public repo, that marks a
+  $12,858 deposit received. That is the same fact that ruled out DocuSign Connect.
+  - **⚠⚠ BUT THE DOCUSIGN RATE-LIMIT HAZARD DOES NOT TRANSFER, and nobody should copy the 20-minute
+    floor across as though it were a rule.** DocuSign publishes one request per unique resource per 15
+    minutes and names **revocation** as the penalty. Stripe has no such rule. `STRIPE_RECHECK_MINS` is
+    **10**, and it exists only so a dashboard repaint and the 15-second remote tick do not each fire a
+    call — not because a vendor would punish us.
+  - **⚠ NO TIMER AT ALL.** Wired to **arrival** — `_jobsLanded` and `openClientDashboard` — so it fires
+    when somebody is looking at the answer and never when nobody is. ACH takes four business days;
+    nothing needs it sooner.
+  - **⚠ SEQUENTIAL, NEVER `Promise.all`.** Every store write takes the **global** Apps Script lock, and
+    this file records in full what parallel sending cost on 2026-09-11: *the retry manufactured the
+    condition it was retrying.*
+- **⚠⚠ IDEMPOTENT ON THE PAYMENT-INTENT ID, NEVER ON `payment.id`.** That is `max(id)+1` over the
+  payments **this device** holds, so two devices both mint `1` — and this file already records that a
+  union by id then **FUSES two real payments into one** rather than merely losing one. The intent id is
+  Stripe's, unique, and the same on every device. Driven: three polls over one settled transfer record
+  it once.
+- **⚠⚠ THE RECORD SAYS `stripe_ach` AND SETS `clearedOn`, WHICH LOOKS LIKE A CONTRADICTION AND IS NOT.**
+  The METHOD is off the clear-on-receipt list because when a **person** records an ACH by hand all they
+  know is that the client authorised it. This record exists only because **Stripe reported the intent
+  `succeeded`** — the money has genuinely settled. That is the one moment an ACH payment is cleared, and
+  it is the whole reason read-back is worth building. Reverting the method to `stripe` fails 2.
+- **⚠ A FAILED CHECK SPEAKS, AND THE WORDING IS THE REQUIREMENT.** A silent failure leaves a settled
+  deposit reading unpaid forever — a state with no exit. But *"not paid"* is also a **claim**, and it
+  would be false, so the notice closes *"Money may already have arrived; this is not a statement that it
+  has not."* **And it does not stamp `checkedAt`**, or a transient 502 makes the app blind for ten
+  minutes rather than until the next time somebody opens the client.
+- **⚠ THE AMOUNT COMES FROM `invoiceHtml(job, stage).amtDue`, THE ONE THING THAT OWNS IT.** Re-deriving
+  it would be a second copy of the money — the drift this file records more often than anything else —
+  and it is the figure the client's own invoice states as due, so the link and the document cannot
+  disagree. A **blocked** invoice cannot be sent for payment at all.
+- **⚠ ONE LINK PER STAGE.** Two links against one invoice is two ways to pay it, and a client who pays
+  both has overpaid by a deposit. Once minted the same link comes back. **And no automatic retry** — the
+  rule `addVendor` and the DocuSign send already follow: a failed POST never reveals whether it landed,
+  and re-sending mints a second link.
+- **⚠ IT STAMPS THE AGREEMENT ON THE WAY THROUGH, and a pre-existing test is what caught me not doing
+  it.** `dashboard-actions` asserts every door into the agreement runs `ensureAgreementApproved`; the
+  first cut of `stripePaymentLink` did not. Asking a client to wire the deposit asks for money the
+  agreement **defines**, so minting a link against an unapproved agreement requests money under terms
+  nobody signed off. **It gates the MINT, not the re-show** — a link already in a client's hands is a
+  read, and re-displaying it must not turn on an estimate that has since been reopened for editing.
+- **⚠ THE APP NEVER SENDS IT.** The link is shown and Anthony sends it with the invoice himself — the
+  same requirement that makes `gmail.compose` deliberately unable to send.
+
+- **5471 committed checks** (`tests/stripe-payments.test.js`, 168 new on top of Phase 2's 37 — the first
+  coverage of what a payment link is or how one is read back). **All 31 changes revert-verified
+  individually, ZERO green** — form-encoding-not-JSON fails **8**, the deactivation check **9**, ACH-only
+  **8**, the intent-status read **5**, only-`succeeded` and the intent-id idempotence **4** each, and the
+  rest 1–2.
+  - **⚠⚠ THE INTENT-STATUS READ FAILED ONLY *ONE* ON THE FIRST SWEEP, ON THE SINGLE MOST CONSEQUENTIAL
+    LINE IN THE BUILD.** Every check drove a PIECE — the backend group asserted it reports the intent's
+    status, the app group asserted the recorder takes only `succeeded` — and **nothing drove the JOIN**,
+    so the two ends could stop meeting with the suite passing. The gap this file records more than any
+    other. There is a group that hands the REAL backend's answer for a `complete`/`processing` session to
+    the REAL `applyStripePayments` and asks what the JOB says; the revert now fails **5**.
+  - **⚠ TWO REVERTS CRASHED THE FILE INSTEAD OF FAILING**, so each reported one throw rather than the
+    assertions it really breaks: `c.calls[1].url` is `undefined.url` when the deactivation never goes
+    out. Read defensively, they fail **8** and **9**. Second time this file records that shape.
+  - **⚠ AND ONE NEEDLE MATCHED TWICE** — `_jobTouch(job, 'payments', payment.uid)` with its comment is
+    **byte-identical** in `saveDeposit` and `_stripeRecordPayment`, which is correct (one shape, two
+    writers) and makes the line unusable as a needle. Scoped to its neighbours, it fails 1. The `NEEDLE
+    x0` guard is what caught it rather than it reading as a green revert.
+- **Verified end to end in headless Chromium on the real page**, driving the real rail, the real
+  `stripePaymentLink` and the real `stripeRefresh` against a fake backend:
+
+  | | |
+  |---|---|
+  | the rail's secondary | `dashStripeLink(991,'deposit')` — the stage rides with it |
+  | the rail's primary | still the invoice send, never the link |
+  | pressing it | posts `stripeLink` · **$12,858** · stage `deposit` · the HVL id in the description |
+  | what it says | *"bank transfer only, no card … It records itself here once the transfer settles (about four business days)"* |
+  | **pressing it again** | **0 network calls**, same link |
+  | the client AUTHORISES (`processing`) | **0 payments · not funded**, and the check IS stamped |
+  | it SETTLES (`succeeded`) | **1 payment** · funded · `stripe_ach` · cleared · *recorded by Stripe* · `_jobTouch` stamped |
+  | polled again | still **1** payment, $12,858 |
+  | the deposit afterwards | **drops off the watch entirely** |
+  | a **502** on the check | names the 502, *"this is not a statement that it has not"*, **`checkedAt` unmoved**, not funded |
+  | Settings | **both Stripe boxes gone**; the note names `STRIPE_SECRET_KEY` |
+
+  Overflow **0** at 1440 and 390px, **no JS page errors**. The app's own `<style>` block is
+  **byte-identical** at 73,349 bytes.
+- **⚠⚠ WHAT IS STILL NOT PROVEN, AND IT IS THE DOCUSIGN SHAPE AGAIN: NO LINK HAS EVER BEEN CREATED
+  AGAINST THE LIVE API.** The egress proxy blocks `stripe.com` from the build environment, so the
+  request shapes, the ACH verification, the intent-status read and the recording are verified in SHAPE
+  and against stubs. **Two things need one real sandbox run** and neither can be asserted from here:
+  that `/v1/payment_links` returns `payment_method_types` at all (if it returns nothing the app refuses
+  every link — loudly, which is the safe direction, but it is a thing to see), and that a real ACH test
+  payment moves `processing → succeeded` the way the read-back expects.
+- **⚠ THREE PRE-EXISTING SUITES PINNED THE OLD WORLD AND BROKE CORRECTLY; ALL RESTATED, none deleted.**
+  `tabs-retired` pinned the label *Stripe link*, the `STRIPE_SCRIPT_URL` gate and `generateStripeLink`
+  surviving; `dashboard-actions` pinned that function as a door into the agreement — **and that one was
+  right, which is how it caught me not stamping**. The requirement never was the label or the variable
+  name; it was that the link is reachable from the deposit row, is never the primary, is withheld when
+  the backend is unconfigured, and stamps the agreement on the way through.
+- Manual **§1 · §2 (Settings) · §3 · §8 · §9a**, with a **new §8b** (the two costs, why the 3% fee is not
+  buildable, the verify-and-deactivate rule, four-business-day settlement and why a client saying *"I've
+  paid"* over a silent screen is the normal state, one link per stage, the failed-check wording, and that
+  the key goes in Script Properties and nowhere else); playbook **Step 9** with a `.stop` and **seven**
+  symptom→cause rows. **⚠ Three standing claims were CORRECTED rather than added to**, each of which
+  would have had somebody do the wrong thing: the *Generate Payment Link* note describing a button that
+  no longer exists, the Settings table asking for two keys that are now refused, and the playbook's
+  *"Wires, cards and cash are marked cleared on receipt"* — stale since Phase 2 in that file only. Both
+  `.md` copies hand-edited and **21 claims parity-checked, 0 mismatches**; tag balance verified on both
+  HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
+  1440/390 with **0 overflow** and **all 50 tables full-width under `print`**.
+
+### ⚠⚠ I SHIPPED A LIVE `ReferenceError` AND THE SUITE WAS GREEN THROUGH IT — AGAIN
+- Replacing `generateStripeLink` with `stripePaymentLink` left **two callers behind**:
+  `onclick="generateStripeLink()"` in the markup and a bare call inside `dashStripeLink`. A
+  ReferenceError on every press of two live controls, and **5,317 checks passed**. Found by reading tool
+  output, not by a test. This file already records the lesson twice (Slice 4's `_setAgrEmailBusy`,
+  Slice 7's three orphaned DOM writes) — *a consolidation is exactly when this bites, because deleting a
+  duplicate path is the right move and it leaves callers behind.*
+- **⚠⚠ AND THE EXISTING TRIPWIRE COULD NOT SEE IT, WHICH IS THE PART WORTH FIXING.**
+  `doc-send.test.js` has checked *"every `_private(` call resolves to a definition"* since Slice 4 — scoped
+  to underscore names on the reasoning that private helpers are the class removed in a sweep. **A PUBLIC
+  function is removed in a sweep too**, and when its caller is a **string** no parser anywhere notices.
+- **THE FOURTH SHAPE IS NOW A TEST: every function named inside an `onclick=` attribute or a rail
+  action's `call:` string must exist.** Those are text the browser resolves at press time and nothing
+  checks before then, so they are exactly where a rename dies silently. **Verified by re-introducing the
+  real bug**: the check names `generateStripeLink [markup]`, and the revert fails **2**. Two exempt classes, both named rather than
+  pattern-matched away — a keyword opening an inline statement (`onclick="if(event.target===this)…"` on
+  five modal overlays) and a browser global we do not rename (`oninput="clearTimeout(window._invQT)…"`).
+
 ## THE PROBATE CONTRACT READ AS ASHLEY SIGNING THE DATE (FIXED 2026-09-18)
 Anthony: *"fix the probate signature block."* Flagged in passing during the DocuSign build and deliberately
 left alone there — it is unrelated to e-signature and had no business in a commit about it. App-only, no
@@ -2055,7 +2560,10 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/sharp-allen-1cc2ur`
+- Active feature branch: `claude/determined-keller-wa6ero`
+  (was `claude/busy-maxwell-q7zrpd`)
+  (was `claude/magical-keller-koqpwl`)
+  (was `claude/sharp-allen-1cc2ur`)
   (was `claude/gifted-babbage-wnzm7w`)
   (was `claude/admiring-tesla-7ysggp`)
   (was `claude/festive-noether-ggr0fn`)
@@ -2068,7 +2576,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/sharp-allen-1cc2ur:main`
+  `git push origin claude/determined-keller-wa6ero:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
