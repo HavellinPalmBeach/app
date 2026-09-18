@@ -266,15 +266,15 @@ Detached buildings are scored as **whole buildings sized by bedroom count**, not
 
 | Row | Weight | Replaces |
 | --- | --- | --- |
-| Casita — bedroom & bath | 2.5 | the old *Casita* row, moved here out of Exterior & Auxiliary |
-| Pool House — with living quarters | 4.5 | Pool House living/bedroom + kitchen/bar + bath |
 | Guest House — 1 / 2 / 3 bedroom | 7.0 / 9.0 / 11.0 | Guest House bedroom + living + kitchen/bar + bath, then +2.0 a bedroom |
 | Caretaker's Cottage — 1 / 2 / 3 bedroom | 5.5 / 7.5 / 9.5 | Cottage bedroom + living/kitchen + bath, then +2.0 a bedroom |
 | Additional Outbuilding Room | 2.0 | unchanged — still a free-text row |
 
 Each weight is the **sum of the sub-rooms it replaces**, so a fully-ticked building prices exactly as it did before; only the number of clicks changed. Every additional bedroom adds 2.0, the old bedroom weight — keep that step if a size is ever added.
 
-> **The pool house was in the list twice, and ticking both double-charged it.** A bare *Pool House* row sat in Exterior & Auxiliary (2.7) while three *Pool House — …* sub-rows sat here (4.5 together). They are the same building — the split was meant to be cabana versus one with living quarters, but nothing on screen said so. The Exterior row is now **Pool House / Cabana — no living quarters** and this section has **Pool House — with living quarters**. Pick one. On a mid-size estate the old double-tick was worth about 7 specialist hours nobody would have questioned.
+> **ONE pool house, one row, and it assumes living quarters (changed 2026-09-18). It is not in this section — it is in Exterior & Auxiliary.** There used to be two rows for one building: a bare *Pool House* in Exterior & Auxiliary (2.7) against three *Pool House — …* sub-rows here (4.5 together). Ticking both double-charged it by about 7 specialist hours nobody would have questioned. They were renamed apart on 2026-08-03 — *Pool House / Cabana — no living quarters* against *Pool House — with living quarters* — which made the pair readable without making it necessary, so on 2026-09-18 it became one row. **The survivor is *Pool House — with living quarters* in Exterior & Auxiliary, and it carries 4.5 rather than the 2.7 that row used to have** — the label promises a bedroom, a kitchen and a bath, so it has to price like one. Measured on a 3,500 sqft Estate Settlement: **12 specialist hours, against 7 at the old 2.7.** A pool house with nothing in it is a changing room — score the *Pool / Cabana Half Bath* row and leave it at that.
+
+> **The casita row is gone (2026-09-18), and what to tick instead depends on what the building actually is.** It moved out of Exterior & Auxiliary into this section on 2026-08-03 and then came out of the grid altogether: at 2.5 it said nothing the pool house and the 1-bedroom guest house either side of it did not, and most people describing a property use *casita* and *guest house* for the same structure. A casita that is a bedroom and a bath is the free-text **Additional Outbuilding Room** row — rename it *Casita* and it prices at **2.0**, half a load unit under the old row, so on a genuinely small one expect roughly one specialist hour less than before. A casita with its own living space or kitchenette is a **Guest House — 1 bedroom** at 7.0. Pick on what is inside it, not on what the owner calls it.
 
 ### 5c. Job Settings
 
@@ -766,9 +766,9 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 
 **Live since 2026-09-17.** An agreement can go out two ways, and **the choice is made per job, on the job, not in Settings**. Anthony's reason: *"if somebody is old school and we need to just send them a PDF to sign, we can do that — but we don't need to go into the app and change the settings overall."*
 
-| | DocuSign (the default once it is switched on) | Send as a PDF |
+| | DocuSign (the default, firm-wide) | Send as a PDF |
 |---|---|---|
-| **What you press** | **Send for signature** on the *Signing packet sent* row. | **Send as a PDF to sign by hand**, beside it. |
+| **What you press** | **Send for signature — DocuSign** on the *Signing packet sent* row. **The button names the route it will take**, so the two are never confused at the moment of pressing. | **Send as a PDF to sign by hand**, beside it. |
 | **Who sends it** | DocuSign emails the client directly. | You do — a Gmail draft with the packet attached, which you read and send yourself. |
 | **✓ I've sent it** | **Not shown.** There is nothing to confirm. | Shown. Press it once the email has gone. |
 | **The signature** | Arrives **on its own**. The row reads *DocuSign is watching for it*. | **✓ Record the signed agreement**, by hand (§8). |
@@ -778,6 +778,28 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 > **⚠⚠ THE ROUTE IS DECIDED WHEN YOU SEND, AND IT IS FIXED FROM THAT MOMENT.** Both buttons are offered side by side until one of them is pressed; afterwards **only the route you chose is offered**. That is not tidiness: an agreement already sitting in somebody's DocuSign inbox must not also be recorded as signed by hand, or the app and DocuSign disagree about whether a contract exists — and a paper job must never be waited on by a watcher that has no envelope. **A job papered before DocuSign was switched on keeps its manual button**, permanently; turning DocuSign on does not strand work already in flight.
 
 > **⚠ You cannot mark a DocuSign agreement signed by hand, and that is the point.** The manual recorder is withdrawn and refuses to open on a job with a live envelope. Without that, somebody ticks it while DocuSign still says *sent* and the two records disagree about a contract. **If the client says they signed and the app has not caught up, open the client** — that is what triggers the check.
+
+### What the client actually fills in
+
+**Three things, and only three**: their signature, the date, and a **marketing choice**. Nothing else is a field — no initials, no role tick box.
+
+| Field | Required? | Where it is |
+|---|---|---|
+| Client signature and date | **Yes** | The signature block at the end. |
+| *I AUTHORIZE* / *I DO NOT AUTHORIZE* marketing use | **Yes — one of the two** | §10.2 on the standard form, §7.2 on the estate/probate form. |
+| Marketing signature | **Only if they authorize** | Directly beneath the two boxes; DocuSign hides it entirely unless *I AUTHORIZE* is picked. |
+
+> **⚠⚠ THE CHOICE IS REQUIRED; THE SIGNATURE IS NOT. THAT PAIRING IS THE WHOLE MECHANISM AND IT IS NOT A COMPROMISE.** DocuSign's guided navigation walks a signer through the *required* fields and jumps *past* optional ones. So an optional signature on its own is a consent nobody is ever asked for — the client clicks Finish having never seen it. Making the **pick** required is what puts the question in front of them; making the **signature** conditional on answering *yes* is what stops a client who declines being asked to sign something they just refused. Declining takes one click and no signature.
+
+> **⚠ IT IS OPT-IN NOW, AND IT USED TO BE OPT-OUT.** The old clause published a client's home *unless they ticked a box saying not to* — silence read as consent. It reads the other way round now: nothing is published unless the client affirmatively authorizes it and signs for it, and **an unanswered agreement means no**. Anthony's reason: *"with respect to using photos in social media, I do think they're going to need to sign that."*
+
+> **Documentation photography is not a choice and is not asked about.** We photograph the property and its contents because that is how the inventory, the appraisal support and the chain of custody are built — a client paying us to inventory their home is not separately consenting to the inventory. It used to carry an *initials* box, which was removed on 2026-09-18: *"if they are paying us to inventory their home, we're obviously going to inventory their home. Let's just state what we do and how we treat that confidential information."* The clause now says plainly where the media is stored, who can see it, and that it is never sold or shared (§10.1a standard, §7.1 estate).
+>
+> **⚠ The estate/probate form had no photography or marketing section at all until 2026-09-18**, and it is the form on the matters where the media is most sensitive. Both forms carry both clauses now.
+
+> **Nothing asks the signer to classify themselves any more.** Who has authority to sign is established at intake and we are talking to that person, so a pick-one on the contract was a question with no reader.
+>
+> **⚠ THE ESTATE FORM STILL STATES THE ROLE, AND THAT IS NOT THE SAME THING.** *Role / Authority* at §1.2 and *Title / Role* on its signature page are the **capacity that lets that person bind the estate** — exactly what *Managing Member* does on our side of the block, and what counsel queries on a court-reviewed matter. They print **the role recorded at intake**. What came off is the **four-option menu** they used to fall back to (*Personal Representative · Executor · POA · Other*), which on an executed contract — and on the signature page, beside the line the representative signs — reads as a pick-one they are meant to answer. No e-signature field was ever placed on it.
 
 ### How the signature gets back
 
@@ -793,6 +815,8 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 > It is fetched **once, on the day it completes**, and never again — document downloads count against the same limit. If the retrieval fails, **re-open the client** and it tries again.
 
 > **Havellin countersigns second, and the envelope is not complete until we do.** The client signs first (routing order 1), then the agreement comes to Havellin. DocuSign only reports *completed* when both are done, so the app cannot mark a job signed off a half-executed contract. **An envelope sitting at *signed* is usually waiting on us** — check the DocuSign inbox.
+>
+> **⚠ THE COUNTERSIGNATURE GOES TO ANTHONY PERSONALLY, NOT TO `agreements@`, AND THE REASON IS THE AUDIT TRAIL.** A department address is a Google Group: whoever opened it first would sign, and the certificate of completion would record that signature under a name that may not be the person who clicked. On a contract, the audit trail naming the wrong human is the one failure it exists to prevent. **`agreements@` is copied instead**, at routing order 3 — so the firm gets the executed agreement on file *after* both signatures, never an unsigned one that reads in the inbox like an executed one. The client and Anthony both receive the completed copy from DocuSign as well.
 
 > **⚠⚠ FIXED 2026-09-18 — AN AGREEMENT SENT THROUGH DOCUSIGN BEFORE THIS DATE GOT STUCK, AND IT REPAIRS ITSELF.** Reported live, on an envelope both parties had already signed: the job sat on *Signing packet sent* and never moved on to the deposit. The send really did go out and the signature really did come back — **nothing was ever lost, and nothing in DocuSign was wrong**. The app recorded the send on the document but not on the job, and three things then failed in silence: it stopped watching the envelope, so it never asked DocuSign for the status; it would have refused the signature if it had; and nothing on screen said so.
 >
@@ -802,7 +826,9 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 
 ### Switching it on
 
-**Settings → Signature provider**: *Recorded by hand* (the default) or *DocuSign*. It is per device, and it only decides whether the DocuSign button is *offered* — it changes nothing about a job already sent. Five values must also be set in the Apps Script project's **Script Properties**, where the Quo key lives:
+**There is nothing to switch on in Settings, and the control that used to be there was removed on 2026-09-18.** DocuSign is the firm's route for every agreement, on every device. *It used to be a per-device dropdown defaulting to "Recorded by hand"*, which meant a concierge who had never opened Settings sent agreements the old way without knowing there was another — and that is exactly what happened: an agreement went out as a plain email on one browser while another was on DocuSign. **How a firm signs is not a per-browser preference.** The per-job choice is unaffected: **Send as a PDF to sign by hand** is still on every unsent agreement.
+
+Five values must be set in the Apps Script project's **Script Properties**, where the Quo key lives:
 
 | Property | Where it comes from |
 |---|---|
@@ -1388,10 +1414,10 @@ The premium's *rate* is pinned to the estimate the client accepted, so changing 
 **Tab: Vendors.** The curated network of trades and service providers (painters, landscapers, movers, appraisers, haulers, etc.), stored in its own Google Sheet. Work each vendor through its lifecycle: *Identified → Contacted → Vetting → Active* (with *Backup* and *Do Not Use* as terminal states). Only **Active** vendors can be assigned to a job in the Job Plan sourcing. Status is set with the **color-coded dropdown on the card** (under the vendor's category), which also shows the rating beside it — there is no separate status badge.
 
 - **☎ Log contact** — type what you discussed in the note field, then log it; this stamps today as the last-contacted date and stores the latest contact note (used for follow-up cadence). Logging the *first* contact auto-advances an *Identified* vendor to *Contacted* (it never moves a vendor already at Vetting/Active/etc.). The last-contacted date + note show in a highlighted bar right under the log box, so you see the prior touch before you call. Last-contacted is set only this way — it is read-only in the edit form. The old bulk-imported Google review is no longer shown or editable; what surfaces is the star rating earned from completed jobs.
-- **Search** — free text across name, contact, phone, and category. Multiple words are AND-ed (so *"west palm mover"* narrows rather than widens), and a numeric query matches the phone number however it's punctuated.
-- **Tap to call / text / email** straight from the vendor card. In the Job Plan sourcing, an assigned vendor's phone is a tap-to-dial link too — you're usually on site when you need them.
-- **Quick edit / Full edit** — *Quick edit* is contact details only, saves just what you changed, and is the one to use from a phone. *Full edit →* opens the complete record below.
-- **Edit (full)** — intake/vetting fields: category group, category, contact, pricing structure, ballpark, minimum job, lead time, COI on file, license, service area, notes.
+- **Search** — free text across name, category, service area, notes and **every contact field**: each contact's first and last name, their title, their own email address, and the digits of the office line and of both contact mobiles. Multiple words are AND-ed (so *"west palm mover"* narrows rather than widens), and a numeric query matches a number however it's punctuated, so typing a mobile you've been called from finds the firm it belongs to.
+- **Tap to call / text / email** straight from the vendor card, **one row per party and each row says who it reaches** — *☎ Office* and *@ Office email* for the firm, then *☎ Andy* / *✉ Text Andy* for each contact who has a mobile on file. **Text is only ever offered on a mobile**: a switchboard does not receive SMS. In the Job Plan sourcing, an assigned vendor's phone is a tap-to-dial link too — you're usually on site when you need them.
+- **Quick edit / Full edit** — *Quick edit* is contact details only, saves just what you changed, and is the one to use from a phone. It carries **both contacts in full** (name, title, mobile, email) as well as the office line, because "the owner gave me his direct email" happens standing in front of the vendor, not at a desk. *Full edit →* opens the complete record below.
+- **Edit (full)** — intake/vetting fields: category group, category, the firm's office phone / office email / website / address / service area / licence, **two contacts** (see §13b), pricing structure, ballpark, minimum job, lead time, COI on file, notes.
 - Performance is rated post-job (a rolling average), kept separate from the curated fields so a vetting edit never wipes performance history.
 - **Delete (manager PIN)** — inside the Edit form, *Delete this vendor permanently* removes the row from the app *and* the spreadsheet. It's PIN-gated (the same manager PIN as approvals/client-delete) and reserved for bulk-import errors or defunct companies — not a substitute for *Do Not Use*, which is for real vendors you're retiring. A vendor with job history (a rating or completed jobs) is blocked from deletion and pointed to Do Not Use instead, so a delete can't orphan performance history.
 
@@ -1423,17 +1449,50 @@ The sixth estimate card, *End-of-Job Logistics*, is not a Category Group — it 
 
 > **An appraiser who also buys or sells is flagged, and the Independent box is unticked for you.** On the Inventory tab's appraiser roster, the directory picker marks such a firm *⚠ also Jewelry & Watch Buyer* and, when you pick it, unticks *Independent* and says why. A firm that may end up acquiring the property — buying it outright, or taking it to auction or an estate sale for a commission on the price — cannot give a defensible opinion of its value. The box stays editable: whether that matters on this estate is your call, not the app's. Before 2026-09-09 the option label hid the buying trade and the box shipped ticked, so the roster asserted *Independent* over precisely the firm that was not — **re-check the roster on any job where an appraiser was linked from the directory before that date.**
 
+### 13b. The office line and the people behind it (added 2026-09-18)
+
+A vendor is a **firm**, so the record separates what belongs to the company from what belongs to a person. Anthony's case: *southflorida@navismoving.com* is the company's inbox, and *andy@navismoving.com* is the owner's — and before this there was one email box, so you kept one and lost the other.
+
+| Field | Whose it is | What it's for |
+|---|---|---|
+| Office phone · Office email | The firm | The switchboard and the general inbox. Reaches whoever picks up. |
+| Contact 1 / Contact 2 — first, last, **title** | A person | Who to ask for. The title is the useful half: *Owner* and *Dispatch* are different calls. |
+| Contact 1 / Contact 2 — mobile, email | That person | Their own cell and their own address. Never the firm's. |
+
+> **What it fixes, and it was a real defect rather than a missing box.** The card used to print the contact's name at the head of the office number — a switchboard presented as that person's direct line, the same mistake as printing the Havellin office line as a concierge's personal mobile (§7). The office row carries **no name** now and says *office* beside the number; each person gets their own row saying *mobile* beside theirs.
+
+> **Nothing was renamed, so nothing migrated.** The existing `phone` and `email` columns still hold the office line and the general inbox — only their labels changed — and Contact 1 keeps the `contact_first` / `contact_last` columns it always had. **No Apps Script redeploy is needed for vendors**: the vendor sheet creates any column it is asked to write, so the new fields appear on the existing sheet by themselves.
+
+> **Fill in whichever half you have.** A slot with a number and no name still counts — that is a card you were handed and half-typed, and the app would rather keep the number than insist on a name; the card says *name not recorded* so you know what's missing. A slot with a title and nothing else does *not* count, because there is nobody to reach. A vendor with nothing but an office line reads exactly as it always did.
+
 ## 14. Referral Partners
 
 **Tab: Referral Partners.** A CRM for the network of attorneys, realtors, trust officers, and Douglas Elliman agents who refer business. Mirrors the Vendor Directory: its own Google Sheet + Apps Script, kept apart from job data.
 
-- **Add / Edit a partner** — first & last name, type, firm, primary contact, phone, email, website, owner, and notes. Type, phone, and email are required. Owner is one of Anthony Graziano · Ashley Jerome · Anthony Graziano Jr.
-- **Search · tap-to-contact · Quick edit** — the same field pattern as the Vendor Directory: free-text search across name, firm, title, phone and city (multi-word AND-ed, numeric queries match the phone), tap-to-call/text/email on the card, and a **Quick edit** for contact details with **Full edit →** as the escape hatch.
+- **Add / Edit a partner** — first & last name, type, firm, title, owner and notes, plus the four ways to reach them (see below). Type and at least one way to reach them are required. Owner is one of Anthony Graziano · Ashley Jerome · Anthony Graziano Jr.
+- **Search · tap-to-contact · Quick edit** — the same field pattern as the Vendor Directory: free-text search across name, firm, title, city and **every number and address on the record** including the assistant's (so *"who is Marie at Gunster"* is a real search), tap-to-call/text/email on the card one labelled row per party, and a **Quick edit** carrying the direct line, the mobile and the office number with **Full edit →** as the escape hatch.
 - **Status** runs the outreach lifecycle *Identified → Contacted → Intro Meeting → Active Partner* (with *Dormant* and *Do Not Use*). It's set with the **color-coded dropdown on the card** (under the partner's type, beside the priority badge) — the same pattern as the Vendor Directory. Partners are retired by status rather than deleted.
 - **Log outreach** — stamps last-contacted to today, and auto-advances a still-*Identified* partner to *Contacted* (never downgrades one further along). The last-contacted date shows in a highlighted bar right above the button.
 - **Dormancy nudge** — an engaged partner with no outreach or referral in 90 days is flagged "Needs Nudge."
 - **Leaderboard** — jobs are attributed to a partner when a professional referral source is linked at intake, so you can see who sends the most business.
 - **Delete (manager PIN)** — inside the Edit form, *Delete this partner permanently* removes the row from the app *and* the spreadsheet, PIN-gated like the vendor delete. Reserved for bulk-import errors / defunct contacts, not a replacement for *Do Not Use*. A partner with referrals attributed to them is blocked from deletion (steered to Do Not Use) so the leaderboard history stays intact.
+
+### 14a. Reaching a partner (added 2026-09-18)
+
+**A partner is a person, not a firm** — four partners at Comiter are already four rows — so this is deliberately *not* the vendor's two contact slots. What one partner needs is their own line, their cell, the firm's switchboard, and the assistant who books the meeting.
+
+| Field | Whose it is | Note |
+|---|---|---|
+| Direct line | Them | Their desk. Unchanged column, relabelled. |
+| Mobile | Them | The only number offered a *Text* button. |
+| Office phone · Extension | The firm | Several partners at one firm legitimately share the switchboard; the extension is theirs on it. |
+| Assistant / gatekeeper · phone · email | Somebody else | The name column already existed, buried in the research block; it now sits beside that person's own number and address. |
+
+> **⚠⚠ On roughly half the directory, the "direct line" is the firm's switchboard — and the card now says so.** Measured on the 79 partners before this shipped: **32** carried *Phone type: Main*, meaning the one phone field held a main number, which the card rendered under that person's name and the Call button dialled; **13 partners shared 5 numbers** between them. Those rows read *⚠ firm main line, not direct* on the card and their button says *☎ Main line*. **It flags and never refuses** — that number is still the only way through — and it clears the moment you move it into *Office phone*. **To find them all: search the Referral Partners tab for *main line*.**
+
+> **Phone type stops being decoration.** It had no reader anywhere in the app until now; it was the workaround for having one phone field. It is the migration signal instead — it is what tells the card which kind of number the legacy value is. Keep it accurate on any row you clean up.
+
+> **⚠⚠ This one needs an Apps Script redeploy, unlike the vendor half.** The Partners sheet is read **by column position**, so the five new columns had to be appended after every existing one and the backend redeployed before they can be saved. Paste `referral-partners-backend.gs`, Deploy → Manage deployments → Edit → New version, then run **backfillIds** once from the editor to write the new header cells. **Until that is done, partner contact fields will not save.** The vendor half needs nothing.
 
 ## 15. Drive Folder Reference
 

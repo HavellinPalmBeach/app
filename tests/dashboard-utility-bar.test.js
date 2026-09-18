@@ -52,7 +52,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
     'workingDaysInclusive', 'approvedEstimateFor',
     'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
-    'standingFlagLines', 'standingFlagsBlock', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent'];
+    'standingFlagLines', 'standingFlagsBlock', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent'];
   const VARS = ['ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',

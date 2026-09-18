@@ -1,5 +1,6 @@
 # Havellin Palm Beach — App Notes
 
+<<<<<<< HEAD
 ## ⚠⚠ DOCUSIGN SENT THE AGREEMENT, THE CLIENT SIGNED, AND THE APP NEVER NOTICED (FIXED 2026-09-18)
 Anthony, mid-Stripe-setup, on a real envelope both parties had signed: *"I just sent them the signing packet
 through DocuSign and we both signed it and the agreement came back signed through DocuSign, but the job
@@ -90,6 +91,458 @@ on the room-status report, and the reason this was a one-line diagnosis rather t
   with. Both `.md` copies hand-edited and **10 claims parity-checked, 0 mismatches**; tag balance verified on
   both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
   1440/390 with **0 overflow** and **all 50 tables full-width under `print`**.
+=======
+## ⚠⚠ DOCUSIGN IS THE FIRM'S ROUTE, AND THE MARKETING CONSENT IS A REAL SIGNATURE (BUILT 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18b`. Anthony, after Ashley
+created an agreement and the old HTML email went out with no DocuSign anywhere: *"that should not be a device by
+device setting. It should be the default and then there should be an option to send an agreement the old fashioned
+way."*
+
+- **⚠⚠ THE ROOT CAUSE WAS A PER-DEVICE `localStorage` KEY DEFAULTING TO `manual`.** `ESIGN_PROVIDER_KEY` read
+  `hav_esign_provider` **per browser**, so `esignAvailable()` was false on any device nobody had opened Settings on
+  and `docProvider` fell through to `gmail`. The integration was live, correct, and **off on the machine the
+  agreement was actually sent from**. **How a firm signs is not a per-browser preference** — it is a constant now,
+  and the Settings control, both read/write sites, the `localStorage` write and the `LOCAL_KEEP_KEYS` entry are all
+  gone. **⚠ THE PER-JOB CHOICE IS UNTOUCHED AND MUST STAY**: `📄 Send as a PDF to sign by hand` is still on every
+  unsent agreement, and the 2026-09-17 rule that the route is pinned to the job the moment it is pressed is
+  unchanged.
+- **⚠⚠ AND THE BUTTON READ THE SAME EITHER WAY, WHICH IS WHY NOBODY NOTICED.** It said *Send signing packet*
+  whether the press would create a DocuSign envelope or a Gmail draft — the one control that decides how a contract
+  is executed, silent about which it would do. It names its route now (*Send for signature — DocuSign* /
+  *Send signing packet by email*). Reverting it fails 1.
+
+### ⚠⚠ THE MARKETING CONSENT IS OPT-IN, SIGNED, AND ON BOTH FORMS
+Anthony: *"with respect to using photos in social media, I do think they're going to need to sign that. So I don't
+know if we just make it a full signature block instead of a tick box."*
+- **⚠⚠ THE OLD §10.2 WAS AN OPT-OUT, AND THAT IS THE DEFECT RATHER THAN THE TICK BOX.** It published a
+  client's home **unless they ticked a box saying not to** — silence read as consent, on a document most people
+  sign without reading every clause. It reads the other way round now: nothing is published unless the client
+  affirmatively authorizes it **and signs for it**, and **an unanswered agreement means no**.
+- **⚠⚠ THE CHOICE IS REQUIRED AND THE SIGNATURE IS OPTIONAL, AND THAT PAIRING IS THE MECHANISM RATHER THAN A
+  COMPROMISE.** DocuSign's guided navigation steps a signer through the **required** fields and **jumps past
+  optional ones**. So an optional signature on its own is **a consent nobody is ever asked for** — the client
+  clicks Finish having never seen it. Making the **radio pair** required is what puts the question in front of
+  them; making the **signature** conditional on `authorize` is what stops a client who declines being asked to sign
+  what they just refused. Making the pair optional fails 2; dropping the conditional parent fails 2.
+- **⚠⚠ IT WAS MEASURED AGAINST THE REAL API, NOT INFERRED FROM A SCREENSHOT.** Anthony sent DocuSign's *Basic
+  fields* panel to show what the plan includes — it lists field TYPES, says nothing about radio groups or
+  conditional logic, and describes the drag-and-drop UI we never use. `testEsignTabs()` is the answer: editor-only,
+  argument-free, it creates **four DRAFT envelopes** (`status:'created'`, x/y positioned, addressed to the firm),
+  one capability each, and **voids them all**. All four came back **ACCEPTED**. *A capability question is answered
+  by one cheap probe, not by reading a pricing page.*
+- **`marketingConsentBlock(signerLabel)` IS ONE BLOCK WITH TWO READERS** and only the signer label differs. Two
+  copies of one consent is how the standard form and the estate form come to ask different questions.
+- **⚠⚠ THE ESTATE FORM HAD NO PHOTOGRAPHY OR MARKETING SECTION AT ALL, and it is the form on the matters where
+  the media is most sensitive.** It carries **§7.1 Documentation Media** and **§7.2 Marketing & Promotional Use**
+  now — **as subsections of 7, deliberately**, so Termination, Dispute Resolution and General Provisions are not
+  renumbered against agreements already issued citing those numbers. Dropping §7.2 fails 1; dropping the block
+  itself fails 4.
+- **⚠ DOCUMENTATION PHOTOGRAPHY LOSES ITS INITIALS BOX AND GAINS A STATEMENT.** Anthony: *"I don't think they
+  need to initial to say that we're going to document their property… if they are paying us to inventory their
+  home, we're obviously going to inventory their home. Let's just state what we do and how we treat that
+  confidential information."* §10.1a / §7.1 now say where the media is stored, who can see it, the seven-year
+  retention, and that it is never sold or shared.
+
+### ⚠⚠ A PERSON COUNTERSIGNS, AND THE DEPARTMENT GROUP IS COPIED INSTEAD
+- **⚠⚠ `agreements@` AS SIGNATORY WAS THE DEFECT.** It is a Google Group: whoever opened it first would sign,
+  and **the certificate of completion would record that signature under a name that may not be the person who
+  clicked**. On a contract, the audit trail naming the wrong human is the one failure it exists to prevent.
+  Anthony: *"Let's make it simple and have me responsible for signing all agreements on behalf of Havellin."*
+  Routing order 2 is `anthony@havellinpalmbeach.com`. Reverting it fails 2.
+- **⚠ `agreements@` IS A CARBON COPY AT ROUTING ORDER 3, AFTER BOTH SIGNATURES.** A copy at order 1 mails the
+  firm an **unsigned** agreement the moment it goes out, which reads in the inbox exactly like an executed one.
+  DocuSign mails every recipient the completed envelope, so the client, Anthony and the file copy all receive it.
+  Reverting it fails 2.
+- **⚠ ANTHONY DIAGNOSED THE DELIVERY HALF HIMSELF, AND IT WAS NOT AN APP FAULT:** *"agreements was not set up to
+  receive posts outside the organization. And I've now changed that."* Worth recording because the app-side
+  symptom (no countersignature request) had two independent causes and only one of them was ours.
+
+### ⚠ THE ROLE MENU CAME OFF BOTH PLACES IT APPEARED, AND THE ROW ITSELF STAYS
+Anthony: *"we don't need the role or authority tick boxes — that will have been established at intake and we will
+be conversing with the person who has the authority to sign the agreement."*
+- The standard form's tick box is **gone**.
+- **⚠⚠ THE PROBATE FORM KEEPS THE ROW, AND DELETING IT WOULD BE THE OPPOSITE DEFECT.** `Role / Authority` at
+  §1.2 and `Title / Role` on its signature page are the **capacity that lets that person bind the estate** — byte
+  for byte what `Managing Member` does on our side of the block, and the thing counsel queries on a court-reviewed
+  matter. **The 2026-09-18 signature-block fix exists to ADD a stated capacity; removing one here would undo it.**
+  They print the role recorded at intake.
+- **⚠ WHAT WENT IS THE FOUR-OPTION FALLBACK MENU** (`Personal Representative · Executor · POA · Other`), which
+  on an executed contract — and on the **signature page, beside the line the representative signs** — reads as a
+  pick-one they are meant to answer. Nothing asks it and no e-signature field is placed on it. **⚠ IT EXISTED
+  TWICE and the first pass found only one**; the browser check is what caught the second. Each fails 1.
+
+### ⚠⚠ A WET SIGNATURE IS NEVER STAMPED DOCUSIGN-ISSUED — and the line that created the risk is not the line that changed
+`recordAgreementSignature` has always ended its provider field in a fallback. While the firm's provider was a
+per-device key **defaulting to `manual`**, inheriting it was harmless: the fallback and the default were the same
+word. **Making DocuSign the constant moved that fallback's blast radius underneath a line nobody touched** — the
+`assignedTCContact` shape this file already records once. It is `sig.provider || 'manual'` now: reaching the
+fallback means no caller named a provider, and the only path that does that is somebody recording a wet or scanned
+signature **by hand**. Recording a paper signature as DocuSign-issued is a **false claim about how a contract was
+executed**, on the one record that answers that question. Reverting it fails 2.
+- **⚠ THE TEST LIFTS THE REAL `ESIGN_PROVIDER_KEY` RATHER THAN STUBBING IT.** `signature-record` stubs it to
+  `'manual'` — which is exactly the value that cannot tell the two implementations apart, and is why that suite
+  was green through it.
+
+- **6102 committed checks** (`tests/esign-docusign.test.js`, 244). **All thirteen changes revert-verified
+  individually, ZERO green** — the provider constant fails **6**, both consent blocks **4** each, and the rest 1–2.
+  - **⚠⚠ EIGHT OF NINE REVERTS CAME BACK GREEN ON THE FIRST SWEEP — THE WHOLE CONSENT MECHANISM, THE
+    COUNTERSIGNER AND THE CARBON COPY, WITH NO COVERAGE AT ALL.** Every check drove a **piece** (the anchor
+    constants, the block's own output, the gs source text) and **nothing drove the outcome**. The groups now build
+    the real envelope through the real `esignSendEnvelope` and **read its recipients and tabs back**, and drive the
+    real `agreementHtml` / `probateAgreementHtml`. Same gap this file records more than any other; this is the
+    time it was the author's own build.
+  - **⚠ FOUR NEEDLES IN THE SWEEP MATCHED NOTHING AND THE `NEEDLE x0` GUARD CAUGHT ALL FOUR** — hand-written
+    spellings against real source whitespace. One of them (`required: 'true' }`) matched **three** times, because
+    `testEsignTabs`'s own probe carries the same literal. Scope a needle to the function, not the file.
+- **⚠ FIVE SUITES PINNED EXPLICIT `fns:` / `vars:` LISTS OR THE OLD MODEL AND BROKE CORRECTLY.**
+  `agreement-fees`, `agreement-rates` and `prep-declutter` when the builders grew a call to
+  `marketingConsentBlock`; `dashboard-actions` on the button label; and **`signature-record`'s three assertions
+  pinning the per-device setting**, restated as four asserting the converse. **Found by searching every pinned
+  list at once** rather than re-running and fixing one failure at a time.
+- **Verified end to end in headless Chromium on both real builders**: **7 anchors × 1 each** on each form, all
+  `rgb(255,255,255)` / `display:inline` / `visibility:visible` / 6px / **present in the text layer**, every
+  `.sig-line` still exactly **36px**, one `I AUTHORIZE` and one `I DO NOT AUTHORIZE` per form, no initials box, no
+  role menu, no opt-out box, the recorded role printing and the blank appearing only when nothing was recorded.
+  `ESIGN_PROVIDER_KEY` reads `docusign` and `esignAvailable()` true with no device setup. Overflow **0** at 1440
+  and 390px, **no page errors**.
+- **Manual §8a rewritten** — the firm-wide default and why the Settings control went, **What the client actually
+  fills in** (three fields, with the required/optional table), the guided-navigation reasoning, opt-in vs opt-out,
+  the documentation-is-not-a-choice note, the estate form's missing section, the role-row distinction, and the
+  countersigner plus the file copy. Playbook **Step 6** and **Step 8** plus **seven** symptom→cause rows. Both
+  `.md` copies hand-edited and **35 claims parity-checked, 0 mismatches**; a stale sweep for the three retired
+  wordings returns **0** in all four files. Tag balance verified on both HTML files (`manual.html`'s `<code>`
+  delta is still the documented false positive at 1), rendered at 1440/390 with **0 overflow** and **all 53 tables
+  full-width under `print`**.
+- **⚠ STILL NOT PROVEN, AND IT IS ANTHONY'S TO DO: send one real sandbox envelope and look at it.** Anchor
+  placement is resolved by DocuSign against the **text layer of the generated PDF**, so where `DS_TAB_Y_OFFSET`
+  puts each box relative to its line cannot be asserted from here — only seen. Everything up to the PDF is proven.
+
+## ⚠ ONE POOL HOUSE, ONE ROW — AND THE WEIGHT WAS THE DECISION, NOT THE LABEL (2026-09-18)
+Anthony, off two screenshots of the room grid: *"let's remove the first two from outbuildings and guest
+houses, and modify poolhouse/cabana no living quarters to read Poolhouse - with living quarters."*
+App-only, no redeploy — `ROOMS` / `ROOM_WEIGHT` / `EXTERIOR_ROOMS` are three plain tables in
+`havellin.html`. Three edits: the **Casita — bedroom & bath** and **Pool House — with living quarters**
+rows out of Outbuildings & Guest Quarters, and the Exterior & Auxiliary
+**Pool House / Cabana — no living quarters** renamed **Pool House — with living quarters**.
+
+- **⚠⚠ THE INSTRUCTION WAS A RENAME AND THE CONSEQUENCE WAS A PRICE, WHICH IS THE ONLY THING WORTH
+  ASKING ABOUT HERE.** The two pool-house rows carried **different weights** — the Exterior one 2.7
+  (a cabana) and the Outbuildings one 4.5 (`2.0 living/bed + 1.5 kitchen/bar + 1.0 bath`). A straight
+  rename leaves the survivor **saying *with living quarters* while pricing a changing room**, silently,
+  on every estate with a pool house. Put to Anthony before anything was built; he took **4.5**.
+  - **Measured on the real engine, not asserted.** A 3,500 sqft Estate Settlement, three rooms scored
+    neutral: ticking the pool house adds **12 specialist hours** at 4.5 against **7** at 2.7. So the
+    decision is worth **5 PS hours per pool house**, and an estimator would have had no way to see it —
+    the row renders identically either way.
+- **⚠ THE SURVIVOR STAYS IN EXTERIOR & AUXILIARY, and that is coherent rather than arbitrary.** The net
+  effect is that the with-quarters pool house MOVED UP beside `Pool / Cabana Half Bath` and the
+  cabana-only variant went. A pool house with nothing in it is a changing room; that is the half-bath
+  row plus the patio rows, which already carry it.
+- **⚠ THE CASITA HAS NO REPLACEMENT ROW AND BOTH DOCUMENTS SAY WHAT TO TICK INSTEAD.** At 2.5 it sat
+  between the pool house and the 1-bedroom guest house saying nothing either of them does not, and
+  *casita* and *guest house* are the same building to most of the people describing one. **A bedroom and
+  a bath is the free-text `Additional Outbuilding Room` row renamed — 2.0, half a load unit under the old
+  row, so a genuinely small casita now prices about one PS hour lighter. Living space or a kitchenette
+  makes it `Guest House — 1 bedroom` at 7.0.** That 2.5→2.0 drift is stated rather than hidden; it is the
+  one place this change is not price-neutral by construction.
+- **⚠ NOTHING NEEDED AN ALIAS, AND IT IS WORTH KNOWING WHY.** `restoreEstimateToUI` matches a saved room
+  on **section+name** first, then idx-within-its-own-section, then plain name **only when the saved record
+  carries no section**. So a saved estimate holding either deleted row drops it silently — and, usefully,
+  the deleted Outbuildings pool house **cannot** fall through onto the Exterior row of the same name,
+  because its saved record has a section. Prelaunch, dummy data only. **If a real estimate ever predates a
+  row rename, add an alias instead** — a rename with no alias reprices downward with nothing on screen.
+- **6041 committed checks** (`tests/room-grid.test.js`, 45 new — **the first coverage in `tests/` of what
+  the room grid's three tables contain or what a room weighs**, which is why the two-section pool house
+  survived from the day it was written to the day somebody read the screen).
+  - **⚠⚠ THE NETS ARE RULES, NOT TODAY'S NAMES.** Every non-custom row has a `ROOM_WEIGHT` entry
+    (`engineRoomWeight` falls back to **2.0 silently**, so a row added without one prices as a generic
+    bedroom and the grid renders it perfectly); every `EXTERIOR_ROOMS` key has a weight and names a real
+    row; no name appears twice in one section (the `_claim` restore hands each saved record to exactly
+    one row, so a duplicate silently restores blank).
+  - **⚠ AND THE ONE THAT WOULD HAVE CAUGHT THE ORIGINAL DEFECT: ONE DETACHED STRUCTURE, ONE ROW.** Across
+    Exterior & Auxiliary and Outbuildings & Guest Quarters, no two rows may share a **stem** — the text up
+    to the first em-dash or slash. `Pool House / Cabana — no living quarters` and `Pool House — with
+    living quarters` both stem to `Pool House`, which is the collision a name-equality check can never
+    see: **the two rows had different names.** Size variants inside ONE section are allowed (Guest House
+    1/2/3 sit adjacent on screen and you obviously pick one); across sections is the state that produced
+    *"nothing on screen said which to pick"*. The test feeds it the old pair by hand so the rule is proven
+    able to fire rather than merely passing.
+  - **⚠⚠ THE WEIGHT REVERT FAILED ONLY *ONE* ON THE FIRST SWEEP — ON THE SINGLE MOST CONSEQUENTIAL LINE.**
+    Every check read a TABLE, so a build where `engineRoomWeight` stopped consulting `ROOM_WEIGHT` would
+    have passed the lot with the price silently wrong. The gap this file records more than any other.
+    There is a group that drives the **real `computeEngineV3`** now: ticking the pool house moves `load`
+    by exactly **4.500000**, is exactly **2.25×** a Boat House (2.0) — a RATIO, so it survives the next
+    `ENGINE_K` or step-table tune, where a pinned hour count would not — and books **12** `totPS`. Re-done,
+    the revert fails **4**.
+- **All seven changes revert-verified individually, ZERO green** — the rename undone fails 6, the Casita
+  row put back 5, a second pool house in Outbuildings 3, a row added with no weight 3, the cabana half
+  bath dropped 3, a row deleted with its weight left behind 1, and the weight 4.
+- **⚠ FOUND IN PASSING, NOT FIXED: `tc` and `ps` ON EVERY `ROOMS` ROW ARE DEAD.** The grid renderer reads
+  `r.name` and `r.custom`; the engine reads `ROOM_WEIGHT[name]`. Nothing anywhere reads a row's own
+  `tc`/`ps` — verified by extracting every `<ident>.tc|.ps` in the file, none of which is a room. They are
+  vestigial per-room hour hints from an older engine, and they **already disagreed with the weights**
+  (both pool-house rows read `tc:1.35,ps:2.70` while weighing 2.7 and 4.5). Left exactly as they were
+  rather than invented anew. `ROOM_WEIGHT` also carries **eight dead keys** naming no row — `Home Gym`,
+  `Home Office`, `Bedroom 5`, `Bedroom 6`, `Additional Bedroom(s)`, `Bonus Room`, `Additional Office`,
+  `Additional Sitting Room`. Harmless (nothing reads a weight for a row that does not exist) and
+  **pre-existing**, which is why the orphan test is scoped to `EXTERIOR_ROOMS`, where it is clean.
+- **Verified end to end in headless Chromium on the real page**, driving the real grid and the real
+  `calcAll`:
+
+  | | |
+  |---|---|
+  | Exterior & Auxiliary | `… Pool / Cabana Half Bath · Pool House — with living quarters · Screened Porch …` |
+  | Outbuildings & Guest Quarters | **7 rows** — three guest house sizes, three cottage sizes, one free-text |
+  | Casita rows anywhere | **0** |
+  | `Pool House` rows anywhere | **1**, rendered with a live scope box |
+  | ticking it on a 3,500 sqft estate | base 112 PS / $18,300 → **124 PS / $20,350** (+12 hrs, **+$2,050**) |
+  | a Boat House (2.0) for comparison | +5 PS hrs |
+
+  Overflow **0** at 1440 and 390px, **no page errors**, and the app's `<style>` block is
+  **byte-identical** at 74,147 bytes — the 368-line CSS deletion rule, applied by reading the diff.
+- Manual **§5b** (two rows out of the outbuildings table; the double-tick note **rewritten**, because it
+  said *"The Exterior row is now Pool House / Cabana — no living quarters and this section has Pool House
+  — with living quarters. **Pick one.**"* — an instruction to choose between two rows, one of which no
+  longer exists; plus a new casita note). Playbook **Step 2** (a `.stop` saying both buildings are NOT in
+  that section, so nobody hunts) and **two symptom→cause rows rewritten** — ⚠ one of them read *"Can't
+  find the casita → It moved from Exterior & Auxiliary into Outbuildings & Guest Quarters"*, which after
+  today sends a concierge standing in a driveway after a row that is not there. Both `.md` copies
+  hand-edited and **17 claims parity-checked, 0 mismatches** — ⚠ three apparent misses were markdown
+  emphasis markers, **verified rather than assumed**. A sweep for the retired wordings comes back with
+  **two hits and both are the sentence explaining the change** (the 2026-08-03 rename, quoted so the note
+  is worth reading) — the ninth time this file records a needle tripping on the prose explaining the fix.
+  Tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false
+  positive at **1**; `concierge-guide.html` clean on every tag), rendered at 1440/390 with **0 overflow**
+  and **all 52 tables full-width under `print`**.
+
+
+## ⚠⚠ THE SYNC REPORT NAMED A PROBLEM WITHOUT NAMING ENOUGH TO ACT ON IT (FIXED 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — `apps-script/quo-sync.gs` ONLY, and only before the next prune.**
+The partner backend was already redeployed for the section below; nothing in it changed again. Found by
+reading the first LIVE `pushQuoAll` log rather than by a test.
+
+- **✅ THE PUSH ITSELF IS PROVEN LIVE (2026-09-18, 12:41pm ET).**
+  `LIVE — pushed to Quo.  create=1  update=194  skip=22  conflict=1  failed=0`, over 79 partners and
+  **147 vendors**. **`update=194` against `create=1` is the one thing only a live read could confirm** —
+  the external-id scheme held and the existing contacts updated in place rather than duplicating. The
+  measurement this whole build was designed around also came back confirmed on the wire: **5 firm
+  contacts collapsing 13 partners** — Pressly (3), Comiter (4), Katz Baskies (2), Boyes Farina (2),
+  Northern Trust (2). That is the 2026-09-18 seed-data reading, live.
+- **⚠⚠ AND THE LOG WAS THEN UNREADABLE AT EXACTLY THE TWO POINTS SOMEBODY HAS TO DECIDE SOMETHING.**
+  - **16 STALE lines, each a bare 32-hex contact id and a uid.** `pruneQuoStaleConfirm` is the one
+    irreversible action in the file, and the list you read immediately before it identified nobody.
+    `_quoLoadExisting` **had the name and the number in hand and discarded both** — it built
+    `externalId -> id` and threw the rest of each record away.
+  - **The CONFLICT line printed the contact LABELS and not the thing that differed.** Two vendor rows
+    for one person under two business names rendered as *"David Schneider (vendor), David Schneider
+    (vendor)"* — identical twice, with nothing on the line saying what the conflict was. `companies`
+    was **computed into the plan and never printed**.
+- **⚠ THE LOADER NOW RETURNS `{ ids, meta }` RATHER THAN A SIDE-CHANNEL ON THE MAP.** `ids` still
+  decides POST vs PATCH and is untouched; `meta` exists only so the report can say who. A non-enumerable
+  property on the id map would have survived `for (var k in existing)` and needed no call-site changes,
+  which is precisely why it was the wrong answer — the contract change is the honest one, and **the test
+  stub broke on it, correctly**, which is how you know the contract is pinned.
+- **⚠ `_quoWho(e)` IS THE ONE RENDERING OF "WHICH CONTACT IS THIS"**, read by the push report AND the
+  prune preview. Two copies is how the list you READ and the list you DELETE come to describe the same
+  row differently. **An unnamed contact prints `(name not returned)` in words** — a bare id behind two
+  spaces reads as a formatting bug rather than as *Quo gave us nothing*.
+- **5996 committed checks** (89 new). **All nine changes revert-verified individually, ZERO green after
+  the three below were re-done** — the loader keeping the name fails 3, the plan carrying it 3, both
+  report lines 2 each, and the rest 1.
+  - **⚠⚠ THREE REVERTS CAME BACK GREEN ON THE FIRST SWEEP AND ALL THREE WERE THE SAME GAP: EVERY CHECK
+    DROVE A PIECE AND NOTHING DROVE THE END.** `_quoLoadExisting` is **stubbed in every other group**, so
+    the real loader could go back to discarding the name with the whole suite passing. `pruneQuoStale`
+    had **no coverage at all** — the list somebody reads before an irreversible delete, never once
+    driven. Both are driven now, the loader against a Quo-shaped response and the preview against a
+    `_quoFetch` that **throws if it is called**, because a preview that hits the API is not a preview.
+  - **⚠⚠ THE THIRD GREEN IS THE ONE WITH THE WORST BLAST RADIUS IN THE FILE, AND IT IS NOT A LOGGING
+    BUG.** A **live** push that cannot read Quo back sees an empty externalId map, so every contact looks
+    new: it would **create a duplicate of all ~210 and then report the originals STALE for deletion** —
+    the exact catastrophe the id scheme exists to make impossible. It only holds while that read is
+    allowed to FAIL LOUDLY. A **dry run may swallow it** (nothing to corrupt, and the plan is still worth
+    reading); a push must not. The asymmetry was correct by construction and untested, so a tidy-up could
+    have collapsed the two. Both directions are pinned now.
+- **⚠ THE REPORT IS DRIVEN, NOT GREPPED.** A build that carries the name on the plan object and then
+  prints a bare id contains every string a source check would look for. The tests capture `Logger` and
+  read **the lines a person would actually see**.
+
+### The greyed examples are gone from every phone and email box
+Anthony, on the vendor form: *"in the phone and email fields there are dummy grey'd out examples. they
+are confusing and it looks like the phone is (561)000-0000 and the email is andy@company.com."*
+App-only, no redeploy.
+
+- **⚠ THE DEFECT IS THE SHAPE, NOT THE WORDING.** A greyed string that is **itself a valid phone number
+  or a valid email address** is indistinguishable at a glance from a value already on file, in a box
+  whose entire job is holding which number reaches which person. An empty box says *nothing recorded*;
+  `(561) 000-0000` says `0000`.
+- **⚠ THE SWEEP FOUND SEVEN MORE THAN THE ONES HE WAS LOOKING AT**, in Client Intake (`i-phone`,
+  `i-email`, `i-executor-phone`, `i-probate-atty-phone`) and Contractors (`c-phone`, `c-email`,
+  `cq-phone`). Same defect, same fix, and **intake is the higher-stakes one** — that is the client's own
+  number and the personal representative's, read off a screen during the call that records them.
+  27 attributes removed across five forms.
+- **⚠ GUIDANCE SURVIVES AND THE CONVERSE IS TESTED.** `e.g. 214` on the extension (the `e.g.` prefix
+  cannot read as a recorded value) and `Direct · Main` on the phone type (a middot-separated pick-one).
+  A test asserts **more than ten placeholders remain**, or the rule would pass on a file stripped bare
+  and stop meaning anything.
+- **⚠⚠ THE TRIPWIRE IS A RULE ABOUT THE SHAPE, NEVER A LIST OF TODAY'S IDS — the fourth markup tripwire,
+  beside the orphaned `_private(` call, the orphaned DOM id and the `onclick=` name check.** No `<input>`
+  in the file may carry a placeholder matching a phone number or an email address. An id list would have
+  caught none of the seven above and nothing added next year: *a net woven from the cases you can think
+  of catches the cases you thought of.*
+- **Revert-verified**: putting back the vendor contact email fails 1, the intake phone 1, and stripping
+  the `e.g. 214` hint fails 1 (the converse).
+- **Verified in headless Chromium on the real page**: all 25 inputs present, **every one rendering an
+  empty box**, both deliberate hints intact, overflow **0** at 1440 / 768 / 390px, **no page errors**.
+  `git diff` is **27 insertions / 27 deletions and not one changed line outside an `<input>` tag**, so
+  the stylesheet is provably untouched — the 368-line CSS deletion rule, applied by reading the diff
+  rather than trusting a green suite.
+- **No document pass** — neither the manual nor the playbook describes a form's placeholder text.
+
+## ⚠⚠ THE OFFICE LINE WAS PRESENTED AS SOMEBODY'S DIRECT NUMBER (BUILT 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — THE PARTNER HALF ONLY.** `referral-partners-backend.gs`
+and `apps-script/quo-sync.gs` (one project, one deployment). **The vendor half is app-only and
+needs nothing.** Anthony: *"they'll be an email for let's say South Florida at navismoving.com and
+then we'll get the owner Andy's email and he's Andy at navismoving.com … office phone number,
+office email, and then two contacts per vendor with cell phone and personal email fields. And I
+guess just do the same thing for the referral partners."* Scoped first; he took the recommendation
+to include a title per contact and **not** to copy the vendor shape onto partners.
+
+- **⚠⚠ THE DEFECT IS NOT "A MISSING FIELD", IT IS A NUMBER PRESENTED AS SOMEBODY'S WHEN IT IS NOT —
+  and it was measured on the real seed data before anything was built.** Of the **79** partner rows,
+  **32 carry `phone_type: Main`**: the firm's switchboard sitting in the one phone field, which the
+  card renders under that person's name and the Call button dials. **13 partners share 5 numbers**
+  between them (Comiter alone is 4 people on one line). Byte-for-byte the 2026-09-09 defect that
+  would have printed the Havellin office line as a concierge's personal mobile, on the directory
+  rather than on our own signature block.
+- **⚠⚠ A VENDOR IS A FIRM AND A PARTNER IS A PERSON, AND COPYING ONE SHAPE ONTO THE OTHER WAS THE
+  WRONG ANSWER.** Anthony asked for the same two contact slots on both. A vendor has people inside
+  it, so two slots is right. **Four partners at Comiter are already four rows**, so a second contact
+  slot on each would model one firm five different ways. What a partner needs is their own line,
+  their cell, the firm's switchboard with their extension on it, and **the assistant who books the
+  meeting** — and `primary_contact` was already that person's name, buried in the research block
+  with nowhere to record their number. Put back to him before building; he took it.
+- **⚠⚠ NOTHING WAS RENAMED, WHICH IS WHY THE VENDOR HALF NEEDS NO REDEPLOY.** `phone` and `email`
+  keep their column names and become the office line and the general inbox **by label only**; slot 1
+  keeps `contact_first` / `contact_last`. 152 rows and ~20 readers are untouched. And
+  `addVendor`/`updateVendor` **create any column they are asked to write**, so the eight new vendor
+  columns appear on the existing sheet by themselves.
+- **⚠⚠ I BROKE THE APPEND-ONLY RULE ON THE PARTNER SHEET AND CAUGHT IT IN THE SAME SESSION.**
+  `COLUMNS` in `referral-partners-backend.gs` is read **by position** and its own comment says
+  *APPEND ONLY, never reorder*. The first cut slotted the five new keys in before the two historical
+  `quo_*` columns, moving `quo_contact_id` from index 33 to 38 — so every read of column 34 on the
+  **live** sheet would have handed back a Quo contact id as somebody's office phone, **and the dialer
+  would then have called it**. Moved to the true end. A test now pins all 35 legacy positions
+  individually and asserts the array length, so the next append cannot do it quietly.
+- **⚠ `phone_type` HAD NO READER IN 30,000 LINES AND IS LOAD-BEARING NOW.** It was the workaround for
+  having one phone field. `referralPhoneIsMainLine` reads it: a row typed Main with nothing in
+  `office_phone` is a switchboard still in the direct-line field, and the card says
+  *"firm main line, not direct"* with the button relabelled **☎ Main line**. **It flags and never
+  refuses** — that number is still the only way through — **and it clears the moment the number is
+  moved into Office phone**, so it is a cleanup somebody can finish rather than a permanent nag. The
+  flag text is in the search blob, so typing *main line* pulls up exactly the 32 rows.
+- **⚠ `vendorContacts(v)` IS THE ONE DEFINITION** of who you can reach at a vendor, read by the card,
+  the tap strip and the search blob. Two copies of that rule is how the card comes to offer a number
+  the search cannot find — the drift this file records more than anything else.
+  - **⚠ A NUMBER WITH NO NAME STILL COUNTS.** That is a card handed over in a driveway and
+    half-typed; requiring the name would throw away the only thing on the slot worth having. The card
+    says *name not recorded*. **A title alone does not count** — there is nobody to reach.
+  - **⚠ `isVendorPhoneKey` IS DERIVED FROM THE SLOTS, NEVER LISTED.** The quick card prefills every
+    number FORMATTED and compares it digit-wise; a mobile added to the slots and missed there would
+    compare `(561) 555-0111` against `5615550111`, read as an edit on every save, and write the
+    formatted string back over the stored digits.
+- **⚠ NO TEXT BUTTON ON A SWITCHBOARD OR A DESK LINE.** The tap strip's own comment says the Text
+  button exists for *"a 'where are you?' to a no-show vendor"* — that is a message to a PERSON, and
+  it was only ever on `phone` because `phone` was the one number a vendor had. It follows the
+  mobiles now. **One row per party, each naming who it reaches** (*☎ Office* · *☎ Andy* ·
+  *✉ Text Andy*), because an unlabelled Call button over a firm with three numbers makes you guess
+  which one it dials — the exact question the split exists to answer.
+- **⚠⚠ THE QUO SYNC IS THE PAYOFF, AND THE EXTERNAL IDs ARE THE WHOLE MIGRATION.** One vendor row now
+  produces up to three contacts, so Andy calling from his cell resolves as *Andy — Navis Moving*
+  instead of an unknown number. **The office record keeps its original `vendor:<uid>` and the person
+  record its bare `<uid>`**; only the new records are suffixed. Suffixing everything would leave all
+  **199 live contacts** matching nothing — the next run creates 199 duplicates **and reports the
+  originals STALE for deletion**.
+  - **⚠⚠ A NUMBER IS ATTRIBUTED TO A PERSON ONLY WHEN IT IS THE BEST WAY TO REACH THEM.** Once a
+    contact has their own mobile the office line goes back to being the FIRM's, because naming it
+    after them puts their name on the receptionist's calls. Until then it keeps the name it has
+    always had — **which is why this ships with ZERO churn**: no mobile is recorded on any of the 152
+    rows today, so every existing contact is left exactly as it reads.
+  - **⚠ A PARTNER'S DESK LINE AND CELL ARE ONE CARD, NOT TWO.** The rule this file is built on is
+    that a NUMBER resolves to one name — which forbids one number on two cards and says nothing
+    against two numbers on one. They are the same person; two cards would be the ambiguity.
+  - **⚠ THE FIRM RECORD IS KEYED `firm:<number>`, NOT `<uid>:office`.** Four partners at one firm
+    emit four identical ids that collapse to one contact; keying on a uid would make the surviving
+    contact depend on which partner happened to be first, and removing that partner would orphan it.
+    It is also the id `_firmPayload` already mints, so the five collapsed switchboard contacts Quo
+    holds today update in place.
+  - **⚠ AN EMAIL-ONLY CONTACT IS DELIBERATELY NOT SYNCED.** There is nothing to resolve on caller ID,
+    and a contact with no number is a row in the dialer that can never ring.
+- **5907 committed checks** (`tests/contact-fields.test.js`, 436 new — the first coverage of what a
+  directory record's contact fields ARE). **All 27 changes revert-verified individually, ZERO green
+  after the four below were re-done** — the office row losing its name fails 1, the contacts dropped
+  from the card 3, the search 7, the switchboard flag 6, the quick card's comparison 4, the column
+  positions 4, and the rest 1–4.
+  - **⚠⚠ TWO GREENS WERE THE SAME GAP AND IT IS THE ONE THIS FILE RECORDS MOST: EVERY CHECK DROVE A
+    PIECE AND NOTHING DROVE THE JOIN.** `isVendorPhoneKey` was tested alone and the map contents were
+    tested alone, and **nothing drove `quickEditVendor` → the form → the patch**. So breaking the
+    prefill, and breaking the digit-wise comparison, each changed nothing any check could see — on the
+    surface Anthony actually described using. There is a group that drives the real modal through a
+    `domStub` now: it asserts every number prefills formatted, that **opening and saving without
+    touching anything writes NOTHING**, and that a real edit writes only what changed.
+  - **⚠⚠ THE THIRD GREEN WAS MY REVERT BEING INVISIBLE TO MY OWN TEST.** The columns check parsed
+    with `/'([a-z_0-9]+)'/`, so the `office_phone_MOVED` sentinel I inserted to prove the position
+    test worked **carried a capital and was skipped entirely** — the array read as unchanged and the
+    check passed. Widened to any quoted token. **⚠ And widening it then matched the apostrophes in
+    my own explanatory comments** (*"a PARTNER IS A PERSON… vendor's"*), so the block is
+    comment-stripped — the sixth time this file records a needle tripping on the prose explaining
+    the fix.
+  - **⚠ THE FOURTH GREEN WAS THE COLLECTOR→PAYLOAD JOIN.** Deleting the line that copies `extras`
+    onto `phoneNumbers` broke nothing: a partner's cell was collected and then thrown away on the way
+    out of the door. Driven now.
+  - **⚠ AND A FIFTH APPEARED AFTER THE FIX: THE GUARD WAS DRIVEN AND NOTHING CHECKED IT WAS CALLED.**
+    Deleting `_pruneAmbiguousExtras(all, byPhone, plan)` from `syncQuoAll` passed. The real
+    `syncQuoAll` runs end to end in dry-run now, which also covers the grouping and the firm collapse.
+- **⚠ `_pruneAmbiguousExtras` WAS EXTRACTED SO IT COULD BE DRIVEN RATHER THAN GREPPED.** It lived
+  inline in `syncQuoAll`, so the only available check was that its source text was present — and a
+  guard that computes the right answer and then throws it away contains every string such a check
+  looks for. Same gap as the DocuSign certificate fetch.
+- **Verified end to end in headless Chromium on the real page:**
+
+  | | |
+  |---|---|
+  | Navis Moving, the firm row | `☎ (561) 555-0100 office · ✉ southflorida@navismoving.com · 🌐 navismoving.com`, **no name on it** |
+  | its two people | *Andy Ramirez · Owner · ☎ (561) 555-0111 mobile · ✉ andy@navismoving.com* and *Dave Chen · Dispatch · ☎ …0122 mobile* |
+  | its tap strip | `☎ Office` · `@ Office email` · `☎ Andy` · `✉ Text Andy` · `☎ Dave` · `✉ Text Dave` |
+  | a vendor with only an office line (today's 152 rows) | reads exactly as before — **no mobile row, no Text button** |
+  | `sms:` links on the whole page | **exactly the three mobiles**, none on any office or desk line |
+  | David Pratt | `☎ …9023 direct · ☎ …1212 mobile · ☎ …2000 office ext 214`, then *Assistant Marie Duval · ☎ · ✉* |
+  | Richard Comiter (the 32-row case) | *"☎ (561) 626-2101 **firm main line, not direct**"* · button **☎ Main line** |
+  | searching a contact's mobile digits | finds the firm · searching *owner* finds it · searching *main line* finds Comiter |
+  | the quick card | every number prefills formatted; open-and-save writes nothing |
+  | the vendor form | 29 `.fld` cells, **no control pushed away from its own label** |
+
+  Overflow **0** at 1440 / 768 / 390px on both tabs, **no page errors**. The app's `<style>` block is
+  **byte-identical** at 73,364 bytes.
+- **⚠ THE FORM GAINED A SECTION HEADER RATHER THAN MORE CELLS.** `.vform` rows stretch to their
+  tallest cell and push every control to the bottom, which is what dropped COI and Reciprocity 101px
+  on 2026-08-27. Contacts sit under their own `fld-wide` sub-headers — **an empty spacer cell was
+  tried first and is wrong at one column**, where it renders as a blank row.
+- **⚠ WHAT IS STILL NOT PROVEN, AND IT IS ANTHONY'S TO DO: NO CONTACT HAS BEEN PUSHED TO THE LIVE QUO
+  API.** The collectors, the ids, the grouping and the payload are driven against the real `.gs`
+  source in a vm, and the whole sync runs end to end in **dry run**. Run `dryRunQuoAll` and read the
+  plan before `pushQuoAll` — specifically that the 199 existing contacts come back as **update**
+  rather than **create**, which is the one thing the id scheme is protecting and the one thing only a
+  live read can confirm.
+- Manual **§13** (four bullets rewritten), **new §13b** (the firm/person split with the field table,
+  the defect it closes, the no-migration note and the half-typed-slot rule), **§14** (two bullets) and
+  **new §14a** (the partner model, the 32-row measurement with how to find them, `phone_type`'s new
+  job, and the redeploy); playbook **Step 2** two notes and **six** symptom→cause rows. Both `.md`
+  copies hand-edited and **48 claims parity-checked, 0 mismatches** — ⚠ two apparent misses were
+  markdown emphasis markers, verified rather than assumed. Tag balance verified on both HTML files
+  (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at 1440/390
+  with **0 overflow** and **all 52 tables full-width under `print`**.
+
+>>>>>>> origin/main
 
 ## ⚠⚠ A CLIENT CAN PAY BY BANK TRANSFER, AND IT RECORDS ITSELF (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18a`.
@@ -593,6 +1046,12 @@ actually send out an agreement for signature."*
     two things to sign.
   - **⚠ THE DEFAULT IS THE E-SIGNATURE ROUTE and `paper` is the deliberate opt-out**, so a caller
     that names no route gets the normal path rather than silently dropping to email.
+  - **⚠⚠ SUPERSEDED IN PART 2026-09-18 — `esignAvailable()` NO LONGER READS A PER-DEVICE SETTING.**
+    Everything above about the PER-JOB route is unchanged and still live. What changed is the
+    CAPABILITY half: `hav_esign_provider` was a `localStorage` key defaulting to `manual`, so the
+    firm's own integration was off on any browser nobody had configured — and an agreement really
+    did go out as a plain email because of it. `ESIGN_PROVIDER_KEY` is a constant now. See the
+    section at the top of this file.
   - **⚠⚠ AND THE JOIN CAME BACK GREEN ON THE REVERT — the same gap this file records six times.**
     `has(fn('docSpec'), 'via:')` matches whether the field carries the caller's choice or a
     hardcoded `''`, and that is not cosmetic: **with `via` dropped, the paper button still renders,
@@ -646,12 +1105,19 @@ actually send out an agreement for signature."*
     ladder in the same order and returns both halves together. It also drops the role suffix:
     `expectedSignerName` appends *"(Trustee)"* for our own prefill, which is right on our screen and
     wrong as a recipient name on a legal envelope.
-  - **⚠ `live:true` DOES NOT TURN DOCUSIGN ON.** `hav_esign_provider` does, and it defaults to
-    `manual`. Verified in a browser: a device that has not opted in reports `manual` / `watches
-    false` / agreement routed to **gmail** — byte-for-byte its old behaviour.
+  - **⚠ `live:true` SAYS THE INTEGRATION EXISTS, NOT THAT IT IS SELECTED.** Until 2026-09-18
+    selection was `hav_esign_provider`, a per-device key defaulting to `manual` — **which is the
+    defect fixed at the top of this file**. `ESIGN_PROVIDER_KEY` is now the firm's constant, so
+    every device reports `docusign` and routes the agreement to DocuSign. **`manual` is NOT dead:**
+    it is the label and the provider stamped on a signature RECORDED BY HAND, which is still a
+    button on every paper-route job. A sweep removing it as unreachable would leave every wet-signed
+    contract recording its provider as DocuSign.
   - **The Settings control is the missing half of a key that had no input anywhere.** Driven through
     the real `saveSettings()`: choosing DocuSign persists, takes effect, routes the agreement, and
     **removes *Record the signed agreement* from the rail**; choosing Recorded by hand puts it back.
+    **⚠⚠ THAT CONTROL WAS REMOVED ON 2026-09-18 AND MUST NOT COME BACK.** Giving a per-device
+    dropdown the answer to *does this firm use DocuSign* is what sent a real agreement out the old
+    way. The capability is a constant; only the PER-JOB route is a choice.
   - **⚠ TWO PRE-EXISTING SUITES PINNED THE OLD WORLD AND BROKE CORRECTLY.**
     `signature-record` pinned `live: false` *"there is no account, no credentials, no backend
     action"* — all three now exist. Restated as the requirement that was always meant: a provider
@@ -2325,7 +2791,9 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/magical-keller-koqpwl`
+- Active feature branch: `claude/determined-keller-wa6ero`
+  (was `claude/busy-maxwell-q7zrpd`)
+  (was `claude/magical-keller-koqpwl`)
   (was `claude/sharp-allen-1cc2ur`)
   (was `claude/gifted-babbage-wnzm7w`)
   (was `claude/admiring-tesla-7ysggp`)
@@ -2339,7 +2807,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/magical-keller-koqpwl:main`
+  `git push origin claude/determined-keller-wa6ero:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -3735,8 +4203,11 @@ workflow."* App-only, no redeploy.
   account, no credentials and no backend action, and a half-built integration reporting
   success on an opaque response is a defect this file already records once
   (`generateStripeLink`). An unknown or not-live key **falls back to `manual`** rather than
-  standing the only working control down on a typo. Turning it on is one Settings field
-  (`hav_esign_provider`, on `LOCAL_KEEP_KEYS`).
+  standing the only working control down on a typo. ~~Turning it on is one Settings field
+  (`hav_esign_provider`, on `LOCAL_KEEP_KEYS`).~~ **⚠ THAT FIELD WAS REMOVED 2026-09-18 and the
+  key with it** — a per-device dropdown answering *does this firm use DocuSign* sent a real
+  agreement out the old way. `ESIGN_PROVIDER_KEY` is a constant. *Kept rather than deleted, per the
+  standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ `esign` IS NEVER OFFERED TO A PERSON.** The picker is built from
   `AGR_SIG_MANUAL_METHODS` (`wet`, `scanned`) and `confirmAgreementSignature` rejects anything
   outside it, so a human cannot claim an electronic signature that no provider issued.

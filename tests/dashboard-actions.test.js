@@ -45,8 +45,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docDraftedAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
-      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
-    vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+    vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
     // ⚠ `SHEETS_SYNC_URL` IS A REAL TOP-LEVEL VAR, so the rail reads it bare rather than
     // behind a `typeof` guard that could never fire in a browser. It is stubbed here because
@@ -304,7 +304,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // ⚠ No 'Approve agreement' step: it is stamped as a side effect of the first print
       // or send now, so a won job goes straight to sending the packet.
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true }, { estimate: EST(), approved: true },
-        '&#9993; Send signing packet', "docAction(7,'agreement','send')"],
+        '&#9993; Send for signature &mdash; DocuSign', "docAction(7,'agreement','send')"],
       [{ approved: true, estimateSentDate: 'Sep 8, 2026', won: true, agrApproved: true, agrSent: true },
         { estimate: EST(), approved: true }, '&#10003; Record the signed agreement', 'dashMarkAgreementSigned(7)'],
       // ⚠ ASKING FOR THE MONEY AND RECEIVING IT ARE TWO STEPS NOW. A signed agreement's

@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-18a';
+var BACKEND_VERSION = '2026-09-18b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -1621,8 +1621,14 @@ var DS_ANCHORS = {
   clientSig:  '/hsc/',
   clientDate: '/hdc/',
   havSig:     '/hsh/',
-  havDate:    '/hdh/'
+  havDate:    '/hdh/',
+  mktYes:     '/mky/',
+  mktNo:      '/mkn/',
+  mktSig:     '/mks/'
 };
+// The radio group's name, which a conditional tab points at as its parent. Declared once and
+// mirrored in the app as ESIGN_MKT_GROUP; the anchor-parity test pins the two.
+var DS_MKT_GROUP = 'marketing_consent';
 
 // ⚠ ONE PLACE TO TUNE THE TAB POSITION, AND IT NEEDS ONE VISUAL CHECK IN THE SANDBOX BEFORE
 // ANYTHING GOES TO A CLIENT. The anchor sits at the TOP of a 36px `.sig-line` box whose
@@ -1828,8 +1834,19 @@ function esignSendEnvelope(data) {
     if (!data || !data.pdfBase64) return { ok: false, error: 'No document supplied to send.' };
     if (!data.signerEmail || !data.signerName) return { ok: false, error: 'The envelope needs the signer name and email.' };
 
-    var havEmail = data.havellinEmail || 'agreements@havellinpalmbeach.com';
+    // ⚠⚠ THE COUNTERSIGNATURE GOES TO A PERSON, NOT TO THE DEPARTMENT GROUP, AND THAT IS A
+    // CORRECTNESS RULE RATHER THAN A PREFERENCE. It used to default to agreements@, which is a
+    // Google Group: whoever opened it first would sign, and the certificate of completion would
+    // record that signature as *Anthony Graziano* regardless of who actually clicked. On a
+    // contract, the audit trail naming the wrong human is the one failure it exists to prevent.
+    // Anthony: *"let's make it simple and have me responsible for signing all agreements on
+    // behalf of Havellin."*
+    // ⚠ agreements@ IS STILL ON THE ENVELOPE — as a CARBON COPY below, which is what actually
+    // delivers the executed agreement to the firm's file. That is the half the group address was
+    // really doing, and a CC does it without also claiming to be a signatory.
+    var havEmail = data.havellinEmail || 'anthony@havellinpalmbeach.com';
     var havName  = data.havellinName  || 'Anthony Graziano';
+    var fileEmail = data.fileCopyEmail || 'agreements@havellinpalmbeach.com';
 
     var env = {
       emailSubject: data.subject || ('Havellin Services Agreement — ' + (data.hvlId || '')),
@@ -1848,7 +1865,7 @@ function esignSendEnvelope(data) {
             recipientId: '1',
             routingOrder: '1',
             roleName: 'Client',
-            tabs: _dsTabs(DS_ANCHORS.clientSig, DS_ANCHORS.clientDate)
+            tabs: _dsClientTabs()
           },
           {
             email: havEmail,
@@ -1857,6 +1874,23 @@ function esignSendEnvelope(data) {
             routingOrder: '2',
             roleName: 'Havellin',
             tabs: _dsTabs(DS_ANCHORS.havSig, DS_ANCHORS.havDate)
+          }
+        ],
+        // ⚠⚠ THIS IS WHAT PUTS THE EXECUTED AGREEMENT IN THE FIRM'S FILE, AND IT COSTS NOTHING
+        // TO RUN. DocuSign mails every recipient — signers and carbon copies alike — the completed
+        // envelope with the signed PDF attached the moment the last signature lands. So the client
+        // gets their copy, Anthony gets his, and agreements@ gets one for the record, with no
+        // second send path in this app to go wrong. The Drive archive still runs and is still the
+        // durable copy; this is the mailbox copy Anthony asked for.
+        // ⚠ ROUTING ORDER 3, AFTER BOTH SIGNATURES. A carbon copy at order 1 would mail the firm
+        // an UNSIGNED agreement the moment it went out, which reads in the inbox exactly like an
+        // executed one.
+        carbonCopies: [
+          {
+            email: fileEmail,
+            name: 'Havellin Palm Beach — Agreements',
+            recipientId: '3',
+            routingOrder: '3'
           }
         ]
       },
@@ -1889,6 +1923,48 @@ function _dsTabs(sigAnchor, dateAnchor) {
       anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
     }]
   };
+}
+
+// ⚠⚠ THE CLIENT CARRIES THE MARKETING CONSENT AND HAVELLIN DOES NOT, and that asymmetry is the
+// whole reason this is a separate builder rather than an argument to _dsTabs. A media release is
+// the client's decision about their own home; putting the same tabs on the countersignature would
+// ask Havellin to consent to Havellin, and — worse — an unanswered REQUIRED radio on recipient 2
+// would block our own countersignature and strand a contract the client had already signed.
+//
+// ⚠ THE RADIO PAIR IS REQUIRED AND THE SIGNATURE IS NOT. Required means the envelope cannot
+// complete until the question is answered either way, which is the only thing that guarantees the
+// client SEES it: DocuSign's guided navigation steps through required fields and jumps past
+// optional ones. The signature is optional AND conditional — it appears only on `authorize`, so a
+// client who declines is never shown a signature line they would have to ignore to finish.
+//
+// ⚠ ALL THREE SHAPES WERE MEASURED AGAINST THE REAL ACCOUNT BEFORE THIS WAS WRITTEN
+// (`testEsignTabs`, 2026-09-18: optional signature, radio group and conditional signature all
+// ACCEPTED). The plan's field palette does not answer this — it lists what the drag-and-drop
+// sender UI offers, and nothing here uses that UI.
+function _dsClientTabs() {
+  var t = _dsTabs(DS_ANCHORS.clientSig, DS_ANCHORS.clientDate);
+
+  t.radioGroupTabs = [{
+    groupName: DS_MKT_GROUP,
+    documentId: '1',
+    radios: [
+      { anchorString: DS_ANCHORS.mktYes, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0',
+        anchorIgnoreIfNotPresent: 'false', value: 'authorize', required: 'true' },
+      { anchorString: DS_ANCHORS.mktNo,  anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0',
+        anchorIgnoreIfNotPresent: 'false', value: 'decline',   required: 'true' }
+    ]
+  }];
+
+  t.signHereTabs.push({
+    anchorString: DS_ANCHORS.mktSig, anchorUnits: 'pixels',
+    anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false',
+    tabLabel: 'marketing_signature',
+    optional: 'true',
+    conditionalParentLabel: DS_MKT_GROUP,
+    conditionalParentValue: 'authorize'
+  });
+
+  return t;
 }
 
 // ─── STATUS ──────────────────────────────────────────────────────────────────────
@@ -2136,6 +2212,129 @@ function testEsignAuth() {
   return true;
 }
 
+// ─── WHAT WILL THIS ACCOUNT ACTUALLY ACCEPT? ─────────────────────────────────────
+// ⚠⚠ THIS EXISTS BECAUSE A SCREENSHOT OF THE FIELD PALETTE IS NOT AN ANSWER, AND THE
+// THREE QUESTIONS IT LOOKS LIKE IT ANSWERS ARE DIFFERENT QUESTIONS.
+//   (1) which FIELD TYPES the drag-and-drop sender UI offers;
+//   (2) which TAB TYPES the REST API accepts on this plan;
+//   (3) whether CONDITIONAL LOGIC on a tab is permitted.
+// Nothing here ever touches the drag-and-drop palette — every envelope in this file is built
+// by API — so (1) is at best a proxy for (2). And (3) is not a field type at all: it is a
+// property ON a tab, so it appears in no palette screenshot either way. Measure it.
+//
+// ⚠ ONE CAPABILITY PER ENVELOPE, DELIBERATELY. Putting all four in one draft and reading a
+// single pass/fail says nothing about WHICH one the account refused — the same reason
+// `testDriveThumbnails` probes its three sources separately and prints the size of each.
+// The baseline case is the control: if IT fails, the probe is broken, not the account.
+//
+// ⚠ TABS ARE PLACED BY x/y HERE AND BY ANCHOR EVERYWHERE ELSE, AND THAT IS THE POINT.
+// This asks ONE question — will the account take this tab type — so the anchor text layer is
+// deliberately removed as a variable. Anchor placement is a separate question answered by a
+// real envelope on a real agreement.
+//
+// ⚠ EVERY ENVELOPE IS status:'created' — A DRAFT. Nothing is mailed to anyone, so this is
+// safe against a live account, and each draft is deleted again at the end. Editor-only and
+// argument-free, like testEsignAuth: the Run menu passes no arguments.
+function testEsignTabs() {
+  var missing = _dsMissingProps();
+  if (missing.length) {
+    Logger.log('NOT CONFIGURED — add these Script Properties: ' + missing.join(', '));
+    return false;
+  }
+  Logger.log('Environment : ' + (_dsIsDemo() ? 'DEMO / sandbox' : 'PRODUCTION'));
+
+  var pdf = htmlToPdfBase64('<html><body><p>Havellin tab capability probe.</p></body></html>');
+  if (!pdf.ok) { Logger.log('FAILED to build the probe PDF — ' + pdf.error); return false; }
+
+  // ⚠ ADDRESSED TO OURSELVES, NOT A PLACEHOLDER. A draft can be sent by hand from the
+  // DocuSign web console by anyone who finds it; addressed to the firm, the worst case is
+  // an odd email to ourselves rather than a probe document reaching a client.
+  var me = { email: 'agreements@havellinpalmbeach.com', name: 'Havellin Palm Beach' };
+
+  function tabsFor(kind) {
+    var base = { signHereTabs: [{ documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' }] };
+    if (kind === 'baseline') return base;
+
+    if (kind === 'optional signature') {
+      return { signHereTabs: [
+        { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' },
+        { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '300', optional: 'true' }
+      ]};
+    }
+
+    if (kind === 'radio group') {
+      return {
+        signHereTabs: base.signHereTabs,
+        radioGroupTabs: [{
+          documentId: '1', groupName: 'marketing_consent', requireInitialOnSharedChange: 'false',
+          radios: [
+            { pageNumber: '1', xPosition: '100', yPosition: '350', value: 'authorize', required: 'true' },
+            { pageNumber: '1', xPosition: '100', yPosition: '380', value: 'decline',   required: 'true' }
+          ]
+        }]
+      };
+    }
+
+    if (kind === 'conditional signature') {
+      return {
+        signHereTabs: [
+          { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' },
+          { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '420',
+            tabLabel: 'marketing_signature', optional: 'true',
+            conditionalParentLabel: 'marketing_consent', conditionalParentValue: 'authorize' }
+        ],
+        radioGroupTabs: [{
+          documentId: '1', groupName: 'marketing_consent',
+          radios: [
+            { pageNumber: '1', xPosition: '100', yPosition: '350', value: 'authorize', required: 'true' },
+            { pageNumber: '1', xPosition: '100', yPosition: '380', value: 'decline',   required: 'true' }
+          ]
+        }]
+      };
+    }
+    return base;
+  }
+
+  var KINDS = ['baseline', 'optional signature', 'radio group', 'conditional signature'];
+  var drafts = [], verdict = {};
+
+  KINDS.forEach(function (kind) {
+    var env = {
+      emailSubject: 'Havellin capability probe — ' + kind + ' (draft, never sent)',
+      documents: [{ documentBase64: pdf.base64, name: 'probe.pdf', fileExtension: 'pdf', documentId: '1' }],
+      recipients: { signers: [{
+        email: me.email, name: me.name, recipientId: '1', routingOrder: '1', tabs: tabsFor(kind)
+      }]},
+      status: 'created'   // ⚠ DRAFT. Never 'sent'.
+    };
+    var res = _dsApi('post', '/envelopes', env);
+    if (res.ok) {
+      verdict[kind] = 'ACCEPTED';
+      if (res.body.envelopeId) drafts.push(res.body.envelopeId);
+    } else {
+      var b = res.body || {};
+      verdict[kind] = 'REFUSED (HTTP ' + res.code + ') — ' + (b.message || b.errorCode || JSON.stringify(b).slice(0, 200));
+    }
+    Logger.log(_pad(kind, 24) + ' : ' + verdict[kind]);
+  });
+
+  // ⚠ CLEAN UP, AND SAY SO IF IT FAILS. A probe that leaves drafts behind on every run turns
+  // the account's envelope list into a bin nobody trusts.
+  drafts.forEach(function (id) {
+    var del = _dsApi('put', '/envelopes/' + encodeURIComponent(id), { status: 'voided', voidedReason: 'Capability probe — never sent' });
+    if (!del.ok) Logger.log('  (could not void draft ' + id + ' — remove it by hand)');
+  });
+
+  Logger.log('');
+  if (verdict['baseline'] !== 'ACCEPTED') {
+    Logger.log('⚠ THE BASELINE FAILED, so read nothing into the other three — the probe itself is the problem, not the plan.');
+    return false;
+  }
+  Logger.log('Baseline passed, so the three results above are real answers about this account.');
+  return verdict;
+}
+
+function _pad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
 // ═══════════════════════════════════════════════════════════════════════════════════
 // STRIPE — ACH ONLY
 // ═══════════════════════════════════════════════════════════════════════════════════
