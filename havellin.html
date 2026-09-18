@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 10:07pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 11:12pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11543,6 +11543,11 @@ function openClientDashboard(jobId) {
   document.getElementById('clients-list-view').style.display = 'none';
   document.getElementById('client-dashboard-view').style.display = 'block';
   renderClientDashboard(jobId);
+  // ⚠ AFTER the paint, never before it. This is the moment stale status actually bites: two gates
+  // fail OPEN, not closed — 'Offer discount' is offered while `!job.agrSigned`, and the service-type
+  // lock keys on `agrSigned || depositReceived` — so a signed-but-unnoticed agreement leaves
+  // re-pricing and re-typing unlocked on a job already under contract.
+  try { esignRefresh({ jobId: jobId }, function (n) { if (n) _dashRedraw(jobId); }); } catch (e) {}
 }
 
 function closeClientDashboard() {
@@ -13009,26 +13014,57 @@ function recordAgreementSignature(jobId, sig) {
 }
 
 // ─── WHERE A PROVIDER'S SIGNATURE WOULD COME BACK ────────────────────────────
-// ⚠⚠ THE DECISION, WRITTEN DOWN BEFORE ANYTHING IS BUILT ON IT: **POLL, DO NOT USE DOCUSIGN
-// CONNECT.** Connect is DocuSign's webhook and it is the obvious design; it cannot work
-// against this backend, for four separate reasons, and each one alone is fatal:
-//   · Apps Script answers a POST to `/exec` with an HTTP **302** redirect to a
-//     `script.googleusercontent.com` URL. Connect reads a non-2xx as a failed delivery and
-//     retries, so every notification looks like a failure forever.
-//   · `ContentService` cannot return a status code at all, so there is no way to answer 200.
-//   · `doPost(e)` does not expose request HEADERS, so `X-DocuSign-Signature-1` — the HMAC
-//     that proves the callback is really DocuSign — is unreadable. An unauthenticated
-//     endpoint that marks contracts signed is not something to ship.
-//   · `/exec` has no inbound auth of its own.
-// So the envelope id is stored on the signature record and a **5-minute Apps Script trigger
-// polls** DocuSign for the status of anything outstanding. Slower, and correct.
+// ⚠⚠ CORRECTED 2026-09-18 — READ THIS BEFORE TRUSTING ANY OF IT. The version of this note that
+// stood here gave FOUR reasons DocuSign Connect (webhooks) "cannot work" against Apps Script, each
+// called independently fatal. **None had been tested.** Checked properly, only ONE held up as
+// written and the headline — *the callback cannot arrive* — is FALSE. It is rewritten rather than
+// appended to, because anyone implementing from it would reason from a false premise:
 //
-// ⚠ NOTHING BELOW CALLS DOCUSIGN. There is no account, no credentials and no backend action
-// yet, and a half-built integration that reports success on an opaque response is a defect
-// this file already records once (`generateStripeLink`, which announced *"Stripe payment
-// link generated"* unconditionally, including when the endpoint was missing). This is the
-// SHAPE the poll writes into, so wiring a real provider adds a backend action and changes
-// `ESIGN_PROVIDERS` — and no screen.
+//   1. *"A POST to /exec answers 302, so every delivery fails."* — HALF RIGHT. The redirect to
+//      `script.googleusercontent.com` is real and current, but `doPost` EXECUTES ON THE FIRST HOP,
+//      before it. The payload arrives. The 302 governs only how the response body comes back.
+//      (The WooCommerce-on-GAS case documents exactly this: the script receives and handles the
+//      POST while the sender logs a failure.) And "retries forever" is wrong — they are bounded.
+//   2. *"ContentService cannot answer 200."* — OVERSTATED. There is no `setStatusCode`, and no 2xx
+//      on the FIRST response, which is the hop Connect grades — but a 200 does arrive at the end
+//      of the chain.
+//   3. *"No headers, so the HMAC is unreadable and the endpoint is unauthenticated."* — PREMISE
+//      HELD, CONCLUSION REFUTED. Headers really are unavailable (Google declined the feature
+//      request on security grounds in 2023), so the HMAC, Basic auth and mTLS are all out — a
+//      BROADER limit than claimed. But "therefore unauthenticated" is wrong twice: DocuSign
+//      documents a pre-shared secret in the listener URL QUERY STRING, which is exactly what Apps
+//      Script does receive (`e.parameter`); and better, the endpoint need never trust the payload —
+//      treat the POST as an untrusted *"go look at envelope X"* ping and re-read through the
+//      JWT-authenticated status call, so a forged request costs one wasted API call and can sign
+//      nothing.
+//   4. *"/exec has no inbound auth."* — TRUE, and irrelevant once 3 falls.
+//
+// ⚠⚠ SO CONNECT IS REACHABLE, AND IS STILL THE WRONG CHOICE — for reasons the old note never gave.
+// Every successful delivery is graded a FAILURE (that first hop is a 302); accumulated failures can
+// push a Connect config into "Active - Pending Deactivation", which is **a signature loop that dies
+// silently** — the worst failure shape for a contract system and exactly the class this file's
+// standing rules exist to stop. Every retry re-runs `doPost`, so idempotency becomes mandatory. And
+// it adds a public write-path endpoint to the deployment that is already the single point of
+// failure for everything else. Connect may also sit well above the basic API plan, which the
+// sandbox would hide until go-live.
+//
+// ⚠ TWO DEAD ENDS, SO NOBODY CHASES THEM: "make the sender follow redirects" is not a rescue
+// (following with POST yields 405 AND fires `doPost` a second time with `e` undefined), and a
+// manifest setting `"httpheaders": true` is a feature-request PROPOSAL that several search results
+// report as shipped — it does not exist.
+//
+// ⚠⚠ AND THE OLD NOTE'S OWN FALLBACK WOULD HAVE BEEN WORSE THAN THE THING IT REJECTED. *"A 5-minute
+// Apps Script trigger polls"* — DocuSign publishes a hard floor of ONE request per unique resource
+// per **15 minutes**, names API revocation as the penalty, and checks it as an automated go-live
+// gate. `esignEnvelopeStatus` is precisely the prohibited shape, and an outstanding envelope
+// returns the same id every run, so that trigger is 288 requests a day against one resource — 3x
+// the ceiling. **The demo sandbox is EXEMPT from the rule**, so it would have tested flawlessly
+// forever and failed only at production review: the latent-defect-ships-green shape this file
+// already records more than once.
+//
+// WHAT IS BUILT INSTEAD: `esignRefresh` checks outstanding envelopes when somebody OPENS the
+// record, gated at `ESIGN_RECHECK_MINS`. Its own comment carries the app-side half of the argument
+// — that a background poll would not even have reached the screen it was meant to keep fresh.
 
 // What the poll hands back per envelope, and the ONE place a provider's verdict becomes a
 // signature. A provider may only ever report `completed`; nothing else it says is allowed
@@ -13054,8 +13090,119 @@ function applyEsignStatus(jobId, status) {
     envelopeId: st.esign.envelopeId,
     recordedBy: ESIGN_PROVIDERS[esignProviderKey()].label
   });
-  if (!blk) { _dashRedraw(jobId); renderJobs(); }
+  if (!blk) {
+    // ⚠ THE EXECUTED COPY IS RETRIEVED HERE AND NOWHERE ELSE — one transition, one fetch, ever.
+    try { esignArchiveSigned(jobId); } catch (e) {}
+    _dashRedraw(jobId); renderJobs();
+  }
   return blk;
+}
+
+// ─── LEARNING THAT AN ENVELOPE CAME BACK ─────────────────────────────────────
+// ⚠⚠ NO WEBHOOK AND NO BACKGROUND TIMER. This is checked when somebody OPENS the record, and the
+// reasoning is not about DocuSign at all — it is about this app.
+//
+// A server-side poll would write to the Jobs sheet, and the SCREEN only re-reads through
+// `jobsWatchTick`. `maybeStartJobsWatch` arms that interval only while some job is at `pending`;
+// an agreement out for signature sits at `won`, so the watch is STOPPED for the entire signature
+// window. And even armed, `jobsStatusSig()` is id + status + approved, while recording a signature
+// writes `agrSigned`/`agrSignedBy`/`agrSignedAt` and touches none of them — so the change would be
+// invisible and `_jobsLanded()` would never fire. A poll would buy a fresher SHEET behind an
+// identically stale SCREEN, correcting on the next page load, which is exactly when this fires.
+//
+// ⚠⚠ AND A 5-MINUTE POLL WOULD HAVE GOT THE API REVOKED. DocuSign publishes a hard floor of ONE
+// request per unique resource per 15 MINUTES and names revocation as the penalty. `esignStatus` is
+// exactly the prohibited shape — one GET per envelope — and an outstanding envelope returns the
+// same id every run, so a 5-minute trigger is 288 requests a day against one resource, 3x the
+// ceiling. **The demo sandbox is EXEMPT from that rule**, so it would have tested flawlessly
+// forever and failed only at production go-live review: the latent-defect-ships-green shape this
+// file already records. Nothing downstream needs the answer sooner — a signature's only effect is
+// to unblock recording a deposit, which arrives days later by cheque and is keyed in by a person.
+var ESIGN_RECHECK_MINS = 20;   // DocuSign's 15-minute floor plus their own suggested margin
+
+function _esignDue(st) {
+  if (!st || !st.esign || !st.esign.envelopeId) return false;
+  if (!st.esign.checkedAt) return true;
+  var age = Date.now() - new Date(st.esign.checkedAt).getTime();
+  return !(age >= 0 && age < ESIGN_RECHECK_MINS * 60000);
+}
+
+// ⚠ SEQUENTIAL, NEVER Promise.all. Every store write on the server takes the GLOBAL Apps Script
+// lock, and this file already records what parallel sending costs: the retry manufactures the
+// condition it is retrying. One at a time, and the whole thing is best-effort.
+function esignRefresh(opts, cb) {
+  var only = opts && opts.jobId;
+  var due = outstandingEnvelopes().filter(function (e) {
+    if (only && e.jobId !== only) return false;
+    var j = jobs.find(function (x) { return x.id === e.jobId; });
+    return _esignDue(j && j.docState && j.docState.agreement);
+  });
+  if (!due.length || !SHEETS_SYNC_URL) { if (cb) cb(0); return; }
+
+  var i = 0, changed = 0;
+  (function next() {
+    if (i >= due.length) { if (cb) cb(changed); return; }
+    var e = due[i++];
+    _appsScriptPost(SHEETS_SYNC_URL, { action: 'esignStatus', envelopeId: e.envelopeId }, function (ok, d) {
+      if (ok && d && d.ok) {
+        var was = isAgreementSigned(jobs.find(function (x) { return x.id === e.jobId; }));
+        applyEsignStatus(e.jobId, d);
+        if (!was && isAgreementSigned(jobs.find(function (x) { return x.id === e.jobId; }))) changed++;
+      } else {
+        // ⚠⚠ IT SPEAKS WHEN IT FAILS. A silent failure here leaves a signed agreement reading
+        // unsigned forever, and this file's standing rule is that a state with no exit is worse
+        // than a failure. It must never read as "not signed yet".
+        var why = (d && (d.error || d.message)) || 'the status check did not reach DocuSign';
+        _docNotice('warn', 'Could not check the signature status for ' + (e.hvlId || 'this agreement')
+                   + ' — ' + why + '. It may already be signed; this is not a statement that it is not.', e.jobId);
+      }
+      next();
+    });
+  })();
+}
+
+// ⚠ FIRED ONCE, ON THE TRANSITION INTO `completed`, AND NEVER AGAIN. DocuSign counts document
+// retrieval as a unique-resource request under the same 15-minute rule, and warns that
+// list-then-get-each trips the polling check even when polling was not intended. `filedAt` is the
+// gate; a later refresh cannot refetch.
+function esignArchiveSigned(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return;
+  var st = docState(job, 'agreement');
+  if (!st.esign || !st.esign.envelopeId || st.esign.filedAt) return;
+  if (!SHEETS_SYNC_URL) return;
+
+  resolveSubfolderId(job, 'Agreement', function (folderId) {
+    if (!folderId) {
+      _docNotice('warn', 'The agreement is signed, but this client has no Agreement folder in Drive, '
+                 + 'so the executed copy could not be filed. Create the Drive folder, then re-open this client.', jobId);
+      return;
+    }
+    _appsScriptPost(SHEETS_SYNC_URL, {
+      action: 'esignArchive', envelopeId: st.esign.envelopeId, folderId: folderId,
+      baseName: docNames(job, 'agreement').drive.replace(/\.[a-z]+$/i, '')
+    }, function (ok, d) {
+      if (!ok || !d || !d.ok) {
+        _docNotice('warn', 'The agreement is signed, but the executed copy could not be retrieved from '
+                   + 'DocuSign — ' + ((d && (d.error || d.message)) || 'no answer from the server')
+                   + '. It is still in DocuSign; re-open this client to try again.', jobId);
+        return;
+      }
+      var st2 = docState(job, 'agreement');
+      st2.esign.filedAt = new Date().toISOString();
+      st2.esign.filedUrl = d.signedUrl || '';
+      st2.esign.certUrl = d.certUrl || '';
+      saveJobs(); syncJobToSheets(job);
+      // ⚠ A MISSING CERTIFICATE IS SAID OUT LOUD. On a probate matter it is the audit trail of who
+      // bound the estate, and losing it quietly is how somebody finds out two years later.
+      _docNotice(d.certUrl ? 'ok' : 'warn',
+        d.certUrl ? 'Signed agreement and certificate of completion filed to Drive.'
+                  : 'Signed agreement filed to Drive, but the certificate of completion could not be '
+                    + 'retrieved' + (d.certError ? ' (' + d.certError + ')' : '') + '. Download it from DocuSign by hand.',
+        jobId);
+      _dashRedraw(jobId);
+    });
+  });
 }
 
 // Agreements out for signature and not yet back — what a poll would ask about. DOM-free, so
@@ -15211,6 +15358,9 @@ function _jobsLanded() {
   // The referral leaderboard is built from jobs too — measured on a cold cache it
   // rendered ZERO BYTES, so the whole section was absent rather than merely wrong.
   if (typeof refreshReferralsTabIfActive === 'function') refreshReferralsTabIfActive();
+  // Outstanding envelopes, checked when the jobs land — so any page load corrects the rail.
+  // Non-blocking and best-effort; nothing on screen waits for it.
+  if (typeof esignRefresh === 'function') { try { esignRefresh({}, function () {}); } catch (e) {} }
 }
 // Per-job estimate store
 var estimateStore = {};  // { jobId: { estimate, approved, approvedBy, approvedAt } }

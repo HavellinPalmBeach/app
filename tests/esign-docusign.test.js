@@ -558,6 +558,191 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
 
+  group('⚠⚠ THE ENVELOPE COMES BACK ON OPEN — driven, and it is the join that matters');
+  {
+    // ⚠⚠ NO WEBHOOK AND NO TIMER, and the reasoning is about this app rather than DocuSign. A
+    // server poll writes to the SHEET; the SCREEN only re-reads through jobsWatchTick, which is
+    // armed only while a job is at `pending`. An agreement out for signature sits at `won`, so that
+    // watch is stopped for the whole signature window — and jobsStatusSig() keys on status/approved,
+    // which recording a signature never touches. A poll would buy a fresher sheet behind an
+    // identically stale screen.
+    let posts = [];
+    const c = sandbox({
+      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'applyEsignStatus',
+            'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature', 'docState',
+            '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable'],
+      vars: ['ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
+      stubs: {
+        SHEETS_SYNC_URL: 'https://script.example/exec',
+        _appsScriptPost: (url, body, cb) => {
+          posts.push(body);
+          cb(true, { ok: true, envelopeId: body.envelopeId, status: 'completed',
+                     signerName: 'Tripp Butler', completedAt: '2026-09-18T14:02:00Z' });
+        },
+        saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
+        _docNotice() {}, resolveSubfolderId() {}, docNames: () => ({ drive: 'a.html' }),
+        agrApprovedBy: 'Anthony Graziano', ESIGN_PROVIDER_KEY: 'docusign',
+      },
+    });
+    const job = { id: 5, hvlId: 'HVL-0007', agrSent: true,
+                  docState: { agreement: { provider: 'docusign', sentAt: '2026-09-17T20:00:00Z',
+                                           esign: { envelopeId: 'env-9', status: 'sent' } } } };
+    c.jobs = [job];
+
+    ok(!c.isAgreementSigned(job), 'it starts unsigned');
+    let n = null;
+    c.esignRefresh({}, (x) => { n = x; });
+    eq(posts.length, 1, 'one status call for one outstanding envelope');
+    eq(posts[0].action, 'esignStatus', 'through the esignStatus action');
+    ok(c.isAgreementSigned(job), '⚠⚠ AND THE SIGNATURE LANDS — the loop closes end to end');
+    eq(c.agreementSignature(job).signedBy, 'Tripp Butler', 'naming the client who signed');
+    eq(n, 1, 'and the caller is told something changed, so it can redraw');
+  }
+
+  group('⚠⚠ THE 15-MINUTE FLOOR — a second check inside the window issues NO request');
+  {
+    // ⚠⚠ DOCUSIGN PUBLISHES A HARD FLOOR OF ONE REQUEST PER UNIQUE RESOURCE PER 15 MINUTES AND
+    // NAMES API REVOCATION AS THE PENALTY. esignStatus is exactly the prohibited shape — one GET
+    // per envelope — and an outstanding envelope returns the same id every time, so an unbounded
+    // check is 3x the ceiling against one resource.
+    // ⚠ AND THE SANDBOX IS EXEMPT FROM THAT RULE, so an ungated version tests flawlessly forever
+    // and fails only at production go-live review. That is why this is a test and not a comment.
+    let posts = 0;
+    const c = sandbox({
+      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature'],
+      vars: ['ESIGN_RECHECK_MINS'],
+      // ⚠ applyEsignStatus is STUBBED here on purpose: this group is about how many requests go
+      // out, not about what the answer does. The join is driven in the group above.
+      stubs: { SHEETS_SYNC_URL: 'u', _appsScriptPost: (u, b, cb) => { posts++; cb(true, { ok: true, status: 'sent' }); },
+               _docNotice() {}, applyEsignStatus() {} },
+    });
+    const withCheck = (mins) => ({ id: 1, agrSent: true, docState: { agreement: { esign: {
+      envelopeId: 'e1', status: 'sent', checkedAt: new Date(Date.now() - mins * 60000).toISOString() } } } });
+
+    c.jobs = [withCheck(2)];  posts = 0; c.esignRefresh({}, () => {});
+    eq(posts, 0, '⚠⚠ checked 2 minutes ago — NO request');
+    c.jobs = [withCheck(14)]; posts = 0; c.esignRefresh({}, () => {});
+    eq(posts, 0, 'still inside the window at 14 minutes');
+    c.jobs = [withCheck(25)]; posts = 0; c.esignRefresh({}, () => {});
+    eq(posts, 1, 'past the window, one request');
+    c.jobs = [{ id: 1, agrSent: true, docState: { agreement: { esign: { envelopeId: 'e1' } } } }];
+    posts = 0; c.esignRefresh({}, () => {});
+    eq(posts, 1, '⚠ never checked before, so it checks');
+    ok(c.ESIGN_RECHECK_MINS >= 15,
+       '⚠⚠ the window is at or above DocuSign’s published floor of 15 minutes');
+  }
+
+  group('⚠ A FAILED CHECK SPEAKS, AND NEVER READS AS "not signed yet"');
+  {
+    // A silent failure leaves a signed agreement reading unsigned forever — a state with no exit,
+    // which this project's standing rule says is worse than a failure.
+    const said = [];
+    const c = sandbox({
+      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature'],
+      vars: ['ESIGN_RECHECK_MINS'],
+      stubs: { SHEETS_SYNC_URL: 'u',
+               _appsScriptPost: (u, b, cb) => cb(false, { error: 'network died', clientError: true }),
+               _docNotice: (kind, msg) => said.push(msg) },
+    });
+    const job = { id: 3, hvlId: 'HVL-0003', agrSent: true,
+                  docState: { agreement: { esign: { envelopeId: 'e1', status: 'sent' } } } };
+    c.jobs = [job];
+    c.esignRefresh({}, () => {});
+    eq(said.length, 1, 'it says something');
+    has(said[0], 'network died', 'carrying the reason');
+    has(said[0], 'not a statement that it is not',
+        '⚠⚠ and explicitly refuses to be read as "unsigned"');
+    ok(!c.isAgreementSigned(job), 'and no signature is invented from a failure');
+  }
+
+  group('⚠⚠ THE EXECUTED COPY IS RETRIEVED ONCE, WITH ITS CERTIFICATE');
+  {
+    // ⚠⚠ certificate=true DEFAULTS TO FALSE on the combined download — read from DocuSign's own
+    // OpenAPI spec, contradicting several third-party write-ups. Omit it and you silently retain a
+    // good-looking signed PDF with NO audit trail.
+    // ⚠⚠ DRIVEN, BECAUSE THE SOURCE GREP HERE CAME BACK GREEN ON THE REVERT. A revert that FETCHED
+    // the certificate and then threw the result away still contained the string 'documents/
+    // certificate', so `has()` passed over a build that files no audit trail at all. What matters
+    // is that TWO files land, so the test drives the real function and counts them.
+    const fetched = [], created = [];
+    const archCtx = (certOk) => {
+      const ctx = {
+        PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => ({
+          DS_BASE_URI: 'https://demo.docusign.net', DS_ACCOUNT_ID: 'acct',
+          DS_INTEGRATION_KEY: 'ik', DS_USER_ID: 'uid', DS_PRIVATE_KEY: 'k' }[k] || '') }) },
+        CacheService: { getScriptCache: () => ({ get: () => 'tok', put: () => {} }) },
+        Logger: { log: () => {} }, JSON, String, Math, Date, RegExp, Error, encodeURIComponent,
+        UrlFetchApp: { fetch: (url) => {
+          fetched.push(url);
+          const isCert = /documents\/certificate/.test(url);
+          if (isCert && !certOk) return { getResponseCode: () => 404, getContentText: () => 'no cert' };
+          return { getResponseCode: () => 200,
+                   getBlob: () => ({ _n: '', setName(n) { this._n = n; return this; },
+                                     getBytes: () => [1, 2, 3], getName() { return this._n; } }) };
+        } },
+        DriveApp: { getFolderById: () => ({ createFile: (b) => { created.push(b.getName());
+          return { getUrl: () => 'https://drive/' + b.getName(), getId: () => 'id' }; } }) },
+      };
+      vm.createContext(ctx);
+      vm.runInContext([gsFn('_dsProp'), gsFn('_dsIsDemo'), gsFn('_dsAuthHost'), gsFn('_dsMissingProps'),
+                       gsFn('_dsAccessToken'), gsFn('_dsB64Url'), gsFn('dsConsentUrl'),
+                       gsVar('DS_AUTH_HOST_DEMO'), gsVar('DS_AUTH_HOST_PROD'), gsVar('DS_JWT_SCOPES'),
+                       gsVar('DS_TOKEN_TTL_SEC'), gsFn('_dsSigningKey'), gsVar('DS_RSA_ALG_ID'),
+                       gsFn('_dsDerLen'), gsFn('_dsFetchBlob'), gsFn('esignArchiveEnvelope')].join('\n'), ctx);
+      return ctx;
+    };
+
+    const good = archCtx(true).esignArchiveEnvelope({ envelopeId: 'env-1', folderId: 'f', baseName: 'HVL-0007 Agreement' });
+    ok(good.ok, 'the archive succeeds');
+    eq(created.length, 2, '⚠⚠ TWO files land — the executed agreement AND the certificate');
+    ok(created.some((n) => /SIGNED/.test(n)), 'the signed copy, named distinctly from the unsigned packet');
+    ok(created.some((n) => /Certificate of Completion/.test(n)), 'and the audit trail');
+    ok(fetched.some((u) => /documents\/combined\?certificate=true/.test(u)),
+       '⚠⚠ the combined download asks for the certificate explicitly — it DEFAULTS TO FALSE, and '
+       + 'omitting it silently retains a good-looking signed PDF with no audit trail');
+    ok(fetched.some((u) => /documents\/certificate$/.test(u)),
+       '⚠ and the standalone certificate is fetched too, so a tenant-wide setting cannot drop it quietly');
+    ok(!!good.signedUrl && !!good.certUrl, 'both URLs come back for the record');
+
+    // ⚠ A MISSING CERTIFICATE IS REPORTED, NOT PASSED OVER. On a probate matter it is the audit
+    // trail of who bound the estate; losing it quietly is how somebody finds out two years later.
+    created.length = 0; fetched.length = 0;
+    const noCert = archCtx(false).esignArchiveEnvelope({ envelopeId: 'env-1', folderId: 'f', baseName: 'X' });
+    ok(noCert.ok, 'the executed agreement is still filed');
+    eq(created.length, 1, 'one file, not two');
+    ok(!!noCert.certError, '⚠⚠ and the failure is reported rather than silent');
+
+    // ⚠⚠ _dsApi WOULD CORRUPT THE PDF. It ends in JSON.parse(res.getContentText()), and
+    // getContentText() decodes bytes as UTF-8 — lossy and irreversible. The retrieval path keeps
+    // the blob and must never touch it.
+    const arch = noComments(gsFn('esignArchiveEnvelope'));
+    const blobFn = noComments(gsFn('_dsFetchBlob'));
+    has(blobFn, 'res.getBlob()', 'retrieval keeps the raw blob');
+    lacks(arch, '_dsApi(', '⚠⚠ and the archive never routes a PDF through the JSON helper');
+    ok(!/getContentText\(\)[^;]*getBlob/.test(blobFn), 'the bytes are never round-tripped through text');
+
+    // once, ever — gated on filedAt
+    const gate = noComments(fn('esignArchiveSigned'));
+    has(gate, 'st.esign.filedAt', '⚠⚠ gated on filedAt, so a later refresh cannot refetch');
+    has(noComments(fn('applyEsignStatus')), 'esignArchiveSigned',
+        '⚠ and it fires from the completion transition rather than from every check');
+  }
+
+  group('⚠ THE CHECK IS WIRED TO ARRIVAL, NOT TO A TIMER');
+  {
+    has(noComments(fn('_jobsLanded')), 'esignRefresh', 'a page load corrects the rail');
+    has(noComments(fn('openClientDashboard')), 'esignRefresh({ jobId: jobId }',
+        '⚠ and opening a client checks that client');
+    // ⚠⚠ NO TIMER ANYWHERE. A 5-minute trigger is 3x DocuSign's published ceiling against one
+    // resource, and the sandbox is exempt from the rule so it would never have failed in testing.
+    lacks(noComments(fn('esignRefresh')), 'setInterval', 'esignRefresh arms no interval');
+    lacks(noComments(fn('esignRefresh')), 'setTimeout', 'and no timer of its own');
+    lacks(GS, 'ScriptApp.newTrigger', '⚠⚠ and the backend creates no time-driven trigger');
+    // ⚠ SEQUENTIAL, NEVER Promise.all — every store write takes the global Apps Script lock, and
+    // this project already paid for parallel sending once.
+    lacks(noComments(fn('esignRefresh')), 'Promise.all', '⚠ envelopes are checked one at a time');
+  }
+
   group('⚠⚠ NO SECRET IS IN THE REPOSITORY');
   {
     // This repo is public and havellin.html is served from GitHub Pages. A private key in either
@@ -634,8 +819,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(GS, "data.action === 'esignSend'", 'and dispatched');
     has(GS, "data.action === 'esignStatus'", 'both of them');
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
-    ok(bv >= '2026-09-17a',
-       '⚠ BACKEND_VERSION moved with the file, or the banner cannot tell this deployment from the old one');
+    // ⚠ A FLOOR, NOT A "did you bump it" CHECK — it states what THIS feature needs. esignArchive
+    // landed in 2026-09-17b, so a deployment older than that cannot file an executed agreement and
+    // the banner must be able to say so. Raise it only when esign itself needs a newer backend.
+    ok(bv >= '2026-09-17b',
+       '⚠ the deployment is at least the one that added esignArchive');
   }
 
   group('⚠ testEsignAuth IS EDITOR-ONLY, ARGUMENT-FREE AND READ-ONLY');

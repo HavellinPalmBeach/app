@@ -34,10 +34,10 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-17a';
+var BACKEND_VERSION = '2026-09-17b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
-  'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus'
+  'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive'
 ];
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
@@ -120,6 +120,7 @@ function doPost(e) {
     if (data.action === 'unshareFolder') { return jsonOut(unshareFolder(data.folderId, data.email)); }
     if (data.action === 'esignSend')     { return jsonOut(esignSendEnvelope(data)); }
     if (data.action === 'esignStatus')   { return jsonOut(esignEnvelopeStatus(data)); }
+    if (data.action === 'esignArchive')  { return jsonOut(esignArchiveEnvelope(data)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -1922,6 +1923,95 @@ function esignEnvelopeStatus(data) {
     };
   } catch (error) {
     Logger.log('esignEnvelopeStatus error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ─── RETRIEVING THE EXECUTED AGREEMENT ───────────────────────────────────────────
+// ⚠⚠ THIS IS THE HALF MOST LIKELY TO BE SKIPPED, BECAUSE THE SEND ALREADY LOOKS FINISHED — and it
+// is the half that matters legally. DocuSign's Document Retention can purge a completed envelope
+// and the DOCUMENTS are then permanently unrecoverable (the certificate and history survive with a
+// Purged flag; the documents do not). Account closure takes everything. ESIGN Act §101(e) puts the
+// retain-and-accurately-reproduce burden on the party RELYING on the record — us — not the vendor.
+// And Florida's five-year limitation on a written contract (Fla. Stat. §95.11) runs from the
+// BREACH, so a 2026 agreement is litigable well into the 2030s, longer than any confidence in
+// holding one particular subscription.
+//
+// ⚠ ON A PROBATE MATTER THE CERTIFICATE MAY BE THE MORE IMPORTANT FILE. A personal representative
+// binds an estate; counsel may later ask who bound it. The certificate of completion is the audit
+// trail — signer identity, timestamps, IP, authentication method — and is a separate document.
+//
+// ⚠⚠ `_dsApi` CANNOT BE USED HERE AND THAT IS NOT A STYLE POINT. It ends in
+// `JSON.parse(res.getContentText())`, and `getContentText()` decodes bytes as UTF-8 — lossy and
+// irreversible for a PDF. A document fetched through it arrives as mangled text, silently. This
+// keeps the blob and never calls getContentText().
+function _dsFetchBlob(path, filename) {
+  var tok = _dsAccessToken();
+  if (!tok.ok) return { ok: false, error: tok.error, needsConsent: !!tok.needsConsent, consentUrl: tok.consentUrl || '' };
+
+  var url = _dsProp('DS_BASE_URI').replace(/\/+$/, '')
+          + '/restapi/v2.1/accounts/' + _dsProp('DS_ACCOUNT_ID') + path;
+  var res = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + tok.token, Accept: 'application/pdf' },
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() >= 300) {
+    // Safe to read as text HERE: a failure is JSON or HTML, never a PDF.
+    return { ok: false, error: 'HTTP ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 300) };
+  }
+  var blob = res.getBlob().setName(filename);
+  return { ok: true, blob: blob, bytes: blob.getBytes().length };
+}
+
+// Files the executed agreement AND the certificate into the job's Drive Agreement folder.
+//
+// ⚠⚠ `certificate=true` DEFAULTS TO FALSE ON THE COMBINED DOWNLOAD — read from DocuSign's own
+// OpenAPI spec, and it contradicts several third-party write-ups. Omit it and you silently retain a
+// perfectly good-looking signed PDF with no audit trail: the silent-omission shape this file
+// records over and over. A test pins the query string.
+//
+// ⚠ THE STANDALONE CERTIFICATE IS FETCHED SEPARATELY ON PURPOSE, not as duplication. A tenant-wide
+// admin setting ("Attach certificate of completion to envelope") may suppress it from the combined
+// PDF, and no source could establish whether the explicit query parameter overrides that. The
+// separate call has no dependence on the setting, so the audit trail cannot go missing quietly.
+//
+// ⚠ NAMES MUST DIFFER FROM THE UNSIGNED PACKET. `uploadHtmlToDrive` overwrites BY FILENAME — that
+// is what makes a re-file replace rather than accumulate — so a packet re-filed after signature
+// would otherwise destroy the executed copy.
+function esignArchiveEnvelope(data) {
+  try {
+    var id = data && data.envelopeId;
+    if (!id) return { ok: false, error: 'No envelope id supplied.' };
+    if (!data.folderId) return { ok: false, error: 'No Drive folder supplied to file the signed agreement into.' };
+    var base = data.baseName || ('Agreement ' + id);
+    var enc = encodeURIComponent(id);
+
+    var signed = _dsFetchBlob('/envelopes/' + enc + '/documents/combined?certificate=true',
+                              base + ' - SIGNED.pdf');
+    if (!signed.ok) return { ok: false, error: 'Could not retrieve the signed agreement — ' + signed.error,
+                             needsConsent: signed.needsConsent, consentUrl: signed.consentUrl };
+
+    var cert = _dsFetchBlob('/envelopes/' + enc + '/documents/certificate',
+                            base + ' - Certificate of Completion.pdf');
+
+    var folder = DriveApp.getFolderById(data.folderId);
+    var out = { ok: true };
+    var f1 = folder.createFile(signed.blob);
+    out.signedUrl = f1.getUrl(); out.signedId = f1.getId(); out.signedBytes = signed.bytes;
+
+    // ⚠ A MISSING CERTIFICATE IS REPORTED, NEVER SILENT. The executed agreement is the thing that
+    // had to be kept; losing the audit trail without saying so is how a probate matter discovers it
+    // two years later.
+    if (cert.ok) {
+      var f2 = folder.createFile(cert.blob);
+      out.certUrl = f2.getUrl(); out.certId = f2.getId(); out.certBytes = cert.bytes;
+    } else {
+      out.certError = cert.error;
+    }
+    return out;
+  } catch (error) {
+    Logger.log('esignArchiveEnvelope error: ' + error);
     return { ok: false, error: String(error) };
   }
 }

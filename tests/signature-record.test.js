@@ -306,23 +306,40 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ POLL, DO NOT USE DOCUSIGN CONNECT — the decision, and it is load-bearing');
+  group('⚠⚠ NO WEBHOOK AND NO TIMER — the decision, corrected, and it is load-bearing');
   {
-    // Connect is DocuSign's webhook and the obvious design. It cannot work against this
-    // backend, for four separate reasons, each fatal on its own — and the most important is
-    // the security one: `doPost(e)` does not expose request headers, so the HMAC that proves
-    // a callback is really DocuSign is unreadable. An unauthenticated endpoint that marks
-    // contracts signed is not something to ship.
+    // ⚠⚠ RESTATED 2026-09-18. This group used to pin the FOUR REASONS the old note gave for
+    // rejecting DocuSign Connect. None of them had been tested and only one held up: the headline
+    // claim, that the callback cannot arrive, is FALSE — `doPost` runs on the first hop, before the
+    // 302. So these assertions were faithfully pinning a wrong explanation, which is worse than
+    // pinning nothing: the next person would have reasoned from it.
+    //
+    // The CONCLUSION survives and the REASONS are replaced. What must be recorded is (a) that the
+    // old reasoning was wrong, so nobody re-derives it, and (b) the real reason Connect is declined
+    // — a signature loop that can die silently — and the real reason the old fallback was worse.
     const where = src.slice(src.indexOf('WHERE A PROVIDER'), src.indexOf('function applyEsignStatus'));
-    has(where, "POLL, DO NOT USE DOCUSIGN", "the decision is recorded where the code is");
-    has(where, '302', 'the redirect that makes every notification look like a failure');
-    has(where, 'ContentService', 'the reason a 200 cannot be returned');
-    has(where, 'X-DocuSign-Signature-1', 'and the HMAC that cannot be read');
-    // ⚠ NOTHING CALLS DOCUSIGN. A half-built integration reporting success on an opaque
-    // response is a defect this file already records once — `generateStripeLink`.
-    lacks(src, 'docusign.net', 'no endpoint is contacted');
-    lacks(src, 'demo.docusign', 'not even a sandbox one');
-    eq((src.match(/accounts\.docusign/g) || []).length, 0, 'no auth host either');
+    has(where, 'CORRECTED', '⚠⚠ the note says it was corrected rather than reading as first-hand fact');
+    has(where, 'doPost` EXECUTES ON THE FIRST HOP',
+        '⚠⚠ and states plainly that the callback DOES arrive — the claim that was false');
+    has(where, 'Active - Pending Deactivation',
+        '⚠⚠ the real reason Connect is declined: a signature loop that dies SILENTLY');
+    has(where, '15 minutes',
+        '⚠⚠ and DocuSign\u2019s published floor, which made the old 5-minute fallback worse than the '
+        + 'thing it rejected');
+    has(where, 'EXEMPT',
+        '⚠⚠ including that the sandbox is exempt, so a poll would have tested clean and failed at go-live');
+    has(where, 'esignRefresh', 'and it names what was built instead');
+    // ⚠ the two dead ends, recorded so they are not chased
+    has(where, '405', 'following the redirect is named as a dead end');
+    has(where, 'httpheaders', 'as is the manifest setting that does not exist');
+    // ⚠ RESTATED TOO: the app still contacts no DocuSign endpoint DIRECTLY — every call goes
+    // through the Apps Script backend, which holds the credentials. The original point was that a
+    // browser must never carry them, and that survives; "nothing calls DocuSign at all" stopped
+    // being true the day the integration landed.
+    lacks(noComments(src), 'docusign.net', '⚠ the app contacts no DocuSign host itself');
+    lacks(noComments(src), 'accounts.docusign', 'and holds no auth host');
+    lacks(noComments(src), 'DS_PRIVATE_KEY', '⚠⚠ nor any credential — those live in Script Properties');
+    has(src, "action: 'esignStatus'", 'it reaches DocuSign only through the backend action');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

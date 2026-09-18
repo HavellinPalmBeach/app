@@ -1,5 +1,89 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE SIGNATURE COMES BACK, AND MY OWN POLL WOULD HAVE GOT THE API REVOKED (BUILT 2026-09-17)
+Anthony, on being asked whether to build the return half now or next session: *"What the heck? Do you think I want
+this like not working? Like, yes, build it."* He is right that it was not a question — an envelope that goes out and
+never comes back is a worse state than no integration, because the rail reads *waiting on the client* forever over a
+contract that was signed a week ago. App + `main-sync.gs`, **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY**,
+`BACKEND_VERSION 2026-09-17b`.
+
+- **⚠⚠ THE 5-MINUTE TRIGGER THIS FILE HAS RECORDED SINCE 2026-09-11 WOULD HAVE HAD THE API KEY REVOKED, AND THE
+  SANDBOX WOULD NEVER HAVE CAUGHT IT.** DocuSign's published polling rule is **one request per unique resource per
+  15 minutes**, and the penalty is not a 429 — it is **revocation of API access**. Five minutes is 3× over. Worse,
+  and this is the part that makes it the dangerous kind of defect: **the demo sandbox is EXEMPT from the polling
+  check**, so every test run against demo would have passed, forever, and the first thing to fail would have been
+  production on a real client's agreement. **A latent defect whose trigger is "you went live" is the shape this file
+  already records once** (the photo-upload loop that armed the day the crew first took a batch of photographs).
+  - `ESIGN_RECHECK_MINS = 20` — their floor plus their own suggested margin, and a test pins it **at or above 15**
+    rather than pinning the number, so the requirement survives the next tuning.
+  - **⚠⚠ AND THERE IS NO TIMER AT ALL, WHICH IS THE ACTUAL FIX.** `lacks(GS, 'ScriptApp.newTrigger')`,
+    `lacks(esignRefresh, 'setInterval')`, `lacks(esignRefresh, 'setTimeout')`. The check is wired to **ARRIVAL** —
+    a page load (`_jobsLanded`) and opening a client (`openClientDashboard`) — so it fires when somebody is looking
+    at the answer and never when nobody is. A timer running against an idle tab is how you spend a rate limit on
+    nobody.
+  - **⚠ SEQUENTIAL, NEVER `Promise.all`.** Every store write takes the **global** Apps Script lock, and this file
+    records in full what parallel sending cost on 2026-09-11: *the retry manufactured the condition it was
+    retrying*. One envelope at a time. A test `lacks()` the parallel form.
+- **⚠⚠ A FAILED CHECK SPEAKS, AND THE WORDING IS THE REQUIREMENT RATHER THAN A NICETY.** A silent failure leaves a
+  signed agreement reading unsigned forever — a state with no exit, which this file's standing rule calls worse than
+  a failure. But *"not signed"* is also a **claim**, and it would be false. So the notice names the cause and then
+  says outright *"It may already be signed; this is not a statement that it is not."* Driven in a browser against a
+  502: the sentence renders, the cause renders, and the job stays unsigned.
+  - **⚠ A FAILED CHECK MUST NOT STAMP `checkedAt`.** Doing so burns the 20-minute window on an answer nobody got,
+    so a transient 502 makes the app blind for twenty minutes rather than five seconds. Verified in the browser that
+    the stamp is unmoved after a failure.
+- **⚠⚠ THE EXECUTED COPY IS RETRIEVED, AND `certificate=true` DEFAULTS TO FALSE.** Read from DocuSign's own OpenAPI
+  spec, contradicting several third-party write-ups that say the opposite. Omit it and the combined download silently
+  returns **a good-looking signed PDF with no audit trail** — on a probate matter the certificate of completion is the
+  record of who bound the estate and when, and its absence is discovered two years later by counsel, not by us. Both
+  are fetched: `documents/combined?certificate=true` AND the standalone `documents/certificate`, because a tenant-wide
+  setting can suppress the embedded one.
+  - **⚠⚠ THE SOURCE GREP FOR THIS CAME BACK GREEN ON THE REVERT.** A revert that fetched the certificate and threw
+    the result away still contained the string `documents/certificate`, so `has()` passed over a build filing **no
+    audit trail at all**. What matters is that TWO FILES LAND, so the test drives the real `esignArchiveEnvelope`
+    against a stubbed `UrlFetchApp`/`DriveApp` and **counts the files**. Re-done, it fails **5**. Same gap this file
+    records more than any other: the check drove a piece and nothing drove the outcome.
+  - **⚠ A MISSING CERTIFICATE IS REPORTED, NEVER PASSED OVER.** The executed agreement still files; `certError` comes
+    back and the notice goes **amber rather than green**. Driven: certificate 404 → one file, `ok:true`, `certError`
+    set.
+  - **⚠⚠ `_dsApi` WOULD HAVE CORRUPTED THE PDF, IRREVERSIBLY.** It ends in `JSON.parse(res.getContentText())`, and
+    `getContentText()` decodes bytes as UTF-8 — lossy, and there is no way back. `_dsFetchBlob` keeps
+    `res.getBlob()` and the archive never routes a PDF through the JSON helper. Both pinned, and this is the trap to
+    remember on any future binary endpoint: **the existing helper is the wrong one and it looks right.**
+- **⚠ FIRED ONCE, ON THE TRANSITION INTO `completed`, GATED ON `filedAt`.** DocuSign counts document retrieval as a
+  unique-resource request under the same 15-minute rule and warns specifically that list-then-get-each trips the
+  polling check **even when polling was not intended**. So the archive is not something a later refresh can re-run:
+  `applyEsignStatus` fires it on the transition, and `st.esign.filedAt` refuses it ever after. Verified in a browser:
+  opening the client a **second time makes zero network calls**.
+- **⚠ A SIGNED AGREEMENT DROPS OFF THE CHECK.** `esignJobWatches` keys on the envelope AND `!isAgreementSigned`, or
+  a completed envelope is asked about forever — which is exactly how a rate limit is spent.
+- **5261 committed checks** (`tests/esign-docusign.test.js`, ~178). **All twelve changes revert-verified
+  individually, ZERO green after the two below were re-done** — the failed-check notice fails 3, the recheck gate and
+  its floor 2 each, the certificate fetch **5**, and the rest 1.
+  - **⚠ THE SECOND GREEN REVERT WAS THE `BACKEND_VERSION` BUMP, AND THE FIX IS NOT "ASSERT THE NEW NUMBER".** A test
+    that pins today's literal is a *did-you-bump-it* check that breaks on the next real bump — this file records that
+    exact assertion breaking twice already on this one constant. It is a **floor** (`bv >= '2026-09-17b'`) with the
+    reason beside it: the archive action landed in that version, so a deployment older than it **cannot file an
+    executed agreement**. That states what the feature needs and survives the next bump.
+- **Verified end to end in headless Chromium on the real page**, driving the real `openClientDashboard`:
+
+  | | before | after |
+  |---|---|---|
+  | opening the client | nothing | `esignStatus` → `esignArchive`, in that order |
+  | the job | unsigned | **signed**, signer *Tripp Butler* — the client, not the approver |
+  | Drive | — | `HVL-0007 - Havellin Services Agreement` into `sub-agr-1`, signed + certificate URLs on the record |
+  | the notice | — | *Signed agreement and certificate of completion filed to Drive* |
+  | **opening it a second time** | — | **0 network calls** |
+  | a 502 on the check | — | amber, names the 502, *"not a statement that it is not"*, `checkedAt` unmoved |
+  | a **paper-route** job on the same device | — | not watched, 0 calls, absent from `outstandingEnvelopes` |
+
+  The 20-minute gate reads `false` fresh, `true` at 21 minutes, `true` never-checked. Overflow **0** at 1440 and
+  390px, **no JS page errors**.
+- **⚠ THE ONE THING NO TEST HERE CAN COVER, AND IT IS ANTHONY'S TO DO: send one real sandbox envelope end to end.**
+  Anchor placement is resolved by DocuSign against the **text layer of the generated PDF**, so whether `/hsc/` is
+  found at all, and where `DS_TAB_Y_OFFSET` puts the box relative to it, cannot be asserted from here — only seen.
+  Everything up to the PDF is proven; the last inch is a visual check on a real envelope.
+
 ## ⚠⚠ DOCUSIGN IS WIRED — AND THE HALF THAT WAS MISSING WAS ALL OF IT (BUILT 2026-09-17)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-17a`.
 Anthony: *"Where do we stand with DocuSign integration? … I want to start wiring up DocuSign so we can
@@ -3327,19 +3411,30 @@ workflow."* App-only, no redeploy.
   `AGR_SIG_MANUAL_METHODS` (`wet`, `scanned`) and `confirmAgreementSignature` rejects anything
   outside it, so a human cannot claim an electronic signature that no provider issued.
 
-### ⚠⚠ POLL, DO NOT USE DOCUSIGN CONNECT — the decision, recorded before anything rests on it
-Connect is DocuSign's webhook and the obvious design. It **cannot work against this backend**,
-for four reasons, each fatal alone:
-- Apps Script answers a POST to `/exec` with an HTTP **302** to `script.googleusercontent.com`.
-  Connect reads a non-2xx as a failed delivery and **retries forever**.
-- `ContentService` cannot return a status code at all, so there is no way to answer 200.
-- **`doPost(e)` does not expose request HEADERS**, so `X-DocuSign-Signature-1` — the HMAC that
-  proves the callback is really DocuSign — is unreadable. An unauthenticated endpoint that
-  marks contracts signed is not something to ship. This is the one that settles it.
-- `/exec` has no inbound auth of its own.
+### ⚠⚠ POLL, DO NOT USE DOCUSIGN CONNECT — the decision, and ⚠ THREE OF ITS FOUR REASONS WERE WRONG
+**⚠⚠ CORRECTED 2026-09-17, and the correction is the point: the conclusion held and the ARGUMENT FOR IT DID
+NOT.** Anthony asked outright — *"Are you sure you understand what's needed? … Do we need to do a bit more work
+to figure out if that's actually what needs to happen here?"* — and he was right to. Tested against DocuSign's
+own documentation rather than repeated: **only the third claim below survives.** The headline one, that the
+callback cannot arrive at all, is **FALSE** — Apps Script's 302 to `script.googleusercontent.com` is followed
+normally by any HTTP client that follows redirects, which Connect does, and the final response is a 200. A note
+that is right for the wrong reason is worse than one that is wrong, because nobody re-examines it. The original
+four are kept below with each one's verdict on it.
+Connect is DocuSign's webhook and the obvious design. It **must not be used against this backend**:
+- ~~Apps Script answers a POST to `/exec` with a **302** and Connect reads a non-2xx as a failed
+  delivery, retrying forever.~~ **FALSE.** The redirect is followed and the final answer is a 200.
+  This was the headline reason and it was never true.
+- ~~`ContentService` cannot return a status code at all, so there is no way to answer 200.~~
+  **TRUE BUT IRRELEVANT.** It cannot set one, and it does not need to — a normal return IS a 200.
+- **`doPost(e)` does not expose request HEADERS.** ✅ **THE ONE THAT HOLDS, AND IT ALONE SETTLES
+  IT.** `X-DocuSign-Signature-1` is the HMAC proving the callback is really DocuSign, and it is
+  unreadable from Apps Script. So the endpoint could only authenticate the payload by trusting its
+  contents — i.e. not at all. **An unauthenticated URL that marks contracts signed** is a thing
+  anybody who learns the URL can fire, on a public repo whose app is served from Pages.
+- ~~`/exec` has no inbound auth of its own.~~ **RESTATED, not a separate reason** — it is the same
+  fact as the one above, counted twice, which is how four reasons looked more convincing than one.
 
-So the envelope id rides the record and a **5-minute Apps Script trigger polls**. Slower, and
-correct. `applyEsignStatus` is where a provider's verdict becomes a signature and
+So the envelope id rides the record and the app **checks on arrival**. Slower, and correct. `applyEsignStatus` is where a provider's verdict becomes a signature and
 `outstandingEnvelopes` is what a poll would ask about — both DOM-free, so the backend side can
 be written against them.
 - **⚠ ONLY `completed` IS A SIGNATURE.** `delivered` and a per-recipient `signed` are not the
