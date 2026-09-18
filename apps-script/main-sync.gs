@@ -34,10 +34,11 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-17b';
+var BACKEND_VERSION = '2026-09-18a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
-  'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive'
+  'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
+  'stripeLink', 'stripeStatus'
 ];
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
@@ -121,6 +122,8 @@ function doPost(e) {
     if (data.action === 'esignSend')     { return jsonOut(esignSendEnvelope(data)); }
     if (data.action === 'esignStatus')   { return jsonOut(esignEnvelopeStatus(data)); }
     if (data.action === 'esignArchive')  { return jsonOut(esignArchiveEnvelope(data)); }
+    if (data.action === 'stripeLink')    { return jsonOut(stripeCreatePaymentLink(data)); }
+    if (data.action === 'stripeStatus')  { return jsonOut(stripePaymentsForLink(data)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -2131,4 +2134,232 @@ function testEsignAuth() {
   Logger.log('Account     : ' + (res.body.accountName || _dsProp('DS_ACCOUNT_ID')));
   Logger.log('ALL GOOD — DocuSign is reachable and consented.');
   return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// STRIPE — ACH ONLY
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚠⚠ THIS LIVES IN main-sync.gs RATHER THAN THE SEPARATE STRIPE PROJECT, AND THAT IS THE
+// WHOLE POINT OF THE MOVE. Until 2026-09-18 the payment link was minted by a second Apps
+// Script deployment behind STRIPE_SCRIPT_URL — fine while it was fire-and-forget, and wrong
+// the moment anything reads back, because read-back is on the app's REQUEST PATH and has to
+// move in lockstep with BACKEND_VERSION, BACKEND_ACTIONS and the dispatch-parity test.
+// `checkBackendVersion` cannot reach a second deployment, so a stale one would fail exactly
+// the way the stale main-sync.gs did: silently, and read as an app bug. This file records
+// that costing six weeks. Same reasoning as the DocuSign build on 2026-09-17.
+//
+// ⚠ ACH ONLY, AND IT IS DECIDED RATHER THAN DEFAULTED. Anthony, 2026-09-18, asked directly:
+// "No cards at all." ACH is 0.8% capped at $5; a card is 2.9% + 30c, which on one $25,715
+// job is $747 against $16.50. A 3% surcharge cannot close that gap legally — the cap is the
+// LOWER of 3% or actual cost of acceptance, and the blended card rate is 2.9023% at these
+// ticket sizes, so 3% is only compliant at or below $300. See STRIPE_PAYMENTS_SPEC.md §1.
+var STRIPE_API             = 'https://api.stripe.com/v1';
+var STRIPE_API_VERSION     = '2024-06-20';
+var STRIPE_ALLOWED_METHODS = ['us_bank_account'];   // ⚠ ACH. Adding a card here is a pricing decision, not a config change.
+
+function _stProp(name) {
+  return (PropertiesService.getScriptProperties().getProperty(name) || '').trim();
+}
+
+// Named individually, never "not configured" — the lesson this file already records twice, on
+// the PDF conversion and on the five DocuSign properties.
+function _stMissingProps() {
+  return ['STRIPE_SECRET_KEY'].filter(function (k) { return !_stProp(k); });
+}
+
+function _stErr(res) {
+  var e = (res && res.body && res.body.error) || {};
+  return e.message || e.type || (res && res.body && res.body.raw) || 'no reason given';
+}
+
+// ⚠ STRIPE TAKES FORM ENCODING, NOT JSON, AND NESTS WITH BRACKETS. `line_items[0][price_data]
+// [currency]=usd`. Posting JSON to this API returns a 400 that reads like a bad key, which is
+// the wrong place to start debugging.
+function _stForm(obj, prefix, out) {
+  out = out || [];
+  for (var k in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+    var v = obj[k];
+    if (v === null || v === undefined) continue;
+    var key = prefix ? prefix + '[' + k + ']' : k;
+    if (Object.prototype.toString.call(v) === '[object Array]') {
+      for (var i = 0; i < v.length; i++) {
+        if (v[i] !== null && typeof v[i] === 'object') _stForm(v[i], key + '[' + i + ']', out);
+        else out.push(encodeURIComponent(key + '[' + i + ']') + '=' + encodeURIComponent(String(v[i])));
+      }
+    } else if (typeof v === 'object') {
+      _stForm(v, key, out);
+    } else {
+      out.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(v)));
+    }
+  }
+  return out.join('&');
+}
+
+function _stApi(method, path, params) {
+  var key = _stProp('STRIPE_SECRET_KEY');
+  if (!key) return { ok: false, code: 0, body: { error: { message: 'STRIPE_SECRET_KEY is not set in Script Properties.' } } };
+
+  var url  = STRIPE_API + path;
+  var opts = {
+    method: method,
+    headers: { Authorization: 'Bearer ' + key, 'Stripe-Version': STRIPE_API_VERSION },
+    muteHttpExceptions: true
+  };
+  if (params) {
+    if (String(method).toLowerCase() === 'get') {
+      url += (url.indexOf('?') === -1 ? '?' : '&') + _stForm(params);
+    } else {
+      opts.contentType = 'application/x-www-form-urlencoded';
+      opts.payload = _stForm(params);
+    }
+  }
+  var res  = UrlFetchApp.fetch(url, opts);
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); } catch (e) { body = { raw: res.getContentText().slice(0, 300) }; }
+  return { ok: res.getResponseCode() < 300, code: res.getResponseCode(), body: body };
+}
+
+// ─── CREATING THE PAYMENT LINK ───────────────────────────────────────────────────
+// ⚠⚠ A PAYMENT LINK, NOT A CHECKOUT SESSION, AND THE REASON IS THE CALENDAR. A Checkout
+// Session expires — 24 hours is Stripe's hard maximum — and a deposit invoice is routinely
+// paid days later by a trust officer who has to get it approved first. An expired link is a
+// client who tried to pay and could not, which is worse than never sending one. A Payment
+// Link does not expire until it is deactivated.
+function stripeCreatePaymentLink(data) {
+  try {
+    var miss = _stMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'Stripe is not configured — missing Script Propert'
+                                 + (miss.length > 1 ? 'ies' : 'y') + ': ' + miss.join(', ') + '.' };
+    }
+    var cents = Math.round(Number(data && data.amount) * 100);
+    if (!(cents > 0)) return { ok: false, error: 'There is no amount to charge on this stage.' };
+
+    var res = _stApi('post', '/payment_links', {
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: cents,
+          product_data: { name: (data.description || 'Havellin Palm Beach').slice(0, 250) }
+        }
+      }],
+      payment_method_types: STRIPE_ALLOWED_METHODS,
+      // ⚠ THE METADATA IS HOW A PAYMENT FINDS ITS WAY HOME. Stripe is the only record of which
+      // job and stage a bank transfer belongs to once it lands days later.
+      metadata: {
+        jobId: String((data && data.jobId) || ''),
+        hvlId: String((data && data.hvlId) || ''),
+        stage: String((data && data.stage) || '')
+      }
+    });
+    if (!res.ok) return { ok: false, error: 'Stripe refused the request (HTTP ' + res.code + '): ' + _stErr(res) };
+
+    // ⚠⚠ VERIFY WHAT CAME BACK; DO NOT TRUST THE PARAMETER. Whether /v1/payment_links honours
+    // `payment_method_types` could not be confirmed from the build environment — docs.stripe.com
+    // is blocked by the egress proxy. So the link is READ BACK and checked, and a link that would
+    // also take a card is DEACTIVATED rather than returned. This is the rule this file already
+    // records paying for on DriveApp.getThumbnail(), which returned a 130KB archival photograph
+    // under a name promising a thumbnail: trust the measurement, never the method name.
+    //
+    // ⚠ AN EMPTY LIST IS A FAILURE, NOT A PASS. Stripe returns null there when it defers to the
+    // Dashboard's own payment-method settings, and those may include cards. We cannot prove
+    // ACH-only in that case, so we refuse and name the fix.
+    var got = res.body.payment_method_types || [];
+    var bad = [];
+    for (var i = 0; i < got.length; i++) {
+      if (STRIPE_ALLOWED_METHODS.indexOf(got[i]) === -1) bad.push(got[i]);
+    }
+    if (!got.length || bad.length) {
+      try { _stApi('post', '/payment_links/' + encodeURIComponent(res.body.id), { active: false }); } catch (e) {}
+      return { ok: false, error: 'Stripe created a link that is not ACH-only ('
+        + (bad.length ? 'it also accepts ' + bad.join(', ') : 'it did not say which methods it accepts')
+        + '), so it was deactivated and NOT sent. Fix it in the Stripe Dashboard: '
+        + 'Settings > Payments > Payment methods — turn OFF cards and turn ON ACH Direct Debit.' };
+    }
+
+    return { ok: true, linkId: res.body.id, url: res.body.url, amount: cents / 100, methods: got };
+  } catch (error) {
+    Logger.log('stripeCreatePaymentLink error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ─── READING BACK WHAT WAS PAID ──────────────────────────────────────────────────
+// ⚠⚠ NO WEBHOOK, AND THE REASON IS THE SAME ONE THAT RULED OUT DOCUSIGN CONNECT. `doPost(e)`
+// does not expose request HEADERS, and Stripe signs every webhook with `Stripe-Signature`
+// with no query-parameter alternative. An Apps Script endpoint therefore cannot authenticate
+// a delivery — leaving an open URL, on a public repo, that marks a $12,858 deposit received.
+//
+// ⚠ BUT THE DOCUSIGN HAZARD DOES NOT TRANSFER, which is why polling is the answer here and was
+// not there. DocuSign publishes a hard one-request-per-resource-per-15-minutes floor and names
+// REVOCATION as the penalty. Stripe has no such rule. And ACH takes ~4 business days to settle,
+// so checking on arrival loses nothing a webhook would have bought.
+//
+// ⚠ ONE LIST CALL, NOT LIST-THEN-GET-EACH. `expand[]=data.payment_intent` returns the intent
+// inline; fetching each one separately is N+1 calls for the same answer.
+function stripePaymentsForLink(data) {
+  try {
+    var id = data && data.linkId;
+    if (!id) return { ok: false, error: 'No payment link supplied.' };
+
+    var res = _stApi('get', '/checkout/sessions', {
+      limit: 100,
+      payment_link: id,
+      expand: ['data.payment_intent']
+    });
+    if (!res.ok) return { ok: false, error: 'Stripe status check failed (HTTP ' + res.code + '): ' + _stErr(res) };
+
+    var out = [];
+    var rows = (res.body && res.body.data) || [];
+    for (var i = 0; i < rows.length; i++) {
+      var s  = rows[i];
+      var pi = s.payment_intent;
+      if (!pi || typeof pi !== 'object') continue;   // unexpanded id, or a session that never got as far as an intent
+      var cd = s.customer_details || {};
+      out.push({
+        sessionId: s.id,
+        piId:      pi.id,
+        // ⚠ THE INTENT'S STATUS, NEVER THE SESSION'S. On ACH the session reads `complete` the
+        // moment the client authorises, while the money is still days away — the intent sits at
+        // `processing` until it actually settles. Reading the session would record money that
+        // has not arrived, which is the whole defect this build exists to avoid.
+        status:    pi.status || '',
+        amount:    (pi.amount_received || pi.amount || 0) / 100,
+        payer:     cd.name || cd.email || '',
+        createdAt: pi.created ? new Date(pi.created * 1000).toISOString() : ''
+      });
+    }
+    return { ok: true, linkId: id, payments: out };
+  } catch (error) {
+    Logger.log('stripePaymentsForLink error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ EDITOR-ONLY, ARGUMENT-FREE, READ-ONLY — the testQuoAuth / testEsignAuth pattern, and the
+// thing to run first. The Apps Script Run menu passes no arguments. It proves the key and the
+// account WITHOUT creating a payment link, so an auth failure can never masquerade as a
+// sending bug. It also reports whether the account can actually take ACH, because a key that
+// authenticates against an account with ACH switched off fails later and further away.
+function testStripeAuth() {
+  var miss = _stMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+
+  var bal = _stApi('get', '/balance', null);
+  if (!bal.ok) { Logger.log('FAILED (HTTP ' + bal.code + '): ' + _stErr(bal)); return; }
+
+  var acct = _stApi('get', '/account', null);
+  var live = _stProp('STRIPE_SECRET_KEY').indexOf('sk_live_') === 0;
+  Logger.log('ALL GOOD — Stripe is reachable.');
+  Logger.log('  mode:    ' + (live ? 'LIVE' : 'TEST'));
+  if (acct.ok) {
+    Logger.log('  account: ' + (acct.body.business_profile && acct.body.business_profile.name || acct.body.id));
+    var caps = acct.body.capabilities || {};
+    Logger.log('  ACH (us_bank_account_ach_payments): ' + (caps.us_bank_account_ach_payments || 'not enabled'));
+    if (caps.us_bank_account_ach_payments !== 'active') {
+      Logger.log('  >> ACH IS NOT ACTIVE. Enable it: Dashboard > Settings > Payments > Payment methods.');
+    }
+  }
 }

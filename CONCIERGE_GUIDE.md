@@ -377,13 +377,21 @@ Recording a payment captures evidence, not a tick:
 | --- | --- |
 | **Amount** | Prefilled with what's still outstanding — a second cheque needs no arithmetic in the field. |
 | **Date received** | The day it reached your hand, not the day it clears. |
-| **Method & reference** | Cheque number, wire confirmation, Stripe id. |
+| **Method & reference** | Cheque number, wire confirmation, Stripe id. Pick **Bank transfer (ACH)** only for a transfer *not* sent through our payment link — one sent through the link records itself. |
 | **Paid by** | The trust, estate account, law firm or the client. In estate work the payer is often not the client, and this is what shows the estate is funding the engagement properly. It also settles the argument if heirs later dispute who paid for what. |
 | **Photo of the cheque** | Take it *before the cheque leaves your hands.* Five seconds, and it's what makes a hand-recorded payment a document rather than an assertion. It files to Drive against the payment. |
 
 **Partial payments are normal.** Two cheques, or the trust sending part and the family the rest, all work. The job stays part-paid and unfunded until the running total hits the target, the bar shows what's outstanding, and the button stays available for the next one. A short total asks before it's accepted; a second cheque that completes the deposit goes through without a warning.
 
-> **Work starts on *received*, not *cleared*.** Waiting for cheques to clear costs three to five days on every job. Wires, cards and cash are marked cleared on receipt; cheques show as uncleared on the dashboard until the bank confirms.
+> **Work starts on *received*, not *cleared*.** Waiting for cheques to clear costs three to five days on every job. Wires, cards and cash are marked cleared on receipt; cheques **and ACH bank transfers** show as *uncleared* on the dashboard until the money genuinely settles.
+
+> **⚠ A CLIENT CAN PAY THE DEPOSIT BY BANK TRANSFER, AND THAT ONE RECORDS ITSELF.** The deposit row of the timeline carries **🏦 ACH payment link** beside *Send deposit invoice*. Press it, send the link the app shows you along with the invoice, and when the transfer lands the payment writes itself — amount, date, payer, and *Stripe* as who recorded it. **Do not also record it by hand**, or the deposit is on the job twice.
+>
+> **It takes about four business days, and that is the normal state of it.** The client authorises the transfer on day one and the money arrives on day four or five. In between, the client will tell you they have paid and the app will show nothing. They are both right. **Do not record it by hand to make the screen agree with them** — that is the app claiming money is in the account when it is not.
+>
+> **The check runs when you open the client.** There is no timer and no other refresh. If you are waiting on a transfer, open the client.
+>
+> **Cards are not accepted.** Not an oversight and not a setting to change: a card on a $25,715 job costs Havellin $747 against $16.50 on a bank transfer, and the "3% convenience fee" that would cover it is only legal on tickets under about $300. If a client insists on a card, the answer is a cheque or a wire.
 
 ### Deposits over $10,000
 
@@ -935,7 +943,13 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | A red chip bottom-left: *N change(s) not saved* | Tap it. It opens and names which write is stuck, which sheet it was going to, and what the server said back. **Try again** resends. Nothing is lost while it sits there — the work is queued, not dropped. |
 | The chip says *Apps Script needs redeploying* | The sheet script answered "unknown action" — it is genuinely older than the app. Anthony redeploys it (Extensions → Apps Script → Deploy → Manage deployments → New version), then you press **Try again**. |
 | The chip says *the Apps Script returned an error* | The script crashed on that one write. It is held rather than retried, because the same request would fail the same way. Tap the chip, screenshot the error line and send it on — **do not go redeploying anything on the strength of this**. Until 2026-09-01 the app called this a redeploy, and it was wrong to. |
-| "No payment link was created" after Generate Payment Link | The Stripe service didn't answer or rejected it. Nothing was sent. Send the deposit invoice and record the payment by hand. |
+| "No payment link was created" after **🏦 ACH payment link** | Stripe refused it or the script could not reach it. Nothing was sent to the client. Send the deposit invoice on its own and record the payment by hand when it arrives; tell Anthony what the message said. |
+| The link was refused because it "is not ACH-only" | Stripe would have let the client pay by card on it, so the app switched the link off rather than send it. Cards cost us about 45× what a transfer does. Anthony fixes it in the Stripe Dashboard (Settings → Payments → Payment methods: cards **off**, ACH Direct Debit **on**), then press the button again. |
+| The client says they paid by bank transfer and the app shows nothing | Normal for about four business days. They have authorised it; the money has not arrived. Open the client again in a day or two. **Do not record it by hand** — the app will record it itself when it settles, and you would end up with the deposit on the job twice. |
+| The deposit shows *uncleared* after a bank transfer you recorded by hand | Correct. A hand-recorded ACH is an authorisation, not settled money — the same treatment a cheque gets. It funds the job either way; the *uncleared* flag comes off when it really lands. |
+| "Could not check the payment status … this is not a statement that it has not" | The status check did not reach Stripe. It is not saying the money is absent — it is saying it does not know. It tries again the next time you open the client. |
+| Pressing **🏦 ACH payment link** gives you the same link again | Intended. One link per invoice. Two links against one deposit is two ways to pay it, and a client who pays both has overpaid. |
+| The ACH button is not on the deposit row | Either the deposit invoice has not been sent yet, or this device has no Apps Script URL in Settings. |
 | The attorney says their paralegal does the inventory — how do I quote it? | Build Estimate → **Documentation scope** (under the concierge hands-on share) → *None*. If they want our photographs and list but will value it themselves, *Capture only*. Do not pick a different service type — the voice, the written-authority gate and the disposition rules come from the service type and must stay. |
 | The Documentation scope dropdown isn't there | The job is a home editing, home transition, home cleanout or home prep. Those price no documentation step, so there is nothing to scale and the control hides. If the owner has died the job is an Estate Settlement, and correcting the service type is what brings it back. |
 | The estimate opened at *None* and I didn't set it | Intake did. *Who builds the inventory?* on the intake form seeds the estimate's scope. Change it on the estimate if the walkthrough says otherwise — the hint under the dropdown will name the disagreement — and correct the intake answer through Edit Client so the next person sees the same thing you do. |

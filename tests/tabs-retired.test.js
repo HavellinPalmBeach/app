@@ -153,19 +153,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠ DOOR 3: the Stripe deposit link — moved, not promoted');
+  group('⚠ DOOR 3: the ACH payment link — moved, not promoted');
   {
+    // ⚠ FOUR OF THE FIVE ASSERTIONS HERE PINNED THE 2026-09-11 WORLD AND BROKE CORRECTLY ON
+    // 2026-09-18, when Stripe moved onto the main backend and learned to read back. They are
+    // RESTATED as the requirement rather than deleted — the requirement never was "the label
+    // says Stripe link" or "the gate names STRIPE_SCRIPT_URL", it was that the link is reachable
+    // from the deposit row, is never the primary, and is withheld when the backend is not set up.
     const acts = noComments(fn('jobTimelineActions'));
-    has(acts, "call: 'dashStripeLink(' + id + ')'", 'reachable from the deposit row');
-    // ⚠ IT IS A SECONDARY, NEVER THE PRIMARY. Stripe is ONE-WAY — no webhook, nothing reads
-    // back, `clearedOn` is never written — so it sends a link and records nothing. The
-    // primary on that row is the payment RECORDER, which is what actually funds a job.
     const dep = acts.slice(acts.indexOf("case 'deposit_invoiced':"), acts.indexOf("case 'deposit_received':"));
-    has(dep, 'out.secondary.push({ label: \'&#128179; Stripe link\'', 'offered as a secondary');
-    lacks(dep, "out.primary = { label: '&#128179;", 'never as the primary');
-    // And only when it is configured — an unconfigured Stripe would be a button that refuses.
-    has(dep, "typeof STRIPE_SCRIPT_URL !== 'undefined' && STRIPE_SCRIPT_URL", 'and only when Stripe is set up at all');
-    has(fn('dashStripeLink'), '_primeAgreementFor(jobId)', 'primed, because generateStripeLink reads currentAgrJobId');
+    has(dep, 'dashStripeLink(', 'reachable from the deposit row');
+    // ⚠⚠ AND THE STAGE RIDES WITH IT. The link is priced from `invoiceHtml(job, stage).amtDue`,
+    // so a call that names no stage would ask a client for the deposit on a midpoint invoice.
+    has(dep, "dashStripeLink(\" + id + \",'deposit')", 'carrying the stage the row is about');
+    has(noComments(fn('dashStripeLink')), "stripePaymentLink(jobId, stage || 'deposit')",
+      'and passes it through rather than assuming one');
+    // ⚠ IT IS A SECONDARY, NEVER THE PRIMARY. It used to be because Stripe was one-way; it
+    // reads back now, and it is STILL a secondary, because the primary on that row is the
+    // payment RECORDER — most Havellin clients pay by cheque and must not be sent past it.
+    has(dep, 'out.secondary.push({ label:', 'offered as a secondary');
+    lacks(dep, 'out.primary = { label: \'&#127974;', 'never as the primary');
+    // And only when the backend is configured — an unreachable one would be a button that refuses.
+    // ⚠ IT IS THE MAIN SYNC URL NOW, NOT A SECOND DEPLOYMENT. `STRIPE_SCRIPT_URL` is deleted.
+    has(dep, 'SHEETS_SYNC_URL', 'and only when the backend is set up at all');
+    lacks(src, 'STRIPE_SCRIPT_URL =', 'the separate payment-link deployment is gone entirely');
+    has(fn('dashStripeLink'), '_primeAgreementFor(jobId)', 'primed, because the agreement panel is what holds the job');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -182,8 +194,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The three "copy payment link" buttons printed a sentence and did nothing else.
     lacks(src, 'function copyStripeLink(', 'the message-stub copier is deleted');
     eq((src.match(/(?<![\w$.])copyStripeLink\s*\(/g) || []).length, 0, 'and nothing calls it');
-    // ⚠ But GENERATING a link is real and survives — it posts to a separate Apps Script.
-    ok(fn('generateStripeLink').length > 0, 'generating a real link survives');
+    // ⚠ But GENERATING a link is real and survives. It was `generateStripeLink` posting to a
+    // separate Apps Script; it is `stripePaymentLink` posting to the main backend since
+    // 2026-09-18, and the old name must be gone rather than left as a second door.
+    ok(fn('stripePaymentLink').length > 0, 'generating a real link survives');
+    lacks(src, 'function generateStripeLink(', 'the old separate-deployment sender is deleted');
+    eq((src.match(/(?<![\w$.])generateStripeLink\s*\(/g) || []).length, 0, 'and nothing calls it');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

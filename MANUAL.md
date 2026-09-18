@@ -8,7 +8,7 @@
 
 > **This is the master document.** It is the system of record for how the app is set up and how it works — configuration, engine, taxonomy, rates, gates. Its companion, the **Concierge Job Playbook** (`concierge-guide.html`), is the walk-through-it-in-order extract for running one job from intake to final invoice with the app open; it covers a subset of what is here, and where the two disagree this document is right. They are reconciled against the app *together* — the version stamp at the foot of each says when. Plain-text copies for a phone or a printer: `MANUAL.md` and `CONCIERGE_GUIDE.md`, generated from these two files.
 
-Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. **Agreements go out for signature through DocuSign** as of 2026-09-17 (§8a); payments are still recorded **by hand**, and Stripe auto-charge and QuickBooks are not built (§3).
+Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. **Agreements go out for signature through DocuSign** as of 2026-09-17 (§8a), and **a client can pay the deposit by bank transfer** as of 2026-09-18 (§8b) — that one payment records itself. Every other payment is still recorded **by hand**, and QuickBooks is not built (§3).
 
 > **How we describe ourselves on client documents — corrected 2026-08-03.** Havellin is **insured and bonded**. It is **NOT licensed**, and every client document said *"Licensed, Insured & Bonded"* until this correction — client estimate footer, invoice footer, both agreement footers, and the Terms line. **Do not put "licensed" back on any client-facing surface.** *The estimate's Terms bullet was cut on 2026-09-10 — it restated the footer seven lines below it on the same page, and Terms is for commercial rules rather than standing facts about the firm. The footers are unchanged and are where the claim is made.* This is compliance, not wording: if it ever needs revisiting it needs Anthony, not a judgement call.
 >
@@ -41,7 +41,7 @@ Open **Settings** (gear icon) and enter:
 | Vendor Directory — Apps Script URL | The Vendor Directory web-app `/exec` URL (separate sheet) |
 | Referral Partners — Apps Script URL | The Referral Partners web-app `/exec` URL (separate sheet) |
 | Gmail — Google OAuth Client ID | **Already filled in.** Change it only to point a device at a different Workspace; clearing it restores the firm default |
-| Stripe Publishable Key | `pk_live_...` (configure when live) |
+| *Stripe needs nothing here.* | It runs through the same Apps Script as everything else, and its secret key lives in that script's **Script Properties** as `STRIPE_SECRET_KEY` — never on a device. See §8b. |
 
 > **Creating the Gmail client ID — once for the firm, then pasted on each device.** In the Google Cloud console, on a project owned by the Havellin Workspace: **(1)** enable the *Gmail API*; **(2)** configure the OAuth consent screen as *Internal*, so only havellinpalmbeach.com accounts can use it and Google does not require app verification; **(3)** create an OAuth client of type *Web application* and add the app's own address as an **Authorized JavaScript origin** (the GitHub Pages origin — scheme and host only, no path); **(4)** paste the client ID into `GMAIL_CLIENT_ID_DEFAULT` in `havellin.html`.
 >
@@ -111,7 +111,9 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts �
 
 > **⚠ DOCUSIGN IS BUILT AS OF 2026-09-17 — this note used to say it was not.** On a job sent through DocuSign the signature comes back **on its own**: the app checks when you open the client, marks the agreement signed, names *the person who actually signed it*, and files the executed copy and its certificate of completion to Drive. **You do not mark it signed by hand and the app will not let you** — see §8a.
 >
-> **Still not built, and still by hand:** *Stripe auto-charge* and *QuickBooks reconciliation*. You still record every payment yourself. And the **paper route is deliberately kept**: any single agreement can be sent as a PDF to sign by hand, per job, without changing a firm-wide setting.
+> **⚠ AND A BANK TRANSFER NOW RECORDS ITSELF TOO, as of 2026-09-18.** A client sent an **ACH payment link** pays from their bank account, and when the transfer settles the app writes the payment, names Stripe as the recorder and funds the job — see §8b. **Cards are not accepted at all**, deliberately.
+>
+> **Still not built, and still by hand:** *QuickBooks reconciliation*, and every payment that does not come through that link — cheques, wires and cash are all recorded by you. And the **paper route is deliberately kept**: any single agreement can be sent as a PDF to sign by hand, per job, without changing a firm-wide setting.
 
 **Staffing sits in the waiting period on purpose.** Once the agreement is out for signature there's usually a few days of dead time — that's when you confirm who is actually available and name the crew on the Job Plan. **Save & Confirm Job Team** is what unlocks hours logging, so a job can't reach its first working day with an unnamed crew (Section 11).
 
@@ -694,7 +696,7 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 2. **✉ Send signing packet** on the *Signing packet sent* row. This stamps the approval, files the signing packet to the Drive **Agreement** folder, and builds the Gmail draft CC'd to agreements@ — in one press. (**🖨 Print** instead if you are handing it over in person; it stamps and files the same way.)
 3. Send the mail, then **✓ I've sent it**.
 
-> **Generate Payment Link** asks the Stripe service for a deposit link and mails it to `billing@havellinpalmbeach.com` for you to forward. **Believe what it tells you.** It used to report success unconditionally — the request was sent in a mode that makes the reply unreadable, so a 404 from an undeployed URL and a 500 from a script that threw both printed *"payment link generated and sent"*. It now reads the reply and says plainly when nothing was created; if it does, send the deposit invoice instead and record the payment by hand. Nothing yet reads *back* from Stripe — there is no webhook and no automatic payment record (§3).
+> **⚠ THIS NOTE USED TO DESCRIBE A DIFFERENT BUTTON.** Until 2026-09-18 *Generate Payment Link* asked a *separate* Apps Script for a link and mailed it to `billing@`, and nothing ever read back from Stripe. It is **🏦 ACH payment link** now, it sits on the deposit row of the timeline, and the payment records itself when the money lands. See **§8b**.
 
 ### Then, as each thing actually happens
 
@@ -812,6 +814,28 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 
 > **⚠ THE ONE THING TO CHECK ON A REAL ENVELOPE, BEFORE TRUSTING IT ON A CLIENT.** DocuSign finds the signature boxes by searching the PDF for invisible markers in the signature block. That the markers are *in* the document is proven; **where DocuSign draws the box relative to them can only be seen**. Send one envelope to yourself in the demo account and look at it before the first client gets one.
 
+## 8b. Taking the deposit by bank transfer (ACH)
+
+**Built 2026-09-18.** The deposit row of the client's timeline carries **🏦 ACH payment link** beside **✉ Send deposit invoice**. Press it, and the app creates a Stripe payment link for exactly what that invoice says is due and shows you the URL. **Send it yourself, with the invoice** — the app never mails it, the same rule that makes every client email a draft you read before it goes.
+
+> **⚠⚠ BANK TRANSFER ONLY. CARDS ARE NOT ACCEPTED, AND THAT IS A PRICING DECISION RATHER THAN A SETTING.** On a $25,715 job a card costs Havellin **$746.63** and a bank transfer costs **$16.50**. A "3% convenience fee" cannot close that gap legally: the card networks cap a surcharge at the *lower* of 3% or what acceptance actually costs you, and Stripe's card price works out above 2.9% on every ticket — so 3% is only chargeable at or below about **$300**. Anthony, asked directly on 2026-09-18: *"No cards at all."*
+>
+> **⚠ AND THE APP ENFORCES IT RATHER THAN TRUSTING THE SETTING.** After creating a link it reads it back, and if Stripe would also take a card on it the link is **switched off and never shown to you**, with a message naming the fix (Stripe Dashboard → Settings → Payments → Payment methods: cards off, ACH Direct Debit on). A link you cannot see is a link no client can pay by card.
+
+> **⚠⚠ IT RECORDS ITSELF, AND ONLY WHEN THE MONEY HAS GENUINELY SETTLED.** A bank transfer is not instant: the client authorises it, and about **four business days** later it actually arrives. Stripe reports those as two different things and **the app waits for the second one**. When it lands, opening the client writes the payment, records the amount, the date the money moved and the payer, names **Stripe** as who recorded it, and funds the job. You do not type anything.
+>
+> **⚠ SO A CLIENT SAYING "I'VE PAID" AND THE APP SAYING NOTHING IS NORMAL FOR A FEW DAYS.** They have authorised it; the money has not arrived. Do not record it by hand to make the screen agree with them — that is the app asserting money is in the account when it is not, on the record of what the firm is owed.
+
+> **⚠ THE CHECK HAPPENS WHEN YOU OPEN THE CLIENT, and there is no other refresh.** Nothing runs on a timer, so a payment that landed overnight appears the first time somebody looks at that job. If you are waiting on one, open the client. Opening it twice in ten minutes makes no second check.
+
+> **⚠ ONE LINK PER STAGE, AND PRESSING THE BUTTON AGAIN RETURNS THE SAME ONE.** Two links against one invoice is two ways to pay it, and a client who pays both has overpaid by a deposit. The amount comes from the invoice itself, so the link and the document the client is reading can never disagree about what is owed — and an invoice the app is blocking cannot be sent for payment at all.
+
+> **⚠ IF THE CHECK FAILS IT SAYS SO, AND IT WILL NOT CLAIM THE MONEY IS ABSENT.** A failed status check reads *"Money may already have arrived; this is not a statement that it has not."* That is deliberate. It also does not count as having checked, so the next time you open the client it tries again rather than going quiet for ten minutes over a blip.
+
+> **Setting it up — once, and not on any device.** One Script Property on the same Apps Script everything else uses: `STRIPE_SECRET_KEY`. **⚠ It must never be typed into the app's Settings** — this page is served publicly, so anything stored on a device is readable by anyone. The old *Stripe Publishable Key* and *Stripe Secret Key — via Apps Script URL* boxes are gone for that reason.
+>
+> **Run `testStripeAuth` in the Apps Script editor first.** It proves the key and the account *without creating a link*, and it tells you whether ACH is actually switched on for the account — a key that authenticates against an account with ACH off fails later and further away, where it reads as an app bug.
+
 ## 9. Client Dashboard
 
 **Tab: Client Dashboard** → select job card. Shows full job status, the job timeline, referral source / partner, and the standing job facts. **Every action that advances the job is on the timeline** — see §9a. The heading line above it carries the two that are not steps: **✎ Edit Client** and **📁 Drive**.
@@ -834,7 +858,7 @@ Opening a client draws a **timeline** of sixteen milestones, from intake to fina
 | Client accepted | **✓ Client accepted — mark won**. |
 | Signing packet sent | **✉ Send signing packet** → **✓ I've sent it**. |
 | Agreement signed | **✓ Record the signed agreement** — see §8. |
-| Deposit invoice sent | **✉ Send deposit invoice**, **💳 Stripe link**. |
+| Deposit invoice sent | **✉ Send deposit invoice**, **🏦 ACH payment link** (§8b). |
 | Deposit received | **✓ Record payment**. |
 | Job active | **▶ Activate job**. Blocks on executor authorisation where that applies. |
 | Midpoint / Final invoice sent | Same send pair. The final carries **🔑 Manager approval** when it is outside ±15% (§12). |

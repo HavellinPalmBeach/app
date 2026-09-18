@@ -422,6 +422,47 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([...orphans.keys()].sort().join(', '), '',
       'every _private( call in the file resolves to a definition in the file');
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // ⚠⚠ A FOURTH SHAPE, AND IT BIT ON 2026-09-18 WITH THE WHOLE SUITE GREEN: A CALL THAT
+    // LIVES INSIDE A STRING. Replacing `generateStripeLink` with `stripePaymentLink` left
+    // `onclick="generateStripeLink()"` in the markup — a ReferenceError on every press of a
+    // live control. The `_private(` check above could not see it: that one is scoped to
+    // underscore names, on the reasoning that private helpers are the class removed in a
+    // sweep. **A PUBLIC function is removed in a sweep too**, and when its caller is a STRING
+    // no parser anywhere notices. It was found by reading tool output, not by a test.
+    //
+    // ⚠ THE NET IS THE STRING-ENCODED CALL SITES, NOT EVERY CALL. An `onclick=` attribute and
+    // a rail action's `call:` are text the browser resolves at press time and nothing checks
+    // before then, so they are exactly where a rename dies silently — and the net is small
+    // enough to have no false positives beyond the two named below.
+    //
+    // ⚠ TWO EXEMPT CLASSES, both named rather than pattern-matched away. A keyword opens an
+    // inline statement (`onclick="if(event.target===this)close…()"` on five modal overlays),
+    // and a browser global is not ours to rename (`oninput="clearTimeout(window._invQT)…"` on
+    // the inventory search). Anything else in one of these strings must be a function we define.
+    const CALLABLE_EXEMPT = new Set([
+      'if', 'for', 'while', 'switch', 'return', 'typeof', 'new', 'delete', 'void', 'do', 'try',
+      'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'alert', 'confirm', 'prompt',
+      'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'encodeURIComponent', 'decodeURIComponent',
+      'String', 'Number', 'Boolean', 'Array', 'Object', 'JSON', 'Math', 'Date',
+    ]);
+    const strCalls = new Set();
+    const noteStr = (name, where) => {
+      if (defs.has(name) || CALLABLE_EXEMPT.has(name)) return;
+      strCalls.add(name + ' [' + where + ']');
+    };
+    for (const m of src.matchAll(/\bon(?:click|change|input|blur|submit)=["']\s*([A-Za-z_$][\w$]*)\s*\(/g)) {
+      noteStr(m[1], 'markup');
+    }
+    // The rail and the quick strip build their buttons as `{ call: 'fn(7)' }` — sometimes
+    // concatenated (`'dashStripeLink(' + id + ')'`), sometimes quoted the other way
+    // (`"dashStripeLink(" + id + ",'deposit')"`). Both open quote-name-paren.
+    for (const m of src.matchAll(/\bcall:\s*["']\s*([A-Za-z_$][\w$]*)\s*\(/g)) {
+      noteStr(m[1], 'a rail action');
+    }
+    eq([...strCalls].sort().join(', '), '',
+      '⚠ every function named inside an onclick= or a rail `call:` string really exists');
+
     // ⚠⚠ AND THE SAME DEFECT IN MARKUP, WHICH BIT AGAIN IN SLICE 7. Deleting the dead
     // Payment Method card left three writes behind —
     // `getElementById('agr-deposit-amt').textContent = …` and two more — on elements that

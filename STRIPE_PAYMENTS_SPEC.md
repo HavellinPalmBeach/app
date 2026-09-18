@@ -202,6 +202,13 @@ because a cheque at least bounces within days.
 when Stripe reports the payment intent `succeeded`. The existing `clearedOn` model is exactly right —
 it is only the classification that is wrong.
 
+**✅ FIXED 2026-09-18 (Phase 2), and the read-back half landed with Phase 3 the same day.** The method
+is `stripe_ach` and is absent from `PAYMENT_METHODS_CLEAR_ON_RECEIPT`, so a hand-recorded ACH reads
+*uncleared*. **⚠ And the converse is what makes the automatic record honest**: `_stripeRecordPayment`
+DOES write `clearedOn`, because that record only exists once Stripe reported the intent `succeeded` —
+the money has genuinely settled. Two different questions, and collapsing them in either direction is
+the defect.
+
 ---
 
 ## 7. Build order
@@ -215,7 +222,7 @@ Settings already says *"configure after EIN + account setup"*, so this is gated 
 3. Open the limit-increase request, citing $6k–$25k tickets.
 4. Decide cards: **off** (recommended) / on absorbing the fee / on with a 2.9% surcharge.
 
-### Phase 1 — restrict to ACH · **NOT blocked** (⚠️ redeploy)
+### Phase 1 — restrict to ACH · **✅ BUILT 2026-09-18** (⚠️ REQUIRES AN APPS SCRIPT REDEPLOY)
 The change itself is one setting — `payment_method_types: ['us_bank_account']` on the Checkout
 Session or Payment Link.
 
@@ -238,13 +245,11 @@ dispatch-parity test.
   three. One less URL to paste onto a new device, one less field that can point at the wrong script.
   ⚠ Keep reading the old key for one release so a device that has not reloaded is not stranded.
 
-Also here: Financial Connections for instant verification, with the microdeposit fallback (1–2 days)
-for institutions it does not cover, and a decision on whether a client waiting two days to verify is
-acceptable on a deposit that gates the job start.
-
-Also here: Financial Connections for instant verification, with the microdeposit fallback (1–2 days)
-for institutions it does not cover, and a decision on whether a client waiting two days to verify is
-acceptable on a deposit that gates the job start.
+**⚠ Financial Connections and the microdeposit fallback are NOT decided and NOT built.** Stripe can
+verify a bank account instantly for most institutions; the rest fall back to microdeposits, which take
+1–2 days. Nothing in this build chooses between them — the link simply offers whatever the account is
+configured for. Whether a client waiting two days to verify is acceptable on a deposit that gates the
+job start is still Anthony's call.
 
 ### Phase 2 — the payment-method model · **✅ BUILT 2026-09-18** (app-only, no redeploy)
 Done ahead of the rest because it is the one piece nothing blocks, and it has to be in place
@@ -270,19 +275,49 @@ Done ahead of the rest because it is the one piece nothing blocks, and it has to
 - Manual §8's *"Wires, cards and cash are marked cleared on receipt; cheques show as uncleared"*
   was falsified by this and is corrected in both copies.
 
-### Phase 3 — read-back (the real work) · **⚠ REQUIRES AN APPS SCRIPT REDEPLOY**
-- New `stripeStatus` action in `main-sync.gs`; add to `BACKEND_ACTIONS`, bump `BACKEND_VERSION`.
-  The dispatch-parity test asserts `BACKEND_ACTIONS` matches `doPost` in both directions, so a
-  partial landing fails the suite — which is correct.
-- `outstandingPayments()` / `_payDue()` / `payRefresh()` on the `esignRefresh` shape (§5).
-- Auto-record the payment on `succeeded`; write `clearedOn` only then.
-- ⚠ **Sequential, never `Promise.all`** — every store write takes the global Apps Script lock, and
-  this repo records what parallel sending cost on 2026-09-11.
-- ⚠ **Idempotent on the payment-intent id**, never on `payment.id` — that is a per-device counter and
-  two devices both mint the same number.
-- ⚠ **A failed check must not stamp `checkedAt`**, and must say so rather than failing silently — the
-  same two rules the e-signature check already follows.
-- Secrets in Script Properties only. This repo is public and `havellin.html` is served from Pages.
+### Phase 3 — read-back · **✅ BUILT 2026-09-18** (⚠️ REQUIRES AN APPS SCRIPT REDEPLOY)
+Built in the same redeploy as Phase 1. What landed, and the two things worth knowing that the plan
+above did not anticipate:
+
+- `stripeLink` and `stripeStatus` actions in `main-sync.gs`, both in `BACKEND_ACTIONS`,
+  `BACKEND_VERSION` **2026-09-18a**. The dispatch-parity test asserts the list matches `doPost` in
+  both directions, so a partial landing fails the suite — which is correct.
+- **⚠⚠ THE ACH-ONLY SETTING IS VERIFIED RATHER THAN TRUSTED, AND THAT WAS NOT IN THE PLAN.** Whether
+  `/v1/payment_links` honours `payment_method_types` could not be confirmed — `docs.stripe.com` is
+  blocked by the egress proxy. So the link is read back after creation, and one that would also take a
+  card is **deactivated and never returned**, with the Dashboard fix named. An **empty**
+  `payment_method_types` counts as a failure too: Stripe returns nothing there when it defers to the
+  Dashboard's own settings, which may include cards, so ACH-only cannot be proven.
+- **⚠⚠ THE INTENT'S STATUS, NEVER THE SESSION'S.** On ACH the checkout session reads `complete` the
+  instant the client authorises, while the money is four business days out. `stripePaymentsForLink`
+  expands `data.payment_intent` and reads `pi.status`; only `succeeded` records anything.
+- `outstandingPayments()` / `_stripeDue()` / `stripeRefresh()` on the `esignRefresh` shape, wired to
+  **arrival** (`_jobsLanded`, `openClientDashboard`) with **no timer**. `STRIPE_RECHECK_MINS` is 10 —
+  ⚠ and it is **not** the DocuSign floor: Stripe publishes no per-resource rate rule and no revocation
+  penalty, so the gate exists only to stop a repaint and the remote tick each firing a call.
+- `clearedOn` **is** written, because the record only exists once Stripe reported `succeeded`. The
+  METHOD stays off `PAYMENT_METHODS_CLEAR_ON_RECEIPT`, which answers the different question of whether
+  a *person* recording an ACH by hand has seen settled money.
+- ⚠ Sequential, never `Promise.all`; idempotent on the payment-intent id, never on `payment.id`; a
+  failed check does not stamp `checkedAt` and says outright *"this is not a statement that it has not"*.
+- The amount comes from `invoiceHtml(job, stage).amtDue` — the one thing that owns it — and a blocked
+  invoice cannot be sent for payment. One link per stage; pressing again returns the same one.
+- **⚠ IT STAMPS THE AGREEMENT ON THE WAY THROUGH**, caught by a pre-existing `dashboard-actions`
+  assertion that every door into the agreement runs `ensureAgreementApproved`. Asking for the deposit
+  asks for money the agreement defines.
+- Secrets in Script Properties only (`STRIPE_SECRET_KEY`). `STRIPE_SCRIPT_URL` **and** `STRIPE_PK` are
+  deleted — the latter had zero readers in 28,000 lines, and the "Secret Key — via Apps Script URL" box
+  beside it invited a real secret into localStorage on a page served from public Pages.
+- `testStripeAuth()` — editor-only, argument-free, read-only; proves the key without minting a link and
+  reports whether `us_bank_account_ach_payments` is actually active.
+
+**⚠⚠ WHAT IS STILL NOT PROVEN, AND IT IS THE SAME SHAPE AS THE DOCUSIGN BUILD: no link has ever been
+created against the live API.** The egress proxy blocks `stripe.com` from the build environment, so the
+request shapes, the ACH verification, the intent-status read and the recording are all verified in
+SHAPE and against stubs, not against Stripe. Two things need one real sandbox run: that
+`/v1/payment_links` returns `payment_method_types` at all (if it returns nothing the app refuses every
+link, loudly, which is the safe direction but is a thing to see), and that a real ACH test payment moves
+`processing → succeeded` the way the read-back expects.
 
 ### Phase 4 — surcharging · **scoped in §1c, recommended against**
 

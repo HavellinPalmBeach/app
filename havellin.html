@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 8:27am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 9:40am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2163,7 +2163,7 @@ body.no-smf .smf-col{display:none;}
         <select id="agr-job" onchange="loadAgreement()" style="width:340px;font-size:12px;"><option value="">Select job</option></select>
         <span id="agr-approval-badge"></span>
         <button class="btn-s" id="btn-agr-approve" onclick="approveAgreementNow()" style="display:none;">Approve &amp; File</button>
-        <button class="btn-s" id="btn-agr-stripe" onclick="generateStripeLink()" style="display:none;">Generate Payment Link</button>
+        <button class="btn-s" id="btn-agr-stripe" onclick="stripePaymentLink(currentAgrJobId, 'deposit')" style="display:none;" title="ACH bank transfer only — cards are not accepted">&#127974; ACH Payment Link</button>
         <button class="btn-bronze" id="btn-agr-pdf" onclick="printAgreement()" style="display:none;">Print / Save PDF</button>
         <button class="btn-bronze" id="btn-agr-packet" onclick="printSigningPacket()" style="display:none;" title="The agreement with the approved estimate attached as Exhibit A — one document to sign">Print Signing Packet</button>
         <button class="btn-bronze" id="btn-agr-email" onclick="emailAgreementToClient()" style="display:none;" title="Signing packet, as a draft in your own Gmail — CC agreements@">&#9993; Email to Client</button>
@@ -2308,13 +2308,9 @@ body.no-smf .smf-col{display:none;}
     </select>
     <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">This only says whether DocuSign is <strong>available</strong>. <strong>How each client signs is chosen per job</strong>, on the agreement step of the client&rsquo;s timeline: <strong>Send for signature</strong> mails the signing packet through DocuSign, or <strong>Send as PDF to sign by hand</strong> emails it the old way for a client who would rather sign on paper. Neither needs you to come back here. On a job sent through DocuSign the timeline turns green on its own once both signatures are in, and <strong>Record the signed agreement</strong> is hidden on <em>that job</em> &mdash; a signature typed by hand would disagree with the envelope. Every other job keeps it.</div>
 
-    <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— configure after EIN + account setup</span></div>
+    <div class="sec" style="margin-top:14px;">Stripe Payments <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— nothing to set here</span></div>
 
-    <label>Stripe Publishable Key</label>
-    <input type="text" id="set-stripe-pk" placeholder="pk_live_...">
-
-    <label>Stripe Secret Key — via Apps Script URL</label>
-    <input type="text" id="set-stripe-script" placeholder="https://script.google.com/macros/s/...">
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;margin-bottom:8px;">Stripe runs through the <strong>same Apps Script as everything else</strong>, so there is no second URL to paste. The secret key lives in that script&rsquo;s <strong>Script Properties</strong> as <code>STRIPE_SECRET_KEY</code> and <strong>never on a device</strong> — this page is served publicly, so a key typed here would be readable by anyone. Havellin accepts <strong>ACH bank transfer only</strong>; cards are switched off in the Stripe Dashboard and the app refuses to send a link that is not ACH-only.</div>
 
     <div class="sec" style="margin-top:14px;">Pricing Engine</div>
 
@@ -11576,6 +11572,7 @@ function openClientDashboard(jobId) {
   // lock keys on `agrSigned || depositReceived` — so a signed-but-unnoticed agreement leaves
   // re-pricing and re-typing unlocked on a job already under contract.
   try { esignRefresh({ jobId: jobId }, function (n) { if (n) _dashRedraw(jobId); }); } catch (e) {}
+  try { stripeRefresh({ jobId: jobId }, function (n) { if (n) _dashRedraw(jobId); }); } catch (e) {}
 }
 
 function closeClientDashboard() {
@@ -12917,12 +12914,12 @@ function esignAnchor(tag) {
   return '<span style="color:#fff;font-size:6px;line-height:0;">' + tag + '</span>';
 }
 
-// ⚠ ONE PROVIDER TABLE, AND `manual` IS THE ONLY LIVE ONE TODAY. `docusign` is declared
-// rather than built: there is no account, no credentials and no backend action for it, and
-// a half-built integration that reports success on an opaque response is a defect this file
-// already records once (`generateStripeLink`, 2026-07-30). What it IS for is the SHAPE —
-// `watches:true` is what stands the manual button down, so wiring a real provider changes
-// this table and nothing else.
+// ⚠ ONE PROVIDER TABLE. It was written on 2026-09-11 with `docusign` DECLARED and NOT
+// built — deliberately, because a half-built integration that reports success on an opaque
+// response is a defect this file records twice (the Stripe payment link, 2026-07-30, now
+// rebuilt; see stripePaymentLink). Both entries are live as of 2026-09-17. What the table is
+// FOR is the SHAPE — `watches:true` is what stands the manual button down, so wiring a real
+// provider changes this table and nothing else, which is exactly what happened.
 // ⚠ `live:true` DOES NOT TURN DOCUSIGN ON — `hav_esign_provider` does, and it defaults to
 // `manual`. This flag only says the integration EXISTS and may be selected; a device that has
 // not opted in behaves exactly as it did before. Proven against the sandbox 2026-09-17:
@@ -13243,6 +13240,161 @@ function outstandingEnvelopes() {
   }).map(function (j) {
     return { jobId: j.id, hvlId: j.hvlId || '', envelopeId: j.docState.agreement.esign.envelopeId };
   });
+}
+
+// ─── STRIPE: LEARNING THAT THE MONEY LANDED ──────────────────────────────────
+// ⚠⚠ NO WEBHOOK AND NO TIMER — the DocuSign shape, for one of the same two reasons and not
+// the other. `doPost(e)` exposes no request HEADERS and Stripe signs with `Stripe-Signature`,
+// so an Apps Script endpoint cannot authenticate a delivery: an open URL, on a public repo,
+// that marks a $12,858 deposit received. That reason carries over exactly.
+//
+// ⚠ WHAT DOES NOT CARRY OVER IS THE RATE LIMIT, and it is worth knowing so nobody copies the
+// 20-minute floor across as though it were a rule. DocuSign publishes one request per unique
+// resource per 15 minutes and names REVOCATION as the penalty; Stripe has no such rule. The
+// gate below exists only so a dashboard repaint and a 15-second remote tick do not each fire
+// a network call — not because a vendor would punish us for it.
+//
+// ⚠ AND NOTHING NEEDS THE ANSWER SOONER. An ACH debit takes about four business days to
+// settle, so checking when somebody opens the client loses nothing a webhook would have won.
+var STRIPE_RECHECK_MINS = 10;
+
+function _stripeDue(st) {
+  if (!st || !st.stripe || !st.stripe.linkId) return false;
+  if (!st.stripe.checkedAt) return true;
+  var age = Date.now() - new Date(st.stripe.checkedAt).getTime();
+  return !(age >= 0 && age < STRIPE_RECHECK_MINS * 60000);
+}
+
+// Every payment link the app is still waiting on, across every job. ⚠ A STAGE DROPS OFF ONCE
+// ITS TARGET IS MET, or a finished stage is asked about forever — the rule `esignJobWatches`
+// already follows on a signed agreement.
+function outstandingPayments() {
+  var out = [];
+  (jobs || []).forEach(function (j) {
+    var ds = j.docState || {};
+    Object.keys(ds).forEach(function (key) {
+      var st = ds[key] || {};
+      if (!st.stripe || !st.stripe.linkId) return;
+      var stage = key.indexOf('invoice:') === 0 ? key.slice(8) : '';
+      if (PAYMENT_STAGES.indexOf(stage) === -1) return;
+      if (stage === 'deposit' && isJobFunded(j)) return;   // the deposit is in; stop asking
+      out.push({ jobId: j.id, hvlId: j.hvlId || '', key: key, stage: stage, linkId: st.stripe.linkId });
+    });
+  });
+  return out;
+}
+
+// ⚠ SEQUENTIAL, NEVER Promise.all. Every store write takes the GLOBAL Apps Script lock, and
+// this file records in full what parallel sending cost on 2026-09-11: the retry manufactured
+// the condition it was retrying. One link at a time, best-effort.
+function stripeRefresh(opts, cb) {
+  var only = opts && opts.jobId;
+  var due = outstandingPayments().filter(function (e) {
+    if (only && e.jobId !== only) return false;
+    var j = jobs.find(function (x) { return x.id === e.jobId; });
+    return _stripeDue(j && j.docState && j.docState[e.key]);
+  });
+  if (!due.length || !SHEETS_SYNC_URL) { if (cb) cb(0); return; }
+
+  var i = 0, recorded = 0;
+  (function next() {
+    if (i >= due.length) { if (cb) cb(recorded); return; }
+    var e = due[i++];
+    _appsScriptPost(SHEETS_SYNC_URL, { action: 'stripeStatus', linkId: e.linkId }, function (ok, d) {
+      if (ok && d && d.ok) {
+        recorded += applyStripePayments(e.jobId, e.key, e.stage, d);
+      } else {
+        // ⚠⚠ IT SPEAKS WHEN IT FAILS, AND IT MUST NOT CLAIM THE MONEY IS ABSENT. A silent
+        // failure leaves a paid deposit reading unpaid — a state with no exit, which this
+        // file's standing rule calls worse than a failure. But "not paid" is also a CLAIM,
+        // and it would be false.
+        //
+        // ⚠ AND A FAILED CHECK DOES NOT STAMP `checkedAt` — see applyStripePayments. Stamping
+        // on an answer nobody got would make the app blind for ten minutes over a transient 502.
+        var why = (d && (d.error || d.message)) || 'the status check did not reach Stripe';
+        _docNotice('warn', 'Could not check the payment status for ' + (e.hvlId || 'this job')
+                   + ' — ' + why + '. Money may already have arrived; this is not a statement that it has not.', e.jobId);
+      }
+      next();
+    });
+  })();
+}
+
+// ⚠⚠ ONLY `succeeded` IS MONEY. On ACH the checkout session reads `complete` the moment the
+// client authorises, while the transfer is still ~4 business days out and can still fail —
+// `processing` is a promise, not a payment. Recording it early is byte-for-byte the defect
+// the whole clears-on-receipt split exists to undo.
+//
+// ⚠⚠ IDEMPOTENT ON THE PAYMENT-INTENT ID, NEVER ON A COUNTER. `payment.id` is max(id)+1 over
+// the payments THIS DEVICE holds, so two devices both mint the same number — this file records
+// that a union by id would then FUSE two real payments into one rather than merely losing one.
+// The intent id is Stripe's, unique, and the same on every device.
+function applyStripePayments(jobId, key, stage, d) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return 0;
+  var st = docState(job, key);
+  st.stripe = st.stripe || {};
+  st.stripe.checkedAt = new Date().toISOString();
+
+  var seen = {};
+  jobPayments(job).forEach(function (p) { if (p.stripePiId) seen[p.stripePiId] = true; });
+
+  var added = 0, landed = 0;
+  (d.payments || []).forEach(function (p) {
+    if (!p || p.status !== 'succeeded' || !p.piId) return;
+    if (seen[p.piId]) return;
+    seen[p.piId] = true;
+    _stripeRecordPayment(job, stage, p);
+    added++; landed += (p.amount || 0);
+  });
+
+  saveJobs(); syncJobToSheets(job);
+  if (added) {
+    _docNotice('ok', fmt(landed) + ' received by bank transfer on ' + (job.name || 'this job')
+               + ' (' + (PAYMENT_STAGE_LABELS[stage] || stage) + ') — recorded automatically from Stripe.', jobId);
+    renderJobs();
+  }
+  return added;
+}
+
+// ⚠ THIS IS THE ONE PLACE A STRIPE PAYMENT BECOMES A PAYMENT RECORD, and it writes the same
+// shape `saveDeposit` writes by hand — same fields, same `uid` minting, same `_jobTouch`. A
+// second payment shape is how the hand-entered and the automatic records come to disagree.
+function _stripeRecordPayment(job, stage, p) {
+  var list = jobPayments(job);
+  var payment = {
+    id: (list.reduce(function (m, x) { return Math.max(m, x.id || 0); }, 0) + 1),
+    uid: _photoUid(),
+    stage: stage,
+    amount: p.amount,
+    receivedOn: (p.createdAt || new Date().toISOString()).slice(0, 10),
+    // ⚠ `stripe_ach`, NOT `stripe`. A card is final on receipt and this is not — see
+    // PAYMENT_METHODS_CLEAR_ON_RECEIPT. Recording it as a card would stamp clearedOn at once.
+    method: 'stripe_ach',
+    reference: p.piId,
+    payer: p.payer || '',
+    recordedBy: 'Stripe',
+    recordedAt: new Date().toISOString(),
+    // ⚠⚠ AND HERE clearedOn IS SET, WHICH LOOKS LIKE A CONTRADICTION AND IS NOT. The method
+    // says "not final when a person records it by hand", because then all anybody knows is
+    // that the client authorised it. This record only exists because STRIPE REPORTED THE
+    // INTENT `succeeded` — the money has genuinely settled. That is the one moment an ACH
+    // payment is cleared, and it is why read-back is worth building at all.
+    clearedOn: (p.createdAt || new Date().toISOString()).slice(0, 10),
+    policyException: false,
+    stripePiId: p.piId,
+    evidence: null,
+    qbMatchId: null
+  };
+  list.push(payment);
+  _jobTouch(job, 'payments', payment.uid);   // or the other device's save merges it away
+  delete job.deposit;
+
+  if (stage === 'deposit') {
+    job.depositReceived = isJobFunded(job);
+    job.depositReceivedAt = payment.receivedOn;
+    job.depositReceivedBy = 'Stripe';
+  }
 }
 
 // ─── FILING TO DRIVE ─────────────────────────────────────────────────────────
@@ -13912,10 +14064,10 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'deposit_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'deposit', 'deposit invoice');
-      // ⚠ Stripe is ONE-WAY — nothing reads back and `clearedOn` is never written — so it
-      // sends a link and records nothing. Beside the deposit, never as the primary.
-      if (live && typeof STRIPE_SCRIPT_URL !== 'undefined' && STRIPE_SCRIPT_URL) {
-        out.secondary.push({ label: '&#128179; Stripe link', call: 'dashStripeLink(' + id + ')' });
+      // ⚠ IT READS BACK NOW, so the label no longer promises only a link. Beside the deposit,
+      // never as the primary — the invoice is the thing to send, the link rides with it.
+      if (live && SHEETS_SYNC_URL) {
+        out.secondary.push({ label: '&#127974; ACH payment link', call: "dashStripeLink(" + id + ",'deposit')" });
       }
       break;
 
@@ -14091,12 +14243,15 @@ function dashApproveInvoice(jobId, stage) {
   openInvPinModal();
 }
 
-// The deposit link. ⚠ Stripe is ONE-WAY — nothing reads back, no webhook, and `clearedOn`
-// is never written — so this sends a link and records nothing. It sits beside the deposit
-// rather than as the primary, which is the payment RECORDER.
-function dashStripeLink(jobId) {
+// The ACH payment link. ⚠⚠ IT IS NO LONGER ONE-WAY — `stripeRefresh` reads the settled
+// payment back and records it — but this button still only CREATES the link. It sits beside
+// the deposit rather than as the primary, because the primary is the payment RECORDER and a
+// client paying by cheque must never be sent past it.
+// ⚠ THE STAGE IS PASSED THROUGH, NEVER ASSUMED. `invoiceHtml(job, stage).amtDue` is what
+// prices the link, so a midpoint link built as a deposit asks the client for the wrong money.
+function dashStripeLink(jobId, stage) {
   if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open this job.'); _dashRedraw(jobId); return; }
-  generateStripeLink();
+  stripePaymentLink(jobId, stage || 'deposit');
 }
 
 function dashSubmitEstimate(jobId) {
@@ -15389,6 +15544,8 @@ function _jobsLanded() {
   // Outstanding envelopes, checked when the jobs land — so any page load corrects the rail.
   // Non-blocking and best-effort; nothing on screen waits for it.
   if (typeof esignRefresh === 'function') { try { esignRefresh({}, function () {}); } catch (e) {} }
+  // Outstanding ACH payments, same reasoning: any page load corrects the rail.
+  if (typeof stripeRefresh === 'function') { try { stripeRefresh({}, function () {}); } catch (e) {} }
 }
 // Per-job estimate store
 var estimateStore = {};  // { jobId: { estimate, approved, approvedBy, approvedAt } }
@@ -20729,11 +20886,16 @@ function attachCollectionDoc(input, jobId, collId) {
 // rather than a URL and resolves it at send time. That matters: a write queued while
 // the URL was wrong or the deployment was down goes out against the CURRENT URL when
 // it retries, so pasting a corrected URL into Settings rescues the whole queue.
+// ⚠ THERE WAS A FOURTH, `stripe`, POINTING AT A SEPARATE PAYMENT-LINK SCRIPT, AND IT IS
+// GONE. Stripe is on the REQUEST PATH now — the link is priced from `invoiceHtml` and the
+// settled payment is read back — so it has to move in lockstep with `BACKEND_VERSION` and
+// the dispatch-parity test, which is the same call made for DocuSign on 2026-09-17. A second
+// deployment somebody must remember to paste is the failure this project already paid six
+// weeks for.
 var SYNC_TARGETS = {
-  main:     function(){ return SHEETS_SYNC_URL; },     // jobs, estimates, logs, plans, contractors
+  main:     function(){ return SHEETS_SYNC_URL; },     // jobs, estimates, logs, plans, contractors, Stripe, DocuSign
   vendor:   function(){ return VENDOR_SYNC_URL; },     // vendor directory sheet
-  referral: function(){ return REFERRAL_SYNC_URL; },   // referral partners sheet
-  stripe:   function(){ return STRIPE_SCRIPT_URL; }    // payment-link generator (send only)
+  referral: function(){ return REFERRAL_SYNC_URL; }    // referral partners sheet
 };
 function _targetUrl(target) {
   var f = SYNC_TARGETS[target || 'main'];
@@ -27404,9 +27566,10 @@ function populateAgrSelect() {
 
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
-var STRIPE_PK = '';
-var STRIPE_SCRIPT_URL = '';
-
+// ⚠ `STRIPE_PK` AND `STRIPE_SCRIPT_URL` ARE DELETED, NOT HIDDEN (2026-09-18). The
+// publishable key had ZERO readers in 28,000 lines — no Stripe.js is loaded anywhere — and
+// the "Secret Key — via Apps Script URL" box invited a real Stripe secret into localStorage on a
+// page served from public GitHub Pages. Both keys live in Script Properties now.
 var DRIVE_FOLDER_ID = '';
 var SHEETS_SYNC_URL = '';
 var VENDOR_SYNC_URL = '';   // separate web app — vendor directory sheet only
@@ -27418,8 +27581,6 @@ var REQUIRE_WALKTHROUGH_NOTES = false;
 
 function openSettings() {
   document.getElementById('settings-modal').style.display = 'flex';
-  document.getElementById('set-stripe-pk').value     = STRIPE_PK;
-  document.getElementById('set-stripe-script').value = STRIPE_SCRIPT_URL;
   document.getElementById('set-sheets-url').value    = SHEETS_SYNC_URL;
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
   var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
@@ -27469,7 +27630,7 @@ var COST_RATE_FIELDS = [
 var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
 // contractor roster (your crew, not practice data), and the two directory caches.
-var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_stripe_pk|hav_stripe_script|hav_gmail_client_id|hav_esign_provider|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_esign_provider|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
@@ -27498,8 +27659,6 @@ function clearLocalJobData() {
 }
 
 function saveSettings() {
-  STRIPE_PK          = document.getElementById('set-stripe-pk').value.trim();
-  STRIPE_SCRIPT_URL  = document.getElementById('set-stripe-script').value.trim();
   SHEETS_SYNC_URL    = document.getElementById('set-sheets-url').value.trim();
   DRIVE_FOLDER_ID    = document.getElementById('set-drive-id').value.trim();
   var vUrlEl2 = document.getElementById('set-vendor-url'); if (vUrlEl2) VENDOR_SYNC_URL = vUrlEl2.value.trim();
@@ -27528,8 +27687,6 @@ function saveSettings() {
     if (isFinite(v) && v > 0) COST_RATES[f.key] = v;
   });
   try {
-    localStorage.setItem('hav_stripe_pk',     STRIPE_PK);
-    localStorage.setItem('hav_stripe_script', STRIPE_SCRIPT_URL);
     localStorage.setItem('hav_sheets_url',    SHEETS_SYNC_URL);
     localStorage.setItem('hav_drive_id',      DRIVE_FOLDER_ID);
     localStorage.setItem('hav_vendor_url',    VENDOR_SYNC_URL);
@@ -27552,8 +27709,6 @@ function saveSettings() {
 
 function loadSettings() {
   try {
-    STRIPE_PK         = localStorage.getItem('hav_stripe_pk')     || '';
-    STRIPE_SCRIPT_URL = localStorage.getItem('hav_stripe_script') || '';
     SHEETS_SYNC_URL   = localStorage.getItem('hav_sheets_url')    || localStorage.getItem('havellin_sheets_url') || '';
     DRIVE_FOLDER_ID   = localStorage.getItem('hav_drive_id')      || '';
     VENDOR_SYNC_URL   = localStorage.getItem('hav_vendor_url')    || '';
@@ -28704,45 +28859,93 @@ function approveAgreementNow() {
 }
 
 
-function generateStripeLink() {
-  if (ensureAgreementApproved(currentAgrJobId)) { showFB(_dashFbTarget('agr-fb'),'warn','The estimate must be approved and the client\'s acceptance recorded first.'); return; }
-  var job = jobs.find(function(j){ return j.id===currentAgrJobId; });
-  if (!job) return;
-  var est = (currentEstimate && currentEstimate.jobId === job.id) ? currentEstimate : null;
-  var havTotal = est ? est.havellinTotal : (job.havellinEst || 0);
-  var deposit = Math.round(havTotal * 0.5);
-
-  if (!STRIPE_SCRIPT_URL) {
-    showFB('agr-fb','warn','Stripe not configured. Go to ⚙ Settings to add your Stripe Apps Script URL.');
+// ⚠⚠ ONE ENTRY POINT, AND IT TAKES THE JOB RATHER THAN READING A GLOBAL. The old version read
+// `currentAgrJobId`, which the drilldown never sets — the wrong-job hazard Slice 1 exists to
+// close, on the one control that mails a client a request for money.
+//
+// ⚠ AND IT POSTS TO THE MAIN BACKEND NOW, NOT A SECOND DEPLOYMENT. `STRIPE_SCRIPT_URL` is
+// retired: a separate Apps Script cannot be reached by `checkBackendVersion`, so a stale one
+// fails silently and reads as an app bug — the six-week defect this file already records.
+function stripePaymentLink(jobId, stage) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { _docNotice('warn', 'Select a client first.', jobId); return; }
+  stage = (PAYMENT_STAGES.indexOf(stage) >= 0) ? stage : 'deposit';
+  if (!SHEETS_SYNC_URL) {
+    _docNotice('warn', 'No Apps Script URL is set on this device — add it in Settings.', jobId);
     return;
   }
-  // This was the app's only `mode:'no-cors'` fetch, and no-cors makes the response
-  // OPAQUE — status unreadable, body unreadable. So `.then` fired on any completed
-  // request, including a 404 from a URL that was never deployed and a 500 from a script
-  // that threw, and the success message went out regardless. `.catch` only ever saw a
-  // DNS/offline failure. It reported a payment link had been generated and emailed when
-  // in fact nothing had happened at all, which during a dry run means sitting and waiting
-  // for a link that is never coming.
-  //
-  // Every other Apps Script call in this file posts `mode:'cors'` and reads the reply
-  // through _readAppsScriptJson, so a readable response is known to work against these
-  // deployments; there was no reason for this one to be different. Now a failure says so.
-  //
-  // NOTE this only makes the report honest. Nothing yet reads BACK from Stripe — no
-  // webhook, no clearedOn write, no auto-populated payment. Deliberately deferred to the
-  // QuickBooks work; recording a payment stays manual (§8).
-  showFB('agr-fb','info','Requesting Stripe payment link…');
-  postSyncTo('stripe', {type:'stripe_link', payload:{jobId:job.id, clientName:job.name, clientEmail:job.email, amount:deposit, description:'Havellin deposit — '+job.name}})
-    .then(function(res){
-      if (res && res.ok) {
-        showFB('agr-fb','ok','Stripe payment link generated and sent to billing@havellinpalmbeach.com. Copy it from there to send to the client.');
-      } else {
-        showFB('agr-fb','err','Stripe service rejected the request' + ((res && res.error) ? ' — ' + res.error : '') + '. No payment link was created. Send the client the deposit invoice instead, and record the payment by hand when it arrives.');
-      }
-    })
-    .catch(function(e){
-      showFB('agr-fb','err','Could not reach the Stripe service' + ((e && e.message) ? ' — ' + e.message : '') + '. No payment link was created. Check the Stripe Apps Script URL in ⚙ Settings.');
-    });
+
+  var key = docKeyFor('invoice', { stage: stage });
+  var st  = docState(job, key);
+  // ⚠ A SECOND LINK FOR ONE STAGE IS TWO WAYS TO PAY THE SAME INVOICE, and a client who pays
+  // both has overpaid by a deposit. Once minted, the same link comes back.
+  if (st.stripe && st.stripe.url) { _stripeShowLink(job, stage, st.stripe.url, false); return; }
+
+  // ⚠⚠ IT IS A DOOR INTO THE AGREEMENT, SO IT STAMPS ON THE WAY THROUGH — the rule
+  // `markAgreementSent` already follows, and the one the pre-existing dashboard-actions test
+  // caught this function breaking. Asking a client to wire money is asking for the deposit
+  // that the agreement DEFINES (50% of the contract total), so minting a link against an
+  // agreement nobody approved requests money under terms that were never signed off.
+  // ⚠ IT GATES THE MINT, NOT THE RE-SHOW ABOVE. A link already in a client's hands is a read;
+  // re-displaying it must not turn on an estimate that has since been reopened for editing.
+  if (ensureAgreementApproved(job.id)) {
+    _docNotice('warn', 'The estimate must be approved and the client\'s acceptance recorded before asking for payment.', jobId);
+    return;
+  }
+
+  // ⚠⚠ THE AMOUNT COMES FROM `invoiceHtml`, THE ONE THING THAT OWNS IT. Re-deriving it here
+  // would be a second copy of the money — the drift this file records more often than anything
+  // else — and it is the figure the client's own invoice states as due, so the link and the
+  // document cannot disagree about what is owed.
+  var inv = null;
+  try { inv = invoiceHtml(job, stage); } catch (e) { inv = null; }
+  if (!inv) { _docNotice('warn', 'Could not price the ' + (PAYMENT_STAGE_LABELS[stage] || stage) + ' on this job.', jobId); return; }
+  if (inv.blocked) {
+    _docNotice('warn', 'That invoice is blocked and cannot be sent for payment yet'
+               + (typeof inv.blocked === 'string' ? ' — ' + inv.blocked : '') + '.', jobId);
+    return;
+  }
+  var amt = Math.round(inv.amtDue || 0);
+  if (!(amt > 0)) {
+    _docNotice('warn', 'Nothing is outstanding on the ' + (PAYMENT_STAGE_LABELS[stage] || stage) + '.', jobId);
+    return;
+  }
+
+  _docNotice('info', 'Creating an ACH payment link for ' + fmt(amt) + '\u2026', jobId);
+
+  // ⚠⚠ NO AUTOMATIC RETRY — the rule `addVendor` and the DocuSign send already follow, for the
+  // same reason. A failed POST never reveals whether it landed, and re-sending mints a SECOND
+  // payment link against one stage. `allowRetry` is deliberately omitted.
+  _appsScriptPost(SHEETS_SYNC_URL, {
+    action: 'stripeLink',
+    jobId: String(job.id),
+    hvlId: job.hvlId || '',
+    stage: stage,
+    amount: amt,
+    description: 'Havellin Palm Beach \u2014 ' + (PAYMENT_STAGE_LABELS[stage] || stage)
+                 + (job.hvlId ? ' (' + job.hvlId + ')' : '')
+  }, function (ok, d) {
+    if (!ok || !d || !d.ok || !d.url) {
+      _docNotice('err', 'No payment link was created'
+                 + ((d && d.error) ? ' \u2014 ' + d.error : '') + '. Nothing was sent to the client.', jobId);
+      return;
+    }
+    var st2 = docState(job, key);
+    st2.stripe = { linkId: d.linkId || '', url: d.url, amount: amt,
+                   createdAt: new Date().toISOString(), checkedAt: '' };
+    saveJobs(); syncJobToSheets(job);
+    _stripeShowLink(job, stage, d.url, true);
+  });
+}
+
+// ⚠ THE LINK IS SHOWN, NEVER SENT BY THE APP. Anthony reviews and sends every client document
+// himself — the same requirement that makes `gmail.compose` deliberately unable to send. The
+// link rides the deposit invoice he is already sending.
+function _stripeShowLink(job, stage, url, fresh) {
+  _docNotice('ok', (fresh ? 'ACH payment link created' : 'ACH payment link for this stage')
+    + ' \u2014 bank transfer only, no card. Send it with the '
+    + (PAYMENT_STAGE_LABELS[stage] || stage) + ' invoice: ' + url
+    + '  \u00b7  It records itself here once the transfer settles (about four business days).', job.id);
 }
 
 

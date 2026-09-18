@@ -1,5 +1,184 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A CLIENT CAN PAY BY BANK TRANSFER, AND IT RECORDS ITSELF (BUILT 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18a`.
+Anthony: *"what needs to be done to integrate Stripe payments? i only want to accept ACH to avoid the 3% fee,
+unless we can add a 3% 'convenience fee' to cover the credit card processing fee. otherwise it's too
+expensive. scope this out beofre doing anythign."* Scoped first (`STRIPE_PAYMENTS_SPEC.md`), then
+**"yes, start on phase 1 and 3"**. Phases 1 and 3 in one redeploy.
+
+- **⚠⚠ THE 3% CONVENIENCE FEE CANNOT BE BUILT AS DESCRIBED, AND THE ARITHMETIC IS WHY — measured, not
+  asserted.** Two separate failures and either one is fatal:
+  - **It is a SURCHARGE, not a convenience fee.** A convenience fee must be flat, must be for an
+    *alternative* channel, and cannot be card-not-present-only. Havellin fails all three.
+  - **A surcharge is capped at the LOWER of 3% or the actual cost of acceptance**, and Stripe's card
+    price is `2.9% + $0.30`, so the blended rate is `0.029 + 0.30/x` — **always above 2.9%**.
+    Solving `0.029 + 0.30/x ≥ 0.03` gives **x ≤ $300**. On the $25,715 worked example the deposit's
+    blended rate is **2.9023%** and 3% over-collects by **$12.56**. So the fee is compliant only on
+    tickets at or below $300, which is no Havellin payment that has ever existed.
+  - **The gap it was meant to close: $746.63 on a card against $16.50 on ACH**, on one job. Anthony,
+    asked directly: *"No cards at all."*
+- **⚠⚠ IT IS IN `main-sync.gs`, NOT THE SEPARATE STRIPE SCRIPT, AND THAT IS THE ARCHITECTURAL CALL.**
+  `STRIPE_SCRIPT_URL` pointed at an Apps Script project **not in this repo and never in it** (verified:
+  five `.gs` files tracked, none carries the string). Fine while the link was fire-and-forget; wrong the
+  moment anything reads back, because **read-back is on the app's REQUEST PATH** and has to move in
+  lockstep with `BACKEND_VERSION`, `BACKEND_ACTIONS` and the dispatch-parity test. `checkBackendVersion`
+  cannot reach a second deployment, so a stale one fails silently and reads as an app bug — the defect
+  this file records costing **six weeks**. Same call as DocuSign on 2026-09-17.
+  - **Its source did not need recovering.** Minting a link is thirty lines; rewriting is less work than
+    retrieving, and the rewrite is the only version that can be version-checked.
+  - **`STRIPE_SCRIPT_URL` AND `STRIPE_PK` ARE BOTH DELETED, and the second one is the interesting half:
+    it had ZERO readers in 28,000 lines.** No Stripe.js is loaded anywhere, so the *Stripe Publishable
+    Key* box stored a string nothing consumed. Worse, the box beside it read **"Stripe Secret Key — via
+    Apps Script URL"** — an invitation to paste a real secret into localStorage on a page served from
+    public GitHub Pages. `SYNC_TARGETS` goes four entries to three.
+- **⚠⚠ THE LINK IS VERIFIED AFTER IT IS CREATED, NOT ASSUMED FROM THE PARAMETER, AND THAT IS THE
+  LOAD-BEARING PART.** Whether `/v1/payment_links` honours `payment_method_types` **could not be
+  confirmed** — `docs.stripe.com` is blocked by the egress proxy. So `stripeCreatePaymentLink` reads the
+  link back, and one that would also take a card is **deactivated and never returned**, with the fix
+  named (Dashboard → Settings → Payments → Payment methods). This is the `DriveApp.getThumbnail()` rule:
+  the method name promised a thumbnail and returned a 130KB photograph. **Trust the measurement.**
+  - **⚠ AN EMPTY `payment_method_types` IS A FAILURE, NOT A PASS.** Stripe returns nothing there when it
+    defers to the Dashboard's own settings, which may include cards. ACH-only cannot be *proven* in that
+    case, and an unprovable claim about how a client may pay is the thing this verification exists to
+    refuse. Reverting that one arm fails 1.
+  - **⚠ THE TEST COUNTS THE DEACTIVATION CALL, NEVER GREPS FOR IT.** A build that reads the methods back,
+    notices the card and returns the link anyway contains every string a grep would look for — the same
+    gap this file records on the DocuSign certificate fetch, where a revert that fetched the file and
+    threw it away came back **green**. What matters is that a SECOND request goes out and no url comes back.
+- **⚠⚠ ONLY `succeeded` IS MONEY, AND ON ACH THAT IS NOT WHAT THE SESSION SAYS.** The checkout session
+  reads `complete` the instant the client authorises their bank, while the transfer is **about four
+  business days out and can still fail**. `stripePaymentsForLink` reads the **payment intent's** status,
+  never the session's, and a test drives a session at `complete` over an intent at `processing` and
+  asserts nothing is recorded. Recording the authorisation is byte-for-byte the defect the
+  clears-on-receipt split exists to undo, arriving by a different door.
+- **⚠ POLLING, AND THE WEBHOOK IS RULED OUT FOR ONE REASON RATHER THAN FOUR.** `doPost(e)` exposes no
+  request HEADERS and Stripe signs with `Stripe-Signature` with no query-param alternative, so an Apps
+  Script endpoint **cannot authenticate a delivery** — an open URL, on a public repo, that marks a
+  $12,858 deposit received. That is the same fact that ruled out DocuSign Connect.
+  - **⚠⚠ BUT THE DOCUSIGN RATE-LIMIT HAZARD DOES NOT TRANSFER, and nobody should copy the 20-minute
+    floor across as though it were a rule.** DocuSign publishes one request per unique resource per 15
+    minutes and names **revocation** as the penalty. Stripe has no such rule. `STRIPE_RECHECK_MINS` is
+    **10**, and it exists only so a dashboard repaint and the 15-second remote tick do not each fire a
+    call — not because a vendor would punish us.
+  - **⚠ NO TIMER AT ALL.** Wired to **arrival** — `_jobsLanded` and `openClientDashboard` — so it fires
+    when somebody is looking at the answer and never when nobody is. ACH takes four business days;
+    nothing needs it sooner.
+  - **⚠ SEQUENTIAL, NEVER `Promise.all`.** Every store write takes the **global** Apps Script lock, and
+    this file records in full what parallel sending cost on 2026-09-11: *the retry manufactured the
+    condition it was retrying.*
+- **⚠⚠ IDEMPOTENT ON THE PAYMENT-INTENT ID, NEVER ON `payment.id`.** That is `max(id)+1` over the
+  payments **this device** holds, so two devices both mint `1` — and this file already records that a
+  union by id then **FUSES two real payments into one** rather than merely losing one. The intent id is
+  Stripe's, unique, and the same on every device. Driven: three polls over one settled transfer record
+  it once.
+- **⚠⚠ THE RECORD SAYS `stripe_ach` AND SETS `clearedOn`, WHICH LOOKS LIKE A CONTRADICTION AND IS NOT.**
+  The METHOD is off the clear-on-receipt list because when a **person** records an ACH by hand all they
+  know is that the client authorised it. This record exists only because **Stripe reported the intent
+  `succeeded`** — the money has genuinely settled. That is the one moment an ACH payment is cleared, and
+  it is the whole reason read-back is worth building. Reverting the method to `stripe` fails 2.
+- **⚠ A FAILED CHECK SPEAKS, AND THE WORDING IS THE REQUIREMENT.** A silent failure leaves a settled
+  deposit reading unpaid forever — a state with no exit. But *"not paid"* is also a **claim**, and it
+  would be false, so the notice closes *"Money may already have arrived; this is not a statement that it
+  has not."* **And it does not stamp `checkedAt`**, or a transient 502 makes the app blind for ten
+  minutes rather than until the next time somebody opens the client.
+- **⚠ THE AMOUNT COMES FROM `invoiceHtml(job, stage).amtDue`, THE ONE THING THAT OWNS IT.** Re-deriving
+  it would be a second copy of the money — the drift this file records more often than anything else —
+  and it is the figure the client's own invoice states as due, so the link and the document cannot
+  disagree. A **blocked** invoice cannot be sent for payment at all.
+- **⚠ ONE LINK PER STAGE.** Two links against one invoice is two ways to pay it, and a client who pays
+  both has overpaid by a deposit. Once minted the same link comes back. **And no automatic retry** — the
+  rule `addVendor` and the DocuSign send already follow: a failed POST never reveals whether it landed,
+  and re-sending mints a second link.
+- **⚠ IT STAMPS THE AGREEMENT ON THE WAY THROUGH, and a pre-existing test is what caught me not doing
+  it.** `dashboard-actions` asserts every door into the agreement runs `ensureAgreementApproved`; the
+  first cut of `stripePaymentLink` did not. Asking a client to wire the deposit asks for money the
+  agreement **defines**, so minting a link against an unapproved agreement requests money under terms
+  nobody signed off. **It gates the MINT, not the re-show** — a link already in a client's hands is a
+  read, and re-displaying it must not turn on an estimate that has since been reopened for editing.
+- **⚠ THE APP NEVER SENDS IT.** The link is shown and Anthony sends it with the invoice himself — the
+  same requirement that makes `gmail.compose` deliberately unable to send.
+
+- **5471 committed checks** (`tests/stripe-payments.test.js`, 168 new on top of Phase 2's 37 — the first
+  coverage of what a payment link is or how one is read back). **All 31 changes revert-verified
+  individually, ZERO green** — form-encoding-not-JSON fails **8**, the deactivation check **9**, ACH-only
+  **8**, the intent-status read **5**, only-`succeeded` and the intent-id idempotence **4** each, and the
+  rest 1–2.
+  - **⚠⚠ THE INTENT-STATUS READ FAILED ONLY *ONE* ON THE FIRST SWEEP, ON THE SINGLE MOST CONSEQUENTIAL
+    LINE IN THE BUILD.** Every check drove a PIECE — the backend group asserted it reports the intent's
+    status, the app group asserted the recorder takes only `succeeded` — and **nothing drove the JOIN**,
+    so the two ends could stop meeting with the suite passing. The gap this file records more than any
+    other. There is a group that hands the REAL backend's answer for a `complete`/`processing` session to
+    the REAL `applyStripePayments` and asks what the JOB says; the revert now fails **5**.
+  - **⚠ TWO REVERTS CRASHED THE FILE INSTEAD OF FAILING**, so each reported one throw rather than the
+    assertions it really breaks: `c.calls[1].url` is `undefined.url` when the deactivation never goes
+    out. Read defensively, they fail **8** and **9**. Second time this file records that shape.
+  - **⚠ AND ONE NEEDLE MATCHED TWICE** — `_jobTouch(job, 'payments', payment.uid)` with its comment is
+    **byte-identical** in `saveDeposit` and `_stripeRecordPayment`, which is correct (one shape, two
+    writers) and makes the line unusable as a needle. Scoped to its neighbours, it fails 1. The `NEEDLE
+    x0` guard is what caught it rather than it reading as a green revert.
+- **Verified end to end in headless Chromium on the real page**, driving the real rail, the real
+  `stripePaymentLink` and the real `stripeRefresh` against a fake backend:
+
+  | | |
+  |---|---|
+  | the rail's secondary | `dashStripeLink(991,'deposit')` — the stage rides with it |
+  | the rail's primary | still the invoice send, never the link |
+  | pressing it | posts `stripeLink` · **$12,858** · stage `deposit` · the HVL id in the description |
+  | what it says | *"bank transfer only, no card … It records itself here once the transfer settles (about four business days)"* |
+  | **pressing it again** | **0 network calls**, same link |
+  | the client AUTHORISES (`processing`) | **0 payments · not funded**, and the check IS stamped |
+  | it SETTLES (`succeeded`) | **1 payment** · funded · `stripe_ach` · cleared · *recorded by Stripe* · `_jobTouch` stamped |
+  | polled again | still **1** payment, $12,858 |
+  | the deposit afterwards | **drops off the watch entirely** |
+  | a **502** on the check | names the 502, *"this is not a statement that it has not"*, **`checkedAt` unmoved**, not funded |
+  | Settings | **both Stripe boxes gone**; the note names `STRIPE_SECRET_KEY` |
+
+  Overflow **0** at 1440 and 390px, **no JS page errors**. The app's own `<style>` block is
+  **byte-identical** at 73,349 bytes.
+- **⚠⚠ WHAT IS STILL NOT PROVEN, AND IT IS THE DOCUSIGN SHAPE AGAIN: NO LINK HAS EVER BEEN CREATED
+  AGAINST THE LIVE API.** The egress proxy blocks `stripe.com` from the build environment, so the
+  request shapes, the ACH verification, the intent-status read and the recording are verified in SHAPE
+  and against stubs. **Two things need one real sandbox run** and neither can be asserted from here:
+  that `/v1/payment_links` returns `payment_method_types` at all (if it returns nothing the app refuses
+  every link — loudly, which is the safe direction, but it is a thing to see), and that a real ACH test
+  payment moves `processing → succeeded` the way the read-back expects.
+- **⚠ THREE PRE-EXISTING SUITES PINNED THE OLD WORLD AND BROKE CORRECTLY; ALL RESTATED, none deleted.**
+  `tabs-retired` pinned the label *Stripe link*, the `STRIPE_SCRIPT_URL` gate and `generateStripeLink`
+  surviving; `dashboard-actions` pinned that function as a door into the agreement — **and that one was
+  right, which is how it caught me not stamping**. The requirement never was the label or the variable
+  name; it was that the link is reachable from the deposit row, is never the primary, is withheld when
+  the backend is unconfigured, and stamps the agreement on the way through.
+- Manual **§1 · §2 (Settings) · §3 · §8 · §9a**, with a **new §8b** (the two costs, why the 3% fee is not
+  buildable, the verify-and-deactivate rule, four-business-day settlement and why a client saying *"I've
+  paid"* over a silent screen is the normal state, one link per stage, the failed-check wording, and that
+  the key goes in Script Properties and nowhere else); playbook **Step 9** with a `.stop` and **seven**
+  symptom→cause rows. **⚠ Three standing claims were CORRECTED rather than added to**, each of which
+  would have had somebody do the wrong thing: the *Generate Payment Link* note describing a button that
+  no longer exists, the Settings table asking for two keys that are now refused, and the playbook's
+  *"Wires, cards and cash are marked cleared on receipt"* — stale since Phase 2 in that file only. Both
+  `.md` copies hand-edited and **21 claims parity-checked, 0 mismatches**; tag balance verified on both
+  HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
+  1440/390 with **0 overflow** and **all 50 tables full-width under `print`**.
+
+### ⚠⚠ I SHIPPED A LIVE `ReferenceError` AND THE SUITE WAS GREEN THROUGH IT — AGAIN
+- Replacing `generateStripeLink` with `stripePaymentLink` left **two callers behind**:
+  `onclick="generateStripeLink()"` in the markup and a bare call inside `dashStripeLink`. A
+  ReferenceError on every press of two live controls, and **5,317 checks passed**. Found by reading tool
+  output, not by a test. This file already records the lesson twice (Slice 4's `_setAgrEmailBusy`,
+  Slice 7's three orphaned DOM writes) — *a consolidation is exactly when this bites, because deleting a
+  duplicate path is the right move and it leaves callers behind.*
+- **⚠⚠ AND THE EXISTING TRIPWIRE COULD NOT SEE IT, WHICH IS THE PART WORTH FIXING.**
+  `doc-send.test.js` has checked *"every `_private(` call resolves to a definition"* since Slice 4 — scoped
+  to underscore names on the reasoning that private helpers are the class removed in a sweep. **A PUBLIC
+  function is removed in a sweep too**, and when its caller is a **string** no parser anywhere notices.
+- **THE FOURTH SHAPE IS NOW A TEST: every function named inside an `onclick=` attribute or a rail
+  action's `call:` string must exist.** Those are text the browser resolves at press time and nothing
+  checks before then, so they are exactly where a rename dies silently. **Verified by re-introducing the
+  real bug**: the check names `generateStripeLink [markup]`, and the revert fails **2**. Two exempt classes, both named rather than
+  pattern-matched away — a keyword opening an inline statement (`onclick="if(event.target===this)…"` on
+  five modal overlays) and a browser global we do not rename (`oninput="clearTimeout(window._invQT)…"`).
+
 ## THE PROBATE CONTRACT READ AS ASHLEY SIGNING THE DATE (FIXED 2026-09-18)
 Anthony: *"fix the probate signature block."* Flagged in passing during the DocuSign build and deliberately
 left alone there — it is unrelated to e-signature and had no business in a commit about it. App-only, no

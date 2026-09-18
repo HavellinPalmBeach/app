@@ -91,7 +91,7 @@
 
   <h2>1. Overview</h2>
   <div class="note"><strong>This is the master document.</strong> It is the system of record for how the app is set up and how it works — configuration, engine, taxonomy, rates, gates. Its companion, the <strong>Concierge Job Playbook</strong> (<code>concierge-guide.html</code>), is the walk-through-it-in-order extract for running one job from intake to final invoice with the app open; it covers a subset of what is here, and where the two disagree this document is right. They are reconciled against the app <em>together</em> — the version stamp at the foot of each says when. Plain-text copies for a phone or a printer: <code>MANUAL.md</code> and <code>CONCIERGE_GUIDE.md</code>, generated from these two files.</div>
-  <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. <strong>Agreements go out for signature through DocuSign</strong> as of 2026-09-17 (§8a); payments are still recorded <strong>by hand</strong>, and Stripe auto-charge and QuickBooks are not built (§3).</p>
+  <p>Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. <strong>Agreements go out for signature through DocuSign</strong> as of 2026-09-17 (§8a), and <strong>a client can pay the deposit by bank transfer</strong> as of 2026-09-18 (§8b) — that one payment records itself. Every other payment is still recorded <strong>by hand</strong>, and QuickBooks is not built (§3).</p>
   <div class="note"><strong>How we describe ourselves on client documents — corrected 2026-08-03.</strong> Havellin is <strong>insured and bonded</strong>. It is <strong>NOT licensed</strong>, and every client document said <em>&#8220;Licensed, Insured &amp; Bonded&#8221;</em> until this correction — client estimate footer, invoice footer, both agreement footers, and the Terms line. <strong>Do not put &#8220;licensed&#8221; back on any client-facing surface.</strong> <em>The estimate&#8217;s Terms bullet was cut on 2026-09-10 &mdash; it restated the footer seven lines below it on the same page, and Terms is for commercial rules rather than standing facts about the firm. The footers are unchanged and are where the claim is made.</em> This is compliance, not wording: if it ever needs revisiting it needs Anthony, not a judgement call.
     <br><br><em>A third party's licence is a different thing and is correct where it appears</em> — <strong>Licensed FFL</strong> on the firearms disposition list (§5f), the vendor directory's <strong>License / cert</strong> field (§13), and &#8220;licensed firearms transfer&#8221; in the collections cost note. Those describe vendors, not us.
     <br><br>The tagline on all four client documents is <strong>&#8220;Havellin handles the work no family should face alone.&#8221;</strong> It replaced <em>Guiding Families Through Life's Transitions</em> on 2026-08-03.</div>
@@ -136,7 +136,7 @@
     <tr><td>Vendor Directory — Apps Script URL</td><td>The Vendor Directory web-app <code>/exec</code> URL (separate sheet)</td></tr>
     <tr><td>Referral Partners — Apps Script URL</td><td>The Referral Partners web-app <code>/exec</code> URL (separate sheet)</td></tr>
     <tr><td>Gmail &mdash; Google OAuth Client ID</td><td><strong>Already filled in.</strong> Change it only to point a device at a different Workspace; clearing it restores the firm default</td></tr>
-    <tr><td>Stripe Publishable Key</td><td><code>pk_live_...</code> (configure when live)</td></tr>
+    <tr><td colspan="2"><em>Stripe needs nothing here.</em> It runs through the same Apps Script as everything else, and its secret key lives in that script&rsquo;s <strong>Script Properties</strong> as <code>STRIPE_SECRET_KEY</code> &mdash; never on a device. See &sect;8b.</td></tr>
   </table>
   <div class="note"><strong>Creating the Gmail client ID &mdash; once for the firm, then pasted on each device.</strong> In the Google Cloud console, on a project owned by the Havellin Workspace: <strong>(1)</strong> enable the <em>Gmail API</em>; <strong>(2)</strong> configure the OAuth consent screen as <em>Internal</em>, so only havellinpalmbeach.com accounts can use it and Google does not require app verification; <strong>(3)</strong> create an OAuth client of type <em>Web application</em> and add the app&rsquo;s own address as an <strong>Authorized JavaScript origin</strong> (the GitHub Pages origin &mdash; scheme and host only, no path); <strong>(4)</strong> paste the client ID into <code>GMAIL_CLIENT_ID_DEFAULT</code> in <code>havellin.html</code>.
     <br><br><strong>This was done on 2026-09-08 and no device needs setting up.</strong> The firm's client id ships in the app as the default, so a new iPad works the moment it loads the page. The Settings field overrides it per device and clearing that field restores the default. <strong>It is not a secret</strong> &mdash; a browser client ID is public by design (it is in the page source of every site that uses one), and the <em>authorized origin</em> is what protects it.
@@ -191,9 +191,12 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     On a job sent through DocuSign the signature comes back <strong>on its own</strong>: the app checks when you open the client,
     marks the agreement signed, names <em>the person who actually signed it</em>, and files the executed copy and its certificate
     of completion to Drive. <strong>You do not mark it signed by hand and the app will not let you</strong> &mdash; see &sect;8a.
-    <br><br><strong>Still not built, and still by hand:</strong> <em>Stripe auto-charge</em> and <em>QuickBooks reconciliation</em>.
-    You still record every payment yourself. And the <strong>paper route is deliberately kept</strong>: any single agreement can be
-    sent as a PDF to sign by hand, per job, without changing a firm-wide setting.</div>
+    <br><br><strong>&#9888; AND A BANK TRANSFER NOW RECORDS ITSELF TOO, as of 2026-09-18.</strong> A client sent an
+    <strong>ACH payment link</strong> pays from their bank account, and when the transfer settles the app writes the payment,
+    names Stripe as the recorder and funds the job &mdash; see &sect;8b. <strong>Cards are not accepted at all</strong>, deliberately.
+    <br><br><strong>Still not built, and still by hand:</strong> <em>QuickBooks reconciliation</em>, and every payment that does not
+    come through that link &mdash; cheques, wires and cash are all recorded by you. And the <strong>paper route is deliberately
+    kept</strong>: any single agreement can be sent as a PDF to sign by hand, per job, without changing a firm-wide setting.</div>
   <p><strong>Staffing sits in the waiting period on purpose.</strong> Once the agreement is out for signature there's usually a few days of dead time — that's when you confirm who is actually available and name the crew on the Job Plan. <strong>Save &amp; Confirm Job Team</strong> is what unlocks hours logging, so a job can't reach its first working day with an unnamed crew (Section 11).</p>
   <p><strong>Home Prep for Sale</strong> follows a streamlined variant of this flow — no room scoring and no crew. Since 2026-09-14 it can carry <strong>declutter hours</strong> for the concierge; see Section 6.</p>
 
@@ -637,7 +640,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
       files the same way.)</li>
     <li>Send the mail, then <strong>&#10003; I&rsquo;ve sent it</strong>.</li>
   </ol>
-  <div class="note"><strong>Generate Payment Link</strong> asks the Stripe service for a deposit link and mails it to <code>billing@havellinpalmbeach.com</code> for you to forward. <strong>Believe what it tells you.</strong> It used to report success unconditionally — the request was sent in a mode that makes the reply unreadable, so a 404 from an undeployed URL and a 500 from a script that threw both printed <em>"payment link generated and sent"</em>. It now reads the reply and says plainly when nothing was created; if it does, send the deposit invoice instead and record the payment by hand. Nothing yet reads <em>back</em> from Stripe — there is no webhook and no automatic payment record (§3).</div>
+  <div class="note"><strong>&#9888; THIS NOTE USED TO DESCRIBE A DIFFERENT BUTTON.</strong> Until 2026-09-18 <em>Generate Payment Link</em> asked a <em>separate</em> Apps Script for a link and mailed it to <code>billing@</code>, and nothing ever read back from Stripe. It is <strong>&#127974; ACH payment link</strong> now, it sits on the deposit row of the timeline, and the payment records itself when the money lands. See <strong>&sect;8b</strong>.</div>
   <h3>Then, as each thing actually happens</h3>
   <p>Each step appears only at its own row on the timeline, records who did it and when, and refuses to run out of order — you
     cannot record a signature on an agreement that was never sent.</p>
@@ -785,6 +788,48 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     document is proven; <strong>where DocuSign draws the box relative to them can only be seen</strong>. Send one envelope to
     yourself in the demo account and look at it before the first client gets one.</div>
 
+  <h2>8b. Taking the deposit by bank transfer (ACH)</h2>
+  <p><strong>Built 2026-09-18.</strong> The deposit row of the client&rsquo;s timeline carries <strong>&#127974; ACH payment link</strong>
+    beside <strong>&#9993; Send deposit invoice</strong>. Press it, and the app creates a Stripe payment link for exactly what that
+    invoice says is due and shows you the URL. <strong>Send it yourself, with the invoice</strong> &mdash; the app never mails it,
+    the same rule that makes every client email a draft you read before it goes.</p>
+  <div class="note"><strong>&#9888;&#9888; BANK TRANSFER ONLY. CARDS ARE NOT ACCEPTED, AND THAT IS A PRICING DECISION RATHER THAN
+    A SETTING.</strong> On a $25,715 job a card costs Havellin <strong>$746.63</strong> and a bank transfer costs
+    <strong>$16.50</strong>. A &ldquo;3% convenience fee&rdquo; cannot close that gap legally: the card networks cap a surcharge at
+    the <em>lower</em> of 3% or what acceptance actually costs you, and Stripe&rsquo;s card price works out above 2.9% on every
+    ticket &mdash; so 3% is only chargeable at or below about <strong>$300</strong>. Anthony, asked directly on 2026-09-18:
+    <em>&ldquo;No cards at all.&rdquo;</em>
+    <br><br><strong>&#9888; AND THE APP ENFORCES IT RATHER THAN TRUSTING THE SETTING.</strong> After creating a link it reads it
+    back, and if Stripe would also take a card on it the link is <strong>switched off and never shown to you</strong>, with a
+    message naming the fix (Stripe Dashboard &rarr; Settings &rarr; Payments &rarr; Payment methods: cards off, ACH Direct Debit
+    on). A link you cannot see is a link no client can pay by card.</div>
+  <div class="note"><strong>&#9888;&#9888; IT RECORDS ITSELF, AND ONLY WHEN THE MONEY HAS GENUINELY SETTLED.</strong> A bank
+    transfer is not instant: the client authorises it, and about <strong>four business days</strong> later it actually arrives.
+    Stripe reports those as two different things and <strong>the app waits for the second one</strong>. When it lands, opening the
+    client writes the payment, records the amount, the date the money moved and the payer, names <strong>Stripe</strong> as who
+    recorded it, and funds the job. You do not type anything.
+    <br><br><strong>&#9888; SO A CLIENT SAYING &ldquo;I&rsquo;VE PAID&rdquo; AND THE APP SAYING NOTHING IS NORMAL FOR A FEW
+    DAYS.</strong> They have authorised it; the money has not arrived. Do not record it by hand to make the screen agree with them
+    &mdash; that is the app asserting money is in the account when it is not, on the record of what the firm is owed.</div>
+  <div class="note"><strong>&#9888; THE CHECK HAPPENS WHEN YOU OPEN THE CLIENT, and there is no other refresh.</strong> Nothing runs
+    on a timer, so a payment that landed overnight appears the first time somebody looks at that job. If you are waiting on one,
+    open the client. Opening it twice in ten minutes makes no second check.</div>
+  <div class="note"><strong>&#9888; ONE LINK PER STAGE, AND PRESSING THE BUTTON AGAIN RETURNS THE SAME ONE.</strong> Two links
+    against one invoice is two ways to pay it, and a client who pays both has overpaid by a deposit. The amount comes from the
+    invoice itself, so the link and the document the client is reading can never disagree about what is owed &mdash; and an invoice
+    the app is blocking cannot be sent for payment at all.</div>
+  <div class="note"><strong>&#9888; IF THE CHECK FAILS IT SAYS SO, AND IT WILL NOT CLAIM THE MONEY IS ABSENT.</strong> A failed
+    status check reads <em>&ldquo;Money may already have arrived; this is not a statement that it has not.&rdquo;</em> That is
+    deliberate. It also does not count as having checked, so the next time you open the client it tries again rather than going
+    quiet for ten minutes over a blip.</div>
+  <div class="note"><strong>Setting it up &mdash; once, and not on any device.</strong> One Script Property on the same Apps Script
+    everything else uses: <code>STRIPE_SECRET_KEY</code>. <strong>&#9888; It must never be typed into the app&rsquo;s Settings</strong>
+    &mdash; this page is served publicly, so anything stored on a device is readable by anyone. The old <em>Stripe Publishable Key</em>
+    and <em>Stripe Secret Key &mdash; via Apps Script URL</em> boxes are gone for that reason.
+    <br><br><strong>Run <code>testStripeAuth</code> in the Apps Script editor first.</strong> It proves the key and the account
+    <em>without creating a link</em>, and it tells you whether ACH is actually switched on for the account &mdash; a key that
+    authenticates against an account with ACH off fails later and further away, where it reads as an app bug.</div>
+
   <h2>9. Client Dashboard</h2>
   <p><strong>Tab: Client Dashboard</strong> → select job card. Shows full job status, the job timeline, referral source / partner, and the standing job facts. <strong>Every action that advances the job is on the timeline</strong> &mdash; see &sect;9a. The heading line above it carries the two that are not steps: <strong>&#9998; Edit Client</strong> and <strong>&#128193; Drive</strong>.</p>
 <div class="note"><strong>&#9888; THE HEADER'S BUTTON BAR IS GONE, AND WHAT REPLACED IT IS TWO BUTTONS (2026-09-11).</strong> The dashboard used to open with a white bubble carrying seven controls &mdash; <em>Estimate &middot; Submit for Approval &middot; Client Accepted &mdash; Mark Won &middot; Change Order &middot; Edit Client &middot; Drive &middot; Activate Job</em>. <strong>Five of those were already reachable further down the same screen</strong>, which is what Anthony asked about: <em>&ldquo;do we need the 5 boxes at the top at all? like the activate job button? estimate probably doesn&rsquo;t need to be there if it&rsquo;s down below in the timeline.&rdquo;</em> Four are rows on the timeline with their own buttons, and <em>Change Order</em> has its own <strong>+ New</strong> in the Change Orders card, beside the count. <strong>&#9888; And two of the copies could disagree.</strong> The bubble offered <strong>Activate Job</strong> on every job; the timeline&rsquo;s own <em>Job active</em> row withholds that button when the activation is blocked, deliberately, because the fix is a phone call to the executor and a button that just alerts the blocker back at you is worse than none. So a contested matter with the Letters outstanding showed no button on the rail and a button at the top. What survives sits on the <strong>Job Timeline &amp; Payments</strong> heading line: <strong>&#9998; Edit Client</strong> and <strong>&#128193; Drive</strong>. <strong>The rule is: the timeline holds every step, that bar holds only what is not one</strong> &mdash; and a test walks the whole lifecycle and fails if anything in the bar is also offered by the rail.</div>
@@ -808,7 +853,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td>Client accepted</td><td><strong>&#10003; Client accepted — mark won</strong>.</td></tr>
     <tr><td>Signing packet sent</td><td><strong>&#9993; Send signing packet</strong> → <strong>&#10003; I&rsquo;ve sent it</strong>.</td></tr>
     <tr><td>Agreement signed</td><td><strong>&#10003; Record the signed agreement</strong> — see §8.</td></tr>
-    <tr><td>Deposit invoice sent</td><td><strong>&#9993; Send deposit invoice</strong>, <strong>&#128179; Stripe link</strong>.</td></tr>
+    <tr><td>Deposit invoice sent</td><td><strong>&#9993; Send deposit invoice</strong>, <strong>&#127974; ACH payment link</strong> (&sect;8b).</td></tr>
     <tr><td>Deposit received</td><td><strong>&#10003; Record payment</strong>.</td></tr>
     <tr><td>Job active</td><td><strong>&#9654; Activate job</strong>. Blocks on executor authorisation where that applies.</td></tr>
     <tr><td>Midpoint / Final invoice sent</td><td>Same send pair. The final carries <strong>&#128273; Manager approval</strong> when it is outside &plusmn;15% (§12).</td></tr>
