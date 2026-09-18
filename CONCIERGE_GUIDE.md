@@ -10,7 +10,9 @@ It deliberately does not explain how the app is built. Setup, Apps Script URLs, 
 
 > **The Operations Manual is the master document.** It covers everything in this playbook and everything this playbook leaves out. This is the walk-through-it-in-order extract, written for running a job with the app open — where the two disagree, the manual is right and this file needs fixing. Both are reconciled against the app together; the version stamps at the foot of each say when. Plain-text copies for a phone or a printer: `CONCIERGE_GUIDE.md` and `MANUAL.md`.
 
-> **Three things are recorded by hand, always.** The client's acceptance, the signed agreement coming back, and every payment. Nothing arrives by itself and nothing is automatic — if you don't record it, the app does not know it happened, and the next step stays locked.
+> **Two things are recorded by hand, always.** The client's acceptance, and every payment. Nothing arrives by itself and nothing is automatic — if you don't record it, the app does not know it happened, and the next step stays locked.
+>
+> **⚠ The signed agreement used to be the third, and since 2026-09-17 it depends on how you sent it.** Sent through **DocuSign**, the signature comes back on its own and *you cannot record it by hand*. Sent as a **PDF**, you record it exactly as before. Step 6 is where you choose, and Step 8 is what happens next.
 
 ## The Job, Start to Finish
 
@@ -23,7 +25,7 @@ It deliberately does not explain how the app is built. Setup, Apps Script URLs, 
 
 > **⚠** **You run the whole job from ONE screen now — the Client Dashboard (changed 2026-09-11).** Open a client and you get a **timeline** of the job from intake to final payment, and every button you need is on the row for the step it belongs to. **Client Estimate, Agreement and Invoices are gone from the top of the screen.** Nothing they did was removed — it all moved onto the timeline. Anthony asked for this in as many words: *"we are finding ourselves having to go to too many tabs … that way, as we're going through a job, we know what to do next."* **Exactly one step is ever lit up**, and that is the one to do next. If a step is red it is blocked, and the row tells you both why and how to clear it. If you are hunting for a button, open the client and look at the lit row — it is there, on the step it belongs to. The steps below are still the order of the job; they are just no longer the order of the tabs.
 
-> **On a phone in the house, press 📱 Field in the header.** The tabs drop to a bottom bar you can reach with a thumb — **Clients · Intake · Estimate · Job Plan · Vendors** — and everything is sized for one hand. The other four tabs are desk work and are hidden, not removed; nothing you type is lost. **Clients is new there as of 2026-09-11, and its buttons work.** So the three things you actually do standing in somebody's kitchen are all on the timeline, on your phone: **record a cheque** they just handed you, **record the signed agreement** they just handed back, and **mark them won** after the walkthrough conversation. Do them there and then — that is the whole point, and it beats a note to yourself for later. Press it again to come back to the full nine tabs. Whatever you were looking at stays put.
+> **On a phone in the house, press 📱 Field in the header.** The tabs drop to a bottom bar you can reach with a thumb — **Clients · Intake · Estimate · Job Plan · Vendors** — and everything is sized for one hand. The other four tabs are desk work and are hidden, not removed; nothing you type is lost. **Clients is new there as of 2026-09-11, and its buttons work.** So the three things you actually do standing in somebody's kitchen are all on the timeline, on your phone: **record a cheque** they just handed you, **record the signed agreement** they just handed back *(on a PDF job — a DocuSign one has nothing to press)*, and **mark them won** after the walkthrough conversation. Do them there and then — that is the whole point, and it beats a note to yourself for later. Press it again to come back to the full nine tabs. Whatever you were looking at stays put.
 
 > **⚠** **Every document goes out the same way, and that is the whole point of the change.** Estimate, signing packet, deposit invoice, midpoint invoice, final invoice — all five: **✉ Send…** → read the draft in your Gmail and send it → **✓ I've sent it**. Each row also carries **👁 View**, **🖨 Print** and **📁 Filed copy**. Learn it once on the estimate and you know how to send an agreement and an invoice. **Why you press two buttons and not one.** The app builds the email and puts it in *your* Gmail as a draft — it deliberately cannot send it, because every client email gets read by a person first. So it cannot know when you actually sent it. **✉ Send** makes the draft; **✓ I've sent it** is you telling the app it went. Until you press the second one the row reads *"Drafted — read it, send it, then confirm"* and the step stays open. **Do not skip it** — on the estimate, that confirmation is what lets you mark the job Won.
 
@@ -314,14 +316,18 @@ Open the job card and hit **✓ Client Accepted — Mark Won**. Acceptance is in
 
 > **One document goes into their Drive folder, and it is the packet (changed 2026-09-11).** It used to file two — the packet *and* the agreement on its own. They sat side by side under almost the same name, and only one of them is signable: the bare agreement is the terms with **Exhibit A missing**, which both forms say makes it invalid. Nothing is lost by filing one, because the packet *contains* the agreement as its first page. **If you are looking in a folder from before that date you will see both.** The one to keep is the one whose name reads **Havellin Services Agreement**. The one ending *_Agreement.html* is the half-document — do not send it to anybody.
 
-Three buttons then appear one at a time, each in its own turn, each recording who did it and when. None of them will run out of order — you cannot mark a signature on an agreement that was never sent.
+The buttons then appear one at a time, each in its own turn, each recording who did it and when. None of them will run out of order — you cannot mark a signature on an agreement that was never sent.
 
 | Button | Press it when |
 | --- | --- |
-| **🖨 Print** (signing packet) | One PDF: the agreement, then the approved estimate as Exhibit A on a new page. **This is what you send for signature** — the agreement alone refers to an exhibit the client does not have. It is also filed to Drive beside the agreement when you approve. |
-| **✓ I've sent it** | You have emailed it or handed it over. |
-| **✓ Record the signed agreement** | The signed copy has come back. It asks **who signed it** — see step 8. Signing does *not* mean paid; the app keeps those separate on purpose. |
+| **🖨 Print** (signing packet) | One PDF: the agreement, then the approved estimate as Exhibit A on a new page. **This is what goes out for signature** — the agreement alone refers to an exhibit the client does not have. It is also filed to Drive beside the agreement when you approve. |
+| **✎ Send for signature** | **The normal route.** DocuSign emails the packet to the client and it comes back signed by itself. Nothing to confirm afterwards, and **no "I've sent it" button appears** — DocuSign did the sending. |
+| **📄 Send as a PDF to sign by hand** | **The old-school route, per job.** A Gmail draft with the packet attached, for you to read and send. Use it for a client who will not sign on a screen. It changes nothing for any other job. |
+| **✓ I've sent it** | *PDF route only.* You have emailed it or handed it over. |
+| **✓ Record the signed agreement** | *PDF route only.* The signed copy has come back. It asks **who signed it** — see step 8. |
 | **✓ Record payment** | The money is in your hand. This is what lets work begin. |
+
+> **⚠** **Pick the route before you press, because it is fixed from that moment.** Both send buttons sit side by side until one is pressed; afterwards **only the one you chose is offered**. An agreement already sitting in a client's DocuSign inbox must not also be recorded as signed by hand — that is two records of one contract disagreeing. **If you send the wrong way, do not try to work around it: tell Anthony.** **A job you papered before DocuSign was switched on keeps its old buttons**, permanently. Nothing in flight was stranded.
 
 ## Step 7 · Staff the job team — Job Plan tab
 
@@ -340,6 +346,22 @@ Do this in the wait between sending the agreement and the deposit landing. You k
 > **⚠** **Confirming the team does not start the clock.** Hours stay locked until the deposit is in. A confirmed team on an unfunded job keeps its confirmation and tells you plainly that the deposit is what's missing. Staffing ahead of payment is deliberate; starting work is not.
 
 ## Step 8 · Signed copy back
+
+**What you do here depends entirely on how you sent it in Step 6.**
+
+### If it went out through DocuSign — nothing to press
+
+The *Agreement signed* row reads **DocuSign is watching for it** and there is no button. When the client signs, the app marks it signed by itself, **names the person who actually signed**, and files the executed copy and its certificate of completion into the client's **Agreement** folder in Drive.
+
+> **⚠** **⚠⚠ OPENING THE CLIENT IS WHAT CHECKS. Nothing runs in the background.** The app asks DocuSign when somebody is looking at the job — so if you are waiting on a signature, **open the client**. That is the refresh, and there is no other one. **It asks at most once every twenty minutes per agreement**, so opening it six times in a row asks once and the other five show you what it last heard. That limit is DocuSign's, not ours, and **the penalty for breaking it is losing API access for the whole firm** — which is why there is no refresh button to hammer. **If the client says they signed and the app still says waiting:** give it twenty minutes and open the client again. **Do not try to record it by hand** — the app will refuse, deliberately, so that two records of one contract cannot disagree.
+
+> **Havellin signs second, and it is not done until we do.** The client signs first; the agreement then comes to Havellin to countersign. The job does **not** read as signed in between, because a half-executed contract is not a contract. **An agreement that seems stuck right after the client signed is usually waiting on us** — check the DocuSign inbox before chasing the client.
+
+> **If the check fails it tells you, and tells you what it does not mean.** You will see the reason and the words *"It may already be signed; this is not a statement that it is not."* Open the client again later. A failed check never marks anything unsigned.
+
+> **Two files land in Drive, not one** — the executed agreement, and the **certificate of completion**, which is DocuSign's record of who signed, from where, and when. On a probate matter that is the evidence of who bound the estate. **If the certificate could not be fetched you get an amber notice saying so** — re-open the client and it tries again. Do not let that one slide on an estate job.
+
+### If it went out as a PDF — record it the day it arrives
 
 **✓ Record the signed agreement** on the *Agreement signed* row. Do it the day it arrives — the deposit step will not open until you have.
 
@@ -729,6 +751,14 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | The dashboard says the job is *tracking to* a date past the target end | At the rate it is actually going, it finishes late. That is a conversation with the client **now**, not on the target end date — re-plan, or raise a change order if the scope grew. |
 | You want to know when the midpoint invoice is due and the strip says *Halfway* | Those are unrelated. *Halfway* is the middle working day of the plan; the payment split is a flat 50/25/25 with no calendar in it. The invoice is due when you send it, from the band above the timeline. |
 | **You hit Save Estimate and the form went blank** | Fixed 2026-09-13 — and **nothing was lost**. Save now lands you on the Client Dashboard, on the client you just priced. Before that it was trying to open a tab that had been retired, so it blanked the form and went nowhere. Open the client; the estimate is there. |
+| **There is no "Record the signed agreement" button and the row says *DocuSign is watching for it*** | Working as intended (new 2026-09-17). That agreement went out through DocuSign, so the signature comes back on its own and the manual button is deliberately withdrawn — two records of one contract must not be able to disagree. **Open the client to check**; that is what triggers it. |
+| **The client says they signed and the app still says waiting** | The app asks DocuSign at most **once every twenty minutes per agreement**, and only when somebody opens the client. Wait twenty minutes and open the client again. **Do not try to record it by hand — the app will refuse.** If it is still waiting after that, the likeliest answer is the next row. |
+| DocuSign says the client signed but the job is not marked signed | **Havellin countersigns second.** The envelope is not *completed* until we have signed too, and a half-executed contract is not a contract. Check the DocuSign inbox — it is usually sitting with us, not the client. |
+| A notice says the signature status could not be checked | It could not reach DocuSign; the reason is in the notice. It says outright *"this is not a statement that it is not [signed]"* — because it is not. Open the client again later. Nothing was marked unsigned. |
+| **An amber notice says the certificate of completion could not be retrieved** | The executed agreement *was* filed; the audit trail was not. On a probate matter that certificate is the evidence of who bound the estate, so **do not let this one slide** — re-open the client and it tries again. If it keeps failing, tell Anthony. |
+| A client will not sign on a screen | Use **📄 Send as a PDF to sign by hand** on the *Signing packet sent* row — it is offered beside the DocuSign button on every job and changes nothing for any other client. **Choose before you press:** once one route is used the other is withdrawn for that job. |
+| You sent it the wrong way | **Tell Anthony; do not work around it.** The route is fixed once you press, on purpose. Recording a DocuSign agreement by hand, or chasing a paper one through DocuSign, is how the app and the contract end up saying different things. |
+| An older job still has the old *Record the signed agreement* button | Correct. A job papered before DocuSign was switched on keeps its manual route permanently — turning DocuSign on does not strand work already in flight. |
 | You are looking for View / Print on a document and the strip at the foot is empty | The document for the stage you are on is in the **brown band at the top**, above the one brown button. The strip at the foot is the archive — documents from *earlier* stages only. On a job whose estimate is still a draft it is legitimately empty. |
 | **There is no Print on the estimate** | It has not been approved yet, so the tray titles it *Client Estimate — DRAFT* and offers View and Edit only. A draft may be read on our screen and must not reach paper. Get it approved (Step 3) and Print appears. |
 | The Hard target on the client details shows a plain dash | No hard target was set at intake — that is fine and not a warning. Until 2026-09-13 the app painted that dash **red and bold** on every job that simply had no hard date, which looked like a problem and was not. Set one in Edit Client if there is one. |

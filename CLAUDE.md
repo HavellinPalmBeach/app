@@ -7149,7 +7149,35 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-13 (twenty-sixth pass)** — both documents, against the firearms transport
+- Last reconciled against the app: **2026-09-17 (twenty-seventh pass)** — both documents, against the DocuSign build.
+  **⚠⚠ THIS PASS IS MOSTLY CORRECTIONS, AND FOUR OF THEM SAID DOCUSIGN DOES NOT EXIST.** The manual's §1 opener
+  (*"DocuSign, Stripe and QuickBooks are not built"*), §3's whole *Not yet built* note, §3's workflow diagram
+  (*Record the Signed Agreement*), and §8's e-signature note — which closed *"No provider is connected today; DocuSign
+  is declared in the app and not built"* — plus the playbook's opening *"Three things are recorded by hand, always"*,
+  which named the signed agreement as one of the three. **Every one of them would have had a concierge hunt for a
+  button that is deliberately withdrawn**, or hand-record a contract the app refuses to let them touch.
+  - **⚠ THE E-SIGNATURE NOTE PREDICTED ITS OWN OBSOLESCENCE AND WAS KEPT RATHER THAN DELETED.** It already said that
+    *if a provider is ever switched on, the manual button stands itself down on its own* — which is exactly what
+    happened. It now says so, and names the sentence that went false. The rule it carries is **still live and is the
+    one to keep**: *Electronic signature* is never offered in the picker, so nobody can type in a signature no provider
+    issued.
+  - **New manual §8a** — the two routes side by side, the route-is-fixed-once-pressed rule, why the manual button is
+    withdrawn, how the signature gets back (open the client; there is no other refresh), the 20-minute limit **and that
+    the penalty is losing API access for the firm**, only-`completed`-counts, the failed-check wording, the certificate
+    of completion and why it matters on probate, the countersignature, the five Script Properties, and **the private key
+    goes into Script Properties and nowhere else** — with the openssl episode recorded so nobody reinvents it.
+  - **Playbook Step 6 gains the two send buttons** with a `.stop` on choosing before pressing, and **Step 8 is split in
+    two** — *nothing to press* on a DocuSign job, the existing wet-signature procedure on a PDF one. **Eight**
+    symptom→cause rows, including the two that will actually happen (*the client says they signed and the app still
+    says waiting* → twenty minutes, then open the client; *DocuSign says signed but the job is not* → **we have not
+    countersigned**).
+  - **47 claims parity-checked** across the four files, **0 mismatches**. ⚠ A sweep for the retired wordings comes back
+    with **one hit in each manual file, and both are the sentence that corrects it** — the eighth time this project
+    records a needle tripping on the text explaining the fix. Tag balance verified on both HTML files
+    (`manual.html`'s `<code>` delta is still the documented false positive at **1**; `concierge-guide.html` clean on
+    every tag). Rendered in Chromium at 1440 and 390px: **overflow 0** on both, no page errors, and **all 50 tables
+    keep their full width under `print`**, so the phone block is still correctly scoped to `screen`.
+- Prior pass **2026-09-13 (twenty-sixth pass)** — both documents, against the firearms transport
   build. **This pass corrects three standing claims rather than adding to them**, and each would have had somebody do
   the wrong thing.
   - **⚠⚠ THE DEALER NO LONGER COLLECTS EVERYTHING.** Manual §10a's custody note said outright *"Havellin never

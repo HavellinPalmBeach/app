@@ -8,7 +8,7 @@
 
 > **This is the master document.** It is the system of record for how the app is set up and how it works — configuration, engine, taxonomy, rates, gates. Its companion, the **Concierge Job Playbook** (`concierge-guide.html`), is the walk-through-it-in-order extract for running one job from intake to final invoice with the app open; it covers a subset of what is here, and where the two disagree this document is right. They are reconciled against the app *together* — the version stamp at the foot of each says when. Plain-text copies for a phone or a printer: `MANUAL.md` and `CONCIERGE_GUIDE.md`, generated from these two files.
 
-Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. Client signatures and payments are recorded **by hand**: DocuSign, Stripe and QuickBooks are not built (§3).
+Browser-based app used by all Havellin staff. No installation. Data syncs across devices (iMac ↔ iPad) via Google Sheets. Documents and media auto-upload to Google Drive. Some approvals require a manager PIN — see §17 for exactly which. **Agreements go out for signature through DocuSign** as of 2026-09-17 (§8a); payments are still recorded **by hand**, and Stripe auto-charge and QuickBooks are not built (§3).
 
 > **How we describe ourselves on client documents — corrected 2026-08-03.** Havellin is **insured and bonded**. It is **NOT licensed**, and every client document said *"Licensed, Insured & Bonded"* until this correction — client estimate footer, invoice footer, both agreement footers, and the Terms line. **Do not put "licensed" back on any client-facing surface.** *The estimate's Terms bullet was cut on 2026-09-10 — it restated the footer seven lines below it on the same page, and Terms is for commercial rules rather than standing facts about the firm. The footers are unchanged and are where the claim is made.* This is compliance, not wording: if it ever needs revisiting it needs Anthony, not a judgement call.
 >
@@ -99,7 +99,7 @@ To open the **Apps Script** behind any of these sheets (to view, edit, or re-dep
 
 ```
 Intake → Estimate → Manager Approval → Send to Client → Client Accepts → Mark Won
-→ Send Signing Packet → Staff the Job Team → Record the Signed Agreement → Record Payment
+→ Send for Signature → Staff the Job Team → Signature Returns → Record Payment
 → Job Active → Job Plan / Document Property → Log Hours → Invoices → Complete
 ```
 
@@ -109,7 +109,9 @@ Intake → Estimate → Manager Approval → Send to Client → Client Accepts �
 > - **Logging hours requires the deposit.** This is the one gate with no override anywhere, and that is only safe *because* the deposit is never waived.
 > - **The Job Plan's staffing and hours section stays shut until Won.** Building a plan for a job you haven't won is wasted effort.
 
-> **Not yet built:** DocuSign, Stripe auto-charge, and QuickBooks reconciliation. Earlier versions of this manual described those as automatic — they are not. Every step above is recorded by hand today: you mark the agreement sent, you mark it signed when it comes back, and you record the deposit when it arrives. When those integrations land they will populate the same records; nothing about the sequence changes.
+> **⚠ DOCUSIGN IS BUILT AS OF 2026-09-17 — this note used to say it was not.** On a job sent through DocuSign the signature comes back **on its own**: the app checks when you open the client, marks the agreement signed, names *the person who actually signed it*, and files the executed copy and its certificate of completion to Drive. **You do not mark it signed by hand and the app will not let you** — see §8a.
+>
+> **Still not built, and still by hand:** *Stripe auto-charge* and *QuickBooks reconciliation*. You still record every payment yourself. And the **paper route is deliberately kept**: any single agreement can be sent as a PDF to sign by hand, per job, without changing a firm-wide setting.
 
 **Staffing sits in the waiting period on purpose.** Once the agreement is out for signature there's usually a few days of dead time — that's when you confirm who is actually available and name the crew on the Job Plan. **Save & Confirm Job Team** is what unlocks hours logging, so a job can't reach its first working day with an unnamed crew (Section 11).
 
@@ -698,8 +700,12 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 Each step appears only at its own row on the timeline, records who did it and when, and refuses to run out of order — you cannot record a signature on an agreement that was never sent.
 
-1. **✓ I've sent it** — you have actually sent the packet (§9b).
-2. **✓ Record the signed agreement** — the signed copy has come back. *Signing does not imply payment*; these are separate facts and the app keeps them separate.
+1. **✓ I've sent it** — you have actually sent the packet (§9b). **⚠ On a DocuSign job this step does not appear**: DocuSign does the sending, so there is nothing for you to confirm (§8a).
+2. **The signature comes back.** Which button you see depends on how the packet went out, and the app decides, not you:
+   - **Sent through DocuSign** — *nothing to press*. The row reads *DocuSign is watching for it* and the signature arrives on its own (§8a).
+   - **Sent as a PDF** — **✓ Record the signed agreement**, below.
+   
+   *Signing does not imply payment*; these are separate facts and the app keeps them separate.
 3. **✓ Record payment** — see below. This is what allows work to begin.
 
 #### The signature record
@@ -719,7 +725,9 @@ Each step appears only at its own row on the timeline, records who did it and wh
 
 > **A job signed before 2026-09-11 is still signed, and its signer is unknown.** That is a fact about the world rather than about our records, so it reads as signed with **nobody named** and the row says *"Signed before the signature record — who signed it is not on file"*. It does not print the old name as the signer, because that name is ours.
 
-> **⚠ *Electronic signature* is never offered to a person, deliberately.** The picker lists only the two manual methods and the app refuses anything else, so nobody can record an electronic signature that no provider issued. If an e-signature provider is ever switched on, **the manual button stands itself down on its own** — the row then says the provider is watching for it, and the signature arrives from the provider, which knows who authenticated and when. That is the point of using one. *No provider is connected today*; DocuSign is declared in the app and not built, and a half-built integration that reports success on an unreadable reply is a defect this app has shipped once already.
+> **⚠ *Electronic signature* is never offered to a person, deliberately — and that is still true now DocuSign is live.** The picker lists only the two *manual* methods and the app refuses anything else, so **nobody can type in an electronic signature that no provider issued**. A real one is never typed: it arrives from DocuSign, which knows who authenticated and when, and that is the entire point of using a provider.
+>
+> **⚠ THIS NOTE USED TO SAY "no provider is connected today". That has been false since 2026-09-17** — see §8a. What it predicted is what happened: on a DocuSign job the manual button **stands itself down on its own** and the row says the provider is watching for it.
 
 ### Recording a payment
 
@@ -751,6 +759,58 @@ A *certified* cheque and a *cashier's* cheque are not the same thing: certified 
 | Final | Balance — labor trued to logged hours, fees on actuals, plus any approved Change Orders | Within 7 days of final invoice |
 
 Third-party and home-prep vendor invoices are billed directly to the client at cost. Havellin's 30% GC fee on home-prep vendors — on a standalone engagement *and* on prep bundled into a labor job, since 2026-09-10 — is calculated on the actual quotes logged in the Job Plan sourcing and trued up from the midpoint invoice onward; no fee is charged on any other third-party vendor; lines with no logged quote fall back to the estimate, tagged "est." Each stage is generated from its own row on the job timeline (§9a).
+
+## 8a. Sending an agreement through DocuSign
+
+**Live since 2026-09-17.** An agreement can go out two ways, and **the choice is made per job, on the job, not in Settings**. Anthony's reason: *"if somebody is old school and we need to just send them a PDF to sign, we can do that — but we don't need to go into the app and change the settings overall."*
+
+| | DocuSign (the default once it is switched on) | Send as a PDF |
+|---|---|---|
+| **What you press** | **Send for signature** on the *Signing packet sent* row. | **Send as a PDF to sign by hand**, beside it. |
+| **Who sends it** | DocuSign emails the client directly. | You do — a Gmail draft with the packet attached, which you read and send yourself. |
+| **✓ I've sent it** | **Not shown.** There is nothing to confirm. | Shown. Press it once the email has gone. |
+| **The signature** | Arrives **on its own**. The row reads *DocuSign is watching for it*. | **✓ Record the signed agreement**, by hand (§8). |
+| **Who is named as signer** | Whoever authenticated to DocuSign — their name and email, from DocuSign. | Whoever you type in. |
+| **The executed copy** | Filed to the client's **Agreement** folder automatically, with its **certificate of completion**. | Yours to file. |
+
+> **⚠⚠ THE ROUTE IS DECIDED WHEN YOU SEND, AND IT IS FIXED FROM THAT MOMENT.** Both buttons are offered side by side until one of them is pressed; afterwards **only the route you chose is offered**. That is not tidiness: an agreement already sitting in somebody's DocuSign inbox must not also be recorded as signed by hand, or the app and DocuSign disagree about whether a contract exists — and a paper job must never be waited on by a watcher that has no envelope. **A job papered before DocuSign was switched on keeps its manual button**, permanently; turning DocuSign on does not strand work already in flight.
+
+> **⚠ You cannot mark a DocuSign agreement signed by hand, and that is the point.** The manual recorder is withdrawn and refuses to open on a job with a live envelope. Without that, somebody ticks it while DocuSign still says *sent* and the two records disagree about a contract. **If the client says they signed and the app has not caught up, open the client** — that is what triggers the check.
+
+### How the signature gets back
+
+**There is no timer and nothing runs in the background.** The app asks DocuSign when somebody is looking: on a page load, and when you open a client. So **opening the client is the refresh** — if you are waiting on a signature, open the job.
+
+- **It asks at most once every 20 minutes per agreement.** DocuSign's published limit is one request per document per 15 minutes and **the penalty is losing API access altogether**, not a warning. Opening the same client six times in a row asks once.
+- **Only *completed* counts as signed.** DocuSign reports *delivered* when the client opens the email and *signed* when one recipient is done — the agreement has two signers (the client, then Havellin), so neither of those is an executed contract and neither marks the job signed.
+- **A failed check says so, and says what it does not mean.** If DocuSign cannot be reached the app tells you the reason and states plainly *"It may already be signed; this is not a statement that it is not."* A silent failure would leave a signed agreement reading unsigned forever.
+- **A signed agreement stops being checked.**
+
+> **⚠ THE CERTIFICATE OF COMPLETION IS FETCHED DELIBERATELY AND IT MATTERS ON PROBATE.** Two files land in the **Agreement** folder: the executed agreement (named *… - SIGNED*) and the **certificate of completion**, which is DocuSign's audit trail of who signed, from what address, and when. On a court-reviewed matter that is the evidence of *who bound the estate*. DocuSign does not include it unless it is asked for, and **if it cannot be retrieved the app says so in amber rather than filing the agreement quietly**.
+>
+> It is fetched **once, on the day it completes**, and never again — document downloads count against the same limit. If the retrieval fails, **re-open the client** and it tries again.
+
+> **Havellin countersigns second, and the envelope is not complete until we do.** The client signs first (routing order 1), then the agreement comes to Havellin. DocuSign only reports *completed* when both are done, so the app cannot mark a job signed off a half-executed contract. **An envelope sitting at *signed* is usually waiting on us** — check the DocuSign inbox.
+
+### Switching it on
+
+**Settings → Signature provider**: *Recorded by hand* (the default) or *DocuSign*. It is per device, and it only decides whether the DocuSign button is *offered* — it changes nothing about a job already sent. Five values must also be set in the Apps Script project's **Script Properties**, where the Quo key lives:
+
+| Property | Where it comes from |
+|---|---|
+| `DS_INTEGRATION_KEY` | DocuSign → Settings → Apps and Keys → the app's *Integration Key*. |
+| `DS_USER_ID` | The same page — *User ID* (a GUID), **not** the email address. |
+| `DS_ACCOUNT_ID` | *API Account ID*. |
+| `DS_PRIVATE_KEY` | The RSA private key generated beside the integration key. |
+| `DS_BASE_URI` | `https://demo.docusign.net` while testing, the account's live base URI in production. **Everything else follows from it** — the app never has a second switch that could disagree about which environment it is talking to. |
+
+> **⚠⚠ THE PRIVATE KEY GOES INTO SCRIPT PROPERTIES AND NOWHERE ELSE. Never paste it into a chat, a document, a terminal, or an online converter.** This repository is public and the app is served from GitHub Pages, so a key in either is not a key. A Google client secret was pasted into a thread on 2026-09-08 and had to be reset.
+>
+> **Paste the key exactly as DocuSign gives it**, including the `-----BEGIN` and `-----END` lines. **DocuSign issues a format Apps Script cannot use, and the script converts it itself** — there is no command to run and nothing to install. An earlier build printed an `openssl` command instead; within minutes of following it the key had been executed line by line as shell commands and left in the terminal history. That is why the app does the conversion.
+
+> **Run `testEsignAuth` from the Apps Script editor before the first envelope.** It proves the five properties, the key and the account in one call and names which one is wrong. **The first run will ask for consent** — it prints a URL to open once, in the browser signed in as the DocuSign user; nothing works until that is granted, and it is granted once per account. **Two gates, one error each, and the second is invisible until the first clears**: a key problem and a consent problem look nothing alike, so read the error rather than guessing.
+
+> **⚠ THE ONE THING TO CHECK ON A REAL ENVELOPE, BEFORE TRUSTING IT ON A CLIENT.** DocuSign finds the signature boxes by searching the PDF for invisible markers in the signature block. That the markers are *in* the document is proven; **where DocuSign draws the box relative to them can only be seen**. Send one envelope to yourself in the demo account and look at it before the first client gets one.
 
 ## 9. Client Dashboard
 
