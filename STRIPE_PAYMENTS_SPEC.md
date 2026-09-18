@@ -68,9 +68,10 @@ Not a number in a config file:
   effectively legal here, but it is legal by way of a dead statute and a circuit opinion, which is a
   sentence worth having counsel read before it goes on a signed contract.
 
-### 1d. Recommendation
+### 1d. DECIDED 2026-09-18 — no cards at all
 
-**Do not build surcharging.** Accept **ACH and wire**, and do not offer cards at all.
+Anthony, asked directly: **"No cards at all."** So surcharging is not built, and the question is
+closed rather than deferred. Accept **ACH, wire and cheque**.
 
 - Havellin's payers are trust officers, estate attorneys and executors. CLAUDE.md already records
   that *"cheques are the NORMAL payment path"* and that *"a wire beats both, being final on receipt —
@@ -226,11 +227,29 @@ Also here: Financial Connections for instant verification, with the microdeposit
 for institutions it does not cover, and a decision on whether a client waiting two days to verify is
 acceptable on a deposit that gates the job start.
 
-### Phase 2 — the payment-method model (app-only, small, no redeploy)
-- Split `stripe` into `stripe_card` / `stripe_ach`; ACH must not clear on receipt (§6).
-- Deposit modal method list and `updateDepModalHints` copy.
-- Reference-field guidance: the Stripe payment-intent id.
-- Legacy `stripe` records keep their meaning — they were all cards.
+### Phase 2 — the payment-method model · **✅ BUILT 2026-09-18** (app-only, no redeploy)
+Done ahead of the rest because it is the one piece nothing blocks, and it has to be in place
+*before* the first ACH dollar moves rather than after.
+
+- `PAYMENT_METHODS_CLEAR_ON_RECEIPT` is now the one definition, replacing the inline `||` chain
+  at the single write site in `saveDeposit`. `stripe_ach` is absent and carries a comment saying
+  it must never be added.
+- Deposit modal offers **Bank transfer (ACH)**; `stripe` is relabelled from *Card / Stripe* to
+  plain **Card**, since with ACH also running through Stripe the processor name no longer says
+  which rail it is.
+- `updateDepModalHints` gains an ACH arm: names the ~4-business-day settlement, says it will read
+  *uncleared* until then, and says outright that **this does not hold the job up**. Flags, never
+  refuses.
+- ⚠ Legacy `stripe` records are **not migrated**, deliberately — every one of them really was a
+  card, and rewriting them would assert an uncleared state that never existed.
+- **37 committed checks** (`tests/stripe-payments.test.js`), driving the real `saveDeposit`.
+  **All five changes revert-verified individually, ZERO green** — the clear-on-receipt defect
+  fails 5 in both of its forms, the modal arm 5, the dropdown and the label map 2 each.
+- Verified in headless Chromium on the real page: seven methods in the dropdown, the list reads
+  `["wire","stripe","cash"]`, the ACH hint paints at $12,858 **with** the wire note and at $400
+  **without** it, cheque and card branches unmoved, overflow **0** at 1440 and 390px, no page errors.
+- Manual §8's *"Wires, cards and cash are marked cleared on receipt; cheques show as uncleared"*
+  was falsified by this and is corrected in both copies.
 
 ### Phase 3 — read-back (the real work) · **⚠ REQUIRES AN APPS SCRIPT REDEPLOY**
 - New `stripeStatus` action in `main-sync.gs`; add to `BACKEND_ACTIONS`, bump `BACKEND_VERSION`.
@@ -268,10 +287,15 @@ New `tests/stripe-payments.test.js`, in the same commit as the code:
 
 ## 9. Open questions for Anthony
 
-1. **Cards off entirely?** Recommended. ACH + wire + cheque covers this client base.
-2. **Is the separate Stripe Apps Script recoverable?** Phase 1 is blocked without its source.
-3. **Microdeposit fallback acceptable?** A client whose bank is not on Financial Connections waits
+1. ~~**Cards off entirely?**~~ **ANSWERED 2026-09-18 — no cards at all.** See §1d. *Kept rather than
+   deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
+2. ~~**Who owns the ACH-return exposure?**~~ **ANSWERED — accepted as a business risk.** Anthony:
+   *"we obviously can't wait 2 months to start a job. not sure how we deal with 60 day return? but
+   that seems unlikely to me, so a risk worth taking."* Correct, and it is not waitable in any
+   case — no firm delays a job two months. ⚠ **It still wants an agreement clause**, and it sits
+   next to the retained-deposit clause `LIFECYCLE_AUDIT.md` §8.6 already flags as needing counsel.
+   Nothing in the app can fix it, and nothing in the app now pretends to.
+3. **Is the separate Stripe Apps Script recoverable?** ⚠ Phase 1 is blocked without its source, and
+   Phase 1 is the literal answer to "only accept ACH". **This is the one open blocker.**
+4. **Microdeposit fallback acceptable?** A client whose bank is not on Financial Connections waits
    1–2 days to verify before the deposit can even be paid, which delays the job start.
-4. **Who owns the ACH-return exposure?** A 60-day unauthorised return on a settled deposit, after the
-   crew has worked, has no technical fix — it is an agreement clause, and it sits next to the
-   retained-deposit clause `LIFECYCLE_AUDIT.md` §8.6 already flags as needing counsel.

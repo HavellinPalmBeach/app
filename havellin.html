@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.17 · 11:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 8:26am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2232,7 +2232,8 @@ body.no-smf .smf-col{display:none;}
       <option value="check">Personal cheque</option>
       <option value="cashiers_check">Cashier's cheque</option>
       <option value="wire">Wire transfer</option>
-      <option value="stripe">Card / Stripe</option>
+      <option value="stripe_ach">Bank transfer (ACH)</option>
+      <option value="stripe">Card</option>
       <option value="cash">Cash</option>
     </select>
 
@@ -11137,6 +11138,27 @@ function jobPayments(job) {
 var PAYMENT_STAGES = ['deposit', 'midpoint', 'final'];
 var PAYMENT_STAGE_LABELS = { deposit: 'Deposit (50%)', midpoint: 'Midpoint (25%)', final: 'Final (25%)' };
 
+// ⚠⚠ WHICH METHODS ARE MONEY THE MOMENT THEY ARE RECORDED. One list, because the rule
+// used to be an inline `||` chain at the one write site and the next rail added to it
+// would have been classified by whoever happened to be editing `saveDeposit`.
+//
+// ⚠⚠ `stripe_ach` IS DELIBERATELY ABSENT AND MUST NEVER BE ADDED. A card authorises
+// instantly; an ACH debit does NOT. It takes ~4 business days to settle, `R01`
+// (insufficient funds) returns inside ~2, and the unauthorised codes `R05`/`R07`/`R10`
+// carry a SIXTY-CALENDAR-DAY window on consumer accounts which under NACHA rules cannot
+// be re-presented. So an ACH deposit stamped cleared on receipt is the app asserting
+// money has landed when it has not, on the record that says what the firm is owed.
+//
+// ⚠ THIS DOES NOT GATE STARTING THE JOB, AND MUST NOT BE MADE TO. `isJobFunded` reads
+// `depositPaidTotal` — recorded AMOUNTS — and never consults `clearedOn`; work starts on
+// RECEIVED, deliberately, because waiting on clearing costs 3-5 days per job
+// (UNEARNED_REVENUE_SPEC.md §6). Anthony, 2026-09-18, on the 60-day return window:
+// *"we obviously can't wait 2 months to start a job ... that seems unlikely to me, so a
+// risk worth taking."* Correct, and it is not waitable in any case — the residual is an
+// agreement clause for counsel, not a gate here. All this list decides is whether the
+// payment reads `uncleared` on screen until it genuinely settles.
+var PAYMENT_METHODS_CLEAR_ON_RECEIPT = ['wire', 'stripe', 'cash'];
+
 // Paid on ONE stage. Every payment record carries a stage, and until now every record
 // was written with `stage: 'deposit'` hardcoded — so midpoint and final money was
 // invoiced and then never captured anywhere. See UNEARNED_REVENUE_SPEC.md §2a.
@@ -11177,7 +11199,7 @@ function depositClearedTotal(job) {
 
 function paymentMethodLabel(m) {
   return ({ check: 'Personal cheque', cashiers_check: "Cashier's cheque", wire: 'Wire transfer',
-            stripe: 'Card / Stripe', cash: 'Cash' })[m] || m || '—';
+            stripe_ach: 'Bank transfer (ACH)', stripe: 'Card', cash: 'Cash' })[m] || m || '—';
 }
 
 // Which stage the modal should open on: the first one that is not yet satisfied. The
@@ -11285,6 +11307,13 @@ function updateDepModalHints() {
       + fmt(amt) + ' is above the ' + fmt(LARGE_DEPOSIT_THRESHOLD) + ' threshold, where a wire or '
       + "cashier's cheque is the policy. It will be recorded and flagged as a policy exception — "
       + 'the funds are not final until the bank confirms.</div>';
+  } else if (method === 'stripe_ach') {
+    hint.innerHTML = '<div style="font-size:11px;color:var(--gray);">An ACH debit is not final on '
+      + 'receipt — it settles in about four business days and will read <strong>uncleared</strong> '
+      + 'until it does. Record it now; the job is funded on money received, not on money cleared.'
+      + (over ? ' Above ' + fmt(LARGE_DEPOSIT_THRESHOLD) + ' a wire is final on receipt and is the '
+               + 'safer instrument for an amount this size.' : '')
+      + '</div>';
   } else if (over) {
     hint.innerHTML = '<div style="font-size:11px;color:var(--gray);">Above ' + fmt(LARGE_DEPOSIT_THRESHOLD)
       + " a wire is preferred and a cashier's cheque is accepted.</div>";
@@ -11322,8 +11351,7 @@ function saveDeposit() {
         + 'Record it as a partial payment anyway? Work is not meant to start until the full '
         + '50% is in — this job will stay unfunded and hours cannot be logged against it.')) return;
 
-  // A cheque is not money until it clears. Wire, card and cash are final on receipt.
-  var clearsOnReceipt = (method === 'wire' || method === 'stripe' || method === 'cash');
+  var clearsOnReceipt = (PAYMENT_METHODS_CLEAR_ON_RECEIPT.indexOf(method) >= 0);
   var list = jobPayments(job);
 
   var payment = {
