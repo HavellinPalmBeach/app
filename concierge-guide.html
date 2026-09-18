@@ -108,8 +108,8 @@
     everything is sized for one hand. The other four tabs are desk work and are hidden, not removed; nothing you type is lost.
     <br><br><strong>Clients is new there as of 2026-09-11, and its buttons work.</strong> So the three things you actually do standing
     in somebody's kitchen are all on the timeline, on your phone: <strong>record a cheque</strong> they just handed you,
-    <strong>record the signed agreement</strong> they just handed back <em>(on a PDF job &mdash; a DocuSign one has nothing to
-    press)</em>, and <strong>mark them won</strong> after the walkthrough conversation. Do them there and then — that is the whole point, and it beats a note to yourself for later.
+    <strong>record the signed agreement</strong> they just handed back <em>(on a PDF job &mdash; a DocuSign one records
+    itself)</em>, and <strong>mark them won</strong> after the walkthrough conversation. Do them there and then — that is the whole point, and it beats a note to yourself for later.
     <br><br>Press it again to come back to the full nine tabs. Whatever you were looking at stays put.</div>
 
   <div class="stop"><strong>Every document goes out the same way, and that is the whole point of the change.</strong> Estimate,
@@ -413,18 +413,22 @@
   <h2>Step 8 · Signed copy back</h2>
   <p><strong>What you do here depends entirely on how you sent it in Step 6.</strong></p>
 
-  <h3>If it went out through DocuSign — nothing to press</h3>
-  <p>The <em>Agreement signed</em> row reads <strong>DocuSign is watching for it</strong> and there is no button. When the client
-    signs, the app marks it signed by itself, <strong>names the person who actually signed</strong>, and files the executed copy and
-    its certificate of completion into the client&rsquo;s <strong>Agreement</strong> folder in Drive.</p>
-  <div class="stop"><strong>&#9888;&#9888; OPENING THE CLIENT IS WHAT CHECKS. Nothing runs in the background.</strong> The app asks
-    DocuSign when somebody is looking at the job &mdash; so if you are waiting on a signature, <strong>open the client</strong>.
-    That is the refresh, and there is no other one.
-    <br><br><strong>It asks at most once every twenty minutes per agreement</strong>, so opening it six times in a row asks once and
-    the other five show you what it last heard. That limit is DocuSign&rsquo;s, not ours, and <strong>the penalty for breaking it is
-    losing API access for the whole firm</strong> &mdash; which is why there is no refresh button to hammer.
-    <br><br><strong>If the client says they signed and the app still says waiting:</strong> give it twenty minutes and open the
-    client again. <strong>Do not try to record it by hand</strong> &mdash; the app will refuse, deliberately, so that two records of
+  <h3>If it went out through DocuSign — one button, and you rarely need it</h3>
+  <p>The <em>Agreement signed</em> row reads <strong>DocuSign is watching for it</strong>. When the client signs, the app marks it
+    signed by itself, <strong>names the person who actually signed</strong>, and files the executed copy and its certificate of
+    completion into the client&rsquo;s <strong>Agreement</strong> folder in Drive. The one button on the row is
+    <strong>&#8635; Check DocuSign now</strong> &mdash; for the moment you have watched the envelope complete and do not want to
+    wait for the next time somebody opens the client.</p>
+  <div class="stop"><strong>&#9888;&#9888; NOTHING RUNS IN THE BACKGROUND. Two things check: opening the client, and the
+    button.</strong> The app asks DocuSign when somebody is looking at the job, and <strong>&#8635; Check DocuSign now</strong> on
+    the <em>Agreement signed</em> row asks on demand. There is no third way and nothing happens on a timer.
+    <br><br><strong>Either way it asks at most once every twenty minutes per agreement</strong>, so opening it six times in a row
+    asks once and the other five show you what it last heard. That limit is DocuSign&rsquo;s, not ours, and <strong>the penalty for
+    breaking it is losing API access for the whole firm</strong>. That is why the button is safe to press: inside the window it
+    <strong>sends nothing</strong> and tells you the time it can ask again, so it cannot be hammered past the limit.
+    <br><br><strong>If the client says they signed and the app still says waiting:</strong> press the button and read what it says
+    back &mdash; either a time to come back at, or that DocuSign does not report the envelope complete, which means it is genuinely
+    still out. <strong>Do not try to record it by hand</strong> &mdash; the app will refuse, deliberately, so that two records of
     one contract cannot disagree.</div>
   <div class="note"><strong>Havellin signs second, and it is not done until we do.</strong> The client signs first; the agreement
     then comes to Havellin to countersign. The job does <strong>not</strong> read as signed in between, because a half-executed
@@ -830,9 +834,11 @@
 <tr><td>The dashboard says the job is <em>tracking to</em> a date past the target end</td><td>At the rate it is actually going, it finishes late. That is a conversation with the client <strong>now</strong>, not on the target end date &mdash; re-plan, or raise a change order if the scope grew.</td></tr>
 <tr><td>You want to know when the midpoint invoice is due and the strip says <em>Halfway</em></td><td>Those are unrelated. <em>Halfway</em> is the middle working day of the plan; the payment split is a flat 50/25/25 with no calendar in it. The invoice is due when you send it, from the band above the timeline.</td></tr>
 <tr><td><strong>You hit Save Estimate and the form went blank</strong></td><td>Fixed 2026-09-13 &mdash; and <strong>nothing was lost</strong>. Save now lands you on the Client Dashboard, on the client you just priced. Before that it was trying to open a tab that had been retired, so it blanked the form and went nowhere. Open the client; the estimate is there.</td></tr>
-<tr><td><strong>There is no &ldquo;Record the signed agreement&rdquo; button and the row says <em>DocuSign is watching for it</em></strong></td><td>Working as intended (new 2026-09-17). That agreement went out through DocuSign, so the signature comes back on its own and the manual button is deliberately withdrawn &mdash; two records of one contract must not be able to disagree. <strong>Open the client to check</strong>; that is what triggers it.</td></tr>
-<tr><td><strong>The client says they signed and the app still says waiting</strong></td><td>The app asks DocuSign at most <strong>once every twenty minutes per agreement</strong>, and only when somebody opens the client. Wait twenty minutes and open the client again. <strong>Do not try to record it by hand &mdash; the app will refuse.</strong> If it is still waiting after that, the likeliest answer is the next row.</td></tr>
+<tr><td><strong>There is no &ldquo;Record the signed agreement&rdquo; button and the row says <em>DocuSign is watching for it</em></strong></td><td>Working as intended (new 2026-09-17). That agreement went out through DocuSign, so the signature comes back on its own and the manual button is deliberately withdrawn &mdash; two records of one contract must not be able to disagree. The button on that row is <strong>&#8635; Check DocuSign now</strong>, and opening the client checks too.</td></tr>
+<tr><td><strong>The client says they signed and the app still says waiting</strong></td><td>Press <strong>&#8635; Check DocuSign now</strong> on the <em>Agreement signed</em> row. If it answers <em>held until 4:55 PM</em>, that is the twenty-minute limit and there is nothing wrong &mdash; come back then. If it answers that DocuSign <em>does not report it complete</em>, <strong>the envelope is genuinely still out</strong>: open it in DocuSign and see who has not finished &mdash; on a two-signer agreement that is often <strong>our own countersignature</strong>. <strong>Do not try to record it by hand &mdash; the app will refuse.</strong></td></tr>
 <tr><td><strong>The agreement came back signed through DocuSign and the job still sits on <em>Signing packet sent</em></strong></td><td><strong>Fixed 2026-09-18, and it repairs itself &mdash; reload the app, then open the client.</strong> Every agreement sent through DocuSign before that date is in this state. The send went out, the client signed, we countersigned; the app simply stopped watching the envelope and never asked. <strong>Nothing was lost and nothing needs re-sending.</strong> On opening the client it asks DocuSign, records the signature, and files the executed copy and certificate to Drive. If it still sits there after that, it is one of the two rows below.</td></tr>
+<tr><td><strong>You pressed &ldquo;Check DocuSign now&rdquo; and it said it is held until a time</strong></td><td>That is the limit, not a fault. DocuSign allows <strong>one status check per agreement every twenty minutes</strong> and the penalty for asking more often is <strong>losing our API access</strong>, so the app holds the request and tells you when it can go. <strong>Nothing is lost by waiting</strong> &mdash; the signature is recorded in full the moment it is asked for. Pressing the button again in the meantime sends nothing.</td></tr>
+<tr><td><strong>You completed the signature and the app did nothing, and there was no button either</strong></td><td>Fixed 2026-09-18. The app was inside its twenty-minute window and said nothing about it, and the row carried no control to ask with &mdash; so a completed envelope and a broken integration looked identical. The row now always carries <strong>&#8635; Check DocuSign now</strong>, and it answers either way.</td></tr>
 <tr><td>A job that was stuck may have <strong>two envelopes</strong> in DocuSign</td><td>While a job was stuck the band went on offering <strong>Send signing packet</strong>. Pressing it again minted a second envelope for one agreement. <strong>Check DocuSign for a duplicate on that client and void the one nobody signed</strong>, then tell Anthony. Do not delete anything that carries a signature.</td></tr>
 <tr><td>DocuSign says the client signed but the job is not marked signed</td><td><strong>Havellin countersigns second.</strong> The envelope is not <em>completed</em> until we have signed too, and a half-executed contract is not a contract. Check the DocuSign inbox &mdash; it is usually sitting with us, not the client.</td></tr>
 <tr><td>A notice says the signature status could not be checked</td><td>It could not reach DocuSign; the reason is in the notice. It says outright <em>&ldquo;this is not a statement that it is not [signed]&rdquo;</em> &mdash; because it is not. Open the client again later. Nothing was marked unsigned.</td></tr>

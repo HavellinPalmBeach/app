@@ -1,6 +1,100 @@
 # Havellin Palm Beach — App Notes
 
-<<<<<<< HEAD
+## ⚠⚠ "I COMPLETED THE SIGNATURE AND NOTHING HAS HAPPENED" — THE GATE HAD NO VOICE (FIXED 2026-09-18)
+Anthony, minutes after the section below shipped, over a DocuSign envelope reading **Completed** with both
+signatures on it: *"ok, so now i've completed the signature and nothing has happened."* App-only, no redeploy.
+**Reproduced against the real functions before anything was changed, and the machinery turned out to be
+right** — which is the only reason this did not become a fix to a mechanism that was already correct.
+
+- **⚠⚠ THE MEASUREMENT, AND IT IS THE WHOLE DIAGNOSIS.** Driving the real `esignRefresh` over a job in exactly
+  the reported state — envelope outstanding, checked **seven minutes** earlier, DocuSign answering `completed`:
+
+  | `checkedAt` | `_esignDue` | network calls | recorded |
+  |---|---|---|---|
+  | **7 minutes ago** | **false** | **0** | **no** |
+  | 21 minutes ago | true | 1 | **yes** |
+  | never | true | 1 | yes |
+
+  So nothing was broken. `ESIGN_RECHECK_MINS` is 20 and the check had been spent; **the app was correct,
+  silent, and indistinguishable from a broken integration.**
+- **⚠⚠ AND IT IS THE ONE ROW WHERE BOTH ROUTES CLOSE AT ONCE, WHICH IS WHY THERE WAS NOTHING TO DO.**
+  `esignJobWatches` deliberately stands *Record the signed agreement* down while an envelope is out — a
+  reachable manual write past a live provider is the defect Slice 6 exists to prevent — and the poll is wired
+  to **arrival only** (`_jobsLanded`, `openClientDashboard`). So between that withdrawal and the floor,
+  `jobTimelineActions` returned **`primary: null`**: a LIT STEP WITH NOTHING TO PRESS, on the one band whose
+  entire contract is *the one thing to do next*.
+  - **⚠ THE STRIPE ROWS ARE STRANDED BY NOTHING FOR EXACTLY THE OPPOSITE REASON, and the contrast is the
+    rule.** Their primary is the **payment recorder**, which is never withdrawn — so a person who knows the
+    money landed can always say so, whatever the poll is doing. A provider check with no human fallback is
+    only safe if the human has some other way to ask.
+- **⚠⚠ THE FIX IS A BUTTON THAT OBEYS THE SAME FLOOR, WHICH IS WHAT MAKES OFFERING IT SAFE.**
+  `dashCheckEsign` goes through the **same `esignNextCheckAt`** the poll does, so ten presses in a minute are
+  ten refusals and at most one request — DocuSign's published limit is one request per unique resource per 15
+  minutes and **the penalty is revocation, not a 429**. Measured in the browser: 11 presses inside the window,
+  **0 network calls**.
+  - **⚠ A REFUSAL THAT NAMES THE TIME IS THE POINT; A DISABLED BUTTON WOULD HAVE BEEN THE SAME SILENCE.**
+    `esignNextCheckAt` returns the **moment**, not a boolean, so the notice can say *"held until 9:15 PM"* and
+    close with *"Nothing is lost by waiting."* A control that quietly does nothing is the defect wearing a
+    button's face.
+  - **⚠ IT NEVER WRITES A SIGNATURE ITSELF.** It asks the provider and records only what the provider says, so
+    it does not reopen the door `esignJobWatches` closes. A test `lacks()` it `recordAgreementSignature`,
+    `agrSigned` and `markAgreementSigned`.
+  - **⚠ AND "ANSWERED, STILL OUT" IS SAID OUT LOUD — the case that explains the ORIGINAL report.** DocuSign
+    answering `sent` used to be silence; it now reads *"does not report it complete — it reads `sent`. EVERY
+    signer has to finish, Havellin's own countersignature included."* **A failure must not be talked over by
+    it**, so the handler compares `checkedAt` before and after: `applyEsignStatus` stamps it only on an
+    ANSWER, so the stamp moving is the proof one arrived. A 502 has already spoken through `_docNotice` and
+    does not stamp, so the cheerful sentence never fires over it.
+- **⚠ ONE ARITHMETIC, TWO READERS.** `_esignDue` is derived from `esignNextCheckAt` and holds no clock of its
+  own; a test `lacks()` it `ESIGN_RECHECK_MINS`. Two copies of *when may we ask again* is how the screen comes
+  to promise a check at a time the poll refuses.
+- **⚠⚠ AND THE DISCARDED RETURN VALUE IS CLOSED — the one this file recorded as step 3 of this morning's
+  defect.** `esignRefresh` threw `applyEsignStatus`'s blocker away, so a provider reporting a signature the
+  recorder then refused said nothing. **Both reachable refusals are now closed, which is exactly when a silent
+  channel gets left alone and exactly why the next one added would be silent for the same reason.**
+  `_esignRecordBlockerText` turns the code into the consequence; an unknown code prints raw rather than being
+  swallowed, because it is searchable and a blank is not.
+- **6171 committed checks** (39 new in `tests/esign-docusign.test.js`). **All ten changes revert-verified
+  individually, ZERO green** — dropping the floor from the button fails **5**, the recorder's refusal 4, the
+  hand-typed recorder's withdrawal 3, the shared gate and the still-out notice 2 each, and the rest 1.
+  - **⚠ ONE REVERT CRASHED THE FILE INSTEAD OF FAILING**, reporting one throw rather than the four assertions
+    it really breaks: `spoke[0].m` is `undefined.m` when the notice never fires — on the test whose whole
+    point is that it does not. Read defensively. Third time this file records that shape.
+- **⚠ A PRE-EXISTING ASSERTION PINNED THE OLD DECISION AND BROKE CORRECTLY; RESTATED, NOT DELETED.**
+  `signature-record` pinned `primary === null` on a watched job. **The requirement was never "no button" — it
+  was NO HAND-TYPED SIGNATURE while a provider is watching**, and the literal reading is what left the row
+  actionless. It is now stated in both directions: the hand-typed recorder is absent, and the provider check
+  is present.
+- **Verified end to end in headless Chromium on the real page**, driving the real dashboard against a job
+  seeded in exactly the reported state:
+
+  | | |
+  |---|---|
+  | the reported state | band lit on *Agreement signed*, **0 posts** — the arrival check is refused by the floor |
+  | the band's primary | **↻ Check DocuSign now**, the ONLY filled button (4 outline beside it) |
+  | pressing it inside the window | **0 posts** · *"allows one status check per agreement every 20 minutes … held until 9:15 PM. Nothing is lost by waiting"* |
+  | ten more presses | **0 posts** |
+  | past the floor, still out | 1 post · *"does not report it complete — it reads 'sent'. EVERY signer has to finish, Havellin's own countersignature included"* |
+  | past the floor, completed | signed · **Annabelle Graziano** · `how: esign` · band moves to **Deposit invoice sent** |
+  | a 502 | names the 502, *"this is not a statement that it is not"*, and the still-out sentence does **not** fire |
+
+  Overflow **0** at 1440 and 390px, **no page errors**, and the app's `<style>` block is **byte-identical** at
+  73,349 bytes across 6 blocks — the 368-line CSS deletion rule, applied by reading the diff.
+- **⚠ FOUND AND FIXED IN PASSING: `CLAUDE.md` STILL CARRIED THREE MERGE CONFLICT MARKERS**, committed in
+  `41c7c65` — `<<<<<<< HEAD`, `=======` and `>>>>>>> origin/main` around two sections that were both wanted.
+  Harmless to the app and not harmless to the file every session reads first.
+- Manual **§8** (the step list no longer says *nothing to press*), **§8a** (the table row and a new bullet —
+  the button, the shared floor, the named time, and that it never writes a signature); playbook **Step 8**
+  rewritten (the heading said *nothing to press*, the body said *there is no button*, and the `.stop` said
+  *"which is why there is no refresh button to hammer"* — all three false as of today), plus **four**
+  symptom→cause rows and two corrected. **19 claims parity-checked, 0 mismatches** — ⚠ one apparent miss was
+  a smart quote against a straight one, **verified rather than assumed**. A stale sweep for the four retired
+  wordings returns **0** relevant hits in all four files; the surviving *"nothing to press"* matches are about
+  photo uploads and the Drive folder and are correct. Tag balance verified on both HTML files
+  (`manual.html`'s `<code>` delta is still the documented false positive at **1**; `concierge-guide.html`
+  clean on every tag), rendered at 1440/390 with **0 overflow** and **all 53 tables full-width under
+  `print`**.
+
 ## ⚠⚠ DOCUSIGN SENT THE AGREEMENT, THE CLIENT SIGNED, AND THE APP NEVER NOTICED (FIXED 2026-09-18)
 Anthony, mid-Stripe-setup, on a real envelope both parties had signed: *"I just sent them the signing packet
 through DocuSign and we both signed it and the agreement came back signed through DocuSign, but the job
@@ -91,7 +185,6 @@ on the room-status report, and the reason this was a one-line diagnosis rather t
   with. Both `.md` copies hand-edited and **10 claims parity-checked, 0 mismatches**; tag balance verified on
   both HTML files (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at
   1440/390 with **0 overflow** and **all 50 tables full-width under `print`**.
-=======
 ## ⚠⚠ DOCUSIGN IS THE FIRM'S ROUTE, AND THE MARKETING CONSENT IS A REAL SIGNATURE (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18b`. Anthony, after Ashley
 created an agreement and the old HTML email went out with no DocuSign anywhere: *"that should not be a device by
@@ -542,7 +635,6 @@ to include a title per contact and **not** to copy the vendor shape onto partner
   (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at 1440/390
   with **0 overflow** and **all 52 tables full-width under `print`**.
 
->>>>>>> origin/main
 
 ## ⚠⚠ A CLIENT CAN PAY BY BANK TRANSFER, AND IT RECORDS ITSELF (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18a`.

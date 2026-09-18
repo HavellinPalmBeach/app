@@ -451,7 +451,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
             'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
-            'esignSigner', 'esignRefresh', '_esignDue', 'applyEsignStatus',
+            'esignSigner', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'jobTimeline',
             'jobTimelineNext', 'docDraftedAt', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
@@ -775,7 +775,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // identically stale screen.
     let posts = [];
     const c = sandbox({
-      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'applyEsignStatus',
+      fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'applyEsignStatus',
             'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature', 'docState',
             '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
@@ -816,7 +816,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and fails only at production go-live review. That is why this is a test and not a comment.
     let posts = 0;
     const c = sandbox({
-      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+      fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['ESIGN_RECHECK_MINS'],
       // ⚠ applyEsignStatus is STUBBED here on purpose: this group is about how many requests go
       // out, not about what the answer does. The join is driven in the group above.
@@ -845,7 +845,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // which this project's standing rule says is worse than a failure.
     const said = [];
     const c = sandbox({
-      fns: ['esignRefresh', '_esignDue', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+      fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['ESIGN_RECHECK_MINS'],
       stubs: { SHEETS_SYNC_URL: 'u',
                _appsScriptPost: (u, b, cb) => cb(false, { error: 'network died', clientError: true }),
@@ -1252,6 +1252,166 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           '⚠ no e-signature anchor sits on the role row — it is stated, never asked');
       });
     });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ "I COMPLETED THE SIGNATURE AND NOTHING HAS HAPPENED" — the gate had no voice');
+  {
+    // Anthony, 2026-09-18, minutes after the send half was fixed, over a DocuSign envelope reading
+    // Completed with BOTH signatures on it. Nothing was broken: the envelope had been checked seven
+    // minutes earlier, so the 20-minute floor refused to ask — silently, with no control on the row
+    // to ask with, because `esignJobWatches` had correctly withdrawn the manual recorder. Every
+    // case below drives the REAL handler and reads the sentence a person would actually see.
+    const build = (answer) => {
+      const notices = [];
+      const posts = [];
+      const c = sandbox({
+        fns: ['dashCheckEsign', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes',
+              'applyEsignStatus', 'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature',
+              'docState', '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey',
+              'isAgreementSent', 'docSentAt', 'docKeyFor', '_esignRecordBlockerText'],
+        vars: ['ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
+        stubs: {
+          SHEETS_SYNC_URL: 'https://script.example/exec',
+          ESIGN_PROVIDER_KEY: 'docusign',
+          dashNotice: (t, m) => notices.push({ t, m }),
+          _docNotice: (t, m) => notices.push({ t, m, doc: true }),
+          _appsScriptPost: (url, body, cb) => { posts.push(body); cb.apply(null, answer(body)); },
+          saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
+          resolveSubfolderId() {}, docNames: () => ({ drive: 'a.html' }),
+          agrApprovedBy: 'Anthony Graziano',
+        },
+      });
+      return { c, notices, posts };
+    };
+    const minsAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
+    // ⚠ THE SENT RECORD CARRIES NO `agrSent`, DELIBERATELY — that is the state DocuSign produces,
+    // and a fixture that hands the code the field under test tests the fixture.
+    const jobAt = (checkedMinsAgo) => ({
+      id: 991, hvlId: 'HVL-0011', name: 'Annabelle Graziano',
+      docState: { agreement: { provider: 'docusign', sentAt: '2026-09-18T20:05:00Z', sentBy: 'DocuSign',
+                               esign: { envelopeId: 'env-abc-123', status: 'sent',
+                                        checkedAt: minsAgo(checkedMinsAgo) } } },
+    });
+    const completed = () => [true, { ok: true, envelopeId: 'env-abc-123', status: 'completed',
+                                     signerName: 'Annabelle Graziano', completedAt: '2026-09-18T20:42:18Z' }];
+
+    // ── 1. THE REPORT ITSELF ──────────────────────────────────────────────────
+    {
+      const { c, notices, posts } = build(completed);
+      c.jobs = [jobAt(7)];
+      eq(c.outstandingEnvelopes().length, 1, 'the envelope IS being watched — that half works');
+      c.dashCheckEsign(991);
+      eq(posts.length, 0, '⚠⚠ inside the 20-minute floor it asks NOTHING — this is the report');
+      eq(notices.length, 1, '⚠⚠ and it SAYS SO, which is the whole fix — silence was the defect');
+      has(notices[0].m, '20 minutes', 'the refusal names the limit');
+      has(notices[0].m, 'API access', 'and why the limit is obeyed rather than worked around');
+      ok(/\d{1,2}:\d{2}\s?(AM|PM)/i.test(notices[0].m),
+        '⚠ and NAMES THE TIME it can ask again — a refusal with no time in it is the same silence');
+      has(notices[0].m, 'Nothing is lost',
+        'and says plainly that waiting costs nothing, because the signature is safe in DocuSign');
+      ok(!c.isAgreementSigned(c.jobs[0]), 'nothing was recorded, correctly');
+
+      // ⚠ TEN PRESSES ARE TEN REFUSALS AND ZERO REQUESTS. That is what makes offering the button
+      // safe at all: it goes through the same gate the poll does, so it can never exceed the floor.
+      for (let i = 0; i < 10; i++) c.dashCheckEsign(991);
+      eq(posts.length, 0, '⚠⚠ ten more presses still send NOTHING — the floor cannot be mashed past');
+    }
+
+    // ── 2. PAST THE WINDOW, THE SAME PRESS LANDS THE SIGNATURE ────────────────
+    {
+      const { c, notices, posts } = build(completed);
+      c.jobs = [jobAt(21)];
+      c.dashCheckEsign(991);
+      eq(posts.length, 1, 'past the floor it asks, once');
+      eq(posts[0].action, 'esignStatus', 'through the provider, never by writing a signature itself');
+      ok(c.isAgreementSigned(c.jobs[0]), '⚠⚠ and the signature lands');
+      eq((c.agreementSignature(c.jobs[0]) || {}).signedBy, 'Annabelle Graziano',
+        '⚠ named by DOCUSIGN, off routing order 1 — never by the person who pressed the button');
+      eq((c.agreementSignature(c.jobs[0]) || {}).how, 'esign', 'and recorded as an e-signature');
+      has(notices[notices.length - 1].m, 'Signed', 'and it says so');
+    }
+
+    // ── 3. ANSWERED, STILL OUT — the case that explains the ORIGINAL report ───
+    {
+      const { c, notices, posts } = build(() => [true, { ok: true, envelopeId: 'env-abc-123', status: 'sent' }]);
+      c.jobs = [jobAt(21)];
+      c.dashCheckEsign(991);
+      eq(posts.length, 1, 'it asks');
+      ok(!c.isAgreementSigned(c.jobs[0]), '⚠⚠ and `sent` is NOT a signature — only `completed` is');
+      const last = notices[notices.length - 1];
+      has(last.m, 'does not report it complete', '⚠⚠ and it says that out loud rather than going quiet');
+      has(last.m, 'countersignature',
+        '⚠ naming the half that is actually outstanding — a two-signer envelope needs OURS too');
+    }
+
+    // ── 4. A FAILED CHECK SPEAKS ONCE, AND IS NOT TALKED OVER ─────────────────
+    {
+      const { c, notices, posts } = build(() => [false, { error: 'HTTP 502' }]);
+      c.jobs = [jobAt(21)];
+      const before = c.jobs[0].docState.agreement.esign.checkedAt;
+      c.dashCheckEsign(991);
+      eq(posts.length, 1, 'it asks');
+      eq(c.jobs[0].docState.agreement.esign.checkedAt, before,
+        '⚠⚠ a FAILED check does not stamp `checkedAt` — it must not spend the 20 minutes on nothing');
+      const spoke = notices.filter((n) => n.doc);
+      eq(spoke.length, 1, 'the failure speaks, through the one channel that owns it');
+      has((spoke[0] || {}).m, '502', 'naming the cause');
+      has((spoke[0] || {}).m, 'not a statement that it is not', 'and refusing to claim the thing is unsigned');
+      // ⚠ AND THE HANDLER MUST NOT APPEND "still out for signature" OVER IT. It never reached
+      // DocuSign at all, so that sentence would be a claim nothing supports.
+      eq(notices.filter((n) => /does not report it complete/.test(n.m)).length, 0,
+        '⚠⚠ and the handler does NOT talk over it with a cheerful "still out"');
+    }
+
+    // ── 5. THE RECORDER'S REFUSAL REACHES THE SCREEN ──────────────────────────
+    {
+      // ⚠⚠ `esignRefresh` THREW THIS RETURN VALUE AWAY, and CLAUDE.md records that discard as step
+      // three of the defect fixed earlier today. Both reachable refusals are closed now — which is
+      // exactly when a silent channel gets left alone, and exactly why the next one added would be
+      // silent for the same reason. Driven by putting the job out of reach of the recorder.
+      const { c, notices } = build(completed);
+      c.jobs = [jobAt(21)];
+      const real = c.recordAgreementSignature;
+      c.recordAgreementSignature = () => 'notsent';
+      c.dashCheckEsign(991);
+      c.recordAgreementSignature = real;
+      const spoke = notices.filter((n) => n.doc);
+      eq(spoke.length, 1, '⚠⚠ a refusal by the recorder is SAID, not swallowed');
+      has((spoke[0] || {}).m, 'could not record it', 'it names what failed');
+      has((spoke[0] || {}).m, 'no record of the signing packet going out',
+        '⚠ in words rather than a code — a person reading a notice needs the consequence');
+      has((spoke[0] || {}).m, 'nothing has been lost', 'and says the signature is safe where it is');
+    }
+
+    // ── 6. IT ASKS THE PROVIDER; IT NEVER WRITES A SIGNATURE ITSELF ───────────
+    {
+      // The reason the manual recorder is withdrawn while an envelope is out is that a hand-typed
+      // signature and the provider can come to disagree about whether a contract exists. This
+      // button must not reopen that door by another name.
+      const body = noComments(fn('dashCheckEsign'));
+      lacks(body, 'recordAgreementSignature', '⚠⚠ it never records a signature itself');
+      lacks(body, 'agrSigned', '⚠⚠ and never touches the legacy flag');
+      lacks(body, 'markAgreementSigned', '⚠⚠ and never reaches the hand-typed recorder');
+      has(body, 'esignNextCheckAt', '⚠ it reads the SHARED gate, never a second copy of the floor');
+    }
+
+    // ── 7. THE FLOOR IS ONE ARITHMETIC, READ BY BOTH ──────────────────────────
+    {
+      // Two copies of "when may we ask again" is how the screen comes to promise a check at a time
+      // the poll refuses. `_esignDue` is derived from `esignNextCheckAt` and holds no clock of its own.
+      const due = noComments(fn('_esignDue'));
+      has(due, 'esignNextCheckAt', '⚠ the poll asks the shared definition');
+      lacks(due, 'ESIGN_RECHECK_MINS', '⚠⚠ and holds NO second copy of the floor');
+      const { c } = build(completed);
+      eq(c.esignNextCheckAt({ esign: { envelopeId: 'e', checkedAt: '' } }), 0, 'never checked → may ask now');
+      eq(c.esignNextCheckAt({ esign: { envelopeId: 'e', checkedAt: 'not a date' } }), 0,
+        '⚠ an unparseable stamp reads as due — the safe direction, and what the old expression did');
+      eq(c.esignNextCheckAt({ esign: { envelopeId: 'e', checkedAt: new Date(Date.now() + 3600000).toISOString() } }), 0,
+        '⚠ so does a stamp from a device whose clock runs ahead');
+      ok(c.esignNextCheckAt({ esign: { envelopeId: 'e', checkedAt: minsAgo(7) } }) > Date.now(),
+        'and a fresh one answers with the MOMENT it may be asked again, not a bare false');
+    }
   }
 
   group('⚠ testEsignAuth IS EDITOR-ONLY, ARGUMENT-FREE AND READ-ONLY');

@@ -704,7 +704,7 @@ Each step appears only at its own row on the timeline, records who did it and wh
 
 1. **✓ I've sent it** — you have actually sent the packet (§9b). **⚠ On a DocuSign job this step does not appear**: DocuSign does the sending, so there is nothing for you to confirm (§8a).
 2. **The signature comes back.** Which button you see depends on how the packet went out, and the app decides, not you:
-   - **Sent through DocuSign** — *nothing to press*. The row reads *DocuSign is watching for it* and the signature arrives on its own (§8a).
+   - **Sent through DocuSign** — the row reads *DocuSign is watching for it* and the signature arrives on its own. **↻ Check DocuSign now** is there for the moment you have watched the envelope complete and want the app to look straight away (§8a).
    - **Sent as a PDF** — **✓ Record the signed agreement**, below.
    
    *Signing does not imply payment*; these are separate facts and the app keeps them separate.
@@ -771,7 +771,7 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 | **What you press** | **Send for signature — DocuSign** on the *Signing packet sent* row. **The button names the route it will take**, so the two are never confused at the moment of pressing. | **Send as a PDF to sign by hand**, beside it. |
 | **Who sends it** | DocuSign emails the client directly. | You do — a Gmail draft with the packet attached, which you read and send yourself. |
 | **✓ I've sent it** | **Not shown.** There is nothing to confirm. | Shown. Press it once the email has gone. |
-| **The signature** | Arrives **on its own**. The row reads *DocuSign is watching for it*. | **✓ Record the signed agreement**, by hand (§8). |
+| **The signature** | Arrives **on its own**. The row reads *DocuSign is watching for it*, over **↻ Check DocuSign now**. | **✓ Record the signed agreement**, by hand (§8). |
 | **Who is named as signer** | Whoever authenticated to DocuSign — their name and email, from DocuSign. | Whoever you type in. |
 | **The executed copy** | Filed to the client's **Agreement** folder automatically, with its **certificate of completion**. | Yours to file. |
 
@@ -806,6 +806,7 @@ Third-party and home-prep vendor invoices are billed directly to the client at c
 **There is no timer and nothing runs in the background.** The app asks DocuSign when somebody is looking: on a page load, and when you open a client. So **opening the client is the refresh** — if you are waiting on a signature, open the job.
 
 - **It asks at most once every 20 minutes per agreement.** DocuSign's published limit is one request per document per 15 minutes and **the penalty is losing API access altogether**, not a warning. Opening the same client six times in a row asks once.
+- **↻ Check DocuSign now is the one way to make it look, and it obeys the same 20 minutes.** It sits on the *Agreement signed* row while an envelope is out. Press it inside the window and it does not ask — it tells you **the time it can ask again** and says nothing is lost by waiting. Pressing it ten times sends nothing. **It never writes a signature itself**; it asks DocuSign and records only what DocuSign says, which is the same rule that withdraws the manual button.
 - **Only *completed* counts as signed.** DocuSign reports *delivered* when the client opens the email and *signed* when one recipient is done — the agreement has two signers (the client, then Havellin), so neither of those is an executed contract and neither marks the job signed.
 - **A failed check says so, and says what it does not mean.** If DocuSign cannot be reached the app tells you the reason and states plainly *"It may already be signed; this is not a statement that it is not."* A silent failure would leave a signed agreement reading unsigned forever.
 - **A signed agreement stops being checked.**
