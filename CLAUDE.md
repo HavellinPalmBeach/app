@@ -1,5 +1,64 @@
 # Havellin Palm Beach — App Notes
 
+## THE PROBATE CONTRACT READ AS ASHLEY SIGNING THE DATE (FIXED 2026-09-18)
+Anthony: *"fix the probate signature block."* Flagged in passing during the DocuSign build and deliberately
+left alone there — it is unrelated to e-signature and had no business in a commit about it. App-only, no
+redeploy. **This is a contract the personal representative signs and a court may read.**
+
+- **⚠⚠ THE LAYOUT PAIRED A PERSON WITH A COLUMN, AND THE SECOND COLUMN WAS THE DATE.** The Havellin block
+  was a two-column grid: **Anthony's name + mobile + email over the SIGNATURE line**, **Ashley's name +
+  mobile + email over the DATE line**. Nothing in it said Anthony was the signatory and Ashley was not —
+  the grid simply gave them a column each, and one of those columns is a date. On the page it reads as
+  **Ashley signing the date**, which is not a thing anybody does.
+- **⚠⚠ THE ENVELOPE SETTLES WHO SIGNS, AND IT IS ONE PERSON.** `esignSendEnvelope` builds exactly **two**
+  recipients — the client at routing order 1, and **one** Havellin recipient at order 2 (`havName`,
+  defaulting to *Anthony Graziano*) holding **both** the `havSig` and `havDate` tabs. So a document
+  implying two Havellin signers disagrees with the envelope it is sent in. The standard form has always
+  printed `Anthony Graziano · Managing Member` and was already correct; only probate was wrong.
+- **THE FIX IS THE CORPORATE EXECUTION SHAPE: the signatory is STATED ABOVE the grid, never inside a
+  column.** `Havellin Palm Beach, LLC` / `Anthony Graziano · Managing Member` / then Signature | Date.
+  Neither column can be mistaken for a second signer because neither carries a name at all. Driven on
+  the real `probateAgreementHtml` — the block now reads *"Havellin Palm Beach, LLC · Anthony Graziano ·
+  Managing Member · Signature /hsh/ · Date /hdh/"*.
+- **⚠ THE TITLE IS NOT DECORATION.** *Managing Member* is the authority that lets that person bind the
+  LLC, and a signature block naming a person with no stated capacity is the thing counsel queries on a
+  court-reviewed matter. The standard form carried it; probate did not.
+- **⚠ THE TWO HARDCODED MOBILES WENT WITH IT, AND THAT IS A SECOND DEFECT RATHER THAN TIDYING.**
+  `(617) 650-6588` and `(978) 857-5374` were typed into this block as literals — exactly what the
+  2026-09-09 office-phone build exists to prevent, and they would not follow a Contractors row. **§1.1
+  Service Provider, three pages earlier in the same document, already states Company · Primary Contact ·
+  Email · Phone · Address · License, and its phone reads `HAVELLIN_OFFICE_PHONE`.** So the signature-page
+  copy was redundant *and* the stale-prone one. The standing client-copy rule applies: a line restating
+  what the reader has already been told is costing rather than earning.
+- **⚠⚠ AND THE CONVERSE IS A TEST, BECAUSE "REMOVE ASHLEY" IS THE WRONG READING.** She is still named at
+  §1.1 as Primary Contact and must stay — the signature block is about **who executes**, not **who the
+  client calls**. A later sweep grepping her name out of the contract would be a real loss. Two
+  assertions pin it: §1.1 still reads *"Anthony Graziano / Ashley Jerome"*, and it still carries the
+  office line **read from the constant rather than typed in the test**.
+- **⚠ EXACTLY ONE `havSig` AND ONE `havDate` SURVIVE, and that was the constraint the fix had to respect.**
+  DocuSign places a tab at **every** occurrence of an anchor string, so a second copy puts a second
+  signature box on one contract for one recipient. The pre-existing esign test already pins each anchor
+  at exactly 1 in each form; measured in the browser after the change: `clientSig 1 · clientDate 1 ·
+  havSig 1 · havDate 1`.
+- **5271 committed checks** (10 new in `tests/agreement-rates.test.js`). **Revert-verified: putting the
+  old block back fails 3** — the second name, the missing title, and the phone on the signature page.
+- **⚠ MY OWN FIRST TEST FAILED ON CORRECT CODE, AND THE SLICE WAS WHY.** The no-phone check sliced *from*
+  `Signature Page` **to the end of the document**, which runs on into the **footer** — and the footer
+  legitimately carries the office line. It reads as the fix failing over a number that is right where it
+  sits. Bounded at `For Office Use` now, with the reason in a comment. **Measure the block, not the rest
+  of the page.**
+- **⚠ AND A SECOND ONE READ EMPTY IN THE BROWSER FOR A REASON WORTH KNOWING: `innerText` APPLIES CSS
+  `text-transform`.** The heading renders uppercase, so `indexOf('Signature Page')` found nothing and the
+  dump came back blank while every other check passed. `textContent` is the one that reads the source
+  text. Same class as the harness's `fmtDate2` stub: the thing you measure with was not measuring what
+  its name suggests.
+- **Verified in headless Chromium on the real builder**: all four anchors render as `rgb(255,255,255)`,
+  `display:inline`, `visibility:visible`, 6px, present in the text layer; every `.sig-line` still exactly
+  **36px**; overflow **0** at 1440 and 390px; no page errors. The client block above it is untouched and
+  still reads *Printed Name · Title / Role* over *Signature · Date*.
+- **No document pass** — neither the manual nor the playbook describes either agreement's signature-page
+  layout, and §8a's only mention (that DocuSign finds its markers in the signature block) is unchanged.
+
 ## ⚠⚠ THE SIGNATURE COMES BACK, AND MY OWN POLL WOULD HAVE GOT THE API REVOKED (BUILT 2026-09-17)
 Anthony, on being asked whether to build the return half now or next session: *"What the heck? Do you think I want
 this like not working? Like, yes, build it."* He is right that it was not a question — an envelope that goes out and
@@ -341,10 +400,10 @@ actually send out an agreement for signature."*
   nothing writes the returned `envelopeId` onto `docState.agreement.esign`. `ESIGN_PROVIDERS.docusign`
   stays `live:false` until it does — flipping it early stands the manual *Record the signed agreement*
   button down and replaces it with nothing.
-- **⚠ FOUND IN PASSING, NOT FIXED, AND IT IS ON A SIGNED CONTRACT:** the probate form's Havellin
-  signature block prints **Ashley Jerome's name and phone number over a *Date* line** while Anthony gets
-  the Signature line. It reads as Ashley signing the date. Pre-existing, unrelated to this build, and
-  flagged rather than swept into a commit about e-signature.
+- ~~**⚠ FOUND IN PASSING, NOT FIXED, AND IT IS ON A SIGNED CONTRACT:** the probate form's Havellin
+  signature block prints **Ashley Jerome's name and phone number over a *Date* line**.~~ **FIXED
+  2026-09-18 — see the section at the top of this file.** *Kept rather than deleted, per the standing
+  rule that a fixed flag left standing reads as outstanding work.*
 
 ## ⚠⚠ WHAT HAVELLIN ACTUALLY SELLS — THE FOUR LINES, IN ORDER (DECIDED 2026-09-17)
 Anthony, closing the catalogue conversation the declutter build came out of: *"we just might not take a home edit
