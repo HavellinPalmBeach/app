@@ -206,6 +206,12 @@ function _splitName(full) {
 // ── Collectors — each returns uniform records ────────────────────────────────
 // { extId, label, first, last, company, role, phone, email, src, tags[] }
 
+// ⚠⚠ A PARTNER IS A PERSON, SO THEIR DESK LINE AND THEIR CELL GO ON ONE CARD under one
+// name — two cards would be the ambiguity, not the fix. What does split out is the FIRM's
+// switchboard and the assistant, because those reach somebody else.
+//
+// ⚠ THE PERSON RECORD KEEPS ITS BARE `uid` EXTERNAL ID, so all 63 live partner contacts
+// update in place instead of duplicating.
 function _collectPartners() {
   var rows = _readTab(SpreadsheetApp.getActiveSpreadsheet(), QUO_PARTNER_TAB);
   var out = [];
@@ -215,20 +221,100 @@ function _collectPartners() {
     var firm = String(r.firm || r.partner_name || '').trim();
     if (!first && !lastN && !firm) continue;
     if (!String(r.uid || '').trim()) continue;   // backfillIds has not run for this row
+    var uid = String(r.uid).trim();
+    var label = (first + ' ' + lastN).trim() || firm;
+    // partner_type is a closed list of four values, so it makes a filterable tag. title
+    // is deliberately NOT tagged — 54 distinct free-text values across 79 rows would be
+    // 54 tags nobody can filter by.
+    var tags = _tags('Referral Partner', _titleCase(r.partner_type));
+
+    // Their own numbers, in the order you would try them. The first is what the contact
+    // groups on; the rest ride the same card.
+    var mine = [];
+    if (_e164(r.phone))  mine.push({ name: 'Work',   value: _e164(r.phone) });
+    if (_e164(r.mobile)) mine.push({ name: 'Mobile', value: _e164(r.mobile) });
     out.push({
-      extId: String(r.uid).trim(),
-      label: (first + ' ' + lastN).trim() || firm,
+      extId: uid, label: label,
       first: first || firm, last: lastN,
       company: firm,
       role: String(r.title || r.partner_type || '').trim(),
-      phone: _e164(r.phone), email: String(r.email || '').trim(),
+      phone: mine.length ? mine[0].value : '',
+      phoneLabel: mine.length ? mine[0].name : 'Work',
+      extras: mine.slice(1),
+      email: String(r.email || '').trim(), emailLabel: 'Work',
       src: QUO_SRC_PARTNER, srcRow: r._row, kind: 'partner',
-      // partner_type is a closed list of four values, so it makes a filterable tag.
-      // title is deliberately NOT tagged — 54 distinct free-text values across 79 rows
-      // would be 54 tags nobody can filter by.
-      tags: _tags('Referral Partner', _titleCase(r.partner_type))
+      tags: tags
     });
+
+    // ⚠ THE OFFICE RECORD'S ID IS `firm:<number>`, NOT `<uid>:office`, and that is
+    // deliberate twice over. Four partners at one firm emit four identical ids that
+    // collapse to one contact — where `<uid>:office` would make the surviving id depend
+    // on which partner happened to be first, so removing that partner would orphan the
+    // firm's contact. And it is the SAME id _firmPayload already mints for a switchboard
+    // several partners share, so the five firm contacts Quo already holds are updated in
+    // place rather than duplicated.
+    var office = _e164(r.office_phone);
+    if (office) {
+      out.push({
+        extId: 'firm:' + office,
+        label: firm || label, first: firm || label, last: '',
+        company: firm, role: 'Main line',
+        phone: office, phoneLabel: 'Main',
+        email: '', src: QUO_SRC_PARTNER, srcRow: r._row, kind: 'partner',
+        tags: tags
+      });
+    }
+
+    // The gatekeeper. At a firm this is who books the meeting, and an unrecognised
+    // number from the person who schedules your introductions is a call you take blind.
+    var asst = _e164(r.assistant_phone);
+    var asstName = String(r.primary_contact || '').trim();
+    if (asst) {
+      out.push({
+        extId: uid + ':asst',
+        label: asstName || (label + ' — assistant'),
+        first: asstName ? asstName.split(/\s+/)[0] : label,
+        last: asstName ? asstName.split(/\s+/).slice(1).join(' ') : 'assistant',
+        company: firm,
+        role: 'Assistant to ' + label,
+        phone: asst, phoneLabel: 'Work',
+        email: String(r.assistant_email || '').trim(), emailLabel: 'Work',
+        src: QUO_SRC_PARTNER, srcRow: r._row, kind: 'partner',
+        tags: tags
+      });
+    }
   }
+  return out;
+}
+
+// ⚠⚠ A VENDOR ROW IS A FIRM AND CAN PRODUCE SEVERAL CONTACTS. `phone` / `email` are the
+// office line and the general inbox; each contact slot is a person with their own mobile.
+// Andy calling from his cell used to ring as an unrecognised number, which is the whole
+// reason the contact columns were added on 2026-09-18.
+//
+// ⚠ THE OFFICE RECORD KEEPS ITS ORIGINAL `vendor:<uid>` EXTERNAL ID, and that is the
+// migration. Suffixing every id would leave all 136 live vendor contacts matching
+// nothing, so the next run would create 136 duplicates AND report the originals STALE.
+// Only the NEW per-contact records carry a suffix.
+function _vendorRowContacts(r) {
+  // Mirrors vendorContacts() in havellin.html. The two are parallel implementations of
+  // one rule, so the app and the dialer cannot disagree about who a firm's people are.
+  var slots = [
+    { n: 1, first: 'contact_first',  last: 'contact_last',  title: 'contact_title',  mobile: 'contact_mobile',  email: 'contact_email'  },
+    { n: 2, first: 'contact2_first', last: 'contact2_last', title: 'contact2_title', mobile: 'contact2_mobile', email: 'contact2_email' }
+  ];
+  var out = [];
+  slots.forEach(function (s) {
+    var first = String(r[s.first] || '').trim(), last = String(r[s.last] || '').trim();
+    var name = (first + ' ' + last).trim() || (s.n === 1 ? String(r.primary_contact || '').trim() : '');
+    var c = {
+      slot: s.n, first: first, last: last, name: name,
+      title: String(r[s.title] || '').trim(),
+      mobile: _e164(r[s.mobile]),
+      email: String(r[s.email] || '').trim()
+    };
+    if (c.name || c.mobile || c.email) out.push(c);
+  });
   return out;
 }
 
@@ -244,9 +330,9 @@ function _collectVendors() {
     var first = String(r.contact_first || '').trim(), lastN = String(r.contact_last || '').trim();
     // One row can carry several trades, semicolon-separated — "Art Appraiser; Antiques
     // & Furniture Appraiser". A firm that does two things is one firm with one number,
-    // so it is one row and one contact. Semicolon rather than comma because a category
-    // name contains a comma ('Specialty Vendor (art handler, etc.)'), eleven contain a
-    // slash and eight an ampersand; none contains a semicolon.
+    // so it is one row. Semicolon rather than comma because a category name contains a
+    // comma ('Specialty Vendor (art handler, etc.)'), eleven contain a slash and eight
+    // an ampersand; none contains a semicolon.
     var cats = String(r.category || '').split(';')
                  .map(function (c) { return c.trim(); })
                  .filter(function (c) { return !!c; });
@@ -254,17 +340,49 @@ function _collectVendors() {
     // Group and every category go on, giving a coarse filter (the 5 groups) and a
     // precise one (42 categories) without having to pick which matters more.
     var tags = _tags.apply(null, ['Vendor', r.category_group].concat(cats));
+    // The sheet carries a UID per vendor (verified populated and distinct on all 152
+    // rows), so identity comes from that rather than the row index — a cleared row that
+    // later gets reused would otherwise inherit the old vendor's contact.
+    var uid = 'vendor:' + (String(r.uid || '').trim() || ('row' + r._row));
+    var people = _vendorRowContacts(r);
+    var reachable = people.filter(function (c) { return !!c.mobile; });
+
+    // ⚠⚠ A NUMBER IS ATTRIBUTED TO A PERSON ONLY WHEN IT IS THE BEST WAY TO REACH THEM.
+    // Once a contact has their own mobile the office line goes back to being the FIRM's,
+    // and naming it after them would put their name on the receptionist's calls. Until
+    // then it is still the only way through to them, so it keeps the name it has always
+    // had — which is also why this changes nothing on the day it ships: no mobile is
+    // recorded yet, so every one of the 136 existing contacts is left exactly as it is.
+    var officeIsFirm = reachable.length > 0;
     out.push({
-      // The sheet carries a UID per vendor (verified populated and distinct on all
-      // 152 rows), so identity comes from that rather than the row index — a cleared
-      // row that later gets reused would otherwise inherit the old vendor's contact.
-      extId: 'vendor:' + (String(r.uid || '').trim() || ('row' + r._row)),
-      label: (first + ' ' + lastN).trim() || name,
-      first: first || name, last: first ? lastN : '',
+      extId: uid,
+      label: officeIsFirm ? name : ((first + ' ' + lastN).trim() || name),
+      first: officeIsFirm ? name : (first || name),
+      last: officeIsFirm ? '' : (first ? lastN : ''),
       company: name, role: cat,
-      phone: _e164(r.phone), email: String(r.email || '').trim(),
+      phone: _e164(r.phone), phoneLabel: 'Main',
+      email: String(r.email || '').trim(), emailLabel: 'Work',
       src: QUO_SRC_VENDOR, srcRow: r._row, kind: 'vendor',
       tags: tags
+    });
+
+    // One contact per person who has their own number. A contact with an email and no
+    // mobile is deliberately NOT one: there is nothing to resolve on caller ID, and a
+    // contact with no number is a row in the dialer that can never ring.
+    reachable.forEach(function (c) {
+      out.push({
+        extId: uid + ':c' + c.slot,
+        label: c.name || (name + ' — mobile'),
+        first: c.first || c.name || name, last: c.first ? c.last : '',
+        company: name,
+        // Their own title beats the trades: "Owner" says more about an incoming call
+        // from Andy than the firm's category list does.
+        role: c.title || cat,
+        phone: c.mobile, phoneLabel: 'Mobile',
+        email: c.email, emailLabel: 'Work',
+        src: QUO_SRC_VENDOR, srcRow: r._row, kind: 'vendor',
+        tags: tags
+      });
     });
   }
   return out;
@@ -327,8 +445,17 @@ function _quoPayload(rec) {
   var fields = { firstName: rec.first || rec.company || rec.label, lastName: rec.last || '' };
   if (rec.company) fields.company = rec.company;
   if (rec.role) fields.role = rec.role;
-  if (rec.phone) fields.phoneNumbers = [{ name: 'Work', value: rec.phone }];
-  if (rec.email) fields.emails = [{ name: 'Work', value: rec.email }];
+  // ⚠ ONE CONTACT MAY HOLD SEVERAL NUMBERS; WHAT IT MAY NOT DO IS SHARE ONE WITH ANOTHER
+  // CONTACT. The rule this file is built on is that a number resolves to exactly one
+  // name on caller ID — which forbids the same number appearing twice, and says nothing
+  // against a partner's desk line and cell sitting on one card under one name. They are
+  // the same person, so two cards would be the ambiguity, not the fix.
+  if (rec.phone) {
+    var nums = [{ name: rec.phoneLabel || 'Work', value: rec.phone }];
+    (rec.extras || []).forEach(function (x) { nums.push({ name: x.name || 'Other', value: x.value }); });
+    fields.phoneNumbers = nums;
+  }
+  if (rec.email) fields.emails = [{ name: rec.emailLabel || 'Work', value: rec.email }];
   var p = { defaultFields: fields, externalId: rec.extId, source: rec.src };
   // Tags ride along only once the workspace field key is known — see the note at
   // QUO_TAGS_FIELD_KEY. Shape is unverified against the live API, so it stays off
@@ -351,6 +478,36 @@ function _firmPayload(company, phone, src, tags, role) {
     p.customFields = [{ key: QUO_TAGS_FIELD_KEY, value: tags }];
   }
   return p;
+}
+
+// ⚠⚠ THE ONE RULE THIS FILE EXISTS FOR: A NUMBER RESOLVES TO EXACTLY ONE NAME. Several
+// numbers on one card is fine, and is how a partner's desk line and cell travel together
+// under one name; the SAME number on two cards is what makes an inbound call ambiguous.
+// So a second number on somebody's card that is also another contact's own number is
+// dropped from that card and REPORTED — never silently carried, because a second name
+// quietly attached to a live number is the exact state this guard exists to prevent.
+function _pruneAmbiguousExtras(all, byPhone, plan) {
+  for (var e = 0; e < all.length; e++) {
+    var rec = all[e];
+    if (!rec.extras || !rec.extras.length) continue;
+    var kept = [];
+    for (var x = 0; x < rec.extras.length; x++) {
+      var num = rec.extras[x].value;
+      // byPhone[num][0] is this record itself when the number is its OWN grouping key,
+      // which is not a clash.
+      if (byPhone[num] && byPhone[num].length && byPhone[num][0] !== rec) {
+        plan.conflict.push({
+          phone: num,
+          names: [rec.label].concat(byPhone[num].map(function (m) { return m.label; })),
+          why: 'a second number on ' + rec.label + "'s card is another contact's own number — dropped from the card"
+        });
+        continue;
+      }
+      kept.push(rec.extras[x]);
+    }
+    rec.extras = kept;
+  }
+  return plan;
 }
 
 // ── The sync ─────────────────────────────────────────────────────────────────
@@ -377,6 +534,8 @@ function syncQuoAll(dryRun) {
     if (!byPhone[r.phone]) { byPhone[r.phone] = []; order.push(r.phone); }
     byPhone[r.phone].push(r);
   }
+
+  _pruneAmbiguousExtras(all, byPhone, plan);
 
   var existing = dryRun ? {} : _quoLoadExisting();
   if (dryRun) { try { existing = _quoLoadExisting(); } catch (e) { existing = {}; } }

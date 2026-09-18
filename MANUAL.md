@@ -1382,10 +1382,10 @@ The premium's *rate* is pinned to the estimate the client accepted, so changing 
 **Tab: Vendors.** The curated network of trades and service providers (painters, landscapers, movers, appraisers, haulers, etc.), stored in its own Google Sheet. Work each vendor through its lifecycle: *Identified → Contacted → Vetting → Active* (with *Backup* and *Do Not Use* as terminal states). Only **Active** vendors can be assigned to a job in the Job Plan sourcing. Status is set with the **color-coded dropdown on the card** (under the vendor's category), which also shows the rating beside it — there is no separate status badge.
 
 - **☎ Log contact** — type what you discussed in the note field, then log it; this stamps today as the last-contacted date and stores the latest contact note (used for follow-up cadence). Logging the *first* contact auto-advances an *Identified* vendor to *Contacted* (it never moves a vendor already at Vetting/Active/etc.). The last-contacted date + note show in a highlighted bar right under the log box, so you see the prior touch before you call. Last-contacted is set only this way — it is read-only in the edit form. The old bulk-imported Google review is no longer shown or editable; what surfaces is the star rating earned from completed jobs.
-- **Search** — free text across name, contact, phone, and category. Multiple words are AND-ed (so *"west palm mover"* narrows rather than widens), and a numeric query matches the phone number however it's punctuated.
-- **Tap to call / text / email** straight from the vendor card. In the Job Plan sourcing, an assigned vendor's phone is a tap-to-dial link too — you're usually on site when you need them.
-- **Quick edit / Full edit** — *Quick edit* is contact details only, saves just what you changed, and is the one to use from a phone. *Full edit →* opens the complete record below.
-- **Edit (full)** — intake/vetting fields: category group, category, contact, pricing structure, ballpark, minimum job, lead time, COI on file, license, service area, notes.
+- **Search** — free text across name, category, service area, notes and **every contact field**: each contact's first and last name, their title, their own email address, and the digits of the office line and of both contact mobiles. Multiple words are AND-ed (so *"west palm mover"* narrows rather than widens), and a numeric query matches a number however it's punctuated, so typing a mobile you've been called from finds the firm it belongs to.
+- **Tap to call / text / email** straight from the vendor card, **one row per party and each row says who it reaches** — *☎ Office* and *@ Office email* for the firm, then *☎ Andy* / *✉ Text Andy* for each contact who has a mobile on file. **Text is only ever offered on a mobile**: a switchboard does not receive SMS. In the Job Plan sourcing, an assigned vendor's phone is a tap-to-dial link too — you're usually on site when you need them.
+- **Quick edit / Full edit** — *Quick edit* is contact details only, saves just what you changed, and is the one to use from a phone. It carries **both contacts in full** (name, title, mobile, email) as well as the office line, because "the owner gave me his direct email" happens standing in front of the vendor, not at a desk. *Full edit →* opens the complete record below.
+- **Edit (full)** — intake/vetting fields: category group, category, the firm's office phone / office email / website / address / service area / licence, **two contacts** (see §13b), pricing structure, ballpark, minimum job, lead time, COI on file, notes.
 - Performance is rated post-job (a rolling average), kept separate from the curated fields so a vetting edit never wipes performance history.
 - **Delete (manager PIN)** — inside the Edit form, *Delete this vendor permanently* removes the row from the app *and* the spreadsheet. It's PIN-gated (the same manager PIN as approvals/client-delete) and reserved for bulk-import errors or defunct companies — not a substitute for *Do Not Use*, which is for real vendors you're retiring. A vendor with job history (a rating or completed jobs) is blocked from deletion and pointed to Do Not Use instead, so a delete can't orphan performance history.
 
@@ -1417,17 +1417,50 @@ The sixth estimate card, *End-of-Job Logistics*, is not a Category Group — it 
 
 > **An appraiser who also buys or sells is flagged, and the Independent box is unticked for you.** On the Inventory tab's appraiser roster, the directory picker marks such a firm *⚠ also Jewelry & Watch Buyer* and, when you pick it, unticks *Independent* and says why. A firm that may end up acquiring the property — buying it outright, or taking it to auction or an estate sale for a commission on the price — cannot give a defensible opinion of its value. The box stays editable: whether that matters on this estate is your call, not the app's. Before 2026-09-09 the option label hid the buying trade and the box shipped ticked, so the roster asserted *Independent* over precisely the firm that was not — **re-check the roster on any job where an appraiser was linked from the directory before that date.**
 
+### 13b. The office line and the people behind it (added 2026-09-18)
+
+A vendor is a **firm**, so the record separates what belongs to the company from what belongs to a person. Anthony's case: *southflorida@navismoving.com* is the company's inbox, and *andy@navismoving.com* is the owner's — and before this there was one email box, so you kept one and lost the other.
+
+| Field | Whose it is | What it's for |
+|---|---|---|
+| Office phone · Office email | The firm | The switchboard and the general inbox. Reaches whoever picks up. |
+| Contact 1 / Contact 2 — first, last, **title** | A person | Who to ask for. The title is the useful half: *Owner* and *Dispatch* are different calls. |
+| Contact 1 / Contact 2 — mobile, email | That person | Their own cell and their own address. Never the firm's. |
+
+> **What it fixes, and it was a real defect rather than a missing box.** The card used to print the contact's name at the head of the office number — a switchboard presented as that person's direct line, the same mistake as printing the Havellin office line as a concierge's personal mobile (§7). The office row carries **no name** now and says *office* beside the number; each person gets their own row saying *mobile* beside theirs.
+
+> **Nothing was renamed, so nothing migrated.** The existing `phone` and `email` columns still hold the office line and the general inbox — only their labels changed — and Contact 1 keeps the `contact_first` / `contact_last` columns it always had. **No Apps Script redeploy is needed for vendors**: the vendor sheet creates any column it is asked to write, so the new fields appear on the existing sheet by themselves.
+
+> **Fill in whichever half you have.** A slot with a number and no name still counts — that is a card you were handed and half-typed, and the app would rather keep the number than insist on a name; the card says *name not recorded* so you know what's missing. A slot with a title and nothing else does *not* count, because there is nobody to reach. A vendor with nothing but an office line reads exactly as it always did.
+
 ## 14. Referral Partners
 
 **Tab: Referral Partners.** A CRM for the network of attorneys, realtors, trust officers, and Douglas Elliman agents who refer business. Mirrors the Vendor Directory: its own Google Sheet + Apps Script, kept apart from job data.
 
-- **Add / Edit a partner** — first & last name, type, firm, primary contact, phone, email, website, owner, and notes. Type, phone, and email are required. Owner is one of Anthony Graziano · Ashley Jerome · Anthony Graziano Jr.
-- **Search · tap-to-contact · Quick edit** — the same field pattern as the Vendor Directory: free-text search across name, firm, title, phone and city (multi-word AND-ed, numeric queries match the phone), tap-to-call/text/email on the card, and a **Quick edit** for contact details with **Full edit →** as the escape hatch.
+- **Add / Edit a partner** — first & last name, type, firm, title, owner and notes, plus the four ways to reach them (see below). Type and at least one way to reach them are required. Owner is one of Anthony Graziano · Ashley Jerome · Anthony Graziano Jr.
+- **Search · tap-to-contact · Quick edit** — the same field pattern as the Vendor Directory: free-text search across name, firm, title, city and **every number and address on the record** including the assistant's (so *"who is Marie at Gunster"* is a real search), tap-to-call/text/email on the card one labelled row per party, and a **Quick edit** carrying the direct line, the mobile and the office number with **Full edit →** as the escape hatch.
 - **Status** runs the outreach lifecycle *Identified → Contacted → Intro Meeting → Active Partner* (with *Dormant* and *Do Not Use*). It's set with the **color-coded dropdown on the card** (under the partner's type, beside the priority badge) — the same pattern as the Vendor Directory. Partners are retired by status rather than deleted.
 - **Log outreach** — stamps last-contacted to today, and auto-advances a still-*Identified* partner to *Contacted* (never downgrades one further along). The last-contacted date shows in a highlighted bar right above the button.
 - **Dormancy nudge** — an engaged partner with no outreach or referral in 90 days is flagged "Needs Nudge."
 - **Leaderboard** — jobs are attributed to a partner when a professional referral source is linked at intake, so you can see who sends the most business.
 - **Delete (manager PIN)** — inside the Edit form, *Delete this partner permanently* removes the row from the app *and* the spreadsheet, PIN-gated like the vendor delete. Reserved for bulk-import errors / defunct contacts, not a replacement for *Do Not Use*. A partner with referrals attributed to them is blocked from deletion (steered to Do Not Use) so the leaderboard history stays intact.
+
+### 14a. Reaching a partner (added 2026-09-18)
+
+**A partner is a person, not a firm** — four partners at Comiter are already four rows — so this is deliberately *not* the vendor's two contact slots. What one partner needs is their own line, their cell, the firm's switchboard, and the assistant who books the meeting.
+
+| Field | Whose it is | Note |
+|---|---|---|
+| Direct line | Them | Their desk. Unchanged column, relabelled. |
+| Mobile | Them | The only number offered a *Text* button. |
+| Office phone · Extension | The firm | Several partners at one firm legitimately share the switchboard; the extension is theirs on it. |
+| Assistant / gatekeeper · phone · email | Somebody else | The name column already existed, buried in the research block; it now sits beside that person's own number and address. |
+
+> **⚠⚠ On roughly half the directory, the "direct line" is the firm's switchboard — and the card now says so.** Measured on the 79 partners before this shipped: **32** carried *Phone type: Main*, meaning the one phone field held a main number, which the card rendered under that person's name and the Call button dialled; **13 partners shared 5 numbers** between them. Those rows read *⚠ firm main line, not direct* on the card and their button says *☎ Main line*. **It flags and never refuses** — that number is still the only way through — and it clears the moment you move it into *Office phone*. **To find them all: search the Referral Partners tab for *main line*.**
+
+> **Phone type stops being decoration.** It had no reader anywhere in the app until now; it was the workaround for having one phone field. It is the migration signal instead — it is what tells the card which kind of number the legacy value is. Keep it accurate on any row you clean up.
+
+> **⚠⚠ This one needs an Apps Script redeploy, unlike the vendor half.** The Partners sheet is read **by column position**, so the five new columns had to be appended after every existing one and the backend redeployed before they can be saved. Paste `referral-partners-backend.gs`, Deploy → Manage deployments → Edit → New version, then run **backfillIds** once from the editor to write the new header cells. **Until that is done, partner contact fields will not save.** The vendor half needs nothing.
 
 ## 15. Drive Folder Reference
 

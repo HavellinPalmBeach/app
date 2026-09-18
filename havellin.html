@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 9:40am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 11:58am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2554,21 +2554,15 @@ body.no-smf .smf-col{display:none;}
         </select>
       </div>
       <div class="fld-note"><strong>Category:</strong> a firm that does two things is <strong>one</strong> vendor — list both trades in the box above rather than adding a second row, so it keeps one rating, one status and one contact history.</div>
+
+      <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">The firm <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the office line and general inbox, not a person</span></div>
       <div class="fld">
-        <label>Contact first name</label>
-        <input type="text" id="v-contact-first">
-      </div>
-      <div class="fld">
-        <label>Contact last name</label>
-        <input type="text" id="v-contact-last">
-      </div>
-      <div class="fld">
-        <label>Phone</label>
+        <label>Office phone</label>
         <input type="tel" id="v-phone" oninput="formatPhone(this)" maxlength="14">
       </div>
       <div class="fld">
-        <label>Email</label>
-        <input type="email" id="v-email">
+        <label>Office email</label>
+        <input type="email" id="v-email" placeholder="southflorida@company.com">
       </div>
       <div class="fld">
         <label>Website</label>
@@ -2585,6 +2579,51 @@ body.no-smf .smf-col{display:none;}
       <div class="fld">
         <label>License / cert</label>
         <input type="text" id="v-license">
+      </div>
+
+      <div class="fld-wide" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Contacts <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the people, with their own mobiles and addresses</span></div>
+      <div class="fld-note">The office line reaches the firm; these reach a person. Fill in whichever you have — a mobile with no name still earns its slot.</div>
+      <div class="fld-wide" style="margin-top:6px;font-size:11px;font-weight:700;color:var(--gray-dk);">Contact 1</div>
+      <div class="fld">
+        <label>First name</label>
+        <input type="text" id="v-contact-first">
+      </div>
+      <div class="fld">
+        <label>Last name</label>
+        <input type="text" id="v-contact-last">
+      </div>
+      <div class="fld">
+        <label>Title <span class="lbl-hint">— owner, dispatcher…</span></label>
+        <input type="text" id="v-contact-title" placeholder="Owner">
+      </div>
+      <div class="fld">
+        <label>Mobile</label>
+        <input type="tel" id="v-contact-mobile" oninput="formatPhone(this)" maxlength="14">
+      </div>
+      <div class="fld">
+        <label>Email</label>
+        <input type="email" id="v-contact-email" placeholder="andy@company.com">
+      </div>
+      <div class="fld-wide" style="margin-top:6px;font-size:11px;font-weight:700;color:var(--gray-dk);">Contact 2</div>
+      <div class="fld">
+        <label>First name</label>
+        <input type="text" id="v-contact2-first">
+      </div>
+      <div class="fld">
+        <label>Last name</label>
+        <input type="text" id="v-contact2-last">
+      </div>
+      <div class="fld">
+        <label>Title</label>
+        <input type="text" id="v-contact2-title">
+      </div>
+      <div class="fld">
+        <label>Mobile</label>
+        <input type="tel" id="v-contact2-mobile" oninput="formatPhone(this)" maxlength="14">
+      </div>
+      <div class="fld">
+        <label>Email</label>
+        <input type="email" id="v-contact2-email">
       </div>
       <!-- Rating is not in this form: it's earned from completed jobs and can never be
            edited, so it has no business on an edit card. It renders on the vendor card
@@ -2653,14 +2692,33 @@ body.no-smf .smf-col{display:none;}
     <div class="sec" style="margin-bottom:2px;">Quick edit</div>
     <div id="vq-name" style="font-size:13px;font-weight:600;color:var(--bronze);margin-bottom:10px;"></div>
     <input type="hidden" id="vq-id" value="">
-    <label>Contact first name</label>
+    <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Contact 1</div>
+    <label>First name</label>
     <input type="text" id="vq-contact-first" autocomplete="off">
-    <label>Contact last name</label>
+    <label>Last name</label>
     <input type="text" id="vq-contact-last" autocomplete="off">
-    <label>Phone</label>
-    <input type="tel" id="vq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Title</label>
+    <input type="text" id="vq-contact-title" autocomplete="off" placeholder="Owner">
+    <label>Mobile</label>
+    <input type="tel" id="vq-contact-mobile" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
     <label>Email</label>
-    <input type="email" id="vq-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="owner@company.com">
+    <input type="email" id="vq-contact-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="andy@company.com">
+    <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Contact 2</div>
+    <label>First name</label>
+    <input type="text" id="vq-contact2-first" autocomplete="off">
+    <label>Last name</label>
+    <input type="text" id="vq-contact2-last" autocomplete="off">
+    <label>Title</label>
+    <input type="text" id="vq-contact2-title" autocomplete="off">
+    <label>Mobile</label>
+    <input type="tel" id="vq-contact2-mobile" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Email</label>
+    <input type="email" id="vq-contact2-email" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">The firm</div>
+    <label>Office phone</label>
+    <input type="tel" id="vq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Office email</label>
+    <input type="email" id="vq-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="southflorida@company.com">
     <label>Website</label>
     <input type="text" id="vq-website" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Service area</label>
@@ -2854,8 +2912,10 @@ body.no-smf .smf-col{display:none;}
           <option>Wealth manager</option>
           <option>Other</option>
         </select>
-        <label>Phone</label>
+        <label>Direct line <span style="font-weight:400;color:var(--gray);">(their desk, not the switchboard)</span></label>
         <input type="tel" id="r-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <label>Mobile</label>
+        <input type="tel" id="r-mobile" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
         <label>Email</label>
         <input type="email" id="r-email" placeholder="partner@firm.com">
       </div>
@@ -2887,6 +2947,24 @@ body.no-smf .smf-col{display:none;}
         <input type="date" id="r-lastcontacted">
       </div>
     </div>
+    <div class="sec" style="margin-top:14px;font-size:11px;">The firm's line, and the gatekeeper</div>
+    <div class="grid2">
+      <div>
+        <label>Office phone <span style="font-weight:400;color:var(--gray);">(the firm's main number)</span></label>
+        <input type="tel" id="r-officephone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <label>Extension <span style="font-weight:400;color:var(--gray);">(theirs, on that line)</span></label>
+        <input type="text" id="r-phoneext" placeholder="e.g. 214">
+      </div>
+      <div>
+        <label>Assistant / gatekeeper <span style="font-weight:400;color:var(--gray);">(who books the meeting)</span></label>
+        <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
+        <label>Assistant phone</label>
+        <input type="tel" id="r-assistantphone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <label>Assistant email</label>
+        <input type="email" id="r-assistantemail" placeholder="assistant@firm.com">
+      </div>
+    </div>
+
     <details style="margin-top:12px;">
       <summary style="cursor:pointer;font-size:11px;color:var(--bronze);font-weight:600;">Research details &amp; address <span style="font-weight:400;color:var(--gray);">(optional — outreach context)</span></summary>
       <div style="margin-top:10px;">
@@ -2896,11 +2974,9 @@ body.no-smf .smf-col{display:none;}
             <input type="text" id="r-channel" placeholder="e.g. Trust Officer - DECISION AUTHORITY">
             <label>Warm path <span style="font-weight:400;color:var(--gray);">(intro angle)</span></label>
             <input type="text" id="r-warmpath" placeholder="e.g. Family friend of Anthony">
-            <label>Primary contact <span style="font-weight:400;color:var(--gray);">(assistant, if any)</span></label>
-            <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
             <label>Website</label>
             <input type="text" id="r-website" placeholder="firm.com">
-            <label>Phone type</label>
+            <label>Phone type <span style="font-weight:400;color:var(--gray);">(what the Direct line really is)</span></label>
             <input type="text" id="r-phonetype" placeholder="Direct &middot; Main">
           </div>
           <div>
@@ -2962,8 +3038,12 @@ body.no-smf .smf-col{display:none;}
     <input type="text" id="rq-title" autocomplete="off">
     <label>Firm / brokerage</label>
     <input type="text" id="rq-firm" autocomplete="off">
-    <label>Phone</label>
+    <label>Direct line</label>
     <input type="tel" id="rq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Mobile</label>
+    <input type="tel" id="rq-mobile" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <label>Office phone <span style="font-weight:400;color:var(--gray);">(the firm's main number)</span></label>
+    <input type="tel" id="rq-officephone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
     <label>Email</label>
     <input type="email" id="rq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Website</label>
@@ -23631,13 +23711,58 @@ function vendorStatusOptions(sel) {
   }).join('');
 }
 function vendorIdOf(v) { return v && (v._row != null ? v._row : v.vendor_name); }
-// Display name for a vendor's primary contact — prefers the split first/last fields,
-// falls back to the legacy primary_contact for any row not yet migrated (safe to
-// keep after the primary_contact column is deleted; the fallback just yields '').
+// ⚠⚠ A VENDOR IS A FIRM, AND `phone` / `email` ARE THE FIRM'S. The office line and the
+// general inbox (southflorida@navismoving.com) belong to the company; a contact slot is a
+// PERSON, with their own mobile and their own address (andy@navismoving.com). Until
+// 2026-09-18 there was one of each, so the office number rendered under the contact's
+// name — a switchboard presented as somebody's direct line, which is the same defect the
+// 2026-09-09 office-phone build removed from our own signature blocks.
+// ⚠ SLOT 1 KEEPS THE ORIGINAL `contact_first` / `contact_last` KEYS, so no row migrates
+// and every reader of those two goes on working; slot 2 is `contact2_*`.
+var VENDOR_CONTACT_SLOTS = [
+  { n: 1, first: 'contact_first',  last: 'contact_last',  title: 'contact_title',  mobile: 'contact_mobile',  email: 'contact_email'  },
+  { n: 2, first: 'contact2_first', last: 'contact2_last', title: 'contact2_title', mobile: 'contact2_mobile', email: 'contact2_email' }
+];
+// Which vendor column keys hold a NUMBER. Derived from the slots rather than listed,
+// so a contact mobile can never be added to the form and forgotten here — which would
+// save its raw digits back over a formatted number on every quick edit.
+function isVendorPhoneKey(key) {
+  if (key === 'phone') return true;   // the firm's office line
+  for (var i = 0; i < VENDOR_CONTACT_SLOTS.length; i++) {
+    if (VENDOR_CONTACT_SLOTS[i].mobile === key) return true;
+  }
+  return false;
+}
+// THE ONE DEFINITION of who you can reach at a vendor — read by the card, the search
+// blob and the Quo sync's mirror of it. Two copies of this is how the card comes to
+// offer a number the search cannot find.
+function vendorContacts(v) {
+  if (!v) return [];
+  var out = [];
+  VENDOR_CONTACT_SLOTS.forEach(function(slot){
+    var first = String(v[slot.first] || '').trim();
+    var last  = String(v[slot.last]  || '').trim();
+    // The retired single-contact column only ever described slot 1.
+    var name = (first + ' ' + last).trim() || (slot.n === 1 ? String(v.primary_contact || '').trim() : '');
+    var c = {
+      slot: slot.n, first: first, last: last, name: name,
+      title:  String(v[slot.title]  || '').trim(),
+      mobile: String(v[slot.mobile] || '').trim(),
+      email:  String(v[slot.email]  || '').trim()
+    };
+    // ⚠ A NUMBER WITH NO NAME STILL COUNTS. That is a card somebody was handed and
+    // half-typed standing in a driveway, and requiring the name would throw away the
+    // one thing on the slot worth having. An entirely empty slot is not a person.
+    if (c.name || c.mobile || c.email) out.push(c);
+  });
+  return out;
+}
+// Display name for a vendor's primary contact — reads the shared slot definition, so it
+// cannot drift from the form. Prefers slot 1 and falls back to slot 2 when only the
+// second is filled in; a vendor with no named contact answers '' exactly as before.
 function _vendorContact(v) {
-  if (!v) return '';
-  var n = ((v.contact_first || '') + ' ' + (v.contact_last || '')).trim();
-  return n || v.primary_contact || '';
+  var named = vendorContacts(v).filter(function(c){ return c.name; });
+  return named.length ? named[0].name : '';
 }
 function lookupVendorById(id) {
   if (id == null || id === '') return null;
@@ -24694,14 +24819,20 @@ function populateJobMenus() {
 // is ~150 rows, so the scan is free, and a cached blob would go stale the moment a
 // card edit patched a field (and would get persisted into the localStorage cache).
 function vendorSearchBlob(v) {
-  return [
-    v.vendor_name, v.category, v.category_group, v.contact_first, v.contact_last,
+  var parts = [
+    v.vendor_name, v.category, v.category_group,
     v.email, v.website, v.physical_address, v.service_area, v.notes,
     v.status, v.license_cert, v.pricing_structure,
     // Fit label so typing "eager" pulls up the first-call shortlist.
     (VENDOR_FIT[vendorFit(v)] || {}).label,
     String(v.phone||'').replace(/\D/g,'')
-  ].filter(Boolean).join(' ').toLowerCase();
+  ];
+  // ⚠ READ THROUGH vendorContacts SO THE LIST CANNOT DRIFT FROM THE FORM. Typing a
+  // contact's mobile must find them, or the field reads as one that did not save.
+  vendorContacts(v).forEach(function(c){
+    parts.push(c.first, c.last, c.title, c.email, String(c.mobile||'').replace(/\D/g,''));
+  });
+  return parts.filter(Boolean).join(' ').toLowerCase();
 }
 function vendorMatchesQuery(v, q) {
   if (!q) return true;
@@ -25013,19 +25144,33 @@ function vendorCardHtml(v) {
   var idAttr = esc(String(id)).replace(/'/g, "\\'");
 
   // Highlighted contact + service-area block — the primary reason to open a card.
+  // ⚠ THE FIRM ROW CARRIES NO NAME. `phone` is the office line and `email` the general
+  // inbox, so putting the contact's name at the head of that row is what presented a
+  // switchboard as somebody's direct number. Each person gets their own row below.
   var cbits = [];
-  var _cname = _vendorContact(v);
-  if (_cname) cbits.push('<strong>' + esc(_cname) + '</strong>');
   var vph = fmtPhoneDisplay(v.phone);
-  if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a>');
+  if (vph) cbits.push('☎ <a href="tel:' + esc(v.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(vph) + '</a> <span style="color:var(--gray);">office</span>');
   if (v.email) cbits.push('✉ <a href="mailto:' + esc(v.email) + '" style="color:var(--bronze);">' + esc(v.email) + '</a>');
   var web = _vendorWebUrl(v.website);
   if (web) cbits.push('🌐 <a href="' + esc(web.href) + '" target="_blank" rel="noopener noreferrer" style="color:var(--bronze);">' + esc(web.label) + '</a>');
   var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
+  // One row per person, reading through the shared slot definition so the card can
+  // never offer a field the form does not write or the search cannot find.
+  var peopleRows = vendorContacts(v).map(function(c){
+    var bits = [];
+    if (c.name)  bits.push('<strong>' + esc(c.name) + '</strong>');
+    if (c.title) bits.push('<span style="color:var(--gray);">' + esc(c.title) + '</span>');
+    // A slot with a number and no name is a half-typed card, not a mistake — say so
+    // rather than rendering a bare number with nothing to attach it to.
+    if (!c.name) bits.push('<span style="color:var(--gray);font-style:italic;">name not recorded</span>');
+    if (c.mobile) bits.push('☎ <a href="tel:' + esc(c.mobile) + '" style="color:var(--bronze);text-decoration:none;font-weight:600;">' + esc(fmtPhoneDisplay(c.mobile) || c.mobile) + '</a> <span style="color:var(--gray);">mobile</span>');
+    if (c.email)  bits.push('✉ <a href="mailto:' + esc(c.email) + '" style="color:var(--bronze);">' + esc(c.email) + '</a>');
+    return '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + bits.join(' &nbsp;·&nbsp; ') + '</div>';
+  }).join('');
   var addrRow = v.physical_address ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Address</span> ' + esc(v.physical_address) + '</div>' : '';
   var areaRow = v.service_area ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Service area</span> <strong>' + esc(v.service_area) + '</strong></div>' : '';
-  var contactBlock = (contactRow || addrRow || areaRow)
-    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + contactRow + addrRow + areaRow + '</div>'
+  var contactBlock = (contactRow || peopleRows || addrRow || areaRow)
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + contactRow + peopleRows + addrRow + areaRow + '</div>'
     : '';
 
   var pricing = _vLine([['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]]);
@@ -25044,13 +25189,30 @@ function vendorCardHtml(v) {
   // The inline contact block above already carries tel:/mailto: links, but they're
   // 11px text — these are thumb-sized targets for calling from a job site. Text uses
   // sms: so a "where are you?" to a no-show vendor is one tap.
-  var tapBits = [];
-  if (v.phone) {
-    tapBits.push('<a href="tel:' + esc(v.phone) + '" class="btn-p" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">☎ Call</a>');
-    tapBits.push('<a href="sms:' + esc(v.phone) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">✉ Text</a>');
-  }
-  if (v.email) tapBits.push('<a href="mailto:' + esc(v.email) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">@ Email</a>');
-  var tapRow = tapBits.length ? '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + tapBits.join('') + '</div>' : '';
+  // ⚠ ONE ROW PER PARTY, AND EACH ROW SAYS WHO IT REACHES. A single unlabelled Call
+  // button over a firm with three numbers makes you guess which one it dials, which is
+  // the whole thing the contact split exists to answer.
+  var _tapBtn = function(href, cls, label){
+    return '<a href="' + esc(href) + '" class="' + cls + '" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">' + esc(label) + '</a>';
+  };
+  var tapRows = [];
+  var officeBits = [];
+  // ⚠ NO TEXT BUTTON ON THE OFFICE LINE. A switchboard does not receive SMS, and the
+  // "where are you?" that button exists for is a message to a PERSON — which is what
+  // the contact mobiles below are. Offering it here was only ever right while `phone`
+  // was the one number a vendor had.
+  if (v.phone) officeBits.push(_tapBtn('tel:' + v.phone, 'btn-p', '☎ Office'));
+  if (v.email) officeBits.push(_tapBtn('mailto:' + v.email, 'btn-s', '@ Office email'));
+  if (officeBits.length) tapRows.push(officeBits);
+  vendorContacts(v).forEach(function(c){
+    if (!c.mobile) return;   // nothing to dial; their email is a link in the block above
+    var who = c.first || c.name || 'Mobile';
+    tapRows.push([ _tapBtn('tel:' + c.mobile, 'btn-p', '☎ ' + who),
+                   _tapBtn('sms:' + c.mobile, 'btn-s', '✉ Text ' + who) ]);
+  });
+  var tapRow = tapRows.map(function(bits){
+    return '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + bits.join('') + '</div>';
+  }).join('');
 
   // Logging a contact is a deliberate event: type what you discussed, then log. It
   // overwrites the single latest note and stamps today's date (single-note model).
@@ -25092,7 +25254,13 @@ function vendorCardHtml(v) {
 // Map form-field ids → sheet column keys (as produced by the sync script's vendorKey).
 var VENDOR_FORM_MAP = {
   'v-name':'vendor_name', 'v-group':'category_group', 'v-category':'category',
-  'v-contact-first':'contact_first', 'v-contact-last':'contact_last', 'v-phone':'phone', 'v-email':'email',
+  // `phone` / `email` are the FIRM's office line and general inbox; a person's own
+  // mobile and address live on their contact slot. See VENDOR_CONTACT_SLOTS.
+  'v-phone':'phone', 'v-email':'email',
+  'v-contact-first':'contact_first', 'v-contact-last':'contact_last',
+  'v-contact-title':'contact_title', 'v-contact-mobile':'contact_mobile', 'v-contact-email':'contact_email',
+  'v-contact2-first':'contact2_first', 'v-contact2-last':'contact2_last',
+  'v-contact2-title':'contact2_title', 'v-contact2-mobile':'contact2_mobile', 'v-contact2-email':'contact2_email',
   'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
   'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity',
   'v-license':'license_cert',
@@ -25146,6 +25314,9 @@ function closeVendorForm(){ document.getElementById('add-vendor-modal').style.di
 // field edit can never blank out vetting data.
 var VENDOR_QUICK_MAP = {
   'vq-contact-first':'contact_first', 'vq-contact-last':'contact_last',
+  'vq-contact-title':'contact_title', 'vq-contact-mobile':'contact_mobile', 'vq-contact-email':'contact_email',
+  'vq-contact2-first':'contact2_first', 'vq-contact2-last':'contact2_last',
+  'vq-contact2-title':'contact2_title', 'vq-contact2-mobile':'contact2_mobile', 'vq-contact2-email':'contact2_email',
   'vq-phone':'phone', 'vq-email':'email', 'vq-website':'website',
   'vq-area':'service_area', 'vq-notes':'notes'
 };
@@ -25155,10 +25326,16 @@ function quickEditVendor(id) {
   document.getElementById('vq-id').value = String(id);
   document.getElementById('vq-name').textContent = v.vendor_name || 'Vendor';
   Object.keys(VENDOR_QUICK_MAP).forEach(function(fid){ _setV(fid, v[VENDOR_QUICK_MAP[fid]]); });
-  // Show the phone the way it reads on the card. Stored values are a mix of raw
+  // Show every number the way it reads on the card. Stored values are a mix of raw
   // digits (bulk import) and formatted (typed in) — saveVendorQuickEdit compares
-  // phones digit-wise so displaying it formatted never fabricates a change.
-  _setV('vq-phone', fmtPhoneDisplay(v.phone) || v.phone || '');
+  // phones digit-wise so displaying them formatted never fabricates a change.
+  // ⚠ DERIVED FROM THE MAP, never a list of ids: a contact mobile added to the slots
+  // and forgotten here would save its raw digits back over a formatted number.
+  Object.keys(VENDOR_QUICK_MAP).forEach(function(fid){
+    var key = VENDOR_QUICK_MAP[fid];
+    if (!isVendorPhoneKey(key)) return;
+    _setV(fid, fmtPhoneDisplay(v[key]) || v[key] || '');
+  });
   var fb = document.getElementById('vq-fb'); if (fb) fb.textContent = '';
   document.getElementById('v-quick-modal').style.display = 'flex';
 }
@@ -25181,9 +25358,11 @@ function saveVendorQuickEdit() {
     var key = VENDOR_QUICK_MAP[fid];
     var val = _getV(fid);
     var cur = String(v[key] == null ? '' : v[key]).trim();
-    // Phone is compared on digits only, so re-displaying "5615550100" as
-    // "(561) 555-0100" isn't mistaken for an edit.
-    if (key === 'phone') { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
+    // Every phone is compared on digits only, so re-displaying "5615550100" as
+    // "(561) 555-0100" isn't mistaken for an edit. Contact mobiles included — they are
+    // prefilled formatted above, so comparing them as strings would post a patch on
+    // every quick save that touched nothing.
+    if (isVendorPhoneKey(key)) { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
     else if (val === cur) return;
     patch[key] = val;
   });
@@ -25493,7 +25672,13 @@ function logVendorContact(btn, id) {
 // sync script's columns; _row is the sheet row for updates.
 var REFERRAL_FORM_MAP = {
   'r-fname':'first_name','r-lname':'last_name','r-type':'partner_type','r-firm':'firm',
+  // ⚠ A PARTNER IS A PERSON. `phone` is their DIRECT line and `mobile` their cell;
+  // `office_phone` is the FIRM's switchboard, which several partners at one firm
+  // legitimately share. `primary_contact` was always the assistant's name — it now sits
+  // beside that person's own number and address rather than in the research block.
   'r-contact':'primary_contact','r-phone':'phone','r-email':'email','r-website':'website',
+  'r-mobile':'mobile','r-officephone':'office_phone','r-phoneext':'phone_ext',
+  'r-assistantphone':'assistant_phone','r-assistantemail':'assistant_email',
   'r-status':'status','r-owner':'owner',
   'r-lastcontacted':'last_contacted','r-notes':'notes',
   // Prospecting intel (mirrors the source contact spreadsheet)
@@ -25502,6 +25687,22 @@ var REFERRAL_FORM_MAP = {
   'r-actec':'actec','r-council':'council','r-councilrole':'council_role',
   'r-channel':'channel','r-priority':'priority','r-warmpath':'warm_path'
 };
+// Which partner column keys hold a NUMBER, named once rather than tested field by
+// field — a number added to the quick card and missed here saves its raw digits back
+// over a formatted one on every edit.
+var REFERRAL_PHONE_KEYS = ['phone', 'mobile', 'office_phone', 'assistant_phone'];
+// ⚠ `phone_type` HAD NO READER IN THE APP UNTIL NOW — it was the workaround for having
+// one phone field, recording whether that number was the person's or the firm's. With a
+// real office_phone column it becomes the migration signal instead: a row whose stored
+// type says main/switchboard, and which has nothing in office_phone, is a switchboard
+// still sitting in the direct-line field. 32 of the 79 seed rows are in that state.
+// Filling in Office phone is what clears it; the flag never refuses anything.
+function referralPhoneIsMainLine(p) {
+  if (!p || !String(p.phone || '').trim()) return false;
+  if (String(p.office_phone || '').trim()) return false;   // already sorted out
+  return /main|switch|reception|general/i.test(String(p.phone_type || ''));
+}
+function isReferralPhoneKey(key) { return REFERRAL_PHONE_KEYS.indexOf(key) !== -1; }
 function _setR(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
 function _getR(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
 function referralIdOf(p){ return p._row!=null ? String(p._row) : ''; }
@@ -25587,7 +25788,16 @@ function referralSearchBlob(p) {
     p.partner_name, p.first_name, p.last_name, p.title, p.firm, p.partner_type,
     p.email, p.website, p.city, p.state, p.council, p.council_role, p.credentials,
     p.notes, p.warm_path, p.status, p.owner,
-    String(p.phone||'').replace(/\D/g,'')
+    // ⚠ EVERY NUMBER AND ADDRESS ON THE RECORD. Typing a partner's cell must find them,
+    // or the field reads as one that did not save. The assistant too — "who is Marie at
+    // Gunster" is a real search.
+    p.primary_contact, p.assistant_email, p.phone_ext, p.phone_type,
+    // So "main line" pulls up the rows whose direct-line field still holds a switchboard.
+    (referralPhoneIsMainLine(p) ? 'firm main line, not direct' : ''),
+    String(p.phone||'').replace(/\D/g,''),
+    String(p.mobile||'').replace(/\D/g,''),
+    String(p.office_phone||'').replace(/\D/g,''),
+    String(p.assistant_phone||'').replace(/\D/g,'')
   ].filter(Boolean).join(' ').toLowerCase();
 }
 function referralSearchQuery() {
@@ -25703,7 +25913,8 @@ function setReferralStatusFromCard(id, val){ if (!val) return; _quickWriteReferr
 // Contact-detail subset for working on the road, mirroring quickEditVendor. Status,
 // priority, channel and the prospecting intel stay on the full form.
 var REFERRAL_QUICK_MAP = {
-  'rq-title':'title', 'rq-firm':'firm', 'rq-phone':'phone', 'rq-email':'email',
+  'rq-title':'title', 'rq-firm':'firm', 'rq-phone':'phone', 'rq-mobile':'mobile',
+  'rq-officephone':'office_phone', 'rq-email':'email',
   'rq-website':'website', 'rq-city':'city', 'rq-notes':'notes'
 };
 function quickEditReferral(id) {
@@ -25712,7 +25923,14 @@ function quickEditReferral(id) {
   document.getElementById('rq-id').value = String(id);
   document.getElementById('rq-name').textContent = p.partner_name || 'Partner';
   Object.keys(REFERRAL_QUICK_MAP).forEach(function(fid){ _setR(fid, p[REFERRAL_QUICK_MAP[fid]]); });
-  _setR('rq-phone', fmtPhoneDisplay(p.phone) || p.phone || '');
+  // Every number shows formatted, and saveReferralQuickEdit compares them digit-wise,
+  // so re-displaying a bulk-imported "5615550100" never reads as an edit. Derived from
+  // the map rather than listed, so a number added to the quick card cannot miss this.
+  Object.keys(REFERRAL_QUICK_MAP).forEach(function(fid){
+    var key = REFERRAL_QUICK_MAP[fid];
+    if (!isReferralPhoneKey(key)) return;
+    _setR(fid, fmtPhoneDisplay(p[key]) || p[key] || '');
+  });
   document.getElementById('r-quick-modal').style.display = 'flex';
 }
 function closeReferralQuickEdit(){ document.getElementById('r-quick-modal').style.display = 'none'; }
@@ -25730,8 +25948,9 @@ function saveReferralQuickEdit() {
     var key = REFERRAL_QUICK_MAP[fid];
     var val = _getR(fid);
     var cur = String(p[key] == null ? '' : p[key]).trim();
-    // Phone compared digit-wise so re-displaying it formatted isn't seen as an edit.
-    if (key === 'phone') { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
+    // Every number compared digit-wise so re-displaying one formatted isn't seen as an
+    // edit — mobile and the office line included, since they are prefilled formatted.
+    if (isReferralPhoneKey(key)) { if (val.replace(/\D/g,'') === cur.replace(/\D/g,'')) return; }
     else if (val === cur) return;
     patch[key] = val;
   });
@@ -25778,30 +25997,66 @@ function referralCardHtml(p){
   if (p.firm) roleBits.push(esc(p.firm));
   var roleRow = roleBits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.6;">' + roleBits.join(' &middot; ') + '</div>' : '';
 
+  // ⚠⚠ `phone` IS THE PARTNER'S DIRECT LINE AND ON 32 OF 79 SEED ROWS IT IS NOT — it is
+  // the firm's switchboard, recorded before there was anywhere else to put it, and
+  // `phone_type` is what says so. Calling that "direct" on the card is the same defect
+  // as printing an office line as somebody's mobile, so the card reads the flag and says
+  // which it is. It is a prompt to move the number into Office phone, not a refusal.
+  var _mainish = referralPhoneIsMainLine(p);
   var cbits = [];
   var ph = fmtPhoneDisplay(p.phone);
-  if (ph) cbits.push('☎ <a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(ph) + '</a>');
+  if (ph) cbits.push('☎ <a href="tel:' + esc(p.phone) + '" style="color:var(--bronze);text-decoration:none;font-weight:600;">' + esc(ph) + '</a> <span style="color:' + (_mainish ? 'var(--warn-tx)' : 'var(--gray)') + ';">' + (_mainish ? 'firm main line, not direct' : 'direct') + '</span>');
+  var mob = fmtPhoneDisplay(p.mobile);
+  if (mob) cbits.push('☎ <a href="tel:' + esc(p.mobile) + '" style="color:var(--bronze);text-decoration:none;font-weight:600;">' + esc(mob) + '</a> <span style="color:var(--gray);">mobile</span>');
+  var off = fmtPhoneDisplay(p.office_phone);
+  if (off) cbits.push('☎ <a href="tel:' + esc(p.office_phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(off) + '</a> <span style="color:var(--gray);">office' + (String(p.phone_ext||'').trim() ? ' ext ' + esc(String(p.phone_ext).trim()) : '') + '</span>');
   if (p.email) cbits.push('✉ <a href="mailto:' + esc(p.email) + '" style="color:var(--bronze);">' + esc(p.email) + '</a>');
   var contactRow = cbits.length ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;">' + cbits.join(' &nbsp;·&nbsp; ') + '</div>' : '';
+  // The gatekeeper gets their own line. At a firm this is who actually books the meeting,
+  // and until now their name sat in a research block with nowhere to record their number.
+  var _asstBits = [];
+  if (String(p.primary_contact||'').trim()) _asstBits.push('<strong>' + esc(String(p.primary_contact).trim()) + '</strong>');
+  var _ap = fmtPhoneDisplay(p.assistant_phone);
+  if (_ap) _asstBits.push('☎ <a href="tel:' + esc(p.assistant_phone) + '" style="color:var(--bronze);text-decoration:none;">' + esc(_ap) + '</a>');
+  if (String(p.assistant_email||'').trim()) _asstBits.push('✉ <a href="mailto:' + esc(String(p.assistant_email).trim()) + '" style="color:var(--bronze);">' + esc(String(p.assistant_email).trim()) + '</a>');
+  var asstRow = _asstBits.length
+    ? '<div style="font-size:12px;color:var(--gray-dk);line-height:1.7;"><span style="color:var(--gray);">Assistant</span> ' + _asstBits.join(' &nbsp;·&nbsp; ') + '</div>'
+    : '';
 
   var _loc = [p.city, p.state].filter(function(x){ return String(x||'').trim(); }).join(', ');
   var locRow = _loc ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Location</span> ' + esc(_loc) + '</div>' : '';
   var councilRow = String(p.council||'').trim()
     ? '<div style="font-size:12px;color:var(--gray-dk);"><span style="color:var(--gray);">Council</span> ' + esc(p.council) + (String(p.council_role||'').trim() ? ' — <strong>' + esc(p.council_role) + '</strong>' : '') + '</div>'
     : '';
-  var contactBlock = (roleRow || contactRow || locRow || councilRow)
-    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + roleRow + contactRow + locRow + councilRow + '</div>'
+  var contactBlock = (roleRow || contactRow || asstRow || locRow || councilRow)
+    ? '<div style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:7px 10px;margin:6px 0;">' + roleRow + contactRow + asstRow + locRow + councilRow + '</div>'
     : '';
 
   // Mobile-only tap-to-contact strip, same as the vendor card (.vc-tap is hidden
   // until the breakpoint) — thumb-sized targets for reaching a partner in the field.
-  var tapBits = [];
-  if (p.phone) {
-    tapBits.push('<a href="tel:' + esc(p.phone) + '" class="btn-p" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">☎ Call</a>');
-    tapBits.push('<a href="sms:' + esc(p.phone) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">✉ Text</a>');
+  // One row per party, each saying who it reaches — same rule as the vendor card. An
+  // unlabelled Call over a partner with a desk line, a cell and a switchboard makes you
+  // guess which it dials.
+  var _pTap = function(href, cls, label){
+    return '<a href="' + esc(href) + '" class="' + cls + '" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">' + esc(label) + '</a>';
+  };
+  var _pRows = [];
+  var _r1 = [];
+  // ⚠ NO TEXT BUTTON ON A DESK LINE OR A SWITCHBOARD — neither receives SMS. Texting is
+  // offered on the mobile row below, which is the only number that can take one.
+  if (p.phone) _r1.push(_pTap('tel:' + p.phone, 'btn-p', _mainish ? '☎ Main line' : '☎ Direct'));
+  else if (p.office_phone) _r1.push(_pTap('tel:' + p.office_phone, 'btn-p', '☎ Office'));
+  if (p.email) _r1.push(_pTap('mailto:' + p.email, 'btn-s', '@ Email'));
+  if (_r1.length) _pRows.push(_r1);
+  if (p.mobile) _pRows.push([ _pTap('tel:' + p.mobile, 'btn-p', '☎ Mobile'),
+                              _pTap('sms:' + p.mobile, 'btn-s', '✉ Text') ]);
+  if (p.assistant_phone) {
+    var _an = String(p.primary_contact||'').trim().split(/\s+/)[0] || 'assistant';
+    _pRows.push([ _pTap('tel:' + p.assistant_phone, 'btn-s', '☎ ' + _an) ]);
   }
-  if (p.email) tapBits.push('<a href="mailto:' + esc(p.email) + '" class="btn-s" style="flex:1;text-align:center;text-decoration:none;line-height:26px;">@ Email</a>');
-  var tapRow = tapBits.length ? '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + tapBits.join('') + '</div>' : '';
+  var tapRow = _pRows.map(function(bits){
+    return '<div class="vc-tap" style="gap:6px;margin:2px 0 6px;">' + bits.join('') + '</div>';
+  }).join('');
 
   var warm = String(p.warm_path||'').trim() ? '<div style="font-size:11px;color:var(--bronze);margin-top:4px;">Warm path: ' + esc(p.warm_path) + '</div>' : '';
   var stats = _rst.count > 0 ? '<div style="font-size:11px;color:var(--bronze);font-weight:600;margin-top:4px;">' + _rst.count + ' referral' + (_rst.count!==1?'s':'') + ' · ' + _rst.won + ' won · $' + Math.round(_rst.wonRev).toLocaleString() + ' won</div>' : '';

@@ -1,5 +1,150 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE OFFICE LINE WAS PRESENTED AS SOMEBODY'S DIRECT NUMBER (BUILT 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — THE PARTNER HALF ONLY.** `referral-partners-backend.gs`
+and `apps-script/quo-sync.gs` (one project, one deployment). **The vendor half is app-only and
+needs nothing.** Anthony: *"they'll be an email for let's say South Florida at navismoving.com and
+then we'll get the owner Andy's email and he's Andy at navismoving.com … office phone number,
+office email, and then two contacts per vendor with cell phone and personal email fields. And I
+guess just do the same thing for the referral partners."* Scoped first; he took the recommendation
+to include a title per contact and **not** to copy the vendor shape onto partners.
+
+- **⚠⚠ THE DEFECT IS NOT "A MISSING FIELD", IT IS A NUMBER PRESENTED AS SOMEBODY'S WHEN IT IS NOT —
+  and it was measured on the real seed data before anything was built.** Of the **79** partner rows,
+  **32 carry `phone_type: Main`**: the firm's switchboard sitting in the one phone field, which the
+  card renders under that person's name and the Call button dials. **13 partners share 5 numbers**
+  between them (Comiter alone is 4 people on one line). Byte-for-byte the 2026-09-09 defect that
+  would have printed the Havellin office line as a concierge's personal mobile, on the directory
+  rather than on our own signature block.
+- **⚠⚠ A VENDOR IS A FIRM AND A PARTNER IS A PERSON, AND COPYING ONE SHAPE ONTO THE OTHER WAS THE
+  WRONG ANSWER.** Anthony asked for the same two contact slots on both. A vendor has people inside
+  it, so two slots is right. **Four partners at Comiter are already four rows**, so a second contact
+  slot on each would model one firm five different ways. What a partner needs is their own line,
+  their cell, the firm's switchboard with their extension on it, and **the assistant who books the
+  meeting** — and `primary_contact` was already that person's name, buried in the research block
+  with nowhere to record their number. Put back to him before building; he took it.
+- **⚠⚠ NOTHING WAS RENAMED, WHICH IS WHY THE VENDOR HALF NEEDS NO REDEPLOY.** `phone` and `email`
+  keep their column names and become the office line and the general inbox **by label only**; slot 1
+  keeps `contact_first` / `contact_last`. 152 rows and ~20 readers are untouched. And
+  `addVendor`/`updateVendor` **create any column they are asked to write**, so the eight new vendor
+  columns appear on the existing sheet by themselves.
+- **⚠⚠ I BROKE THE APPEND-ONLY RULE ON THE PARTNER SHEET AND CAUGHT IT IN THE SAME SESSION.**
+  `COLUMNS` in `referral-partners-backend.gs` is read **by position** and its own comment says
+  *APPEND ONLY, never reorder*. The first cut slotted the five new keys in before the two historical
+  `quo_*` columns, moving `quo_contact_id` from index 33 to 38 — so every read of column 34 on the
+  **live** sheet would have handed back a Quo contact id as somebody's office phone, **and the dialer
+  would then have called it**. Moved to the true end. A test now pins all 35 legacy positions
+  individually and asserts the array length, so the next append cannot do it quietly.
+- **⚠ `phone_type` HAD NO READER IN 30,000 LINES AND IS LOAD-BEARING NOW.** It was the workaround for
+  having one phone field. `referralPhoneIsMainLine` reads it: a row typed Main with nothing in
+  `office_phone` is a switchboard still in the direct-line field, and the card says
+  *"firm main line, not direct"* with the button relabelled **☎ Main line**. **It flags and never
+  refuses** — that number is still the only way through — **and it clears the moment the number is
+  moved into Office phone**, so it is a cleanup somebody can finish rather than a permanent nag. The
+  flag text is in the search blob, so typing *main line* pulls up exactly the 32 rows.
+- **⚠ `vendorContacts(v)` IS THE ONE DEFINITION** of who you can reach at a vendor, read by the card,
+  the tap strip and the search blob. Two copies of that rule is how the card comes to offer a number
+  the search cannot find — the drift this file records more than anything else.
+  - **⚠ A NUMBER WITH NO NAME STILL COUNTS.** That is a card handed over in a driveway and
+    half-typed; requiring the name would throw away the only thing on the slot worth having. The card
+    says *name not recorded*. **A title alone does not count** — there is nobody to reach.
+  - **⚠ `isVendorPhoneKey` IS DERIVED FROM THE SLOTS, NEVER LISTED.** The quick card prefills every
+    number FORMATTED and compares it digit-wise; a mobile added to the slots and missed there would
+    compare `(561) 555-0111` against `5615550111`, read as an edit on every save, and write the
+    formatted string back over the stored digits.
+- **⚠ NO TEXT BUTTON ON A SWITCHBOARD OR A DESK LINE.** The tap strip's own comment says the Text
+  button exists for *"a 'where are you?' to a no-show vendor"* — that is a message to a PERSON, and
+  it was only ever on `phone` because `phone` was the one number a vendor had. It follows the
+  mobiles now. **One row per party, each naming who it reaches** (*☎ Office* · *☎ Andy* ·
+  *✉ Text Andy*), because an unlabelled Call button over a firm with three numbers makes you guess
+  which one it dials — the exact question the split exists to answer.
+- **⚠⚠ THE QUO SYNC IS THE PAYOFF, AND THE EXTERNAL IDs ARE THE WHOLE MIGRATION.** One vendor row now
+  produces up to three contacts, so Andy calling from his cell resolves as *Andy — Navis Moving*
+  instead of an unknown number. **The office record keeps its original `vendor:<uid>` and the person
+  record its bare `<uid>`**; only the new records are suffixed. Suffixing everything would leave all
+  **199 live contacts** matching nothing — the next run creates 199 duplicates **and reports the
+  originals STALE for deletion**.
+  - **⚠⚠ A NUMBER IS ATTRIBUTED TO A PERSON ONLY WHEN IT IS THE BEST WAY TO REACH THEM.** Once a
+    contact has their own mobile the office line goes back to being the FIRM's, because naming it
+    after them puts their name on the receptionist's calls. Until then it keeps the name it has
+    always had — **which is why this ships with ZERO churn**: no mobile is recorded on any of the 152
+    rows today, so every existing contact is left exactly as it reads.
+  - **⚠ A PARTNER'S DESK LINE AND CELL ARE ONE CARD, NOT TWO.** The rule this file is built on is
+    that a NUMBER resolves to one name — which forbids one number on two cards and says nothing
+    against two numbers on one. They are the same person; two cards would be the ambiguity.
+  - **⚠ THE FIRM RECORD IS KEYED `firm:<number>`, NOT `<uid>:office`.** Four partners at one firm
+    emit four identical ids that collapse to one contact; keying on a uid would make the surviving
+    contact depend on which partner happened to be first, and removing that partner would orphan it.
+    It is also the id `_firmPayload` already mints, so the five collapsed switchboard contacts Quo
+    holds today update in place.
+  - **⚠ AN EMAIL-ONLY CONTACT IS DELIBERATELY NOT SYNCED.** There is nothing to resolve on caller ID,
+    and a contact with no number is a row in the dialer that can never ring.
+- **5907 committed checks** (`tests/contact-fields.test.js`, 436 new — the first coverage of what a
+  directory record's contact fields ARE). **All 27 changes revert-verified individually, ZERO green
+  after the four below were re-done** — the office row losing its name fails 1, the contacts dropped
+  from the card 3, the search 7, the switchboard flag 6, the quick card's comparison 4, the column
+  positions 4, and the rest 1–4.
+  - **⚠⚠ TWO GREENS WERE THE SAME GAP AND IT IS THE ONE THIS FILE RECORDS MOST: EVERY CHECK DROVE A
+    PIECE AND NOTHING DROVE THE JOIN.** `isVendorPhoneKey` was tested alone and the map contents were
+    tested alone, and **nothing drove `quickEditVendor` → the form → the patch**. So breaking the
+    prefill, and breaking the digit-wise comparison, each changed nothing any check could see — on the
+    surface Anthony actually described using. There is a group that drives the real modal through a
+    `domStub` now: it asserts every number prefills formatted, that **opening and saving without
+    touching anything writes NOTHING**, and that a real edit writes only what changed.
+  - **⚠⚠ THE THIRD GREEN WAS MY REVERT BEING INVISIBLE TO MY OWN TEST.** The columns check parsed
+    with `/'([a-z_0-9]+)'/`, so the `office_phone_MOVED` sentinel I inserted to prove the position
+    test worked **carried a capital and was skipped entirely** — the array read as unchanged and the
+    check passed. Widened to any quoted token. **⚠ And widening it then matched the apostrophes in
+    my own explanatory comments** (*"a PARTNER IS A PERSON… vendor's"*), so the block is
+    comment-stripped — the sixth time this file records a needle tripping on the prose explaining
+    the fix.
+  - **⚠ THE FOURTH GREEN WAS THE COLLECTOR→PAYLOAD JOIN.** Deleting the line that copies `extras`
+    onto `phoneNumbers` broke nothing: a partner's cell was collected and then thrown away on the way
+    out of the door. Driven now.
+  - **⚠ AND A FIFTH APPEARED AFTER THE FIX: THE GUARD WAS DRIVEN AND NOTHING CHECKED IT WAS CALLED.**
+    Deleting `_pruneAmbiguousExtras(all, byPhone, plan)` from `syncQuoAll` passed. The real
+    `syncQuoAll` runs end to end in dry-run now, which also covers the grouping and the firm collapse.
+- **⚠ `_pruneAmbiguousExtras` WAS EXTRACTED SO IT COULD BE DRIVEN RATHER THAN GREPPED.** It lived
+  inline in `syncQuoAll`, so the only available check was that its source text was present — and a
+  guard that computes the right answer and then throws it away contains every string such a check
+  looks for. Same gap as the DocuSign certificate fetch.
+- **Verified end to end in headless Chromium on the real page:**
+
+  | | |
+  |---|---|
+  | Navis Moving, the firm row | `☎ (561) 555-0100 office · ✉ southflorida@navismoving.com · 🌐 navismoving.com`, **no name on it** |
+  | its two people | *Andy Ramirez · Owner · ☎ (561) 555-0111 mobile · ✉ andy@navismoving.com* and *Dave Chen · Dispatch · ☎ …0122 mobile* |
+  | its tap strip | `☎ Office` · `@ Office email` · `☎ Andy` · `✉ Text Andy` · `☎ Dave` · `✉ Text Dave` |
+  | a vendor with only an office line (today's 152 rows) | reads exactly as before — **no mobile row, no Text button** |
+  | `sms:` links on the whole page | **exactly the three mobiles**, none on any office or desk line |
+  | David Pratt | `☎ …9023 direct · ☎ …1212 mobile · ☎ …2000 office ext 214`, then *Assistant Marie Duval · ☎ · ✉* |
+  | Richard Comiter (the 32-row case) | *"☎ (561) 626-2101 **firm main line, not direct**"* · button **☎ Main line** |
+  | searching a contact's mobile digits | finds the firm · searching *owner* finds it · searching *main line* finds Comiter |
+  | the quick card | every number prefills formatted; open-and-save writes nothing |
+  | the vendor form | 29 `.fld` cells, **no control pushed away from its own label** |
+
+  Overflow **0** at 1440 / 768 / 390px on both tabs, **no page errors**. The app's `<style>` block is
+  **byte-identical** at 73,364 bytes.
+- **⚠ THE FORM GAINED A SECTION HEADER RATHER THAN MORE CELLS.** `.vform` rows stretch to their
+  tallest cell and push every control to the bottom, which is what dropped COI and Reciprocity 101px
+  on 2026-08-27. Contacts sit under their own `fld-wide` sub-headers — **an empty spacer cell was
+  tried first and is wrong at one column**, where it renders as a blank row.
+- **⚠ WHAT IS STILL NOT PROVEN, AND IT IS ANTHONY'S TO DO: NO CONTACT HAS BEEN PUSHED TO THE LIVE QUO
+  API.** The collectors, the ids, the grouping and the payload are driven against the real `.gs`
+  source in a vm, and the whole sync runs end to end in **dry run**. Run `dryRunQuoAll` and read the
+  plan before `pushQuoAll` — specifically that the 199 existing contacts come back as **update**
+  rather than **create**, which is the one thing the id scheme is protecting and the one thing only a
+  live read can confirm.
+- Manual **§13** (four bullets rewritten), **new §13b** (the firm/person split with the field table,
+  the defect it closes, the no-migration note and the half-typed-slot rule), **§14** (two bullets) and
+  **new §14a** (the partner model, the 32-row measurement with how to find them, `phone_type`'s new
+  job, and the redeploy); playbook **Step 2** two notes and **six** symptom→cause rows. Both `.md`
+  copies hand-edited and **48 claims parity-checked, 0 mismatches** — ⚠ two apparent misses were
+  markdown emphasis markers, verified rather than assumed. Tag balance verified on both HTML files
+  (`manual.html`'s `<code>` delta is still the documented false positive at 1), rendered at 1440/390
+  with **0 overflow** and **all 52 tables full-width under `print`**.
+
+
 ## ⚠⚠ A CLIENT CAN PAY BY BANK TRANSFER, AND IT RECORDS ITSELF (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-18a`.
 Anthony: *"what needs to be done to integrate Stripe payments? i only want to accept ACH to avoid the 3% fee,
@@ -2234,7 +2379,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/magical-keller-koqpwl`
+- Active feature branch: `claude/busy-maxwell-q7zrpd`
+  (was `claude/magical-keller-koqpwl`)
   (was `claude/sharp-allen-1cc2ur`)
   (was `claude/gifted-babbage-wnzm7w`)
   (was `claude/admiring-tesla-7ysggp`)
@@ -2248,7 +2394,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/magical-keller-koqpwl:main`
+  `git push origin claude/busy-maxwell-q7zrpd:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

@@ -40,7 +40,20 @@ var COLUMNS = [
   // Written by the first version of the Quo sync, which cached each contact id here.
   // The current sync derives that mapping from Quo itself, so these are now historical
   // — kept because removing a column would be a schema change for no gain.
-  'quo_contact_id', 'quo_external_id'
+  'quo_contact_id', 'quo_external_id',
+  // ⚠⚠ A PARTNER IS A PERSON, NOT A FIRM, which is why this is NOT the vendor's two
+  // contact slots. Four partners at Comiter are already four rows here. What one of them
+  // needs is the firm's main line, their extension on it, their cell, and the assistant
+  // who books the meeting — so `phone` stays their DIRECT line and `primary_contact` was
+  // already the assistant's name.
+  // Measured on the seed sheet before this was built: 32 of 79 rows carried phone_type
+  // 'Main', i.e. the switchboard sitting in the field the card dials under that person's
+  // name, and 13 partners shared 5 numbers between them.
+  // ⚠ APPENDED AT THE END, AFTER the two historical quo_* columns, and that is the whole
+  // point of "APPEND ONLY" above. Slotting these in before them shifts quo_contact_id
+  // from index 33 to 38, so every read of column 34 on the LIVE sheet would hand back a
+  // Quo contact id as somebody's office phone — and the sync would then dial it.
+  'office_phone', 'phone_ext', 'mobile', 'assistant_phone', 'assistant_email'
 ];
 
 function setupSheet() {
@@ -166,12 +179,16 @@ function backfillIds() {
   var updC = COLUMNS.indexOf('updated_at') + 1;
   var srcC = COLUMNS.indexOf('source') + 1;
   var lcnC = COLUMNS.indexOf('last_contact_note') + 1;
+  // Appended 2026-09-18. updatePartner writes by COLUMNS index whether or not a header
+  // cell exists, so without this the values land in columns nobody can read by name.
+  var CONTACT_COLS = ['office_phone', 'phone_ext', 'mobile', 'assistant_phone', 'assistant_email'];
   var emailC = COLUMNS.indexOf('email') + 1;
   var pnC = COLUMNS.indexOf('partner_name') + 1;
   sh.getRange(1, uidC).setValue('uid');
   sh.getRange(1, updC).setValue('updated_at');
   sh.getRange(1, srcC).setValue('source');
   sh.getRange(1, lcnC).setValue('last_contact_note');
+  CONTACT_COLS.forEach(function (k) { sh.getRange(1, COLUMNS.indexOf(k) + 1).setValue(k); });
   var now = new Date().toISOString(), n = 0;
   for (var r = 2; r <= last; r++) {
     var first = String(sh.getRange(r, 1).getValue()).trim();
