@@ -266,15 +266,15 @@ Detached buildings are scored as **whole buildings sized by bedroom count**, not
 
 | Row | Weight | Replaces |
 | --- | --- | --- |
-| Casita — bedroom & bath | 2.5 | the old *Casita* row, moved here out of Exterior & Auxiliary |
-| Pool House — with living quarters | 4.5 | Pool House living/bedroom + kitchen/bar + bath |
 | Guest House — 1 / 2 / 3 bedroom | 7.0 / 9.0 / 11.0 | Guest House bedroom + living + kitchen/bar + bath, then +2.0 a bedroom |
 | Caretaker's Cottage — 1 / 2 / 3 bedroom | 5.5 / 7.5 / 9.5 | Cottage bedroom + living/kitchen + bath, then +2.0 a bedroom |
 | Additional Outbuilding Room | 2.0 | unchanged — still a free-text row |
 
 Each weight is the **sum of the sub-rooms it replaces**, so a fully-ticked building prices exactly as it did before; only the number of clicks changed. Every additional bedroom adds 2.0, the old bedroom weight — keep that step if a size is ever added.
 
-> **The pool house was in the list twice, and ticking both double-charged it.** A bare *Pool House* row sat in Exterior & Auxiliary (2.7) while three *Pool House — …* sub-rows sat here (4.5 together). They are the same building — the split was meant to be cabana versus one with living quarters, but nothing on screen said so. The Exterior row is now **Pool House / Cabana — no living quarters** and this section has **Pool House — with living quarters**. Pick one. On a mid-size estate the old double-tick was worth about 7 specialist hours nobody would have questioned.
+> **ONE pool house, one row, and it assumes living quarters (changed 2026-09-18). It is not in this section — it is in Exterior & Auxiliary.** There used to be two rows for one building: a bare *Pool House* in Exterior & Auxiliary (2.7) against three *Pool House — …* sub-rows here (4.5 together). Ticking both double-charged it by about 7 specialist hours nobody would have questioned. They were renamed apart on 2026-08-03 — *Pool House / Cabana — no living quarters* against *Pool House — with living quarters* — which made the pair readable without making it necessary, so on 2026-09-18 it became one row. **The survivor is *Pool House — with living quarters* in Exterior & Auxiliary, and it carries 4.5 rather than the 2.7 that row used to have** — the label promises a bedroom, a kitchen and a bath, so it has to price like one. Measured on a 3,500 sqft Estate Settlement: **12 specialist hours, against 7 at the old 2.7.** A pool house with nothing in it is a changing room — score the *Pool / Cabana Half Bath* row and leave it at that.
+
+> **The casita row is gone (2026-09-18), and what to tick instead depends on what the building actually is.** It moved out of Exterior & Auxiliary into this section on 2026-08-03 and then came out of the grid altogether: at 2.5 it said nothing the pool house and the 1-bedroom guest house either side of it did not, and most people describing a property use *casita* and *guest house* for the same structure. A casita that is a bedroom and a bath is the free-text **Additional Outbuilding Room** row — rename it *Casita* and it prices at **2.0**, half a load unit under the old row, so on a genuinely small one expect roughly one specialist hour less than before. A casita with its own living space or kitchenette is a **Guest House — 1 bedroom** at 7.0. Pick on what is inside it, not on what the owner calls it.
 
 ### 5c. Job Settings
 

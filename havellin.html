@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 12:56pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 2:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3459,17 +3459,26 @@ var ROOMS = [
   {section:'Exterior & Auxiliary',rooms:[
     {name:'Balcony',tc:0.30,ps:0.55},
     {name:'Boat House',tc:0.85,ps:1.95},
-    // Casita moved to Outbuildings & Guest Quarters (2026-08-03) — it is guest
-    // accommodation, and sitting in this list beside the patio and the shed put it two
-    // sections away from the Guest House rows it has to be chosen against.
+    // Casita is gone from the grid entirely (2026-09-18). It moved from this list into
+    // Outbuildings & Guest Quarters on 2026-08-03 and came out altogether on Anthony's
+    // instruction: at 2.5 it sat between the pool house and the 1-bedroom guest house
+    // saying nothing either of them does not, and "casita" and "guest house" are the same
+    // building to most of the people describing one out loud. Score a genuine casita as
+    // Guest House — 1 bedroom.
     {name:'Furnished Patio',tc:0.55,ps:0.95},
     {name:'Outdoor Kitchen',tc:0.55,ps:0.95},
     {name:'Pool / Cabana Half Bath',tc:0.22,ps:0.30},
-    // Renamed from the bare "Pool House". There is a second pool-house row in Outbuildings
-    // for one WITH living quarters (4.5 vs 2.7), and with both called "Pool House" nothing
-    // on screen said which to pick — so ticking both silently double-counted the same
-    // building by 2.7 load units, about 7 PS hours on a mid-size estate.
-    {name:'Pool House / Cabana — no living quarters',tc:1.35,ps:2.70},
+    // ⚠ ONE pool-house row in the whole grid, and it is the one WITH living quarters
+    // (2026-09-18). There were two — this one at a cabana's 2.7 and a with-quarters one at
+    // 4.5 two sections down in Outbuildings — and with both reading "Pool House" on screen
+    // nothing said which to pick, so ticking both silently double-counted one building.
+    // This row is the survivor and it TAKES THE 4.5: the label promises living quarters, so
+    // it has to price like them, and leaving it at 2.7 would have put a cabana's weight
+    // under a label saying bedroom, kitchen and bath. The cabana-only variant went with it —
+    // a pool house with nothing in it is a changing room, already carried by the
+    // Pool / Cabana Half Bath row above and the patio rows. Never add a second row under
+    // this name; the double-count is the whole reason there is one.
+    {name:'Pool House — with living quarters',tc:1.35,ps:2.70},
     {name:'Screened Porch',tc:0.45,ps:0.85},
     {name:'Shed',tc:0.70,ps:1.65},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
@@ -3483,8 +3492,11 @@ var ROOMS = [
     //
     // Weights are the old per-building sub-room SUMS, so a fully-ticked building prices
     // exactly as before; each extra bedroom adds the old bedroom weight of 2.0.
-    {name:'Casita — bedroom & bath',tc:0.85,ps:1.30},
-    {name:'Pool House — with living quarters',tc:1.35,ps:2.70},
+    //
+    // 2026-09-18: the Casita and Pool House rows came out of this section. The pool house
+    // moved up to Exterior & Auxiliary as a single row, keeping the 4.5 it had here; the
+    // casita was removed outright (see the note in that section). What is left is the one
+    // thing this section is for — a detached dwelling, sized in bedrooms.
     {name:'Guest House — 1 bedroom',tc:1.60,ps:2.60},
     {name:'Guest House — 2 bedroom',tc:2.05,ps:3.35},
     {name:'Guest House — 3 bedroom',tc:2.50,ps:4.10},
@@ -3600,20 +3612,22 @@ var ROOM_WEIGHT = {
   // Half Bath (0.4, which only modulates the sqft baseline) and a full bath in guest
   // quarters. Exterior weights are absolute load, not a modulator.
   'Pool / Cabana Half Bath':0.5,
-  'Pool House / Cabana — no living quarters':2.7,'Screened Porch':1.0,'Shed':1.65,
+  // 4.5, not a cabana's 2.7 — this is the grid's only pool-house row and it names living
+  // quarters. Derivation is in the outbuildings block below, where the row used to live.
+  'Pool House — with living quarters':4.5,'Screened Porch':1.0,'Shed':1.65,
   // ── Outbuildings: ONE WEIGHT PER BUILDING, sized by bedroom count ──────────────
   // These replaced eleven per-sub-room rows on 2026-08-03. Each weight is the SUM of the
   // sub-rooms it replaces, so a fully-ticked building prices exactly as it did before:
   //   Guest House 2.0 bed + 2.0 living + 2.0 kitchen/bar + 1.0 bath = 7.0
   //   Cottage     2.0 bed + 2.5 living/kitchen + 1.0 bath          = 5.5
   //   Pool House  2.0 living/bed + 1.5 kitchen/bar + 1.0 bath      = 4.5
+  //               ↑ listed with the EXTERIOR rows above, where its one row now lives
   // Each additional bedroom adds the old bedroom weight, 2.0.
   //
-  // The ladder is meant to be read top to bottom — casita (a bed and a bath) → pool house
-  // with quarters → cottage → guest house. If a size is ever added, keep the +2.0 step or
-  // the ladder stops being predictable.
-  'Casita — bedroom & bath':2.5,
-  'Pool House — with living quarters':4.5,
+  // The ladder is meant to be read top to bottom — pool house with quarters (4.5, above)
+  // → cottage → guest house. The casita rung (2.5) came out on 2026-09-18; a genuine
+  // casita is Guest House — 1 bedroom. If a size is ever added, keep the +2.0 step or the
+  // ladder stops being predictable.
   'Guest House — 1 bedroom':7.0,'Guest House — 2 bedroom':9.0,'Guest House — 3 bedroom':11.0,
   "Caretaker's Cottage — 1 bedroom":5.5,"Caretaker's Cottage — 2 bedroom":7.5,"Caretaker's Cottage — 3 bedroom":9.5,
   'Additional Outbuilding Room':2.0
@@ -3622,8 +3636,7 @@ var ROOM_WEIGHT = {
 var EXTERIOR_ROOMS = {
   'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Balcony':1,'Boat House':1,
   'Furnished Patio':1,'Outdoor Kitchen':1,'Pool / Cabana Half Bath':1,
-  'Pool House / Cabana — no living quarters':1,'Screened Porch':1,'Shed':1,
-  'Casita — bedroom & bath':1,'Pool House — with living quarters':1,
+  'Pool House — with living quarters':1,'Screened Porch':1,'Shed':1,
   'Guest House — 1 bedroom':1,'Guest House — 2 bedroom':1,'Guest House — 3 bedroom':1,
   "Caretaker's Cottage — 1 bedroom":1,"Caretaker's Cottage — 2 bedroom":1,"Caretaker's Cottage — 3 bedroom":1,
   'Additional Outbuilding Room':1

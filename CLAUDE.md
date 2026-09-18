@@ -1,5 +1,104 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠ ONE POOL HOUSE, ONE ROW — AND THE WEIGHT WAS THE DECISION, NOT THE LABEL (2026-09-18)
+Anthony, off two screenshots of the room grid: *"let's remove the first two from outbuildings and guest
+houses, and modify poolhouse/cabana no living quarters to read Poolhouse - with living quarters."*
+App-only, no redeploy — `ROOMS` / `ROOM_WEIGHT` / `EXTERIOR_ROOMS` are three plain tables in
+`havellin.html`. Three edits: the **Casita — bedroom & bath** and **Pool House — with living quarters**
+rows out of Outbuildings & Guest Quarters, and the Exterior & Auxiliary
+**Pool House / Cabana — no living quarters** renamed **Pool House — with living quarters**.
+
+- **⚠⚠ THE INSTRUCTION WAS A RENAME AND THE CONSEQUENCE WAS A PRICE, WHICH IS THE ONLY THING WORTH
+  ASKING ABOUT HERE.** The two pool-house rows carried **different weights** — the Exterior one 2.7
+  (a cabana) and the Outbuildings one 4.5 (`2.0 living/bed + 1.5 kitchen/bar + 1.0 bath`). A straight
+  rename leaves the survivor **saying *with living quarters* while pricing a changing room**, silently,
+  on every estate with a pool house. Put to Anthony before anything was built; he took **4.5**.
+  - **Measured on the real engine, not asserted.** A 3,500 sqft Estate Settlement, three rooms scored
+    neutral: ticking the pool house adds **12 specialist hours** at 4.5 against **7** at 2.7. So the
+    decision is worth **5 PS hours per pool house**, and an estimator would have had no way to see it —
+    the row renders identically either way.
+- **⚠ THE SURVIVOR STAYS IN EXTERIOR & AUXILIARY, and that is coherent rather than arbitrary.** The net
+  effect is that the with-quarters pool house MOVED UP beside `Pool / Cabana Half Bath` and the
+  cabana-only variant went. A pool house with nothing in it is a changing room; that is the half-bath
+  row plus the patio rows, which already carry it.
+- **⚠ THE CASITA HAS NO REPLACEMENT ROW AND BOTH DOCUMENTS SAY WHAT TO TICK INSTEAD.** At 2.5 it sat
+  between the pool house and the 1-bedroom guest house saying nothing either of them does not, and
+  *casita* and *guest house* are the same building to most of the people describing one. **A bedroom and
+  a bath is the free-text `Additional Outbuilding Room` row renamed — 2.0, half a load unit under the old
+  row, so a genuinely small casita now prices about one PS hour lighter. Living space or a kitchenette
+  makes it `Guest House — 1 bedroom` at 7.0.** That 2.5→2.0 drift is stated rather than hidden; it is the
+  one place this change is not price-neutral by construction.
+- **⚠ NOTHING NEEDED AN ALIAS, AND IT IS WORTH KNOWING WHY.** `restoreEstimateToUI` matches a saved room
+  on **section+name** first, then idx-within-its-own-section, then plain name **only when the saved record
+  carries no section**. So a saved estimate holding either deleted row drops it silently — and, usefully,
+  the deleted Outbuildings pool house **cannot** fall through onto the Exterior row of the same name,
+  because its saved record has a section. Prelaunch, dummy data only. **If a real estimate ever predates a
+  row rename, add an alias instead** — a rename with no alias reprices downward with nothing on screen.
+- **6041 committed checks** (`tests/room-grid.test.js`, 45 new — **the first coverage in `tests/` of what
+  the room grid's three tables contain or what a room weighs**, which is why the two-section pool house
+  survived from the day it was written to the day somebody read the screen).
+  - **⚠⚠ THE NETS ARE RULES, NOT TODAY'S NAMES.** Every non-custom row has a `ROOM_WEIGHT` entry
+    (`engineRoomWeight` falls back to **2.0 silently**, so a row added without one prices as a generic
+    bedroom and the grid renders it perfectly); every `EXTERIOR_ROOMS` key has a weight and names a real
+    row; no name appears twice in one section (the `_claim` restore hands each saved record to exactly
+    one row, so a duplicate silently restores blank).
+  - **⚠ AND THE ONE THAT WOULD HAVE CAUGHT THE ORIGINAL DEFECT: ONE DETACHED STRUCTURE, ONE ROW.** Across
+    Exterior & Auxiliary and Outbuildings & Guest Quarters, no two rows may share a **stem** — the text up
+    to the first em-dash or slash. `Pool House / Cabana — no living quarters` and `Pool House — with
+    living quarters` both stem to `Pool House`, which is the collision a name-equality check can never
+    see: **the two rows had different names.** Size variants inside ONE section are allowed (Guest House
+    1/2/3 sit adjacent on screen and you obviously pick one); across sections is the state that produced
+    *"nothing on screen said which to pick"*. The test feeds it the old pair by hand so the rule is proven
+    able to fire rather than merely passing.
+  - **⚠⚠ THE WEIGHT REVERT FAILED ONLY *ONE* ON THE FIRST SWEEP — ON THE SINGLE MOST CONSEQUENTIAL LINE.**
+    Every check read a TABLE, so a build where `engineRoomWeight` stopped consulting `ROOM_WEIGHT` would
+    have passed the lot with the price silently wrong. The gap this file records more than any other.
+    There is a group that drives the **real `computeEngineV3`** now: ticking the pool house moves `load`
+    by exactly **4.500000**, is exactly **2.25×** a Boat House (2.0) — a RATIO, so it survives the next
+    `ENGINE_K` or step-table tune, where a pinned hour count would not — and books **12** `totPS`. Re-done,
+    the revert fails **4**.
+- **All seven changes revert-verified individually, ZERO green** — the rename undone fails 6, the Casita
+  row put back 5, a second pool house in Outbuildings 3, a row added with no weight 3, the cabana half
+  bath dropped 3, a row deleted with its weight left behind 1, and the weight 4.
+- **⚠ FOUND IN PASSING, NOT FIXED: `tc` and `ps` ON EVERY `ROOMS` ROW ARE DEAD.** The grid renderer reads
+  `r.name` and `r.custom`; the engine reads `ROOM_WEIGHT[name]`. Nothing anywhere reads a row's own
+  `tc`/`ps` — verified by extracting every `<ident>.tc|.ps` in the file, none of which is a room. They are
+  vestigial per-room hour hints from an older engine, and they **already disagreed with the weights**
+  (both pool-house rows read `tc:1.35,ps:2.70` while weighing 2.7 and 4.5). Left exactly as they were
+  rather than invented anew. `ROOM_WEIGHT` also carries **eight dead keys** naming no row — `Home Gym`,
+  `Home Office`, `Bedroom 5`, `Bedroom 6`, `Additional Bedroom(s)`, `Bonus Room`, `Additional Office`,
+  `Additional Sitting Room`. Harmless (nothing reads a weight for a row that does not exist) and
+  **pre-existing**, which is why the orphan test is scoped to `EXTERIOR_ROOMS`, where it is clean.
+- **Verified end to end in headless Chromium on the real page**, driving the real grid and the real
+  `calcAll`:
+
+  | | |
+  |---|---|
+  | Exterior & Auxiliary | `… Pool / Cabana Half Bath · Pool House — with living quarters · Screened Porch …` |
+  | Outbuildings & Guest Quarters | **7 rows** — three guest house sizes, three cottage sizes, one free-text |
+  | Casita rows anywhere | **0** |
+  | `Pool House` rows anywhere | **1**, rendered with a live scope box |
+  | ticking it on a 3,500 sqft estate | base 112 PS / $18,300 → **124 PS / $20,350** (+12 hrs, **+$2,050**) |
+  | a Boat House (2.0) for comparison | +5 PS hrs |
+
+  Overflow **0** at 1440 and 390px, **no page errors**, and the app's `<style>` block is
+  **byte-identical** at 74,147 bytes — the 368-line CSS deletion rule, applied by reading the diff.
+- Manual **§5b** (two rows out of the outbuildings table; the double-tick note **rewritten**, because it
+  said *"The Exterior row is now Pool House / Cabana — no living quarters and this section has Pool House
+  — with living quarters. **Pick one.**"* — an instruction to choose between two rows, one of which no
+  longer exists; plus a new casita note). Playbook **Step 2** (a `.stop` saying both buildings are NOT in
+  that section, so nobody hunts) and **two symptom→cause rows rewritten** — ⚠ one of them read *"Can't
+  find the casita → It moved from Exterior & Auxiliary into Outbuildings & Guest Quarters"*, which after
+  today sends a concierge standing in a driveway after a row that is not there. Both `.md` copies
+  hand-edited and **17 claims parity-checked, 0 mismatches** — ⚠ three apparent misses were markdown
+  emphasis markers, **verified rather than assumed**. A sweep for the retired wordings comes back with
+  **two hits and both are the sentence explaining the change** (the 2026-08-03 rename, quoted so the note
+  is worth reading) — the ninth time this file records a needle tripping on the prose explaining the fix.
+  Tag balance verified on both HTML files (`manual.html`'s `<code>` delta is still the documented false
+  positive at **1**; `concierge-guide.html` clean on every tag), rendered at 1440/390 with **0 overflow**
+  and **all 52 tables full-width under `print`**.
+
+
 ## ⚠⚠ THE SYNC REPORT NAMED A PROBLEM WITHOUT NAMING ENOUGH TO ACT ON IT (FIXED 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — `apps-script/quo-sync.gs` ONLY, and only before the next prune.**
 The partner backend was already redeployed for the section below; nothing in it changed again. Found by
@@ -2461,7 +2560,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/busy-maxwell-q7zrpd`
+- Active feature branch: `claude/determined-keller-wa6ero`
+  (was `claude/busy-maxwell-q7zrpd`)
   (was `claude/magical-keller-koqpwl`)
   (was `claude/sharp-allen-1cc2ur`)
   (was `claude/gifted-babbage-wnzm7w`)
@@ -2476,7 +2576,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/busy-maxwell-q7zrpd:main`
+  `git push origin claude/determined-keller-wa6ero:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
