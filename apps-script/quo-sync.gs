@@ -418,8 +418,13 @@ function _collectClients() {
 // ── Existing contacts ────────────────────────────────────────────────────────
 // Read back what Quo already holds under our sources, so create-vs-update is
 // decided against Quo's actual state rather than a cached id in a sheet.
+// Returns { ids, meta } — ids is externalId -> contact id, which is what decides
+// POST vs PATCH; meta is externalId -> { name, phone }, kept ONLY so the STALE report
+// can say WHO it is proposing to delete. The first version threw the name away and
+// printed a bare contact id, which named a problem without naming enough to act on it:
+// sixteen opaque ids is not a list anybody can make a decision from.
 function _quoLoadExisting() {
-  var map = {}, token = '', guard = 0;
+  var map = {}, meta = {}, token = '', guard = 0;
   var srcQ = _quoAllSources().map(function (s) {
     return 'sources=' + encodeURIComponent(s);
   }).join('&');
@@ -433,12 +438,17 @@ function _quoLoadExisting() {
     for (var i = 0; i < list.length; i++) {
       var c = list[i];
       var ext = c.externalId || (c.defaultFields && c.defaultFields.externalId);
-      if (ext) map[String(ext)] = c.id;
+      if (!ext) continue;
+      map[String(ext)] = c.id;
+      var df = c.defaultFields || {};
+      var nm = ((df.firstName || '') + ' ' + (df.lastName || '')).trim() || df.company || '';
+      var ph = (df.phoneNumbers && df.phoneNumbers.length && df.phoneNumbers[0].value) || '';
+      meta[String(ext)] = { name: nm, phone: ph };
     }
     token = body.nextPageToken || (body.pageToken) || '';
     guard++;
   } while (token && guard < 100);
-  return map;
+  return { ids: map, meta: meta };
 }
 
 function _quoPayload(rec) {
@@ -537,8 +547,9 @@ function syncQuoAll(dryRun) {
 
   _pruneAmbiguousExtras(all, byPhone, plan);
 
-  var existing = dryRun ? {} : _quoLoadExisting();
-  if (dryRun) { try { existing = _quoLoadExisting(); } catch (e) { existing = {}; } }
+  var loaded = { ids: {}, meta: {} };
+  try { loaded = _quoLoadExisting(); } catch (e) { if (!dryRun) throw e; }
+  var existing = loaded.ids, existingMeta = loaded.meta;
   // Everything Quo holds under our sources. Anything still in here at the end of the
   // run is a contact the directories no longer produce — a vendor row deleted, a
   // partner removed, a switchboard that dissolved. The sync has no DELETE it can rely
@@ -652,10 +663,18 @@ function syncQuoAll(dryRun) {
   }
   for (var u in unseen) {
     if (Object.prototype.hasOwnProperty.call(unseen, u)) {
-      plan.stale.push({ externalId: u, contactId: unseen[u] });
+      var sm = existingMeta[u] || {};
+      plan.stale.push({ externalId: u, contactId: unseen[u], name: sm.name || '', phone: sm.phone || '' });
     }
   }
   return plan;
+}
+
+// One rendering of "which contact is this", read by the push report AND the prune
+// preview. Two copies is how the list you READ and the list you DELETE come to describe
+// the same row differently.
+function _quoWho(e) {
+  return (e.name || '(name not returned)') + (e.phone ? '  ' + e.phone : '');
 }
 
 function _logQuoAll(p) {
@@ -678,9 +697,15 @@ function _logQuoAll(p) {
     Logger.log('              role: ' + e.roles.join(' / '));
     Logger.log('              tags: ' + e.tags.join(', '));
   });
-  p.conflict.forEach(function (e) { Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why); });
+  p.conflict.forEach(function (e) {
+    Logger.log('  CONFLICT ' + e.phone + '  ' + e.names.join(', ') + '  — ' + e.why);
+    // The DISTINCT BUSINESS NAMES are what caused this, and printing only the contact
+    // labels above made it unreadable: two rows for one person read as 'David Schneider,
+    // David Schneider' with nothing saying what differed. Name the thing that differed.
+    if (e.companies && e.companies.length) Logger.log('             business names: ' + e.companies.join('  |  '));
+  });
   if (p.stale.length) Logger.log('  ' + p.stale.length + ' contact(s) in Quo no longer in any directory — delete by hand:');
-  p.stale.forEach(function (e) { Logger.log('    STALE   ' + e.contactId + '  was ' + e.externalId); });
+  p.stale.forEach(function (e) { Logger.log('    STALE   ' + _quoWho(e) + '   ' + e.contactId + '  was ' + e.externalId); });
   p.failed.forEach(function (e) { Logger.log('  FAILED  ' + e.name + '  HTTP ' + e.code + '  ' + e.error); });
   return p;
 }
@@ -739,7 +764,7 @@ function dumpQuoContact(contactId) {
 // replaces rather than merges cannot blank the name while we are testing.
 function testQuoTags() {
   if (!QUO_TAGS_FIELD_KEY) { Logger.log('QUO_TAGS_FIELD_KEY is empty — nothing to test.'); return; }
-  var existing = _quoLoadExisting();
+  var existing = _quoLoadExisting().ids;
   var vendors = _collectVendors(), target = null;
   for (var i = 0; i < vendors.length && !target; i++) {
     if (vendors[i].phone && existing[vendors[i].extId]) target = vendors[i];
@@ -797,9 +822,9 @@ function pruneQuoStale(reallyDelete) {
   var gone = 0, kept = 0;
   for (var i = 0; i < plan.stale.length; i++) {
     var s = plan.stale[i];
-    if (!reallyDelete) { Logger.log('  ' + s.contactId + '  was ' + s.externalId); continue; }
+    if (!reallyDelete) { Logger.log('  ' + _quoWho(s) + '   ' + s.contactId + '  was ' + s.externalId); continue; }
     var res = _quoFetch('delete', '/contacts/' + encodeURIComponent(s.contactId), null);
-    if (res.code >= 200 && res.code < 300) { gone++; Logger.log('  DELETED ' + s.contactId + '  was ' + s.externalId); }
+    if (res.code >= 200 && res.code < 300) { gone++; Logger.log('  DELETED ' + _quoWho(s) + '   ' + s.contactId + '  was ' + s.externalId); }
     else { kept++; Logger.log('  FAILED  ' + s.contactId + '  HTTP ' + res.code); }
     Utilities.sleep(QUO_THROTTLE_MS);
   }

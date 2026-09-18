@@ -699,22 +699,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(!!mm, name + ' is present in apps-script/quo-sync.gs');
       return mm ? mm[0] : '';
     };
-    function drive(partnerRows, vendorRows) {
+    function drive(partnerRows, vendorRows, quoHolds) {
       const g = {
         SpreadsheetApp: { getActiveSpreadsheet: () => ({ __rows: partnerRows }), openById: () => ({ __rows: vendorRows }) },
         QUO_PARTNER_TAB: 'Partners', QUO_VENDOR_ID: 'x', QUO_VENDOR_TAB: 'V',
         QUO_SRC_PARTNER: 'Havellin Referral Partner', QUO_SRC_VENDOR: 'Havellin Vendor',
         QUO_SRC_CLIENT: 'Havellin Client', QUO_SYNC_CLIENTS: false, QUO_TAGS_FIELD_KEY: '',
         QUO_THROTTLE_MS: 0,
-        _readTab: (ss) => ss.__rows, _collectClients: () => [], _quoLoadExisting: () => ({}),
-        Logger: { log() {} }, Utilities: { sleep() {} }, _quoFetch: () => ({ code: 200, body: {} }),
+        _readTab: (ss) => ss.__rows, _collectClients: () => [],
+        _quoLoadExisting: () => (quoHolds || { ids: {}, meta: {} }),
+        Logger: { log(line) { g.__log.push(String(line)); } },
+        __log: [],
+        Utilities: { sleep() {} }, _quoFetch: () => ({ code: 200, body: {} }),
       };
       vm.createContext(g);
       vm.runInContext([grab('_e164'), grab('_titleCase'), grab('_tags'), grab('_vendorRowContacts'),
                        grab('_collectPartners'), grab('_collectVendors'), grab('_quoPayload'),
-                       grab('_firmPayload'), grab('_pruneAmbiguousExtras'), grab('syncQuoAll')].join('\n\n'),
+                       grab('_firmPayload'), grab('_pruneAmbiguousExtras'), grab('_quoWho'),
+                       grab('_logQuoAll'), grab('syncQuoAll')].join('\n\n'),
                       g, { filename: 'quo-sync.gs (extracted)' });
-      return g.syncQuoAll(true);
+      const plan = g.syncQuoAll(true);
+      // The REPORT is the deliverable here, not the plan object — a stale entry that
+      // carries a name and then prints a bare id is the defect this closes. So drive
+      // the real renderer and read the lines a person would actually see.
+      g.__log.length = 0;
+      g._logQuoAll(plan);
+      plan.__lines = g.__log.slice();
+      return plan;
     }
 
     // Anthony's example, all the way through the real sync.
@@ -744,6 +755,54 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(pratt.phone, '+15617179023', 'Pratt keeps his own desk line');
     const roe = clash.create.concat(clash.update).find((e) => e.ext === 'u-roe');
     eq(roe.name, 'Jane Roe', "and Jane's number still resolves to Jane, which is the whole rule");
+
+    // ⚠⚠ A REPORT THAT NAMES A PROBLEM WITHOUT NAMING ENOUGH TO ACT ON IT.
+    // The first live prune list was sixteen lines of `STALE <32-hex id> was vendor:<uid>`
+    // — a decision nobody can make, about contacts nobody can identify, on the one
+    // action in this file that is irreversible. _quoLoadExisting had the name and the
+    // number in hand and threw both away. Driven on the REAL reporter, because the plan
+    // object carrying a name and the log line printing a bare id is exactly the state
+    // this closes.
+    const withStale = drive([], [Object.assign({ _row: 7 }, NAVIS)], {
+      ids: { 'vendor:u-gone': 'c-0001' },
+      meta: { 'vendor:u-gone': { name: 'Old Hauler LLC', phone: '+15615550000' } },
+    });
+    eq(withStale.stale.length, 1, 'a contact Quo holds that no directory produces any more is stale');
+    eq(withStale.stale[0].name, 'Old Hauler LLC', '⚠ and the plan says WHO, not just which id');
+    eq(withStale.stale[0].phone, '+15615550000', 'and on what number');
+    const staleLine = withStale.__lines.find((l) => l.indexOf('STALE') !== -1);
+    ok(!!staleLine, 'the report prints a STALE line');
+    ok(staleLine.indexOf('Old Hauler LLC') !== -1,
+       '⚠⚠ THE REQUIREMENT: the LINE A PERSON READS names the contact, not only the plan object');
+    ok(staleLine.indexOf('c-0001') !== -1, 'while still carrying the id the delete needs');
+
+    // A contact Quo returns with no usable name must say so rather than rendering blank —
+    // a bare id with two spaces in front of it reads as a formatting bug, not as "Quo
+    // gave us nothing".
+    const noName = drive([], [Object.assign({ _row: 7 }, NAVIS)], {
+      ids: { 'vendor:u-gone': 'c-0002' }, meta: {},
+    });
+    const blankLine = noName.__lines.find((l) => l.indexOf('STALE') !== -1);
+    ok(blankLine.indexOf('(name not returned)') !== -1, 'an unnamed contact says so in words');
+
+    // ⚠ THE CONFLICT LINE PRINTED THE CONTACT LABELS AND NOT THE THING THAT DIFFERED.
+    // Two rows for one person under two business names rendered as 'David Schneider,
+    // David Schneider' — identical twice, with nothing on the line saying what the
+    // conflict was. `companies` was computed and never printed.
+    const twoNames = drive([], [
+      { _row: 2, uid: 'u-ds1', vendor_name: 'Schneider Appraisals', contact_first: 'David',
+        contact_last: 'Schneider', phone: '5613913580', category: 'Art Appraiser' },
+      { _row: 3, uid: 'u-ds2', vendor_name: 'Schneider Fine Art', contact_first: 'David',
+        contact_last: 'Schneider', phone: '5613913580', category: 'Antiques & Furniture Appraiser' },
+    ]);
+    eq(twoNames.conflict.length, 1, 'one number under two business names is reported');
+    eq(twoNames.conflict[0].companies.sort(), ['Schneider Appraisals', 'Schneider Fine Art'],
+       'the plan carries both business names');
+    const confLines = twoNames.__lines.filter((l) => l.indexOf('business names:') !== -1);
+    eq(confLines.length, 1, 'and the report prints them');
+    ok(confLines[0].indexOf('Schneider Appraisals') !== -1 &&
+       confLines[0].indexOf('Schneider Fine Art') !== -1,
+       '⚠ naming what actually differed, which the contact labels could not');
   }
 
   group('⚠⚠ every number the collector produces reaches the payload Quo is sent');
@@ -785,5 +844,93 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A record with no extras must not grow an empty entry.
     const office = g._quoPayload(vrecs.find((r) => r.extId === 'vendor:u-navis'));
     eq(office.defaultFields.phoneNumbers.length, 1, 'one number where there is one number');
+  }
+
+  group('⚠⚠ the loader keeps the name, and the prune preview prints it');
+  {
+    // BOTH OF THESE CAME BACK GREEN ON THE FIRST REVERT SWEEP, and they are the same
+    // gap this project records more than any other: every check drove a PIECE and
+    // nothing drove the END.
+    //   · _quoLoadExisting is STUBBED in every other group, so the real loader could go
+    //     back to discarding the name with the whole suite passing.
+    //   · pruneQuoStale had NO coverage at all — the list somebody reads immediately
+    //     before an irreversible delete, never once driven.
+    const grab = (name) => {
+      const mm = QUO.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'));
+      ok(!!mm, name + ' is present in apps-script/quo-sync.gs');
+      return mm ? mm[0] : '';
+    };
+
+    // ── the REAL loader, against a Quo-shaped response ────────────────────────
+    const lg = {
+      QUO_SRC_PARTNER: 'P', QUO_SRC_VENDOR: 'V', QUO_SRC_CLIENT: 'C', QUO_SRC_LEGACY: 'L',
+      _quoFetch: () => ({ code: 200, body: { data: [
+        { id: 'c-777', externalId: 'vendor:u-gone', defaultFields: {
+          firstName: 'Old', lastName: 'Hauler', company: 'Old Hauler LLC',
+          phoneNumbers: [{ name: 'Main', value: '+15615550000' }] } },
+        { id: 'c-778', externalId: 'firm:+15616559011', defaultFields: {
+          firstName: '', lastName: '', company: 'Dissolved Switchboard',
+          phoneNumbers: [{ name: 'Main', value: '+15616559011' }] } },
+      ] } }),
+    };
+    vm.createContext(lg);
+    vm.runInContext([grab('_quoAllSources'), grab('_quoLoadExisting')].join('\n\n'),
+                    lg, { filename: 'quo-sync.gs (extracted)' });
+    const loaded = lg._quoLoadExisting();
+    eq(loaded.ids['vendor:u-gone'], 'c-777', 'the id map is what decides POST vs PATCH, unchanged');
+    eq(loaded.meta['vendor:u-gone'].name, 'Old Hauler',
+       '⚠ THE REVERT THAT WAS GREEN: the REAL loader keeps the name it already had in hand');
+    eq(loaded.meta['vendor:u-gone'].phone, '+15615550000', 'and the number');
+    eq(loaded.meta['firm:+15616559011'].name, 'Dissolved Switchboard',
+       'a firm contact has no first/last, so the company name is the name');
+
+    // ── the REAL prune preview ────────────────────────────────────────────────
+    const pg = {
+      QUO_THROTTLE_MS: 0, Utilities: { sleep() {} },
+      Logger: { log(line) { pg.__log.push(String(line)); } }, __log: [],
+      _quoFetch: () => { throw new Error('a PREVIEW must not call the API'); },
+      syncQuoAll: () => ({ stale: [
+        { externalId: 'vendor:u-gone', contactId: 'c-777', name: 'Old Hauler LLC', phone: '+15615550000' },
+      ] }),
+    };
+    vm.createContext(pg);
+    vm.runInContext([grab('_quoWho'), grab('pruneQuoStale')].join('\n\n'),
+                    pg, { filename: 'quo-sync.gs (extracted)' });
+    pg.pruneQuoStale(false);
+    const prev = pg.__log.find((l) => l.indexOf('c-777') !== -1);
+    ok(!!prev, 'the preview lists the contact');
+    ok(prev.indexOf('Old Hauler LLC') !== -1,
+       '⚠⚠ THE SECOND GREEN REVERT: the list you decide from names the contact, not just its id');
+    ok(pg.__log.some((l) => l.indexOf('WOULD DELETE') !== -1), 'and says nothing was deleted');
+    ok(pg.__log.some((l) => l.indexOf('pruneQuoStaleConfirm') !== -1),
+       'naming the function the Run menu can actually reach, since the menu passes no arguments');
+
+    // ⚠⚠ THE WORST BLAST RADIUS IN THIS FILE, AND IT WAS GREEN ON THE REVERT.
+    // A LIVE push that cannot read Quo back sees an empty externalId map, so EVERY
+    // contact looks new: it would create a duplicate of all ~210 and then report the
+    // originals STALE for deletion. The id scheme exists to make that impossible, and
+    // it only holds while the read is allowed to FAIL LOUDLY. A dry run may swallow it
+    // — there is nothing to corrupt and the plan is still worth reading — but a push
+    // must not. Nothing tested the asymmetry, so a tidy-up could have collapsed the two.
+    const boom = (dry) => {
+      const bg = {
+        SpreadsheetApp: { getActiveSpreadsheet: () => ({ __rows: [] }), openById: () => ({ __rows: [] }) },
+        QUO_PARTNER_TAB: 'Partners', QUO_VENDOR_ID: 'x', QUO_VENDOR_TAB: 'V',
+        QUO_SRC_PARTNER: 'P', QUO_SRC_VENDOR: 'V', QUO_SRC_CLIENT: 'C',
+        QUO_SYNC_CLIENTS: false, QUO_TAGS_FIELD_KEY: '', QUO_THROTTLE_MS: 0,
+        _readTab: (ss) => ss.__rows, _collectClients: () => [],
+        _quoLoadExisting: () => { throw new Error('HTTP 503'); },
+        Logger: { log() {} }, Utilities: { sleep() {} }, _quoFetch: () => ({ code: 200, body: {} }),
+      };
+      vm.createContext(bg);
+      vm.runInContext([grab('_e164'), grab('_titleCase'), grab('_tags'), grab('_vendorRowContacts'),
+                       grab('_collectPartners'), grab('_collectVendors'), grab('_quoPayload'),
+                       grab('_firmPayload'), grab('_pruneAmbiguousExtras'), grab('syncQuoAll')].join('\n\n'),
+                      bg, { filename: 'quo-sync.gs (extracted)' });
+      try { bg.syncQuoAll(dry); return null; } catch (e) { return e.message; }
+    };
+    eq(boom(true), null, 'a DRY RUN still prints a plan when Quo is unreadable — nothing can be corrupted');
+    eq(boom(false), 'HTTP 503',
+       '⚠⚠ a LIVE push REFUSES rather than treating every existing contact as new');
   }
 };

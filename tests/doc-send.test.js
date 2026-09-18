@@ -559,4 +559,43 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((noComments(fn('docSend')).match(/showFB\(/g) || []).length, 0,
       'nothing in the send path writes to a tab strip');
   }
+
+  group('⚠ NO INPUT OFFERS A VALUE-SHAPED EXAMPLE — the fourth markup tripwire');
+  {
+    // Anthony, on the vendor form: *"in the phone and email fields there are dummy
+    // grey'd out examples. they are confusing and it looks like the phone is
+    // (561)000-0000 and the email is andy@company.com."* He is right, and the defect is
+    // not the wording — it is the SHAPE. A greyed string that is itself a valid phone
+    // number or a valid email address is indistinguishable at a glance from a value
+    // already on file, in a box whose entire job is holding which number reaches which
+    // person. An empty box says "nothing recorded"; "(561) 000-0000" says "0000".
+    //
+    // ⚠ THIS IS A RULE ABOUT THE SHAPE, NOT A LIST OF TODAY'S IDS, deliberately. The
+    // sweep that closed this found seven MORE in Client Intake and Contractors than the
+    // ones he was looking at, and an id list would have caught none of them and nothing
+    // added next year either. Same reasoning as the prep-fee sweep: a net woven from the
+    // cases you can think of catches the cases you thought of.
+    //
+    // GUIDANCE IS STILL ALLOWED and two placeholders deliberately survive: 'e.g. 214'
+    // on the extension (the 'e.g.' prefix cannot read as a recorded value) and
+    // 'Direct · Main' on the phone type (a middot-separated pick-one, not a value).
+    const VALUE_SHAPED = /^(\(?\d{3}\)?[ .-]?\d{3}[ .-]?\d{4}|[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})$/;
+    const tags = src.match(/<input\b[^>]*>/g) || [];
+    ok(tags.length > 100, 'the markup really was scanned (' + tags.length + ' inputs)');
+    const bad = [];
+    tags.forEach((t) => {
+      const ph = /\bplaceholder="([^"]*)"/.exec(t);
+      if (!ph) return;
+      if (!VALUE_SHAPED.test(ph[1].trim())) return;
+      const id = /\bid="([^"]*)"/.exec(t);
+      bad.push((id ? id[1] : '(no id)') + ' -> ' + ph[1]);
+    });
+    eq(bad, [], '⚠⚠ no input offers a placeholder that is itself a valid phone number or email address');
+
+    // The converse, or the rule above passes on a file with no placeholders left at all
+    // and stops meaning anything. Real guidance must survive.
+    const kept = tags.filter((t) => /\bplaceholder="/.test(t)).length;
+    ok(kept > 10, 'genuine hint placeholders are untouched (' + kept + ' remain)');
+    has(src, 'placeholder="e.g. 214"', "the extension keeps its 'e.g.' hint, which cannot read as a value");
+  }
 };

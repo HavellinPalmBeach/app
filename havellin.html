@@ -1001,7 +1001,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 11:58am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 12:56pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1086,8 +1086,8 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div id="i-deceased-note" style="display:none;font-size:11px;color:var(--gray);margin:6px 0 8px;padding:6px 10px;background:var(--tan);border-radius:4px;">Client is deceased — phone and email are disabled. Collect the authorized representative's contact below; that is where client documents will be sent.</div>
       <div class="row">
-        <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
-        <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email" placeholder="client@email.com"></div>
+        <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" oninput="formatPhone(this)" maxlength="14"></div>
+        <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email"></div>
       </div>
       <label>Property address <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-addr" placeholder="123 Ocean Blvd, Palm Beach FL">
       <div class="row">
@@ -1166,7 +1166,7 @@ body.no-smf .smf-col{display:none;}
           <div></div>
         </div>
         <div class="row">
-          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
+          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" oninput="formatPhone(this)" maxlength="14"></div>
           <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
         </div>
       </div>
@@ -1179,7 +1179,7 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div class="row">
           <div><label>Firm <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-firm" placeholder="Law firm name"></div>
-          <div><label>Attorney phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14"></div>
+          <div><label>Attorney phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" oninput="formatPhone(this)" maxlength="14"></div>
         </div>
         <div class="row">
           <div><label>Attorney email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-probate-atty-email" placeholder="Direct email"></div>
@@ -1853,8 +1853,8 @@ body.no-smf .smf-col{display:none;}
     <label>Firm</label>
     <input type="text" id="qp-firm" placeholder="e.g. Comiter, Singer, Baseman &amp; Braun">
     <div class="row">
-      <div><label>Phone</label><input type="tel" id="qp-phone" placeholder="(561) 000-0000"></div>
-      <div><label>Email</label><input type="email" id="qp-email" placeholder="name@firm.com"></div>
+      <div><label>Phone</label><input type="tel" id="qp-phone"></div>
+      <div><label>Email</label><input type="email" id="qp-email"></div>
     </div>
     <div id="qp-fb"></div>
     <div style="display:flex;gap:8px;margin-top:14px;">
@@ -2410,7 +2410,7 @@ body.no-smf .smf-col{display:none;}
     <div id="cq-name" style="font-size:13px;font-weight:600;color:var(--bronze);margin-bottom:10px;"></div>
     <input type="hidden" id="cq-id" value="">
     <label>Phone</label>
-    <input type="tel" id="cq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="cq-phone" oninput="formatPhone(this)" maxlength="14">
     <label>Email</label>
     <input type="email" id="cq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Rate ($/hr — your cost)</label>
@@ -2443,8 +2443,8 @@ body.no-smf .smf-col{display:none;}
           <option value="TC">TC — Transition Concierge</option>
           <option value="PS">PS — Property Specialist</option>
         </select>
-        <label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="c-phone" placeholder="(561) 000-0000">
-        <label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="c-email" placeholder="contractor@email.com">
+        <label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="c-phone">
+        <label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="c-email">
       </div>
       <div>
         <label>Rate ($/hr — your cost)</label><input type="number" id="c-rate" placeholder="e.g. 60">
@@ -2562,7 +2562,7 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div class="fld">
         <label>Office email</label>
-        <input type="email" id="v-email" placeholder="southflorida@company.com">
+        <input type="email" id="v-email">
       </div>
       <div class="fld">
         <label>Website</label>
@@ -2594,7 +2594,7 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div class="fld">
         <label>Title <span class="lbl-hint">— owner, dispatcher…</span></label>
-        <input type="text" id="v-contact-title" placeholder="Owner">
+        <input type="text" id="v-contact-title">
       </div>
       <div class="fld">
         <label>Mobile</label>
@@ -2602,7 +2602,7 @@ body.no-smf .smf-col{display:none;}
       </div>
       <div class="fld">
         <label>Email</label>
-        <input type="email" id="v-contact-email" placeholder="andy@company.com">
+        <input type="email" id="v-contact-email">
       </div>
       <div class="fld-wide" style="margin-top:6px;font-size:11px;font-weight:700;color:var(--gray-dk);">Contact 2</div>
       <div class="fld">
@@ -2698,11 +2698,11 @@ body.no-smf .smf-col{display:none;}
     <label>Last name</label>
     <input type="text" id="vq-contact-last" autocomplete="off">
     <label>Title</label>
-    <input type="text" id="vq-contact-title" autocomplete="off" placeholder="Owner">
+    <input type="text" id="vq-contact-title" autocomplete="off">
     <label>Mobile</label>
-    <input type="tel" id="vq-contact-mobile" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="vq-contact-mobile" oninput="formatPhone(this)" maxlength="14">
     <label>Email</label>
-    <input type="email" id="vq-contact-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="andy@company.com">
+    <input type="email" id="vq-contact-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">Contact 2</div>
     <label>First name</label>
     <input type="text" id="vq-contact2-first" autocomplete="off">
@@ -2711,14 +2711,14 @@ body.no-smf .smf-col{display:none;}
     <label>Title</label>
     <input type="text" id="vq-contact2-title" autocomplete="off">
     <label>Mobile</label>
-    <input type="tel" id="vq-contact2-mobile" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="vq-contact2-mobile" oninput="formatPhone(this)" maxlength="14">
     <label>Email</label>
     <input type="email" id="vq-contact2-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);">The firm</div>
     <label>Office phone</label>
-    <input type="tel" id="vq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="vq-phone" oninput="formatPhone(this)" maxlength="14">
     <label>Office email</label>
-    <input type="email" id="vq-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="southflorida@company.com">
+    <input type="email" id="vq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Website</label>
     <input type="text" id="vq-website" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Service area</label>
@@ -2913,11 +2913,11 @@ body.no-smf .smf-col{display:none;}
           <option>Other</option>
         </select>
         <label>Direct line <span style="font-weight:400;color:var(--gray);">(their desk, not the switchboard)</span></label>
-        <input type="tel" id="r-phone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <input type="tel" id="r-phone" oninput="formatPhone(this)" maxlength="14">
         <label>Mobile</label>
-        <input type="tel" id="r-mobile" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <input type="tel" id="r-mobile" oninput="formatPhone(this)" maxlength="14">
         <label>Email</label>
-        <input type="email" id="r-email" placeholder="partner@firm.com">
+        <input type="email" id="r-email">
       </div>
       <div>
         <label>Status</label>
@@ -2951,7 +2951,7 @@ body.no-smf .smf-col{display:none;}
     <div class="grid2">
       <div>
         <label>Office phone <span style="font-weight:400;color:var(--gray);">(the firm's main number)</span></label>
-        <input type="tel" id="r-officephone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <input type="tel" id="r-officephone" oninput="formatPhone(this)" maxlength="14">
         <label>Extension <span style="font-weight:400;color:var(--gray);">(theirs, on that line)</span></label>
         <input type="text" id="r-phoneext" placeholder="e.g. 214">
       </div>
@@ -2959,9 +2959,9 @@ body.no-smf .smf-col{display:none;}
         <label>Assistant / gatekeeper <span style="font-weight:400;color:var(--gray);">(who books the meeting)</span></label>
         <input type="text" id="r-contact" placeholder="Assistant / paralegal name">
         <label>Assistant phone</label>
-        <input type="tel" id="r-assistantphone" placeholder="(561) 000-0000" oninput="formatPhone(this)" maxlength="14">
+        <input type="tel" id="r-assistantphone" oninput="formatPhone(this)" maxlength="14">
         <label>Assistant email</label>
-        <input type="email" id="r-assistantemail" placeholder="assistant@firm.com">
+        <input type="email" id="r-assistantemail">
       </div>
     </div>
 
@@ -3039,11 +3039,11 @@ body.no-smf .smf-col{display:none;}
     <label>Firm / brokerage</label>
     <input type="text" id="rq-firm" autocomplete="off">
     <label>Direct line</label>
-    <input type="tel" id="rq-phone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="rq-phone" oninput="formatPhone(this)" maxlength="14">
     <label>Mobile</label>
-    <input type="tel" id="rq-mobile" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="rq-mobile" oninput="formatPhone(this)" maxlength="14">
     <label>Office phone <span style="font-weight:400;color:var(--gray);">(the firm's main number)</span></label>
-    <input type="tel" id="rq-officephone" oninput="formatPhone(this)" maxlength="14" placeholder="(561) 000-0000">
+    <input type="tel" id="rq-officephone" oninput="formatPhone(this)" maxlength="14">
     <label>Email</label>
     <input type="email" id="rq-email" autocomplete="off" autocapitalize="off" spellcheck="false">
     <label>Website</label>

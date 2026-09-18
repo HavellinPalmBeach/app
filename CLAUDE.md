@@ -1,5 +1,87 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE SYNC REPORT NAMED A PROBLEM WITHOUT NAMING ENOUGH TO ACT ON IT (FIXED 2026-09-18)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — `apps-script/quo-sync.gs` ONLY, and only before the next prune.**
+The partner backend was already redeployed for the section below; nothing in it changed again. Found by
+reading the first LIVE `pushQuoAll` log rather than by a test.
+
+- **✅ THE PUSH ITSELF IS PROVEN LIVE (2026-09-18, 12:41pm ET).**
+  `LIVE — pushed to Quo.  create=1  update=194  skip=22  conflict=1  failed=0`, over 79 partners and
+  **147 vendors**. **`update=194` against `create=1` is the one thing only a live read could confirm** —
+  the external-id scheme held and the existing contacts updated in place rather than duplicating. The
+  measurement this whole build was designed around also came back confirmed on the wire: **5 firm
+  contacts collapsing 13 partners** — Pressly (3), Comiter (4), Katz Baskies (2), Boyes Farina (2),
+  Northern Trust (2). That is the 2026-09-18 seed-data reading, live.
+- **⚠⚠ AND THE LOG WAS THEN UNREADABLE AT EXACTLY THE TWO POINTS SOMEBODY HAS TO DECIDE SOMETHING.**
+  - **16 STALE lines, each a bare 32-hex contact id and a uid.** `pruneQuoStaleConfirm` is the one
+    irreversible action in the file, and the list you read immediately before it identified nobody.
+    `_quoLoadExisting` **had the name and the number in hand and discarded both** — it built
+    `externalId -> id` and threw the rest of each record away.
+  - **The CONFLICT line printed the contact LABELS and not the thing that differed.** Two vendor rows
+    for one person under two business names rendered as *"David Schneider (vendor), David Schneider
+    (vendor)"* — identical twice, with nothing on the line saying what the conflict was. `companies`
+    was **computed into the plan and never printed**.
+- **⚠ THE LOADER NOW RETURNS `{ ids, meta }` RATHER THAN A SIDE-CHANNEL ON THE MAP.** `ids` still
+  decides POST vs PATCH and is untouched; `meta` exists only so the report can say who. A non-enumerable
+  property on the id map would have survived `for (var k in existing)` and needed no call-site changes,
+  which is precisely why it was the wrong answer — the contract change is the honest one, and **the test
+  stub broke on it, correctly**, which is how you know the contract is pinned.
+- **⚠ `_quoWho(e)` IS THE ONE RENDERING OF "WHICH CONTACT IS THIS"**, read by the push report AND the
+  prune preview. Two copies is how the list you READ and the list you DELETE come to describe the same
+  row differently. **An unnamed contact prints `(name not returned)` in words** — a bare id behind two
+  spaces reads as a formatting bug rather than as *Quo gave us nothing*.
+- **5996 committed checks** (89 new). **All nine changes revert-verified individually, ZERO green after
+  the three below were re-done** — the loader keeping the name fails 3, the plan carrying it 3, both
+  report lines 2 each, and the rest 1.
+  - **⚠⚠ THREE REVERTS CAME BACK GREEN ON THE FIRST SWEEP AND ALL THREE WERE THE SAME GAP: EVERY CHECK
+    DROVE A PIECE AND NOTHING DROVE THE END.** `_quoLoadExisting` is **stubbed in every other group**, so
+    the real loader could go back to discarding the name with the whole suite passing. `pruneQuoStale`
+    had **no coverage at all** — the list somebody reads before an irreversible delete, never once
+    driven. Both are driven now, the loader against a Quo-shaped response and the preview against a
+    `_quoFetch` that **throws if it is called**, because a preview that hits the API is not a preview.
+  - **⚠⚠ THE THIRD GREEN IS THE ONE WITH THE WORST BLAST RADIUS IN THE FILE, AND IT IS NOT A LOGGING
+    BUG.** A **live** push that cannot read Quo back sees an empty externalId map, so every contact looks
+    new: it would **create a duplicate of all ~210 and then report the originals STALE for deletion** —
+    the exact catastrophe the id scheme exists to make impossible. It only holds while that read is
+    allowed to FAIL LOUDLY. A **dry run may swallow it** (nothing to corrupt, and the plan is still worth
+    reading); a push must not. The asymmetry was correct by construction and untested, so a tidy-up could
+    have collapsed the two. Both directions are pinned now.
+- **⚠ THE REPORT IS DRIVEN, NOT GREPPED.** A build that carries the name on the plan object and then
+  prints a bare id contains every string a source check would look for. The tests capture `Logger` and
+  read **the lines a person would actually see**.
+
+### The greyed examples are gone from every phone and email box
+Anthony, on the vendor form: *"in the phone and email fields there are dummy grey'd out examples. they
+are confusing and it looks like the phone is (561)000-0000 and the email is andy@company.com."*
+App-only, no redeploy.
+
+- **⚠ THE DEFECT IS THE SHAPE, NOT THE WORDING.** A greyed string that is **itself a valid phone number
+  or a valid email address** is indistinguishable at a glance from a value already on file, in a box
+  whose entire job is holding which number reaches which person. An empty box says *nothing recorded*;
+  `(561) 000-0000` says `0000`.
+- **⚠ THE SWEEP FOUND SEVEN MORE THAN THE ONES HE WAS LOOKING AT**, in Client Intake (`i-phone`,
+  `i-email`, `i-executor-phone`, `i-probate-atty-phone`) and Contractors (`c-phone`, `c-email`,
+  `cq-phone`). Same defect, same fix, and **intake is the higher-stakes one** — that is the client's own
+  number and the personal representative's, read off a screen during the call that records them.
+  27 attributes removed across five forms.
+- **⚠ GUIDANCE SURVIVES AND THE CONVERSE IS TESTED.** `e.g. 214` on the extension (the `e.g.` prefix
+  cannot read as a recorded value) and `Direct · Main` on the phone type (a middot-separated pick-one).
+  A test asserts **more than ten placeholders remain**, or the rule would pass on a file stripped bare
+  and stop meaning anything.
+- **⚠⚠ THE TRIPWIRE IS A RULE ABOUT THE SHAPE, NEVER A LIST OF TODAY'S IDS — the fourth markup tripwire,
+  beside the orphaned `_private(` call, the orphaned DOM id and the `onclick=` name check.** No `<input>`
+  in the file may carry a placeholder matching a phone number or an email address. An id list would have
+  caught none of the seven above and nothing added next year: *a net woven from the cases you can think
+  of catches the cases you thought of.*
+- **Revert-verified**: putting back the vendor contact email fails 1, the intake phone 1, and stripping
+  the `e.g. 214` hint fails 1 (the converse).
+- **Verified in headless Chromium on the real page**: all 25 inputs present, **every one rendering an
+  empty box**, both deliberate hints intact, overflow **0** at 1440 / 768 / 390px, **no page errors**.
+  `git diff` is **27 insertions / 27 deletions and not one changed line outside an `<input>` tag**, so
+  the stylesheet is provably untouched — the 368-line CSS deletion rule, applied by reading the diff
+  rather than trusting a green suite.
+- **No document pass** — neither the manual nor the playbook describes a form's placeholder text.
+
 ## ⚠⚠ THE OFFICE LINE WAS PRESENTED AS SOMEBODY'S DIRECT NUMBER (BUILT 2026-09-18)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — THE PARTNER HALF ONLY.** `referral-partners-backend.gs`
 and `apps-script/quo-sync.gs` (one project, one deployment). **The vendor half is app-only and
