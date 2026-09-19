@@ -48,8 +48,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     m[k] = { status: statuses[k] }; return m;
   }, {}) });
 
-  const P = sandbox({ fns: ['jobProgress'],
-                      vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES'] });
+  const P = sandbox({ fns: ['jobProgress', 'roomStatusNormalize'],
+                      vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+                             'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'] });
   const prog = (est, plan, logs) => P.jobProgress(est, plan, logs);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -195,9 +196,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // …and keeps no private copy of the counting it used to do inline.
     ['TC_DONE_STATUSES[s]', 'PS_DONE_STATUSES[s]', 'totalTCHrs +=', 'r.excluded'].forEach((n) =>
       lacks(cb, n, `computeProjection holds no second copy of the count (${n})`));
-    eq((src.match(/TC_DONE_STATUSES\[/g) || []).length, 1,
-       'the done-status test appears in exactly one place in the file');
-    eq((src.match(/PS_DONE_STATUSES\[/g) || []).length, 1, '…and so does its specialist twin');
+    // The hours-weighted ACCUMULATION lives in one place. Other readers (the Job Plan's
+    // all-rooms-locked banner since 2026-09-19) ask the shared set whether ONE room is past
+    // a milestone — reading the set is the point of having it, and beats re-listing statuses.
+    eq((src.match(/TC_DONE_STATUSES\[s\]\) P\.doneTC \+=/g) || []).length, 1,
+       'the concierge-hours accumulation appears in exactly one place in the file');
+    eq((src.match(/PS_DONE_STATUSES\[s\]\) P\.donePS \+=/g) || []).length, 1, '…and so does its specialist twin');
+    lacks(fn('renderJobPlan'), "=== 'locked' ||", 'and no reader re-lists the statuses instead of asking the set');
     eq((src.match(/function jobProgress\(/g) || []).length, 1, 'and there is one definition of it');
 
     // Drive the REAL computeProjection against the REAL jobProgress and assert the snapshot it
@@ -205,9 +210,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // exists proves the line is there; this proves the numbers agree.
     const saved = [];
     const C = sandbox({
-      fns: ['computeProjection', 'jobProgress', 'getJobPlan'],
+      fns: ['computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize'],
       vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'jobPlanStore',
-             'estimateStore', 'currentEstimate'],
+             'estimateStore', 'currentEstimate', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
       stubs: {
         jobLogEntries: () => LOG(6, 12),
         saveJobPlan: (id) => saved.push(id),
@@ -380,11 +385,12 @@ const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
-      'standingFlagsBlock', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent'];
+      'standingFlagsBlock', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent',
+      'roomStatusNormalize'];
     const DVARS = ['ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY',
-      'TC_DONE_STATUSES', 'PS_DONE_STATUSES'];
+      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'];
 
     // A real 6-day job, activated on its target start, four working days in. 63 hours of room
     // work priced; the powder room (3 hrs) is packed and 36 hours are on the clock.

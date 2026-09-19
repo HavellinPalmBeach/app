@@ -38,9 +38,11 @@ function rig(opts) {
   let confirmAnswer = opts.confirm === undefined ? true : opts.confirm;
 
   const ctx = sandbox({
-    fns: ['_doPhotoUpload', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_slotStatusHtml',
-          'dismissFailedPhoto'],
-    vars: ['PHOTO_UPLOAD_TIMEOUT_MS'],
+    // The room workspace's shot strip is where a failed shot shows now (2026-09-19); the
+    // per-slot badge it replaced lived on room cards that no longer exist.
+    fns: ['_doPhotoUpload', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_roomShotStripHtml',
+          '_invDetailRefs', '_invFileId', '_roomShotThumbStyle', 'dismissFailedPhoto'],
+    vars: ['PHOTO_UPLOAD_TIMEOUT_MS', '_localShotThumbs'],
     stubs: {
       jobs: [{ id: 1, driveFolder: 'https://drive.google.com/drive/folders/FOLDER' }],
       _photoRefs: { 1: [] },
@@ -51,6 +53,7 @@ function rig(opts) {
       _savePendingPhotoData() {},
       _updatePhotoStatusEl() {},
       _invTouch(r) { r.updatedAt = 1; },
+      _invThumbCache: () => ({}),
       confirm: () => confirmAnswer,
       setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
       clearTimeout: (id) => { if (id) timers[id - 1] = null; },
@@ -93,9 +96,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(r.badges.some((b) => /still held on this device/.test(b) && /Retry/.test(b)),
        '⚠ naming the one thing that matters: the image is still here, so Retry can work');
 
-    // The slot now renders something a person can act on, which it did not before.
-    const html = r.ctx._slotStatusHtml(1, 2, 'before');
-    has(html, 'shot 1 not saved', 'the card shows the failure');
+    // The room's shot strip now renders something a person can act on, which it did not before.
+    const html = r.ctx._roomShotStripHtml(1, 2);
+    has(html, 'not saved', 'the strip shows the failure');
+    has(html, 'As found 1', 'against the shot it belongs to');
     has(html, 'retryPhotoUpload(1', 'with a Retry');
     lacks(html, 'Uploading', 'and no longer claims to be uploading');
   }
@@ -134,9 +138,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // button rendered `hidden` still carries its onclick, so `has(html, 'dismissFailedPhoto')`
     // was green over a control nobody can press. Read the rendered element the way a person
     // would — it has to be THERE and it has to be REACHABLE.
-    const card = r.ctx._slotStatusHtml(1, 2, 'before');
+    const card = r.ctx._roomShotStripHtml(1, 2);
     const btn = (card.match(/<button[^>]*dismissFailedPhoto[^>]*>/) || [''])[0];
-    ok(btn, 'the card renders a discard control');
+    ok(btn, 'the strip renders a discard control');
     lacks(btn, 'hidden', 'not hidden');
     lacks(btn, 'disabled', 'not disabled');
     lacks(btn, 'display:none', 'and not styled out of existence');
@@ -161,7 +165,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // And it really leaves every reading of the slot.
     eq(r.ctx._slotRefs(1, 2, 'before').length, 0, 'the slot no longer counts it');
-    eq(r.ctx._slotStatusHtml(1, 2, 'before'), '', 'and the card is clean');
+    eq(r.ctx._roomShotStripHtml(1, 2), '', 'and the strip is clean');
     has(fnBody('_slotRefs'), '!r.deletedAt',
         '⚠ the filter tests the tombstone — it did not, so a removed photo went on warning');
   }

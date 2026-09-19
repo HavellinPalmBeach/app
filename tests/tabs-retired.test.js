@@ -215,7 +215,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(o, 'showPanel(', 'nor switches panels');
     has(o, "docAction(jobId, 'invoice', 'view'", 'it opens the document through the one action');
     has(o, "stage: stage || 'midpoint'", 'carrying the stage it was asked for');
-    eq((src.match(/openInvoiceFor\(/g) || []).length, 4, 'its three Job Plan callers are unchanged');
+    // Two callers on the Job Plan since 2026-09-19 — the all-rooms-locked banner and the
+    // derived "midpoint invoice sent" line — plus the definition. The hand-ticked midpoint gate
+    // that was the third went with the midpoint booleans it wrote.
+    eq((src.match(/openInvoiceFor\(/g) || []).length, 3, 'its two Job Plan callers are unchanged');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

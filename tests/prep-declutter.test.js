@@ -350,7 +350,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(typeof fn('standingFlagsBlock') === 'string', 'standingFlagsBlock is real (stubbed here only)');
     ok(typeof fn('renderVendorSourcing') === 'string', 'renderVendorSourcing is real (stubbed here only)');
     const planFns = ['renderPrepJobPlan', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
-      'chkGrid', 'planChk', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan',
+      'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan',
       '_planTouch'];
     const planVars = ['PREP_FEE_RATE', 'EST_TOLERANCE_PCT'];
     const mkPlan = (dcHrs, loggedTC) => {

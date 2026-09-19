@@ -1,5 +1,114 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE HOUSE IS SHOT TWICE AND NOBODY TYPES A NAME IN IT — THE FIELD-CAPTURE REBUILD, STEP 1 OF 3 (BUILT 2026-09-19)
+Anthony's spec, *Inventory pipeline and Job Plan restructure (decided 2026-09-19)*, answered question by question from a
+car: **step 1 only** (the capture change and the Job Plan cut; Build Inventory and Value are steps 2 and 3 and are NOT
+built), **build the in-app camera**, **dictate to text**, **Cleared means the specialists are done**, **one room list**,
+**refuse Lock on estate/probate with no as-found shot and only flag on a living-client job**, **add a Detail-of-last
+toggle**, **Job Admin at the top of the Inventory tab** (*"I know for certain I don't want another tab"* · *"going back
+to the client dashboard is not a logical workflow when we're in the middle of the job"*), **derive the midpoint lines and
+delete the boxes**, **derive Letters, keep the PR-authority box**, docs in the same commit — and then *"leave the
+firearms flag … it should be a big red flag at the top if that was flagged at intake."* App-only, no redeploy: every new
+field rides the per-item manifest merge and nothing in `apps-script/` changed.
+
+- **⚠⚠ THE FIELD TYPES NOTHING, AND THAT IS THE WHOLE DESIGN.** `_captureShot` is the ONE writer for every room shot
+  (`before` · `inventory` · `detail` · `after`); an Items shot lands as a manifest line with **`objectName:''` and the default
+  category**, the filename is `HVL-0007_Kitchen_INV_3_2026-09-19_184821.jpg` — job, room, pass, sequence, stamp — and the
+  desk names it that evening under a new **Unnamed shots** worklist count, first of six. Five chips in the field
+  (`FIELD_DISPOSITIONS`: Keep · Donate · Sell · **Remove → Junk** · **Undecided → blank**), seven at the desk, and
+  **Undecided is the default**, so nothing decided lands in *Not yet decided* rather than being filed as Keep by silence.
+  - **⚠ THE CHIP LATCHES; APPRAISE AND DETAIL RESET.** A disposition is a standing answer about the shelf; *send this one to
+    a specialist* and *this is a close-up of the last one* are judgements about one object. Reverting the latch fails 4,
+    the reset 3.
+  - **⚠ A DETAIL SHOT IS NEVER A LINE.** It files under the previous item (`groupId`), `_jobInvRefs` excludes it, and
+    `_invAssignItemNos` skips it, so two shots of one object are one numbered line. An orphan detail with nothing to be a
+    detail of degrades to an ordinary item rather than vanishing. Reverting the filter fails 3.
+  - **`fieldNote` and `groupId` are on the `savePhotoRefs` whitelist and on `INV_STICKY_FIELDS`** — the third time this
+    file records that a new manifest key is silently dropped on every save without it.
+- **⚠⚠ THE CAMERA IS THE APP'S OWN VIEWFINDER BECAUSE THE NATIVE PICKER CANNOT STAY OPEN.** `<input capture>` closes after
+  every shot on iOS, and *"the camera stays open"* was the requirement. `#field-cam` is `getUserMedia` with its own shutter
+  and a Done button; refused permission degrades to the native picker **on the same overlay** and says so, and every shot
+  still files. The two-pass rule lives here: the As-found pass offers **no chips** (evidence, never inventory), the Items
+  pass offers five. Hold-to-talk is `webkitSpeechRecognition` where the browser has it and a typed box where it does not;
+  either appends to the LAST shot's note. Reverting *camera closes after every shot* fails 5 and throws 2.
+- **⚠⚠ THREE STATES, TWO TAPS, AND THE OLD LADDER IS NORMALISED ON READ — NEVER MIGRATED.** `pending → locked → cleared`;
+  `roomStatusNormalize` reads `sorting` as pending and `packed`/`complete` as cleared **without rewriting the store**, so a
+  plan written on the old build is right on the next paint on every device with nothing to run. `TC_DONE_STATUSES`
+  `{locked, cleared}` and `PS_DONE_STATUSES` `{cleared}` feed `jobProgress`, `computeProjection` and the schedule strip
+  exactly as before. Reverting the done sets fails **17**, dropping the normalisation **21**.
+  - **⚠ LOCK IS REFUSED ON AN ESTATE, FLAGGED ON A LIVING JOB, and the two are different functions.** `lockRefusal` keys on
+    `isDecedentJob` and needs one `before` shot (a FAILED one still counts — the evidence was taken); `lockFlag` is the amber
+    version. `setPlanRoomStatus` enforces the refusal itself, so no second door reaches around the disabled button, and
+    **Cleared is refused until Lock** (*Lock the room first.*). Reverting the refusal fails 6, the setter 4, Cleared-first 2.
+- **⚠⚠ FOUND IN THE BROWSER, NOT BY A TEST: THE ROOM LIST WAS BEHIND A CLOSED ACCORDION.** The first cut put the rooms
+  inside Phase 1, and `job-plan-accordion` correctly pins that every phase starts closed — so the whole field surface sat
+  behind a tap on a bar reading *Phase 1*, and the Playwright run **could not click a room at all**. `domStub` has no notion
+  of display, so 6,757 source-level checks were green over it. The rooms sit **above the accordion** now; the assertion is
+  on rendered ORDER (the room container before the first `phase-body-`), which is what a closed body hides. Reverting it
+  fails 1. *The stub proves what a function returns; only the browser proves what a person can reach.*
+- **⚠⚠ THE JOB PLAN CUT: ~60 POSITIONAL BOXES BECAME A KEYED CATALOGUE PLUS LINES THE APP READS FOR ITSELF.** `PLAN_TASKS`
+  is keyed (`crew_briefed`, `mv_eta`, …) with a `when(ctx)` predicate per box; `planDerivedLines` reads the real records —
+  `isAgreementSigned`, `isJobFunded`, `docSentAt`, `stagePaidTotal`, the executor-authorization field, room statuses,
+  vendor sourcing, release authority, `jobLogEntries`, `changeOrders` — and a derived line is never ticked. Measured on the
+  real renderer, same six-room house: Home Editing **9** boxes / 8 lines, Home Transition 28 / 8 (Move Day is real work),
+  Home Cleanout 13 / 8, Estate Settlement 17 / 9, Probate and Contested 18 / 11, plus 3–12 boxes under Job Admin.
+  - **⚠⚠ `job.midpointInvoiceSent` / `midpointReceived` ARE DELETED, NOT LEFT DEAD.** Three stores of one fact (the two
+    booleans, `docState`, `payments[]`); the boolean was the one a person could tick without sending anything.
+    `defaultInvStage` reads `docSentAt(job,'invoice','midpoint')` now. A test `lacks()` the field in live code; reverting
+    the derived read fails 3.
+  - **⚠ TICKS MADE BEFORE TODAY DO NOT CARRY, and both documents say so.** The old keys were `prefix + i`; a positional
+    tick has nothing to attach to under a named key. Notes (`p0_call_notes` is the same key), room statuses, hours,
+    photographs and the Inventory tab all carried. Prelaunch, dummy data.
+  - **⚠ JOB ADMIN RENDERS ON THE INVENTORY TAB ONLY** (`renderJobAdmin`, folded, with the count on the fold), and
+    `_planTaskDone` reads without `getJobPlan`, which MINTS a plan for any job it is asked about — reverting that fails 1
+    and throws 1, because a read that writes is the wrong-job hazard this file already records on `jobSchedule`.
+  - **⚠ THE FIREARMS BANNER IS THE FIRST ELEMENT IN THE HEADER**, above the client line and the standing-flags brief, red
+    (`#8b1e1e`), carrying the intake note or *Ticked at intake, no detail recorded*, the crew rule and the protocol link;
+    a slim `.fa-line` sits at the top of every room workspace on that job. It keeps the two firearms boxes on Phase 1 for
+    a flagged job whatever the service. Reverting the banner fails 4, the box predicate 1.
+- **6758 committed checks** (`tests/field-capture.test.js` new; `tests/room-phase-carry.test.js` rewritten; six suites
+  restated — `job-plan-merge`, `job-progress`, `photo-recovery`, `prep-declutter`, `tabs-retired`, `appraisal-track`).
+  **All 24 changes revert-verified individually, ZERO green** — baseline 0 before and after, no unmatched needles. Two
+  reverts crashed a file as well as failing it (the camera closing, `planChk` minting) and are read as red on the fails
+  they also report, per the standing rule.
+  - **⚠ THE REGEX COMMENT STRIPPER EATS 166KB OF THIS FILE, AND `accept="image/*"` IS WHY.** `/\/\*[\s\S]*?\*\//g` reads
+    the `/*` inside `image/*` as a comment opener and swallows everything to the next `*/` — ~170KB spans, twice. Four
+    assertions on `setPlanRoomStatus` read as failing on correct code because the function was simply gone from the
+    "live" text. Both new suites use a **line-based** stripper and assert `live.length > src.length * 0.5` and that the
+    function under test is still present. Add that guard to any comment-stripped needle from here.
+  - **⚠ TWO EDITS ARE COVERED BY THE BROWSER RUN AND NOT BY A UNIT REVERT**, recorded rather than implied: the
+    `_updatePhotoStatusEl` repaint hook (the workspace strip redraws after a shot lands) and `_invMissingThumbIds`
+    fetching thumbnails for every live ref. Both are exercised end to end below.
+- **Verified end to end in headless Chromium on the real page with a fake camera device** (`--use-fake-device-for-media-stream`),
+  **78 checks**, driving the real Job Plan, the real workspace, the real viewfinder and the real Inventory tab:
+
+  | | |
+  |---|---|
+  | the Job Plan on a flagged estate | firearms banner first, red, above the client line · **2 room rows**, the excluded bath in the not-in-scope line · **17 boxes** · 4 derived blocks · no midpoint box |
+  | the room workspace | full screen · the slim firearms line · three cameras · **Lock disabled**, *Shoot the room as found first* on screen · Cleared not offered |
+  | the As-found pass | camera open, **frames in the viewfinder**, no chips · two shots, **still open** · Done closes it · strip reads *As found · 2* · Lock live, refusal gone |
+  | the Items pass | five chips, Undecided lit · Sell + Appraise + shoot → chip **stays**, Appraise **resets** · Detail → files under item 1 · typed note lands on the last shot · **two lines and one detail**, no name, filename with no name and no category, every shot uploaded |
+  | Lock, After, Cleared | Locked · Cleared offered with the no-after flag · After shot clears it · Cleared, store holds `cleared` · row reads *2 found · 2 items · 1 after* · *1 of 2* then *2 of 2 rooms locked* · the midpoint banner lights |
+  | the Inventory tab | **Job Admin first**, folded, *0 of 5 ticked · 3 derived items still open* · financial-close boxes, no court list on a settlement · *Unnamed shots 2* · the field note and *+1 detail shot* on the row |
+  | the downsizing job | no banner · a room `packed` on the old build reads **Cleared** · Lock **flags, never refuses** |
+  | 390px | Job Plan · workspace · camera · Inventory all **overflow 0**; the shutter 72×72 and on screen |
+  | the stylesheet | **79 lines added, 0 deleted** · **0 page errors** |
+
+- Manual **§9a-i** (specialist hours earn at *cleared*), **§10 rewritten** (the room list and workspace, the two-passes
+  table, three states / two taps, ⚑ Appraise fires at the desk), **§10a** (Job Admin, Unnamed shots, six counts), **§11**
+  (the room list above the accordion and why, the firearms banner, the restructured per-service table with the measured
+  counts, the two deleted booleans, ticks do not carry, a room drawn once). Playbook **Step 10a rewritten** around the two
+  passes and the two taps, the firearms banner `.stop`, the schedule `.stop` and its symptom row, the inventory step, and
+  **ten symptom→cause rows** (one restated, nine new). Both `.md` copies hand-edited; **55 claims parity-checked, 0
+  mismatches** — ⚠ four apparent misses were needles straddling `<em>` markup, **verified rather than assumed**. Tag
+  balance verified (`manual.html`'s `<code>` delta is still the documented false positive at **1**), rendered at
+  1440/390 with **0 overflow, 0 page errors**, and under `print` **no table takes the phone rule** (16 and 39 tables,
+  byte-for-byte the same widths as the previous tree — which is what *"all tables full-width under print"* has meant in
+  every prior entry).
+- **⚠ NOT BUILT, DELIBERATELY: Agent One (Build Inventory) and Agent Two (Value).** Steps 2 and 3 of the spec wait on the
+  bake-off. **Open for Anthony:** the standalone-line floor — the spec's flat $100 against `invListingThreshold` ($100
+  formal / $1,000 standard), which already exists and already branches.
+
 ## ⚠⚠ THE WALKTHROUGH WAS WRITE-ONLY ON SCREEN, AND `privateNote` IS THE PROOF (BUILT 2026-09-19)
 Ashley's report, via Anthony: *"after we build an estimate there's no real easy way to go back and look at that estimate,
 like the rooms that are ticked to the notes that are taken … I might do that ahead of going to the client's house for the
@@ -3303,8 +3412,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/estimate-view-client-dashboard-024he6`
-  (was `claude/sharp-allen-1cc2ur`)
+- Active feature branch: `claude/focused-knuth-pqw6ff`
+  (was `claude/estimate-view-client-dashboard-024he6`, then `claude/sharp-allen-1cc2ur`)
   ⚠ This session was ASSIGNED that branch, which is an older name still in the list below — a
   session's assignment wins over whatever is recorded here, so it is promoted rather than
   duplicated. Everything is on `main` either way; Pages serves `main`.
@@ -3323,7 +3432,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/estimate-view-client-dashboard-024he6:main`
+  `git push origin claude/focused-knuth-pqw6ff:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

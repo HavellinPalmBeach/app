@@ -466,6 +466,85 @@ input:checked+.slider:before{transform:translateX(18px);}
 .sf-txt{flex:1 1 220px;min-width:0;}
 .sf-rule{flex:1 1 100%;margin-left:160px;font-weight:700;}
 @media (max-width:820px){.sf-lbl{flex:1 1 100%;}.sf-rule{margin-left:0;}}
+/* ── Field capture (2026-09-19): the firearms banner, the room list, the room workspace,
+   the in-app camera, the derived lines and Job Admin. The workspace and the camera are
+   FIXED full-screen siblings of the panels (see #room-ws / #field-cam in the markup),
+   above the modal layer, so a phone gets one room at a time and nothing behind it. */
+.fa-banner{background:#8b1e1e;color:#fff;border-radius:6px;padding:12px 16px;margin-bottom:12px;}
+.fa-hd{font-size:15px;font-weight:800;letter-spacing:.04em;}
+.fa-rule{font-size:12.5px;font-weight:600;margin-top:4px;line-height:1.45;}
+.fa-note{font-size:11.5px;margin-top:4px;opacity:.92;}
+.fa-link{display:inline-block;margin-top:8px;color:#fff;font-weight:700;text-decoration:underline;}
+.fa-line{background:#8b1e1e;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;}
+.fa-line a{color:#fff;}
+.rl{display:flex;flex-direction:column;gap:6px;}
+.rl-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;border:1px solid var(--border-md);border-radius:6px;background:var(--white);cursor:pointer;font-family:inherit;color:var(--gray-dk);min-height:48px;}
+.rl-row:active{background:var(--cream);}
+.rl-name{flex:1 1 auto;min-width:0;font-size:13px;font-weight:700;line-height:1.3;}
+.rl-note{display:block;font-size:10.5px;font-weight:400;color:var(--gray);font-style:italic;}
+.rl-counts{flex:0 1 auto;font-size:10.5px;color:var(--gray);white-space:nowrap;}
+.rl-fail{color:#c0392b;font-weight:700;}
+.rl-pill{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:12px;padding:3px 9px;white-space:nowrap;}
+.rl-excl{margin-top:8px;font-size:11px;color:#A32D2D;background:#fbeded;border:1px solid #E3B7B7;border-radius:4px;padding:6px 10px;line-height:1.5;}
+#room-ws{position:fixed;inset:0;background:var(--cream);z-index:1100;display:none;flex-direction:column;overflow:hidden;}
+.ws-top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--gray-dk);color:var(--cream);}
+.ws-top .btn-back{background:none;border:1px solid rgba(255,255,255,.4);color:var(--cream);border-radius:5px;padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer;min-height:44px;white-space:nowrap;}
+.ws-title{flex:1;min-width:0;font-size:15px;font-weight:700;line-height:1.2;}
+.ws-body{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch;}
+.ws-cams{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0;}
+.ws-cam{border:1px solid var(--border-md);border-radius:8px;background:var(--white);padding:14px 6px;font-family:inherit;font-size:12px;font-weight:700;color:var(--gray-dk);cursor:pointer;min-height:72px;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.ws-cam small{font-size:10px;font-weight:600;color:var(--gray);}
+.ws-status{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px;}
+.ws-btn{border-radius:8px;padding:12px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border-md);background:var(--white);color:var(--gray-dk);min-height:48px;flex:1 1 140px;}
+.ws-btn.on{color:#fff;}
+.ws-btn:disabled{opacity:.45;cursor:not-allowed;}
+.ws-btn small{font-weight:500;}
+.ws-why{font-size:11.5px;line-height:1.45;border-radius:4px;padding:6px 9px;margin:4px 0;}
+.ws-why.err{background:var(--err-bg);color:var(--err-tx);font-weight:600;}
+.ws-why.warn{background:var(--warn-bg);color:var(--warn-tx);}
+.ws-why.muted{color:var(--gray);}
+.ws-strip{margin-top:12px;}
+.ws-strip-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin:10px 0 4px;}
+.ws-shots{display:flex;flex-wrap:wrap;gap:8px;}
+.ws-shot{width:96px;font-size:10px;color:var(--gray);}
+.ws-thumb{width:96px;height:96px;border-radius:5px;border:1px solid var(--border);background:var(--white) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.ws-shot .n{font-weight:700;color:var(--gray-dk);margin-top:2px;}
+.ws-shot .note{font-style:italic;line-height:1.3;}
+#field-cam{position:fixed;inset:0;background:#000;z-index:1200;display:none;flex-direction:column;color:#fff;}
+.fc-top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(0,0,0,.7);font-size:13px;}
+.fc-top .fc-room{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fc-done{background:var(--bronze);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;min-height:44px;}
+#fc-stage{flex:1;position:relative;min-height:0;background:#111;}
+#fc-video{width:100%;height:100%;object-fit:cover;display:block;}
+#fc-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s;}
+.fc-nocam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:13px;line-height:1.5;color:#ddd;}
+#fc-ui{background:rgba(0,0,0,.85);padding:8px 12px 14px;display:flex;flex-direction:column;gap:8px;}
+.fc-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.fc-chip{flex:1 1 auto;border-radius:20px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#eee;font-family:inherit;font-size:13px;font-weight:700;padding:9px 12px;cursor:pointer;min-height:40px;}
+.fc-chip.on{background:var(--bronze);border-color:var(--bronze);color:#fff;}
+.fc-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.fc-tog{border-radius:6px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#eee;font-family:inherit;font-size:12px;font-weight:600;padding:8px 10px;cursor:pointer;min-height:40px;}
+.fc-tog.on{background:var(--bronze);border-color:var(--bronze);color:#fff;}
+.fc-tog:disabled{opacity:.35;cursor:default;}
+.fc-talk{touch-action:none;user-select:none;-webkit-user-select:none;}
+.fc-talk.on{background:#c0392b;border-color:#c0392b;color:#fff;}
+.fc-last{display:flex;gap:8px;align-items:center;font-size:11px;color:#ccc;min-height:40px;}
+.fc-last-thumb{width:40px;height:40px;border-radius:4px;background:#333 center/cover no-repeat;flex:0 0 auto;}
+.fc-shutter-row{display:flex;justify-content:center;padding-top:4px;}
+.fc-shutter{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;padding:0;}
+.fc-shutter:disabled{opacity:.35;cursor:default;}
+.fc-note-in{flex:1;min-width:120px;font-size:13px;padding:8px;border-radius:5px;border:1px solid #555;background:#222;color:#fff;}
+.pl-derived{border:1px solid var(--border);border-radius:5px;background:var(--white);margin:6px 0 10px;}
+.pl-line{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:6px 10px;font-size:12px;border-top:1px solid var(--border);}
+.pl-line:first-child{border-top:none;}
+.pl-dot{flex:0 0 14px;font-weight:800;color:var(--gray);}
+.pl-ok .pl-dot,.pl-ok .pl-lbl{color:var(--ok-tx);}
+.pl-lbl{font-weight:600;}
+.pl-det{color:var(--gray);font-size:11px;}
+.ja-card{border:1px solid var(--border-md);border-radius:6px;background:var(--white);margin-bottom:12px;}
+.ja-hd{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:12.5px;font-weight:700;}
+.ja-hd .ja-n{font-size:11px;color:var(--gray);font-weight:600;margin-left:auto;}
+.ja-body{padding:4px 12px 12px;border-top:1px solid var(--border);}
 .divider{height:1px;background:var(--border);margin:1rem 0;}
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--gray);font-size:12px;}
 /* The "nothing selected yet" panel, shared by Client Estimate, Inventory, Job Plan and
@@ -1033,7 +1112,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 10:31am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 3:03pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1874,6 +1953,12 @@ body.no-smf .smf-col{display:none;}
      same addPartner action the Referral Partners tab uses, so there is one write path and
      one place a partner can come from. Deliberately minimal: name, firm and contact. The
      rest of the prospecting intel is desk work on the Referral Partners tab. -->
+<!-- The room workspace and the in-app camera (2026-09-19). Siblings of the panels, never
+     children of #job-plan-content: that container is rewritten by innerHTML on every plan
+     redraw, and a live <video> inside it would be torn down mid-shot. -->
+<div id="room-ws"></div>
+<div id="field-cam"></div>
+
 <div class="modal-overlay" id="qp-modal" style="display:none;">
   <div class="modal-box" style="width:440px;">
     <div class="modal-title">New Referral Partner</div>
@@ -7548,8 +7633,6 @@ function saveIntake() {
     probateSale: document.getElementById('i-probate-sale') ? document.getElementById('i-probate-sale').value : '',
     executorAuth: document.getElementById('i-executor-auth') ? document.getElementById('i-executor-auth').value : 'pending',
     depositReceived: false,
-    midpointInvoiceSent: false,
-    midpointReceived: false,
     agrSigned: false,
     svc:svc, svcLabel:svcLabels[svc],
     sqft:document.getElementById('i-sqft').value,
@@ -7845,6 +7928,37 @@ function standingFlagsBlock(job) {
       '</div>';
     }).join('') +
   '</div>';
+}
+
+// ⚠⚠ FIREARMS FLAGGED AT INTAKE IS A RED BANNER AT THE TOP OF THE JOB PLAN (2026-09-19), not
+// only a row in the brief. Anthony: *"the firearms flag should be a big red flag at the top if
+// that was flagged at intake."* The brief still lists it beside every other flag; this is the
+// one thing on the tab that cannot be scrolled past, and the room workspace carries a slim
+// version of it so the rule is in front of whoever is standing in the room.
+function firearmsFlaggedAtIntake(job) {
+  var f = houseFlagsOf(job).firearms;
+  return !!(f && f.on);
+}
+function _firearmsRow() {
+  return HOUSE_FLAGS.filter(function(x){ return x.key === 'firearms'; })[0] || {};
+}
+function firearmsBannerHtml(job) {
+  if (!firearmsFlaggedAtIntake(job)) return '';
+  var f = houseFlagsOf(job).firearms;
+  var row = _firearmsRow();
+  return '<div class="fa-banner">'
+    + '<div class="fa-hd">&#9888; FIREARMS IN THIS HOUSE &mdash; flagged at intake</div>'
+    + '<div class="fa-rule">' + esc(row.crewRule || 'Nothing moves without written authority.') + '</div>'
+    + (f.note ? '<div class="fa-note">Intake: \u201c' + esc(f.note) + '\u201d</div>'
+              : '<div class="fa-note">Ticked at intake, no detail recorded &mdash; ask the client before Day 1.</div>')
+    + (row.doc ? '<a class="fa-link" href="' + esc(row.doc) + '" target="_blank" rel="noopener">' + esc(row.docLabel || 'Read the firearms protocol') + ' &rarr;</a>' : '')
+    + '</div>';
+}
+function firearmsWorkspaceLine(job) {
+  if (!firearmsFlaggedAtIntake(job)) return '';
+  var row = _firearmsRow();
+  return '<div class="fa-line">&#9888; Firearms flagged on this job &mdash; photograph in place, nothing moves.'
+    + (row.doc ? ' <a href="' + esc(row.doc) + '" target="_blank" rel="noopener">Protocol &rarr;</a>' : '') + '</div>';
 }
 
 // Every field on the Client Intake form, and the three that reset to something other
@@ -12056,12 +12170,12 @@ function sectionHdr(title) {
 // "Approved — Awaiting Client". **Every row below reads the carrier that owns
 // its own milestone**, and there is a test for exactly that job.
 //
-// ⚠ THE INVOICE-SENT ROWS ARE DELIBERATELY ABSENT AND THIS IS NOT AN OVERSIGHT.
-// Nothing in this app records that an invoice was sent: `midpointInvoiceSent` is
-// a self-attested Job Plan checkbox with no who and no when, and the deposit and
-// final invoices have no field at all. A row whose `done` cannot be answered
-// honestly is worse than no row — it would read as a milestone while being a
-// guess. They arrive with the send record that backs them, not before.
+// ⚠ THE INVOICE-SENT ROWS WERE DELIBERATELY ABSENT UNTIL THE SEND RECORD EXISTED (Slice 0).
+// Nothing then recorded that an invoice was sent: the Job Plan's `midpointInvoiceSent`
+// was a self-attested checkbox with no who and no when, and the deposit and final invoices
+// had no field at all. A row whose `done` cannot be answered honestly is worse than no row.
+// They arrived with `docState` in Slice 4, and on 2026-09-19 the hand-ticked checkbox was
+// deleted outright, so the send record is the only source there is.
 //
 // `state` is one of: done · current · blocked · waiting · terminal.
 // THE INVARIANT, asserted over a fixture matrix: at most ONE row is `current`
@@ -12147,10 +12261,31 @@ var JT_LEG_BREAK = 'agreement_signed';
 // derivation stays side-effect-free. Splitting the measurement out of the persistence is what
 // made the schedule able to read progress at all.
 var PROJ_CREW_DAY = 7;
+// ⚠⚠ A ROOM HAS THREE STATES AND TWO TAPS (2026-09-19). It had five — pending, sorting, locked,
+// packed, complete — and three to five taps per room on chips too small for a thumb. The two
+// that survive are the two the job actually turns on: LOCKED (sorted and shot; the concierge's
+// decisions in this room are final, which is what the midpoint invoice waits for) and CLEARED
+// (empty, the after-photo is in; the specialists' work in this room is done). `sorting` was a
+// state nobody read; `packed` and `complete` were one fact in two words.
+// ⚠ LEGACY VALUES ARE NORMALISED ON READ, NEVER MIGRATED IN THE STORE. A plan written before
+// today still holds `packed`, and a device that has not loaded this build may still write it.
+// Every reader goes through roomStatusNormalize, so both shapes mean one thing everywhere.
+var ROOM_STATUSES = ['pending', 'locked', 'cleared'];
+var ROOM_STATUS_META = {
+  pending: { label: 'Pending', color: 'var(--gray)',  bg: 'var(--cream)' },
+  locked:  { label: 'Locked',  color: '#357a50',      bg: '#eaf4ec' },
+  cleared: { label: 'Cleared', color: 'var(--ok-tx)', bg: '#e6f3e6' }
+};
+var ROOM_STATUS_LEGACY = { sorting: 'pending', packed: 'cleared', complete: 'cleared' };
+function roomStatusNormalize(s) {
+  s = String(s || 'pending');
+  if (ROOM_STATUS_LEGACY[s]) return ROOM_STATUS_LEGACY[s];
+  return ROOM_STATUS_META[s] ? s : 'pending';
+}
 // TC% counts a room once locked (sort/decision done).
-// PS% counts a room once packed (physical packing done).
-var TC_DONE_STATUSES = { locked:1, packed:1, complete:1 };
-var PS_DONE_STATUSES = { packed:1, complete:1 };
+// PS% counts a room once cleared (the physical work in it is done).
+var TC_DONE_STATUSES = { locked:1, cleared:1 };
+var PS_DONE_STATUSES = { cleared:1 };
 
 function jobProgress(est, plan, logs) {
   var P = { has:false, estTC:0, estPS:0, estHrs:0, actTC:0, actPS:0, actHrs:0, hoursPct:0,
@@ -12181,7 +12316,7 @@ function jobProgress(est, plan, logs) {
     if (!Number.isFinite(tcH) || !Number.isFinite(psH)) { P.invalidRooms.push(r.name || ('Room ' + r.idx)); return; }
     P.planTC += tcH;
     P.planPS += psH;
-    var s = (rooms[r.idx] && rooms[r.idx].status) || 'pending';
+    var s = roomStatusNormalize(rooms[r.idx] && rooms[r.idx].status);
     if (TC_DONE_STATUSES[s]) P.doneTC += tcH;
     if (PS_DONE_STATUSES[s]) P.donePS += psH;
   });
@@ -17515,6 +17650,7 @@ function savePhotoRefs(jobId) {
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, driveFileId:r.driveFileId,
                reviewed:r.reviewed, reviewedAt:r.reviewedAt, reviewedBy:r.reviewedBy, valNote:r.valNote,
+               fieldNote:r.fieldNote, groupId:r.groupId,
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
@@ -17572,82 +17708,21 @@ function dismissFailedPhoto(jobId, stableId) {
   _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
 }
 
-function _slotStatusHtml(jobId, roomIdx, label) {
-  var refs = _slotRefs(jobId, roomIdx, label);
-  var uploading = refs.filter(function(r){ return r.status === 'uploading'; }).length;
-  var failedRefs = refs.filter(function(r){ return r.status === 'failed'; });
-  var html = '';
-  if (uploading > 0) html += '<span style="color:var(--gray);font-size:10px;">Uploading…</span> ';
-  failedRefs.forEach(function(r) {
-    html += '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; shot ' + r.seq + ' not saved</span>'
-      + ' <button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')"'
-      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;margin-left:3px;">Retry</button>'
-      + ' <button onclick="dismissFailedPhoto(' + jobId + ',\'' + r.stableId + '\')" title="Discard this shot"'
-      + ' style="font-size:10px;padding:2px 6px;cursor:pointer;background:none;color:#c0392b;border:1px solid #c0392b;border-radius:3px;font-family:inherit;margin-left:2px;">&#10005;</button> ';
-  });
-  return html;
-}
-
-function _renderRoomPhotoControls(jobId, roomIdx, label) {
-  var btnText = label === 'before' ? 'Before' : 'After';
-  var refs = _slotRefs(jobId, roomIdx, label);
-  var count = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
-  var hasFailed = refs.some(function(r){ return r.status === 'failed'; });
-  var borderCol = count > 0 ? 'var(--ok-tx)' : (hasFailed ? '#c0392b' : 'var(--border-md)');
-  var bgCol = count > 0 ? '#f0faf0' : (hasFailed ? '#fff5f5' : 'var(--cream)');
-  var txCol = count > 0 ? 'var(--ok-tx)' : (hasFailed ? '#c0392b' : 'var(--gray-dk)');
-  var badge = count > 0
-    ? ' <span id="photo-cnt-' + jobId + '-r' + roomIdx + '-' + label + '" style="background:var(--ok-tx);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:1px;">' + count + '</span>'
-    : '<span id="photo-cnt-' + jobId + '-r' + roomIdx + '-' + label + '"></span>';
-  return '<div style="display:inline-flex;align-items:center;gap:5px;margin-right:6px;margin-bottom:4px;">'
-    + '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
-    + 'border-radius:4px;border:1px solid ' + borderCol + ';font-size:11px;background:' + bgCol + ';color:' + txCol + ';">'
-    + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
-    + 'onchange="attachJobPlanPhoto(this,' + jobId + ',' + roomIdx + ',\'' + label + '\')">'
-    + '&#128247; ' + btnText + badge + '</label>'
-    + '<span id="photo-st-' + jobId + '-r' + roomIdx + '-' + label + '" style="font-size:10px;">'
-    + _slotStatusHtml(jobId, roomIdx, label)
-    + '</span></div>';
-}
-
+// After a shot's status moves — lands, fails, is retried, is discarded — the two surfaces
+// that show it are redrawn from the store: the room workspace (the shot strip) and the Job
+// Plan's room list (the counts). Until 2026-09-19 this painted per-slot badges into two room
+// grids that no longer exist.
 function _updatePhotoStatusEl(jobId, roomIdx, label) {
-  var el = document.getElementById('photo-st-' + jobId + '-r' + roomIdx + '-' + label);
-  if (el) el.innerHTML = _slotStatusHtml(jobId, roomIdx, label);
-  var refs = _slotRefs(jobId, roomIdx, label);
-  var count = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
-  var cntEl = document.getElementById('photo-cnt-' + jobId + '-r' + roomIdx + '-' + label);
-  if (cntEl) {
-    if (count > 0) {
-      cntEl.textContent = count;
-      cntEl.style.cssText = 'background:var(--ok-tx);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:1px;';
-    } else {
-      cntEl.textContent = '';
-      cntEl.style.cssText = '';
-    }
-  }
-  var warnHtml = '<span style="color:#c0392b;font-size:10px;font-weight:600;">&#9888; Photo not saved — see Retry below</span>';
-  // Label-specific flag (Phase 1 'before' card / Phase 2 'after' card live separately).
-  var labelFailed = refs.some(function(r){ return r.status === 'failed'; });
-  var lblFlag = document.getElementById('photo-fail-flag-' + jobId + '-r' + roomIdx + '-' + label);
-  if (lblFlag) {
-    lblFlag.style.display = labelFailed ? '' : 'none';
-    lblFlag.innerHTML = labelFailed ? warnHtml : '';
-  }
-  // Legacy combined flag (standalone Room Documentation card has both photos in one).
-  var allRefs = (_photoRefs[jobId] || []).filter(function(r){ return r.roomIdx === roomIdx && !r.collId; });
-  var anyFailed = allRefs.some(function(r){ return r.status === 'failed'; });
-  var flagEl = document.getElementById('photo-fail-flag-' + jobId + '-r' + roomIdx);
-  if (flagEl) {
-    flagEl.style.display = anyFailed ? '' : 'none';
-    flagEl.innerHTML = anyFailed ? warnHtml : '';
-  }
+  if (_roomWs.open && _roomWs.jobId === jobId && _roomWs.roomIdx === roomIdx) _paintRoomWorkspace();
+  _repaintPlanRooms(jobId);
 }
 
-// ── Court item inventory: one photo per object, named at capture ──────────────
-// Inventory photos live on the room (roomIdx) with label 'inventory' and carry an
-// objectName + category baked into the Drive filename, so each file is self-identifying
-// for a §733.604 court inventory. Disposition is an editable decision kept as metadata
-// (not in the filename, since the app can't rename a file already in Drive).
+// ── Court item inventory: one photo per object, NAMED AT THE DESK ───────────────
+// Inventory photos live on the room (roomIdx) with label 'inventory'. Until 2026-09-19 the
+// object name and category were typed BEFORE the shutter and baked into the Drive filename;
+// the field types nothing now (see _captureShot) and the inventory LINE is what links a name
+// to its file. Disposition is an editable decision kept as metadata, never in the filename,
+// since the app cannot rename a file already in Drive.
 // ── Shared tangible-personal-property taxonomy ────────────────────────────────
 // Single source of truth for item categories. Each category knows (a) which
 // specialist appraiser it routes to and (b) whether items in it can carry enough
@@ -17849,187 +17924,6 @@ function _invRefs(jobId, roomIdx) {
   return (_photoRefs[jobId] || []).filter(function(r){
     return r.roomIdx === roomIdx && r.label === 'inventory' && !r.collId;
   });
-}
-
-function _renderRoomInventoryList(jobId, roomIdx) {
-  var refs = _invRefs(jobId, roomIdx);
-  if (!refs.length) return '';
-  var rows = refs.map(function(r) {
-    var st = r.status === 'uploaded'
-      ? '<span style="color:var(--ok-tx);font-weight:700;">&#10003;</span>'
-      : (r.status === 'failed'
-          ? '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>'
-          : '<span style="color:var(--gray);">…</span>');
-    var meta = [r.category, r.disposition].filter(Boolean).map(function(x){ return esc(x); }).join(' · ');
-    var apprFlag = invNeedsAppraisal(r, _invJob(jobId))
-      ? ' <span title="Likely needs a specialist appraisal — routed to a ' + esc(invAppraiserFor(r.category) || 'specialist') + '" style="color:var(--bronze);font-weight:700;">&#9873;</span>'
-      : '';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:10px;padding:1px 0;">'
-      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.seq||'') + '. ' + esc(r.objectName||'(unnamed)') + apprFlag
-      + (meta ? ' <span style="color:var(--gray);">— ' + meta + '</span>' : '') + '</span>'
-      + st + '</div>';
-  }).join('');
-  var nUp = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
-  return '<div style="margin-top:4px;padding-top:4px;border-top:1px dashed var(--border-md);">'
-    + '<div style="font-size:9px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Inventory · ' + nUp + '/' + refs.length + ' saved</div>'
-    + rows + '</div>';
-}
-
-// Single-select disposition chip; stores the choice on the row's container dataset.
-function _selectInvDisp(btn, jobId, roomIdx) {
-  var wrap = document.getElementById('inv-disp-' + jobId + '-r' + roomIdx);
-  if (!wrap) return;
-  var val = btn.getAttribute('data-disp');
-  var clearing = wrap.dataset.disp === val; // re-click deselects
-  wrap.dataset.disp = clearing ? '' : val;
-  Array.prototype.forEach.call(wrap.querySelectorAll('button'), function(c) {
-    var on = !clearing && c === btn;
-    c.style.background = on ? 'var(--gray-dk)' : 'var(--cream)';
-    c.style.color = on ? 'var(--cream)' : 'var(--gray)';
-    c.style.borderColor = on ? 'var(--gray-dk)' : 'var(--border-md)';
-  });
-}
-
-// The sentence under the Appraise toggle. ⚠ IT REPORTS, IT DOES NOT INSTRUCT: on an intrinsic
-// category the item is ALREADY bound for the worklist (invNeedsAppraisal fires on the category
-// plus a blank value), and the crew pressing the toggle for it is harmless but pointless. Saying
-// nothing there is what made the whole track look absent — it has been running silently since
-// it was built.
-function _invApprNoteText(cat) {
-  return invIsIntrinsic(cat)
-    ? '&#10003; ' + esc(cat) + ' already goes to the appraisal worklist.'
-    : 'Tick for anything that should be valued by a specialist.';
-}
-function _paintInvApprNote(jobId, roomIdx) {
-  var noteEl = document.getElementById('inv-appr-' + jobId + '-r' + roomIdx + '-note');
-  var catEl = document.getElementById('inv-cat-' + jobId + '-r' + roomIdx);
-  if (noteEl && catEl) noteEl.innerHTML = _invApprNoteText(catEl.value || INV_DEFAULT_CATEGORY);
-}
-// Bronze when on, matching the "⚑ appraise" badge the row wears on the Inventory tab. A fact
-// painted one colour where it is entered and another where it is read is two opinions of it.
-function _selectInvAppr(btn, jobId, roomIdx) {
-  var on = !btn.dataset.on;
-  btn.dataset.on = on ? '1' : '';
-  btn.style.background = on ? 'var(--bronze)' : 'var(--cream)';
-  btn.style.color = on ? 'var(--cream)' : 'var(--gray)';
-  btn.style.borderColor = on ? 'var(--bronze)' : 'var(--border-md)';
-}
-
-function _renderRoomInventoryCapture(jobId, roomIdx) {
-  var nameId = 'inv-name-' + jobId + '-r' + roomIdx;
-  var catId  = 'inv-cat-'  + jobId + '-r' + roomIdx;
-  var dispId = 'inv-disp-' + jobId + '-r' + roomIdx;
-  var listId = 'inv-list-' + jobId + '-r' + roomIdx;
-  var fieldStyle = 'width:100%;box-sizing:border-box;padding:4px 6px;font-size:11px;margin-bottom:4px;';
-  var btnStyle = 'cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'
-    + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);color:var(--gray-dk);white-space:nowrap;';
-  var chipStyle = 'cursor:pointer;padding:2px 7px;border-radius:11px;border:1px solid var(--border-md);'
-    + 'background:var(--cream);color:var(--gray);font-size:10px;font-weight:600;font-family:inherit;';
-  var catOpts = INV_CATEGORIES.map(function(c){
-    return '<option value="' + esc(c) + '"' + (c === INV_DEFAULT_CATEGORY ? ' selected' : '') + '>' + esc(c) + '</option>';
-  }).join('');
-  var chips = INV_DISPOSITIONS.map(function(d){
-    return '<button type="button" data-disp="' + esc(d) + '" onclick="_selectInvDisp(this,' + jobId + ',' + roomIdx + ')" style="' + chipStyle + '">' + esc(d) + '</button>';
-  }).join('');
-  // ⚠⚠ APPRAISE IS NOT A CHIP, AND THAT IS THE DESIGN — see INV_DISPOSITIONS. It is a
-  // SECOND, INDEPENDENT answer, because the two are not alternatives: the crew standing in the
-  // room can know both that this is going to auction and that nobody knows what it is worth.
-  // Reported by Anthony from the field — "the only disposition avenues are auction, consign,
-  // donate, hold, junk, keep, or sell, and we need appraisal in there too" — and he is right
-  // that it was unreachable: `needsAppr` had ONE writer in the entire file, the collector-vehicle
-  // import, so no person could set it anywhere.
-  //
-  // It is a toggle rather than a chip so it cannot deselect a disposition, and it sits on its own
-  // line under them with the automatic rule spelled out beside it, because the commonest case is
-  // that the category has ALREADY put the item on the worklist and the crew has no way to know.
-  var apprId = 'inv-appr-' + jobId + '-r' + roomIdx;
-  return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">'
-    + '<input type="text" id="' + nameId + '" placeholder="Object name (e.g. Tiffany lamp)" style="' + fieldStyle + '">'
-    + '<select id="' + catId + '" onchange="_paintInvApprNote(' + jobId + ',' + roomIdx + ')" style="' + fieldStyle + '">' + catOpts + '</select>'
-    + '<div id="' + dispId + '" data-disp="" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;">' + chips + '</div>'
-    + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">'
-      + '<button type="button" id="' + apprId + '" data-on="" onclick="_selectInvAppr(this,' + jobId + ',' + roomIdx + ')" '
-      + 'title="Send this item to a specialist for valuation. It keeps whatever disposition you picked above." '
-      + 'style="' + chipStyle + '">&#9873; Appraise</button>'
-      + '<span id="' + apprId + '-note" style="font-size:9.5px;color:var(--gray);line-height:1.3;flex:1 1 120px;min-width:0;">'
-      + _invApprNoteText(INV_DEFAULT_CATEGORY) + '</span>'
-    + '</div>'
-    + '<label style="' + btnStyle + '">'
-    + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
-    + 'onchange="attachJobPlanInventoryPhoto(this,' + jobId + ',' + roomIdx + ')">'
-    + '&#128247; Capture item</label>'
-    + '<div id="' + listId + '">' + _renderRoomInventoryList(jobId, roomIdx) + '</div>'
-    + '</div>';
-}
-
-function _updateRoomInventoryEl(jobId, roomIdx) {
-  var listEl = document.getElementById('inv-list-' + jobId + '-r' + roomIdx);
-  if (listEl) listEl.innerHTML = _renderRoomInventoryList(jobId, roomIdx);
-}
-
-function attachJobPlanInventoryPhoto(input, jobId, roomIdx) {
-  var file = input.files[0];
-  if (!file) return;
-  var job = _photoCaptureJob(jobId);
-  if (!job) { input.value = ''; return; }
-  var estRec = estimateStore[jobId];
-  var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
-  var room = estRooms.find(function(r){ return r.idx === roomIdx; });
-  var roomName = room ? room.name : ('Room' + roomIdx);
-  var seq = _invRefs(jobId, roomIdx).length + 1;
-  // Object name is typed before the shot; if left blank, fall back to a prompt so a
-  // captured photo is never lost, then to a sequence placeholder.
-  var nameEl = document.getElementById('inv-name-' + jobId + '-r' + roomIdx);
-  var objectName = (nameEl && nameEl.value.trim()) || '';
-  if (!objectName) objectName = (window.prompt('Name this item for the inventory:') || '').trim();
-  if (!objectName) objectName = 'Item ' + seq;
-  var catEl  = document.getElementById('inv-cat-' + jobId + '-r' + roomIdx);
-  var category = (catEl && catEl.value) || INV_DEFAULT_CATEGORY;
-  var dispEl = document.getElementById('inv-disp-' + jobId + '-r' + roomIdx);
-  var disposition = (dispEl && dispEl.dataset.disp) || '';
-  // The explicit field answer. The automatic category rule still applies on top of it, so
-  // leaving this off never takes an intrinsic item off the worklist.
-  var apprEl = document.getElementById('inv-appr-' + jobId + '-r' + roomIdx);
-  var needsAppr = !!(apprEl && apprEl.dataset.on);
-  var ts = Date.now();
-  var cleanRoom = _cleanName(roomName);
-  var cleanObj = _cleanName(objectName) || ('Item' + seq);
-  var cleanCat = _cleanName(category) || 'Uncategorized';
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
-      // Re-read after the compress — see attachJobPlanPhoto. seq above is only the
-      // "Item N" name fallback, which is fixed at the moment the crew is prompted.
-      seq = _invRefs(jobId, roomIdx).length + 1;
-      var stableId = jobId + '_r' + roomIdx + '_inv_' + _photoUid();
-      var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_INV_' + cleanCat + '_' + cleanObj + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
-      var ref = { stableId:stableId, roomIdx:roomIdx, label:'inventory', seq:seq, collId:null,
-                  objectName:objectName, category:category, disposition:disposition,
-                  needsAppr:needsAppr,
-                  filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
-      _setPhotoRef(jobId, ref);
-      savePhotoRefs(jobId);
-      _photoRetryData[stableId] = dataUrl;
-      if (nameEl) nameEl.value = '';
-      // ⚠ THE TOGGLE RESETS WITH THE NAME AND THE DISPOSITION DOES NOT, and that asymmetry is
-      // deliberate rather than an oversight. A disposition is a standing answer about the room
-      // being worked — a whole shelf going to auction is one decision made once — whereas
-      // "send this one to a specialist" is a judgement about the single object in front of you.
-      // Leaving it latched would silently flag every subsequent shot in the room for appraisal,
-      // which is the intake-checkbox leak this file already records once.
-      if (apprEl && apprEl.dataset.on) _selectInvAppr(apprEl, jobId, roomIdx);
-      _updateRoomInventoryEl(jobId, roomIdx);
-      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
-        _updateRoomInventoryEl(jobId, roomIdx);
-        // The Inventory tab will pull this back from Drive on any device; caching the
-        // copy already in hand just means it is there instantly on THIS one.
-        _invCacheLocalThumb(jobId, stableId, dataUrl);
-        _scheduleInventorySync(jobId);
-      });
-    });
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
 }
 
 // ══════════════ ESTATE INVENTORY TAB (Build 1 — read-only manifest) ══════════════
@@ -18282,7 +18176,9 @@ function _invCacheLocalThumb(jobId, stableId, dataUrl) {
 // a deleted or unreadable photo must not be re-requested on every render.
 function _invMissingThumbIds(jobId) {
   var cache = _invThumbCache(jobId), out = [];
-  _jobInvRefs(jobId).forEach(function(r) {
+  // Every live shot on the job, not only the inventory lines: the room workspace strip and
+  // the item panel's detail shots draw the as-found, detail and after photographs too.
+  (_photoRefs[jobId] || []).filter(function(r){ return !r.deletedAt; }).forEach(function(r) {
     var id = _invFileId(r);
     if (!id || cache[id] || _invThumbTried[id]) return;
     if (out.indexOf(id) < 0) out.push(id);
@@ -18423,8 +18319,12 @@ function _invTouch(ref) { if (ref) ref.updatedAt = Date.now(); return ref; }
 // ⚠ `serial` IS ON THIS LIST because it is a reading taken off the object itself. Once the
 // item has left the property nobody can go back and re-read it, so a merge that drops it
 // destroys the only link between our manifest and the dealer's receipt.
+// ⚠ `fieldNote` AND `groupId` ARE ON IT (2026-09-19) for the same reason `serial` is: both are
+// taken standing in the room — what the concierge said over the shot, and which shot it is a
+// detail of — and neither can be re-derived at the desk once the crew has moved on.
 var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc', 'serial',
-                         'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId'];
+                         'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId',
+                         'fieldNote', 'groupId'];
 function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
 // ⚠⚠ "NEVER SAW A VALUE" AND "DELIBERATELY EMPTIED IT" ARE DIFFERENT ANSWERS, and without
 // telling them apart a sticky field could never be cleared at all — you would blank a
@@ -20729,6 +20629,9 @@ function _invCapturedToday(items) {
 // act on is decoration.
 function _invNeedsValue(r) { var n = parseFloat(r.fmv); return isNaN(n); }
 var INV_WORK_FLAGS = [
+  // First, because since 2026-09-19 every field shot arrives without a name — naming is the
+  // desk's job (and, next, the agent's) — so this is the evening's first pile.
+  {key:'unnamed',   label:'Unnamed shots',   test:function(r){ return !r.objectName; }},
   {key:'undecided', label:'Not yet decided', test:function(r){ return !r.disposition; }},
   {key:'noval',     label:'No value yet',    test:function(r){ return _invNeedsValue(r); }},
   {key:'appr',      label:'Needs appraiser',  test:function(r, job){ return invNeedsAppraisal(r, job); }},
@@ -20746,7 +20649,7 @@ function _invMatchesFilter(r, job) {
     if (fl && !fl.test(r, job)) return false;
   }
   if (f.q) {
-    var blob = [r.objectName, r.category, r.disposition, r.channel, r.valNote,
+    var blob = [r.objectName, r.category, r.disposition, r.channel, r.valNote, r.fieldNote,
                 _invRoomName(job.id, r.roomIdx), _invItemNo(r)].filter(Boolean).join(' ').toLowerCase();
     if (blob.indexOf(f.q.toLowerCase()) < 0) return false;
   }
@@ -20997,7 +20900,9 @@ function _renderInvRow(job, ref) {
   if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraiser engaged yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
   if (ref.flagBequest) warn.push('<span title="Named in a specific bequest" style="color:var(--bronze);">bequest</span>');
   if (ref.flagDisputed) warn.push('<span title="Recorded dispute" style="color:#c0392b;">disputed</span>');
-  var sub = [esc(ref.category || '—'), esc(_invRoomName(jid, ref.roomIdx))].join(' &middot; ');
+  var det = _invDetailRefs(jid, ref.stableId);
+  var sub = [esc(ref.category || '—'), esc(_invRoomName(jid, ref.roomIdx))].join(' &middot; ')
+    + (det.length ? ' &middot; +' + det.length + ' detail shot' + (det.length > 1 ? 's' : '') : '');
   return '<div style="border-bottom:1px solid var(--border);background:' + (picked ? 'var(--cream)' : 'transparent') + ';">'
     + '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;">'
       + '<input type="checkbox"' + (picked ? ' checked' : '') + ' onchange="_invTogglePick(\'' + sid + '\',this)" '
@@ -21005,10 +20910,12 @@ function _renderInvRow(job, ref) {
       + _invThumbHTML(jid, ref, 40)
       + '<span style="font-size:10px;color:var(--gray);font-weight:700;width:26px;flex:0 0 auto;">' + esc(_invItemNo(ref)) + '</span>'
       + '<div style="flex:1;min-width:0;">'
-        + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(ref.objectName || '(unnamed)')
+        + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+        + (ref.objectName ? esc(ref.objectName) : '<span style="color:var(--bronze);">Unnamed \u2014 shot ' + esc(ref.seq || '') + ', name it below</span>')
         + (ref.manual ? ' <span style="font-size:8px;color:var(--bronze);" title="Manual line item (no photo)">M</span>' : '') + '</div>'
         + '<div style="font-size:10px;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sub
         + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
+        + (ref.fieldNote ? '<div style="font-size:10.5px;color:var(--gray-dk);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(ref.fieldNote) + '">&#127908; ' + esc(ref.fieldNote) + '</div>' : '')
       + '</div>'
       + '<div style="width:104px;flex:0 0 auto;">' + _invInput(jid, ref, fmvCol, job) + '</div>'
       + '<div style="width:110px;flex:0 0 auto;">' + _invInput(jid, ref, dispCol, job) + '</div>'
@@ -21043,6 +20950,20 @@ function _renderInvPanel(job, ref) {
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px 10px;">' + fields + '</div></div>';
   }).join('');
   var nC = custodyEvents(ref).length;
+  // What the field recorded over this shot. The note is the concierge's own words ("signed on
+  // the base", "Mom's from Italy", "promised to Karen") and the agent's first input; the
+  // detail shots are the close-ups linked to this line at capture, never lines of their own.
+  var det = _invDetailRefs(jid, ref.stableId);
+  var fieldHtml = (ref.manual ? '' : '<div style="margin-bottom:10px;">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">From the field</div>'
+    + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Field note</div>'
+    + '<textarea rows="2" style="width:100%;font-size:11px;padding:5px 7px;box-sizing:border-box;" placeholder="What the concierge said over the shot" '
+      + 'onchange="_invEdit(' + jid + ',\'' + ref.stableId + '\',\'fieldNote\',this)">' + esc(ref.fieldNote || '') + '</textarea>'
+    + (det.length
+        ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invThumbHTML(jid, d, 64); }).join('') + '</div>'
+        : '')
+    + '</div>');
   return '<div style="padding:10px 4px 12px 52px;background:#fcfaf5;border-top:1px dashed var(--border-md);">'
     + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;">'
       + _invThumbHTML(jid, ref, 96)
@@ -21052,7 +20973,7 @@ function _renderInvPanel(job, ref) {
         + (ref.manual ? '<button class="btn-s" onclick="removeInventoryManualItem(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;">Remove line item</button>' : '')
       + '</div>'
     + '</div>'
-    + secs + '</div>';
+    + fieldHtml + secs + '</div>';
 }
 
 function _renderInvGroup(job, g) {
@@ -21180,7 +21101,7 @@ function renderInventoryTab() {
   var body;
   if (!all.length) {
     body = '<div class="card"><div style="padding:16px 2px;color:var(--gray);font-size:12px;">'
-      + 'No items yet. Capture them on the <strong>Job Plan</strong> room cards during the walkthrough, '
+      + 'No items yet. Open a room on the <strong>Job Plan</strong> and shoot it \u2014 every item shot lands here for naming \u2014 '
       + 'or use <strong>+ Add line item</strong> for an asset with no photo.</div></div>';
   } else if (!items.length) {
     body = '<div class="card"><div style="padding:16px 2px;color:var(--gray);font-size:12px;">'
@@ -21195,7 +21116,8 @@ function renderInventoryTab() {
       + esc(_invThumbFailed[jobId]) + '. The records are all here; only the thumbnails are missing.</div>'
     : '';
 
-  cont.innerHTML = _renderInvWorkbar(job, all)
+  cont.innerHTML = renderJobAdmin(jobId, job)
+    + _renderInvWorkbar(job, all)
     + (all.length ? _renderInvFlagStrip(job, all) + _renderInvFilterRow(job, all) : '')
     + thumbNote
     + _renderDuplicateImportNotice(jobId)
@@ -21390,41 +21312,630 @@ function _photoStamp(ms) {
        + '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
 }
 
-function attachJobPlanPhoto(input, jobId, roomIdx, label) {
-  var file = input.files[0];
-  if (!file) return;
+// ── One writer for every shot a room takes ────────────────────────────────────
+// ⚠⚠ THE CAMERA CHANGED ON 2026-09-19 AND THE FIELD TYPES NOTHING NOW. Until then an item
+// photo needed an object name and a category BEFORE the shutter — on an iPad, forty times in
+// a hot garage, which is Anthony's own description of why nobody would. Naming and categorising
+// moved to the desk (and, next, to the agent that reads the photos). What the field records
+// instead is what only the field can know: which pile the object was sorted into (the chip),
+// whether it needs a specialist (⚑ Appraise, per shot), whether this shot is a detail of the
+// last one, and anything the concierge said over it (a dictated note).
+//
+// EVERY shot — as-found, item, detail, after — comes through here, whether the in-app camera
+// took it or the native file input the camera falls back to. Two writers of one record is how
+// the filename, the seq and the retry bytes come to disagree: the 2026-08-03 photo audit found
+// six ways a shot went missing and three of them were exactly that. The native path is a thin
+// wrapper that reads the file and hands the bytes here.
+//
+// `label`: 'before' (the as-found pass — evidence, never an inventory line), 'inventory' (a line
+// for the desk to name), 'detail' (linked to a primary shot by groupId, never a line of its
+// own), 'after' (the room cleared).
+//
+// ⚠ THE FIELD HAS FIVE CHIPS AND THE DESK KEEPS SEVEN. Keep, Donate, Sell, Remove, Undecided
+// are the piles a room is sorted into; the manifest's Auction / Consign / Sell are a DESK
+// refinement of a field Sell, Remove is the manifest's Junk, and Hold is a desk flag, never a
+// pile. Undecided maps to '' — the "Not yet decided" bucket the Inventory tab was built to
+// receive — and it is the DEFAULT, so an unsorted shot is never silently filed as Keep.
+var FIELD_DISPOSITIONS = [
+  { key: 'keep',      label: 'Keep',      disposition: 'Keep' },
+  { key: 'donate',    label: 'Donate',    disposition: 'Donate' },
+  { key: 'sell',      label: 'Sell',      disposition: 'Sell' },
+  { key: 'remove',    label: 'Remove',    disposition: 'Junk' },
+  { key: 'undecided', label: 'Undecided', disposition: '' }
+];
+var FIELD_DISP_DEFAULT = 'undecided';
+function fieldDispToInv(key) {
+  var f = FIELD_DISPOSITIONS.filter(function(d){ return d.key === key; })[0];
+  return f ? f.disposition : '';
+}
+var PHOTO_CAPTURE_LABELS = ['before', 'inventory', 'detail', 'after'];
+
+// Small in-memory thumbnails keyed by stableId, so a shot draws in the room workspace the
+// instant it is taken — before Drive has issued the file id the persistent cache is keyed by.
+var _localShotThumbs = {};
+
+function _captureShot(jobId, roomIdx, label, rawDataUrl, opts) {
+  opts = opts || {};
+  if (PHOTO_CAPTURE_LABELS.indexOf(label) < 0) return false;
   var job = _photoCaptureJob(jobId);
-  if (!job) { input.value = ''; return; }
+  if (!job) return false;
+  // A detail shot with nothing to be a detail OF is an item shot. Never drop a photograph
+  // because a toggle was pressed out of order.
+  if (label === 'detail' && !opts.groupId) label = 'inventory';
   var estRec = estimateStore[jobId];
   var estRooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
   var room = estRooms.find(function(r){ return r.idx === roomIdx; });
   var roomName = room ? room.name : ('Room' + roomIdx);
   var cleanRoom = _cleanName(roomName);
   var ts = Date.now();
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    compressImage(ev.target.result, 900, 0.72, function(dataUrl) {
-      // Sequence and id are taken HERE, not at capture time. Read before the async
-      // FileReader + compress, two shots fired into one slot back to back both
-      // computed seq 1 and the SAME stableId, so the second ref overwrote the
-      // first in _setPhotoRef: both files reached Drive, one of them referenced by
-      // nothing, and the slot badge counted one shot where two were taken.
-      var seq = _slotRefs(jobId, roomIdx, label).length + 1;
-      var stableId = jobId + '_r' + roomIdx + '_' + label + '_' + _photoUid();
-      var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + label + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
-      var ref = { stableId:stableId, roomIdx:roomIdx, label:label, seq:seq, collId:null,
-                  filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
-      _setPhotoRef(jobId, ref);
-      savePhotoRefs(jobId);
-      _photoRetryData[stableId] = dataUrl;
-      _updatePhotoStatusEl(jobId, roomIdx, label);
-      _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
-        _updatePhotoStatusEl(jobId, roomIdx, label);
-      });
+  compressImage(rawDataUrl, 900, 0.72, function(dataUrl) {
+    // Sequence and id are taken HERE, after the async compress, not at capture time. Read
+    // before it, two shots fired into one slot back to back both computed seq 1 and the SAME
+    // stableId, so the second ref overwrote the first: both files reached Drive, one of them
+    // referenced by nothing, and the badge counted one shot where two were taken.
+    var seq = _slotRefs(jobId, roomIdx, label).length + 1;
+    var tag = label === 'inventory' ? 'INV' : (label === 'detail' ? 'DETAIL' : label);
+    var stableId = jobId + '_r' + roomIdx + '_' + label + '_' + _photoUid();
+    // ⚠ NO OBJECT NAME AND NO CATEGORY IN THE FILENAME. Drive cannot rename after upload and
+    // neither exists at capture time any more. The inventory LINE links to the file — that is
+    // the promise to counsel (one line, one photo) and it holds; the filename never needed to
+    // carry words to keep it.
+    var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + tag + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
+    var ref = { stableId: stableId, roomIdx: roomIdx, label: label, seq: seq, collId: null,
+                filename: filename, driveFileUrl: null, status: 'uploading', ts: ts };
+    if (label === 'inventory') {
+      ref.objectName = '';                     // the desk names it
+      ref.category = INV_DEFAULT_CATEGORY;     // the desk files it
+      ref.disposition = fieldDispToInv(opts.fieldDisp || FIELD_DISP_DEFAULT);
+      ref.needsAppr = !!opts.needsAppr;
+    }
+    if (label === 'detail') ref.groupId = opts.groupId;
+    if (opts.fieldNote) ref.fieldNote = String(opts.fieldNote);
+    _invTouch(ref);
+    _setPhotoRef(jobId, ref);
+    savePhotoRefs(jobId);
+    _photoRetryData[stableId] = dataUrl;
+    _savePendingPhotoData(jobId);
+    compressImage(dataUrl, 160, 0.6, function(small) {
+      _localShotThumbs[stableId] = small;
+      if (opts.onThumb) opts.onThumb(ref, small);
     });
-  };
+    if (opts.onRef) opts.onRef(ref);
+    _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
+      // The Inventory tab pulls this back from Drive on any device; caching the copy already
+      // in hand just means it is there instantly on THIS one.
+      _invCacheLocalThumb(jobId, stableId, dataUrl);
+      if (label === 'inventory' || label === 'detail') _scheduleInventorySync(jobId);
+      if (opts.onDone) opts.onDone(_getPhotoRef(jobId, stableId));
+    });
+  });
+  return true;
+}
+
+// The note the concierge speaks (or types) over the last shot. Appended, never replaced —
+// two thoughts about one object are two sentences on one line.
+function _fieldNoteAppend(jobId, stableId, text) {
+  text = String(text || '').trim();
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref || !text) return false;
+  ref.fieldNote = ((ref.fieldNote || '').trim() + ' ' + text).trim();
+  _invTouch(ref);
+  _setPhotoRef(jobId, ref);
+  savePhotoRefs(jobId);
+  if (ref.label === 'inventory' || ref.label === 'detail') _scheduleInventorySync(jobId);
+  return true;
+}
+
+// Detail shots of one primary item, in the order they were taken.
+function _invDetailRefs(jobId, stableId) {
+  return (_photoRefs[jobId] || []).filter(function(r){
+    return r.label === 'detail' && r.groupId === stableId && !r.deletedAt;
+  }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+}
+
+// ═════════════════════════ THE IN-APP CAMERA (2026-09-19) ═════════════════════════
+// ⚠⚠ "CAMERA STAYS OPEN" CANNOT BE DONE WITH THE NATIVE CAMERA, and that is the whole reason
+// this exists. Every shot used to be an <input type="file" capture="environment">: iOS opens
+// the Camera app for exactly one photograph, closes it, and will not re-open without a fresh
+// tap — the change event is not a user activation, so a programmatic .click() is refused.
+// Forty items in a garage was forty round trips through the room card. A live viewfinder in
+// the page with our own shutter is the only way to shoot, shoot, shoot, Done.
+// ⚠ IT DEGRADES TO THE NATIVE INPUT, ON THE SAME SURFACE. No getUserMedia (an old browser),
+// or the permission refused: the overlay stays, the chips and toggles stay, and the shutter
+// becomes a native file input. One UI, two ways of producing the bytes, one writer of the
+// record (_captureShot).
+// ⚠ THE CHIP LATCHES AND THE TOGGLES DO NOT. A disposition is a standing answer about the
+// pile being shot — tap Sell, shoot the pile. ⚑ Appraise and Detail-of-last are judgements
+// about ONE object and reset after every shot, because the intrinsic categories are exactly
+// the ones nobody wants lit by accident, and a stuck detail toggle would merge two objects.
+var _fieldCam = { open: false };
+var FIELD_CAM_MODES = { before: 'As found', inventory: 'Items', after: 'After' };
+
+function _fieldCamRoomName(jobId, roomIdx) {
+  var r = _planRoom(jobId, roomIdx);
+  return r ? r.name : ('Room ' + roomIdx);
+}
+
+function openFieldCamera(jobId, roomIdx, mode) {
+  if (!FIELD_CAM_MODES[mode]) return false;
+  var job = _photoCaptureJob(jobId);
+  if (!job) return false;
+  var el = document.getElementById('field-cam');
+  if (!el) return false;
+  _fieldCamStop();
+  _fieldCam = { open: true, jobId: jobId, roomIdx: roomIdx, mode: mode,
+                disp: FIELD_DISP_DEFAULT, appr: false, detail: false,
+                last: null, lastAny: null, lastThumb: '', count: 0,
+                stream: null, ready: false, native: false, nativeWhy: '',
+                talking: false, recog: null, heard: '' };
+  el.innerHTML = _fieldCamShellHtml();
+  el.style.display = 'flex';
+  _fieldCamPaint();
+  var md = (typeof navigator !== 'undefined') && navigator.mediaDevices;
+  if (!md || !md.getUserMedia) { _fieldCamGoNative('This browser has no in-page camera.'); return true; }
+  var want = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false };
+  var pr;
+  try { pr = md.getUserMedia(want); } catch (e) { _fieldCamGoNative('The camera could not be opened.'); return true; }
+  var mine = _fieldCam;
+  pr.then(function(stream) {
+    if (!mine.open || _fieldCam !== mine) { stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+    mine.stream = stream;
+    var v = document.getElementById('fc-video');
+    if (!v) return;
+    v.srcObject = stream;
+    v.onloadedmetadata = function() {
+      mine.ready = true;
+      try { var pl = v.play(); if (pl && pl.catch) pl.catch(function(){}); } catch (e) {}
+      _fieldCamPaint();
+    };
+  }).catch(function(err) {
+    if (_fieldCam !== mine) return;
+    var name = err && err.name;
+    _fieldCamGoNative(name === 'NotAllowedError' || name === 'SecurityError'
+      ? 'Camera permission was refused. Allow it in the browser settings to shoot without leaving the app.'
+      : 'The camera could not be opened' + (name ? ' (' + name + ')' : '') + '.');
+  });
+  return true;
+}
+
+function _fieldCamGoNative(why) {
+  if (!_fieldCam.open) return;
+  _fieldCam.native = true;
+  _fieldCam.nativeWhy = why || '';
+  var stage = document.getElementById('fc-stage');
+  if (stage) stage.innerHTML = '<div class="fc-nocam">' + esc(why || '') + '<br><br>Each press of the shutter opens the phone\u2019s camera for one photo.</div>';
+  _fieldCamPaint();
+}
+
+function _fieldCamShellHtml() {
+  var st = _fieldCam;
+  return '<div class="fc-top">'
+    + '<span class="fc-room">' + esc(_fieldCamRoomName(st.jobId, st.roomIdx)) + ' \u00b7 ' + esc(FIELD_CAM_MODES[st.mode]) + '</span>'
+    + '<span id="fc-count">0 shots</span>'
+    + '<button type="button" class="fc-done" onclick="closeFieldCamera()">Done</button>'
+    + '</div>'
+    + '<div id="fc-stage">'
+    + '<video id="fc-video" autoplay muted playsinline></video>'
+    + '<canvas id="fc-canvas" style="display:none;"></canvas>'
+    + '<div id="fc-flash"></div>'
+    + '</div>'
+    + '<div id="fc-ui"></div>';
+}
+
+// Repaints the control strip only. The <video> lives in #fc-stage and is never rewritten
+// while the overlay is open — replacing it would tear the stream down mid-shot.
+function _fieldCamPaint() {
+  var st = _fieldCam;
+  var ui = document.getElementById('fc-ui');
+  if (!st.open || !ui) return;
+  var cnt = document.getElementById('fc-count');
+  if (cnt) cnt.textContent = st.count + (st.count === 1 ? ' shot' : ' shots');
+  var h = '';
+  var lastRef = st.lastAny ? _getPhotoRef(st.jobId, st.lastAny) : null;
+  if (lastRef) {
+    h += '<div class="fc-last">'
+      + '<div class="fc-last-thumb" style="' + (st.lastThumb ? 'background-image:url(&quot;' + st.lastThumb + '&quot;);' : '') + '"></div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div><strong>Last:</strong> ' + (lastRef.label === 'detail' ? 'detail of the item before it' : esc(FIELD_CAM_MODES[lastRef.label] || lastRef.label)) + ' \u00b7 shot ' + lastRef.seq
+      + (lastRef.status === 'failed' ? ' \u00b7 <span style="color:#ff8a80;">not saved \u2014 held on this device</span>' : '') + '</div>'
+      + (lastRef.fieldNote ? '<div style="font-style:italic;color:#ddd;">\u201c' + esc(lastRef.fieldNote) + '\u201d</div>' : '')
+      + (st.talking ? '<div id="fc-talk-status" style="color:#ffb3a7;">Listening\u2026 ' + esc(st.heard) + '</div>' : '')
+      + '</div></div>';
+  }
+  if (st.mode === 'inventory') {
+    h += '<div class="fc-chips">' + FIELD_DISPOSITIONS.map(function(d) {
+      return '<button type="button" class="fc-chip' + (st.disp === d.key ? ' on' : '') + '" onclick="fieldCamSetDisp(\'' + d.key + '\')">' + esc(d.label) + '</button>';
+    }).join('') + '</div>';
+    h += '<div class="fc-row">'
+      + '<button type="button" class="fc-tog' + (st.appr ? ' on' : '') + '" onclick="fieldCamToggleAppr()" title="Flag the next shot for a specialist valuation">&#9873; Appraise</button>'
+      + '<button type="button" class="fc-tog' + (st.detail ? ' on' : '') + '" onclick="fieldCamToggleDetail()"' + (st.last ? '' : ' disabled') + ' title="The next shot is a close-up of the last item, not a new item">+ Detail of last</button>'
+      + '</div>';
+  }
+  // The note on the last shot: hold to talk where the browser can transcribe, typed where it cannot.
+  var SR = (typeof window !== 'undefined') && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  h += '<div class="fc-row">';
+  if (SR) {
+    h += '<button type="button" class="fc-tog fc-talk' + (st.talking ? ' on' : '') + '"' + (st.lastAny ? '' : ' disabled')
+      + ' onpointerdown="fieldCamTalkStart(event)" onpointerup="fieldCamTalkStop()" onpointercancel="fieldCamTalkStop()" onpointerleave="fieldCamTalkStop()">'
+      + '&#127908; ' + (st.talking ? 'Release to save' : 'Hold to talk') + '</button>';
+  }
+  h += '<input type="text" id="fc-note-input" class="fc-note-in" placeholder="Note on the last shot" onkeydown="if(event.key===\'Enter\')fieldCamTypedNote()"' + (st.lastAny ? '' : ' disabled') + '>'
+    + '<button type="button" class="fc-tog" onclick="fieldCamTypedNote()"' + (st.lastAny ? '' : ' disabled') + '>Add</button>'
+    + '</div>';
+  h += '<div class="fc-shutter-row">';
+  if (st.native) {
+    h += '<label class="fc-shutter" title="Take a photo"><input type="file" accept="image/*" capture="environment" id="fc-native" style="display:none;" onchange="fieldCamNativeShot(this)">&#128247;</label>';
+  } else {
+    h += '<button type="button" class="fc-shutter" onclick="fieldCamShoot()"' + (st.ready ? '' : ' disabled') + ' title="Take a photo">&#128247;</button>';
+  }
+  h += '</div>';
+  ui.innerHTML = h;
+}
+
+function fieldCamSetDisp(key) {
+  if (!_fieldCam.open) return false;
+  if (!FIELD_DISPOSITIONS.some(function(d){ return d.key === key; })) return false;
+  _fieldCam.disp = key;   // latches: it describes the pile, not the shot
+  _fieldCamPaint();
+  return true;
+}
+function fieldCamToggleAppr()   { if (!_fieldCam.open) return; _fieldCam.appr = !_fieldCam.appr; _fieldCamPaint(); }
+function fieldCamToggleDetail() { if (!_fieldCam.open || !_fieldCam.last) return; _fieldCam.detail = !_fieldCam.detail; _fieldCamPaint(); }
+
+// The bytes arrive here from the shutter (a canvas frame) or the native input (a file). One
+// path from here on, so the two cannot disagree about what a shot records.
+function _fieldCamCommit(dataUrl) {
+  var st = _fieldCam;
+  if (!st.open || !dataUrl) return false;
+  var label = st.mode === 'inventory' ? ((st.detail && st.last) ? 'detail' : 'inventory') : st.mode;
+  var wsHere = function() { return _roomWs.open && _roomWs.jobId === st.jobId && _roomWs.roomIdx === st.roomIdx; };
+  return _captureShot(st.jobId, st.roomIdx, label, dataUrl, {
+    fieldDisp: st.disp,
+    needsAppr: st.appr,
+    groupId: label === 'detail' ? st.last : null,
+    onRef: function(ref) {
+      if (_fieldCam !== st) return;
+      st.count++;
+      st.lastAny = ref.stableId;
+      if (ref.label === 'inventory') st.last = ref.stableId;   // a detail never becomes the primary
+      st.appr = false;      // per shot, never latched
+      st.detail = false;    // likewise
+      st.lastThumb = '';
+      if (st.open) _fieldCamPaint();
+      if (wsHere()) _paintRoomWorkspace();
+    },
+    onThumb: function(ref, small) {
+      if (_fieldCam === st && st.lastAny === ref.stableId) { st.lastThumb = small; if (st.open) _fieldCamPaint(); }
+      if (wsHere()) _paintRoomWorkspace();
+    },
+    onDone: function() {
+      if (_fieldCam === st && st.open) _fieldCamPaint();
+      if (wsHere()) _paintRoomWorkspace();
+    }
+  });
+}
+
+function fieldCamShoot() {
+  var st = _fieldCam;
+  if (!st.open || st.native || !st.ready) return false;
+  var v = document.getElementById('fc-video');
+  var c = document.getElementById('fc-canvas');
+  if (!v || !c || !v.videoWidth) return false;
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  var dataUrl = c.toDataURL('image/jpeg', 0.92);
+  var fl = document.getElementById('fc-flash');
+  if (fl) { fl.style.opacity = '0.85'; setTimeout(function(){ fl.style.opacity = '0'; }, 120); }
+  return _fieldCamCommit(dataUrl);
+}
+
+function fieldCamNativeShot(input) {
+  var file = input && input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) { _fieldCamCommit(ev.target.result); };
   reader.readAsDataURL(file);
   input.value = '';
+}
+
+function fieldCamTalkStart(ev) {
+  if (ev && ev.preventDefault) ev.preventDefault();
+  var st = _fieldCam;
+  if (!st.open || !st.lastAny || st.talking) return false;
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return false;
+  var recog = new SR();
+  recog.continuous = true; recog.interimResults = true; recog.lang = 'en-US';
+  st.heard = '';
+  var interim = '';
+  recog.onresult = function(e) {
+    var fin = ''; interim = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) fin += e.results[i][0].transcript + ' ';
+      else interim += e.results[i][0].transcript;
+    }
+    if (fin) st.heard += fin;
+    var s = document.getElementById('fc-talk-status');
+    if (s) s.textContent = ('Listening\u2026 ' + st.heard + interim).trim();
+  };
+  recog.onend = function() {
+    var said = (st.heard + ' ' + interim).trim();
+    st.talking = false; st.recog = null; st.heard = '';
+    if (said && st.lastAny) _fieldNoteAppend(st.jobId, st.lastAny, said);
+    if (st.open && _fieldCam === st) _fieldCamPaint();
+    if (_roomWs.open && _roomWs.jobId === st.jobId) _paintRoomWorkspace();
+  };
+  recog.onerror = function(e) {
+    st.talking = false; st.recog = null;
+    if (st.open && _fieldCam === st) _fieldCamPaint();
+    if (e && e.error !== 'aborted' && e.error !== 'no-speech') showSyncBadge('Microphone: ' + e.error, true);
+  };
+  st.recog = recog; st.talking = true;
+  try { recog.start(); } catch (ex) { st.talking = false; st.recog = null; }
+  _fieldCamPaint();
+  return true;
+}
+function fieldCamTalkStop() {
+  var st = _fieldCam;
+  if (st.recog) { try { st.recog.stop(); } catch (e) {} }
+}
+function fieldCamTypedNote() {
+  var st = _fieldCam;
+  var inp = document.getElementById('fc-note-input');
+  if (!st.open || !st.lastAny || !inp) return false;
+  var ok = _fieldNoteAppend(st.jobId, st.lastAny, inp.value);
+  inp.value = '';
+  _fieldCamPaint();
+  if (_roomWs.open && _roomWs.jobId === st.jobId) _paintRoomWorkspace();
+  return ok;
+}
+
+function _fieldCamStop() {
+  var st = _fieldCam;
+  if (st.recog) { try { st.recog.abort(); } catch (e) {} st.recog = null; st.talking = false; }
+  if (st.stream) { try { st.stream.getTracks().forEach(function(t){ t.stop(); }); } catch (e) {} st.stream = null; }
+  var v = document.getElementById('fc-video');
+  if (v) { try { v.srcObject = null; } catch (e) {} }
+}
+
+// ⚠ THE CAMERA CLOSES WHEN THE CONCIERGE SAYS SO AND AT NO OTHER TIME. Not after a shot, not
+// after a note, not on an upload finishing. That is the single biggest field improvement in
+// this build and it is not a burst mode; it is simply not closing the camera.
+function closeFieldCamera() {
+  var st = _fieldCam;
+  if (!st.open) return;
+  _fieldCamStop();
+  st.open = false;
+  var el = document.getElementById('field-cam');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  if (_roomWs.open && _roomWs.jobId === st.jobId) _paintRoomWorkspace();
+  _repaintPlan(st.jobId);
+}
+
+// ═════════════════════════ THE ROOM WORKSPACE (2026-09-19) ═════════════════════════
+// One room, full screen. Replaces the two 4-up grids of room cards (every room drawn twice,
+// once per phase, on chips too small to hit with a thumb). A room has three camera buttons
+// and two status taps, and that is all it has.
+var _roomWs = { open: false, jobId: null, roomIdx: null, msg: '' };
+
+// The job's rooms in walkthrough order (ascending estimate idx — the order the Build
+// Estimate grid and the client estimate use), excluded rooms split out. One definition,
+// read by the plan renderer, the room list repaint and the workspace.
+function _planRooms(jobId) {
+  var estRec = estimateStore[jobId];
+  var all = (estRec && estRec.estimate && estRec.estimate.rooms) || [];
+  var sorted = all.map(function(r, i){ return { r: r, i: i }; })
+    .sort(function(a, b){
+      var ai = (typeof a.r.idx === 'number') ? a.r.idx : Infinity;
+      var bi = (typeof b.r.idx === 'number') ? b.r.idx : Infinity;
+      return ai - bi || a.i - b.i;
+    })
+    .map(function(x){ return x.r; });
+  return { rooms: sorted.filter(function(r){ return !r.excluded; }),
+           excluded: sorted.filter(function(r){ return !!r.excluded; }) };
+}
+function _planRoom(jobId, roomIdx) {
+  var estRec = estimateStore[jobId];
+  var rooms = estRec && estRec.estimate && estRec.estimate.rooms ? estRec.estimate.rooms : [];
+  return rooms.find(function(r){ return r.idx === roomIdx; }) || null;
+}
+function _planRoomStatus(jobId, roomIdx) {
+  var plan = jobPlanStore[jobId];
+  return roomStatusNormalize(plan && plan.rooms && plan.rooms[roomIdx] && plan.rooms[roomIdx].status);
+}
+function _shotCount(jobId, roomIdx, label) { return _slotRefs(jobId, roomIdx, label).length; }
+
+// ⚠⚠ THE AS-FOUND PASS IS THE ONE STEP WHOSE ORDER CAN NEVER BE REVERSED. Two to four wide
+// shots from the corners, then every drawer, cabinet and closet opened and shot with its
+// contents undisturbed, before anyone touches anything. Those photographs are the only proof
+// that the desk drawer held a stapler and not a watch the morning the team walked in. On an
+// estate or probate job Lock is REFUSED until one exists — Anthony's call, 2026-09-19, and the
+// first room control in the app that refuses rather than flags. On a living-client job it is
+// flagged and never refused: the owner is standing there and can say what was in the drawer.
+function lockRefusal(job, jobId, roomIdx) {
+  if (!job || !isDecedentJob(job)) return '';
+  if (_shotCount(jobId, roomIdx, 'before') > 0) return '';
+  return 'Shoot the room as found first. On an estate job nothing is locked without it.';
+}
+function lockFlag(job, jobId, roomIdx) {
+  if (!job || isDecedentJob(job)) return '';
+  if (_shotCount(jobId, roomIdx, 'before') > 0) return '';
+  return 'No as-found shots on this room. Shoot it before anything moves.';
+}
+function clearedFlag(jobId, roomIdx) {
+  return _shotCount(jobId, roomIdx, 'after') > 0 ? '' : 'No after photo on this room yet. Cleared means empty and photographed.';
+}
+
+// Two taps. Lock (sorted and shot), then Cleared (empty, after-photo in). Cleared is offered
+// only once the room is locked, and either lit button steps back one on a second tap — a
+// mis-tap must be undoable standing in the room, not from the desk.
+function planRoomStatusBtns(jobId, roomIdx, status) {
+  status = roomStatusNormalize(status);
+  var job = _invJob(jobId);
+  var refusal = status === 'pending' ? lockRefusal(job, jobId, roomIdx) : '';
+  var flag = status === 'pending' ? lockFlag(job, jobId, roomIdx) : '';
+  var aflag = status === 'locked' ? clearedFlag(jobId, roomIdx) : '';
+  var lockOn = status === 'locked' || status === 'cleared';
+  var clrOn = status === 'cleared';
+  var h = '<div class="ws-status" id="plan-room-status-' + roomIdx + '">';
+  h += '<button type="button" class="ws-btn' + (lockOn ? ' on' : '') + '"' + (refusal ? ' disabled' : '')
+    + ' style="' + (lockOn ? 'background:' + ROOM_STATUS_META.locked.color + ';border-color:' + ROOM_STATUS_META.locked.color + ';' : '') + '"'
+    + ' onclick="setPlanRoomStatus(' + jobId + ',' + roomIdx + ',\'' + (status === 'locked' ? 'pending' : 'locked') + '\')">'
+    + (lockOn ? '&#10003; Locked' : '&#128274; Lock \u2014 sorted &amp; shot') + (status === 'locked' ? ' <small>(tap to undo)</small>' : '') + '</button>';
+  if (status !== 'pending') {
+    h += '<button type="button" class="ws-btn' + (clrOn ? ' on' : '') + '"'
+      + ' style="' + (clrOn ? 'background:' + ROOM_STATUS_META.cleared.color + ';border-color:' + ROOM_STATUS_META.cleared.color + ';' : '') + '"'
+      + ' onclick="setPlanRoomStatus(' + jobId + ',' + roomIdx + ',\'' + (clrOn ? 'locked' : 'cleared') + '\')">'
+      + (clrOn ? '&#10003; Cleared <small>(tap to undo)</small>' : '&#10003; Cleared \u2014 empty, after-photo in') + '</button>';
+  }
+  h += '</div>';
+  if (refusal) h += '<div class="ws-why err">' + esc(refusal) + '</div>';
+  else if (flag) h += '<div class="ws-why warn">' + esc(flag) + '</div>';
+  if (status === 'pending') h += '<div class="ws-why muted">Cleared comes after Lock.</div>';
+  if (aflag) h += '<div class="ws-why warn">' + esc(aflag) + '</div>';
+  return h;
+}
+
+// The setter enforces what the buttons show, so nothing reaching around the workspace can
+// lock a room the workspace would refuse. Returns the refusal, '' on success.
+function setPlanRoomStatus(jobId, roomIdx, status) {
+  status = roomStatusNormalize(status);
+  var cur = _planRoomStatus(jobId, roomIdx);
+  var why = '';
+  if (status === 'locked' && cur === 'pending') why = lockRefusal(_invJob(jobId), jobId, roomIdx);
+  if (status === 'cleared' && cur === 'pending') why = 'Lock the room first.';
+  if (why) { _roomWs.msg = why; if (_roomWs.open) _paintRoomWorkspace(); return why; }
+  _roomWs.msg = '';
+  setRoomStatus(jobId, roomIdx, status);
+  if (_roomWs.open) _paintRoomWorkspace();
+  _repaintPlan(jobId);
+  return '';
+}
+
+function openRoomWorkspace(jobId, roomIdx) {
+  var el = document.getElementById('room-ws');
+  if (!el || !_planRoom(jobId, roomIdx)) return false;
+  _roomWs = { open: true, jobId: jobId, roomIdx: roomIdx, msg: '' };
+  _paintRoomWorkspace();
+  el.style.display = 'flex';
+  return true;
+}
+function closeRoomWorkspace() {
+  var el = document.getElementById('room-ws');
+  var jobId = _roomWs.jobId;
+  _roomWs = { open: false, jobId: null, roomIdx: null, msg: '' };
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  if (jobId) _repaintPlan(jobId);
+}
+
+function _roomShotThumbStyle(jobId, ref) {
+  var id = _invFileId(ref);
+  var src = _localShotThumbs[ref.stableId] || (id ? (_invThumbCache(jobId)[id] || '') : '');
+  return src ? 'background-image:url(&quot;' + src + '&quot;);' : '';
+}
+function _roomShotStripHtml(jobId, roomIdx) {
+  var groups = [['before', 'As found'], ['inventory', 'Items'], ['after', 'After']];
+  return groups.map(function(g) {
+    var refs = _slotRefs(jobId, roomIdx, g[0]);
+    if (!refs.length) return '';
+    var tiles = refs.map(function(r) {
+      var det = g[0] === 'inventory' ? _invDetailRefs(jobId, r.stableId) : [];
+      var id = _invFileId(r);
+      var bg = _roomShotThumbStyle(jobId, r);
+      var status = r.status === 'uploaded' ? ''
+        : (r.status === 'failed'
+            ? '<div style="color:#c0392b;font-weight:700;">&#9888; not saved '
+              + '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" class="btn-s" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border-color:#c0392b;">Retry</button> '
+              + '<button onclick="dismissFailedPhoto(' + jobId + ',\'' + r.stableId + '\')" class="btn-s" style="font-size:9px;padding:1px 5px;cursor:pointer;color:#c0392b;border-color:#c0392b;">&#10005;</button></div>'
+            : '<div style="color:var(--gray);">Uploading\u2026</div>');
+      return '<div class="ws-shot">'
+        + '<div class="ws-thumb"' + (id ? ' data-thumb-id="' + esc(id) + '"' : '') + ' style="' + bg + '">' + (bg ? '' : '&#128247;') + '</div>'
+        + '<div class="n">' + (g[0] === 'inventory' ? (r.objectName ? esc(r.objectName) : 'Item ' + r.seq) : g[1] + ' ' + r.seq)
+        + (r.needsAppr ? ' <span style="color:var(--bronze);">&#9873;</span>' : '')
+        + (g[0] === 'inventory' ? ' \u00b7 ' + (r.disposition ? esc(r.disposition) : 'undecided') : '')
+        + (det.length ? ' \u00b7 +' + det.length + ' detail' : '') + '</div>'
+        + (r.fieldNote ? '<div class="note">\u201c' + esc(r.fieldNote) + '\u201d</div>' : '')
+        + status + '</div>';
+    }).join('');
+    return '<div class="ws-strip-h">' + g[1] + ' \u00b7 ' + refs.length + '</div><div class="ws-shots">' + tiles + '</div>';
+  }).join('');
+}
+
+function _paintRoomWorkspace() {
+  var el = document.getElementById('room-ws');
+  var ws = _roomWs;
+  if (!el || !ws.open) return;
+  var jobId = ws.jobId, roomIdx = ws.roomIdx;
+  var job = _invJob(jobId);
+  var room = _planRoom(jobId, roomIdx);
+  if (!job || !room) { closeRoomWorkspace(); return; }
+  var status = _planRoomStatus(jobId, roomIdx);
+  var m = ROOM_STATUS_META[status];
+  var nB = _shotCount(jobId, roomIdx, 'before'), nI = _shotCount(jobId, roomIdx, 'inventory'), nA = _shotCount(jobId, roomIdx, 'after');
+  var decedent = isDecedentJob(job);
+  var h = '<div class="ws-top">'
+    + '<button type="button" class="btn-back" onclick="closeRoomWorkspace()">&#8592; Rooms</button>'
+    + '<div class="ws-title">' + esc(room.name) + '</div>'
+    + '<span class="rl-pill" style="color:' + m.color + ';background:' + m.bg + ';">' + m.label + '</span>'
+    + '</div>'
+    + firearmsWorkspaceLine(job)
+    + '<div class="ws-body">';
+  if (room.note) h += '<div style="font-size:11.5px;color:var(--gray);font-style:italic;margin-bottom:6px;">&#128203; ' + esc(room.note) + '</div>';
+  h += '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.5;">'
+    + '<strong>1. As found</strong> \u2014 wide shots from the corners, then every drawer, cabinet and closet open, contents undisturbed. '
+    + (decedent ? '<strong>Mandatory on this job.</strong> ' : '')
+    + '<strong>2. Sort, then Items</strong> \u2014 work the room, pick a chip, shoot the pile. '
+    + '<strong>3. After</strong> \u2014 the room empty.</div>';
+  h += '<div class="ws-cams">'
+    + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'before\')">&#128247; As found<small>' + nB + ' shot' + (nB === 1 ? '' : 's') + '</small></button>'
+    + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'inventory\')">&#128247; Items<small>' + nI + ' shot' + (nI === 1 ? '' : 's') + '</small></button>'
+    + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'after\')">&#128247; After<small>' + nA + ' shot' + (nA === 1 ? '' : 's') + '</small></button>'
+    + '</div>';
+  h += planRoomStatusBtns(jobId, roomIdx, status);
+  h += '<div id="room-ws-msg" class="ws-why err" style="' + (ws.msg ? '' : 'display:none;') + '">' + esc(ws.msg || '') + '</div>';
+  h += '<div class="ws-strip">' + _roomShotStripHtml(jobId, roomIdx) + '</div>';
+  h += '</div>';
+  el.innerHTML = h;
+  _invPaintThumbs(jobId);
+}
+
+// The room list on the Job Plan: one row per room, tap to open the workspace.
+function _planRoomListHtml(jobId) {
+  var rs = _planRooms(jobId);
+  var rows = rs.rooms.map(function(r) {
+    var st = _planRoomStatus(jobId, r.idx);
+    var m = ROOM_STATUS_META[st];
+    var nB = _shotCount(jobId, r.idx, 'before'), nI = _shotCount(jobId, r.idx, 'inventory'), nA = _shotCount(jobId, r.idx, 'after');
+    var failed = (_photoRefs[jobId] || []).some(function(x){ return x.roomIdx === r.idx && !x.collId && !x.deletedAt && x.status === 'failed'; });
+    return '<button type="button" class="rl-row" onclick="openRoomWorkspace(' + jobId + ',' + r.idx + ')">'
+      + '<span class="rl-name">' + esc(r.name) + (r.note ? '<span class="rl-note">' + esc(r.note) + '</span>' : '') + '</span>'
+      + '<span class="rl-counts">' + nB + ' found \u00b7 ' + nI + ' items \u00b7 ' + nA + ' after'
+      + (failed ? ' <span class="rl-fail">&#9888; not saved</span>' : '') + '</span>'
+      + '<span class="rl-pill" style="color:' + m.color + ';background:' + m.bg + ';">' + m.label + '</span>'
+      + '</button>';
+  }).join('');
+  var excl = rs.excluded.length
+    ? '<div class="rl-excl"><strong>Not in scope \u2014 homeowner is handling:</strong> '
+      + rs.excluded.map(function(r){ return esc(r.name) + (r.note ? ' <em>(' + esc(r.note) + ')</em>' : ''); }).join(' \u00b7 ') + '</div>'
+    : '';
+  return '<div class="rl">' + (rows || '<div style="font-size:12px;color:var(--gray);">No rooms priced on this estimate.</div>') + '</div>' + excl;
+}
+function _repaintPlanRooms(jobId) {
+  var el = document.getElementById('plan-rooms-' + jobId);
+  if (el) el.innerHTML = _planRoomListHtml(jobId);
+}
+
+// The plan content, redrawn without the network round trip loadJobPlanTab makes. Used after
+// a status tap or a camera session so the room list and the derived lines catch up.
+function _repaintPlan(jobId) {
+  var sel = document.getElementById('plan-job');
+  var content = document.getElementById('job-plan-content');
+  if (!sel || !content || parseInt(sel.value) !== jobId) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var estRec = estimateStore[jobId];
+  if (!job || !estRec || !estRec.estimate) return;
+  if (!((estRec.approved || job.approved) && isJobWon(job))) return;
+  content.innerHTML = (job.svc === 'prep') ? renderPrepJobPlan(jobId, job, estRec.estimate) : renderJobPlan(jobId, job, estRec.estimate);
 }
 
 function attachJobPlanCollectionPhoto(input, jobId, collId) {
@@ -21540,7 +22051,7 @@ function retryPhotoUpload(jobId, stableId) {
   // reads exactly like one that worked, which is how a lost shot stays lost.
   if (!dataUrl) {
     alert('That photo can no longer be retried from this device — the image itself was not held.\n\n'
-      + 'Re-shoot ' + (ref.objectName || ref.filename || 'the item') + ' if it is still on site.');
+      + 'Re-shoot ' + (ref.objectName || ref.filename || 'it') + ' if it is still on site.');
     return;
   }
   ref.status = 'uploading';
@@ -21556,15 +22067,12 @@ function retryPhotoUpload(jobId, stableId) {
     _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
       _updateCollPhotoStatus(jobId, ref.collId);
     });
-  } else if (ref.label === 'inventory') {
-    _updateRoomInventoryEl(jobId, ref.roomIdx);
-    _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
-      _updateRoomInventoryEl(jobId, ref.roomIdx);
-    });
   } else {
     _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
     _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
       _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
+      _invCacheLocalThumb(jobId, stableId, dataUrl);
+      if (ref.label === 'inventory' || ref.label === 'detail') _scheduleInventorySync(jobId);
     });
   }
 }
@@ -23078,11 +23586,13 @@ function toggleLogHistory() {
 //
 // The stage now advances off money actually recorded, which is the same rule the deposit
 // already followed, one stage along: midpoint paid means the next document to produce is
-// the final. `midpointInvoiceSent` is still honoured if some future path sets it.
+// the final. A midpoint invoice already SENT (the document record, `docSentAt`) advances it
+// too — `job.midpointInvoiceSent`, the hand-ticked Job Plan box that used to sit beside it,
+// was deleted on 2026-09-19 as a third store of one fact.
 function defaultInvStage(job) {
   if (!job) return 'deposit';
   if (!isJobFunded(job)) return 'deposit';
-  if (!job.midpointInvoiceSent && stagePaidTotal(job, 'midpoint') <= 0) return 'midpoint';
+  if (!docSentAt(job, 'invoice', 'midpoint') && stagePaidTotal(job, 'midpoint') <= 0) return 'midpoint';
   return 'final';
 }
 
@@ -24091,6 +24601,7 @@ function renderProjection(jobId) {
 }
 
 function setRoomStatus(jobId, roomIdx, status) {
+  status = roomStatusNormalize(status);   // the store holds the three-state vocabulary only
   var plan = getJobPlan(jobId);
   if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
   plan.rooms[roomIdx].status = status;
@@ -24225,6 +24736,9 @@ function loadJobPlanTab() {
     }
   } else {
     content.innerHTML = renderJobPlan(jobId, job, est);
+    // A photo landing from the other device redraws the plan; the room somebody has open
+    // must show it too, or the workspace and the list disagree about what was shot.
+    if (_roomWs.open && _roomWs.jobId === jobId) _paintRoomWorkspace();
   }
 
   // Show log section and wire log-job hidden input to this job
@@ -24284,8 +24798,15 @@ function loadJobPlanTab() {
   renderProjection(jobId);
 }
 
+// Read-only: never mints a plan record for a job that has none. planChk is rendered on the
+// Inventory tab now as well as the Job Plan, and getJobPlan would seed the store with an empty
+// plan for every client somebody merely looked at — which saveAllJobPlans then posts.
+function _planTaskDone(jobId, key) {
+  var plan = jobPlanStore[jobId];
+  return !!(plan && plan.tasks && plan.tasks[key]);
+}
 function planChk(jobId, key, label) {
-  var done = !!((getJobPlan(jobId).tasks || {})[key]);
+  var done = _planTaskDone(jobId, key);
   return '<label style="display:flex;align-items:flex-start;gap:8px;margin:0;padding:3px 0;font-size:12px;cursor:pointer;' +
     'color:' + (done ? 'var(--gray)' : 'var(--gray-dk)') + ';text-decoration:' + (done ? 'line-through' : 'none') + ';">' +
     '<input type="checkbox"' + (done ? ' checked' : '') +
@@ -24317,42 +24838,11 @@ function planPhaseWrap(id, title, body) {
     'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div>';
 }
 
-// Room lifecycle is split across phases so the crew can't quietly drive a room to
-// "complete" from Phase 1 and skip Phase 2 (and the midpoint invoice). Phase 1 caps
-// at "locked" (decisions final); Phase 2 owns "packed → complete" (execution).
-function planRoomStatusBtns(jobId, roomIdx, status, phaseKey) {
-  var ST  = phaseKey === 'p1' ? ['pending','sorting','locked']
-          : phaseKey === 'p2' ? ['locked','packed','complete']
-          : ['pending','sorting','locked','packed','complete'];
-  var CLR = {pending:'#aaa',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
-  // ⚠⚠ PHASE 2 CANNOT DRAW THREE OF THE FIVE STATES, AND SILENCE IS THE WRONG ANSWER.
-  // Its row is locked / packed / complete, so a room still at `pending` or `sorting` lights
-  // NOTHING — three grey buttons and no indication of where the room actually is. Reported
-  // 2026-09-12 as *"why don't the 'locked' from phase 1 carry to starting point in stage 2?"*,
-  // which is exactly how a blank control reads: as state that failed to arrive. The state DID
-  // arrive (the badge says PENDING and the store holds it); the BUTTON ROW just had no way to
-  // say so. It says so here, in the same wrapper the buttons live in, so `setPlanRoomStatus`'s
-  // existing two-grid repaint keeps it live with no second call site to forget.
-  // ⚠ IT FLAGS, IT NEVER REFUSES. Locking a room from the Phase 2 card is legitimate — the
-  // crew is standing in it — and disabling the control would strand somebody mid-room. The
-  // split exists to stop Phase 1 driving a room to `complete`, not to stop Phase 2 locking one.
-  var below = phaseKey === 'p2' && (status === 'pending' || status === 'sorting');
-  return '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:5px 0;">' +
-    ST.map(function(s) {
-      var a = s === status;
-      return '<button onclick="setPlanRoomStatus(' + jobId + ',' + roomIdx + ',\'' + s + '\')"' +
-        ' style="padding:3px 9px;font-size:10px;font-weight:' + (a ? 700 : 400) + ';border-radius:3px;cursor:pointer;font-family:inherit;' +
-        'background:' + (a ? CLR[s] : 'var(--cream)') + ';color:' + (a ? '#fff' : 'var(--gray)') + ';' +
-        'border:1px solid ' + (a ? CLR[s] : 'var(--border-md)') + ';">' + s + '</button>';
-    }).join('') + '</div>' +
-    (below ? '<div style="font-size:10px;font-weight:600;color:var(--warn-tx);background:var(--warn-bg);' +
-      'border-radius:3px;padding:3px 6px;margin:-2px 0 4px;">Still ' + status +
-      ' — finish the decisions in Phase 1, or lock it here</div>' : '');
-}
-
+// The projection read-out at the foot of a working phase. It used to end in a per-day
+// checkbox — "Daily projection checked and signed off" — a self-attestation that recorded
+// nothing the projection above it did not already show. The reading stays; the tick went
+// with the rest of the box-ticking on 2026-09-19.
 function renderDailyCloseBlock(jobId, phase) {
-  var today = new Date().toISOString().split('T')[0];
-  var key = 'dc_p' + phase + '_' + today;
   var snap = computeProjection(jobId);
   var projHtml = snap
     ? projBandHtml(snap.tcBand,'TC',snap.projTC,snap.triggerTC,snap.estTC,snap.tcPct) +
@@ -24361,8 +24851,281 @@ function renderDailyCloseBlock(jobId, phase) {
   return '<div style="background:var(--tan);border-radius:5px;padding:10px 12px;margin-top:14px;">' +
     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-dk);margin-bottom:8px;">Daily Close</div>' +
     projHtml +
-    '<div style="font-size:11px;color:var(--gray);margin:6px 0 4px;">Log today\'s hours above before reviewing the projection. Over the line? Stop — Change Order before the next room.</div>' +
-    planChk(jobId, key, 'Daily projection checked and signed off — ' + today) + '</div>';
+    '<div style="font-size:11px;color:var(--gray);margin:6px 0 4px;">Log today\'s hours above, then read the projection. Over the line? Stop \u2014 Change Order before the next room.</div></div>';
+}
+
+// ═══════════════════ THE JOB PLAN'S CHECKBOXES, KEYED BY NAME (2026-09-19) ═══════════════════
+// ⚠⚠ THE OLD PLAN HAD ROUGHLY SIXTY CHECKBOXES IN TWENTY-FOUR SECTIONS AND NO CATALOGUE. Each
+// box was `prefix + array index`, so the label array literal WAS the id: reorder one list, or
+// insert a line, and every saved tick below it silently re-mapped to a different sentence.
+// This is the one list, keyed by name, so the next cut cannot do that.
+//
+// WHAT SURVIVED, and why (Anthony, 2026-09-19: *"we don't have to get rid of everything"*):
+// a box is kept when it records an ACTION a person takes that nothing in the app can see
+// — a call placed, a key tested, a document handed over against a receipt, a firearm checked
+// for NFA parts. A box is DERIVED (see planDerivedLines) when the app already holds the record
+// — the signed agreement, the deposit, the invoices, the room statuses, the change orders. A
+// box is DELETED when it described how the camera flow works ("wide-angle photo of every
+// room") — the flow enforces it — or restated the playbook; that text lives in the playbook
+// now, Step 10. Desk paperwork (financial close, the §733.604 filing list, records) moved to
+// JOB_ADMIN_TASKS on the Inventory tab, which is where the evening's work actually happens.
+var PLAN_TASKS = [
+  // Phase 0 — before Day 1
+  { key:'precall',            phase:'p0', sec:'Pre-job call',
+    label:'Pre-job call placed 3–5 days before Day 1 — daily rhythm set, who decides asked and written down, logistics confirmed (the script is in the playbook, Step 10)' },
+  { key:'materials_onsite',   phase:'p0', sec:'Access &amp; crew', label:'Moving materials on site for Day 1 morning' },
+  { key:'access_tested',      phase:'p0', sec:'Access &amp; crew', label:'Keys and access codes tested; elevator and parking confirmed', mm:' (and the moving truck)' },
+  { key:'crew_briefed',       phase:'p0', sec:'Access &amp; crew', label:'Crew confirmed by name and briefed — standing job flags read aloud' },
+  { key:'nda_signed',         phase:'p0', sec:'Access &amp; crew', label:'NDA signed by every crew member and contractor before entry' },
+  { key:'coi_provided',       phase:'p0', sec:'Access &amp; crew', label:'Certificate of Insurance provided to the attorney, PR or HOA as required' },
+  { key:'pr_authority',       phase:'p0', sec:'Probate gate', when:function(c){ return c.isProbate; },
+    label:'Personal Representative authority confirmed — full vs limited, limitations noted' },
+  { key:'nh_floorplan',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'New home floor plan obtained or sketched to scale' },
+  { key:'nh_placement',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'New home measured; furniture placement plan drafted against the keep list' },
+  { key:'nh_plan_approved',   phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'Placement plan reviewed with and approved by the client before move day' },
+  { key:'nh_mover_confirmed', phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'Moving company confirmed: date, window, crew size, contact' },
+  { key:'nh_hoa_rules',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'HOA / building move-out rules confirmed at origin; move-in rules at destination' },
+  // Phase 1 — in the house. Kept because each is a thing a person does with their hands,
+  // and on a firearm the cost of not doing it is a felony rather than a missed tick.
+  { key:'firearms_in_place',  phase:'p1', sec:'In the house', when:function(c){ return c.firearms || c.isDocJob; },
+    label:'Firearms photographed where they lie and left there — nothing moves without written authority' },
+  { key:'nfa_check',          phase:'p1', sec:'In the house', when:function(c){ return c.firearms || c.isDocJob; },
+    label:'Each firearm checked for NFA items — a suppressor looks like a plain metal tube, a short-barrelled rifle or shotgun looks ordinary — see the protocol' },
+  { key:'docs_sequestered',   phase:'p1', sec:'In the house', when:function(c){ return c.isDocJob; },
+    label:'Wills, trusts, deeds, titles, financial and military records sequestered and handed to the PR or attorney against a signed receipt' },
+  { key:'cash_logged',        phase:'p1', sec:'In the house', when:function(c){ return c.isDocJob; },
+    label:'Cash, jewelry and documents found are logged and set aside — never removed without PR sign-off' },
+  // Phase 2 — pickups and disposal
+  { key:'coc_pickup_present', phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.isDisposal || c.hasCOC; },
+    label:'TC present for every valuables pickup; the handoff is signed for' },
+  { key:'shred_done',         phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.isDisposal; },
+    label:'Shredding completed, or the vendor confirmed on schedule' },
+  // Phase 3 — move day (Home Transition only). The whole supervision sequence survives.
+  { key:'mv_eta',             phase:'p3', sec:'Pre-move',    when:function(c){ return c.isMM; }, label:'Moving company arrival confirmed; ETA logged' },
+  { key:'mv_tc_onsite',       phase:'p3', sec:'Pre-move',    when:function(c){ return c.isMM; }, label:'TC on site before the movers arrive' },
+  { key:'mv_crew_briefed',    phase:'p3', sec:'Pre-move',    when:function(c){ return c.isMM; }, label:'Moving crew briefed: fragile and high-value items pointed out; floor plan shared' },
+  { key:'mv_load_supervised', phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'TC present and supervising throughout loading' },
+  { key:'mv_fragile_load',    phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'Fragile and high-value items: TC directly oversees — does not leave the area' },
+  { key:'mv_origin_walked',   phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'Every room, closet, attic, garage and outdoor space walked before the truck departs' },
+  { key:'mv_origin_photos',   phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'Origin final walkthrough complete and photographed' },
+  { key:'mv_dest_ahead',      phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'TC at the new home ahead of the truck where possible' },
+  { key:'mv_dest_plan',       phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Movers directed per the approved floor plan' },
+  { key:'mv_fragile_unload',  phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Fragile and high-value items: TC oversees unloading' },
+  { key:'mv_client_walk',     phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Client walkthrough of the new home; approval confirmed and noted' },
+  { key:'mv_damage',          phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Any damage photographed and reported the same day' },
+  { key:'mv_mover_signoff',   phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Moving company final sign-off' },
+  // Phase 4 — close-out
+  { key:'broom_clean',        phase:'p4', sec:'Close-out', when:function(c){ return c.isDisposal; }, label:'Property broom-clean; final photographs taken inside and out' },
+  { key:'home_empty',         phase:'p4', sec:'Close-out', when:function(c){ return c.isDisposal || c.isMM; },
+    label:'Home confirmed empty — every room, closet, attic, garage and outdoor space walked' },
+  { key:'re_disclosed',       phase:'p4', sec:'Real estate handoff', when:function(c){ return c.re; }, label:'Real estate relationship disclosed in writing; client consents to the introduction' },
+  { key:'re_handoff',         phase:'p4', sec:'Real estate handoff', when:function(c){ return c.re; }, label:'Warm handoff to Team Ashley &amp; Anthony made' },
+  { key:'satisfaction_call',  phase:'p4', sec:'Client', label:'Client satisfaction confirmed by phone — a call, not a text' },
+  { key:'review_ask',         phase:'p4', sec:'Client', label:'Google review requested, only after satisfaction is confirmed' },
+  { key:'referral_ask',       phase:'p4', sec:'Client', label:'Referral ask made' }
+];
+
+// Desk paperwork. Rendered at the TOP of the Inventory tab, not on the Job Plan, because that
+// is the tab the concierge works at the end of the day — Anthony: *"once we're in a job, the
+// job plan is gonna tell us midpoint is reached, and then we're gonna be working to get the
+// inventory done for the end of the job. Going back to the client dashboard is not a logical
+// workflow."* Same store, same tick, same per-key merge as the Job Plan's boxes.
+var JOB_ADMIN_TASKS = [
+  { key:'fin_vendor_invoices',   sec:'Financial close', label:'All vendor invoices collected and filed in the job folder' },
+  { key:'fin_proceeds',          sec:'Financial close', when:function(c){ return c.isDisposal; },
+    label:'Sale, consignment and auction proceeds reconciled — amounts received confirmed and documented' },
+  { key:'fin_settlement',        sec:'Financial close', when:function(c){ return c.isDisposal; },
+    label:'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received' },
+  { key:'fin_donation_receipts', sec:'Financial close', label:'Donation receipts collected and filed for tax records' },
+  { key:'ct_inventory',   sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'§733.604 inventory verified — date-of-death FMV on every line' },
+  { key:'ct_appraisals',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'All professional appraisals attached as supporting documentation' },
+  { key:'ct_nonprobate',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Non-probate assets excluded (joint with survivorship, POD/TOD, trust, beneficiary-designated)' },
+  { key:'ct_served',      sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Inventory served on all interested parties; proof of service filed' },
+  { key:'ct_filed',       sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Filed within the 60-day deadline, or an extension petitioned for cause' },
+  { key:'ct_accounting',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Final accounting prepared: sale proceeds, donations, disposal costs, professional fees' },
+  { key:'ct_pr_signoff',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'PR sign-off obtained on the final disposition summary' },
+  { key:'rec_archived',   sec:'Records', label:'Job folder complete and archived in Drive — 7-year retention' }
+];
+
+// Everything a `when` predicate can ask about a job, computed once per render.
+function planTaskCtx(job, est) {
+  var svc = (est && est.svc) || (job && job.svc) || '';
+  var isMM = svc === 'downsizing_move';
+  var isDownsizing = svc === 'downsizing' || isMM;
+  var isCleanout = svc === 'home_cleanout';
+  var isEstate = svc === 'cleanout';
+  var isProbate = svc === 'probate' || svc === 'contested_probate';
+  var isDocJob = isEstate || isProbate;
+  var isDisposal = isCleanout || isDocJob;
+  var collections = (est && est.collections) || [];
+  var formal = isFormalDoc(job);
+  return { svc: svc, isMM: isMM, isDownsizing: isDownsizing, isCleanout: isCleanout, isEstate: isEstate,
+           isProbate: isProbate, isDocJob: isDocJob, isDisposal: isDisposal,
+           hasPlaybook: isDownsizing || isDisposal, formal: formal,
+           hasCOC: formal || collections.length > 0 || isDocJob,
+           firearms: firearmsFlaggedAtIntake(job), re: !!(job && job.re === 'yes'),
+           job: job, est: est };
+}
+function planTasksFor(list, phase, ctx) {
+  return list.filter(function(t){ return (!phase || t.phase === phase) && (!t.when || t.when(ctx)); });
+}
+// Sections in catalogue order, each a subsection heading over a checkbox grid. `only` narrows
+// to the named sections (the pre-job call renders apart from the rest so its notes box can
+// sit under it); `skip` leaves them out.
+function planTaskSectionsHtml(jobId, tasks, ctx, only, skip) {
+  var secs = [];
+  tasks.forEach(function(t){ if (secs.indexOf(t.sec) < 0) secs.push(t.sec); });
+  return secs.filter(function(s){ return (!only || only.indexOf(s) >= 0) && (!skip || skip.indexOf(s) < 0); })
+    .map(function(s) {
+      var mine = tasks.filter(function(t){ return t.sec === s; });
+      return planSubsec(s) + chkGrid(mine.map(function(t){
+        return planChk(jobId, t.key, t.label + (ctx.isMM && t.mm ? t.mm : ''));
+      }).join(''));
+    }).join('');
+}
+function planTasksHtml(jobId, phase, ctx, only, skip) {
+  return planTaskSectionsHtml(jobId, planTasksFor(PLAN_TASKS, phase, ctx), ctx, only, skip);
+}
+
+// ═══════════════════════ DERIVED, NOT TICKED ═══════════════════════
+// A green or open line the app computes from a record it already holds. Every one of these
+// used to be a hand-ticked box on the Job Plan, duplicating a fact the Client Dashboard was
+// deriving at the same time — and the midpoint pair had a THIRD store of its own. One truth.
+// DOM-free and clock-free: the tests read the real rule and the real wording.
+function planDerivedLines(jobId, job, est, phase) {
+  var out = [];
+  if (!job || !est) return out;
+  var ctx = planTaskCtx(job, est);
+  var rs = _planRooms(jobId);
+  var rooms = rs.rooms;
+  var plan = jobPlanStore[jobId] || {};
+  var roomsAt = function(set) {
+    return rooms.filter(function(r){
+      return !!set[roomStatusNormalize(plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status)];
+    }).length;
+  };
+  if (phase === 'p0') {
+    var signed = isAgreementSigned(job);
+    out.push({ key: 'agreement_signed', ok: signed, label: 'Service agreement signed',
+               detail: signed ? 'on file' : 'not yet — recorded on the Client Dashboard when it comes back' });
+    var funded = isJobFunded(job);
+    out.push({ key: 'deposit_received', ok: funded, label: 'Deposit received',
+               detail: funded ? '$' + Math.round(depositPaidTotal(job)).toLocaleString() + ' recorded' : 'not yet — no crew is scheduled before it lands' });
+    if (ctx.isProbate) {
+      var letters = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
+      out.push({ key: 'letters', ok: letters, label: 'Letters of Administration on file',
+                 detail: job.executorAuth === 'notneeded' ? 'not required on this matter' : (letters ? 'received' : 'pending — recorded at intake or under Edit Client, and the job cannot activate without it') });
+    }
+    if (ctx.isDocJob) {
+      var atty = !!(job.probateAttyName || job.probateAttyFirm);
+      out.push({ key: 'attorney_on_file', ok: atty, label: 'Estate attorney on file',
+                 detail: atty ? [job.probateAttyName, job.probateAttyFirm].filter(Boolean).join(', ') : 'not recorded — Edit Client' });
+    }
+    if (ctx.isProbate) {
+      var dl = !!job.probateDeadline;
+      out.push({ key: 'deadline_733604', ok: dl, label: '§733.604 inventory deadline',
+                 detail: dl ? fmtDate2(job.probateDeadline) + ' — 60 days from the Letters' : 'not recorded — Edit Client, from the date the Letters issued' });
+    }
+  }
+  if (phase === 'p1') {
+    var nL = roomsAt(TC_DONE_STATUSES);
+    out.push({ key: 'rooms_locked', ok: rooms.length > 0 && nL === rooms.length, label: 'All rooms locked',
+               detail: nL + ' of ' + rooms.length + (rooms.length && nL === rooms.length ? ' — the project midpoint' : '') });
+  }
+  if (phase === 'p2') {
+    var sent = !!docSentAt(job, 'invoice', 'midpoint');
+    out.push({ key: 'midpoint_sent', ok: sent, label: 'Midpoint invoice sent',
+               detail: sent ? 'sent' : 'send it from the Client Dashboard the moment every room is locked — collection takes time',
+               action: { label: 'Open the midpoint invoice', call: 'openInvoiceFor(' + jobId + ',\'midpoint\')' } });
+    var paid = stagePaidTotal(job, 'midpoint');
+    out.push({ key: 'midpoint_received', ok: paid > 0, label: 'Midpoint payment received',
+               detail: paid > 0 ? '$' + Math.round(paid).toLocaleString() + ' recorded' : 'not yet — recorded on the Client Dashboard when it lands' });
+    var vendors = est.vendors || [];
+    if (vendors.length) {
+      var vsrc = job.vendorSourcing || {};
+      var nV = vendors.filter(function(v, i){ var rec = vsrc[_srcLineKey(v, i)]; return rec && rec.status === 'Confirmed'; }).length;
+      out.push({ key: 'vendors_confirmed', ok: nV === vendors.length, label: 'Vendors confirmed',
+                 detail: nV + ' of ' + vendors.length + ' — status on the Vendor &amp; Partner Sourcing card' });
+    }
+    if (ctx.isDocJob) {
+      var leaving = _jobInvRefs(jobId).filter(function(r){ return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
+      if (leaving.length) {
+        var nA = leaving.filter(function(r){ return !!(r.authBy && r.approvalDate); }).length;
+        out.push({ key: 'release_authority', ok: nA === leaving.length, label: 'Written release authority on every item leaving',
+                   detail: nA + ' of ' + leaving.length + ' — the release approval request is on the Inventory tab' });
+      }
+    }
+    var donating = _jobInvRefs(jobId).filter(function(r){ return r.disposition === 'Donate'; });
+    if (donating.length) {
+      var rcpt = donating.some(function(r){ return !!r.receiptDoc; });
+      out.push({ key: 'donation_receipt', ok: rcpt, label: 'Donation receipt on file',
+                 detail: rcpt ? 'attached' : donating.length + ' item' + (donating.length > 1 ? 's' : '') + ' going to donation — attach the receipt on the Inventory tab (Receipt / Doc)' });
+    }
+  }
+  if (phase === 'p4') {
+    var nC = roomsAt(PS_DONE_STATUSES);
+    out.push({ key: 'rooms_cleared', ok: rooms.length > 0 && nC === rooms.length, label: 'All rooms cleared', detail: nC + ' of ' + rooms.length });
+    var logs = jobLogEntries(jobId);
+    var hrs = 0;
+    logs.forEach(function(e){ ((e && e.members) || []).forEach(function(m){ hrs += Number(m && m.hours) || 0; }); });
+    var estHrs = (Number(est.totTC) || 0) + (Number(est.totPS) || 0);
+    out.push({ key: 'hours_logged', ok: logs.length > 0, label: 'Hours logged',
+               detail: logs.length ? (Math.round(hrs * 10) / 10) + ' hrs against ' + (Math.round(estHrs * 10) / 10) + ' estimated — the final invoice trues to the log' : 'none yet — the final invoice cannot issue without them' });
+    var cos = (typeof changeOrders !== 'undefined' ? changeOrders : []).filter(function(c){ return c && c.jobId === jobId; });
+    if (cos.length) {
+      var nAcc = cos.filter(function(c){ return !!c.clientApproved; }).length;
+      out.push({ key: 'change_orders', ok: nAcc === cos.length, label: 'Change orders accepted by the client',
+                 detail: nAcc + ' of ' + cos.length + (nAcc < cos.length ? ' — an unaccepted change order is never billed' : '') });
+    }
+    if (est.prepEnabled && est.prepItems && est.prepItems.length) {
+      var psrc = job.prepSourcing || {};
+      var nP = est.prepItems.filter(function(pi, i){ var rec = psrc[_srcLineKey(pi, i)]; return rec && rec.status === 'Confirmed'; }).length;
+      out.push({ key: 'prep_vendors', ok: nP === est.prepItems.length, label: 'Prep vendors confirmed',
+                 detail: nP + ' of ' + est.prepItems.length });
+    }
+    var fin = !!docSentAt(job, 'invoice', 'final');
+    out.push({ key: 'final_invoice_sent', ok: fin, label: 'Final invoice sent',
+               detail: fin ? 'sent' : 'from the Client Dashboard, once the hours are in' });
+  }
+  return out;
+}
+function planDerivedHtml(jobId, job, est, phase) {
+  var lines = planDerivedLines(jobId, job, est, phase);
+  if (!lines.length) return '';
+  return '<div class="pl-derived" id="plan-derived-' + phase + '-' + jobId + '">' + lines.map(function(l) {
+    return '<div class="pl-line ' + (l.ok ? 'pl-ok' : 'pl-open') + '">'
+      + '<span class="pl-dot">' + (l.ok ? '&#10003;' : '&#9675;') + '</span>'
+      + '<span class="pl-lbl">' + l.label + '</span>'
+      + (l.detail ? '<span class="pl-det">' + l.detail + '</span>' : '')
+      + (l.action && !l.ok ? '<button type="button" class="btn-s" style="font-size:10px;margin-left:auto;" onclick="' + l.action.call + '">' + l.action.label + '</button>' : '')
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+// ═══════════════════════ JOB ADMIN — the top of the Inventory tab ═══════════════════════
+var _jobAdminOpen = {};
+function toggleJobAdmin(jobId) {
+  _jobAdminOpen[jobId] = !_jobAdminOpen[jobId];
+  renderInventoryTab();
+}
+function renderJobAdmin(jobId, job) {
+  var estRec = estimateStore[jobId];
+  var est = estRec && estRec.estimate;
+  if (!job || !est || !isJobWon(job)) return '';
+  var ctx = planTaskCtx(job, est);
+  var tasks = planTasksFor(JOB_ADMIN_TASKS, null, ctx);
+  var done = tasks.filter(function(t){ return _planTaskDone(jobId, t.key); }).length;
+  var derived = planDerivedLines(jobId, job, est, 'p4');
+  var openLines = derived.filter(function(l){ return !l.ok; }).length;
+  var open = !!_jobAdminOpen[jobId];
+  return '<div class="ja-card">'
+    + '<div class="ja-hd" onclick="toggleJobAdmin(' + jobId + ')">'
+      + '<span>' + (open ? '&#9662;' : '&#9656;') + '</span>'
+      + '<span>Job Admin — desk paperwork</span>'
+      + '<span class="ja-n">' + done + ' of ' + tasks.length + ' ticked' + (openLines ? ' · ' + openLines + ' derived item' + (openLines > 1 ? 's' : '') + ' still open' : '') + '</span>'
+    + '</div>'
+    + (open ? '<div class="ja-body">' + planDerivedHtml(jobId, job, est, 'p4') + planTaskSectionsHtml(jobId, tasks, ctx) + '</div>' : '')
+    + '</div>';
 }
 
 // ── PHASE 0: VENDOR & PARTNER SOURCING ────────────────────────────────────────
@@ -27072,43 +27835,6 @@ function populateReferralPicker(){
 function openInvoiceFor(jobId, stage) {
   docAction(jobId, 'invoice', 'view', { stage: stage || 'midpoint' });
 }
-function setMidpointSent(jobId, checked) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  job.midpointInvoiceSent = !!checked;
-  saveJobs(); syncJobToSheets(job);
-  loadJobPlanTab(); // re-render so the banner / close-out flag update
-}
-function setMidpointReceived(jobId, checked) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  job.midpointReceived = !!checked;
-  saveJobs(); syncJobToSheets(job);
-  loadJobPlanTab();
-}
-// Phase 2 billing gate: confirm the midpoint invoice went out (and was collected),
-// with a one-click jump to generate it.
-function midpointGateHtml(jobId, midAmt) {
-  var job = jobs.find(function(j){ return j.id === jobId; }) || {};
-  var sent = !!job.midpointInvoiceSent;
-  var recd = !!job.midpointReceived;
-  var amtStr = midAmt ? '$' + Math.round(midAmt).toLocaleString() : '—';
-  return '<div style="border:1px solid var(--border-md);border-radius:5px;padding:10px 12px;background:var(--white);">' +
-    '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">' +
-      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;margin:0;cursor:pointer;font-weight:600;">' +
-        '<input type="checkbox" style="width:auto;margin:0;" ' + (sent?'checked':'') + ' onchange="setMidpointSent(' + jobId + ',this.checked)"> ' +
-        'Midpoint invoice (25% = ' + amtStr + ') sent to client</label>' +
-      '<button onclick="openInvoiceFor(' + jobId + ',\'midpoint\')" class="btn-s" style="font-size:11px;">Generate midpoint invoice &rarr;</button>' +
-    '</div>' +
-    '<div style="margin-top:8px;">' +
-      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;margin:0;cursor:pointer;color:' + (recd?'var(--ok-tx)':'var(--gray-dk)') + ';">' +
-        '<input type="checkbox" style="width:auto;margin:0;" ' + (recd?'checked':'') + ' onchange="setMidpointReceived(' + jobId + ',this.checked)"> ' +
-        'Midpoint payment received</label>' +
-    '</div>' +
-    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Send this the moment all rooms lock — collection takes time, and you don\'t want to finish the job with 50% outstanding.</div>' +
-  '</div>';
-}
-
 // Home Prep for Sale — simplified Job Plan. A fee-only, vendor-managed service has no
 // in-house labor, so the room phases, hours log, PS crew, and end-of-job logistics don't
 // apply. This plan shows only what the Transition Concierge actually manages: the prep
@@ -27341,83 +28067,28 @@ function docStandardEffect(job) {
 }
 
 function renderJobPlan(jobId, job, est) {
-  var plan   = getJobPlan(jobId);
-  var svc    = est.svc || job.svc || '';
-  var isMM         = svc === 'downsizing_move';
-  var isDownsizing = svc === 'downsizing' || svc === 'downsizing_move';
-  var isCleanout   = svc === 'home_cleanout';
-  var isEstate     = svc === 'cleanout';                  // Estate Settlement (deceased owner)
-  var isProbate    = svc === 'probate' || svc === 'contested_probate';
-  var isDocJob     = isEstate || isProbate;               // requires §733.604 documentation
-  var isDisposal   = isCleanout || isDocJob;              // full clear-out + disposition streams
-  // Downsizing, Home Cleanout, Estate Settlement, Probate & Contested all share the core
-  // sort/pack/disposition playbook; estate & probate add documentation + court phases.
-  var hasPlaybook  = isDownsizing || isDisposal;
-  var vendors     = est.vendors     || [];
-  var collections = est.collections || [];
-  var prem   = !!est.prem;                    // Premium-estate RATE toggle — no longer drives custody
-  var formal = isFormalDoc(job);              // Documentation level (court/attorney grade)
+  var ctx = planTaskCtx(job, est);
+  var isMM = ctx.isMM, isProbate = ctx.isProbate, isDocJob = ctx.isDocJob, isDisposal = ctx.isDisposal;
+  var hasPlaybook = ctx.hasPlaybook;
+  var formal = ctx.formal;
   var custodyMandatory = formal || isProbate; // mandatory on formal jobs + all probate; NOT on premium-rate alone
-  var hasCOC = formal || collections.length > 0 || isDocJob; // show the custody section
-  var psNames = (est.psSlots && est.psSlots.length)
-    ? est.psSlots.map(function(s){
-        return (s.label && !s.label.startsWith('contractor_')) ? s.label
-               : (s.label === 'contractor_senior' ? 'Senior PS' : 'PS Specialist');
-      }).join(', ')
-    : ((est.psCount || est.nps || 2) + ' specialists');
-  // Walkthrough order — the same top-to-bottom the Build Estimate grid and the client
-  // estimate use (Entry & Living → Kitchen & Utility → Lifestyle → …). `idx` is the
-  // running counter across the whole ROOMS array, so ascending idx IS that order.
-  // This used to sort by complexity descending, which shuffled the house into a
-  // sequence matching nothing else in the app: the crew reading the plan against the
-  // estimate had to hunt for each room, and on site nobody walks a property hardest-
-  // room-first. Rooms with no idx (older saves) keep their stored position at the end.
-  var _allJpRooms = (est.rooms || []).map(function(r, i){ return { r: r, i: i }; })
-    .sort(function(a, b){
-      var ai = (typeof a.r.idx === 'number') ? a.r.idx : Infinity;
-      var bi = (typeof b.r.idx === 'number') ? b.r.idx : Infinity;
-      return ai - bi || a.i - b.i;
-    })
-    .map(function(x){ return x.r; });
-  // Excluded (homeowner-handled) rooms are shown to the crew flagged NOT IN SCOPE but
-  // are kept out of the priced/status-tracked room set (midpoint gate, projections).
-  var rooms = _allJpRooms.filter(function(r){ return !r.excluded; });
-  var excludedRooms = _allJpRooms.filter(function(r){ return r.excluded; });
-  var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
+  var rooms = _planRooms(jobId).rooms;
 
-  // Red "NOT IN SCOPE" cards appended to each phase's room grid so on-site TC/PS
-  // know at a glance which rooms the homeowner is handling — do not touch.
-  var exclCardsHtml = excludedRooms.map(function(r) {
-    return '<div style="border:1px solid #E3B7B7;border-radius:4px;padding:8px 10px;background:#fbeded;">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
-      '<strong style="font-size:12px;line-height:1.3;color:#A32D2D;">'+r.name+'</strong>' +
-      '<span style="font-size:9px;font-weight:800;color:#fff;background:#A32D2D;border-radius:3px;padding:1px 5px;white-space:nowrap;">NOT IN SCOPE</span>' +
-      '</div>' +
-      '<div style="font-size:10px;color:#A32D2D;font-weight:600;line-height:1.4;'+(r.note?'margin-bottom:4px;':'')+'">Homeowner is handling this room &mdash; do not touch.</div>' +
-      (r.note ? '<div style="font-size:10px;color:var(--gray);font-style:italic;">&#128203; '+r.note+'</div>' : '') +
-      '</div>';
-  }).join('');
-
-  // Midpoint billing: "all rooms locked" = Phase 1 complete = the contractual midpoint,
-  // and the moment to send the 25% invoice (collection takes time).
+  // Midpoint billing: "all rooms locked" = Phase 1 complete = the contractual midpoint, and
+  // the moment to send the 25% invoice (collection takes time). Read off the document record,
+  // never a hand-ticked box.
   var _hav = est.havellinTotal || job.havellinEst || 0;
   var _midAmt = paymentSplit(_hav).midpoint;
   var _midAmtStr = _midAmt ? '$' + Math.round(_midAmt).toLocaleString() : '';
-  var _allLocked = rooms.length > 0 && rooms.every(function(r){
-    var st = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
-    return st === 'locked' || st === 'packed' || st === 'complete';
-  });
-  var _midBanner = (hasPlaybook && _allLocked && !job.midpointInvoiceSent)
+  var _allLocked = rooms.length > 0 && rooms.every(function(r){ return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; });
+  var _midSent = !!docSentAt(job, 'invoice', 'midpoint');
+  var _midBanner = (hasPlaybook && _allLocked && !_midSent)
     ? '<div class="alert a-err" style="margin-bottom:12px;font-size:12.5px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">' +
         '<span>&#9888; <strong>All rooms are locked — you&rsquo;re at the project midpoint.</strong> The 25% midpoint invoice' +
         (_midAmtStr ? ' (' + _midAmtStr + ')' : '') + ' hasn&rsquo;t been sent. Don&rsquo;t finish the job with money outstanding.</span>' +
-        '<button onclick="openInvoiceFor(' + jobId + ',\'midpoint\')" class="btn-bronze" style="font-size:11px;">Generate midpoint invoice &rarr;</button>' +
+        '<button onclick="openInvoiceFor(' + jobId + ',\'midpoint\')" class="btn-bronze" style="font-size:11px;">Open the midpoint invoice &rarr;</button>' +
       '</div>'
     : '';
-
-  function chks(prefix, list) { // 2-column grid wrapper around positional checklist items
-    return chkGrid(list.map(function(t,i){ return planChk(jobId, prefix+i, t); }).join(''));
-  }
 
   // ── Header ──────────────────────────────────────────────────────────────────
   // Compact, single-line-wrapping header. Crew (TC/PS) intentionally omitted — it's
@@ -27438,17 +28109,21 @@ function renderJobPlan(jobId, job, est) {
   if (formal || isDocJob) {
     _hdrBits.push(['Documentation', formal ? 'Formal (court / attorney grade)' : 'Standard']);
   }
-  var hdr = '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
+  // ⚠ THE FIREARMS BANNER IS THE FIRST THING ON THE TAB when intake ticked it — above the
+  // client line, above everything. The standing-flags brief below still lists it with the
+  // other flags; the banner is the one that cannot be scrolled past.
+  var hdr = firearmsBannerHtml(job) +
+    '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
     '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
     _hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
     (job.driveFolder ? '<span><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Photos in Drive</a></span>' : '') +
     '</div>' +
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
-    (custodyMandatory ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job.</div>' : '') +
+    (custodyMandatory ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job — every item shot in place before it moves, written authority before it leaves.</div>' : '') +
     '</div>' +
-    // What intake was told about this house. Phase 0's "Standing job flags read aloud to
-    // the crew" checkbox has existed far longer than anything that produced the flags.
+    // What intake was told about this house. Phase 0's "crew briefed — standing job flags read
+    // aloud" checkbox is the paired action.
     standingFlagsBlock(job);
 
   // Client info renders at the top of the Job Plan tab (above Log Hours), not inline
@@ -27456,250 +28131,18 @@ function renderJobPlan(jobId, job, est) {
   var _jpHeader = document.getElementById('job-plan-header');
   if (_jpHeader) _jpHeader.innerHTML = hdr;
 
-  // ── Phase 0 ──────────────────────────────────────────────────────────────────
-  var p0CallNote = getPlanNote(jobId, 'p0_call_notes');
-  var p0 = planSubsec('Pre-Job Client Call') +
-    planChk(jobId,'p0_call','Pre-job call placed 3–5 days before Day 1 (warm reconnection; daily rhythm set; decision authority asked directly and documented; four categories previewed; honest emotional frame; logistics confirmed)') +
-    '<div style="margin:6px 0 10px;">' +
-    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:4px;">Pre-Job Call Notes</div>' +
-    '<textarea id="p0-call-notes-'+jobId+'" rows="4" style="width:100%;font-size:12px;padding:7px 9px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;" placeholder="Emotional tone, family dynamics, anything the client mentioned that isn\'t in a checkbox..." oninput="savePlanNote('+jobId+',\'p0_call_notes\',this.value)">'+p0CallNote+'</textarea>' +
-    '</div>' +
-    planSubsec('Agreements & Admin') +
-    // Note: index keys are intentionally non-contiguous (skip _2 Drive folder and
-    // _5 NDA, both removed) so existing saved checkbox state stays mapped correctly.
-    chkGrid(
-      planChk(jobId,'p0_admin_0','Signed engagement agreement confirmed on file') +
-      planChk(jobId,'p0_admin_1','50% deposit received and confirmed before any crew is scheduled') +
-      planChk(jobId,'p0_admin_3','All authorized decision-makers identified, with contact info') +
-      planChk(jobId,'p0_admin_4','Preferred client communication method confirmed')
-    ) +
-    planSubsec('Vendor &amp; Partner Sourcing') +
-    '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>' +
-    planSubsec('Crew & Materials') +
-    chks('p0_crew_',['Moving materials package confirmed and on-site for Day 1 morning',
-      'PS crew confirmed by name and briefed on address, time, parking, access, building rules',
-      'Standing job flags read aloud to the crew']) +
-    planSubsec('Property Access') +
-    chks('p0_access_',['Keys/access codes obtained and tested','Elevator reserved where applicable',
-      'Parking confirmed for crew vehicles'+(isMM?' (and moving truck for Move Management)':'')]) +
-    (isMM ? planSubsec('New Home Prep') +
-      chks('p0_nh_',['New home floor plan obtained or sketched to scale',
-        'New home measured; furniture placement plan drafted against keep list',
-        'Furniture placement plan reviewed with and approved by client before move day',
-        'Moving company confirmed: date, window, crew size, contact',
-        'HOA/building move-out rules confirmed at origin; move-in rules at destination']) : '') +
-    (isDocJob ? planSubsec('Authority &amp; Legal'+(isProbate?' (Probate)':' (Estate)')) +
-      chks('p0_auth_',['Certified copy of Letters of Administration / Testamentary on file',
-        'Personal Representative authority confirmed (full vs. limited) — limitations noted',
-        'Estate attorney contact confirmed; direct communication channel established',
-        'Signed engagement &amp; access authorization from the Personal Representative',
-        'NDA signed by every crew member / contractor before entry',
-        'Certificate of Insurance (COI) provided to attorney / PR / HOA as required']) +
-      (isProbate ? chks('p0_deadline_',['60-day §733.604 inventory deadline calculated from Letters issuance — logged in job file',
-        'Target substantial completion in 30–45 days to leave room for amendments']) : '') : '');
+  // The room list: one row per room, in walkthrough order, tap to open the workspace.
+  var roomsCard = '<div id="plan-rooms-' + jobId + '">' + _planRoomListHtml(jobId) + '</div>';
 
-  // ── Phase 1 ──────────────────────────────────────────────────────────────────
-  // Compact room grid: 3 per row. Status buttons + photos only — no per-room checklists.
-  // The highlighted status button already shows current status; no separate badge needed.
-  var p1rooms = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px;">' +
-    rooms.map(function(r) {
-      var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
-      return '<div id="plan-room-block-p1-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
-        '<strong style="font-size:12px;line-height:1.3;">'+r.name+'</strong>' +
-        '<span id="plan-room-badge-p1-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
-        '</div>' +
-        '<div style="font-size:10px;color:var(--gray);margin-bottom:5px;">Vol '+r.vol+' · Cplx '+r.cplx+' · '+r.tcH.toFixed(1)+'TC / '+r.psH.toFixed(1)+'PS hrs</div>' +
-        (r.note ? '<div style="font-size:10px;color:var(--gray);font-style:italic;margin-bottom:4px;">&#128203; '+r.note+'</div>' : '') +
-        '<div id="plan-room-status-p1-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status,'p1')+'</div>' +
-        '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'-before" style="display:none;margin-top:4px;"></div>' +
-        '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
-        _renderRoomPhotoControls(jobId, r.idx, 'before') +
-        '</div>' +
-        _renderRoomInventoryCapture(jobId, r.idx) +
-        '</div>';
-    }).join('') + exclCardsHtml +
-    '</div>';
-
-  // Phase 1 house-level gates
-  var p1gates = isDisposal ? [
-    'All rooms sorted and decision-locked — every item routed to a disposition stream',
-    (isDocJob ? 'Retained / heir-designated items listed and confirmed with the PR in writing before Phase 2'
-              : 'Retained items list confirmed with client in writing before Phase 2'),
-    'Sale / consignment items inventoried, photographed, chain of custody opened',
-    'High-value items reviewed by TC, documented, and set aside'
-  ] : [
-    'All rooms decision-locked — every item routed to keep / sell / donate / dispose',
-    'Keep list confirmed with client before Phase 2 begins'+(isMM?' (measured against floor plan)':''),
-    'Sell items inventoried, photographed, chain of custody opened',
-    'High-value items reviewed by TC, documented, and set aside'
-  ];
-
-  var p1 = planSubsec('Rooms — Sort & Lock (walkthrough order)') + p1rooms +
-    planSubsec('Phase Gates') +
-    chks('p1_gate_', p1gates) +
-    (hasCOC ? planSubsec('Chain of Custody'+(custodyMandatory?' — Mandatory':'')) +
-      chks('p1_coc_',['Photograph high-value item in place before it moves',
-        'Logged: description, '+(isDocJob?'date-of-death FMV estimate':'client\'s stated value')+', condition, photo reference',
-        (isDocJob?'PR acknowledgment of the room\'s inventory before items leave it':'Client acknowledgment of the room\'s inventory before items leave it'),
-        'Vendor handoff documented; TC physically present for valuables pickup']) : '') +
-    (isDocJob ? planSubsec('§733.604 Documentation Package') +
-      chks('p1_doc_',['Wide-angle photo of every room before anything is moved',
-        'Every item est. $500+ photographed in place (full shot + maker\'s marks / serial)',
-        'Master inventory spreadsheet building: Category | Description | Location | Qty | Condition | Est. FMV | Valuation Source | Photo ID | Disposition',
-        'Items for formal appraisal flagged on a separate tab (jewelry, art, antiques, firearms, coins/metals, vehicles)',
-        'Potentially exempt property logged (§732.402 — household ≤ $20K, up to 2 vehicles)',
-        'Wills/codicils, trusts, deeds, titles, financial &amp; military records sequestered and turned over to PR/attorney with signed receipt',
-        'Cash, jewelry, firearms, documents NEVER removed without PR/attorney sign-off',
-        'Suppressors, short-barrelled rifles/shotguns and any registered NFA item flagged on sight &mdash; a suppressor looks like a plain metal tube and will not read as a firearm unless someone says so']) : '') +
-    renderDailyCloseBlock(jobId,1);
-
-  // ── Phase 2 ──────────────────────────────────────────────────────────────────
-  var p2vendorGates = vendors.map(function(v,i){
-    return planChk(jobId,'p2_vx_'+i,(v.type||'Vendor')+' — confirmed day before; items staged and accessible');
-  }).join('');
-
-  // Phase 2 room grid: same rooms, but only packed/complete are available here —
-  // the crew has to come to Phase 2 to advance a room past "locked".
-  var p2rooms = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px;">' +
-    rooms.map(function(r) {
-      var status = (plan.rooms && plan.rooms[r.idx] && plan.rooms[r.idx].status) || 'pending';
-      return '<div id="plan-room-block-p2-'+r.idx+'" style="border:1px solid var(--border-md);border-radius:4px;padding:8px 10px;background:var(--white);">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:5px;">' +
-        '<strong style="font-size:12px;line-height:1.3;">'+r.name+'</strong>' +
-        '<span id="plan-room-badge-p2-'+r.idx+'" style="font-size:10px;font-weight:700;color:'+(CLR[status]||'var(--gray)')+';white-space:nowrap;">'+status.toUpperCase()+'</span>' +
-        '</div>' +
-        '<div id="plan-room-status-p2-'+r.idx+'">'+planRoomStatusBtns(jobId,r.idx,status,'p2')+'</div>' +
-        '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'-after" style="display:none;margin-top:4px;"></div>' +
-        '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">' +
-        _renderRoomPhotoControls(jobId, r.idx, 'after') +
-        '</div>' +
-        '</div>';
-    }).join('') + exclCardsHtml +
-    '</div>';
-
-  var p2 = planSubsec('Midpoint Invoice (25%)') + midpointGateHtml(jobId, _midAmt) +
-    planSubsec('Rooms — Pack &amp; Complete') + p2rooms +
-    planSubsec('Phase Gates') +
-    (isDisposal
-      ? chks('p2_gate_',[
-          'All disposition streams cleared: haul staged or removed, donation staged, consignment/auction picked up, shred staged',
-          'Donation receipt captured',
-          'Sale / consignment / auction chain-of-custody closed for all pickups',
-          'Shredding completed or vendor confirmed on schedule',
-          (isDocJob ? 'Disposition recorded against each inventory line; proceeds routed to the estate account'
-                    : 'Only retained items remain — boxed, labeled, and ready for client')])
-      : chks('p2_gate_',[
-          'All keep items packed and labeled by destination room'+(isMM?' (checked against floor plan)':''),
-          'Sell items: all vendor pickups completed, chain-of-custody closed',
-          'Donation pickup completed; receipt captured',
-          'Dispose items cleared',
-          'Property ready for '+(isMM?'move day':'close-out')])) +
-    (vendors.length ? planSubsec('Vendor Confirmations') + p2vendorGates : '') +
-    renderDailyCloseBlock(jobId,2);
-
-  // ── Phase 3 (MM only) ─────────────────────────────────────────────────────────
-  var p3 = isMM ? planPhaseWrap('p3','Phase 3 — Move Day',
-    planSubsec('Pre-Move') +
-    chks('p3_pre_',['Moving company arrival confirmed; ETA logged',
-      'TC on-site before movers arrive',
-      'Moving crew briefed: fragile and high-value items pointed out; floor plan shared']) +
-    planSubsec('Origin') +
-    chks('p3_orig_',['TC present and supervising throughout loading',
-      'Fragile and high-value items: TC directly oversees — does not leave the area',
-      'Every room, closet, attic, garage, and outdoor space walked before truck departs',
-      'Origin final walkthrough complete and photographed']) +
-    planSubsec('Destination') +
-    chks('p3_dest_',['TC at new home ahead of the truck where possible',
-      'Movers directed per the approved floor plan',
-      'Fragile and high-value items: TC oversees unloading',
-      'Client walkthrough of new home; approval confirmed and noted',
-      'Any damage photographed and reported same day',
-      'Moving company final sign-off'])) : '';
-
-  // ── Phase 4 ──────────────────────────────────────────────────────────────────
-  var p4prep = (est.prepEnabled && est.prepItems && est.prepItems.length)
-    ? planSubsec('Home Prep') +
-      chks('p4_prep_',['Each prep vendor scheduled and confirmed',
-        'Each prep item completed with TC sign-off','Final cleaning complete',
-        'Property photographed in final condition, inside and out']) +
-      est.prepItems.map(function(p,i){ return planChk(jobId,'p4_prepi_'+i,(p.type||'Prep item')+' — scheduled, completed, and signed off'); }).join('')
-    : '';
-  var p4re = (job.re === 'yes')
-    ? planSubsec('Real Estate Handoff') +
-      chks('p4_re_',['Property confirmed showing-ready with TC sign-off',
-        'Real estate relationship disclosed in writing; client consents to introduction',
-        'Warm introduction to Team Ashley &amp; Anthony made']) : '';
-
-  var _midCloseFlag = (hasPlaybook && !job.midpointReceived)
-    ? '<div class="alert a-err" style="margin-bottom:10px;font-size:11.5px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">' +
-        '<span>&#9888; Midpoint payment (25%' + (_midAmtStr ? ' = ' + _midAmtStr : '') + ') is not marked received. Collect it before closing out.</span>' +
-        '<button onclick="openInvoiceFor(' + jobId + ',\'midpoint\')" class="btn-s" style="font-size:10px;">Open midpoint invoice</button>' +
-      '</div>'
-    : '';
-  var p4 = _midCloseFlag + p4prep +
-    planSubsec('Financial Close') +
-    (isDisposal
-      ? chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
-          'All vendor invoices collected and filed in the job folder',
-          'Sale / consignment / auction proceeds reconciled: amounts received confirmed and documented',
-          'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received',
-          'Donation receipts collected and filed (for tax records)',
-          'Materials costs totaled and itemized (cost + 25% materials handling)',
-          'All Change Orders finalized and signed',
-          (isDocJob ? 'Final invoice generated from job log on actual hours — hour-by-hour breakdown for PR/court'
-                    : 'Final invoice generated from job log; reviewed; sent to client')])
-      : chks('p4_fin_',['All TC and PS hours reconciled; final totals confirmed vs estimate and Change Orders',
-          'All vendor invoices collected and filed in the job folder',
-          'Materials costs totaled and itemized (cost + 25% materials handling)',
-          'All Change Orders finalized and signed',
-          'Final invoice generated from job log; reviewed; sent to client'])) +
-    p4re +
-    (isProbate ? planSubsec('Florida Court &amp; Legal Compliance') +
-      chks('p4_court_',['Verified §733.604 inventory prepared with date-of-death FMV for every asset',
-        'All professional appraisals attached as supporting documentation',
-        'Non-probate assets excluded (joint w/ survivorship, POD/TOD, trust, beneficiary-designated)',
-        'Inventory served on all interested parties; proof of service filed',
-        'Filed within the 60-day deadline (or extension petitioned for cause)',
-        'Final accounting prepared: all sale proceeds, donations, disposal costs, professional fees',
-        'PR sign-off obtained on the final disposition summary',
-        'Project file retained — 7-year minimum (FL statute of limitations)']) : '') +
-    planSubsec('Vendor Scorecard') +
-    '<div id="scorecard-' + jobId + '">' + renderVendorScorecard(jobId, job) + '</div>' +
-    planSubsec('Job Complete') +
-    (isDisposal
-      ? chks('p4_done_',['Home confirmed empty: every room, closet, attic, garage, and outdoor space walked and verified',
-          'Property confirmed broom-clean; final photographs taken inside and out',
-          'Client satisfaction confirmed by phone (a call, not a text)',
-          'Google review requested only after satisfaction confirmed','Referral ask made',
-          'Job folder complete and archived in Drive; 7-year retention applies',
-          'Move documented for NASMM SMM-C tracking'])
-      : chks('p4_done_',['Client satisfaction confirmed by phone (a call, not a text)',
-          'Google review requested only after satisfaction confirmed','Referral ask made',
-          'Job folder complete and archived in Drive; 7-year retention applies',
-          'Move documented for NASMM SMM-C tracking']));
-
-  // For service types without the core playbook: render standalone Room Documentation instead
+  // For service types without the core playbook: the rooms, the sourcing, and a note.
   if (!hasPlaybook) {
-    var docRooms = rooms.map(function(r) {
-      return '<div style="border:1px solid var(--border-md);border-radius:4px;padding:10px 12px;margin-bottom:8px;">'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-        + '<strong style="font-size:12px;">'+r.name+'</strong>'
-        + (r.note ? '<span style="font-size:10px;color:var(--gray);font-style:italic;">'+r.note+'</span>' : '')
-        + '</div>'
-        + '<div id="photo-fail-flag-'+jobId+'-r'+r.idx+'" style="display:none;margin-bottom:4px;"></div>'
-        + '<div style="display:flex;flex-wrap:wrap;gap:0;">'
-        + _renderRoomPhotoControls(jobId, r.idx, 'before')
-        + _renderRoomPhotoControls(jobId, r.idx, 'after')
-        + '</div></div>';
-    }).join('');
     var placeholder = '<div style="border:1px solid var(--border);border-radius:5px;padding:16px;margin-bottom:12px;background:var(--white);font-size:12px;color:var(--gray);line-height:1.6;">'
-      + 'Workflow playbook for this service type is in development. Hours logging, the forward variance projection, and photo documentation are fully active for this job.'
+      + 'This service type has no phase playbook. Hours logging, the forward variance projection and room-by-room photo documentation are all active for this job.'
       + '</div>';
     var roomDocsCard = rooms.length > 0
       ? '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
-        + '<div class="sec" style="margin-bottom:10px;">Room Documentation</div>'
-        + docRooms
+        + '<div class="sec" style="margin-bottom:10px;">Rooms — tap a room to shoot it</div>'
+        + roomsCard
         + '</div>'
       : '';
     var sourcingCard = '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
@@ -27708,6 +28151,47 @@ function renderJobPlan(jobId, job, est) {
         + '</div>';
     return placeholder + sourcingCard + roomDocsCard;
   }
+
+  // ── Phase 0 ──────────────────────────────────────────────────────────────────
+  var p0CallNote = getPlanNote(jobId, 'p0_call_notes');
+  var p0 = planDerivedHtml(jobId, job, est, 'p0') +
+    planTasksHtml(jobId, 'p0', ctx, ['Pre-job call']) +
+    '<div style="margin:6px 0 10px;">' +
+    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:4px;">Pre-Job Call Notes</div>' +
+    '<textarea id="p0-call-notes-'+jobId+'" rows="4" style="width:100%;font-size:12px;padding:7px 9px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;" placeholder="Emotional tone, family dynamics, anything the client mentioned that isn\'t in a checkbox..." oninput="savePlanNote('+jobId+',\'p0_call_notes\',this.value)">'+p0CallNote+'</textarea>' +
+    '</div>' +
+    planSubsec('Vendor &amp; Partner Sourcing') +
+    '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>' +
+    planTasksHtml(jobId, 'p0', ctx, null, ['Pre-job call']);
+
+  // The rooms are the field surface, so they sit ABOVE the phase accordion where every
+  // phase starts closed — a crew standing in a room should not have to find "Phase 1" to
+  // reach the camera. The phases below are the checklist; this is the work.
+  var roomsBlock = '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+    + '<div class="sec" style="margin-bottom:10px;">Rooms &mdash; tap a room to shoot it and lock it</div>'
+    + roomsCard + '</div>';
+
+  // ── Phase 1 ──────────────────────────────────────────────────────────────────
+  // The handful of in-house actions that are not the camera's job to enforce.
+  var p1 = planDerivedHtml(jobId, job, est, 'p1') +
+    planTasksHtml(jobId, 'p1', ctx) +
+    renderDailyCloseBlock(jobId, 1);
+
+  // ── Phase 2 ──────────────────────────────────────────────────────────────────
+  var p2 = planDerivedHtml(jobId, job, est, 'p2') +
+    planTasksHtml(jobId, 'p2', ctx) +
+    renderDailyCloseBlock(jobId, 2);
+
+  // ── Phase 3 (Home Transition only) ───────────────────────────────────────────
+  var p3 = isMM ? planPhaseWrap('p3', 'Phase 3 — Move Day', planTasksHtml(jobId, 'p3', ctx)) : '';
+
+  // ── Phase 4 ──────────────────────────────────────────────────────────────────
+  var p4 = planDerivedHtml(jobId, job, est, 'p4') +
+    planTasksHtml(jobId, 'p4', ctx) +
+    planSubsec('Vendor Scorecard') +
+    '<div id="scorecard-' + jobId + '">' + renderVendorScorecard(jobId, job) + '</div>' +
+    '<div style="font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;">Financial close' + (isProbate ? ', the §733.604 filing list' : '') +
+      ' and records are desk work: they are under <strong>Job Admin</strong> at the top of the Inventory tab.</div>';
 
   // Collections and vehicles flagged during the estimate walkthrough are NOT items yet.
   // They live on the estimate snapshot and are brought into the manifest deliberately,
@@ -27726,12 +28210,12 @@ function renderJobPlan(jobId, job, est) {
       + '. They are added deliberately rather than automatically, because the job decides the disposition, not the estimate. '
       + 'Bring them in from <strong>Inventory &rarr; From the Estimate Walkthrough</strong>.</div>' : '';
 
-  return _midBanner + _pendBanner +
-    planPhaseWrap('p0','Phase 0 — Pre-Job'+(isDocJob?' & Authority':''), p0) +
-    planPhaseWrap('p1','Phase 1 — Sort, Decisions'+(isDocJob?' & Documentation':''), p1) +
-    planPhaseWrap('p2','Phase 2 — '+(isDisposal?'Pack & Disposition':'Pack & Prepare'), p2) +
+  return _midBanner + _pendBanner + roomsBlock +
+    planPhaseWrap('p0','Phase 0 — Pre-Job'+(isDocJob?' &amp; Authority':''), p0) +
+    planPhaseWrap('p1','Phase 1 — In the house'+(isDocJob?' (documentation)':''), p1) +
+    planPhaseWrap('p2','Phase 2 — '+(isDisposal?'Disposition &amp; clear':'Pack &amp; clear'), p2) +
     p3 +
-    planPhaseWrap('p4','Phase 4 — Close-Out'+(isProbate?' & Court Filing':''), p4);
+    planPhaseWrap('p4','Phase 4 — Close-Out', p4);
 }
 
 // ⚠⚠ WHICH PHASES ARE OPEN IS THE CREW'S STATE, NOT THE RENDERER'S. The accordion lived
@@ -27763,18 +28247,6 @@ function togglePlanTask(jobId, key, checked, el) {
   var label = el ? el.parentElement : null;
   while (label && label.tagName !== 'LABEL') label = label.parentElement;
   if (label) { label.style.color = checked ? 'var(--gray)' : 'var(--gray-dk)'; label.style.textDecoration = checked ? 'line-through' : 'none'; }
-}
-
-function setPlanRoomStatus(jobId, roomIdx, status) {
-  setRoomStatus(jobId, roomIdx, status);
-  var CLR = {pending:'var(--gray)',sorting:'var(--bronze)',locked:'#357a50',packed:'#2563a8',complete:'var(--ok-tx)'};
-  // A room shows in both the Phase 1 and Phase 2 grids — keep both in sync.
-  ['p1','p2'].forEach(function(pk) {
-    var wrap = document.getElementById('plan-room-status-' + pk + '-' + roomIdx);
-    if (wrap) wrap.innerHTML = planRoomStatusBtns(jobId, roomIdx, status, pk);
-    var badge = document.getElementById('plan-room-badge-' + pk + '-' + roomIdx);
-    if (badge) { badge.textContent = status.toUpperCase(); badge.style.color = CLR[status]||'var(--gray)'; }
-  });
 }
 
 // ⚠⚠ PRINT JOB PLAN IS RETIRED (2026-09-11). `printJobPlan` and `_jpExpandForPrint` are

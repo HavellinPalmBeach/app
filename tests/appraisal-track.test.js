@@ -148,171 +148,83 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ THE FIELD CAN SAY IT NOW — it could not before, anywhere in the app');
+  group('⚠⚠ THE FIELD CAN SAY IT — on the camera now, per shot, with no name and no category');
   {
+    // Since 2026-09-19 the typed capture card is gone: the concierge types nothing in the
+    // field. The camera overlay carries the five piles and the ⚑ Appraise toggle instead.
+    const dom = domStub({});
     const s = sandbox({
-      fns: ['_renderRoomInventoryCapture', '_renderRoomInventoryList', '_invRefs',
-            '_invApprNoteText', 'invIsIntrinsic', 'invCatMeta'],
-      vars: ['INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_DISPOSITIONS', 'INV_TAXONOMY'],
-      stubs: { jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] },
-               _invThumbHTML: () => '', _invItemNo: () => 1 },
+      fns: ['_fieldCamPaint', '_getPhotoRef', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail'],
+      vars: ['_fieldCam', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'FIELD_CAM_MODES'],
+      stubs: { document: dom, _photoRefs: { 1: [] } },
     });
-    const html = s._renderRoomInventoryCapture(1, 0);
+    s._fieldCam = { open: true, jobId: 1, roomIdx: 0, mode: 'inventory', disp: 'undecided', appr: false,
+                    detail: false, last: null, lastAny: null, lastThumb: '', count: 0, ready: true,
+                    native: false, talking: false };
+    const ui = () => dom.getElementById('fc-ui').innerHTML;
+    s._fieldCamPaint();
 
-    has(html, 'inv-appr-1-r0', 'the capture card carries an appraise control');
-    has(html, '_selectInvAppr(this,1,0)', 'wired to the toggle');
-    has(readable(html), '⚑ Appraise', 'and it is labelled');
+    has(ui(), 'fieldCamToggleAppr()', 'the camera carries an appraise control');
+    has(readable(ui()), '⚑ Appraise', 'and it is labelled');
+    lacks(ui(), 'inv-name-', '⚠ no object-name field — naming is the desk\'s job');
+    lacks(ui(), 'inv-cat-', 'and no category select');
 
-    // ⚠ A TOGGLE, NOT AN EIGHTH CHIP — pressing it must not deselect the disposition, because
-    // the two answers are independent. That is the whole "two avenues" point.
-    lacks(html, 'data-disp="Appraise"', '⚠ it is not a disposition chip');
-    has(html, '_selectInvDisp', 'the seven chips are untouched');
-    s.INV_DISPOSITIONS.forEach((d) => {
-      has(html, 'data-disp="' + d + '"', d + ' is still a chip');
-    });
-
-    // The category select has to repaint the note, or the automatic rule stays invisible.
-    has(html, '_paintInvApprNote(1,0)', 'changing the category repaints the note');
-
-    // ⚠ THE NOTE REPORTS, IT DOES NOT INSTRUCT. The commonest case is that the category has
-    // ALREADY put the item on the worklist and the crew had no way to know — which is why the
-    // whole track looked absent when it had been running silently since it was built.
-    has(readable(s._invApprNoteText('Art & Décor')), '✓ Art & Décor already goes to the appraisal worklist',
-        'an intrinsic category says it is already covered');
-    has(readable(s._invApprNoteText('Furniture')), 'Tick for anything that should be valued by a specialist',
-        'and a plain one asks the question');
-    lacks(s._invApprNoteText('Art & Décor'), 'Tick for',
-          '⚠ it does not ask for an action that changes nothing');
-  }
-
-  group('⚠ THE MARKUP AND THE PAINTER ARE TESTED AGAINST EACH OTHER, not each on its own');
-  {
-    // ⚠⚠ THIS GROUP EXISTS BECAUSE A REVERT CAME BACK GREEN. Breaking the note span's id in
-    // the rendered card — so _paintInvApprNote looks up an element that is not there and the
-    // sentence never changes — failed NOTHING: the checks above drive _invApprNoteText directly
-    // and grep the card for the wiring, and neither notices that the two ends no longer meet.
-    // The silent failure mode is a renamed id, and the note is the half that tells the crew the
-    // automatic rule has ALREADY fired, which is what made the whole track look absent.
-    // So: read the id out of the REAL card and hand it to the REAL painter.
-    const r = sandbox({
-      fns: ['_renderRoomInventoryCapture', '_renderRoomInventoryList', '_invRefs',
-            '_invApprNoteText', 'invIsIntrinsic', 'invCatMeta'],
-      vars: ['INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_DISPOSITIONS', 'INV_TAXONOMY'],
-      stubs: { jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] },
-               _invThumbHTML: () => '', _invItemNo: () => 1 },
-    });
-    const card = r._renderRoomInventoryCapture(1, 0);
-    const noteId = (card.match(/<span id="([^"]*-note)"/) || [])[1];
-    ok(noteId, 'the card renders a note span with an id');
-
-    const p = sandbox({
-      fns: ['_paintInvApprNote', '_invApprNoteText', 'invIsIntrinsic', 'invCatMeta'],
-      vars: ['INV_DEFAULT_CATEGORY', 'INV_TAXONOMY'],
-      stubs: { document: domStub({ 'inv-cat-1-r0': { value: 'Art & Décor' } }) },
-    });
-    // Seeded by the id the CARD actually emitted. If that id is renamed on either side, the
-    // painter writes nowhere and this goes quiet — which is the bug.
-    const note = p.document.getElementById(noteId);
-    note.innerHTML = 'UNPAINTED';
-    p._paintInvApprNote(1, 0);
-    has(readable(note.innerHTML), 'already goes to the appraisal worklist',
-        '⚠ the painter reaches the span the card rendered — markup and lookup agree');
-
-    p.document.getElementById('inv-cat-1-r0').value = 'Furniture';
-    p._paintInvApprNote(1, 0);
-    has(readable(note.innerHTML), 'Tick for anything that should be valued',
-        'and switching to a plain category repaints it');
-    lacks(note.innerHTML, 'UNPAINTED', 'the seeded text is really gone');
-  }
-
-  group('pressing the toggle paints it, and pressing it again clears it');
-  {
-    const s = sandbox({ fns: ['_selectInvAppr'], stubs: { document: domStub({}) } });
-    const btn = s.document.getElementById('inv-appr-1-r0');
-    btn.style = {}; btn.dataset = {};
-    s._selectInvAppr(btn, 1, 0);
-    eq(btn.dataset.on, '1', 'one press sets it');
-    eq(btn.style.background, 'var(--bronze)',
-       '⚠ bronze — the same colour the "⚑ appraise" badge wears on the Inventory tab');
-    s._selectInvAppr(btn, 1, 0);
-    eq(btn.dataset.on, '', 'a second press clears it');
-    eq(btn.style.background, 'var(--cream)', 'and repaints');
+    // ⚠ A TOGGLE, NOT A SIXTH CHIP — pressing it must not deselect the pile, because the two
+    // answers are independent. That is the whole "two avenues" point.
+    s.FIELD_DISPOSITIONS.forEach((d) => has(ui(), "fieldCamSetDisp('" + d.key + "')", d.label + ' is a chip'));
+    lacks(ui(), "fieldCamSetDisp('appraise')", '⚠ appraise is not a chip');
+    s.fieldCamToggleAppr();
+    eq(s._fieldCam.appr, true, 'one press sets it');
+    has(ui(), 'fc-tog on" onclick="fieldCamToggleAppr()"', '⚠ painted lit — the same bronze the "⚑ appraise" badge wears on the Inventory tab');
+    s.fieldCamToggleAppr();
+    eq(s._fieldCam.appr, false, 'a second press clears it');
+    lacks(ui(), 'fc-tog on" onclick="fieldCamToggleAppr()"', 'and repaints');
   }
 
   group('⚠⚠ THE CAPTURE WRITES IT, and the toggle does NOT latch to the next shot');
   {
     const refs = [];
     const s = sandbox({
-      fns: ['attachJobPlanInventoryPhoto', '_selectInvAppr', '_cleanName', '_photoUid'],
-      vars: ['_photoUidSeq'],
+      fns: ['_captureShot', '_fieldCamCommit', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs'],
+      vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
+             '_fieldCam', '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
       stubs: {
         jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] }, estimateStore: {},
-        document: domStub({
-          'inv-name-1-r0': { value: 'Carved side table' },
-          'inv-cat-1-r0': { value: 'Furniture' },
-          'inv-disp-1-r0': { dataset: { disp: 'Auction' } },
-          'inv-appr-1-r0': { dataset: { on: '1' }, style: {} },
-        }),
         _photoCaptureJob: (jid) => ({ id: jid, status: 'won', won: true }),
-        _invRefs: () => [], _photoStamp: () => '20260911',
-        _photoRetryData: {}, _setPhotoRef: (j, r) => refs.push(r),
-        savePhotoRefs: () => {}, _updateRoomInventoryEl: () => {},
-        _doPhotoUpload: () => {}, _invCacheLocalThumb: () => {}, _scheduleInventorySync: () => {},
+        _photoStamp: () => '20260919', _photoRetryData: {}, _savePendingPhotoData() {},
+        _setPhotoRef: (j, r) => refs.push(r), savePhotoRefs() {}, _invTouch(r) { r.updatedAt = 1; return r; },
+        _doPhotoUpload() {}, _invCacheLocalThumb() {}, _scheduleInventorySync() {},
+        _getPhotoRef: (j, id) => refs.find((r) => r.stableId === id),
         compressImage: (d, w, q, cb) => cb(d),
-        FileReader: function () {
-          this.readAsDataURL = () => this.onload({ target: { result: 'data:image/jpeg;base64,AAA' } });
-        },
+        _fieldCamPaint() {}, _paintRoomWorkspace() {}, _roomWs: { open: false },
       },
     });
-    s.attachJobPlanInventoryPhoto({ files: [{ name: 'x.jpg' }], value: 'x' }, 1, 0);
+    s._fieldCam = { open: true, jobId: 1, roomIdx: 0, mode: 'inventory', disp: 'sell', appr: true,
+                    detail: false, last: null, lastAny: null, lastThumb: '', count: 0 };
+    s._fieldCamCommit('data:image/jpeg;base64,AAA');
 
     eq(refs.length, 1, 'the shot is recorded');
     eq(refs[0].needsAppr, true, '⚠⚠ the field answer reaches the record');
-    eq(refs[0].disposition, 'Auction',
+    eq(refs[0].disposition, 'Sell',
        '⚠⚠ AND SO DOES THE DISPOSITION — the two avenues ride the same line, which is the model');
-    eq(refs[0].objectName, 'Carved side table', 'with the object it describes');
+    eq(refs[0].objectName, '', 'with NO name — the desk names it');
 
-    // ⚠ THE ASYMMETRY IS DELIBERATE. A disposition is a standing answer about the room being
-    // worked; "send this one to a specialist" is a judgement about the single object in front
+    // ⚠ THE ASYMMETRY IS DELIBERATE. A disposition is a standing answer about the pile being
+    // shot; "send this one to a specialist" is a judgement about the single object in front
     // of you. Latching it would flag every later shot in the room — the intake-checkbox leak
     // this project already paid for once.
-    const appr = s.document.getElementById('inv-appr-1-r0');
-    eq(appr.dataset.on, '', '⚠ the appraise toggle resets for the next object');
-    eq(s.document.getElementById('inv-disp-1-r0').dataset.disp, 'Auction',
-       'and the disposition deliberately does not');
-    eq(s.document.getElementById('inv-name-1-r0').value, '', 'the name clears with it');
+    eq(s._fieldCam.appr, false, '⚠ the appraise toggle resets for the next object');
+    eq(s._fieldCam.disp, 'sell', 'and the disposition deliberately does not');
   }
 
   group('leaving the toggle off never takes an intrinsic item OFF the worklist');
   {
-    const refs = [];
-    const s = sandbox({
-      fns: ['attachJobPlanInventoryPhoto', '_selectInvAppr', '_cleanName', '_photoUid'],
-      vars: ['_photoUidSeq'],
-      stubs: {
-        jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] }, estimateStore: {},
-        document: domStub({
-          'inv-name-1-r0': { value: 'Oil portrait' },
-          'inv-cat-1-r0': { value: 'Art & Décor' },
-          'inv-disp-1-r0': { dataset: { disp: '' } },
-          'inv-appr-1-r0': { dataset: { on: '' }, style: {} },
-        }),
-        _photoCaptureJob: (jid) => ({ id: jid, status: 'won', won: true }),
-        _invRefs: () => [], _photoStamp: () => '20260911',
-        _photoRetryData: {}, _setPhotoRef: (j, r) => refs.push(r),
-        savePhotoRefs: () => {}, _updateRoomInventoryEl: () => {},
-        _doPhotoUpload: () => {}, _invCacheLocalThumb: () => {}, _scheduleInventorySync: () => {},
-        compressImage: (d, w, q, cb) => cb(d),
-        FileReader: function () {
-          this.readAsDataURL = () => this.onload({ target: { result: 'data:image/jpeg;base64,AAA' } });
-        },
-      },
-    });
-    s.attachJobPlanInventoryPhoto({ files: [{ name: 'x.jpg' }], value: 'x' }, 1, 0);
-    eq(refs[0].needsAppr, false, 'the explicit flag is off');
-
-    const g = ctx([mk(refs[0])]);
-    ok(g.invAwaitingAppraisal(mk(refs[0]), 1),
+    // The field cannot pick a category any more, so this is the desk's case: a shot filed
+    // under Art & Décor at the desk with the field toggle off is still on the worklist.
+    const row = mk({ stableId: 'p', objectName: 'Oil portrait', category: 'Art & Décor', needsAppr: false });
+    const g = ctx([row]);
+    eq(row.needsAppr, false, 'the explicit flag is off');
+    ok(g.invAwaitingAppraisal(row, 1),
        '⚠ and the automatic category rule still puts the painting on the worklist');
   }
 

@@ -1,96 +1,191 @@
 'use strict';
 // ─────────────────────────────────────────────────────────────────────────────
-// "Why don't the 'locked' from phase 1 carry to starting point in stage 2?"
-// Reported 2026-09-12, after the Apps Script redeploy and after moving to a single
-// Google account in the browser — so neither sync cause was live any more.
+// A ROOM HAS TWO TAPS AND NO OTHERS (2026-09-19).
 //
-// ⚠⚠ THE LOCK DOES CARRY, AND THAT WAS MEASURED BEFORE ANYTHING WAS CHANGED. Both grids
-// read the same `plan.rooms[idx].status`, and setPlanRoomStatus repaints both. Driven in a
-// browser: lock all three rooms in Phase 1 and the Phase 2 card reads badge LOCKED with the
-// `locked` button lit, live AND after a full loadJobPlanTab() re-render.
+// This file used to pin the five-state room lifecycle split across two grids — Phase 1
+// capped at `locked`, Phase 2 owning `packed → complete`, and the 2026-09-12 note that a
+// room below `locked` had to SAY so on the Phase 2 card instead of lighting nothing. All
+// of that went with the grids. What replaced it is smaller and the rules are these:
 //
-// ⚠⚠ WHAT DOES NOT CARRY IS EVERY STATE BELOW IT. Phase 2's row is locked/packed/complete,
-// so a room at `pending` or `sorting` lights NOTHING — three grey buttons, no reading at all.
-// A control showing nothing selected reads as state that failed to arrive, which is exactly
-// the report. The status was always there; the button row had no way to say so.
+//   LOCK    — sorted and shot. The concierge's decisions in this room are final; the
+//             midpoint invoice waits on every room reaching it.
+//   CLEARED — empty, and the after-photo is in. The specialists' work here is done.
+//
+// ⚠⚠ ON AN ESTATE OR PROBATE JOB, LOCK IS REFUSED UNTIL AN AS-FOUND SHOT EXISTS. The
+// as-found pass — every drawer, cabinet and closet shot with its contents undisturbed —
+// is the one step whose order can never be reversed, and the only proof of what was in
+// the house the morning the team walked in. Anthony's call, 2026-09-19: refuse on
+// estate and probate, flag on a living-client job. It is the first room control in the
+// app that refuses rather than flags, and it is the setter that refuses, not just the
+// button, so nothing reaching around the workspace can lock a room it would not.
+//
+// ⚠ LEGACY VALUES ARE NORMALISED ON READ. A plan written before today still holds
+// `packed`; a device on the old build may still write `sorting`. Both mean one thing
+// everywhere, and nothing in the store is migrated.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { sandbox, source } = require('./harness');
+const { sandbox, source, domStub } = require('./harness');
+
+// ⚠ LINE-BASED, NOT A REGEX OVER THE WHOLE FILE. The usual `/\/\*[\s\S]*?\*\//` stripper pairs
+// the `/*` inside every `accept="image/*"` attribute with a distant `*/` and silently eats
+// ~170KB of live code — which made an absence check over the result pass over code that
+// was still there. Found by measuring `live.length`, not by reading.
+const liveLines = (s) => String(s).split('\n')
+  .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')); })
+  .join('\n');
+
+const ESTATE = { id: 7, name: 'Butler Estate', svc: 'probate', won: true, status: 'won' };
+const LIVING = { id: 8, name: 'Ellsworth', svc: 'downsizing', won: true, status: 'won' };
+const SHOT = (jobId, roomIdx, label) => ({ stableId: jobId + '_r' + roomIdx + '_' + label + '_x', roomIdx, label,
+                                           seq: 1, collId: null, status: 'uploaded', ts: 1 });
+
+function rig(refs) {
+  const painted = [];
+  const ctx = sandbox({
+    fns: ['planRoomStatusBtns', 'setPlanRoomStatus', 'roomStatusNormalize', '_invJob', 'lockRefusal',
+          'lockFlag', 'clearedFlag', '_shotCount', '_slotRefs', 'isDecedentJob', '_planRoomStatus',
+          'setRoomStatus', 'getJobPlan', '_planTouch'],
+    vars: ['ROOM_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+           'DECEDENT_SERVICES', 'jobPlanStore', '_roomWs'],
+    stubs: {
+      jobs: [Object.assign({}, ESTATE), Object.assign({}, LIVING)],
+      _photoRefs: refs || {},
+      saveJobPlan() {}, renderProjection() {},
+      _paintRoomWorkspace() { painted.push('ws'); }, _repaintPlan() { painted.push('plan'); },
+      document: domStub({}),
+    },
+  });
+  return { ctx, painted };
+}
+// The lit buttons are the ones painted with the state's colour.
+const lit = (html) => (html.match(/<button[^>]*class="ws-btn on"[^>]*>([^<]*)/g) || []).length;
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
-  const s = sandbox({ fns: ['planRoomStatusBtns'] });
-  const btns = (status, phase) => s.planRoomStatusBtns(7, 3, status, phase);
-  // The lit button is the one rendered bold — that is the only thing that says "you are here".
-  const lit = (html) => {
-    const out = [];
-    const re = /<button[^>]*font-weight:(\d+)[^>]*>([a-z\-]+)<\/button>/g;
-    let m;
-    while ((m = re.exec(html))) if (m[1] === '700') out.push(m[2]);
-    return out;
-  };
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ A LOCK MADE IN PHASE 1 IS LIT IN PHASE 2 — the reported case, pinned');
+  group('⚠⚠ THREE STATES, TWO TAPS, AND NOTHING ELSE');
   {
-    eq(lit(btns('locked', 'p1')).join(','), 'locked', 'Phase 1 lights it');
-    eq(lit(btns('locked', 'p2')).join(','), 'locked',
-       '⚠ and so does Phase 2 — both rows read the same stored status');
-    // The two later states belong to Phase 2 and must light there too, or the crew loses
-    // its place the moment it advances a room.
-    eq(lit(btns('packed', 'p2')).join(','), 'packed', 'packed lights in Phase 2');
-    eq(lit(btns('complete', 'p2')).join(','), 'complete', 'complete lights in Phase 2');
-    // One definition of the row: Phase 2 owns packed → complete and Phase 1 caps at locked,
-    // so a crew cannot drive a room to complete from the sort grid and skip the midpoint.
-    lacks(btns('pending', 'p1'), '>packed<', 'Phase 1 still cannot reach packed');
-    lacks(btns('pending', 'p1'), '>complete<', 'nor complete');
+    const { ctx } = rig({ 7: [SHOT(7, 3, 'before')] });
+    eq(ctx.ROOM_STATUSES, ['pending', 'locked', 'cleared'], 'the vocabulary is three words');
+    Object.keys(ctx.ROOM_STATUS_META).forEach((k) => ok(ctx.ROOM_STATUSES.indexOf(k) >= 0, k + ' is one of them'));
+
+    const pending = ctx.planRoomStatusBtns(7, 3, 'pending');
+    has(pending, "setPlanRoomStatus(7,3,'locked')", 'a pending room offers Lock');
+    lacks(pending, "'cleared'", '⚠ and not Cleared — Cleared comes after Lock');
+    has(pending, 'Cleared comes after Lock', 'and says so');
+    eq(lit(pending), 0, 'nothing is lit');
+
+    const locked = ctx.planRoomStatusBtns(7, 3, 'locked');
+    has(locked, "setPlanRoomStatus(7,3,'cleared')", 'a locked room offers Cleared');
+    has(locked, "setPlanRoomStatus(7,3,'pending')", 'and its lit Lock steps back on a second tap — a mis-tap is undone in the room');
+    eq(lit(locked), 1, 'Lock is lit');
+
+    const cleared = ctx.planRoomStatusBtns(7, 3, 'cleared');
+    eq(lit(cleared), 2, 'both are lit');
+    has(cleared, "setPlanRoomStatus(7,3,'locked')", 'and Cleared steps back to Locked');
+
+    ['sorting', 'packed', 'complete'].forEach((old) => {
+      [pending, locked, cleared].forEach((h) => lacks(h, "'" + old + "'", 'no button ever writes ' + old));
+    });
+    lacks(pending + locked + cleared, 'plan-room-status-p1', 'and the two-grid ids are gone');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ AND A ROOM BELOW LOCKED NOW SAYS SO INSTEAD OF GOING BLANK');
+  group('⚠⚠ ON AN ESTATE JOB, LOCK IS REFUSED WITHOUT AN AS-FOUND SHOT — and the setter refuses too');
   {
-    ['pending', 'sorting'].forEach((st) => {
-      eq(lit(btns(st, 'p2')).length, 0,
-         st + ': no Phase 2 button can be lit — the row does not carry that state');
-      has(btns(st, 'p2'), 'Still ' + st,
-          '⚠ so the card says where the room actually is, in words');
-      has(btns(st, 'p2'), 'Phase 1', 'and names where the fix is');
-    });
-    // The converse is what stops it becoming noise: a room Phase 2 CAN draw says nothing.
-    ['locked', 'packed', 'complete'].forEach((st) => {
-      lacks(btns(st, 'p2'), 'Still ', st + ': nothing to explain, so nothing is said');
-    });
-    // And Phase 1 never carries it — there the three states are all drawable.
-    ['pending', 'sorting', 'locked'].forEach((st) => {
-      lacks(btns(st, 'p1'), 'Still ', 'Phase 1 (' + st + ') never carries the note');
-    });
+    const bare = rig({ 7: [] });
+    const html = bare.ctx.planRoomStatusBtns(7, 3, 'pending');
+    ok(/<button[^>]*disabled[^>]*>[^<]*Lock/.test(html), 'the Lock button is disabled');
+    has(html, 'Shoot the room as found first', 'and the reason is on screen');
+    has(html, 'ws-why err', 'painted as a refusal, not a hint');
+
+    eq(bare.ctx.setPlanRoomStatus(7, 3, 'locked'), 'Shoot the room as found first. On an estate job nothing is locked without it.',
+       '⚠⚠ the SETTER refuses, so nothing reaching around the button can lock it');
+    ok(!bare.ctx.jobPlanStore[7] || !bare.ctx.jobPlanStore[7].rooms || !bare.ctx.jobPlanStore[7].rooms[3],
+       'and the store is untouched');
+    eq(bare.ctx._roomWs.msg, 'Shoot the room as found first. On an estate job nothing is locked without it.',
+       'the refusal is handed to the workspace to show');
+
+    // One as-found shot, and the room can lock.
+    const shot = rig({ 7: [SHOT(7, 3, 'before')] });
+    const ok1 = shot.ctx.planRoomStatusBtns(7, 3, 'pending');
+    ok(!/<button[^>]*disabled/.test(ok1), 'with an as-found shot the button is live');
+    lacks(ok1, 'Shoot the room as found first', 'and the refusal is gone');
+    eq(shot.ctx.setPlanRoomStatus(7, 3, 'locked'), '', 'the setter accepts');
+    eq(shot.ctx.jobPlanStore[7].rooms[3].status, 'locked', 'and writes it');
+    ok(shot.ctx.jobPlanStore[7].at && shot.ctx.jobPlanStore[7].at['rooms:3'] > 0, 'stamped for the per-key merge');
+    ok(shot.painted.indexOf('plan') >= 0, 'and the plan is repainted so the room list catches up');
+
+    // A failed shot still counts as an as-found shot: the bytes are held on the device and
+    // Retry will land it. Refusing here would strand a room on a bad signal.
+    const failed = rig({ 7: [Object.assign(SHOT(7, 3, 'before'), { status: 'failed' })] });
+    eq(failed.ctx.lockRefusal(failed.ctx.jobs[0], 7, 3), '', 'a shot held on the device is a shot');
+  }
+
+  group('⚠ ON A LIVING-CLIENT JOB IT FLAGS AND NEVER REFUSES — the owner is standing there');
+  {
+    const bare = rig({ 8: [] });
+    const html = bare.ctx.planRoomStatusBtns(8, 3, 'pending');
+    ok(!/<button[^>]*disabled/.test(html), 'the Lock button is live');
+    has(html, 'No as-found shots on this room', 'with an amber flag');
+    has(html, 'ws-why warn', 'painted as a warning');
+    lacks(html, 'ws-why err', 'never as a refusal');
+    eq(bare.ctx.setPlanRoomStatus(8, 3, 'locked'), '', 'and the setter accepts');
+    eq(bare.ctx.jobPlanStore[8].rooms[3].status, 'locked', 'and writes it');
+
+    const shot = rig({ 8: [SHOT(8, 3, 'before')] });
+    lacks(shot.ctx.planRoomStatusBtns(8, 3, 'pending'), 'No as-found shots', 'the flag clears with one shot');
+  }
+
+  group('⚠ CLEARED ONLY AFTER LOCK, and Cleared without an after-photo is flagged, not refused');
+  {
+    const r = rig({ 7: [SHOT(7, 3, 'before')] });
+    eq(r.ctx.setPlanRoomStatus(7, 3, 'cleared'), 'Lock the room first.', 'a pending room cannot skip to Cleared');
+    r.ctx.setPlanRoomStatus(7, 3, 'locked');
+    has(r.ctx.planRoomStatusBtns(7, 3, 'locked'), 'No after photo on this room yet', 'a locked room with no after-photo says so');
+    eq(r.ctx.setPlanRoomStatus(7, 3, 'cleared'), '', 'but Cleared is accepted — it flags, it does not refuse');
+    eq(r.ctx.jobPlanStore[7].rooms[3].status, 'cleared', 'and lands');
+    const withAfter = rig({ 7: [SHOT(7, 3, 'before'), SHOT(7, 3, 'after')] });
+    lacks(withAfter.ctx.planRoomStatusBtns(7, 3, 'locked'), 'No after photo', 'and the flag clears with an after shot');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠ IT FLAGS AND NEVER REFUSES — the standing rule, on the one control in the room');
+  group('⚠ LEGACY VALUES ARE NORMALISED ON READ, NEVER MIGRATED');
   {
-    // Locking from the Phase 2 card is legitimate: the crew is standing in the room. The
-    // split exists to stop Phase 1 reaching `complete`, not to stop Phase 2 reaching `locked`.
-    const p2 = btns('pending', 'p2');
-    has(p2, "setPlanRoomStatus(7,3,'locked')", 'the lock button is still live on a pending room');
-    lacks(p2, 'disabled', 'nothing is disabled');
-    lacks(p2, 'pointer-events:none', 'and nothing is made unpressable another way');
+    const { ctx } = rig({});
+    eq(ctx.roomStatusNormalize('sorting'), 'pending', 'sorting was a state nobody read');
+    eq(ctx.roomStatusNormalize('packed'), 'cleared', 'packed and complete were one fact in two words');
+    eq(ctx.roomStatusNormalize('complete'), 'cleared', '…so both read as cleared');
+    eq(ctx.roomStatusNormalize('locked'), 'locked', 'locked is unchanged');
+    eq(ctx.roomStatusNormalize(undefined), 'pending', 'nothing recorded is pending');
+    eq(ctx.roomStatusNormalize('garbage'), 'pending', 'and so is a value from nowhere');
+
+    // A store still holding the old word reads and writes the new one.
+    ctx.jobPlanStore[7] = { rooms: { 3: { status: 'packed' } } };
+    eq(ctx._planRoomStatus(7, 3), 'cleared', 'a room packed on the old build reads as cleared');
+    ctx.setRoomStatus(7, 4, 'packed');
+    eq(ctx.jobPlanStore[7].rooms[4].status, 'cleared', '⚠ and a write of the old word lands as the new one');
+    ok(ctx.TC_DONE_STATUSES.locked && ctx.TC_DONE_STATUSES.cleared && !ctx.TC_DONE_STATUSES.packed,
+       'the concierge-done set is locked + cleared');
+    ok(ctx.PS_DONE_STATUSES.cleared && !ctx.PS_DONE_STATUSES.locked && !ctx.PS_DONE_STATUSES.packed,
+       'the specialist-done set is cleared alone');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠ THE NOTE LIVES IN THE BUTTON WRAPPER, so the live repaint carries it for free');
+  group('⚠ ONE ROOM CONTROL, ONE WRITER — and the old grids are gone');
   {
-    // setPlanRoomStatus repaints #plan-room-status-<phase>-<idx> on BOTH grids. Anything
-    // rendered outside that wrapper would need a second call site, and a second call site is
-    // how the two grids come to disagree — which is the defect this file exists about.
-    const body = src.slice(src.indexOf('function setPlanRoomStatus('));
-    const fn = body.slice(0, body.indexOf('\n}\n'));
-    has(fn, "['p1','p2'].forEach", 'the repaint still covers both grids');
-    has(fn, 'planRoomStatusBtns(jobId, roomIdx, status, pk)',
-        'and rebuilds the whole wrapper, note included');
-    // The note must be INSIDE what that function returns, not appended by a caller.
-    const pb = src.slice(src.indexOf('function planRoomStatusBtns('));
-    has(pb.slice(0, pb.indexOf('\n}\n')), 'Still ',
-        'the note is produced by planRoomStatusBtns itself');
+    const live = liveLines(src);
+    ok(live.length > src.length * 0.5, 'the stripper kept the code (found ' + live.length + ' of ' + src.length + ' chars)');
+    ok(live.indexOf('function setPlanRoomStatus(') > 0, 'and the setter is in what it kept');
+    eq((src.match(/function planRoomStatusBtns\(/g) || []).length, 1, 'one definition of the buttons');
+    eq((src.match(/function setPlanRoomStatus\(/g) || []).length, 1, 'one definition of the setter');
+    lacks(live, 'plan-room-block-p1', 'the Phase 1 room grid is gone');
+    lacks(live, 'plan-room-block-p2', 'and the Phase 2 grid');
+    lacks(live, "['p1','p2'].forEach", 'so there is no two-grid repaint to keep in step');
+    // The setter, not the button, is where the refusal lives.
+    const setter = live.slice(live.indexOf('function setPlanRoomStatus('));
+    has(setter.slice(0, setter.indexOf('\n}\n')), 'lockRefusal(', 'the setter consults the refusal itself');
+    has(setter.slice(0, setter.indexOf('\n}\n')), "'Lock the room first.'", 'and the order of the two taps');
   }
 };
