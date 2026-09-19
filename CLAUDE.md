@@ -1,5 +1,114 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE WALKTHROUGH WAS WRITE-ONLY ON SCREEN, AND `privateNote` IS THE PROOF (BUILT 2026-09-19)
+Ashley's report, via Anthony: *"after we build an estimate there's no real easy way to go back and look at that estimate,
+like the rooms that are ticked to the notes that are taken … I might do that ahead of going to the client's house for the
+first day of the job just to refresh myself with what's going on there."* Plus: take an accepted job off the Build Estimate
+dropdown. App-only, no redeploy.
+
+- **⚠⚠ MEASURED BEFORE ANYTHING WAS BUILT, AND IT IS WORSE THAN THE REPORT. `privateNote` HAD EXACTLY TWO READERS IN
+  31,000 LINES — the textarea it is typed into, and the line in `restoreEstimateToUI` that writes it back into that same
+  textarea.** So the dictated note about access, hoarding and family dynamics — precisely what somebody re-reading this in
+  the car needs — was reachable only by reopening a form that is **locked** by then. Per-room notes were barely better:
+  they reach the Drive worksheet and a set of `.txt` sidecars, and **no on-screen surface outside the Build Estimate room
+  grid**. Ashley asked for a convenience; the record was write-only.
+- **⚠⚠ IT IS DELIBERATELY NOT A `DOC_ACTIONS` KIND, AND THAT IS THE LOAD-BEARING DECISION.** A kind in that registry
+  inherits `send` and `file`, and `file` writes into the **client's own Drive folder** — which is exactly how the internal
+  worksheet reached a client on 2026-09-08. This page carries the private note **verbatim**. So it opens through
+  `openPlainViewer`, which passes **no spec**: no send, no file, and no print, because `printDocViewer` already returns
+  early on a null spec AND the button is hidden. Both, because either alone would put a Print control on a page naming
+  which son disagrees with which daughter. A test `lacks()` `walkthrough` in the registry and drives the refusal.
+  - **⚠ THE PRINT BUTTON IS SET IN BOTH DIRECTIONS ON EVERY OPEN.** It is one shared control, so a viewer that only ever
+    HIDES it leaves the next client document with no way to print. `_openViewer(title, sub, html, spec)` owns that;
+    `openDocViewer` and `openPlainViewer` are both thin wrappers on it, and a test asserts there is one writer of the
+    viewer body rather than two.
+- **⚠ THE LOCKED COPY WINS AND THE PAGE SAYS WHICH IT IS SHOWING.** `buildLockSnapshot` freezes every room at approval,
+  so an approved estimate shows that and prints *Locked ‹date› by ‹name›*; an unapproved one shows the live rooms under an
+  amber line. **Standing in a driveway you have to know whether you are reading what was QUOTED or a draft somebody has
+  since edited.** Reverting it fails 6.
+  - **⚠ THE LOCK SNAPSHOT RENAMES THE HOUR FIELDS** (`estimated_tc_hours` / `special_items` against the live record's
+    `tcH` / `spcl`), so a reader that knows one shape prints **0.0 on half the jobs** — silently. `_wtRoomHrs` reads both.
+  - **⚠ AND IT DROPPED `idx` ENTIRELY, so a locked estimate had no ordering key at all.** Added, so the live record and
+    the frozen one sort by one rule rather than two.
+- **⚠⚠ FOUND IN THE BROWSER, NOT BY A TEST: THE SECTION HEADING PRINTED TWICE.** `includedRooms` pushes every in-scope
+  room and then **appends the excluded ones**, so an out-of-scope room from an early section arrives last — and with no
+  `idx` on an older locked record a walk-and-compare renderer emits *Entry &amp; Living* a second time. That is most prep
+  jobs, and it is Anthony's own example (guest beds, kitchen, laundry excluded). Rooms are grouped **before** rendering
+  now, which is correct whether or not `idx` is there. Reverting it fails 3.
+- **⚠ AN EXCLUDED ROOM IS AN ANSWER, NOT A GAP.** `setRoomState` clears and disables its scores, so printing *0 / 5*
+  against it reads as a room scored empty rather than one the client is handling. It says *Out of scope* and still
+  carries its note, which is the reason why.
+- **⚠⚠ THE DROPDOWN FILTER IS UNSAFE WITHOUT `forceJobId`, AND THAT IS THE WHOLE RISK IN THIS COMMIT.** A `<select>`
+  **silently rejects a value with no matching option**, so a filtered-out job leaves `e-job` EMPTY — and fifteen
+  downstream reads of `parseInt(e-job.value)` then resolve to **0**, including the one that stamps `jobId` onto the saved
+  snapshot. `dashEditEstimate` revokes the approval but leaves the job **WON**, so the dashboard's edit door lands on
+  exactly that case every single time. `populateJobSelect(forceJobId)` always lists the job it is about to select.
+  - **⚠ THE CURRENTLY-SELECTED JOB IS A SECOND CASE, not the same one.** `showPanel('estimate')` repopulates with **no
+    argument**, so tapping across to Vendors and back while editing a won job's estimate would drop its option and unbind
+    the form under the work in progress. Reverting that arm alone fails 1.
+  - **⚠ THE STUB COULD NOT SEE ANY OF THIS AND THE TEST MODELS THE BROWSER INSTEAD.** `domStub` stores whatever it is
+    handed — a number, unvalidated — so a test driving it would have passed on the defect. The test coerces to a string
+    and rejects an unlisted value, the two things a real `<select>` does, and says so at the site.
+- **⚠ THE RULE IS THE CLIENT'S ACCEPTANCE, NOT THE MANAGER'S APPROVAL — ANTHONY'S CALL, AND HE IS RIGHT.** Offered the
+  tighter `approved` threshold he answered *"even if it's approved we may need to offer a discount or change something."*
+  Checked rather than assumed: `Offer discount` is on the rail while `!job.agrSigned`, so hiding at `approved` would take
+  a job off the tab with a live door still open. **And a won job with NO estimate stays listed**, or there is nowhere to
+  build its first one — `isJobWon` migrates legacy `active`/`closed` records, so keying on it alone would hide them.
+  It also fails in the **safe direction** on a cold cache: an unread store reads as "no estimate", so the job is listed.
+- **⚠ FILTERING REMOVES A DEAD END RATHER THAN A CAPABILITY.** Picking an approved job out of that dropdown landed on a
+  form `applyEstimateLock` had **already disabled** — the same dead end `dashEditEstimate` was built to close, still
+  reachable by the loose door beside it. Two doors, one broken, become one that works.
+- **⚠ THE BUTTON IS ON THE UTILITY BAR AND NOT IN THE BAND, and that is the rule that bar exists for.** Re-reading the
+  walkthrough is a standing reference, never goes `done`, and is not a step — the band's whole contract is *the one thing
+  to do next*. The existing test asserting no bar call appears anywhere in `jobTimelineActions` covers it unchanged.
+  - **⚠ AN UNREAD STORE STILL GETS THE BUTTON, AND THAT IS THE OPPOSITE OF A BUG.** `estimateStore` is `{}` until the
+    fetch lands, so gating on the record alone would **withhold** the control on a job that has a walkthrough — a missing
+    button reads as *this job has none*, a false claim about the JOB when the truth is about the DEVICE. Offered while
+    unread; `dashWalkthrough` then says which of loading / unreachable / never-built it is. Same shape as Win/Loss
+    reading 0 on a cold cache. Reverting it fails 2.
+- **⚠ IT PRIMES NOTHING, AND IT IS THE ONLY `dash*` HANDLER THAT DOES NOT.** The others call `_primeEstimateFor` because
+  the function they delegate to reads a GLOBAL the Build Estimate tab sets, and priming is what stops a PIN approving the
+  wrong client's estimate. This one takes its record by job id and returns a string: no global to get wrong, none left
+  pointed at this job afterwards. A test `lacks()` it `currentEstimate` and `_primeEstimateFor`.
+- **6368 committed checks** (`tests/walkthrough-view.test.js`, 77 new; 3 more in `dashboard-utility-bar`). **All nineteen
+  changes revert-verified individually, ZERO green** — the locked copy fails **6**, the private block / `openPlainViewer`
+  / the bar button **3** each, section grouping 3, and the rest 1–2. Baseline **0** before and after, no unmatched needles.
+  - **⚠ ONE SILENT NO-OP REPLACE, AND THE ONLY REASON IT SURFACED IS THAT A LATER ASSERTION FAILED.** A fixture patch
+    needled a literal `\u2019` against a file holding the real character, so `str.replace` rewrote the file unchanged and
+    exited 0 — the shape this file already records. **Every replace in the sweep asserts its replacement landed**; the
+    one that did not was a hand edit outside it.
+- **⚠ ONE PRE-EXISTING ASSERTION BROKE CORRECTLY AND IS RESTATED, NOT DELETED.** `doc-actions` pinned the literal
+  `'<div class="ce-page">'` **inside `openDocViewer`** — a byte sequence, not a requirement — and it moved into
+  `_openViewer`. Restated as: whatever WRITES the viewer body wraps the document in a page, and there is exactly one such
+  writer. The thirteenth time this file records that shape. `dashboard-utility-bar`'s `eq(b.length, 2, 'two controls, not
+  seven')` was **still true of its fixture** and had stopped describing the bar; restated in both directions.
+- **Verified end to end in headless Chromium on the real page**, driving the real dashboard and the real nav:
+
+  | | |
+  |---|---|
+  | the Build Estimate dropdown | *Select job* · **Ellsworth** only — the won job is gone |
+  | `editEstimateForJob(7)` on that won job | option listed, `e-job.value` **`'7'`**, snapshot job id **7** |
+  | the utility bar | `✎ Edit Client` · **`🔍 Walkthrough`** · `📁 Drive`, **0 duplicate onclicks**, none in the band |
+  | pressing it | modal open, Print **hidden**, stamp `rgb(121,31,31)`, private note **above** the rooms, newline kept |
+  | the rooms | 2 section headings, *Entry &amp; Living* **once**, *Out of scope* on the laundry with **no 0/5** |
+  | the hours | **0.9 TC / 8.1 PS**, read off the locked record's own field names |
+  | pressing Print on it | **print target unchanged**, viewer still open |
+  | a client document straight after | Print **back**, titled *Client Estimate* |
+  | a job with no estimate | `✎ Edit Client` · `📁 Create Drive folder` — no Walkthrough button |
+  | overflow 1440 · 390px | **0** · **0**, **0 page errors** |
+
+  The app's own stylesheet grew by exactly **13 lines / 7 rules** in **one diff hunk** with nothing deleted — the
+  368-line CSS deletion rule, applied by reading the diff rather than trusting a green suite.
+- Manual **§5** (the dropdown, with why the rule is acceptance rather than approval), **§5a** (the private note now has a
+  reader, and nothing about where it goes has changed), **§9** (three controls, not two) and a **new §9c** with the
+  what-you-see table, the cannot-be-sent-filed-or-printed note, the locked-versus-draft note and the cold-cache note.
+  Playbook **Step 2** (a `.stop` on the dropdown and where the working door is), **Step 10** (a new *Before Day 1* section
+  with a `.stop` that it is internal and must not be shown in the house) and **five** symptom→cause rows. Both `.md`
+  copies hand-edited and **25 claims parity-checked, 0 mismatches** — ⚠ one apparent miss was a markdown emphasis
+  marker, **verified rather than assumed**. Tag balance verified on both HTML files (`manual.html`'s `<code>` delta is
+  still the documented false positive at **1**; `concierge-guide.html` clean on every tag), rendered at 1440/390 with
+  **0 overflow**, **0 page errors**, and **all 55 tables full-width under `print`**.
+
 ## ⚠⚠ THE ESTATE PROHIBITION IS REVERSED — ONE MARKETING CLAUSE AND ONE BOX, BOTH FORMS (2026-09-18)
 App-only, **no Apps Script redeploy** — and that is a property of the design rather than luck: `docSend` measures
 the html it is about to convert and names what it found, so the backend places the tab off the measurement and
@@ -3194,7 +3303,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/sharp-allen-1cc2ur`
+- Active feature branch: `claude/estimate-view-client-dashboard-024he6`
+  (was `claude/sharp-allen-1cc2ur`)
   ⚠ This session was ASSIGNED that branch, which is an older name still in the list below — a
   session's assignment wins over whatever is recorded here, so it is promoted rather than
   duplicated. Everything is on `main` either way; Pages serves `main`.
@@ -3213,7 +3323,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/sharp-allen-1cc2ur:main`
+  `git push origin claude/estimate-view-client-dashboard-024he6:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

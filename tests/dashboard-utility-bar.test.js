@@ -98,8 +98,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('The bar holds only what is NOT a step');
 
+  // ⚠ RESTATED 2026-09-19, NOT LOOSENED. This read "two controls, not seven" against a
+  // fixture with no estimate record — still true of that fixture, and it stopped describing
+  // the bar the moment a third control landed. The bar now holds Edit Client, Drive, and
+  // — once an estimate exists — the walkthrough record. Its contract is stated below in
+  // both directions rather than as a count nobody can read.
   const b = bar({ driveFolder: 'https://drive.google.com/drive/folders/XYZ' });
-  eq(b.length, 2, 'two controls, not seven');
+  eq(b.length, 2, 'a job with no estimate carries two controls, not the old seven');
   eq(b[0].call, 'dashEditClient(7)', 'Edit Client — the client record is not a milestone');
   eq(b[0].href, undefined, 'and it is a button, not a link');
   eq(b[1].label, '&#128193; Drive', 'and the Drive link');
@@ -115,6 +120,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   ok(!/openChangeOrder/.test(barCallText), 'Change Order is not here — the Change Orders card carries it');
   // Nothing in this bar is a primary: the primary belongs to the tan NEXT band, alone.
   ok(b.every((x) => !x.primary), 'no control here claims to be the next thing to do');
+
+  // ⚠⚠ THE WALKTHROUGH IS THE THIRD, AND IT IS HERE RATHER THAN IN THE BAND FOR THE REASON
+  // THIS WHOLE FILE EXISTS. Re-reading the rooms and the private note before day one is a
+  // standing reference, not a milestone: it never goes `done`, so a band whose contract is
+  // "the one thing to do next" is the wrong home for it. Ashley's report is what asked for
+  // it; `walkthrough-view.test.js` owns what the page itself says.
+  const bWt = (function () {
+    const c = sandbox({ fns: ['dashUtilityBar'],
+      stubs: { document: domStub({}), estimateStore: { 7: { estimate: EST(), approved: true } },
+               _estStoreState: 'ready' } });
+    return c.dashUtilityBar({ id: 7, driveFolder: 'https://drive.google.com/x' });
+  })();
+  eq(bWt.length, 3, 'a job with an estimate carries three');
+  eq(bWt[1].call, 'dashWalkthrough(7)', 'and the third is the walkthrough record');
+  ok(!bWt.some((x) => x.primary), 'still no primary in the bar');
 
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ THE RULE: no control in the bar is also a step on the rail');

@@ -586,6 +586,19 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
    same voice OPENING one: it butts onto the band above and the table below, so a caveat
    about the figures reads before them rather than after. */
 .ce-lead{font-size:11px;color:var(--gray);font-style:italic;padding:7px 14px;background:var(--cream);border-bottom:1px solid var(--border);margin-bottom:0;}
+/* THE WALKTHROUGH RECORD (internal). It renders inside .ce-page like every other
+   document, so it inherits .ce-tbl / .ce-band and only needs what is genuinely its own.
+   ⚠ .wt-stamp is the one red thing on the page and it stays that way: this document
+   carries the private note verbatim, and the banner is what stops it being mistaken for
+   a client copy the way the Drive worksheet was on 2026-09-08. */
+.wt-stamp{font-size:11px;font-weight:700;color:var(--err-tx);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;text-align:center;}
+.wt-draft{font-size:11px;color:var(--warn-tx);font-style:italic;padding:7px 14px;background:var(--warn-bg);border:1px solid var(--bronze-lt);border-radius:4px;margin-bottom:0;}
+/* pre-wrap, because the note is dictated and its line breaks are the speaker's own. */
+.wt-private{font-size:13px;color:var(--gray-dk);line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px 14px;background:var(--cream);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;margin-bottom:0;}
+.wt-sec{background:var(--tan);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);padding:5px 14px;}
+.wt-out td{color:var(--gray);font-style:italic;}
+.wt-tag{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--bronze);border:1px solid var(--bronze-lt);border-radius:3px;padding:1px 4px;margin-left:5px;white-space:nowrap;}
+.wt-note{font-size:12px;color:var(--gray);overflow-wrap:anywhere;}
 .pay-tbl{width:100%;border-collapse:collapse;margin-bottom:1rem;}
 .pay-tbl td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px;}
 .pay-tbl td.r{text-align:right;font-weight:600;}
@@ -1020,7 +1033,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.18 · 6:07pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 10:31am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2137,7 +2150,7 @@ body.no-smf .smf-col{display:none;}
         <div class="doc-viewer-sub" id="doc-viewer-sub"></div>
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
-        <button class="btn-bronze" onclick="printDocViewer()">&#128424; Print / Save PDF</button>
+        <button class="btn-bronze" id="doc-viewer-print" onclick="printDocViewer()">&#128424; Print / Save PDF</button>
         <button class="btn-s" onclick="closeDocViewer()">Close</button>
       </div>
     </div>
@@ -8330,14 +8343,49 @@ function saveEstimateAndPreview() {
   }, 1000);
 }
 
-function populateJobSelect() {
+// ⚠⚠ A JOB THE CLIENT HAS ACCEPTED COMES OFF THIS TAB, AND IT REMOVES A DEAD END RATHER
+// THAN A CAPABILITY. Picking an approved job out of this dropdown lands you on a form
+// `applyEstimateLock` has already disabled — the same dead end `dashEditEstimate` was built
+// to close, still reachable by the loose door beside it. The working door is on the client
+// dashboard, and it un-approves before it navigates.
+//
+// ⚠ THE RULE IS THE CLIENT'S ACCEPTANCE, NOT THE MANAGER'S APPROVAL, AND ANTHONY IS RIGHT
+// THAT THE DIFFERENCE MATTERS: an approved estimate can still legitimately be re-priced, and
+// `Offer discount` is on the rail for exactly as long as `!job.agrSigned`. Hiding at
+// `approved` would take a job off this tab while a real door into it is still open.
+//
+// ⚠ AND A WON JOB WITH NO ESTIMATE STAYS VISIBLE. `isJobWon` migrates legacy active/closed
+// records, so keying on it alone would hide a job that has never been priced — on the one
+// tab where the pricing is done. It also fails in the SAFE direction on a cold cache: an
+// unread `estimateStore` reads as "no estimate", so the job is listed rather than hidden.
+function estimateTabHidesJob(job) {
+  if (!job || !isJobWon(job)) return false;
+  var rec = (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null;
+  return !!(rec && rec.estimate);
+}
+
+// ⚠⚠ `forceJobId` IS LOAD-BEARING AND THE FILTER IS UNSAFE WITHOUT IT. A <select> silently
+// rejects a value with no matching option, so a filtered-out job leaves `e-job` EMPTY — and
+// fifteen downstream reads of `parseInt(e-job.value)` then resolve to 0, including the one
+// that stamps `jobId` onto the saved snapshot. `dashEditEstimate` revokes the approval but
+// leaves the job WON, so the edit door lands on precisely that case every single time.
+//
+// ⚠ THE CURRENTLY-SELECTED JOB IS KEPT FOR THE SAME REASON, and it is a second case rather
+// than the same one: `showPanel('estimate')` repopulates with no argument, so tapping across
+// to Vendors and back while editing a won job's estimate would drop its option and unbind
+// the form underneath the work in progress.
+function populateJobSelect(forceJobId) {
   var sel = document.getElementById('e-job');
-  var cur = sel.value;
+  if (!sel) return;
+  var cur  = parseInt(sel.value, 10) || 0;
+  var keep = parseInt(forceJobId, 10) || 0;
   sel.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
+    if (j.id !== cur && j.id !== keep && estimateTabHidesJob(j)) return;
     sel.innerHTML += '<option value="'+j.id+'">'+j.name+(j.addr?' — '+j.addr.split(',')[0]:'')+'</option>';
   });
-  if (cur) sel.value = cur;
+  if (keep) sel.value = keep;
+  else if (cur) sel.value = cur;
 }
 
 function resetEstimate() {
@@ -10169,6 +10217,11 @@ function buildLockSnapshot(est, lockedBy) {
   est.lockedRooms = (est.rooms || []).map(function(r){
     return {
       name: r.name,
+      // ⚠ THE ORDERING KEY. Without it an approved estimate has nothing to sort by, so
+      // the walkthrough record falls back to array order — which puts every out-of-scope
+      // room at the end, because that is the order `includedRooms` builds them in. One
+      // ordering rule for the live record and the frozen one, not two.
+      idx: r.idx,
       section: r.section || '',
       note: (r.note || '').trim(),
       vol: r.vol,
@@ -10432,8 +10485,11 @@ function editEstimateForJob(jobId) {
   var estPanel = document.getElementById('panel-estimate');
   if (estPanel) estPanel.classList.add('active');
 
-  // Populate job dropdown FIRST then select the job
-  populateJobSelect();
+  // Populate job dropdown FIRST then select the job.
+  // ⚠ THE ID IS PASSED, ALWAYS. A won job is filtered off this dropdown, and this is the
+  // door that reaches one anyway — see populateJobSelect. Without it the select silently
+  // refuses the value and the whole tab unbinds.
+  populateJobSelect(jobId);
   var jobSel = document.getElementById('e-job');
   if (jobSel) {
     jobSel.value = jobId;
@@ -11921,6 +11977,24 @@ function dashUtilityBar(job) {
   var out = [
     { label: '&#9998; Edit Client', call: 'dashEditClient(' + id + ')', bronze: true }
   ];
+  // ⚠⚠ THE WALKTHROUGH IS A STANDING REFERENCE, NOT A LIFECYCLE STEP, WHICH IS EXACTLY WHY
+  // IT IS HERE AND NOT IN THE BAND. The band's whole contract is "the one thing to do next",
+  // and re-reading the walkthrough the night before day one is not a step and never goes
+  // `done`. That is the rule this bar is built on — the timeline holds every step, this bar
+  // holds only what is not one — and there is a test asserting no call in here appears
+  // anywhere in `jobTimelineActions`.
+  //
+  // ⚠ AN UNREAD STORE STILL GETS THE BUTTON, AND THAT IS THE OPPOSITE OF A BUG. `estimateStore`
+  // is {} until the fetch lands, so gating purely on the record would WITHHOLD the control on
+  // a cold cache — a missing button reads as "this job has no walkthrough", which is a false
+  // statement about the job rather than about this device. Offered while unread, the handler
+  // says which it is. Once the store is read and there is genuinely no estimate, it is
+  // withheld: the fix is to go and build one, and a button that only refuses is worse than none.
+  var _wtSeen = (typeof _estStoreState === 'undefined') || _estStoreState === 'ready';
+  var _wtRec  = (typeof estimateStore !== 'undefined') ? estimateStore[id] : null;
+  if (!_wtSeen || (_wtRec && _wtRec.estimate)) {
+    out.push({ label: '&#128269; Walkthrough', call: 'dashWalkthrough(' + id + ')' });
+  }
   // The job folder is made ONCE, automatically, when the CLIENT IS CREATED
   // (createDriveJobFolder, at the end of the intake save), with all six subfolders in
   // the same call. A job that HAS one gets a link, and it must stay an <a>: that is
@@ -14202,6 +14276,177 @@ function _docNotice(type, msg, jobId) {
   alert(msg);
 }
 
+// ─── THE WALKTHROUGH RECORD ──────────────────────────────────────────────────
+// ⚠⚠ THE WALKTHROUGH WAS WRITE-ONLY ON SCREEN, AND `privateNote` IS THE PROOF. It had
+// exactly two readers in the whole file — the textarea it is typed into, and the line in
+// `restoreEstimateToUI` that writes it back into that same textarea. So the dictated note
+// about access, hoarding and family dynamics, the single most useful thing anyone can read
+// before day one, was reachable only by reopening a form that is LOCKED by then. Per-room
+// notes were nearly as bad: they reach the Drive worksheet and a set of .txt sidecars, and
+// no on-screen surface outside the Build Estimate room grid.
+//
+// ⚠ DOM-FREE, the same reason `jobTimeline` and `standingFlagLines` are: the tests drive
+// the real builder and read the real wording rather than grepping rendered HTML.
+//
+// ⚠⚠ THIS IS NOT A CLIENT DOCUMENT AND MUST NEVER BECOME ONE. It carries the private note
+// verbatim. It is deliberately NOT registered in `DOC_ACTIONS` — a kind in that registry
+// inherits `send` and `file`, and `file` writes into the client's own Drive folder, which
+// is exactly how the internal worksheet reached a client on 2026-09-08. It is opened
+// through `openPlainViewer`, which has no send, no file and no Print.
+
+// Which copy of the walkthrough to show. `lockedRooms` is the immutable snapshot
+// `buildLockSnapshot` takes at approval; `rooms` is whatever the live estimate holds now.
+// ⚠ THE LOCKED COPY WINS WHEN THERE IS ONE, and the header says which is on screen — a
+// reader standing in a driveway has to know whether they are looking at what was QUOTED or
+// at a draft somebody has since edited.
+function walkthroughSource(est) {
+  if (!est) return { rooms: [], colls: [], locked: false, at: '', by: '' };
+  var locked = !!(est.lockedRooms && est.lockedRooms.length);
+  return {
+    rooms: locked ? est.lockedRooms : (est.rooms || []),
+    colls: (locked && est.lockedCollections) ? est.lockedCollections : (est.collections || []),
+    locked: locked,
+    at: est.lockedAt || '',
+    by: est.lockedBy || ''
+  };
+}
+
+// ⚠ THE LOCK SNAPSHOT RENAMES THE HOUR FIELDS (`estimated_tc_hours` / `special_items`
+// against the live record's `tcH` / `spcl`), so a reader that knows only one shape prints
+// blanks on half the jobs. One accessor, both shapes.
+function _wtRoomHrs(r) {
+  var tc = (r.tcH != null) ? r.tcH : r.estimated_tc_hours;
+  var ps = (r.psH != null) ? r.psH : r.estimated_ps_hours;
+  return { tc: (+tc || 0), ps: (+ps || 0) };
+}
+
+function walkthroughHtml(job, est) {
+  if (!job) return '';
+  if (!est) return '';
+  var src = walkthroughSource(est);
+  var rooms = (src.rooms || []).slice().sort(function (a, b) {
+    return (a.idx == null ? 9999 : a.idx) - (b.idx == null ? 9999 : b.idx);
+  });
+
+  var h = '';
+  h += '<div class="wt-stamp">Internal walkthrough record — not a client document</div>';
+  h += '<div class="ce-title">Walkthrough &amp; Scope</div>';
+
+  // Who priced it and when, and WHICH copy this is.
+  var when = src.locked
+    ? ('Locked ' + fmtDate2((src.at || '').slice(0, 10)) + (src.by ? ' by ' + esc(src.by) : ''))
+    : 'Draft — this estimate has not been approved, so these scores can still change';
+  h += '<div class="ce-meta">'
+    + '<div class="ce-meta-item"><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name || '—') + '</div></div>'
+    + '<div class="ce-meta-item"><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc(job.addr || '—') + '</div></div>'
+    + '<div class="ce-meta-item"><div class="ce-meta-label">Job</div><div class="ce-meta-val">' + esc(job.hvlId || '—') + ' · ' + esc(svcLabelOf(job)) + '</div></div>'
+    + '<div class="ce-meta-item"><div class="ce-meta-label">Walkthrough by</div><div class="ce-meta-val">' + esc(est.preparedBy || job.tc || '—') + '</div></div>'
+    + '</div>';
+  h += '<div class="' + (src.locked ? 'ce-lead' : 'wt-draft') + '">' + when + '</div>';
+
+  // ⚠⚠ THE PRIVATE NOTE GOES FIRST, AND THAT IS THE WHOLE POINT OF THE SCREEN. It is what
+  // somebody re-reading this in the car actually needs: the access problem, the hoarding,
+  // the son who disagrees with the daughter. Putting it under a room table nobody scrolls
+  // to would rebuild the defect this closes.
+  if ((est.privateNote || '').trim()) {
+    h += '<div class="ce-band" style="margin-top:1.25rem;">Private walkthrough notes</div>';
+    h += '<div class="wt-private">' + esc(est.privateNote.trim()) + '</div>';
+  }
+
+  // ─── Rooms ───
+  h += '<div class="ce-band" style="margin-top:1.25rem;">Rooms walked</div>';
+  if (!rooms.length) {
+    h += '<div class="ce-note" style="margin-bottom:0;">No rooms were scored on this estimate. A fee-only engagement (Home Prep for Sale) prices vendor lines rather than rooms — see below.</div>';
+  } else {
+    h += '<table class="ce-tbl"><thead><tr>'
+      + '<th>Room</th><th>Fullness</th><th>Complexity</th><th class="r">Hours</th><th>Walkthrough note</th>'
+      + '</tr></thead><tbody>';
+    // ⚠⚠ GROUPED BEFORE RENDERING, NEVER BY WALKING AND COMPARING, AND THE BROWSER IS WHAT
+    // TAUGHT ME THAT. `includedRooms` appends the EXCLUDED rooms after all the in-scope ones,
+    // and a lock snapshot written before today carries no `idx` to sort them back into place
+    // — so a walk-and-compare prints "Entry & Living" twice on any job with an out-of-scope
+    // room in an early section, which is most prep jobs and was Anthony's own example.
+    var secOrder = [], bySec = {};
+    rooms.forEach(function (r) {
+      var k = r.section || 'Other';
+      if (!bySec[k]) { bySec[k] = []; secOrder.push(k); }
+      bySec[k].push(r);
+    });
+    var _row = function (r) {
+      var hrs = _wtRoomHrs(r);
+      // ⚠ AN EXCLUDED ROOM IS AN ANSWER, NOT A GAP. `setRoomState` clears and disables its
+      // scores, so printing "0 / 0" against it reads as a room scored empty rather than one
+      // the client is handling themselves.
+      var out = !!r.excluded;
+      return '<tr' + (out ? ' class="wt-out"' : '') + '>'
+        + '<td>' + esc(r.name || '') + (r.spcl || r.special_items ? ' <span class="wt-tag">special items</span>' : '') + '</td>'
+        + (out
+            ? '<td colspan="3" class="muted">Out of scope — homeowner handling this room</td>'
+            : '<td class="muted">' + (r.vol == null ? '—' : r.vol) + ' / 5</td>'
+              + '<td class="muted">' + (r.cplx == null ? '—' : r.cplx) + ' / 5</td>'
+              + '<td class="r muted">' + hrs.tc.toFixed(1) + ' TC · ' + hrs.ps.toFixed(1) + ' PS</td>')
+        + '<td class="wt-note">' + ((r.note || '').trim() ? esc(r.note.trim()) : '<span class="muted">—</span>') + '</td>'
+        + '</tr>';
+    };
+    secOrder.forEach(function (sec) {
+      h += '<tr><td colspan="5" class="wt-sec">' + esc(sec) + '</td></tr>';
+      bySec[sec].forEach(function (r) { h += _row(r); });
+    });
+    h += '</tbody></table>';
+    var scored = rooms.filter(function (r) { return !r.excluded; }).length;
+    var excl = rooms.length - scored;
+    var noted = rooms.filter(function (r) { return (r.note || '').trim(); }).length;
+    h += '<div class="ce-note">' + scored + ' room' + (scored === 1 ? '' : 's') + ' in scope'
+      + (excl ? ' · ' + excl + ' out of scope' : '')
+      + ' · ' + noted + ' carr' + (noted === 1 ? 'ies' : 'y') + ' a note.</div>';
+  }
+
+  // ─── Notable collections ───
+  var colls = src.colls || [];
+  if (colls.length) {
+    h += '<div class="ce-band">Notable collections</div>';
+    h += '<table class="ce-tbl"><thead><tr><th>Collection</th><th>Disposition</th><th>Note</th></tr></thead><tbody>';
+    colls.forEach(function (c) {
+      h += '<tr><td>' + esc(c.name || '') + '</td>'
+        + '<td class="muted">' + esc(c.dispLabel || c.disposition || c.disp || '—') + '</td>'
+        + '<td class="wt-note">' + ((c.note || '').trim() ? esc(c.note.trim()) : '<span class="muted">—</span>') + '</td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+
+  // ─── Vehicles ───
+  var vehs = est.vehicles || [];
+  if (vehs.length) {
+    h += '<div class="ce-band">Vehicles &amp; watercraft</div>';
+    h += '<table class="ce-tbl"><thead><tr><th>Vehicle</th><th>Flagged</th><th>Note</th></tr></thead><tbody>';
+    vehs.forEach(function (v) {
+      var flags = [];
+      if (v.collector) flags.push('collector — specialist appraisal');
+      if (!v.titleLocated) flags.push('title to be located');
+      h += '<tr><td>' + esc(_vehicleLineName(v)) + '</td>'
+        + '<td class="muted">' + (flags.length ? esc(flags.join(' · ')) : '—') + '</td>'
+        + '<td class="wt-note">' + ((v.note || '').trim() ? esc(v.note.trim()) : '<span class="muted">—</span>') + '</td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+
+  // ─── Prep vendor lines ───
+  // The scope notes on these are walkthrough observations too, and on a fee-only job they
+  // are the ONLY thing the walkthrough produced — the room table above is empty by design.
+  var preps = est.prepItems || [];
+  if (preps.length) {
+    h += '<div class="ce-band">Property preparation — scope notes</div>';
+    h += '<table class="ce-tbl"><thead><tr><th>Trade</th><th>Scope note</th></tr></thead><tbody>';
+    preps.forEach(function (p) {
+      h += '<tr><td>' + esc(p.type || '') + '</td>'
+        + '<td class="wt-note">' + ((p.note || '').trim() ? esc(p.note.trim()) : '<span class="muted">—</span>') + '</td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+
+  return h;
+}
+
 // ─── THE VIEWER ──────────────────────────────────────────────────────────────
 // ⚠ THE MODAL LIVES OUTSIDE `#client-dashboard-view`, DELIBERATELY. `jobsWatchTick`
 // re-renders the drilldown with innerHTML whenever a status changes remotely — every 15
@@ -14210,19 +14455,42 @@ function _docNotice(type, msg, jobId) {
 // width on a phone for nothing.
 var _docViewerSpec = null;
 
-function openDocViewer(spec, html) {
+function _openViewer(title, sub, html, spec) {
   var box = document.getElementById('doc-viewer-body');
   var ttl = document.getElementById('doc-viewer-title');
-  var sub = document.getElementById('doc-viewer-sub');
+  var sb  = document.getElementById('doc-viewer-sub');
   var ov  = document.getElementById('doc-viewer-modal');
   if (!box || !ov) return false;
-  _docViewerSpec = spec;
-  ttl.textContent = docTitle(spec.kind, spec.stage);
-  sub.textContent = (spec.job.name || 'Client') + (spec.job.addr ? ' · ' + spec.job.addr : '');
+  // ⚠ THE PRINT BUTTON IS SET ON EVERY OPEN, IN BOTH DIRECTIONS. It is one shared
+  // control, so a viewer that only ever HIDES it leaves the next document opened after an
+  // internal one with no way to print — and one that only ever shows it puts a Print button
+  // on a page carrying the private note.
+  var pb = document.getElementById('doc-viewer-print');
+  if (pb) pb.style.display = spec ? '' : 'none';
+  _docViewerSpec = spec || null;
+  ttl.textContent = title;
+  sb.textContent = sub;
   box.innerHTML = '<div class="ce-page">' + html + '</div>';
   ov.style.display = 'flex';
   box.scrollTop = 0;
   return true;
+}
+
+function openDocViewer(spec, html) {
+  return _openViewer(
+    docTitle(spec.kind, spec.stage),
+    (spec.job.name || 'Client') + (spec.job.addr ? ' · ' + spec.job.addr : ''),
+    html, spec);
+}
+
+// ⚠⚠ AN INTERNAL PAGE OPENS WITH NO SPEC, AND THAT IS WHAT WITHHOLDS EVERY VERB. There is
+// no `docAction` behind it, so there is no send, no file and — because `printDocViewer`
+// returns early on a null spec and the button above is hidden — no print. The walkthrough
+// carries the private note verbatim: what a family is like, who is hoarding, which son
+// disagrees with which daughter. A printed copy of that left on a kitchen counter is the
+// failure this shape exists to make impossible.
+function openPlainViewer(title, sub, html) {
+  return _openViewer(title, sub, html, null);
 }
 
 function closeDocViewer() {
@@ -14622,6 +14890,40 @@ function dashEditEstimate(jobId) {
     saveEstimateState();
   }
   dashGoEstimate(jobId);
+}
+
+// ⚠⚠ THE ONE ON-SCREEN READER OF THE WALKTHROUGH, AND UNTIL NOW THERE WAS NONE. Ashley's
+// report: after an estimate is built there is no easy way back to the rooms that were ticked
+// or the notes taken — you reopen Build Estimate, pick the job out of a dropdown, and land on
+// a form that is LOCKED by then. Measured before building anything: `privateNote` has exactly
+// two readers in this file and both are the textarea it is typed into.
+//
+// ⚠ IT PRIMES NOTHING, DELIBERATELY, AND IT IS THE ONLY dash* HANDLER THAT DOES NOT. The
+// others call `_primeEstimateFor` because the function they delegate to reads a GLOBAL the
+// Build Estimate tab sets, and priming is what stops a PIN approving the wrong client's
+// estimate. This one takes its record by job id and returns a string: there is no global to
+// get wrong, and nothing left pointed at this job afterwards.
+function dashWalkthrough(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
+  var rec = estimateStore[jobId];
+  if (!(rec && rec.estimate)) {
+    // ⚠ AN UNREAD STORE AND AN UNBUILT ESTIMATE ARE DIFFERENT ANSWERS. `loadEstimateState`
+    // hydrates from localStorage and THEN fetches, so on a cold cache — a new iPad, cleared
+    // data, Safari evicting storage — `estimateStore` is {} at first paint. Saying "no
+    // estimate has been built" there is a false claim about the job rather than about this
+    // device, which is the distinction `_estStoreState` exists for.
+    dashNotice('warn', (_estStoreState === 'loading')
+      ? 'The estimates are still loading on this device — give it a moment and press it again.'
+      : (_estStoreState === 'offline')
+        ? 'This device cannot reach the estimate sheet, so the walkthrough cannot be read. Check the Apps Script URL in Settings.'
+        : 'No estimate has been built for this job yet, so there is no walkthrough to read.');
+    _dashRedraw(jobId); return;
+  }
+  var html = walkthroughHtml(job, rec.estimate);
+  if (!html) { dashNotice('warn', 'This walkthrough could not be built.'); _dashRedraw(jobId); return; }
+  openPlainViewer('Walkthrough & Scope',
+    (job.name || 'Client') + (job.addr ? ' · ' + job.addr : ''), html);
 }
 
 // ⚠ THE ±15% FINAL-INVOICE PIN WAS REACHABLE FROM ONE BUTTON ON THE INVOICES TAB. The

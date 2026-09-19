@@ -203,8 +203,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // It is a sibling of the print target, in the modal/utility block.
     ok(Math.abs(dvAt - src.indexOf('id="print-target"')) < 1500, 'sitting with the other overlays');
 
+    // ⚠ RESTATED, NOT DELETED. This pinned the literal inside `openDocViewer`, which is a
+    // byte sequence and not a requirement — the wrap moved into a shared `_openViewer` when
+    // the walkthrough gained a no-print mode, so it broke on a change it has no opinion
+    // about. The requirement is that whatever WRITES the viewer body wraps the document in
+    // a page, and that there is exactly one such writer.
     const open = noComments(fn('openDocViewer'));
-    has(open, "'<div class=\"ce-page\">'", 'the document is wrapped in a page, as it prints');
+    const shared = noComments(fn('_openViewer'));
+    has(shared, "'<div class=\"ce-page\">'", 'the document is wrapped in a page, as it prints');
+    has(shared, "getElementById('doc-viewer-body')", 'and that is the function writing the body');
+    has(open, '_openViewer(', 'openDocViewer routes through it rather than keeping its own copy');
+    lacks(open, 'innerHTML', 'so there is one writer of the viewer body, never two');
     const close = noComments(fn('closeDocViewer'));
     // ⚠ A 45KB agreement left behind a hidden overlay is one display:flex away from being
     // read as the current client's.

@@ -101,9 +101,11 @@ The tab reads top to bottom in three bands. **Top card:** *Job* on the left (job
 ### On the walkthrough
 
 - Use **📝** for notes and **🎙** for voice-to-text in each room row. Voice transcribes as you talk. Hit **Save Notes** and it files itself to the job's Walkthrough Notes folder.
-- **Private Walkthrough Notes** — the box at the end of the room grid, with its own mic. Internal only: never on the client estimate, never in a shared folder. It's for what you wouldn't say in front of the family — access problems, hoarding, who's actually making the decision. Dictate it in the car on the way out.
+- **Private Walkthrough Notes** — the box at the end of the room grid, with its own mic. Internal only: never on the client estimate, never in a shared folder. It's for what you wouldn't say in front of the family — access problems, hoarding, who's actually making the decision. Dictate it in the car on the way out. **Write it properly — somebody reads it back before Day 1.** It comes up on the client dashboard under **🔍 Walkthrough**, at the top of the page, above the rooms.
 - **No photos at this stage.** Photography happens after the job is active, not on the estimate visit.
 - Room sections open collapsed and run two across. Open each one as you walk that part of the house; use *Expand all / Collapse all / Hide empty* at the top.
+
+> **⚠ ONCE THE CLIENT HAS SAID YES, THE JOB LEAVES THIS DROPDOWN (new 2026-09-19).** That is deliberate, and it is not a lockout — picking an accepted job here never worked anyway, because approval disables the form and you landed on a screen you could not type in. **To change a price after the client has accepted: open the client, and press *Edit estimate* under the document tray on the timeline.** That un-approves the estimate and brings you back here with the job loaded and the form live. An approved job the client has *not* accepted yet is still on the list, and so is a won job you have never priced.
 
 ### Scoring a room
 
@@ -437,6 +439,14 @@ Two things worth knowing when you ask for one:
 
 The job is now **Active**. Three things run in parallel.
 
+### Before Day 1 — read the walkthrough back
+
+Open the client and press **🔍 Walkthrough**, on the same line as *Edit Client* and *Drive*. It opens the whole walkthrough over the dashboard: **your private notes first**, then every room you ticked with its fullness and complexity scores and whatever you wrote in it, the collections and their dispositions, the vehicles, and any prep scope notes. This is the one to do the night before, or sitting outside in the car.
+
+> **⚠ IT IS AN INTERNAL PAGE. DO NOT SHOW IT TO ANYONE IN THE HOUSE.** It carries your private notes word for word — who is hoarding, which son disagrees with which daughter, the access problem you did not raise in front of them. There is deliberately **no Print button and no way to send or file it**, so it cannot end up on a kitchen counter or in a shared folder. Read it off the screen and close it.
+
+> **If the estimate was approved you are reading the frozen copy**, and the page says *Locked &lt;date&gt; by &lt;name&gt;* at the top. If it was not, it says so in amber — those scores can still move. A room reading *Out of scope* is one the client is handling; that is an answer you recorded, not a room you missed.
+
 ### Where you are against the schedule — read it on the Client Dashboard
 
 Open the client and the line above the timeline reads the whole schedule at once: *Started Sep 21 · **Working day 4 of 6** · 52% of the work done · 57% of the estimated hours logged · Halfway Sep 23 · Target end Sep 28*, with the hard target or the court deadline beside it.
@@ -767,6 +777,11 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| **Your client is not in the Build Estimate dropdown** | They have accepted and the job is *Won*, so it comes off that picker. Open the client on the dashboard and press **Edit estimate** under the document tray — that un-approves the estimate and lands you on a form you can actually edit. Picking it from the dropdown only ever gave you a disabled screen. |
+| **You want to see the rooms you ticked, or what you wrote in them** | Client dashboard → **🔍 Walkthrough**, beside *Edit Client*. Private notes, every room with its scores and note, the collections, the vehicles. You do not need to go near Build Estimate. |
+| **There is no ‹Walkthrough› button on this client** | No estimate has been saved for the job yet — there is nothing to read. If you know there is one, the estimates may still be loading on this device; press it again in a moment and it will tell you which it is. |
+| **The walkthrough page has no Print button** | Deliberate. It carries your private notes word for word, so there is no way to print, send or file it — a printed copy of that is exactly what must not exist. Read it off the screen. |
+| **The walkthrough shows different scores from the ones you remember typing** | You are reading the frozen copy taken when the estimate was approved — the page says *Locked* and names who approved it. That is the record of what was quoted. The live scores only show while an estimate is still unapproved, and then the page says so in amber. |
 | **A Home Prep job needs a few rooms cleared and you are about to re-type it as Home Editing** | Don't. Stay on Home Prep and type the hours into *Pre-Prep Declutter* on Build Estimate. Re-typing prices off the whole property's square footage, not the rooms you tick — on a 3,500 sqft house, four rooms and twelve rooms both come out near **$8,950**, so you would quote a full editing job for half a day of your own time. Re-type only when it really is an editing job that also needs trades. |
 | **A prep estimate won't save** — "add at least one Home Prep vendor with a cost" | Declutter hours alone are not a prep engagement. If there are genuinely no vendors and the job is only decluttering, re-type it as **Home Editing**; the refusal says so. Otherwise add the trades. |
 | **A prep job's final invoice is blocked and you thought prep was exempt** | It is exempt only when it quoted **no** declutter hours. You quoted hours, so the final bills what is in the log — and an empty log would bill nothing for work you did. Log the hours on the Job Plan, then reprint. |

@@ -183,6 +183,8 @@ Room photos, item photos, collection photos/appraisals, and the inventory workbo
 
 **Tab: Build Estimate** → select job from dropdown. This section covers the labor-based services (Home Editing, Home Transition, Cleanout, Estate Settlement, Probate). Home Prep for Sale uses the fee-only flow in Section 6.
 
+> **⚠ A JOB THE CLIENT HAS ACCEPTED IS NOT IN THAT DROPDOWN, AND THAT REMOVES A DEAD END RATHER THAN A CAPABILITY (2026-09-19).** Once a job is marked **Won** and has an estimate saved, it comes off the picker. Picking an approved job out of it never worked anyway — the form you landed on was *disabled*, because approval locks the estimate. **The working door is on the client dashboard: open the client and press *Edit estimate* under the document tray.** That un-approves the estimate first and then takes you here, which is the only sequence that leaves you a form you can actually type in. **⚠ The rule is the client's acceptance, not the manager's approval** — an approved estimate can still legitimately be re-priced, and *Offer discount* stays on the timeline for as long as the agreement is unsigned, so hiding at *approved* would have closed this tab on a job with a live door into it. A won job with **no** estimate stays on the list, or there would be no way to build its first one.
+
 **How the tab is laid out** (rebuilt 2026-08-02, so a screenshot older than that will not match):
 
 | Band | Holds |
@@ -200,6 +202,8 @@ Room photos, item photos, collection photos/appraisals, and the inventory workbo
 During the site visit, use the **📝** (notes) and **🎙** (voice-to-text) buttons in each room row. Voice transcribes in real time into the notes field. Hit **Save Notes** — the note saves with the estimate and uploads as a `.txt` file to the job's **Walkthrough Notes** Drive folder automatically.
 
 **Private Walkthrough Notes** is a separate box, sitting as the last cell of the room grid with its own 🎙 button. It is *internal only* — never shown to the client, never on the estimate document, never uploaded to a shared folder. It is for what you would not say in front of the family: access problems, hoarding, who is actually making the decision, anything that changes how the job runs. It saves with the estimate (`est.privateNote`) and reloads with it. The intended use is dictating in the car on the way out.
+
+> **⚠⚠ IT NOW HAS A READER, AND UNTIL 2026-09-19 IT HAD NONE.** This box had exactly two readers in the whole app — itself, and the line that writes it back into itself when you reopen the estimate. So the one thing most worth re-reading before Day 1 was reachable only by opening a form that is *locked* by then. It is now on the client dashboard under **🔍 Walkthrough** (§9c), at the top of the page, above the rooms. **Nothing about where it goes has changed**: still internal, still never on the client estimate, still never in a shared Drive folder, and the page it renders on cannot be sent, filed or printed.
 
 > 📷 Photos are NOT captured during the estimate stage. Photography happens only after job activation.
 
@@ -907,7 +911,7 @@ Five values must be set in the Apps Script project's **Script Properties**, wher
 
 ## 9. Client Dashboard
 
-**Tab: Client Dashboard** → select job card. Shows full job status, the job timeline, referral source / partner, and the standing job facts. **Every action that advances the job is on the timeline** — see §9a. The heading line above it carries the two that are not steps: **✎ Edit Client** and **📁 Drive**.
+**Tab: Client Dashboard** → select job card. Shows full job status, the job timeline, referral source / partner, and the standing job facts. **Every action that advances the job is on the timeline** — see §9a. The heading line above it carries the three that are not steps: **✎ Edit Client**, **🔍 Walkthrough** and **📁 Drive**.
 > **⚠ THE HEADER'S BUTTON BAR IS GONE, AND WHAT REPLACED IT IS TWO BUTTONS (2026-09-11).** The dashboard used to open with a white bubble carrying seven controls — *Estimate · Submit for Approval · Client Accepted — Mark Won · Change Order · Edit Client · Drive · Activate Job*. **Five of those were already reachable further down the same screen**, which is what Anthony asked about: *"do we need the 5 boxes at the top at all? like the activate job button? estimate probably doesn't need to be there if it's down below in the timeline."* Four are rows on the timeline with their own buttons, and *Change Order* has its own **+ New** in the Change Orders card, beside the count. **⚠ And two of the copies could disagree.** The bubble offered **Activate Job** on every job; the timeline's own *Job active* row withholds that button when the activation is blocked, deliberately, because the fix is a phone call to the executor and a button that just alerts the blocker back at you is worse than none. So a contested matter with the Letters outstanding showed no button on the rail and a button at the top. What survives sits on the **Job Timeline & Payments** heading line: **✎ Edit Client** and **📁 Drive**. **The rule is: the timeline holds every step, that bar holds only what is not one** — and a test walks the whole lifecycle and fails if anything in the bar is also offered by the rail.
 
 > **It is deliberately NOT inside the tan *Next* card.** That card means *the one thing to do next*; hanging standing tools in it costs it exactly that meaning. It sits on the heading immediately above it instead.
@@ -1087,6 +1091,25 @@ The change order then appears on the job with two buttons:
 2. **Get Acceptance** — the client types their name against *✓ I Accept This Change Order*. Hand them the iPad, or record it yourself off their email or call. Name and date are stored on the change order.
 
 > **An unaccepted Change Order is never billed.** Acceptance is what updates the project total and what puts the change on the final invoice — the invoice counts client-approved change orders and silently ignores the rest. A change order created, printed, agreed on the phone and never marked accepted is work you will do and not charge for. Take the acceptance at the moment the client agrees.
+
+### 9c. 🔍 Walkthrough — reading the estimate back
+
+The third control on the **Job Timeline & Payments** heading line. It opens the walkthrough that priced the job as a read-only page over the dashboard: **the private walkthrough notes, every room that was ticked with its fullness and complexity scores and its note, the notable collections with their dispositions, the vehicles, and any prep scope notes.** The intended use is the one Ashley described — reading yourself back into a job the night before Day 1, or in the car outside.
+
+| On the page | Where it came from |
+| --- | --- |
+| Private walkthrough notes, first, above everything | The internal box at the end of the room grid (§5a) |
+| Rooms, in walkthrough order, grouped by section | The room grid — scores, hours and the per-room note |
+| A room reading *Out of scope* | Ticked ✗ — the client is handling it. It is an answer, not a gap, so no score prints against it |
+| Notable collections and their dispositions | The collections card |
+| Vehicles, with *collector* and *title to be located* | The vehicles card |
+| Prep scope notes | The Property Preparation lines — on a fee-only job these *are* the walkthrough |
+
+> **⚠⚠ IT IS AN INTERNAL PAGE AND IT CANNOT BE SENT, FILED OR PRINTED.** It carries the private note word for word — what a family is like, who is hoarding, which son disagrees with which daughter. So unlike the five client documents in §9b it is **not** in the document registry at all: there is no Send, no File to Drive, and the viewer's *Print / Save PDF* button is hidden on it. A printed copy of that left on a kitchen counter is the failure this shape exists to make impossible. The page stamps itself *Internal walkthrough record — not a client document* in red across the top, the same way the Drive worksheet does.
+
+> **⚠ ON AN APPROVED ESTIMATE IT SHOWS THE FROZEN COPY, AND SAYS SO.** Approval takes an immutable snapshot of every room — scores, hours and notes — so later edits cannot rewrite history. The page shows that snapshot and prints *Locked &lt;date&gt; by &lt;name&gt;*. An estimate that has **not** been approved shows the live rooms under an amber line saying the scores can still change. Standing in a driveway you need to know which of the two you are reading.
+
+> **The button is withheld on a job with no estimate** — the fix there is to go and build one, and a button that only refuses is worse than none. **⚠ But it is offered while the estimates are still loading**, and the message then says so rather than claiming the job has no walkthrough. On a device with a cold cache — a new iPad, cleared data, Safari evicting storage — a missing button would be a false statement about the *job* when the truth is about the *device*.
 
 ## 10. Active Job Documentation
 
