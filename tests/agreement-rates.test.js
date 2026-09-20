@@ -249,4 +249,39 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(seg, 'Ashley Jerome', 'and no second name in the block');
     has(seg, 'Managing Member', 'with the same authority stated');
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ⚠⚠ THE ESTATE FORM PROMISED A PER-JOB NDA AND THE FIRM DOES NOT TAKE ONE (fixed 2026-09-20).
+  // Anthony: *"we do not require NDAs for staff on all jobs. confidentiality is baked into our
+  // 1099 employment agreements."* §7 said outright that Havellin would *"Require all team
+  // members and contractors to sign a Non-Disclosure Agreement before accessing the property"* —
+  // on the one form a personal representative signs, on the matters where the contents are most
+  // sensitive, and the Job Plan's `nda_signed` checkbox was the operational half of it. Same
+  // class as the 15% vendor fee clause, the *licensed* claim and the cost-plus materials line:
+  // a document stating something the business does not do, found by reading the document.
+  group('⚠⚠ neither agreement promises a per-job NDA, and the obligation is still stated');
+  {
+    const p = probateDoc(PROBATE, est());
+    lacks(p, 'Non-Disclosure', '⚠⚠ the estate form no longer promises a per-job NDA, in any wording');
+    lacks(p, 'before accessing the property', 'nor the per-job trigger that went with it');
+    // ⚠ THE CONVERSE IS THE HALF THAT MATTERS, and deleting the bullet outright would have been
+    // the opposite defect: the duty is REAL, it is simply STANDING rather than per-job. A
+    // confidentiality section on an estate engagement that says nothing about the crew is worse
+    // than one that overpromises, because the representative is reading it to find exactly that.
+    has(p, 'confidentiality obligations',
+        '⚠ the duty is still stated — standing, in the contractor agreement, not a per-job signature');
+    has(p, 'before they work on any Havellin engagement',
+        '…and it binds before anybody sets foot in the house, which is what the old bullet was for');
+    has(p, 'strictly confidential', 'the rest of §7 is untouched');
+    // The living-client form never made the promise — its §9 puts the duty on Havellin and says
+    // it may disclose to "its personnel, contractors, and vendors who need it". It must not
+    // acquire one by a later sweep trying to make the two forms match.
+    lacks(standardDoc(LIVING, est()), 'Non-Disclosure',
+          'the standard form never promised one, and does not gain one');
+    // ⚠ AND NOTHING ANYWHERE ASKS A PERSON TO ATTEST THAT IT HAPPENED. The clause and the
+    // checkbox have to move together or the app goes on collecting evidence for a promise the
+    // contract no longer makes — or, worse, the reverse.
+    lacks(noComments(src), 'NDA signed by every crew member',
+          '⚠⚠ and the Job Plan box that attested to it is gone from live code');
+  }
 };

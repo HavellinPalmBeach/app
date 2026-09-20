@@ -434,6 +434,48 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(draft, "'agreement','view'", '⚠ nor the signing packet');
     lacks(draft, 'deposit invoice', '⚠ the words do not appear anywhere on the page');
     lacks(draft, 'midpoint invoice', 'for any stage');
+
+    // ─── ONE ACTION ROW, NOT TWO (2026-09-20) ────────────────────────────────────
+    // Anthony, off a final-invoice band whose four buttons sat two over two: *"let's make the
+    // four ... move horizontally rather than stacked two over two to save a little vertical
+    // scrolling."* NOTHING WAS WRAPPING — the tray's buttons and the step's were two sibling
+    // flex rows, so the 2×2 was by construction and no width would ever have fixed it. The
+    // requirement is therefore about STRUCTURE, not CSS, and that is what these pin: one
+    // container holds all of them, and the document's buttons still come first in it.
+    const rowOf = (html, cls) => {
+      const at = html.indexOf('<div class="' + cls + '">');
+      if (at < 0) return '';
+      // The row holds only buttons, so the first close after it is its own.
+      return html.slice(at, html.indexOf('</div>', at));
+    };
+    const dRow = rowOf(draft, 'jt-doc-acts');
+    ok(dRow.length > 0, 'the band draws an action row inside the tray');
+    eq((dRow.match(/<button/g) || []).length, 3,
+       '⚠⚠ ONE ROW holds them all — View, Edit estimate and the step primary, not two rows of buttons');
+    has(dRow, 'jt-btn-p', '…including the primary, which used to sit in a second row below');
+    ok(dRow.indexOf("'estimate','view'") < dRow.indexOf('jt-btn-p'),
+       '⚠ TRAY BEFORE THE PRIMARY still, left to right: you consult the document, then you act on it');
+    ok(dRow.indexOf('dashEditEstimate(7)') < dRow.indexOf('jt-btn-p'),
+       'and every tray button is ahead of it, not just the first');
+    // ⚠ The second row is GONE rather than emptied — an empty flex row is 0px but it is also a
+    // sibling nothing accounts for, and the next person adding a margin to it would reopen this.
+    lacks(draft.slice(draft.indexOf('jt-doc-acts')), 'jt-acts',
+          '⚠⚠ and there is no second action row after it at all');
+    eq((draft.match(/jt-btn-p/g) || []).length, 1, 'still exactly one filled button in the band');
+
+    // ⚠ THE NO-DOCUMENT CASE IS UNCHANGED, and it has to be tested separately: four rail rows
+    // map to no document (intake, walkthrough, job active, work complete), and on those the
+    // step's row is the only row there has ever been. Merging must not have cost them their row.
+    // Deposit paid, job not yet activated — `job_active` is one of the four rows that map to no
+    // document at all, so the step's row is the only row the band has ever drawn there.
+    const noDoc = paint({ estimateSentDate: 'Sep 9, 2026', agrSent: true, agrSigned: true,
+      docState: { estimate: { sentAt: '2026-09-09' }, agreement: { sentAt: '2026-09-10' }, 'invoice:deposit': { sentAt: '2026-09-12' } },
+      payments: [{ uid: 'p1', stage: 'deposit', amount: 12050, date: '2026-09-15', method: 'wire', clearedOn: '2026-09-15' }] });
+    has(noDoc, 'Activate job', 'the fixture really does land on a step with no document');
+    has(noDoc, 'jt-acts', '⚠ a step with no document still draws its own action row');
+    lacks(noDoc, 'jt-doc-acts', 'and no tray row, because there is no document to put in one');
+    const nRow = rowOf(noDoc, 'jt-acts');
+    has(nRow, 'jt-btn-p', 'carrying the primary exactly as before');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

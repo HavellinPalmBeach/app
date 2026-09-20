@@ -449,7 +449,8 @@ The Job Plan runs in the order you work a job, and the stages are named, not num
 2. **Gates** — one row of chips: agreement signed, deposit received, on probate the Letters and the §733.604 deadline, the attorney, vendors lined up. Green or red, read off the record, nothing to tick. A red one says underneath what clears it.
 3. **Vendors & partners** — a tool, folded, with *2 of 4 confirmed* on the bar. It opens by itself while the job is not yet active and anything on it is unconfirmed. Step 10c.
 4. **Hours & daily close** — a tool, folded, with today's hours on the bar; you open it to log the day. Step 10b.
-5. **Before Day 1** — the pre-job call and its notes, materials on site, keys tested, crew briefed, NDA, COI. Open, ticks counted in the heading.
+5. **Before Day 1** — the pre-job call and its notes, materials on site, keys tested, crew briefed, COI. Open, ticks counted in the heading.
+   ⚠ **The NDA box went on 2026-09-20.** Havellin does not take a per-job NDA — confidentiality is in the contractor agreement every crew member signs before they work an engagement at all, so there is nothing to collect on the day and nothing to tick.
 6. **In the house** — the room cards, and on an estate job the four in-house boxes under them. Step 10a.
 7. **Midpoint & pickups** — the midpoint invoice lines, release authority, receipts, pickups, shredding. Open.
 8. **Move day** — Home Transition only.
