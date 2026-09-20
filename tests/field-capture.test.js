@@ -455,8 +455,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             // The stages (2026-09-19, evening): the gate chips, the fold counts, the current stage.
-            'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr'],
-      vars: ['SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
+            'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
+            // The open job body (2026-09-20): stage cards on a thread, marked off the stage the job is in.
+            'planStageCard', 'planStageState', 'planCurrentStage'],
+      vars: ['SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders'],
       stubs: {
         document: dom, isFormalDoc: () => false,
@@ -464,7 +466,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _sfHost: () => '<div id="sf-host-plan"><div class="sf-brief">BRIEF</div></div>',
         renderVendorSourcing: () => '', renderVendorScorecard: () => '', renderDailyCloseBlock: () => '',
         _importableFromEstimate: () => ({ collections: [], vehicles: [] }), getPlanNote: () => '',
-        paymentSplit: () => ({ midpoint: 1000 }), estWorkingDays: () => 0, addWorkingDays: () => '',
+        paymentSplit: () => ({ midpoint: 1000 }),
+        // The header carries the dashboard's schedule strip since 2026-09-20; job-plan-stages drives the real one.
+        planScheduleHtml: () => '<div class="plan-sched">STRIP</div>',
         docSentAt: () => null, isAgreementSigned: () => false, isJobFunded: () => false, depositPaidTotal: () => 0,
         stagePaidTotal: () => 0, jobLogEntries: () => [], _photoRefs: { 7: [] },
       },
@@ -482,6 +486,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(hdr, 'firearms-protocol.html', 'and the protocol link');
     ok(hdr.indexOf('fa-banner') < hdr.indexOf('Client:'), 'above the client line');
     has(hdr, 'BRIEF', 'and the standing-flags brief still follows');
+    ok(hdr.indexOf('Client:') < hdr.indexOf('<div class="plan-sched">STRIP') && hdr.indexOf('plan-sched') < hdr.indexOf('BRIEF'),
+       'the schedule strip sits under the client line and above the brief (2026-09-20)');
 
     // Rooms, once.
     eq((out.match(/openRoomWorkspace\(7,0\)/g) || []).length, 1, 'the kitchen is one row');
@@ -502,8 +508,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // of order (vendors and the pre-job call come first in a real job). The requirement was never
     // "first" — it was NEVER INSIDE A CLOSED BODY. They sit between Before Day 1 and Hours now, and the
     // end marker planPhaseWrap emits is what lets a string prove it. job-plan-stages.test.js has the rest.
-    ok(out.indexOf('id="plan-rooms-7"') > out.indexOf('<!--/stage-p0-->') && out.indexOf('id="plan-rooms-7"') < out.indexOf('id="phase-body-hours"'),
-       '⚠ the room list sits between two folds, never inside a closed phase body');
+    // ⚠ RESTATED 2026-09-20. The folds came off the job body: only the two tools (Vendors, Hours) fold, at
+    // the top, and the rooms are an open card on the flow AFTER both have closed. Same requirement, one
+    // fewer way to break it.
+    ok(out.indexOf('id="plan-rooms-7"') > out.lastIndexOf('<!--/stage-hours-->') && out.indexOf('id="plan-rooms-7"') > out.indexOf('<!--/stage-p0-->')
+       && out.indexOf('id="plan-rooms-7"') < out.indexOf('<!--/stage-rooms-->'),
+       '⚠ the room list sits in its own open card after every fold has closed — never inside a closed body');
+    eq((out.match(/id="phase-body-/g) || []).length, 2, 'and there are exactly two folds on the plan, both tools');
 
     // The lines and the boxes.
     // ⚠ RESTATED 2026-09-19 (evening). Before Day 1's derived lines are the GATE CHIPS at the top of the
@@ -511,7 +522,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Close-out still draw a derived block. Four surfaces, one rule each.
     has(out, 'id="plan-gates-7"', 'the gates render as a chip row');
     ['agreement_signed', 'deposit_received', 'attorney_on_file'].forEach((k) => has(out, 'data-gate="' + k + '"', k + ' is a gate chip'));
-    has(out, '<span class="rl-meta">0 of 2 locked &middot; 0 cleared</span>', 'the rooms header carries the locked count');
+    has(out, '<span class="stg-count">0 of 2 locked &middot; 0 cleared</span>', 'the rooms card heading carries the locked count');
     ['p2', 'p4'].forEach((ph) => has(out, 'plan-derived-' + ph + '-7', ph + ' still has its derived lines'));
     lacks(out, 'plan-derived-p0-7', 'and Before Day 1 does not repeat the chips as lines');
     ["'firearms_in_place'", "'nfa_check'", "'docs_sequestered'", "'cash_logged'", "'coc_pickup_present'", "'shred_done'",

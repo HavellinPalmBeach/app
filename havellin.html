@@ -55,11 +55,19 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
    Without this, a phone renders the header/nav at viewport width against a wider
    scrolled page — the cut-off header with a blank gap beside it. */
 .grid2>*,.grid3>*,.grid4>*{min-width:0;}
-/* Job Plan checklist grid — fixed column count so every phase is consistent and a
-   lone item stays within its column instead of stretching across the page. */
-.chk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 18px;align-items:start;}
+/* Job Plan checklist grid — three columns on a desk, two on the iPad, one on a phone. A section
+   holding ONE box spans the row: a lone sentence in a third of the width wrapped to four lines beside
+   nothing (Anthony, 2026-09-20: "for this item, it should stretch all the way across"). */
+.chk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 18px;align-items:start;}
+.chk-grid > :only-child{grid-column:1 / -1;}
 @media (max-width:900px){.chk-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:600px){.chk-grid{grid-template-columns:1fr;}}
+/* A checklist box is a sentence, not a form label. The global `label` rule (10px, uppercase,
+   letter-spaced) reached every box and made each stage read as a wall of capitals — Anthony,
+   2026-09-20: "can we re-format this better?" Sentence case, 12.5px, and a ticked box greys out. */
+.plan-chk{display:flex;align-items:flex-start;gap:8px;margin:0;padding:3px 0;font-size:12.5px;line-height:1.45;font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray-dk);cursor:pointer;}
+.plan-chk input[type=checkbox]{margin:3px 0 0;width:14px;height:14px;flex-shrink:0;accent-color:var(--gray-dk);}
+.plan-chk-done{color:var(--gray);text-decoration:line-through;}
 /* Dense entry form — each field is its own auto-flowing cell so three columns stay
    balanced (no tall single-column stacks) and inputs are cell-width, not page-width.
    .fld-wide spans the full row for notes / section headers. Collapses gracefully. */
@@ -505,6 +513,29 @@ input:checked+.slider:before{transform:translateX(18px);}
 .gate-fixes{flex:1 1 100%;font-size:11px;color:var(--gray-dk);line-height:1.5;}
 .stage-meta{font-size:11px;font-weight:600;color:var(--cream);opacity:.85;white-space:nowrap;}
 .stage-warn{color:#f3c86b;font-weight:700;}
+/* The job body (2026-09-20): Before Day 1 → In the house → Midpoint & pickups → Move day → Close-out,
+   OPEN, in the order the job is done, on one thread with a node per stage — green behind you, bronze
+   where you are, grey ahead: the dashboard timeline's own vocabulary (.jt-row::before). Only the two
+   tools above it fold. Anthony: "the main body should just be the job you're working and everything
+   should flow logically through that." */
+.plan-flow{position:relative;padding-left:22px;}
+.stg{position:relative;border:1px solid var(--border);border-radius:5px;background:var(--white);margin-bottom:12px;}
+.stg::before{content:'';position:absolute;left:-22px;top:13px;width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:2px solid var(--border-md);background:var(--white);z-index:1;}
+.stg:not(:last-child)::after{content:'';position:absolute;left:-16px;top:27px;bottom:-27px;width:2px;background:var(--border-md);}
+.stg-done::before{border-color:var(--sage-dk);background:radial-gradient(circle,var(--white) 0 2.5px,var(--sage-dk) 2.5px);}
+.stg-done:not(:last-child)::after{background:var(--sage-dk);}
+.stg-cur::before{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 3px,var(--white) 3px);}
+.stg-cur{border-color:var(--bronze);box-shadow:inset 3px 0 0 var(--bronze);}
+.stg-hd{display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;padding:10px 14px 8px;border-bottom:1px solid var(--border);}
+.stg-title{font-size:13px;font-weight:700;color:var(--gray-dk);}
+.stg-now{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);border:1px solid var(--bronze);border-radius:10px;padding:2px 7px;margin-left:8px;vertical-align:middle;}
+.stg-count{font-size:11px;font-weight:600;color:var(--gray);white-space:nowrap;margin-left:auto;}
+.stg-sub{flex-basis:100%;font-size:11px;color:var(--gray);}
+.stg-body{padding:6px 14px 14px;}
+@media (max-width:600px){.plan-flow{padding-left:18px;}.stg::before{left:-18px;width:12px;height:12px;top:14px;}.stg:not(:last-child)::after{left:-13px;}}
+/* The schedule strip on the plan header — the dashboard's own (.jt-sched), sitting under the client
+   line inside the header card rather than above a timeline. */
+.plan-sched .jt-sched{margin:8px 0 0;padding:8px 0 0;border-bottom:none;border-top:1px solid var(--border);}
 .rl-fail{color:#c0392b;font-weight:700;}
 .rl-pill{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:12px;padding:3px 9px;white-space:nowrap;}
 .rl-excl{margin-top:8px;font-size:11px;color:#A32D2D;background:#fbeded;border:1px solid #E3B7B7;border-radius:4px;padding:6px 10px;line-height:1.5;}
@@ -1141,7 +1172,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 9:06pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 5:19am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12153,8 +12184,16 @@ function jtScheduleHtml(sched) {
   }
 
   if (sched.state === 'running') {
+    // A start that slipped names the target beside it — "Started Sep 22 — target was Sep 21" —
+    // and only a RECORDED start may say so (a deposit date is a proxy, never a slip claim).
+    var slipped = sched.actualStartKind === 'activated' && !!sched.start && !!sched.actualStart && sched.actualStart !== sched.start;
     h += I('Started ' + esc(fmtDate2(sched.actualStart))
-         + (sched.actualStartKind === 'deposit' ? ' (from the deposit)' : ''));
+         + (sched.actualStartKind === 'deposit' ? ' (from the deposit)' : '')
+         + (slipped ? ' \u2014 target was ' + esc(fmtDate2(sched.start)) : ''));
+    // Today, in words, so "Working day 3 of 6" is anchored on the calendar it was measured against.
+    // Anthony, 2026-09-20: *"target start date was September 21st, actual start date September
+    // 22nd, projected six days, today is the 24th, three more days … lets you know where you stand."*
+    if (sched.today) h += I('Today ' + V(fmtDate2(sched.today)));
     // ⚠ NEVER "Working day 0 of 6". `elapsed` is 0 whenever today is before the recorded start
     // — an activation stamped ahead of the calendar, or a clock-skewed device — and a job
     // cannot be on day zero of itself. Measured in a browser, not reasoned about: a job
@@ -12163,6 +12202,14 @@ function jtScheduleHtml(sched) {
     h += (sched.elapsed >= 1)
       ? '<span class="jt-sched-i jt-sched-lead">' + V('Working day ' + sched.elapsed + ' of ' + sched.days) + '</span>'
       : I(V(dayTxt));
+    // "N to go" counts the working days AFTER today (jobSchedule's `remaining`), and is withheld
+    // once the job is over its length — the pace line below says that in red, and "0 to go" beside
+    // "2 days past" would be two readings of one fact.
+    if (sched.elapsed >= 1 && !sched.overBy && typeof sched.remaining === 'number') {
+      h += I(sched.remaining > 0
+        ? V(sched.remaining + ' working day' + (sched.remaining === 1 ? '' : 's') + ' to go')
+        : V('last planned day'));
+    }
     // ⚠⚠ TWO FIGURES, NEVER ONE. Work DONE and hours BURNED answer different questions and
     // a single percentage cannot tell "70% spent, 70% done" from "70% spent, 30% done" — the
     // second being the job in trouble. The gap between them is the reading.
@@ -12523,7 +12570,7 @@ function jobSchedule(job, est, todayStr, prog) {
   var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false,
             start:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
             actualStart:'', actualStartKind:'', projectedEnd:'', startSlip:0,
-            elapsed:0, overBy:0, endVariance:0,
+            elapsed:0, overBy:0, endVariance:0, remaining:0,
             progress:false, workPct:0, hoursPct:0, actHrs:0, estHrs:0,
             paceEnd:'', paceBy:0,
             fit:'', fitTxt:'', pace:'', paceTxt:'', paceFix:'' };
@@ -12577,6 +12624,9 @@ function jobSchedule(job, est, todayStr, prog) {
       if (S.actualStart !== S.start) S.projectedEnd = addWorkingDays(S.actualStart, S.days);
     }
     S.overBy = Math.max(0, S.elapsed - S.days);
+    // The working days AFTER today: on day 3 of 6 there are three more. Clock-free like the rest —
+    // it is arithmetic on `elapsed`, which the caller's `todayStr` already fixed.
+    S.remaining = Math.max(0, S.days - S.elapsed);
   } else {
     S.state = 'planned';
   }
@@ -24975,17 +25025,17 @@ function _planTaskDone(jobId, key) {
   var plan = jobPlanStore[jobId];
   return !!(plan && plan.tasks && plan.tasks[key]);
 }
+// A box is a sentence in `.plan-chk` (sentence case, 12.5px — the stylesheet says why), and a
+// ticked one carries `.plan-chk-done`; togglePlanTask flips the class rather than repainting styles.
 function planChk(jobId, key, label) {
   var done = _planTaskDone(jobId, key);
-  return '<label style="display:flex;align-items:flex-start;gap:8px;margin:0;padding:3px 0;font-size:12px;cursor:pointer;' +
-    'color:' + (done ? 'var(--gray)' : 'var(--gray-dk)') + ';text-decoration:' + (done ? 'line-through' : 'none') + ';">' +
+  return '<label class="plan-chk' + (done ? ' plan-chk-done' : '') + '">' +
     '<input type="checkbox"' + (done ? ' checked' : '') +
-    ' style="margin-top:2px;width:13px;height:13px;flex-shrink:0;accent-color:var(--gray-dk);"' +
     ' onchange="togglePlanTask(' + jobId + ',\'' + key + '\',this.checked,this)"> ' + label + '</label>';
 }
 
-// Wrap checklist items in a responsive 2-column grid (collapses to 1 column when
-// the panel is narrow, e.g. iPad portrait) to save vertical space.
+// Wrap checklist items in the `.chk-grid` (three columns on a desk, two on the iPad, one on a
+// phone; a section with ONE box spans the row — the stylesheet carries the rule).
 function chkGrid(inner) {
   return '<div class="chk-grid">' + inner + '</div>';
 }
@@ -24995,6 +25045,8 @@ function planSubsec(title) {
     'color:var(--gray);margin:12px 0 4px;">' + title + '</div>';
 }
 
+// The fold — used by the two TOOLS at the top of the plan (Vendors & partners, Hours & daily close)
+// and by nothing in the job body, which is open (planStageCard). 2026-09-20.
 function planPhaseWrap(id, title, body, meta) {
   // Re-open whatever the crew had open before this redraw. See _planOpenPhases.
   var open = !!_planOpenPhases[id];
@@ -25014,6 +25066,29 @@ function planPhaseWrap(id, title, body, meta) {
     'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div><!--/stage-' + id + '-->';
 }
 
+// An OPEN stage of the job body: a card on the flow whose node says where the job is — `done`
+// (the job has moved past it), `cur` (you are here, with a NOW tag on the title), or '' (ahead).
+// Nothing here folds and nothing here is remembered; the count in the heading is the same text
+// the fold used to carry. The end marker matches planPhaseWrap's, so the order test reads the
+// folds and the cards alike. Anthony, 2026-09-20: *"not sure this needs to be condensed with
+// expanders … it's not that much info."*
+function planStageCard(id, title, body, meta, state, sub) {
+  return '<div class="stg' + (state ? ' stg-' + state : '') + '" id="stage-' + id + '">'
+    + '<div class="stg-hd"><span class="stg-title">' + title + (state === 'cur' ? '<span class="stg-now">Now</span>' : '') + '</span>'
+    + (meta ? '<span class="stg-count">' + meta + '</span>' : '')
+    + (sub ? '<span class="stg-sub">' + sub + '</span>' : '')
+    + '</div><div class="stg-body">' + body + '</div></div><!--/stage-' + id + '-->';
+}
+// The body's order, and the node each card gets from the stage the job is in (planCurrentStage).
+// Move day sits between Midpoint & pickups and Close-out on a Home Transition; on every other
+// service it is simply absent, so the thread runs Before Day 1 → In the house → Midpoint → Close-out.
+var PLAN_FLOW = ['p0', 'rooms', 'p2', 'p3', 'p4'];
+function planStageState(id, cur) {
+  var i = PLAN_FLOW.indexOf(id), c = PLAN_FLOW.indexOf(cur);
+  if (i < 0 || c < 0) return '';
+  return i < c ? 'done' : (i === c ? 'cur' : '');
+}
+
 // ═══════════ THE STAGES, IN THE ORDER A CONCIERGE RUNS A JOB (2026-09-19, evening) ═══════════
 // Anthony, reading the plan the field-capture build shipped: *"the rooms come before the phase
 // zero pre-job authority, so that seems out of order … vendor and partner sourcing should be at
@@ -25025,12 +25100,25 @@ function planPhaseWrap(id, title, body, meta) {
 // Phase 0, below the work they precede; and Phase 3 is Move Day, which only Home Transition has,
 // so every other job counted 0, 1, 2, 4.
 //
-// The order now: gates (a chip row, nothing to tick) → Vendors & partners (folded, open while
-// anything is unconfirmed) → Before Day 1 (the pre-job call and the access & crew boxes) →
-// Rooms (always open, the four in-house boxes under the grid) → Hours & daily close (folded,
-// today's hours on the fold) → Midpoint & pickups → Move day (Transition only) → Close-out.
-// Named stages; the phase NUMBERS are gone. The task keys (`p0`…`p4`) stay internal, because a
-// saved tick is keyed by them and this file records what renaming a key costs.
+// ═══════ AND THEN THE FOLDS CAME OFF THE JOB ITSELF (2026-09-20) ═══════
+// Anthony, the next morning, off a screenshot of Midpoint & pickups, Move day and Close-out each
+// behind a dark bar: *"not sure this needs to be condensed with expanders … it's not that much
+// info … let's rethink this all to make more sense to a human doing a job … Maybe the vendors and
+// partners and hours in daily close are at the top and both expandable. But everything else just
+// sort of runs in the order that it's done in a job. The only thing we would expand or contract
+// would be the vendors and partners as we're filling those out and then when you're logging your
+// hours you expand that … otherwise the main body should just be the job you're working and
+// everything should flow logically through that."*
+//
+// The order now: the header (with the schedule strip — planScheduleHtml) → gates (a chip row,
+// nothing to tick) → the two TOOLS, folded: Vendors & partners (opens by itself while the job is
+// not yet active and a line is unconfirmed) and Hours & daily close (today's hours on the fold,
+// opened by the person logging them) → then the JOB, open, on one thread: Before Day 1 → In the
+// house (the room cards, the in-house boxes under them) → Midpoint & pickups → Move day
+// (Transition only) → Close-out. Each card carries a node — green behind you, bronze NOW, grey
+// ahead — off planCurrentStage; nothing in the body folds. Named stages; the phase NUMBERS are
+// gone. The task keys (`p0`…`p4`) stay internal, because a saved tick is keyed by them and this
+// file records what renaming a key costs.
 
 // What "lined up" means, for the fold and for the gate chip: every service vendor on the estimate
 // at Confirmed, every collection partner assigned, every prep line Confirmed. The end-of-job
@@ -25094,28 +25182,51 @@ function planHoursMetaHtml(jobId, job, est) {
     + ' &middot; ' + _hrsTxt(m.logged) + ' of ' + _hrsTxt(m.est) + ' logged';
 }
 
-// Which stage the job is in, so it opens by itself on load. Before Day 1 opens Vendors while
-// anything is unconfirmed, then Before Day 1; once the job is active only Rooms is open (it is
-// never inside a fold); every room locked opens Midpoint & pickups; every room cleared with the
-// midpoint paid opens Close-out. Anything the crew opens or closes stays that way for the session.
+// Which stage of the job the crew is in — the bronze NOW node on the flow, and nothing more: no
+// card opens or closes on it (2026-09-20). Before the job is active it is Before Day 1 (the vendor
+// calls are part of those days); active is the house; every room locked is Midpoint & pickups;
+// every room cleared with the midpoint paid is Close-out. ⚠ The locked test is asked BEFORE the
+// active test on purpose — an active job with every room locked is at the midpoint, not in the
+// house. Move day is never "current" by rule: it reads done once Close-out is, and ahead until then.
 function planCurrentStage(jobId, job, est) {
   var rooms = _planRooms(jobId).rooms;
   var nL = rooms.filter(function(r) { return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var nC = rooms.filter(function(r) { return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   if (rooms.length && nC === rooms.length && stagePaidTotal(job, 'midpoint') > 0) return 'p4';
   if (rooms.length && nL === rooms.length) return 'p2';
-  if (job && job.status === 'active') return '';
-  var vp = vendorSourcingProgress(jobId, job, est);
-  if (vp.total && vp.done < vp.total) return 'vendors';
+  if (job && job.status === 'active') return 'rooms';
   return 'p0';
+}
+// The ONE fold that opens by itself: Vendors & partners, while the job is not yet active and a
+// line on the estimate is still unconfirmed — the calls are what the days before Day 1 are for,
+// and Anthony's own description of the tool: *"expand … the vendors and partners as we're filling
+// those out."* The hours fold never opens on its own; its meta says the state (and amber when a
+// working day has nothing logged), and the person logging the day opens it.
+function planVendorsOpenOnLoad(jobId, job, est) {
+  if (job && job.status === 'active') return false;
+  var vp = vendorSourcingProgress(jobId, job, est);
+  return !!(vp.total && vp.done < vp.total);
 }
 var _planLastJob = null;
 function _planOpenStageFor(jobId, job, est) {
   if (_planLastJob === jobId) return;          // a redraw keeps whatever the crew has open
   _planLastJob = jobId;
   _planOpenPhases = {};
-  var stage = planCurrentStage(jobId, job, est);
-  if (stage) _planOpenPhases[stage] = true;
+  if (planVendorsOpenOnLoad(jobId, job, est)) _planOpenPhases.vendors = true;
+}
+
+// Where you stand in the job, on the plan's own header: the SAME strip the Client Dashboard draws
+// (jtScheduleHtml over jobSchedule), never a second reading of the dates — the header used to
+// hand-compute a Target Start and a Projected end here, which is how it once printed a different
+// completion date from the client's own estimate. Anthony, 2026-09-20: *"shouldn't there be
+// something at the top that says like, target start date is this, actual start date is that,
+// today is … projected six days, today is the 24th, three more days … that lets you know where
+// you stand in the job."* ⚠ `jobPlanStore[jobId]` directly, never getJobPlan, which MINTS a plan.
+function planScheduleHtml(jobId, job, est) {
+  var sEst = approvedEstimateFor(jobId) || est;
+  var prog = jobProgress(sEst, jobPlanStore[jobId], jobLogEntries(jobId));
+  var strip = jtScheduleHtml(jobSchedule(job, sEst, _todayStr(), prog));
+  return strip ? '<div class="plan-sched">' + strip + '</div>' : '';
 }
 
 // ⚠ THE HOURS LOG IS STATIC MARKUP (#plan-log-section — the entry form, the summary, the
@@ -25172,13 +25283,13 @@ var PLAN_TASKS = [
   { key:'nh_hoa_rules',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'HOA / building move-out rules confirmed at origin; move-in rules at destination' },
   // Phase 1 — in the house. Kept because each is a thing a person does with their hands,
   // and on a firearm the cost of not doing it is a felony rather than a missed tick.
-  { key:'firearms_in_place',  phase:'p1', sec:'In the house', when:function(c){ return c.firearms || c.isDocJob; },
+  { key:'firearms_in_place',  phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.firearms || c.isDocJob; },
     label:'Firearms photographed where they lie and left there — nothing moves without written authority' },
-  { key:'nfa_check',          phase:'p1', sec:'In the house', when:function(c){ return c.firearms || c.isDocJob; },
+  { key:'nfa_check',          phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.firearms || c.isDocJob; },
     label:'Each firearm checked for NFA items — a suppressor looks like a plain metal tube, a short-barrelled rifle or shotgun looks ordinary — see the protocol' },
-  { key:'docs_sequestered',   phase:'p1', sec:'In the house', when:function(c){ return c.isDocJob; },
+  { key:'docs_sequestered',   phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
     label:'Wills, trusts, deeds, titles, financial and military records sequestered and handed to the PR or attorney against a signed receipt' },
-  { key:'cash_logged',        phase:'p1', sec:'In the house', when:function(c){ return c.isDocJob; },
+  { key:'cash_logged',        phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
     label:'Cash, jewelry and documents found are logged and set aside — never removed without PR sign-off' },
   // Phase 2 — pickups and disposal
   { key:'coc_pickup_present', phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.isDisposal || c.hasCOC; },
@@ -28382,15 +28493,12 @@ function renderJobPlan(jobId, job, est) {
   // ── Header ──────────────────────────────────────────────────────────────────
   // Compact, single-line-wrapping header. Crew (TC/PS) intentionally omitted — it's
   // assigned/locked in the Log Hours rows below, not pinned here.
+  // The dates are not bits any more: the schedule strip under this line carries the target start,
+  // the actual start, today, the working day and the days to go, off jobSchedule (2026-09-20).
   var _hdrBits = [
     ['Client', esc(job.name||'—')],
     ['Service', esc(SVC_LABELS[job.svc] || job.svcLabel || est.svc || '—')],
-    ['Property', esc([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—')],
-    ['Target Start', fmtDate2(job.start)],
-    // ⚠ `estWorkingDays`, the shared definition — this row used to take the TC leg ALONE
-    // while the client's own estimate took max(TC, PS), so a legacy estimate with no `days`
-    // and a larger specialist leg printed two different completion dates for one job.
-    ['Projected', (function(){ var _d = estWorkingDays(est); return (job.start && _d > 0) ? fmtDate2(addWorkingDays(job.start, _d)) : '—'; })()]
+    ['Property', esc([job.addr, job.city ? job.city+', FL' : ''].filter(Boolean).join(', ')||'—')]
   ];
   if (isMM && job.destAddr) {
     _hdrBits.push(['New Home', esc([job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') + (job.destSqft ? ' · '+job.destSqft+' sqft':''))]);
@@ -28407,6 +28515,7 @@ function renderJobPlan(jobId, job, est) {
     _hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
     (job.driveFolder ? '<span><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Photos in Drive</a></span>' : '') +
     '</div>' +
+    planScheduleHtml(jobId, job, est) +
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
     (custodyMandatory ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job — every item shot in place before it moves, written authority before it leaves.</div>' : '') +
@@ -28458,17 +28567,14 @@ function renderJobPlan(jobId, job, est) {
     '</div>' +
     planTasksHtml(jobId, 'p0', ctx, null, ['Pre-job call']);
 
-  // ── Rooms: the work. Never inside a fold. The four in-house boxes sit under the grid ──
+  // ── In the house: the room cards, the four in-house boxes under the grid ────────────
   var nLocked = rooms.filter(function(r){ return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var nCleared = rooms.filter(function(r){ return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var inHouse = planTasksHtml(jobId, 'p1', ctx);
-  var roomsBlock = '<div id="plan-rooms-block-' + jobId + '" style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
-    + '<div class="sec" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">'
-    + '<span>Rooms &mdash; tap a room to shoot it and lock it</span>'
-    + '<span class="rl-meta">' + nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared</span></div>'
-    + roomsCard
-    + (inHouse ? planSubsec('While you are in the house') + inHouse : '')
-    + '</div>';
+  // The in-house boxes carry their own section heading (the catalogue's `sec`), so nothing is added here —
+  // a second heading over the first read as two headings stacked on the card (seen in the browser, 2026-09-20).
+  var roomsBody = roomsCard + inHouse;
+  var roomsMeta = nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared';
 
   // ── Hours & daily close: the loader moves #plan-log-section into this slot ──────────
   var hoursBody = '<div id="plan-hours-slot"></div>'
@@ -28478,7 +28584,7 @@ function renderJobPlan(jobId, job, est) {
   var p2 = planDerivedHtml(jobId, job, est, 'p2') + planTasksHtml(jobId, 'p2', ctx);
 
   // ── Move day (Home Transition only) ─────────────────────────────────────────────────
-  var p3 = isMM ? planPhaseWrap('p3', 'Move day', planTasksHtml(jobId, 'p3', ctx), planStageMeta(jobId, job, est, 'p3', ctx)) : '';
+  var p3 = isMM ? planTasksHtml(jobId, 'p3', ctx) : '';
 
   // ── Close-out ────────────────────────────────────────────────────────────────────────
   var p4 = planDerivedHtml(jobId, job, est, 'p4') +
@@ -28505,14 +28611,21 @@ function renderJobPlan(jobId, job, est) {
       + '. They are added deliberately rather than automatically, because the job decides the disposition, not the estimate. '
       + 'Bring them in from <strong>Inventory &rarr; From the Estimate Walkthrough</strong>.</div>' : '';
 
+  // ── The job, top to bottom, OPEN (2026-09-20). The two tools fold above it; nothing below
+  // does. `cur` is the stage the job is in and each card's node reads done / NOW / ahead off it.
+  var cur = planCurrentStage(jobId, job, est);
+  var flow = '<div class="plan-flow" id="plan-flow-' + jobId + '">'
+    + planStageCard('p0', 'Before Day 1', p0, planStageMeta(jobId, job, est, 'p0', ctx), planStageState('p0', cur))
+    + planStageCard('rooms', 'In the house', roomsBody, roomsMeta, planStageState('rooms', cur), 'Tap a room to shoot it and lock it.')
+    + planStageCard('p2', 'Midpoint &amp; pickups', p2, planStageMeta(jobId, job, est, 'p2', ctx), planStageState('p2', cur))
+    + (isMM ? planStageCard('p3', 'Move day', p3, planStageMeta(jobId, job, est, 'p3', ctx), planStageState('p3', cur)) : '')
+    + planStageCard('p4', 'Close-out', p4, planStageMeta(jobId, job, est, 'p4', ctx), planStageState('p4', cur))
+    + '</div>';
+
   return _midBanner + _pendBanner + gates +
     planPhaseWrap('vendors', 'Vendors &amp; partners', vendorsBody, vendorsMeta) +
-    planPhaseWrap('p0', 'Before Day 1', p0, planStageMeta(jobId, job, est, 'p0', ctx)) +
-    roomsBlock +
     planPhaseWrap('hours', 'Hours &amp; daily close', hoursBody, planHoursMetaHtml(jobId, job, est)) +
-    planPhaseWrap('p2', 'Midpoint &amp; pickups', p2, planStageMeta(jobId, job, est, 'p2', ctx)) +
-    p3 +
-    planPhaseWrap('p4', 'Close-out', p4, planStageMeta(jobId, job, est, 'p4', ctx));
+    flow;
 }
 
 // ⚠⚠ WHICH PHASES ARE OPEN IS THE CREW'S STATE, NOT THE RENDERER'S. The accordion lived
@@ -28543,7 +28656,7 @@ function togglePlanTask(jobId, key, checked, el) {
   saveJobPlan(jobId);
   var label = el ? el.parentElement : null;
   while (label && label.tagName !== 'LABEL') label = label.parentElement;
-  if (label) { label.style.color = checked ? 'var(--gray)' : 'var(--gray-dk)'; label.style.textDecoration = checked ? 'line-through' : 'none'; }
+  if (label && label.classList) label.classList.toggle('plan-chk-done', !!checked);
 }
 
 // ⚠⚠ PRINT JOB PLAN IS RETIRED (2026-09-11). `printJobPlan` and `_jpExpandForPrint` are

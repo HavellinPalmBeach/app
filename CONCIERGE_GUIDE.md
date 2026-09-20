@@ -441,20 +441,21 @@ Two things worth knowing when you ask for one:
 
 The job is now **Active**. Three things run in parallel.
 
-### The plan, top to bottom (rebuilt 2026-09-19, evening)
+### The plan, top to bottom (rebuilt 2026-09-19, opened up 2026-09-20)
 
-The Job Plan runs in the order you work a job, and the stages are named, not numbered:
+The Job Plan runs in the order you work a job, and the stages are named, not numbered. Two tools fold at the top; everything under them is the job itself, open, on one thread with a node per stage — green behind you, a bronze **NOW** where you are, grey ahead:
 
-1. **Gates** — one row of chips: agreement signed, deposit received, on probate the Letters and the §733.604 deadline, the attorney, vendors lined up. Green or red, read off the record, nothing to tick. A red one says underneath what clears it.
-2. **Vendors & partners** — the estimate's vendors, the collection partners, the end-of-job logistics slots. Folded, with *2 of 4 confirmed* on the fold. Step 10c.
-3. **Before Day 1** — the pre-job call and its notes, materials on site, keys tested, crew briefed, NDA, COI. Folded, ticks counted on the fold.
-4. **Rooms** — the cards, always open. Step 10a. The four in-house boxes sit under the grid on an estate job.
-5. **Hours & daily close** — the hours form, the summary and the projection, folded, with today's hours on the fold. Step 10b.
-6. **Midpoint & pickups** — the midpoint invoice lines, release authority, receipts, pickups, shredding. Folded.
-7. **Move day** — Home Transition only.
-8. **Close-out** — the final walk, the empty-house check, the handoff, the satisfaction call, the review and referral asks, the vendor scorecard. Folded.
+1. **Where you stand** — the schedule strip under the client line: target start, the day you actually started, today, *Working day 3 of 6*, how many working days are left, halfway, the target end. The same line the Client Dashboard shows (see *Where you are against the schedule*, below).
+2. **Gates** — one row of chips: agreement signed, deposit received, on probate the Letters and the §733.604 deadline, the attorney, vendors lined up. Green or red, read off the record, nothing to tick. A red one says underneath what clears it.
+3. **Vendors & partners** — a tool, folded, with *2 of 4 confirmed* on the bar. It opens by itself while the job is not yet active and anything on it is unconfirmed. Step 10c.
+4. **Hours & daily close** — a tool, folded, with today's hours on the bar; you open it to log the day. Step 10b.
+5. **Before Day 1** — the pre-job call and its notes, materials on site, keys tested, crew briefed, NDA, COI. Open, ticks counted in the heading.
+6. **In the house** — the room cards, and on an estate job the four in-house boxes under them. Step 10a.
+7. **Midpoint & pickups** — the midpoint invoice lines, release authority, receipts, pickups, shredding. Open.
+8. **Move day** — Home Transition only.
+9. **Close-out** — the final walk, the empty-house check, the handoff, the satisfaction call, the review and referral asks, the vendor scorecard. Open.
 
-> **The stage you are in opens by itself when the job loads.** Before Day 1: *Vendors & partners* while anything is unconfirmed, then *Before Day 1*. Once the job is active, only the rooms. Once every room is locked, *Midpoint & pickups*. Once the midpoint is paid and the rooms are cleared, *Close-out*. Tap any bar to open or close it; it stays that way until you reload. The phase numbers are gone — Phase 3 was Move day, which most jobs never have, so the old plan counted 0, 1, 2, 4.
+> **Nothing in the job folds, and the stage you are in says NOW.** Before Day 1 until the job is active; In the house while it is; Midpoint & pickups once every room is locked; Close-out once the midpoint is paid and the rooms are cleared. Move day is never marked NOW — it reads done once Close-out does. The only bar that opens by itself is *Vendors & partners*, while you are still lining them up; tap either bar to open or close it and it stays that way until you reload. The phase numbers are gone — Phase 3 was Move day, which most jobs never have, so the old plan counted 0, 1, 2, 4.
 
 ### Before Day 1 — read the walkthrough back
 
@@ -464,9 +465,9 @@ Open the client and press **🔍 Walkthrough**, on the same line as *Edit Client
 
 > **If the estimate was approved you are reading the frozen copy**, and the page says *Locked &lt;date&gt; by &lt;name&gt;* at the top. If it was not, it says so in amber — those scores can still move. A room reading *Out of scope* is one the client is handling; that is an answer you recorded, not a room you missed.
 
-### Where you are against the schedule — read it on the Client Dashboard
+### Where you are against the schedule — on the Job Plan header and the Client Dashboard
 
-Open the client and the line above the timeline reads the whole schedule at once: *Started Sep 21 · **Working day 4 of 6** · 52% of the work done · 57% of the estimated hours logged · Halfway Sep 23 · Target end Sep 28*, with the hard target or the court deadline beside it.
+The line under the client card on the Job Plan (new 2026-09-20) and the line above the timeline on the Client Dashboard are the same line: *Started Sep 22, 2026 — target was Sep 21, 2026 · Today Sep 24, 2026 · **Working day 3 of 6** · 3 working days to go · 36% of the work done · 50% of the estimated hours logged · Halfway Sep 23 · Target end Sep 28 · now ending Sep 29*, with the hard target or the court deadline beside it. Anthony asked for exactly this on the plan: *"target start date was September 21st, actual start date September 22nd, projected six days, today is the 24th, three more days … that lets you know where you stand in the job."*
 
 > **⚠** **⚠ THOSE TWO PERCENTAGES ARE DIFFERENT QUESTIONS AND THE GAP BETWEEN THEM IS THE POINT (new 2026-09-13).** **Work done** comes from the room statuses you set on the Job Plan, weighted by the hours the estimate priced each room at. **Hours logged** comes from your timesheet. *70% spent against 70% done* is a job going fine. *70% spent against 30% done* is a job in trouble — and one number could never have told you which you were looking at. **Look at the pair, not at either one.**
 
@@ -493,7 +494,7 @@ Open the client and the line above the timeline reads the whole schedule at once
 
 ### a. Shoot the rooms — Job Plan tab
 
-The rooms are a block of **cards, three across on a desk** (two on the iPad, one on a phone), under *Before Day 1* on the Job Plan once the job is **Won** — one card per room you priced, in walkthrough order, with the status pill beside the name, the shot counts (*2 found · 5 items · 1 after*) under it and the walkthrough note on one line. The rooms the client is keeping are named in one line underneath rather than listed. **Tap a room** and it opens as a **pop-up over the plan** (the whole screen on a phone) — you never leave the Job Plan; *← Rooms*, a tap outside it or Esc closes it. Inside: three camera buttons, the two status taps, and a strip of everything shot in it so far. Above the cameras is the intake brief — every must-find with a **Found it** tick, the safety answer, the cash and the safes — so you read it in the room, not from memory. Rebuilt 2026-09-19 — the old room cards, with a typed name, a category and seven chips before every shot, are gone.
+The rooms are a block of **cards, three across on a desk** (two on the iPad, one on a phone), the *In the house* card on the Job Plan, right under *Before Day 1*, once the job is **Won** — one card per room you priced, in walkthrough order, with the status pill beside the name, the shot counts (*2 found · 5 items · 1 after*) under it and the walkthrough note on one line. The rooms the client is keeping are named in one line underneath rather than listed. **Tap a room** and it opens as a **pop-up over the plan** (the whole screen on a phone) — you never leave the Job Plan; *← Rooms*, a tap outside it or Esc closes it. Inside: three camera buttons, the two status taps, and a strip of everything shot in it so far. Above the cameras is the intake brief — every must-find with a **Found it** tick, the safety answer, the cash and the safes — so you read it in the room, not from memory. Rebuilt 2026-09-19 — the old room cards, with a typed name, a category and seven chips before every shot, are gone.
 
 > **⚠** **Two passes through every room, in this order, and you type nothing in either.**
 >
@@ -530,7 +531,7 @@ The rooms are a block of **cards, three across on a desk** (two on the iPad, one
 
 ### b. Log hours — Job Plan tab, every single day
 
-The log is the **Hours & daily close** stage, folded under the rooms (it used to sit at the top of the tab). The fold reads *today 3 hrs · 36 of 63 logged*; on an active job with nothing logged for today it reads **no hours logged today** in amber. Tap the bar and the same form, summary, projection and history open under it.
+The log is the **Hours & daily close** bar at the top of the plan, under *Vendors & partners* and above the job (moved there 2026-09-20 — it spent one evening folded under the rooms). The bar reads *today 3 hrs · 36 of 63 logged*; on an active job with nothing logged for today it reads **no hours logged today** in amber. Tap the bar and the same form, summary, projection and history open under it.
 
 One entry per working day: the **date**, an **activity summary**, and **hours against each named crew member**. The roles come from the roster you confirmed — concierge rows log as TC, specialist rows as PS.
 
@@ -542,7 +543,7 @@ Log *your own* hours as well as the crew's. You are on site for every crew hour;
 
 ### c. Source the vendors — Job Plan tab
 
-It is the **first stage on the plan** — *Vendors & partners*, above *Before Day 1* and the rooms — because these calls are made before the job starts. It opens by itself while anything on it is unconfirmed, and its fold counts the lines (*2 of 4 confirmed*); the *Vendors lined up* gate chip at the top of the plan goes green when they all are.
+It is the **first bar on the plan** — *Vendors & partners*, a tool folded above the job — because these calls are made before the job starts. It opens by itself while the job is not yet active and anything on it is unconfirmed, and its fold counts the lines (*2 of 4 confirmed*); the *Vendors lined up* gate chip at the top of the plan goes green when they all are.
 
 Assign a directory vendor to each estimate line, set its status, and **record the actual quote**. Actual quotes on **Home Prep** lines are what the 30% fee is charged on at the midpoint and final — on a standalone prep job and, since 2026-09-10, on prep bundled into any other job too. Every other vendor line carries nothing for Havellin; those are recorded so the client's costs and the job's real margin are known. You will notice prep lines have **no *Coord hrs* box** — prep books no *coordination* hours, so there is nothing to compare against. (Declutter hours are a different thing and are logged in the hours log, not here.) A line with no logged quote falls back to the estimate and gets tagged "est." on the client's invoice.
 
@@ -950,8 +951,12 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | You pressed *Found it* on the iPad and the laptop still shows the line as missing | Reload the laptop. The tick saves to the job and syncs, but nothing polls the client record mid-job; only the device that pressed it repaints at once. Still missing after a reload? The Apps Script is older than `2026-09-19a` and let the laptop's stale copy win (manual §11): redeploy, then press it once more. |
 | The brief in the room is long and the cameras are below it | Scroll. It is the intake answers, and the point is that you read them in the room. Firearms stays pinned above the scroll. |
 | The brief says *Must find* three times | One line per item on the intake answer, so each line is its own row with its own *Found it*. That is what lets one be ticked without the others. |
-| The plan opened with only one stage open, or with everything shut | The stage the job is in opens by itself when the job loads: *Vendors & partners* while anything is unconfirmed, then *Before Day 1*, then nothing but the rooms once the job is active, *Midpoint & pickups* once every room is locked, *Close-out* once the midpoint is paid and the rooms are cleared. Tap any bar to open it; it stays open until you reload. |
-| Where did the hours log go? | Under **Hours & daily close**, folded, after the rooms. The fold reads today's hours and the running total; tap it and the entry form, the summary and the projection open under it. Nothing about logging changed. |
+| The plan opened with the job showing and both bars at the top shut | That is the layout since 2026-09-20: the job itself never folds; only the two tools at the top do. *Vendors & partners* opens by itself while you are still lining them up on a job not yet active; *Hours & daily close* opens when you tap it. The stage you are in carries a bronze **NOW**. |
+| Where did the hours log go? | Under **Hours & daily close**, the second bar at the top of the plan, folded. The bar reads today's hours and the running total; tap it and the entry form, the summary and the projection open under it. Nothing about logging changed. |
+| Every stage of the job is open and the tab looks long | By design, since 2026-09-20 — Anthony: *"the main body should just be the job you're working."* Read down the thread: green nodes are behind you, the bronze **NOW** is where you are, grey is ahead. The two things you do not need all day, the vendors and the hours log, are the bars at the top. |
+| You want to know where the job stands against the schedule | The strip under the client card on the Job Plan: target start, the day you started, today, *Working day N of M*, days to go, the target end. Same line as the Client Dashboard. |
+| The checkbox labels are lower case now, and one box runs the whole width | By design (2026-09-20). A box is a sentence, not a form label. A section with one box spans the row instead of wrapping to four lines in a third of the width. |
+| The Move day card has no NOW even though you are moving today | Move day is never marked NOW — the marker follows the rooms and the money. It reads done once Close-out does. Tick its boxes as you go; the count is in its heading. |
 | The Hours fold reads *no hours logged today* in amber | The job is active and nothing is logged for today. Open it and log the day before you leave the house — the timesheet is the invoice. |
 | There is no Phase 3, or no phase numbers at all | The numbers went on 2026-09-19. Phase 3 was Move day, which only Home Transition has, so every other job counted 0, 1, 2, 4. The stages are named now, in the order you work them. |
 | The room cards are three across and you want the old full-width rows | By design: three on a desk, two on the iPad, one on a phone, so a twelve-room house is four rows rather than twelve. Everything the row carried is on the card — name, status, the three counts, the note. |

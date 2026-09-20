@@ -1,5 +1,90 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE FOLDS CAME OFF THE JOB ITSELF — TWO TOOLS AT THE TOP, THE JOB OPEN ON A THREAD, THE SCHEDULE ON THE HEADER (REBUILT 2026-09-20)
+Anthony, the morning after the stage rebuild, in four messages inside an hour. Off the Before Day 1 fold: *"I know we have the rest
+of this in three columns … but this it seems like a waste of space. Maybe for this item, it should stretch all the way across."*
+Off a screenshot of Midpoint & pickups, Move day and Close-out each behind a dark bar: *"not sure this needs to be condensed with
+expanders … it's not that much info. can we re-format this better?"* Then: *"let's rethink this all to make more sense to a human
+doing a job."* Then the design, in his words: *"Maybe the vendors and partners and hours in daily close are at the top and both
+expandable. But everything else just sort of runs in the order that it's done in a job. The only thing we would expand or contract
+would be the vendors and partners as we're filling those out and then when you're logging your hours you expand that … otherwise
+the main body should just be the job you're working and everything should flow logically through that."* And, minutes later:
+*"shouldn't there be something at the top that says like, target start date is this, actual start date is that, today is … projected
+six days, today is the 24th, three more days … that lets you know where you stand in the job."* All four built. App-only, no redeploy.
+
+- **⚠⚠ THE TOOLS FOLD; THE JOB DOES NOT.** `planPhaseWrap` now wraps exactly two things — **Vendors & partners** and **Hours &
+  daily close** — at the top of the plan under the gate chips. Everything under them is `planStageCard` inside `.plan-flow`: Before
+  Day 1 → **In the house** (the room cards, the in-house boxes under them) → Midpoint & pickups → Move day (Transition) → Close-out,
+  open, each carrying the same `<!--/stage-ID-->` end marker the fold emits so the order test reads both alike. The test counts
+  `phase-body-` at **exactly two** and asserts nothing after `class="plan-flow"` starts closed. Putting Midpoint back in a fold fails 2
+  and throws 1; moving the hours fold back under the rooms fails 6.
+- **⚠⚠ THE STAGE THE JOB IS IN IS MARKED, NOT OPENED.** `planCurrentStage` returns `p0` / `rooms` / `p2` / `p4` — the same four
+  rules as yesterday (locked asked before active, on purpose) with `rooms` where it used to answer `''` and `p0` where it used to
+  answer `vendors` — and `planStageState(id, cur)` turns it into a node per card: **green behind you, bronze NOW where you are, grey
+  ahead**, the dashboard timeline's own vocabulary (`.jt-row::before`), with the thread between cards green through the done ones.
+  Move day is never NOW by rule; it reads done once Close-out does. `_planOpenStageFor` no longer reads `planCurrentStage` at all
+  (a `lacks()` pins it) — **the ONE fold that opens by itself is Vendors, through `planVendorsOpenOnLoad`: not yet active AND a line
+  unconfirmed**, which is Anthony's *"as we're filling those out"* verbatim; an active job with a stray unconfirmed dumpster does not
+  get the tool thrown open over the work. The hours fold waits to be tapped. Every node grey fails 12; the card ignoring its state 10.
+- **⚠ THE HOURS LOG IS STILL STATIC MARKUP AND STILL MOVES.** `#plan-log-section` is parked and placed exactly as yesterday; only
+  the slot moved — into the fold at the top, above the job. Driven in the browser across 7 → 8 → 9 → 10 (prep) → 7, a redraw and a
+  reload: one node in the DOM at every step, in the slot on a labour job, parked and hidden on prep.
+- **⚠⚠ THE SCHEDULE STRIP IS ON THE PLAN HEADER AND IT IS THE DASHBOARD'S OWN.** `planScheduleHtml(jobId, job, est)` is
+  `jtScheduleHtml(jobSchedule(job, approvedEstimateFor(jobId) || est, _todayStr(), jobProgress(…)))` under the client line — and
+  the header's hand-typed **Target Start** and **Projected** bits are deleted, so the plan can no longer compute a length of its own
+  (the drift this file already records once: the header took the TC leg alone). `dashboard-schedule` restated its readers count from
+  4 to 3 and pins that `renderJobPlan` lacks `estWorkingDays(`. `jobPlanStore[jobId]` directly, never `getJobPlan`, which MINTS —
+  reverting that fails 1 and throws 1.
+  - **The strip learned three things, on both surfaces:** a recorded start that slipped names the target beside it (*Started Sep 22,
+    2026 — target was Sep 21, 2026*; a deposit-anchored start never claims a slip), **Today**, and **N working days to go** off a new
+    `jobSchedule` field `remaining = max(0, days − elapsed)` — the working days AFTER today, so day 3 of 6 has three more; *last
+    planned day* on the sixth; **withheld once the job is over its length**, where the red pace line already says so, and withheld
+    on a descriptor that carries no `remaining` rather than printing a wrong count. Driven: Anthony's own example renders
+    *Started Sep 22, 2026 — target was Sep 21, 2026 · Today Sep 24, 2026 · **Working day 3 of 6** · 3 working days to go · Halfway
+    Sep 23 · Target end Sep 28 · now ending Sep 29*.
+- **⚠ THE BOXES WERE SHOUTING BECAUSE OF THE FORM-LABEL RULE.** `planChk` rendered a `<label>` with inline styles and no
+  `text-transform`, so the global `label{font-size:10px;text-transform:uppercase;letter-spacing:.05em}` reached every checkbox and a
+  stage of thirteen boxes read as a wall of capitals — the thing under *"can we re-format this better?"*. `.plan-chk` (sentence
+  case, 12.5px, no inline style at all) and `.plan-chk-done`; `togglePlanTask` toggles the class instead of painting `style.color`.
+  **`.chk-grid > :only-child{grid-column:1 / -1}`** spans a section's lone box — the pre-job call was one sentence in a third of the
+  width wrapping to four lines beside nothing. Measured: the lone box is **1200px in a 1200px grid** at 1440 and 320 in 320 at 390,
+  while a five-box section still runs three across (two at 900). The old CSS comment said the exact opposite on purpose (*"a lone
+  item stays within its column instead of stretching across"*) — it is gone with the rule.
+- **⚠ FOUND IN THE BROWSER, NOT BY A TEST: TWO HEADINGS STACKED ON THE HOUSE CARD.** The renderer put `planSubsec('While you are
+  in the house')` over `planTasksHtml('p1')`, whose section heading is the catalogue's own `sec` — so the card read *WHILE YOU ARE
+  IN THE HOUSE / IN THE HOUSE*, and had since 2026-09-19. The four p1 tasks' `sec` is **Before anything leaves the house** and the
+  renderer adds nothing over it. Keys unchanged.
+- **7055 committed checks** (+120: `job-plan-stages` rewritten 89 → 135, fourteen more in `dashboard-schedule`, the `field-capture`
+  rooms pin restated — after the LAST fold's end marker, in its own card — and `.rl-meta` → `.stg-count`). **All 22 changes
+  revert-verified individually, ZERO green** — baseline 0 before and after, no unmatched needles; three reverts crashed a file as
+  well as failing it and are read as red on the fails they also report, per the standing rule.
+- **Verified end to end in headless Chromium on the real page, 76 checks, four seeded jobs**, with `_todayStr` pinned to Sep 24 for
+  the Transition so the strip could be read against Anthony's sentence:
+
+  | | |
+  |---|---|
+  | a won estate, one vendor unconfirmed | `gates > fold:vendors > fold:hours > flow[p0* > rooms > p2 > p4]` · two folds exactly · **Vendors open by itself, Hours shut** · NOW on Before Day 1, bronze node, grey ahead · *Target start Sep 21, 2026 · 3 working days · Halfway · Target end* under the client line · the lone box **1200 of 1200px**, Access & crew three across, `text-transform: none` at 12.5px · the log in the top fold, one in the DOM · a tap on the Study still opens the pop-up · a tick greys through the class with no inline style and survives a redraw and a reload |
+  | 900 · 390 | two room columns and two box columns at 900 · one at 390, the lone box **320 of 320**, the NOW tag and the node on screen · overflow **0** |
+  | a won downsizing, nothing on the estimate | **nothing opens by itself** · Before Day 1 NOW · no in-house heading · `#log-job` = 8 |
+  | an active Transition, every room locked, started Sep 22 against Sep 21 | `flow[p0✓ > rooms✓ > p2* > p3 > p4]` · nothing opens · house node **green**, midpoint **bronze**, Move day grey, the thread green behind and grey ahead · the Midpoint boxes on screen with no tap · amber *no hours logged today* · the strip reads Anthony's sentence, working day in bronze |
+  | 7 hrs logged, then cleared + midpoint paid | *today 7 hrs · 7 of 14 logged*, *50% of the estimated hours logged* · `flow[p0✓ > rooms✓ > p2✓ > p3✓ > p4*]` — **Move day reads done once Close-out is NOW** |
+  | a prep job · a reload | no slot, no folds, no flow, the log parked and hidden · nothing on disk names an open phase or a NOW; Vendors opens again from the rule · **0 page errors** |
+
+- **The stylesheet: 3 lines replaced, 34 added, 0 deleted, in 3 hunks** (1111 → 1142 lines, 605 → 628 rules) — the checklist grid
+  block, the `.plan-flow` / `.stg-*` / `.plan-sched` block after `.stage-warn`. Measured on the FIRST `<style>` block.
+- Manual **§9a-i** (three new rows — the slipped start, Today, the days to go — and a note that the same strip is on the plan
+  header), **§10** (the rooms are the *In the house* card, second on the thread; the never-in-a-fold note now says nothing on the
+  job is), **§11** (the intro; the stage table reordered with Hours under Vendors and every behaviour restated — *a tool, folded at
+  the top* / *open, first on the thread* / *open; marked NOW once…*; the hours note; the auto-open note replaced by *marked, not
+  opened* with Anthony's words; a new note on the boxes and the lone box; the firearms note's heading; the per-service table's
+  *Stages* column, now **Stages on the thread**, 7/8 → 4/5). Playbook: **The plan, top to bottom** rewritten around the two tools
+  and the thread, the schedule heading now *on the Job Plan header and the Client Dashboard* with the example sentence, Step 10a/b/c
+  sentences, two symptom rows rewritten and **four new** (the tab looks long, where the job stands, the lower-case boxes, no NOW on
+  Move day). Both `.md` copies hand-edited; **70 claims parity-checked, 0 mismatches**; a stale sweep for seventeen retired wordings
+  returns **0**; tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page
+  errors**; under `print` the tables are **byte-identical to HEAD** (16/16 and 17/40 as wide as their container, 0 taking the
+  phone rule).
+
 ## ⚠⚠ THE JOB PLAN RUNS IN THE ORDER A CONCIERGE RUNS A JOB, AND THE PHASE NUMBERS ARE GONE (REBUILT 2026-09-19, LATE EVENING)
 Anthony, reading the plan the field-capture build shipped that afternoon: *"the rooms come before the phase zero pre-job
 authority, so that seems out of order … vendor and partner sourcing should be at the top before we get to the rooms, because
@@ -8786,9 +8871,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-19 (thirtieth pass, late evening)** — both documents, against the Job Plan stage
-  rebuild: the order, the named stages, the gate chips, the hours fold, the auto-open rule and the three-across room cards; see the
-  entry at the top of this file.
+- Last reconciled against the app: **2026-09-20 (thirty-first pass)** — both documents, against the Job Plan rethink: the two
+  tools folded at the top, the job open on a thread with a NOW node, the schedule strip on the plan header, the sentence-case boxes
+  and the lone box that spans the row; see the entry at the top of this file.
+- Prior pass **2026-09-19 (thirtieth pass, late evening)** — both documents, against the Job Plan stage rebuild: the order, the
+  named stages, the gate chips, the hours fold, the auto-open rule and the three-across room cards.
 - Prior pass **2026-09-19 (twenty-ninth pass, evening)** — both documents, against the must-find Found ticks, the brief
   in the room and the desk block; see the entry at the top of this file. The **twenty-eighth pass (2026-09-19)** was the field-capture
   rebuild — manual §9a-i, §10 rewritten, §10a, §11; playbook Step 10a rewritten, ten symptom rows — also at the top of this file.

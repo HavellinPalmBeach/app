@@ -85,9 +85,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ prep is 0 through an EXPLICIT branch — that engagement runs on the vendors’ calendar');
     eq(e.estWorkingDays(null), 0, 'and no estimate is 0, not NaN');
 
-    eq((src.match(/estWorkingDays\(/g) || []).length, 4,
-       'one definition and three readers — the client estimate, the Job Plan header, the schedule');
+    // ⚠ RESTATED 2026-09-20. The Job Plan header no longer reads the length itself: it renders the
+    // dashboard's schedule strip (planScheduleHtml → jobSchedule), so the plan and the dashboard cannot
+    // state two lengths for one job. Two readers of the one definition, and the header reads the schedule.
+    eq((src.match(/estWorkingDays\(/g) || []).length, 3,
+       'one definition and two readers — the client estimate and the schedule; the Job Plan header reads the schedule');
     lacks(src, 'Math.ceil(est.totTC / 7)', 'the Job Plan header’s divergent copy is gone');
+    lacks(noComments(fn('renderJobPlan')), 'estWorkingDays(', 'and it computes no length of its own any more');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -263,6 +267,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const paced = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 9, actualStart: '2026-09-21',
       actualStartKind: 'activated', pace: 'overrun', paceTxt: 'Working day 9 of 6.', paceFix: 'Re-plan.' }));
     has(paced, 'jt-sched-note', 'a pace flag gets its own line rather than joining the clauses');
+
+    // ⚠ WHERE YOU STAND, IN WORDS (2026-09-20). Anthony, off the Job Plan: "target start date was
+    // September 21st, actual start date September 22nd, projected six days, today is the 24th, three
+    // more days … that lets you know where you stand in the job." The strip is the one renderer of
+    // that sentence, on the dashboard and on the plan header alike.
+    const slipped = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 3, remaining: 3, today: '2026-09-24',
+      actualStart: '2026-09-22', actualStartKind: 'activated', projectedEnd: '2026-09-29' }));
+    has(slipped, 'Started D:2026-09-22', 'the recorded start');
+    has(slipped, 'target was D:2026-09-21', '⚠ and the target it slipped from, beside it');
+    has(slipped, 'Today <span class="jt-sched-v">D:2026-09-24</span>', 'today, so the working day is anchored on a date');
+    has(slipped, 'Working day 3 of 6', 'where the job is');
+    has(slipped, '3 working days to go', 'and the working days after today');
+    has(slipped, 'now ending <span class="jt-sched-v">D:2026-09-29</span>', 'and the end the slip moved it to');
+    const onTime = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 6, remaining: 0, today: '2026-09-28',
+      actualStart: '2026-09-21', actualStartKind: 'activated' }));
+    lacks(onTime, 'target was', 'a start on the target date names no slip');
+    has(onTime, 'last planned day', 'day 6 of 6 is the last planned day, not "0 to go"');
+    const over = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 8, remaining: 0, overBy: 2, today: '2026-09-30',
+      actualStart: '2026-09-21', actualStartKind: 'activated', pace: 'overrun', paceTxt: 'Working day 8 of 6 — 2 past.', paceFix: 'Re-plan.' }));
+    lacks(over, 'to go', '⚠ over the length, "to go" is withheld — the red pace line says it once');
+    lacks(over, 'last planned day', 'and so is the last-day wording');
+    const dep = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 2, remaining: 4, today: '2026-09-23',
+      actualStart: '2026-09-22', actualStartKind: 'deposit' }));
+    has(dep, '(from the deposit)', 'a deposit-anchored start still says so');
+    lacks(dep, 'target was', '⚠ and never claims a slip — a deposit date is a proxy, not a recorded start');
+    lacks(V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 2, today: '2026-09-23',
+      actualStart: '2026-09-22', actualStartKind: 'activated' })), 'to go', 'a descriptor without `remaining` prints no count rather than a wrong one');
     has(paced, 'Re-plan.', 'and it carries the fix');
 
     // A one-day job: addWorkingDays(s,1) is s and ceil(1/2) is 1, so halfway and end are the start.
