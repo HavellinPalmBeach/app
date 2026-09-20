@@ -1,5 +1,89 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ ONE PHOTOGRAPH, MANY INVENTORY LINES (BUILT 2026-09-20)
+App-only, no redeploy — `derivedFrom` rides the existing per-item manifest merge. Anthony, off a photograph of a bar
+console: *"this same picture is going to serve as reference to multiple items — four bottles of booze, a Banksy, a
+hutch — so we really don't have to photograph each individual item unless let's say we know it's extremely valuable
+and we want to take a picture of the front and the back, or this Banksy if it was real we would zoom in on the
+signature of the artist, or if it's China we'd flip it over and get the maker's mark."*
+
+- **HE IS DESCRIBING HOW THE WORK IS ACTUALLY DONE AND THE MANIFEST COULD NOT EXPRESS IT.** One shot was one line, so
+  five objects in one frame meant either **five photographs of one shelf** or **four objects going unrecorded**.
+  `invSplitItem(jobId, stableId)` adds a line sharing the image; `_invDerivedRefs` / `_invPhotoSource` /
+  `_invPhotoSiblings` read the set.
+- **⚠⚠ A DERIVED ROW IS A FULL INVENTORY LINE AND IS NOT A PHOTOGRAPH, AND THAT SPLIT IS THE WHOLE DESIGN.** It gets its
+  own permanent item number, name, category, value, disposition, flags and custody log — different objects, and a
+  receipt cites each separately. What it does not get is a place in **`_slotRefs`**, which answers *how many shots are
+  in this slot* and drives the room card's counts, the as-found Lock gate and the **`seq` on the next shot**. Counting
+  it there would tell the crew they had shot the room more thoroughly than they had and skip a sequence number on a
+  file that exists. Reverting that one filter fails 3. Measured in the browser: **1 line → 4 lines, still 1 shot**, and
+  the room card still reads *1 found · 1 items · 0 after*.
+- **⚠⚠ IT IS NOT `groupId`, AND COLLAPSING THE TWO WOULD PUT A CLOSE-UP OF A SIGNATURE ON THE COURT SCHEDULE AS A
+  SEPARATE ASSET.** A **detail** shot is a second PHOTOGRAPH of ONE object (the maker's mark, the signature) and is
+  never a line; this is the converse — one photograph, several objects. Both exist and both are needed, which is
+  exactly what Anthony's sentence describes.
+- **⚠ THE SPLIT COPIES THE IMAGE AND NOTHING ELSE.** No name, no category, no disposition, no value, no flags: a
+  prefilled answer on a blank line is the silence-reads-as-Keep defect the Undecided default exists to stop, and a
+  bequest on the console says nothing about the bottle beside it. Inheriting them fails 4.
+- **⚠⚠ IT REFUSES ON A SHOT THAT HAS NOT REACHED DRIVE, and that refusal is why the status question never has to be
+  answered anywhere else.** A derived row carries the source's `driveFileId`; taken from a shot still uploading it
+  would carry nothing and **nothing would ever come back and fill it in** — the line would print on the attorney's
+  schedule with an empty photo box for the rest of the engagement. Retry the shot, then split it. Reverting fails 4.
+- **⚠ NO CHAINS.** Splitting a derived line rebases onto the photograph, so removing a middle line cannot orphan the
+  ones after it. Reverting fails 3.
+- **⚠⚠ DISCARDING THE PHOTOGRAPH TAKES ITS LINES, NAMES THEM, AND ASKS DRIVE ONCE.** They exist only because the image
+  does. The confirm **names** them — *"3 lines"* invites a yes, *#13 Banksy print · #14 B&O speaker* is the work you
+  are about to lose — and every one is tombstoned, so Restore brings the lot back. **`inDrive` deliberately excludes
+  them**: all three rows carry the same file id, and asking Drive three times would land two loud refusals on screen
+  over a delete that worked. Reverting the cascade fails 4, the naming 2, the one-ask 1.
+- **⚠ `derivedFrom` IS ON THE `savePhotoRefs` WHITELIST AND ON `INV_STICKY_FIELDS`** — losing it either way turns a line
+  back into a phantom photograph, inflating the room count and offering a Retry for bytes that do not exist. 1 each.
+- **⚠ DESK ONLY, DELIBERATELY.** Splitting is naming work — you have to know what the four bottles are — and the
+  2026-09-19 camera exists so the field types nothing. A test `lacks()` it in `_captureShot`, both camera renderers and
+  the room strip.
+- **⚠ THE ROW SAYS *1 of 4 in this photo*, AND IT IS NOT DECORATION.** Once one shot carries several lines, two rows
+  under identical thumbnails is the ordinary case — and read cold it looks exactly like a duplicated import, which
+  somebody would then "tidy up" by deleting one.
+- **⚠⚠ FOUND IN THE BROWSER AND BY NOTHING ELSE: `ts: Date.now()` SCATTERED ONE FRAME'S OBJECTS.** Everywhere else in
+  the manifest `ts` means **when the photograph was taken** — `_jobInvRefs` sorts on it, the Today view groups on it,
+  the As-Found Record orders on it. Stamped with the moment of the split, **three of the four objects rendered under
+  today and the console under the day it was shot**, a hundred rows apart on a real estate. Measured on the rendered
+  tab (3 of 4 cues, one group missing entirely), not reasoned about. It inherits the source's `ts` now; they tie, and
+  a **stable sort** breaks the tie on insertion order — source first, then each split in the order somebody made it.
+- **7642 committed checks** (`tests/photo-split.test.js`, 70 new). **All twelve changes revert-verified individually,
+  ZERO green**; baseline 0 before and after.
+  - **⚠ ONE CAME BACK GREEN AND THE TEST WAS THE PROBLEM — the fourteenth time this file records it.** The row cue was
+    asserted against the **source** of `_renderInvRow`, and wrapping the whole cue in `false ? … : ''` leaves the
+    string in the file while the rendered row no longer carries it. Both it and the panel control are **driven** now,
+    with the converse pinned (an unsplit photograph says nothing; a manual line is offered no split).
+  - **⚠ AND ONE NEEDLE MATCHED NOTHING** — backslash escaping in the sweep script against an `onclick` string. The
+    `NEEDLE x0` guard caught it; re-anchored, it fails 3.
+- **Verified end to end in headless Chromium on the real page**, driving the real tab, the real split, the real room
+  card, the real client document and the real discard:
+
+  | | |
+  |---|---|
+  | a bar console split three times | **1 line → 4 lines, still 1 shot** · the as-found shot untouched |
+  | item numbers | 1 · 2 · 3 · 4, all distinct, **all one Drive file** |
+  | the rows | the cue on **all four**, *1 of 4 in this photo*, both names present |
+  | the Job Plan room card | **1 found · 1 items · 0 after** |
+  | the Estate Inventory PDF | **4 rows**, the Banksy and the B&O speaker both on it |
+  | discarding the photograph | names the Banksy · *3 inventory lines* · offers Restore · **4 tombstoned** · Drive asked **once** |
+  | 1440 / 390px | overflow **0 / 0**, **0 page errors** |
+
+  The first `<style>` block is **byte-identical at 93,071 bytes / 635 rules**.
+- Manual **§10a** (three notes: the split with Anthony's words, line-not-photograph with the room-card consequence and
+  the detail-shot distinction, and the two refusals). Playbook **Step 10e** (one photo several items, when an object
+  earns a second photograph, and a `.stop` on binning the picture) and **three** symptom→cause rows — including the
+  one that will actually happen: *four rows share one photograph → do not delete the duplicates, they are four
+  different things in one picture*. Both `.md` copies hand-edited; **22 claims parity-checked, 0 mismatches**; tag
+  balance clean; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **17/40 and 16/16** as at HEAD.
+- **⚠ NOT BUILT, AND IT IS THE OBVIOUS NEXT WIN: a crop box from the identifying agent.** Four lines sharing one frame
+  all show the same thumbnail, so the desk tells them apart by name rather than by picture. If Agent One returns a
+  bounding box per object, each line could render its own crop of the shared photograph with no second upload. The
+  schema is ready for it — a `crop` on the derived row, read by `_invThumbHTML` and `_invPrintThumb` — and nothing
+  else has to move.
+
 ## ⚠⚠ THE AS-FOUND PASS REACHED NO DOCUMENT AT ALL, AND IT FILES IN ITS OWN FOLDER NOW (BUILT 2026-09-20)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` (`BACKEND_VERSION 2026-09-20b`) **and** `saveInventory.gs`,
 one project and one deployment. Anthony, thinking out loud about the hand-over: *"we are going to provide the inventory
