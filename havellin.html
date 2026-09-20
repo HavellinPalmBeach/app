@@ -1184,7 +1184,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 2:11pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 3:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -23657,6 +23657,57 @@ function addLogPSSlot() {
   buildLogTeamRows();
 }
 
+// ── THE LOG FORM'S SELECT OPTIONS, IN ONE PLACE (2026-09-20) ──────────────────────────────
+// `buildLogTeamRows` renders the roster and `rebuildLogDropdowns` re-reads it when the contractor
+// directory changes under an open form. They used to hold two copies of this list, and the copies
+// disagreed: the rebuild wrote "None / every specialist / Other" over every specialist select on
+// every plan open (loadJobPlanTab calls both, in that order), so "Contractor TBD" — the placeholder
+// the team sign-off itself tells you to pick — was not on the list, the one-person-one-slot rule was
+// undone (every name back in every slot), and a stray "Other" stored the literal word as a crew
+// member. Measured in the browser on 2026-09-20, the day hours became mandatory on every job.
+//
+// Every real person already spoken for elsewhere on this entry. A name in here is omitted from
+// the OTHER selects, so one specialist cannot be booked into six roles — the duplicate becomes
+// unreachable rather than merely rejected on save. Placeholders never count as taken — belt and
+// braces today, since neither placeholder is ever in the roster lists this filters (both are
+// appended to every select unconditionally below); it is what keeps a placeholder repeatable the
+// day one lands in a roster list.
+function _logCrewTaken(crew, exceptKey) {
+  var out = [];
+  function add(key, nm) { if (key !== exceptKey && !isCrewPlaceholder(nm)) out.push(nm); }
+  if (crew) {
+    add('tc', crew.tc && crew.tc.name);
+    add('tc2', crew.tc2 && crew.tc2.name);
+    (crew.ps || []).forEach(function(p, idx){ add('ps' + idx, p && p.name); });
+  }
+  return out;
+}
+// `sel` is always offered even when taken, so a pre-existing duplicate (seeded from an estimate
+// built before the one-slot rule) still renders and can be seen and corrected.
+function _logOptList(names, sel, taken) {
+  var html = names.filter(function(n){ return n === sel || taken.indexOf(n) < 0; })
+    .map(function(n){ return '<option' + (n===sel?' selected':'') + '>' + n + '</option>'; }).join('');
+  // Preserve a previously-assigned name that's no longer in the active list.
+  if (sel && names.indexOf(sel) < 0 && !isCrewPlaceholder(sel)) html += '<option selected>' + sel + '</option>';
+  return html;
+}
+// kind: 'tc' | 'tc2' | 'ps' (with `slot`, 0-based). `teamOK` decides only the empty option's
+// wording on a specialist row: before sign-off an empty slot is unstaffed; after, it means absent
+// today. The unnamed outside concierge (CONTRACTOR_TC_NAME) carries COST_RATES.contractorTC in the
+// margin panel and is stored under its display name, like "Contractor TBD", so it reads correctly
+// in the log history and the invoice team table with no mapping.
+function _logSelectOptionsHtml(kind, crew, sel, slot, teamOK, tcNames, psNames) {
+  sel = sel || '';
+  if (kind === 'ps') {
+    return '<option value="">' + (teamOK ? 'Not on site' : 'Select specialist') + '</option>' +
+      _logOptList(psNames, sel, _logCrewTaken(crew, 'ps' + slot)) +
+      '<option value="Contractor TBD"' + (sel==='Contractor TBD'?' selected':'') + '>Contractor TBD</option>';
+  }
+  return '<option value="">' + (kind === 'tc2' ? 'Not on site' : 'Select TC') + '</option>' +
+    _logOptList(tcNames, sel, _logCrewTaken(crew, kind)) +
+    '<option' + (sel===CONTRACTOR_TC_NAME?' selected':'') + '>' + CONTRACTOR_TC_NAME + '</option>';
+}
+
 function buildLogTeamRows() {
   // Build TC and PS name options from live contractor directory
   var tcNames = getAllActiveTC().map(function(c){ return c.name; });
@@ -23668,37 +23719,9 @@ function buildLogTeamRows() {
   var crew = jobId ? getJobCrew(jobId) : null;
   var lockTag = ' <span style="font-size:9px;color:var(--ok-tx);font-weight:700;">🔒 locked for job</span>';
 
-  // Every real person already spoken for elsewhere on this entry. A name in here is
-  // omitted from the OTHER selects, so one specialist cannot be booked into six roles
-  // — the duplicate becomes unreachable rather than merely rejected on save.
-  function takenBy(exceptKey) {
-    var out = [];
-    function add(key, nm) { if (key !== exceptKey && !isCrewPlaceholder(nm)) out.push(nm); }
-    if (crew) {
-      add('tc', crew.tc && crew.tc.name);
-      add('tc2', crew.tc2 && crew.tc2.name);
-      (crew.ps || []).forEach(function(p, idx){ add('ps' + idx, p && p.name); });
-    }
-    return out;
-  }
-  // sel is always offered even when taken, so a pre-existing duplicate (seeded from an
-  // estimate built before this rule) still renders and can be seen and corrected.
-  function optList(names, sel, exceptKey) {
-    var taken = takenBy(exceptKey);
-    var html = names.filter(function(n){ return n === sel || taken.indexOf(n) < 0; })
-      .map(function(n){ return '<option' + (n===sel?' selected':'') + '>' + n + '</option>'; }).join('');
-    // Preserve a previously-assigned name that's no longer in the active list.
-    if (sel && names.indexOf(sel) < 0 && !isCrewPlaceholder(sel)) html += '<option selected>' + sel + '</option>';
-    return html;
-  }
-
+  // The options every select below offers come from _logSelectOptionsHtml — the same builder
+  // rebuildLogDropdowns re-reads when the directory changes under an open form. Not a copy.
   var rowStyle = 'display:grid;grid-template-columns:2fr 80px;gap:8px;align-items:end;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);';
-  // Unnamed outside concierge — carries COST_RATES.contractorTC in the margin panel.
-  // Stored under its display name (like "Contractor TBD") rather than a machine key, so
-  // it reads correctly in the log history and the invoice team table with no mapping.
-  var tcContractorOpt = function(sel) {
-    return '<option' + (sel===CONTRACTOR_TC_NAME?' selected':'') + '>' + CONTRACTOR_TC_NAME + '</option>';
-  };
 
   // Two independent conditions, in the order they occur in real life. Staffing happens
   // BEFORE the deposit on purpose — you have to commit people while the agreement is out
@@ -23720,9 +23743,7 @@ function buildLogTeamRows() {
     '<div>' +
       '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge' + (tcLocked ? lockTag : '') + '</label>' +
       '<select id="log-m0-name"' + (tcLocked ? ' disabled' : '') + ' onchange="setCrewTC(' + jobId + ',this.value)" style="margin-top:4px;">' +
-        '<option value="">Select TC</option>' +
-        optList(tcNames, tcName, 'tc') +
-        tcContractorOpt(tcName) +
+        _logSelectOptionsHtml('tc', crew, tcName, 0, teamOK, tcNames, psNames) +
       '</select>' +
     '</div>' +
     '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
@@ -23739,9 +23760,7 @@ function buildLogTeamRows() {
       '<div>' +
         '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge 2' + (tc2Locked ? lockTag : '') + '</label>' +
         '<select id="log-tc2-name"' + (tc2Locked ? ' disabled' : '') + ' onchange="setCrewTC2(' + jobId + ',this.value)" style="margin-top:4px;">' +
-          '<option value="">Not on site</option>' +
-          optList(tcNames, tc2Name, 'tc2') +
-          tcContractorOpt(tc2Name) +
+          _logSelectOptionsHtml('tc2', crew, tc2Name, 0, teamOK, tcNames, psNames) +
         '</select>' +
       '</div>' +
       '<div><label style="margin:0;">Hours</label><input type="number" id="log-tc2-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
@@ -23769,10 +23788,7 @@ function buildLogTeamRows() {
         (needsName ? ' <span style="font-size:9px;color:var(--warn-tx);font-weight:700;">needs a name</span>' : '') + '</label>' +
       '<div style="display:grid;grid-template-columns:1fr 70px;gap:6px;align-items:end;margin-top:4px;">' +
         '<select id="log-m'+i+'-name"' + (psLocked ? ' disabled' : '') + ' onchange="setCrewPS(' + jobId + ',' + slot + ',this.value)">' +
-          // Before sign-off an empty slot is unstaffed; after, it means absent today.
-          '<option value="">' + (teamOK ? 'Not on site' : 'Select specialist') + '</option>' +
-          optList(psNames, psName, 'ps' + slot) +
-          '<option value="Contractor TBD"' + (psName==='Contractor TBD'?' selected':'') + '>Contractor TBD</option>' +
+          _logSelectOptionsHtml('ps', crew, psName, slot, teamOK, tcNames, psNames) +
         '</select>' +
         '<input type="number" id="log-m'+i+'-hrs" title="Hours" min="0" max="24" step="0.5" placeholder="hrs" style="text-align:right;"' + hrsAttr + '>' +
       '</div>' +
@@ -23949,6 +23965,7 @@ function saveLogEntry() {
   updateLogSummary(jobId);
   renderLogHistory(jobId);
   renderProjection(jobId);
+  _repaintHoursReadouts(jobId);   // the fold count and the header strip: plan markup, not the log section
   showFB('log-fb','ok','Hours entry saved.');
 }
 
@@ -23980,6 +23997,7 @@ function deleteLogEntry(jobId, entryId) {
   updateLogSummary(jobId);
   renderLogHistory(jobId);
   renderProjection(jobId);
+  _repaintHoursReadouts(jobId);   // a voided line moves the fold count and the strip too
 }
 
 function updateLogSummary(jobId) {
@@ -25367,7 +25385,7 @@ function planPhaseWrap(id, title, body, meta) {
     'border-radius:5px 5px 0 0;gap:10px;">' +
     '<span style="font-weight:700;font-size:13px;">' + title + '</span>' +
     '<span style="display:flex;align-items:center;gap:10px;">' +
-    (meta ? '<span class="stage-meta">' + meta + '</span>' : '') +
+    (meta ? '<span class="stage-meta" id="stage-meta-' + id + '">' + meta + '</span>' : '') +
     '<span id="phase-chev-' + id + '">' + (open ? '▼' : '▶') + '</span></span></div>' +
     '<div id="phase-body-' + id + '" style="display:' + (open ? '' : 'none') + ';padding:12px 14px 14px;border:1px solid var(--border);' +
     'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div><!--/stage-' + id + '-->';
@@ -25529,11 +25547,35 @@ function _planOpenStageFor(jobId, job, est) {
 // something at the top that says like, target start date is this, actual start date is that,
 // today is … projected six days, today is the 24th, three more days … that lets you know where
 // you stand in the job."* ⚠ `jobPlanStore[jobId]` directly, never getJobPlan, which MINTS a plan.
-function planScheduleHtml(jobId, job, est) {
+function _planScheduleStrip(jobId, job, est) {
   var sEst = approvedEstimateFor(jobId) || est;
   var prog = jobProgress(sEst, jobPlanStore[jobId], jobLogEntries(jobId));
-  var strip = jtScheduleHtml(jobSchedule(job, sEst, _todayStr(), prog));
-  return strip ? '<div class="plan-sched">' + strip + '</div>' : '';
+  return jtScheduleHtml(jobSchedule(job, sEst, _todayStr(), prog));
+}
+function planScheduleHtml(jobId, job, est) {
+  var strip = _planScheduleStrip(jobId, job, est);
+  return strip ? '<div class="plan-sched" id="plan-sched">' + strip + '</div>' : '';
+}
+
+// After hours land, or a line is voided, the two readouts that live OUTSIDE the log section — the
+// count on the Hours fold and the schedule strip on the header (its "% of the estimated hours
+// logged" and the pace verdict) — are plan markup, so saveLogEntry's own repaints (the summary,
+// the history, the projection) never reached them: the fold went on shouting "no hours logged
+// today" in amber over the entry that had just cleared it, until the next redraw. Measured
+// 2026-09-20. Repainted IN PLACE, never by redrawing the plan — an innerHTML write over
+// #job-plan-content destroys the form the person is standing at (see _parkHoursSection). Reads
+// the plan store the way planScheduleHtml does, never through getJobPlan, which mints.
+function _repaintHoursReadouts(jobId) {
+  var sel = document.getElementById('plan-job');
+  if (!sel || parseInt(sel.value) !== jobId) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var estRec = estimateStore[jobId];
+  var est = estRec && estRec.estimate;
+  if (!job || !est) return;
+  var meta = document.getElementById('stage-meta-hours');
+  if (meta) meta.innerHTML = planHoursMetaHtml(jobId, job, est);
+  var strip = document.getElementById('plan-sched');
+  if (strip) strip.innerHTML = _planScheduleStrip(jobId, job, est);
 }
 
 // ⚠ THE HOURS LOG IS STATIC MARKUP (#plan-log-section — the entry form, the summary, the
@@ -31662,33 +31704,26 @@ function rebuildDropdowns() {
 }
 
 function rebuildLogDropdowns(tcList, psList) {
-  // TC row 0
-  var tcSel = document.getElementById('log-m0-name');
-  if (tcSel) {
-    var cur = tcSel.value;
-    tcSel.innerHTML = '<option value="">Select TC</option>';
-    tcList.forEach(function(c){ tcSel.innerHTML += '<option>'+c.name+'</option>'; });
-    if (cur) tcSel.value = cur;
+  // Rewrites each select's OPTIONS in place and keeps its value — it never re-renders the rows,
+  // so a directory reload landing mid-entry cannot destroy the hours somebody is typing. The
+  // list itself is _logSelectOptionsHtml's, the one buildLogTeamRows renders; this function holds
+  // no opinion of its own about what a select offers (it used to, and the two disagreed — see
+  // the note above _logCrewTaken).
+  var tcNames = tcList.map(function(c){ return c.name; });
+  var psNames = psList.map(function(c){ return c.name; });
+  var jobId = parseInt((document.getElementById('log-job')||{}).value) || 0;
+  var crew = jobId ? getJobCrew(jobId) : null;
+  var teamOK = !!(crew && crew.confirmed);
+  function redo(id, kind, slot) {
+    var el = document.getElementById(id);
+    if (!el) return;                          // a row not rendered (the second TC, an unused slot)
+    var cur = el.value;
+    el.innerHTML = _logSelectOptionsHtml(kind, crew, cur, slot, teamOK, tcNames, psNames);
+    if (cur) el.value = cur;
   }
-  // Second TC row (only present when rendered)
-  var tc2Sel = document.getElementById('log-tc2-name');
-  if (tc2Sel) {
-    var cur2 = tc2Sel.value;
-    tc2Sel.innerHTML = '<option value="">Not on site</option>';
-    tcList.forEach(function(c){ tc2Sel.innerHTML += '<option>'+c.name+'</option>'; });
-    if (cur2) tc2Sel.value = cur2;
-  }
-  // PS rows 1-6
-  for (var i = 1; i <= 6; i++) {
-    var psSel = document.getElementById('log-m'+i+'-name');
-    if (psSel) {
-      var curPs = psSel.value;
-      psSel.innerHTML = '<option value="">None</option>';
-      psList.forEach(function(c){ psSel.innerHTML += '<option>'+c.name+'</option>'; });
-      psSel.innerHTML += '<option>Other</option>';
-      if (curPs) psSel.value = curPs;
-    }
-  }
+  redo('log-m0-name', 'tc', 0);
+  redo('log-tc2-name', 'tc2', 0);
+  for (var i = 1; i <= 6; i++) redo('log-m' + i + '-name', 'ps', i - 1);
 }
 
 function saveContractors() {
