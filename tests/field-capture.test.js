@@ -661,6 +661,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(row, '_invEdit(1,\'p\',\'objectName\',this)', 'an unnamed line carries its own name box');
     has(row, '<input type="text"', 'and it is a real control, not a prompt to go elsewhere');
     lacks(row, 'name it below', 'the sentence that pointed at a field that was not there is gone');
+    // ⚠ AND A NAMED LINE CARRIES ONE TOO. Anthony's rule for the agent is "as much detail as
+    // possible, and I can edit errors" — so every name is long, and a truncated name you have
+    // to open a panel to correct makes the review cost more than the errors do.
+    const named = rowCtx._renderInvRow({ id: 1 }, Object.assign({}, ref, { objectName: 'Banksy "Ghetto 4 Life" canvas print, approx 48x36in' }));
+    has(named, '_invEdit(1,\'p\',\'objectName\',this)', 'a NAMED line is editable in the row as well');
+    has(named, 'Banksy', 'with the agent’s own words in the box');
+    has(named, 'title="Banksy', '⚠ and the full text on hover, since a long name is clipped in a narrow row');
     has(row, 'signed on the base', 'the field note is on the row');
     has(row, '+1 detail shot', 'and the detail count');
     rowCtx._invOpen.p = true;

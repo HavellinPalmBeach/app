@@ -1194,7 +1194,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 6:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 6:22pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -21467,19 +21467,26 @@ function _renderInvRow(job, ref) {
       + '<span style="font-size:10px;color:var(--gray);font-weight:700;width:26px;flex:0 0 auto;">' + esc(_invItemNo(ref)) + '</span>'
       + '<div style="flex:1;min-width:0;">'
         + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
-        // AN UNNAMED ROW CARRIES ITS OWN NAME BOX, and that is the difference between a
-        // worklist and a chore. The Unnamed pile is worked top to bottom in one sitting, so
-        // making somebody open the panel, type, and close it again for every shot of the day
-        // is how a count of forty never gets cleared. A named row stays plain text: once the
-        // agent is proposing these, the box is the exception rather than the shape of the list.
+        // THE NAME IS EDITED IN THE ROW, NAMED OR NOT, and the "or not" is the correction.
+        // The first cut of this put a box on a BLANK name only and left a filled one as
+        // truncated text you had to open the panel to change — which is fine while the desk is
+        // typing names from nothing, and wrong the moment an agent is proposing them. Anthony's
+        // rule for that agent is "as much detail as possible, and I can edit errors": every
+        // name is then long, every long name truncates, and every correction would sit behind a
+        // chevron. Editing has to be cheaper than the error rate, or the review does not happen.
+        // The FMV and disposition beside it are already always-inputs, so the row was a form
+        // already; this is the third field, not a new idea.
         // AND `_invEdit` DELIBERATELY DOES NOT REDRAW ON `objectName`, so the row does not
         // reflow out from under the person typing. The chip strip repaints on its own instead.
-        + (ref.objectName
-            ? esc(ref.objectName)
-            : '<input type="text" value="" placeholder="What is it? e.g. Chesterfield sofa, brown leather" '
-              + 'onchange="_invEdit(' + jid + ',\'' + sid + '\',\'objectName\',this)" '
-              + 'style="width:100%;max-width:360px;font-size:11.5px;padding:3px 6px;box-sizing:border-box;'
-              + 'border:1px solid var(--bronze);border-radius:3px;background:#fffdf9;">')
+        + '<input type="text" value="' + esc(ref.objectName || '') + '"'
+          + ' title="' + esc(ref.objectName || '') + '"'
+          + ' placeholder="What is it? the agent proposes this — correct it here"'
+          + ' onchange="_invEdit(' + jid + ',\'' + sid + '\',\'objectName\',this)"'
+          // Bronze while it is empty, so the Unnamed pile still reads as a pile at a glance;
+          // quiet once filled, so three hundred named lines are a list rather than a wall of boxes.
+          + ' style="width:100%;font-size:11.5px;padding:3px 6px;box-sizing:border-box;border-radius:3px;'
+          + (ref.objectName ? 'border:1px solid transparent;background:transparent;font-weight:600;'
+                            : 'border:1px solid var(--bronze);background:#fffdf9;') + '">'
         + (ref.manual ? ' <span style="font-size:8px;color:var(--bronze);" title="Manual line item (no photo)">M</span>' : '') + '</div>'
         + '<div style="font-size:10px;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sub
         + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
