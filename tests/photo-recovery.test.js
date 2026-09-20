@@ -87,8 +87,14 @@ function rig(opts) {
   };
 }
 
-const seed = (r, status) => {
-  r.ctx._photoRefs[1] = [{ stableId: 's1', roomIdx: 2, label: 'before', seq: 1,
+const seed = (r, status, label) => {
+  // ⚠ THE LABEL IS LOAD-BEARING SINCE 2026-09-20 and used to be incidental. This fixture is
+  // shared by the watchdog, the retry and the discard groups; it said 'before' throughout,
+  // which made every discard test accidentally exercise an AS-FOUND shot — the one shot the
+  // discard now refuses. Anthony's "just delete it on device and drive... there is no probate
+  // risk here" was about a fat-fingered ITEM shot re-taken a second later, which is what this
+  // seeds now. The as-found refusal has a group of its own below.
+  r.ctx._photoRefs[1] = [{ stableId: 's1', roomIdx: 2, label: label || 'inventory', seq: 1,
                            status: status || 'uploading', filename: 'kitchen.jpg' }];
 };
 
@@ -112,7 +118,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The room's shot strip now renders something a person can act on, which it did not before.
     const html = r.ctx._roomShotStripHtml(1, 2);
     has(html, 'not saved', 'the strip shows the failure');
-    has(html, 'As found 1', 'against the shot it belongs to');
+    has(html, 'Item 1', 'against the shot it belongs to');
     has(html, 'retryPhotoUpload(1', 'with a Retry');
     lacks(html, 'Uploading', 'and no longer claims to be uploading');
   }
@@ -181,7 +187,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(r.ref().updatedAt, 'stamped, so the removal wins the per-item merge');
 
     // And it really leaves every reading of the slot.
-    eq(r.ctx._slotRefs(1, 2, 'before').length, 0, 'the slot no longer counts it');
+    eq(r.ctx._slotRefs(1, 2, 'inventory').length, 0, 'the slot no longer counts it');
     eq(r.ctx._roomShotStripHtml(1, 2), '', 'and the strip is clean');
     eq(r.trashed.length, 0, '⚠ a shot that never reached Drive asks Drive to delete nothing');
     has(fnBody('_slotRefs'), '!r.deletedAt',
@@ -210,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(r.ref().deletedAt > 0, 'the row is tombstoned');
     ok(r.ref().updatedAt, 'stamped, so the removal wins the per-item merge');
     eq(r.ctx._photoRefs[1].length, 1, 'tombstone, never a splice');
-    eq(r.ctx._slotRefs(1, 2, 'before').length, 0, 'gone from every reading of the slot');
+    eq(r.ctx._slotRefs(1, 2, 'inventory').length, 0, 'gone from every reading of the slot');
     eq(r.trashed.join(','), 'FID1', '⚠ and the file really left the client\u2019s Drive folder');
 
     ok(!r.ctx.discardShot(1, 's1'), 'a second press finds nothing to do');
@@ -273,6 +279,41 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ what was asked for is the bad photograph off the screen — a Drive refusal must not block that');
     ok(r.badges.some(function(b){ return /could not be removed from Google Drive/.test(b); }),
        'and the failure speaks, because the row has already gone from the manifest');
+  }
+
+  // ⚠⚠ AND THE ONE SHOT THAT IS NOT DISCARDABLE AT ALL. Anthony's 2026-09-20 call — "just
+  // delete it on device and drive... there is no probate risk here" — was about a fat-fingered
+  // ITEM shot re-taken a second later. The as-found pass is the case it did not consider and
+  // the case where the claim is false: it is the record of the property's condition on arrival
+  // and the only answer to "there was a gold Rolex in my father's desk drawer" once the house
+  // is empty. You do not curate an evidence set. Refused on BOTH bins, because the camera's own
+  // and the room strip both route through discardShot.
+  group('⚠⚠ AN AS-FOUND SHOT CANNOT BE DISCARDED — the evidence set is not curated');
+  {
+    const r = rig({ ok: true });
+    seed(r, 'uploaded', 'before');
+    r.ref().driveFileId = 'FID9';
+    r.setConfirm(true);
+
+    eq(r.ctx.discardShot(1, 's1'), false, 'the discard is refused outright');
+    ok(!r.ref().deletedAt, 'the row is not tombstoned');
+    eq(r.trashed.length, 0, '⚠ and nothing is asked of Drive — the file stays in the client folder');
+    eq(r.ctx._slotRefs(1, 2, 'before').length, 1, 'the shot is still on the slot');
+
+    // ⚠ IT REFUSES BEFORE THE CONFIRM, not after one. A dialog that asks and then declines
+    // teaches people the control is broken rather than that the rule exists.
+    const quiet = rig({ ok: true });
+    seed(quiet, 'uploaded', 'before');
+    quiet.setConfirm(false);
+    eq(quiet.ctx.discardShot(1, 's1'), false, 'declining changes nothing either');
+
+    // The refusal has to SAY what it is protecting and what to do instead, or it reads as a bug.
+    const body = fnBody('discardShot');
+    has(body, "ref.label === 'before'", 'keyed on the pass, never on a label list that could drift');
+    has(body, 'Shoot another', 'and it names the alternative rather than only saying no');
+    // And the item case is untouched — proven by the group above, pinned here as the converse.
+    ok(body.indexOf("ref.label === 'before'") < body.indexOf('confirm('),
+       '⚠ the refusal is ahead of the confirm in the function, so the dialog never opens on one');
   }
 
   // ⚠ A FLOOR, NOT A "did you bump it" CHECK — it states what THIS feature needs, so it

@@ -575,7 +575,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const m = sandbox({ fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
                               '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal'],
                         vars: ['INV_STICKY_FIELDS'],
-                        stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {},
+                        stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {},
                                  _scheduleInventorySync() {}, _invNetDisplay: () => '' } });
     m._photoRefs[2] = [{ stableId: 'a', label: 'inventory', collId: null, fmv: '500000' }];
 
@@ -809,7 +809,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const a = sandbox({ fns: ['_invSetAppraiser', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
                               '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
-                                 _invRefreshGuardrail() {}, _invRefreshSummary() {} } });
+                                 _invRefreshGuardrail() {}, _invRefreshSummary() {}, _invRefreshFlagStrip() {} } });
     a.jobs.push({ id: 1, appraisers: [{ id: 7, name: 'Marie Wayland', firm: 'Appraisals by the Sea' }] });
     a._photoRefs[1] = [{ stableId: 'x', label: 'inventory', collId: null }];
 
