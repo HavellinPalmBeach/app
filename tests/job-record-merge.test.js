@@ -380,7 +380,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       vars: ['jobLogs'],
       stubs: {
         confirm: () => true,
-        saveLogData() {}, updateLogSummary() {}, renderLogHistory() {}, renderProjection() {},
+        saveLogData() {}, updateLogSummary() {}, renderLogHistory() {}, renderProjection() {}, _repaintHoursReadouts() {},
       },
     });
     ctx.jobLogs[7] = [{ id: 'L1', members: [{ role: 'PS', hours: 7 }] },

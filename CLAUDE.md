@@ -1,5 +1,76 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ HOURS ON EVERY JOB — DECIDED — AND PROVING THE PLUMBING FOUND TWO LEAKS ON THE FORM (2026-09-20)
+Anthony, hours after the fixed-fee build, closing the question that entry left open: *"I think we should log hours for every
+job. So I want all that functionality in the job plan and I'm gonna make it mandatory for transition concierges. Nothing for
+you to change as long as all that plumbing is still wired in there and works. because you're right, we are gonna learn from the
+hours and the discipline of setting a job timeline and sticking to it and not letting jobs run over that are fixed cost and
+therefore destroying our own margins."* **The answer is yes, and it was measured by driving the REAL hours form on a
+fixed-price job in a browser rather than by reading the source — which is the only reason the two defects below were found.**
+Both are on the path he has just made mandatory; both fixed. App-only, no redeploy.
+
+- **⚠⚠ THE SPECIALIST SELECTS WERE REWRITTEN ON EVERY PLAN OPEN, AND "CONTRACTOR TBD" WAS NOT ON THE REWRITTEN LIST.**
+  `loadJobPlanTab` calls `buildLogTeamRows()` and then `rebuildDropdowns()`, and `rebuildLogDropdowns` held its OWN copy of
+  what a specialist select offers — *None / every specialist / Other* — written straight over the rows the builder had just
+  drawn. So on first open the placeholder the team sign-off itself tells you to pick (*"use “Contractor TBD” for a body you
+  have not picked yet"*) was not offered, the one-person-one-slot rule was undone (every name back in every slot), and
+  **Other**, if picked, was stored as a crew member literally named Other and costed at the placeholder rate. **With today's
+  roster — one active specialist — a job priced for two could not be confirmed from the form as first drawn**; the way out was
+  a failed confirm, which redrew the rows and quietly restored the right list. `_logSelectOptionsHtml` (with `_logCrewTaken` /
+  `_logOptList`) is the one builder now, read by both; the rebuild rewrites OPTIONS in place and **never re-renders the rows**,
+  because a directory reload landing mid-entry must not destroy the hours somebody is typing. Reverting the rebuild's own list
+  fails 3, re-rendering the rows 4, the PS row's private list 2, dropping the retired-name arm 1.
+  - **⚠ ONE REVERT IS GREEN BY CONSTRUCTION, RECORDED RATHER THAN COVERED.** `_logCrewTaken`'s `!isCrewPlaceholder` guard
+    changes no option on any select: neither placeholder is ever in the roster lists the guard filters — TBD and
+    `CONTRACTOR_TC_NAME` are appended to every select unconditionally — so removing it is unobservable. The original closure
+    inside `buildLogTeamRows` carried the same unobservable guard. Kept, with a comment saying it is belt-and-braces (it is what
+    keeps a placeholder repeatable the day one lands in a roster list), and the test's label names the append, not the guard.
+    The nineteenth time this file records an assertion that could not fail — this time one that was true for a reason other
+    than the one its label gave.
+- **⚠⚠ THE FOLD WENT ON SHOUTING "NO HOURS LOGGED TODAY" OVER THE ENTRY THAT HAD JUST CLEARED IT.** `saveLogEntry` repaints
+  the summary, the history and the projection — all inside `#plan-log-section` — and never touched the two readouts that live
+  OUTSIDE it: the count on the Hours fold and the schedule strip on the header (its *% of the estimated hours logged* and the
+  pace verdict). Both sat on the last redraw, so the one action that clears the amber nag left it standing until a job
+  switch, a photo landing or the 15-second tick. `_repaintHoursReadouts(jobId)` writes both in place by id (`stage-meta-hours`
+  on `planPhaseWrap`'s count, `plan-sched` on the strip; `planScheduleHtml` is now `_planScheduleStrip` plus its wrapper) —
+  **never through `loadJobPlanTab` or `_repaintPlan`**, whose `innerHTML` write destroys the form under the person typing, and
+  never through `getJobPlan`, which mints; guarded on the picker showing this job. Called from `saveLogEntry` and from
+  `deleteLogEntry`, because a voided line moves the count too. Reverts: the save 2, the void 1, redrawing the plan 3 and a
+  throw, `getJobPlan` 2 and a throw, the picker guard 1, each id 2.
+  - **⚠ The 2026-09-19 entry's *"the fold reads today 7 hrs · 7 of 14 logged the moment hours land"* was measured WITH a
+    redraw** — its own table row says *"7 hrs logged today, redraw"*. It holds without one now.
+- **⚠⚠ NOT CHANGED, AND IT IS THE ANSWER: NOTHING ON THE HOURS PATH BRANCHES ON THE BILLING BASIS.** Pinned on six
+  functions (`saveLogEntry`, `buildLogTeamRows`, `rebuildLogDropdowns`, `planHoursMeta`, `_repaintHoursReadouts`,
+  `deleteLogEntry`) beside the standing `loadJobPlanTab` / `jobProgress` pins in `job-progress`. The two refusals on the save
+  are the team sign-off and the deposit, on a flat fee exactly as on time and materials; a fixed-price final issues off the fee
+  with an empty log (measured this morning). **The amber fold on a fixed-price job is DELIBERATE and is not to be quieted** —
+  the morning entry's *"His call; one line to quiet the fold if he makes it"* is answered: he made the opposite call, in the
+  words quoted above, and both documents now carry it as the rule.
+- **7260 committed checks** (+90: `tests/hours-log-form.test.js` new; three pins restated in `job-plan-stages` — the fold
+  count and the strip wrapper carry ids, the strip's direct store read moved into `_planScheduleStrip` and is pinned there —
+  and the void sandbox in `job-record-merge` gained the repaint stub). **Twelve reverts run individually, eleven red, one green
+  by construction (above)**; baseline 0 before and after, no unmatched needles. **The stylesheet is byte-identical** (91,167
+  bytes, measured on the FIRST `<style>` block).
+- **Verified end to end in headless Chromium, 25 checks, 0 failed, 0 page errors**, on a fixed-price Estate Settlement priced
+  for two specialists — signed, funded, active, started today — driven through the REAL form, the REAL sign-off and the REAL
+  save, on a byte-identical copy so the revert sweep could run on the real file at the same time:
+
+  | | |
+  |---|---|
+  | first open | the log in its slot, shown, bound to the job · the hours boxes wait on the **team sign-off** (title *Confirm the job team first*), nothing about fixed price · the specialist select reads **Select specialist / Anthony Graziano Jr / Contractor TBD** (it read *None / Anthony Graziano Jr / Other*) · the fold **amber**: *no hours logged today · 0 of 60 logged* |
+  | staffing through the real selects, `confirmJobTeam` | slot 2 takes *Contractor TBD*, challenged once, accepted · *Job team confirmed* · the boxes go live |
+  | `saveLogEntry`, 7 + 7 + 7 | one entry, **21 hrs (TC 7 · PS 7 · PS 7)** · *Hours entry saved.* · the form cleared · written to the device store · the named crew locked |
+  | **before any redraw** | the fold reads **today 21 hrs · 21 of 60 logged** and the strip **35% of the estimated hours logged** — the two lines the old build left stale |
+  | the final | **$11,500** (23,000 − the 11,500 deposit), unblocked, no PIN — the log changed the bill by nothing |
+  | a reload | the entry, the confirmed team and the live form all come back; the fold reads the count on its own |
+
+- Manual **§11** (the hours note carries both corrections) and **§12** (the decision replaces *"worth keeping up while the
+  durations are still unknown"*); playbook **Step 10b** (a `.stop`: every job, fixed price included, in Anthony's words), the
+  amber-fold symptom row extended and **three new rows** (logged and the fold still reads none · *Other* and no *Contractor
+  TBD* · *do I log hours on a fixed-price job?*). Both `.md` copies hand-edited; **18 claims parity-checked, 0 mismatches**;
+  tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**;
+  under `print` **16/16 and 17/40** tables as wide as their container, as at HEAD.
+
 ## ⚠⚠ THREE ASKS IN ONE MORNING — THE BANNER IS THE ROW, THE DIRECTORY IS ALPHABETICAL, THE FIXED FEE IS THE MANAGER'S FIGURE (2026-09-20)
 Anthony, off two screenshots and a voice note, the morning after the Job Plan rethink. On a Home Cleanout plan whose red
 FIREARMS banner and STANDING JOB FLAGS panel both printed *2 pistols*, the crew rule and the protocol link: *"seems sort of
@@ -62,7 +133,9 @@ that's the way we're going to price in the beginning is go fixed price and avoid
     (2026-09-13) that fixed price decides how hours are billed and has never decided whether they are recorded. If the crew
     stops logging on fixed jobs, the fold nags daily and the margin panel goes blind — and the log is the only record of
     whether 20% was the right contingency, which is the very uncertainty he named. His call; one line to quiet the fold if he
-    makes it.
+    makes it. **Answered the same afternoon — see the entry above this one: hours are logged on every job, fixed price
+    included, mandatory for the concierge, and the fold is NOT quieted.** *Kept rather than deleted, per the standing rule that a
+    fixed flag left standing reads as outstanding work.*
 - **7154 committed checks** (+99: `tests/fixed-price.test.js` new, 74; sixteen more in `intake-house-flags`, nine in
   `contractor-roster`). **All 20 changes revert-verified individually, ZERO green** — baseline 0 before and after, no
   unmatched needles; the one first-sweep green was the fixture above, re-done. **The stylesheet is byte-identical** (89,970
@@ -9052,7 +9125,10 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-20 (thirty-second pass)** — both documents, against the three asks of the same
+- Last reconciled against the app: **2026-09-20 (thirty-third pass)** — both documents, against the hours decision and the two
+  form leaks it surfaced: hours on every job, fixed price included; the fold and the strip move on the save; the specialist
+  selects offer *Contractor TBD* from the first draw; see the entry at the top of this file.
+- Prior pass **2026-09-20 (thirty-second pass)** — both documents, against the three asks of the same
   morning: the brief no longer repeats the firearms banner on the plan, the alphabetical directory, and the fixed fee as the
   manager's figure with a warning that fires only when the estimate moved; see the entry at the top of this file.
 - Also on 2026-09-20, from the concurrent session merged here: *"Docs: the playbook still described the two-row band; §8a had no

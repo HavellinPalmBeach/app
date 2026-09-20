@@ -213,7 +213,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(three, 'id="phase-body-vendors" style="display:none', 'starts closed');
     lacks(three, 'stage-meta', 'no meta, no span');
     ok(three.endsWith('<!--/stage-vendors-->'), 'the end marker closes it');
-    has(w.planPhaseWrap('hours', 'Hours', 'BODY', 'today 3 hrs'), '<span class="stage-meta">today 3 hrs</span>', 'the count rides the fold');
+    has(w.planPhaseWrap('hours', 'Hours', 'BODY', 'today 3 hrs'), '<span class="stage-meta" id="stage-meta-hours">today 3 hrs</span>',
+      'the count rides the fold, under an id so _repaintHoursReadouts can move it without redrawing the plan');
   }
 
   group('planStageCard — an open card on the flow, with the same end marker');
@@ -255,14 +256,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the schedule strip on the plan header — the dashboard’s own, never a second reading of the dates');
   {
-    const s = sandbox({ fns: ['planScheduleHtml', 'jobSchedule', 'jtScheduleHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
+    const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', 'jtScheduleHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
                               'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize'],
                         vars: ['PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
                         stubs: { docSentAt: () => null, jobLogEntries: () => [], _todayStr: () => '2026-09-24' } });
     const est = EST({ days: 6 });
     s.estimateStore[7] = { estimate: est, approved: true };
     const planned = s.planScheduleHtml(7, JOB(), est);
-    has(planned, '<div class="plan-sched"><div class="jt-sched">', 'the strip, wrapped for the header card');
+    has(planned, '<div class="plan-sched" id="plan-sched"><div class="jt-sched">', 'the strip, wrapped for the header card, under an id the hours repaint can reach');
     has(planned, 'Target start', 'a job that has not started states its target');
     has(planned, '6 working days', 'and its length');
     has(planned, 'Target end', 'and the target end');
@@ -278,8 +279,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(running, 'Target end', 'the target end still reads');
     has(running, 'now ending', 'and the end the slip moved it to');
     eq(s.planScheduleHtml(7, JOB({ status: 'lost' }), est), '', 'a dead job renders nothing');
-    lacks(noComments(fn('planScheduleHtml')), 'getJobPlan', '⚠ it reads the plan store directly — the accessor MINTS a plan for any job it is asked about');
-    has(fn('planScheduleHtml'), 'jobPlanStore[jobId]', 'directly');
+    // The measurement itself lives in _planScheduleStrip since 2026-09-20 (planScheduleHtml wraps it;
+    // _repaintHoursReadouts reuses it after an hours save), so the store rule is pinned on both halves.
+    lacks(noComments(fn('planScheduleHtml')) + noComments(fn('_planScheduleStrip')), 'getJobPlan', '⚠ it reads the plan store directly — the accessor MINTS a plan for any job it is asked about');
+    has(fn('_planScheduleStrip'), 'jobPlanStore[jobId]', 'directly');
     const r = noComments(fn('renderJobPlan'));
     has(r, 'planScheduleHtml(jobId, job, est)', 'the header calls it');
     lacks(r, 'estWorkingDays(', '⚠ and computes no length of its own — that is the drift this file records twice');
@@ -288,7 +291,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(r, "'Projected'", 'both of them');
     // The strip lands under the client line, inside the header card.
     const { hdr } = plan(JOB(), EST());
-    ok(hdr.indexOf('Client:') < hdr.indexOf('<div class="plan-sched">'), 'under the client line');
+    ok(hdr.indexOf('Client:') < hdr.indexOf('<div class="plan-sched"'), 'under the client line');
   }
 
   group('⚠ the hours log is MOVED into its fold at the top, and parked before anything rewrites the plan');
