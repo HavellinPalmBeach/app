@@ -135,16 +135,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠⚠ a redraw does not shut the phase the crew is working in');
   {
-    const s = sandbox({ fns: ['planPhaseWrap', 'togglePhase'], vars: ['_planOpenPhases'],
+    const s = sandbox({ fns: ['planPhaseWrap', 'togglePhase', 'secCaret'], vars: ['_planOpenPhases'],
                         stubs: { document: { getElementById: () => null } } });
 
     // First render: everything closed, as it has always been.
     const shut = s.planPhaseWrap('p1', 'Phase 1', 'body');
     has(shut, 'id="phase-body-p1" style="display:none', 'a phase starts closed');
-    has(shut, '>▶<', 'with a closed chevron');
+    // ⚠ RESTATED 2026-09-20, and the new form is the requirement the literal stood in for.
+    // This pinned '>▶<' and '>▼<' — the big carets the Job Plan drew on the RIGHT of the bar until
+    // the folds took Build Estimate's own `.sec-hdr`/`.sec-caret`. The byte sequence was never the
+    // rule. The rule is that the pair the fold RENDERS is the pair the toggle WRITES: a glyph
+    // changed at one end and not the other leaves a control disagreeing with what it shows, which
+    // is exactly what four writers of one caret invite. Driven off the shared definition, so it
+    // survives the next change of glyph and fails on a second copy of one.
+    has(shut, '>' + s.secCaret(false) + '<', 'with a closed caret');
 
     // The crew opens it. Drive the REAL toggle against a real element.
-    const el = { style: { display: 'none' } }, chev = { textContent: '▶' };
+    const el = { style: { display: 'none' } }, chev = { textContent: s.secCaret(false) };
     s.document = { getElementById: (id) => id === 'phase-body-p1' ? el
                                          : id === 'phase-chev-p1' ? chev : null };
     s.togglePhase('p1');
@@ -154,7 +161,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Now the tab redraws — a photo landing, the estimate store arriving, anything.
     const after = s.planPhaseWrap('p1', 'Phase 1', 'body');
     lacks(after, 'id="phase-body-p1" style="display:none', 'the redraw leaves it OPEN');
-    has(after, '>▼<', 'chevron included, so the control matches what it shows');
+    has(after, '>' + s.secCaret(true) + '<', 'caret included, so the control matches what it shows');
+    eq(chev.textContent, s.secCaret(true), '⚠ and the toggle WROTE the same caret the renderer draws — one pair, both ends');
+    ok(s.secCaret(true) !== s.secCaret(false), 'the two states are distinguishable at all');
 
     // A phase nobody opened is still closed after the same redraw.
     has(s.planPhaseWrap('p2', 'Phase 2', 'body'), 'id="phase-body-p2" style="display:none',

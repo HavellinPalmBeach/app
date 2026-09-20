@@ -515,7 +515,17 @@ input:checked+.slider:before{transform:translateX(18px);}
 .gate-ok{background:var(--ok-bg);color:var(--ok-tx);border-color:#b9d49a;}
 .gate-no{background:var(--err-bg);color:var(--err-tx);border-color:#e3b7b7;}
 .gate-fixes{flex:1 1 100%;font-size:11px;color:var(--gray-dk);line-height:1.5;}
-.stage-meta{font-size:11px;font-weight:600;color:var(--cream);opacity:.85;white-space:nowrap;}
+/* The two tool folds at the top of the Job Plan wear Build Estimate's `.sec-hdr .sec-toggle`, so
+   these only add what a fold needs on top of a section header: no top margin (the wrapper owns the
+   gap) and a bordered body under the bar. Radius 4px to match .sec-hdr, not the 5px it used. */
+.plan-fold{margin-bottom:12px;}
+.plan-fold .sec-hdr{margin-top:0;}
+.plan-fold-body{padding:12px 14px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;}
+/* ⚠ `text-transform:none` IS LOAD-BEARING, NOT TIDYING. The meta sits INSIDE .sec-hdr now, which is
+   uppercase with .1em tracking — inherited, "today 0 hrs · 7 of 60 logged" renders as a shouted
+   TODAY 0 HRS. .sec-count resets both for the same reason; this is the same reset on the same bar.
+   `margin-left:auto` is what puts it at the right-hand end now the row is no longer space-between. */
+.stage-meta{margin-left:auto;font-size:9px;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--tan);opacity:.85;white-space:nowrap;}
 .stage-warn{color:#f3c86b;font-weight:700;}
 /* The job body (2026-09-20): Before Day 1 → In the house → Midpoint & pickups → Move day → Close-out,
    OPEN, in the order the job is done, on one thread with a node per stage — green behind you, bronze
@@ -1184,7 +1194,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 3:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 4:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1235,7 +1245,7 @@ body.no-smf .smf-col{display:none;}
        `#agr-page-content` and `ensureAgreementApproved` primes before it stamps. Removing
        the markup and repointing all of that in one commit is how one gets missed. -->
   <button class="nb" data-field="1" data-field-label="Job Plan" onclick="showPanel('job-plan',this)">Job Plan</button>
-  <button class="nb" onclick="showPanel('inventory',this)">Inventory</button>
+  <button class="nb" onclick="showPanel('inventory',this)">Job Admin &amp; Inv</button>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
   <button class="nb" data-field="1" data-field-label="Vendors" onclick="showPanel('vendors',this)">Vendors</button>
   <button class="nb" onclick="showPanel('referrals',this)">Referral Partners</button>
@@ -2062,8 +2072,8 @@ body.no-smf .smf-col{display:none;}
   <div class="card" style="margin-bottom:1rem;">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
-        <div style="font-size:13px;font-weight:600;">Estate Inventory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;">Work the day&rsquo;s walkthrough: value each item, decide where it goes, then produce the client&rsquo;s schedule.</div>
+        <div style="font-size:13px;font-weight:600;">Job Admin &amp; Inventory</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">The desk half of the job: work the day&rsquo;s walkthrough, tick off the admin, then produce the client&rsquo;s schedule.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
@@ -4529,7 +4539,7 @@ function buildRoomTable() {
     _secRoomIds[si] = [];
     html += '<div class="room-sec" id="room-sec-' + si + '">';
     html += '<div class="sec-hdr sec-toggle" onclick="toggleRoomSection(' + si + ')">'
-          + '<span class="sec-caret" id="sec-caret-' + si + '">&#9662;</span>'
+          + '<span class="sec-caret" id="sec-caret-' + si + '">' + secCaret(!_roomSecCollapsed[si]) + '</span>'
           + '<span>' + sec.section + '</span>'
           + '<span class="sec-count" id="sec-count-' + si + '"></span></div>';
     html += '<div class="sec-body" id="sec-body-' + si + '">';
@@ -4637,6 +4647,16 @@ var _secRoomIds = {};        // sectionIndex -> [roomId,...], rebuilt by buildRo
 var _roomSecCollapsed = {};  // sectionIndex -> true when collapsed
 var _roomSecInit = false;    // false until the first build stamps the default-collapsed state
 
+// ⚠ ONE CARET, SIX WRITERS. Four headers RENDER a caret — the Job Plan's tool folds, Build
+// Estimate's room sections, the Vendors tree and the Referral Partners tree — and two toggles
+// REWRITE it, so a glyph changed at one end and not the other leaves a control disagreeing with
+// what it shows. They are the same control and read the same pair here. ▾ open / ▸ shut — the SMALL carets. Until 2026-09-20 the Job Plan drew the big
+// ▼/▶ at 13px on the right of the bar while Build Estimate drew ▸ at 9px on the left, which is
+// what Anthony saw: *"move the expanding triangles … to the left … somehow it looks smaller."*
+// Self-contained on purpose: the glyphs live in the one function every caller reads, so there is
+// nothing beside it to fall out of step with.
+function secCaret(open) { return open ? '\u25BE' : '\u25B8'; }   // ▾ open / ▸ shut
+
 function toggleRoomSection(si) {
   _roomSecCollapsed[si] = !_roomSecCollapsed[si];
   applyRoomSectionState(si);
@@ -4648,7 +4668,7 @@ function applyRoomSectionState(only) {
     var caret = document.getElementById('sec-caret-' + si);
     var collapsed = !!_roomSecCollapsed[si];
     if (body)  body.style.display = collapsed ? 'none' : '';
-    if (caret) caret.innerHTML = collapsed ? '&#9656;' : '&#9662;';  // ▸ collapsed / ▾ open
+    if (caret) caret.textContent = secCaret(!collapsed);
   });
 }
 function updateRoomSectionCounts() {
@@ -5156,7 +5176,7 @@ function checkBackendVersion() {
 // mistakes that make a redeploy look done when it is not.
 var BACKEND_FEATURE_COST = {
   htmlToPdf:     'client emails go out with no PDF attached',
-  getThumbnails: 'no photographs on the Inventory tab',
+  getThumbnails: 'no photographs on the Job Admin & Inv tab',
   saveMedia:     'the inventory manifest never leaves this device',
   uploadHtml:    'estimates filed to Drive pile up instead of replacing',
   createFolder:  'new clients get no Google Drive folder at all',
@@ -16531,6 +16551,39 @@ function hardDeleteJob(id) {
 }
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
+// ── ONE CURRENT JOB ACROSS THE TWO JOB TABS (2026-09-20) ─────────────────────────────────────
+// Anthony: *"if I'm working on a job and I'm going between job plan and inventory, they're on the
+// same job. So selecting in one basically selects in both."* They are the field and the desk halves
+// of ONE job — the Job Plan is worked in the room, Job Admin & Inv is worked that evening — so a
+// client picked on either is the client both open on.
+//
+// ⚠ SESSION STATE, NOT A RECORD, the rule `_planOpenPhases` already follows. Which client somebody
+// is looking at is nobody else's business: it must never reach the job store or the sheet, where it
+// would sync one person's screen position to the other's iPad. A reload clears it, deliberately.
+//
+// ⚠⚠ AND IT IS CHECKED AGAINST `jobs` BEFORE IT IS ASSIGNED, which is the whole risk here. A
+// <select> SILENTLY REJECTS a value it has no option for, leaving the picker EMPTY — so a
+// remembered job dropped by another device would land BOTH tabs on "Select a job" and read as the
+// sync being broken rather than the job being gone. That is the `forceJobId` defect of 2026-09-19
+// arriving by a different door. Both pickers list every job unfiltered (`populateLogAndInvSelects`
+// and `populateInventorySelect` each walk `jobs` with no filter), so anything still in `jobs`
+// resolves on both and anything else is correctly refused.
+var _currentJobId = 0;
+function setCurrentJob(jobId) {
+  var id = parseInt(jobId) || 0;
+  if (id) _currentJobId = id;
+}
+// Returns true only when it MOVED the picker, so a caller re-renders on a real change and not on
+// every tab open.
+function adoptCurrentJob(selId) {
+  var sel = document.getElementById(selId);
+  if (!sel || !_currentJobId) return false;
+  if (String(sel.value) === String(_currentJobId)) return false;
+  if (!jobs.some(function(j){ return j.id === _currentJobId; })) return false;
+  sel.value = String(_currentJobId);
+  return String(sel.value) === String(_currentJobId);
+}
+
 function showPanel(id, btn) {
   // Field mode shows four tabs. Navigating to any other panel leaves you looking at a
   // screen with no matching tab in the bottom bar and nothing highlighted — no way back
@@ -16585,6 +16638,8 @@ function showPanel(id, btn) {
   if (id==='winloss') renderWinLoss();
   if (id==='job-plan') {
     populateLogAndInvSelects();
+    // Adopt BEFORE maybeStartPlanWatch below — planWatchTick reads the selected job.
+    if (adoptCurrentJob('plan-job')) loadJobPlanTab();
     buildLogTeamRows();
     rebuildDropdowns();
     var logDateEl = document.getElementById('log-date');
@@ -16597,7 +16652,7 @@ function showPanel(id, btn) {
   }
   if (id==='invoice') { populateLogAndInvSelects(); loadInvoice(); }
   if (id==='agreement') { populateAgrSelect(); }
-  if (id==='inventory') { populateInventorySelect(); renderInventoryTab(); _invRefreshFromCloud(); }
+  if (id==='inventory') { populateInventorySelect(); adoptCurrentJob('inv-job'); renderInventoryTab(); _invRefreshFromCloud(); }
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -20919,6 +20974,8 @@ function _invEnsureLoaded(jobId) {
 // took its `if (!jobId) return` and the one moment a job actually became current was the
 // one moment nothing fetched.
 function onInventoryJobChange() {
+  var _sel = document.getElementById('inv-job');
+  setCurrentJob(_sel && _sel.value);   // the Job Plan opens on this client too
   renderInventoryTab();
   _invRefreshFromCloud();
 }
@@ -25202,6 +25259,10 @@ function loadJobPlanTab() {
     if (ls2) ls2.style.display = 'none';
     empty('Job not found.'); return;
   }
+  // Job Admin & Inv opens on this client too. Set ABOVE the gates below on purpose: a job whose
+  // plan is withheld (not won, estimate unread) is still the job being worked, and its desk tab
+  // should follow it rather than stay on whoever was open last.
+  setCurrentJob(jobId);
   var estRec = estimateStore[jobId];
   var isApproved = (estRec && estRec.approved) || job.approved;
   if (!estRec) {
@@ -25379,16 +25440,22 @@ function planPhaseWrap(id, title, body, meta) {
   // says how it stands. The end marker lets a test prove a block sits BETWEEN two folds rather
   // than inside one — a closed body hides whatever is in it, and the browser is the only other
   // thing that can tell.
-  return '<div style="margin-bottom:12px;">' +
-    '<div onclick="togglePhase(\'' + id + '\')" style="display:flex;justify-content:space-between;' +
-    'align-items:center;cursor:pointer;padding:10px 14px;background:var(--gray-dk);color:var(--cream);' +
-    'border-radius:5px 5px 0 0;gap:10px;">' +
-    '<span style="font-weight:700;font-size:13px;">' + title + '</span>' +
-    '<span style="display:flex;align-items:center;gap:10px;">' +
+  // ⚠ THE BAR IS BUILD ESTIMATE'S OWN `.sec-hdr .sec-toggle`, NOT A SECOND COPY OF IT (2026-09-20).
+  // It was ~90 characters of inline style drawing the same dark bar three points larger, with the
+  // caret on the far RIGHT — 1228px from the label on a 1440px screen, against 12px on the next tab.
+  // Sharing the class is what stops the two drifting again; the room sections and these folds are
+  // the same control and now look it.
+  // ⚠ `class` GOES BEFORE `id` ON THE BODY, deliberately: the accordion suite reads
+  // `id="phase-body-X" style="display:none` as one string to prove a fold starts shut, and an
+  // attribute inserted between those two would break a true assertion over a cosmetic change.
+  return '<div class="plan-fold">' +
+    '<div class="sec-hdr sec-toggle" onclick="togglePhase(\'' + id + '\')">' +
+    '<span class="sec-caret" id="phase-chev-' + id + '">' + secCaret(open) + '</span>' +
+    '<span>' + title + '</span>' +
     (meta ? '<span class="stage-meta" id="stage-meta-' + id + '">' + meta + '</span>' : '') +
-    '<span id="phase-chev-' + id + '">' + (open ? '▼' : '▶') + '</span></span></div>' +
-    '<div id="phase-body-' + id + '" style="display:' + (open ? '' : 'none') + ';padding:12px 14px 14px;border:1px solid var(--border);' +
-    'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div><!--/stage-' + id + '-->';
+    '</div>' +
+    '<div class="plan-fold-body" id="phase-body-' + id + '" style="display:' + (open ? '' : 'none') + ';">' +
+    body + '</div></div><!--/stage-' + id + '-->';
 }
 
 // An OPEN stage of the job body: a card on the flow whose node says where the job is — `done`
@@ -25796,14 +25863,14 @@ function planDerivedLines(jobId, job, est, phase) {
       if (leaving.length) {
         var nA = leaving.filter(function(r){ return !!(r.authBy && r.approvalDate); }).length;
         out.push({ key: 'release_authority', ok: nA === leaving.length, label: 'Written release authority on every item leaving',
-                   detail: nA + ' of ' + leaving.length + ' — the release approval request is on the Inventory tab' });
+                   detail: nA + ' of ' + leaving.length + ' — the release approval request is on the Job Admin & Inv tab' });
       }
     }
     var donating = _jobInvRefs(jobId).filter(function(r){ return r.disposition === 'Donate'; });
     if (donating.length) {
       var rcpt = donating.some(function(r){ return !!r.receiptDoc; });
       out.push({ key: 'donation_receipt', ok: rcpt, label: 'Donation receipt on file',
-                 detail: rcpt ? 'attached' : donating.length + ' item' + (donating.length > 1 ? 's' : '') + ' going to donation — attach the receipt on the Inventory tab (Receipt / Doc)' });
+                 detail: rcpt ? 'attached' : donating.length + ' item' + (donating.length > 1 ? 's' : '') + ' going to donation — attach the receipt on the Job Admin & Inv tab (Receipt / Doc)' });
     }
   }
   if (phase === 'p4') {
@@ -27218,7 +27285,7 @@ function renderVendorsTab() {
     var gcounts = _vendorCounts(allInGroup);
     var gopen = active || !!vendorExpandedGroups[g];
     var gHeader = '<div onclick="toggleVendorGroup(' + gi + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--tan);border:1px solid var(--border-md);border-radius:6px;padding:11px 13px;margin-bottom:6px;">' +
-        '<div style="font-weight:700;font-size:14px;color:var(--gray-dk);"><span style="color:var(--bronze);margin-right:8px;display:inline-block;width:10px;">' + (gopen?'▾':'▸') + '</span>' + esc(g) +
+        '<div style="font-weight:700;font-size:14px;color:var(--gray-dk);"><span style="color:var(--bronze);margin-right:8px;display:inline-block;width:10px;">' + secCaret(gopen) + '</span>' + esc(g) +
           ' <span style="font-weight:400;font-size:11px;color:var(--gray);">· ' + cats.length + ' categor' + (cats.length===1?'y':'ies') + '</span></div>' +
         _vendorCountsHtml(gcounts) +
       '</div>';
@@ -27231,7 +27298,7 @@ function renderVendorsTab() {
         var vs = byGroup[g][cat].slice().sort(comparator);
         var copen = active || !!vendorExpandedCats[key];
         var cHeader = '<div onclick="toggleVendorCat(' + ci + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:9px 12px;margin-bottom:6px;">' +
-            '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (copen?'▾':'▸') + '</span>' + esc(cat) + '</div>' +
+            '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + secCaret(copen) + '</span>' + esc(cat) + '</div>' +
             _vendorCountsHtml(_vendorCounts(vs)) +
           '</div>';
         var section = copen ? '<div class="dir-cards">' + vs.map(vendorCardHtml).join('') + '</div>' : '';
@@ -28023,7 +28090,7 @@ function renderReferralsTab(){
       ? '<span style="color:var(--ok-tx);font-weight:600;">' + active + ' active</span>'
       : '<span style="color:var(--gray);">0 active</span>';
     var header = '<div onclick="toggleReferralCat(' + i + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px;">' +
-        '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + (open?'▾':'▸') + '</span>' + esc(t) + '</div>' +
+        '<div style="font-weight:600;font-size:13px;"><span style="color:var(--bronze);margin-right:6px;display:inline-block;width:10px;">' + secCaret(open) + '</span>' + esc(t) + '</div>' +
         '<div style="font-size:11px;color:var(--gray);white-space:nowrap;">' + ps.length + ' partner' + (ps.length!==1?'s':'') + ' · ' + activeTxt + ' · ' + contacted + ' contacted</div>' +
       '</div>';
     var section = open
@@ -28943,7 +29010,7 @@ function renderJobPlan(jobId, job, est) {
     planSubsec('Vendor Scorecard') +
     '<div id="scorecard-' + jobId + '">' + renderVendorScorecard(jobId, job) + '</div>' +
     '<div style="font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;">Financial close' + (isProbate ? ', the §733.604 filing list' : '') +
-      ' and records are desk work: they are under <strong>Job Admin</strong> at the top of the Inventory tab.</div>';
+      ' and records are desk work: they are under <strong>Job Admin</strong>, at the top of the <strong>Job Admin &amp; Inv</strong> tab.</div>';
 
   // Collections and vehicles flagged during the estimate walkthrough are NOT items yet.
   // They live on the estimate snapshot and are brought into the manifest deliberately,
@@ -28995,7 +29062,7 @@ function togglePhase(id) {
   if (!body) return;
   var collapsed = body.style.display === 'none';
   body.style.display = collapsed ? '' : 'none';
-  if (chev) chev.textContent = collapsed ? '▼' : '▶';
+  if (chev) chev.textContent = secCaret(collapsed);   // one pair, shared with the room sections
   if (collapsed) _planOpenPhases[id] = true; else delete _planOpenPhases[id];
 }
 

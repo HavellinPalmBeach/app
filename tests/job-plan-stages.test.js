@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const j = sandbox({
       fns: ['renderJobPlan', 'planTaskCtx', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
-            'planChk', '_planTaskDone', 'planPhaseWrap', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines',
+            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
@@ -208,7 +208,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('planPhaseWrap — the tools’ fold: the meta on the bar and the end marker; three arguments still work');
   {
-    const w = sandbox({ fns: ['planPhaseWrap'], vars: ['_planOpenPhases'] });
+    const w = sandbox({ fns: ['planPhaseWrap', 'secCaret'], vars: ['_planOpenPhases'] });
     const three = w.planPhaseWrap('vendors', 'Vendors', 'BODY');
     has(three, 'id="phase-body-vendors" style="display:none', 'starts closed');
     lacks(three, 'stage-meta', 'no meta, no span');

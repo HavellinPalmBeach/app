@@ -3999,6 +3999,97 @@ element (`{value:'3500'}`, `{attrs:{'data-state':'in'}}`), anything else sets `.
   because the body never executes. The first resolution pass reported *"LOADED OK, fns=[calcAll]"*
   and had proved precisely nothing.
 
+## ⚠ ONE JOB ACROSS BOTH JOB TABS, AND THE FOLDS TOOK BUILD ESTIMATE'S OWN BAR (2026-09-20)
+Anthony, off the Job Plan: *"I used the drop down to set the job to one of our dummy clients, and I realized what would be
+nice is if the inventory tab updated to the same client … selecting in one basically selects in both."* Then, on the name:
+*"rather than call it inventory tab, I kind of like job admin … that way job plan and job admin kind of signal what they're
+used for."* Then, off a screenshot of the two dark fold bars: *"can we move the expanding triangles that are all the way over
+on the right to the left? And make it look like it does in build estimate … somehow it looks smaller … can you just check the
+formatting so that the pages are consistent."* App-only, no redeploy.
+
+- **⚠ THE SYNC IS SAFE BECAUSE NEITHER PICKER FILTERS, AND THAT WAS CHECKED BEFORE IT WAS BUILT.**
+  `populateLogAndInvSelects` (`#plan-job`) and `populateInventorySelect` (`#inv-job`) each walk `jobs` with **no filter**, so
+  every job has a matching option on both and a shared id always resolves. Had either filtered, this would have been the
+  `forceJobId` defect of 2026-09-19 arriving by a second door: **a `<select>` silently rejects a value it has no option for**,
+  so the picker would have gone EMPTY and both tabs would have read *Select a job*.
+  - **⚠ THE MEMBERSHIP GUARD IS THE WHOLE RISK AND IT IS TESTED.** `adoptCurrentJob` refuses an id no longer in `jobs` rather
+    than assigning it and hoping — a job dropped by another device (the ledger does this) would otherwise empty both pickers
+    and read as the sync being broken rather than the job being gone. Reverting the guard fails 1.
+  - **⚠ SESSION STATE, NEVER A RECORD**, the rule `_planOpenPhases` already follows. Which client somebody is looking at is
+    nobody else's business; persisting it would sync one person's screen position to the other's iPad. A test `lacks()` it
+    `localStorage`, `saveJobs` and `syncJobToSheets`.
+  - **⚠ THE JOB PLAN RECORDS THE CLIENT ABOVE ITS OWN GATES.** A job whose plan is withheld (not won, estimate unread) is
+    still the job being worked, so the desk tab follows it rather than staying on whoever was open last. Moving the call
+    below the won gate fails 2.
+- **⚠ THE TAB IS `Job Admin & Inv`, AND THE NAME HAD BEEN HALF-TRUE SINCE 2026-09-19.** `renderJobAdmin` has been folded at
+  the top of that tab since the field-capture build — on Anthony's own instruction at the time (*"I know for certain I don't
+  want another tab"*) — so the tab carried the admin checklist and said only *Inventory*. The nav is abbreviated; the page
+  heading reads **Job Admin & Inventory** in full. **Measured in Chromium before committing to the long name**: the nav
+  buttons total **1207px against 1440px** available, no wrap, no clip, no page overflow at 1440 / 1280 / 1100 / 1024.
+- **⚠⚠ THE FOLD WAS A SECOND COPY OF A BAR THAT ALREADY EXISTED, AND THE NUMBERS ARE WHY ANTHONY'S EYE WAS RIGHT.**
+  Measured on the rendered page at 1440 before the change:
+
+  | | Job Plan fold | Build Estimate |
+  |---|---|---|
+  | caret side | **RIGHT, 1228px in** | LEFT, 12px in |
+  | caret glyph · size | `▶` 13px | `▸` **9px** |
+  | title | 13px / 700 / none | 10px / 600 / **UPPERCASE** |
+  | bar height | **40px** | 30px |
+
+  `planPhaseWrap` carried ~90 characters of inline style drawing the same dark bar three points larger. It wears
+  **`.sec-hdr .sec-toggle` and `.sec-caret`** now — the class, not a copy of it — and every metric matches.
+- **⚠⚠ `text-transform:none` ON THE META IS LOAD-BEARING, NOT TIDYING.** The count sits INSIDE `.sec-hdr` now, which is
+  uppercase with .1em tracking, so inherited it renders *"no hours logged today · 0 of 157 logged"* as a shouted
+  **TODAY 0 HRS** — on the one line carrying the amber nag. `.sec-count` resets both for the same reason.
+- **⚠ `class` GOES BEFORE `id` ON THE FOLD BODY, DELIBERATELY.** The accordion suite reads
+  `id="phase-body-X" style="display:none` as ONE string to prove a fold starts shut; an attribute inserted between those two
+  would break a true assertion over a cosmetic change.
+- **⚠ ONE CARET, SIX WRITERS — and the net is the rule, not today's call sites.** Two fold headers RENDER a caret and two
+  toggles REWRITE it; the Vendors and Referral Partners headers held a third and fourth copy of the same pair. All read
+  `secCaret(open)` now. A test asserts **no live line anywhere in the file carries a caret glyph outside that function**, in
+  both spellings (the code uses `\u` escapes; a hand edit would use the character). ⚠ Routing Vendors and Referrals through it
+  is a **zero-byte** substitution — they already drew the small carets on the left — so nothing about those two tabs moved.
+- **7347 committed checks** (+43: `tests/job-tab-sync.test.js` new at 21, `tests/fold-consistency.test.js` new at 20;
+  four pinned `fns:` lists broke correctly as `planPhaseWrap` grew a call to `secCaret` — **found by searching every pinned
+  list at once**, which this file records costing a round when it is not). **All eleven changes revert-verified
+  individually, ZERO green**; baseline 0 before and after, no unmatched needles.
+  - **⚠⚠ THE FIRST SWEEP CAME BACK GREEN ON SIX OF TWELVE, AND FIVE OF THE SIX WERE THE SAME GAP: every check drove a PIECE
+    and nothing drove what a person would SEE.** The caret's position — the thing Anthony actually asked for — the shared
+    classes, the room sections' glyphs, the CSS reset and the tab name could each be backed out with the whole suite
+    passing. `tests/fold-consistency.test.js` exists for exactly those five and drives the rendered bar rather than reading
+    around it.
+  - **⚠ AND THE SIXTH GREEN WAS THE REVERT, NOT THE TEST.** It commented the call out — `/* setCurrentJob(jobId); */` — and
+    a `has()` over raw source is satisfied by a call that no longer runs. The assertion is comment-stripped now (line-based:
+    `accept="image/*"` makes the block-comment regex eat ~170KB) and the revert is a true deletion. Re-done, it fails 2.
+  - **⚠ TWO PRE-EXISTING ASSERTIONS PINNED THE OLD GLYPHS AND BROKE CORRECTLY; RESTATED, NOT DELETED.**
+    `job-plan-accordion` pinned `>▶<` and `>▼<` — a byte sequence, not a requirement. The requirement is that **the pair the
+    fold RENDERS is the pair the toggle WRITES**, so it is driven off the shared definition and now also asserts the toggle
+    wrote what the renderer draws. The twentieth time this file records a byte-sequence pin breaking on a true change.
+- **Verified end to end in headless Chromium on the real page**, two seeded jobs, driving the real nav and both real pickers:
+
+  | | |
+  |---|---|
+  | nav label | **Job Admin & Inv** · page heading *Job Admin & Inventory* |
+  | pick Butler on the Job Plan, open the desk tab | `inv-job` **follows to 7** |
+  | switch the desk tab to Ellsworth, go back | `plan-job` and `log-job` both **8**, header names Ellsworth |
+  | a stale job (999) | **refused** — `moved:false`, picker left on a real client, never emptied |
+  | localStorage keys for it | **none** |
+  | the fold bar | caret **▸ 9px, LEFT at 12px**, title **10px/600/uppercase**, bar **30px** — every metric equal to Build Estimate |
+  | the count | `text-transform: none`, 9px, 12px from the right edge — not shouted |
+  | opening a fold | writes **▾**, body shown, the hours log lands in its slot |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  The first `<style>` block goes **1154 → 1164 lines and 632 → 635 rules, nothing deleted** — the 368-line CSS rule, applied
+  by measurement.
+- Manual **§10a** (the heading, *Tab: Job Admin & Inv*, and a note carrying the rename, the shared picker, the session-only
+  rule and the refusal); playbook **§e** (heading and a note in field language). Both `.md` copies hand-edited; **16 claims
+  parity-checked, 0 mismatches**; tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390
+  with **0 overflow, 0 page errors**; under `print` **17/40 and 16/16** tables as wide as their container, as at HEAD.
+- **⚠ NOT DONE, DELIBERATELY: the Invoices and Agreement pickers (`invoice-job`, `agr-job`) do NOT join the sync.** Anthony
+  asked for the two JOB tabs and those are document tabs reached from the Client Dashboard's own band. Widening it would
+  change which client a document renders against as a side effect of visiting another tab, which is the wrong-job hazard
+  this file records on `_primeEstimateFor`. His call, not a cleanup.
+
 ## Always on every commit
 - **Run `tools/stamp-build.sh`. Do not edit the stamp any other way, and above all do not
   write a regex against `hdr-ver`.** It reads the ET clock itself, anchors on the span's
@@ -4048,7 +4139,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/dazzling-babbage-ijoew4`
+- Active feature branch: `claude/great-turing-ac4h9i`
+  (was `claude/dazzling-babbage-ijoew4`)
   (was `claude/quirky-pasteur-bknj9m`)
   (was `claude/focused-knuth-pqw6ff`)
   (was `claude/estimate-view-client-dashboard-024he6`, then `claude/sharp-allen-1cc2ur`)
@@ -4070,7 +4162,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/dazzling-babbage-ijoew4:main`
+  `git push origin claude/great-turing-ac4h9i:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

@@ -517,7 +517,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const j = sandbox({
       fns: ['renderJobPlan', 'planTaskCtx', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
-            'planChk', '_planTaskDone', 'planPhaseWrap', 'planDerivedHtml', 'planDerivedLines', '_planRooms', '_planRoomStatus',
+            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', '_planRooms', '_planRoomStatus',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             // The stages (2026-09-19, evening): the gate chips, the fold counts, the current stage.
