@@ -29,7 +29,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: ['svcLabelOf', 'isDecedentJob', 'svcFamily', 'svcFamilyOptions', 'sameSvcFamily',
-          'isTMOnly', '_svcChangeConsequences', 'prepFeeRate', 'getVendorActuals', '_srcLineKey',
+          'fixedPriceBuffer', '_svcChangeConsequences', 'prepFeeRate', 'getVendorActuals', '_srcLineKey',
           'vendorFeeNote', '_invVendorFeeSentence',
           '_agrHasPrepVendors', '_pctWords', 'ecIsProbateSvc', 'ecIsEstateSvc'],
     vars: ['SVC_LABELS', 'DECEDENT_SERVICES', 'SVC_ORDER', 'PREP_FEE_RATE', 'SMF_PCT', '_PCT_WORDS'],
@@ -178,7 +178,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'e-prepared-by': 'Ashley Jerome', 'e-svc-note': '' });
       const fb = [];
       const c = sandbox({
-        fns: ['svcFamily', 'svcFamilyOptions', 'sameSvcFamily', 'isDecedentJob', 'isTMOnly',
+        fns: ['svcFamily', 'svcFamilyOptions', 'sameSvcFamily', 'isDecedentJob', 'fixedPriceBuffer',
               '_svcChangeConsequences', 'changeEstimateService',
               // the consequence lines read the rate now rather than printing a 30
               'prepFeeRate'],
@@ -255,16 +255,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(l, 'bills no concierge or specialist hours', 'entering prep is fee-only');
     has(l, 'kept and comes back', 'and the room scoring is not destroyed');
 
+    // ⚠ THESE THREE PINNED THE RETIRED T&M-ONLY RULE ("Fixed price is not offered on probate
+    // matters" / "becomes available again") and broke correctly when it came off on 2026-09-20.
+    // Restated rather than deleted, because the REQUIREMENT never was that probate refuses a
+    // flat fee — it is that a service change reports what it actually MOVES. What moves now is
+    // the contingency the suggested fee carries, and the converse is the half worth pinning: no
+    // withdrawal notice may survive anywhere, or the dialog would tell a concierge a flat fee is
+    // unavailable on the one matter type Anthony opened it up for.
     l = ctx._svcChangeConsequences('cleanout', 'probate', j()).join(' | ');
-    has(l, 'Fixed price is not offered', 'probate withdraws the flat fee');
-    has(l, '733.604', 'and asks for the case details Estate Settlement never collected');
+    lacks(l, 'not offered', 'probate no longer withdraws the flat fee');
+    lacks(l, 'becomes available', 'and nothing claims to restore it either');
+    has(l, 'contingency', 'what moves is the contingency, and it is reported');
+    has(l, '25%', 'naming the figure this matter type carries');
+    has(l, '20%', 'against the one it came from');
+    has(l, 'typed by hand stays as it is', 'a hand-set fee is not silently repriced');
+    has(l, '733.604', 'and it still asks for the case details Estate Settlement never collected');
 
     l = ctx._svcChangeConsequences('probate', 'contested_probate', j()).join(' | ');
     lacks(l, '733.604', 'moving between two probate services does not re-ask for them');
-    lacks(l, 'Fixed price is not offered', 'nor re-state a restriction that already applied');
+    has(l, '35%', 'but contested carries a wider contingency than probate, so that is reported');
 
-    l = ctx._svcChangeConsequences('contested_probate', 'cleanout', j()).join(' | ');
-    has(l, 'Fixed price becomes available', 'leaving a T&M-only matter restores it');
+    l = ctx._svcChangeConsequences('downsizing', 'downsizing_move', j()).join(' | ');
+    lacks(l, 'contingency', 'two services on the same 20% say nothing about it');
 
     l = ctx._svcChangeConsequences('downsizing', 'home_cleanout', j()).join(' | ');
     eq(l, '', 'a move that changes none of those says nothing rather than padding the dialog');

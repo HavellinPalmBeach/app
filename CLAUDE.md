@@ -1,5 +1,142 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ FIXED PRICE ON EVERY ENGAGEMENT — AND A FIXED-FEE CONTRACT HAD NO WAY TO END (2026-09-20)
+Anthony, hours after the hours decision: *"extend fixed pricing to all engagement types, including probate and contested
+probate… My gut tells me that executors or personal representatives are going to want to know a number, not here's my best
+estimate of hours and I could go over, and if I go over by 15%, I'll just keep getting change orders to you… we need to then
+modify the documents accordingly, like the agreement, and anywhere that we talk about hourly pricing, or at least these
+agreements need to toggle based on how we ultimately configure the estimate."* App-only, no redeploy.
+
+- **⚠⚠ THE GROUND FOR THE WITHHOLDING DISSOLVED THIS MORNING, WHICH IS WHY THIS IS NOT A RELAXATION.** `isTMOnly(svcKey)`
+  returned true on probate and contested probate: the toggle disabled, `calcAll` clearing a stale checked box with a notice,
+  the panel showing the flat figure as an internal reference nobody outside the office saw. Its stated reason was that the
+  representative's expenses are reviewed by the court and *"a flat fee that can't be tied back to logged time is exactly what
+  a judge or an heir's counsel questions."* **Hours became mandatory on every job, fixed price included, in the entry directly
+  below this one — the same morning.** The log now exists on a flat-fee probate exactly as on a T&M one; the fee is simply not
+  billed FROM it. **Deleted, not left returning false** — a retired gate that still compiles is how one comes back — and the
+  requirement is pinned as the CONVERSE over live source (no `isTMOnly`, no `_tmOnly`, no `_fixedCleared`, no
+  `fixed-price-warn`, `toggleFixedPrice` naming no matter type, and **exactly one** `isFixed = false` site in `calcAll`).
+  - **⚠ PREP IS STILL EXCLUDED AND IT IS A DIFFERENT KIND OF RULE.** `computeEngineV3` zeroes every hour on prep and its
+    revenue is `prepFeeRate()` of vendor spend, so there is no hourly basis for a flat fee to replace. `isPrep` gates it in
+    `calcAll`, which is where it belongs. Do not re-express it as a service exclusion beside the one just removed.
+- **⚠⚠ THE 25% / 35% BANDS ARE QUOTED FIGURES NOW AND WERE KEPT DELIBERATELY.** `fixedPriceBuffer` has always carried probate
+  25% and contested 35% against 20% everywhere else, annotated *"reference only — T&M billed"*. They reach a personal
+  representative's own page from today. Put to Anthony against flattening to 20; he kept them. The reason, recorded because
+  somebody will propose 20 again: **the buffer IS the risk Havellin absorbs**, and the change-order triggers the estate
+  agreement already lists — beneficiary disputes, legal holds and work stoppages, ancillary probate in another state — are
+  precisely what makes a matter run long. Measured on the real form, same six rooms: the suggestion is **$21,960 Estate
+  Settlement · $26,875 probate · $41,715 contested**, which is a heavier hourly basis AND a wider band, both correct.
+- **⚠⚠ THREE DEFECTS FOUND ON THE WAY, ALL LIVE BEFORE THIS BUILD, because Estate Settlement has ALWAYS been quotable flat
+  and takes the SAME estate/probate agreement form.** Opening probate up did not create them; it made them the common case.
+  - **`_cePhases` CARRIED NO `fixedPrice` REFERENCE AT ALL.** The Close-Out stage told the client *"your final invoice is
+    generated from the actual logged hours — not from the estimate"* and the records list promised *"a final invoice built
+    from the actual logged hours"* — which is what `renderInvoice` does on T&M and **the exact opposite** of what it does on
+    a flat fee (`_fixed` anchors every stage to `_fixedTotal` and the final never consults the log). The stage narrative
+    contradicted this document's own Terms four inches below it. Reverting either arm fails 3.
+  - **THE ESTATE AGREEMENT'S §4.1 LISTED AN HOURS TRIGGER ON A FIRM FEE** — *"actual hours projected to exceed estimate by
+    more than 15%"* — two paragraphs under §3.1 stating the price does not vary with the hours worked. A mechanism that
+    cannot fire, in a contract construed against the drafter. It is a change in SCOPE on the fixed arm. Reverting fails 2.
+  - **AND §3.1 CALLED ITSELF *Hourly Rate Structure* ON A FIXED-FEE CONTRACT.** ⚠ **The rate card itself STAYS and is
+    load-bearing**: the Fixed Project Fee paragraph under it says the hourly rates *"apply only to Change-Order work"*, so
+    stripping them leaves a change-order mechanism with no rate to price it at. Only the heading moves.
+
+### ⚠⚠ A FIXED-FEE CONTRACT WITH NO PARTIAL-TERMINATION FORMULA — the real find, and Anthony's call
+Both forms measured the exit in **hours worked** (`§8.1` *"responsible for all hours worked"*, *"a final invoice reflecting
+actual hours and materials"*; `§12.2` *"pay Contractor for all Services performed"*) while §3.3 / §3.1 said three sections
+earlier that a fixed fee does not vary with the hours worked. **So a fixed-price matter terminated half-way had two answers to
+what is owed and they contradicted each other**, on a contract a probate court may read.
+- **⚠⚠ AND §12.4 ACTIVELY REFUNDED THE DEPOSIT.** *"If the deposit exceeds the amount owed, Contractor will refund the unused
+  balance"* — correct under a T&M reading, and on a flat fee stopped early it hands most of the 50% back. The estate form at
+  least said non-refundable *"if termination occurs after project start"*, and **nothing in that Agreement defines project
+  start**, so a client who signed, paid and cancelled the day before the crew arrived got all of it back.
+- **ANTHONY ON THE MECHANISM, AND HE IS RIGHT:** *"i don't want anything about hours worked if we are going down the fixed
+  price route. what if we've worked fewer hours than underpin the model/pricing."* **An hours-based exit payment claws back
+  exactly the upside the 20–35% contingency was paid for.** Fixed price transfers the risk — Havellin eats the overrun and
+  keeps the gain on an efficient job — and computing the exit from hours reverses that on the one job where it was earned.
+- **⚠⚠ HE OPENED ON "IF THEY JUST ARBITRARILY FIRE US THEY OWE US THE FULL AMOUNT", AND THAT IS THE ONE THING THAT WOULD HAVE
+  COST HIM THE PROTECTION.** A clause taking the whole contract price regardless of work performed is tested as **liquidated
+  damages** and survives only if the figure is a reasonable forecast of actual loss made **at signing**; the full price on a
+  matter stopped at 10% is not, since the cost was never incurred and the crew is free to take other work. **The failure mode
+  is the bad one: a court that calls it a penalty strikes the clause OUTRIGHT** and drops us to common-law damages, i.e.
+  below what a smaller enforceable number would have collected. On probate it is worse again — the representative pays from
+  estate funds and the fee is reviewed, so an over-reaching exit clause can taint the **reasonableness finding on the fee
+  itself**. Put to him with that reasoning; he took the alternative.
+- **THE RULE: A STAGE-BASED EARN-OUT ON THE 50/25/25 SCHEDULE THE CLIENT ALREADY SIGNED.** Deposit earned in full **on
+  signature** and not refundable; **75%** earned once the midpoint milestone is reached; the **whole fee** on completion of
+  the Exhibit A scope; plus non-cancelable vendor commitments. No hours anywhere, no new arithmetic, and it reads as
+  compensation rather than a penalty because each step is a milestone actually reached. **It also lands where Anthony wanted
+  in every realistic case** — nobody terminates a concierge engagement on day one for no reason, and a mid-job termination
+  differs from *"the full amount"* only by the last 25%. Reverting the estate arm fails **13**, the standard §12.2 4, §12.4 3.
+- **⚠ "FOR CAUSE" IS DEFINED AND CURABLE AND THAT IS THE LOAD-BEARING LINE.** A material breach by Havellin, described in the
+  client's written notice, **uncured after seven days**. If cause meant *"the client is unhappy"* every convenience
+  termination gets relabelled and the earn-out protects nothing. ⚠ **The cross-reference differs by form on purpose**: the
+  standard form cites **§12.3**, which really does carry notice-and-cure; the estate form's §8.2 is Havellin's own right to
+  terminate and says nothing about cure, so there the mechanism is **stated inline** rather than pointed at a section that
+  does not say it. A wrong cross-reference on a signed contract is worse than none.
+- **⚠ THE T&M ARMS OF BOTH FORMS ARE UNTOUCHED, DELIBERATELY.** The question put to Anthony was scoped to fixed price, and
+  the T&M wording is coherent on its own terms. ⚠ **The *"after project start"* vagueness is still there on the T&M arm** —
+  flagged rather than fixed, because changing what a T&M client owes on termination is not what this asked for.
+- **⚠⚠ NOT A LAWYER, AND FLORIDA LIQUIDATED DAMAGES IS FACT-SPECIFIC.** This is contract language drafted here and not
+  reviewed. **It goes to counsel with the firearms protocol before the first real engagement signs on a flat fee**, and both
+  documents say so on their face.
+
+- **⚠⚠ I NEARLY SHIPPED A LINE THAT UNLOCKED THE BILLING BASIS ON AN APPROVED ESTIMATE.** The first cut replaced
+  `_fxEl.disabled = _tmOnly` with `_fxEl.disabled = false`, which reads as tidying. **`applyEstimateLock` disables every
+  input in `#panel-estimate` on a SUBMITTED or APPROVED estimate and `calcAll` runs after it**, so that line would have handed
+  the fixed-price toggle back to anyone looking at an estimate a manager is reviewing — and left the `data-lock-restore`
+  bookkeeping inconsistent as well. Nothing disables that box any more except the lock, so nothing in `calcAll` should speak
+  to it; both it and the wrapper's `opacity` write are gone. A test `lacks()` `_fxEl.disabled` in `calcAll` and pins that the
+  lock is the only writer; the browser drives approve → locked → unlock. **The `assignedTCContact` shape exactly: a change
+  that gives an existing line a new reader can turn a harmless one dangerous, and the line was one I had just written.**
+- **7384 committed checks** (+80; `tests/fixed-price-all-services.test.js` new, 71). **All twelve changes revert-verified
+  individually, ZERO green** — the estate earn-out fails 13, flattening the bands 10, the toggle refusal 9, the
+  service-change note 5, §12.2 4, and the rest 1–3; baseline **0** before and after.
+  - **⚠ THE `NEEDLE x0` GUARD EARNED ITS KEEP AGAIN.** The twelfth revert's needle matched nothing (my comment insertion had
+    moved the neighbouring line it anchored on) and would otherwise have read as a green revert. Re-anchored, it fails 1.
+  - **⚠ THE T&M GATE REVERT FAILS ONLY *ONE*, AND THE REASON IS THE STANDING GAP: `calcAll` IS NOT DRIVEN IN `tests/`.** It
+    reads three dozen DOM elements, so only a source assertion sees that change. **The browser run is the driven proof** and
+    is where the three suggested-fee figures above were measured.
+  - **⚠ THREE PRE-EXISTING ASSERTIONS PINNED THE RETIRED RULE AND BROKE CORRECTLY; ALL RESTATED AS THEIR CONVERSE, NONE
+    DELETED.** `fixed-price`'s driven pair (the box unticks itself, the row hides) now asserts the box STAYS ticked on both
+    matter types and the fee prefills; `service-change`'s *"Fixed price is not offered"* / *"becomes available again"* now
+    assert no withdrawal notice survives and that the CONTINGENCY change is what gets reported. Two pinned `fns:` lists
+    carried `isTMOnly` and now carry `fixedPriceBuffer`.
+  - **⚠ AND ONE OF MY OWN NEW ASSERTIONS FAILED ON CORRECT CODE.** `toggleFixedPrice` prefills only into an EMPTY field
+    ("prefill + override"), so the previous step's `$26,100` was still there and the prefill never ran. The fixture clears
+    the field; the code was right.
+- **Verified end to end in headless Chromium on the real page, 40 checks, 0 failed, 0 page errors**, driving the real job
+  loader, the real room grid, the real toggle, the real builders and the real invoice chain:
+
+  | | |
+  |---|---|
+  | the toggle on a contested-probate estimate | **enabled**, undimmed, no *Not available* sub-label, the retired warn element **absent from the DOM** |
+  | ticking it | **stays ticked** (it used to untick itself) · the amount row opens · the fee prefills **$41,715** · the panel names the **35% contingency** |
+  | the same scoring across three matter types | **$21,960 · $26,875 · $41,715** — 20% / 25% / 35%, rising correctly |
+  | an APPROVED estimate | the toggle is **disabled** by the lock, and released when it comes off |
+  | the estate agreement, fixed | §3.1 *Fee Structure* · *fixed price of $54,000* · the **$185/hour card survives** for change orders · **no hours trigger** in §4.1 · §8.1 earns at signature / 75% / completion · material breach + seven days |
+  | the same matter on T&M | *Hourly Rate Structure*, the hours trigger and the hours-based termination all **untouched** |
+  | the living-client agreement, fixed | §12.4 **no longer refunds the deposit** · *earned on signature and is not refundable* · §12.2 anchored to **§3.2** |
+  | the client estimate | the fixed close-out **drops the hours claim** and says what the final does; the T&M one keeps it |
+  | **the invoice chain**, $54,000 contested probate, **empty timesheet** | **$27,000 · $13,500 · $13,500 = $54,000** · the final **not blocked**, **no PIN**, **no `/hr` line anywhere** |
+  | 1440 / 390px | overflow **0 / 0** |
+
+  The first `<style>` block is **byte-identical at 91,294 bytes / 632 rules** — the 368-line CSS deletion rule, applied by
+  measurement.
+- **⚠ NOT CHANGED, AND IT IS ANTHONY'S THIRD DECISION: the flat fee stands alone on the invoice, everywhere.** Asked whether a
+  fixed-price probate final should carry the hour schedule as court backup, he chose no. That needed no code — `_fixed` finals
+  already print *"billed at the agreed fixed price; charges do not vary with the hours worked"* and no hour detail — and the
+  browser run pins it (`no /hr line`). **The hours are still recorded on every job**; they are simply not on the client's
+  document. If counsel ever asks for them, they exist.
+- Manual **§5c** (availability, and the contingency note rewritten with why 25/35 were kept), **§8** (a new note: the
+  contradiction, the earn-out, why not the full fee, the curable-cause rule, and the counsel flag), **§11** (the contested
+  note no longer says fixed price is withheld), **§16** (the Billing basis note, with Anthony's words and what is *not*
+  waived). Playbook **the lever table**, **the quick reference**, a **Step 6 `.stop`** in field language (*"do not improvise
+  on this in a driveway… do not offer a refund of the deposit; it is not yours to offer"*) and **four** symptom→cause rows.
+  Both `.md` copies hand-edited; **33 claims parity-checked, 0 mismatches** — ⚠ four apparent misses were markdown emphasis
+  markers, **verified by stripping them rather than assumed**. A stale sweep for **seven** retired wordings returns **0 across
+  all four files**. Tag balance clean on both HTML files; rendered at 1440/390 with **0 overflow, 0 page errors**; under
+  `print` **40/40 and 16/16** tables keep their full width, so the phone block is still correctly scoped to `screen`.
+
 ## ⚠⚠ A BAD PHOTO COULD NOT BE DELETED, AND "DONE" WAS TWO DIFFERENT BUTTONS (BUILT 2026-09-20)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-20a`; until it lands a photo binned in
 the field comes off the job and **stays in the client's Drive folder**. Anthony, on a phone, in field mode, in a room:
@@ -4048,7 +4185,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/dazzling-babbage-ijoew4`
+- Active feature branch: `claude/gracious-rubin-u3r5pe`
+  (was `claude/dazzling-babbage-ijoew4`)
   (was `claude/quirky-pasteur-bknj9m`)
   (was `claude/focused-knuth-pqw6ff`)
   (was `claude/estimate-view-client-dashboard-024he6`, then `claude/sharp-allen-1cc2ur`)
@@ -4070,7 +4208,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/dazzling-babbage-ijoew4:main`
+  `git push origin claude/gracious-rubin-u3r5pe:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
