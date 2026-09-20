@@ -1194,7 +1194,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 7:23pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 7:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18049,7 +18049,7 @@ function savePhotoRefs(jobId) {
                sourceCollId:r.sourceCollId, sourceVehId:r.sourceVehId,
                filename:r.filename, driveFileUrl:r.driveFileUrl, driveFileId:r.driveFileId,
                reviewed:r.reviewed, reviewedAt:r.reviewedAt, reviewedBy:r.reviewedBy, valNote:r.valNote,
-               fieldNote:r.fieldNote, groupId:r.groupId,
+               fieldNote:r.fieldNote, groupId:r.groupId, derivedFrom:r.derivedFrom,
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
@@ -18071,13 +18071,19 @@ function _setPhotoRef(jobId, ref) {
   else _photoRefs[jobId].push(ref);
 }
 
+// ⚠⚠ A DERIVED LINE IS NOT A PHOTOGRAPH AND MUST NOT COUNT AS ONE. `_slotRefs` answers "how
+// many shots are in this slot", which drives the room card's counts, the as-found Lock gate and
+// the `seq` on the NEXT shot taken. A row split off an existing photograph (`derivedFrom`) is a
+// second OBJECT in a picture already taken — counting it would tell the crew they had shot the
+// room more thoroughly than they had, and would skip a sequence number on a file that exists.
+// It stays a full inventory line everywhere a LINE is what is being counted.
 // ⚠ A DISCARDED SHOT MUST DROP OUT OF EVERY READING OF THE SLOT, and this filter did not
 // test the tombstone — so a removed photo went on counting in the badge and went on drawing
 // its own Retry button. Room photos were simply never removable before, which is what left
 // that latent.
 function _slotRefs(jobId, roomIdx, label) {
   return (_photoRefs[jobId] || []).filter(function(r){
-    return r.roomIdx === roomIdx && r.label === label && !r.collId && !r.deletedAt;
+    return r.roomIdx === roomIdx && r.label === label && !r.collId && !r.deletedAt && !r.derivedFrom;
   });
 }
 
@@ -18138,17 +18144,29 @@ function discardShot(jobId, stableId) {
   // A detail shot is a close-up of THIS object. Binning the object without them would leave
   // photographs of a thing that is no longer on the manifest.
   var dets = ref.label === 'inventory' ? _invDetailRefs(jobId, stableId) : [];
+  // ⚠⚠ AND THE LINES SPLIT OUT OF IT GO TOO, NAMED. One photograph can carry several inventory
+  // lines (2026-09-20), and they exist only because the image does — binning the picture and
+  // leaving them behind would put rows on the court schedule with an empty photo box and no way
+  // to fill it. So they cascade like detail shots do, and the confirm NAMES them rather than
+  // counting them: "3 lines" invites a yes, "#12 Banksy · #13 hutch" is the work you are about
+  // to lose and stops the tap. Every one of them is tombstoned, so Restore brings the lot back.
+  var derived = ref.label === 'inventory' ? _invDerivedRefs(jobId, stableId) : [];
   var inDrive = [ref].concat(dets).filter(function(r){ return !!_invFileId(r); });
   var msg = 'Delete ' + _shotDesc(ref) + '?';
   if (dets.length) msg += '\n\nIts ' + dets.length + ' detail shot'
     + (dets.length > 1 ? 's go' : ' goes') + ' with it.';
+  if (derived.length) msg += '\n\n⚠ ' + derived.length + ' inventory line'
+    + (derived.length > 1 ? 's were' : ' was') + ' split out of this photograph and '
+    + (derived.length > 1 ? 'go' : 'goes') + ' with it:\n'
+    + derived.map(function(r){ return '  · ' + _invNamed(r); }).join('\n')
+    + '\n\nRestore on the Job Admin & Inv tab brings them back.';
   msg += inDrive.length
     ? '\n\nRemoved from this job and from the client\u2019s Google Drive folder. Google keeps it in '
       + 'the Drive bin for 30 days.'
     : '\n\nIt never reached Google Drive, so the image is thrown away with it.';
   if (!confirm(msg)) return false;
 
-  [ref].concat(dets).forEach(function(r) {
+  [ref].concat(dets).concat(derived).forEach(function(r) {
     r.deletedAt = Date.now();
     // ⚠ SO THE UNDO BUFFER CAN TELL THE TRUTH. Restore gives the ROW back — name, value,
     // disposition, custody — and it cannot give the photograph back, because that is in
@@ -18172,7 +18190,7 @@ function discardShot(jobId, stableId) {
   // draw a "Last:" panel for a photograph that no longer exists and file the next note on it.
   if (_fieldCam.open && _fieldCam.jobId === jobId) {
     var gone = {};
-    [ref].concat(dets).forEach(function(r){ gone[r.stableId] = 1; });
+    [ref].concat(dets).concat(derived).forEach(function(r){ gone[r.stableId] = 1; });
     if (gone[_fieldCam.lastAny]) { _fieldCam.lastAny = null; _fieldCam.lastThumb = ''; }
     if (gone[_fieldCam.last])    _fieldCam.last = null;
     if (gone[_fieldCam.noteFor]) { _fieldCam.noteFor = null; _fieldCam.noteDraft = ''; }
@@ -18182,6 +18200,9 @@ function discardShot(jobId, stableId) {
   }
   _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
 
+  // ⚠ `inDrive` IS DELIBERATELY [ref] + dets AND NOT THE DERIVED LINES. Every line split out of
+  // this photograph carries the SAME driveFileId, so including them would ask Drive to bin one
+  // file three times — two of those refusals landing loudly on screen over a delete that worked.
   _trashShotFiles(inDrive.map(function(r){ return _invFileId(r); }));
   return true;
 }
@@ -18769,6 +18790,99 @@ function _invThumbHTML(jobId, ref, px) {
     + ' title="' + esc(ref.objectName || '') + '">' + glyph + '</div>';
 }
 
+// ── ONE PHOTOGRAPH, MANY INVENTORY LINES (2026-09-20) ────────────────────────
+// Anthony, off a photograph of a bar console: *"this same picture is going to serve as
+// reference to multiple items — four bottles of booze, a Banksy, a hutch — so we really don't
+// have to photograph each individual item unless let's say we know it's extremely valuable
+// and we want to take a picture of the front and the back, or this Banksy if it was real we
+// would zoom in on the signature of the artist, or if it's China we'd flip it over and get
+// the maker's mark."*
+//
+// He is describing how the work is actually done, and the manifest could not express it: one
+// shot was one line, so five objects in one frame meant five photographs of one shelf or four
+// objects going unrecorded. The desk splits the line instead.
+//
+// ⚠⚠ A DERIVED ROW IS A FULL INVENTORY LINE AND IS NOT A PHOTOGRAPH. It gets its own permanent
+// item number, its own name, category, value, disposition, flags and custody log — they are
+// different objects and a receipt cites each one separately. What it does NOT get is a place
+// in `_slotRefs`, retry bytes, or an upload: it points at a file that is already in Drive.
+//
+// ⚠ IT IS DELIBERATELY DESK-ONLY. Splitting is naming work — you have to know what the four
+// bottles are — and the 2026-09-19 camera exists so the field types nothing. The field shoots
+// the shelf; the desk turns it into lines that evening.
+//
+// ⚠ AND IT IS NOT `groupId`. A DETAIL shot is a second PHOTOGRAPH of one object (the maker's
+// mark, the signature) and is never a line. This is the converse: one photograph, several
+// objects. Collapsing the two would make a close-up of a signature a separate asset on the
+// court schedule.
+function _invDerivedRefs(jobId, stableId) {
+  return (_photoRefs[jobId] || []).filter(function(r){
+    return r.derivedFrom === stableId && !r.deletedAt;
+  }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+}
+// The photograph a line's image comes from: itself, or the shot it was split off.
+function _invPhotoSource(jobId, ref) {
+  if (!ref || !ref.derivedFrom) return ref || null;
+  return _getPhotoRef(jobId, ref.derivedFrom) || null;
+}
+// Every line that shares one photograph, source first — what the desk needs to see beside a
+// row so two identical-looking thumbnails are not read as a duplicate.
+function _invPhotoSiblings(jobId, ref) {
+  var src = _invPhotoSource(jobId, ref);
+  if (!src) return [];
+  var all = [src].concat(_invDerivedRefs(jobId, src.stableId));
+  return all.filter(function(r){ return !r.deletedAt; });
+}
+
+// Split another object out of a photograph already taken. Returns the new row, or a string
+// naming the refusal.
+//
+// ⚠⚠ IT REFUSES ON A SHOT THAT HAS NOT REACHED DRIVE, and that is the reason the status
+// question never has to be answered anywhere else. A derived row carries the source's
+// `driveFileId` so its thumbnail and its link resolve; taken from a shot still uploading, it
+// would carry nothing, and nothing would ever come back and fill it in — the line would print
+// on the attorney's schedule with an empty photo box for the rest of the engagement. Retry the
+// shot first, then split it.
+function invSplitItem(jobId, stableId) {
+  var src = _getPhotoRef(jobId, stableId);
+  if (!src || src.deletedAt) return 'That photograph is not on this job.';
+  if (src.derivedFrom) src = _invPhotoSource(jobId, src) || src;   // split off the photograph, never off a line
+  if (src.label !== 'inventory') return 'Only an item photograph can be split into several lines.';
+  if (!_invFileId(src)) {
+    return 'This photograph has not reached Google Drive yet, so a line split off it would have '
+      + 'no image and never get one. Press Retry on the shot first, then split it.';
+  }
+  var ref = {
+    stableId: jobId + '_d' + _photoUid(),
+    derivedFrom: src.stableId,
+    roomIdx: src.roomIdx, label: 'inventory', collId: null, seq: src.seq,
+    // The image, and only the image. Name, category, value, disposition, flags and custody are
+    // deliberately NOT copied: this is a different object, and a prefilled answer on a blank
+    // line is the silence-reads-as-Keep defect the Undecided default exists to stop.
+    filename: src.filename, driveFileUrl: src.driveFileUrl, driveFileId: src.driveFileId,
+    // ⚠⚠ `ts` IS THE SOURCE'S, NOT NOW, AND THE BROWSER IS WHAT FOUND IT. Everywhere else in
+    // the manifest `ts` means WHEN THE PHOTOGRAPH WAS TAKEN — `_jobInvRefs` sorts on it, the
+    // Today filter groups on it, the As-Found Record orders on it. Stamped with the moment of
+    // the split, the four objects in one frame scattered: three under today and the console
+    // under the day it was shot, and on a 200-item estate a hundred rows apart from each other
+    // in the list. Inheriting it keeps one frame's lines together and keeps `ts` meaning one
+    // thing. They tie, and a stable sort then breaks the tie on insertion order — source first,
+    // then each split in the order it was made, which is the order somebody typed them in.
+    status: 'uploaded', ts: src.ts,
+    objectName: '', category: INV_DEFAULT_CATEGORY, disposition: ''
+  };
+  _invTouch(ref);
+  _setPhotoRef(jobId, ref);
+  savePhotoRefs(jobId);
+  _scheduleInventorySync(jobId);
+  return ref;
+}
+function invSplitItemClick(jobId, stableId) {
+  var out = invSplitItem(jobId, stableId);
+  if (typeof out === 'string') { alert(out); return; }
+  renderInventoryTab();
+}
+
 function _jobInvRefs(jobId) {
   return (_photoRefs[jobId] || [])
     .filter(function(r){ return r.label === 'inventory' && !r.collId && !r.deletedAt; })
@@ -18834,7 +18948,12 @@ function _invTouch(ref) { if (ref) ref.updatedAt = Date.now(); return ref; }
 // detail of — and neither can be re-derived at the desk once the crew has moved on.
 var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc', 'serial',
                          'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId',
-                         'fieldNote', 'groupId'];
+                         // ⚠ `derivedFrom` IS STICKY BECAUSE LOSING IT TURNS A LINE INTO A PHANTOM
+                         // PHOTOGRAPH. It is set once, at the split, and never cleared through the
+                         // UI; a merge that dropped it would put the row back into `_slotRefs`,
+                         // inflating the room's shot count and offering a Retry for bytes that do
+                         // not exist. Same reasoning as sourceCollId two entries up.
+                         'fieldNote', 'groupId', 'derivedFrom'];
 function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
 // ⚠⚠ "NEVER SAW A VALUE" AND "DELIBERATELY EMPTIED IT" ARE DIFFERENT ANSWERS, and without
 // telling them apart a sticky field could never be cleared at all — you would blank a
@@ -21673,8 +21792,16 @@ function _renderInvRow(job, ref) {
   if (ref.flagBequest) warn.push('<span title="Named in a specific bequest" style="color:var(--bronze);">bequest</span>');
   if (ref.flagDisputed) warn.push('<span title="Recorded dispute" style="color:#c0392b;">disputed</span>');
   var det = _invDetailRefs(jid, ref.stableId);
+  // ⚠ A ROW THAT SHARES ITS PHOTOGRAPH SAYS SO, and it is not decoration. Once one shot can
+  // carry several lines, two rows sitting under identical thumbnails is the ordinary case —
+  // and read cold it looks exactly like a duplicated import, which somebody would then "tidy
+  // up" by deleting one. The line names how many objects are in the frame.
+  var sibs = _invPhotoSiblings(jid, ref);
   var sub = [esc(ref.category || '—'), esc(_invRoomName(jid, ref.roomIdx))].join(' &middot; ')
-    + (det.length ? ' &middot; +' + det.length + ' detail shot' + (det.length > 1 ? 's' : '') : '');
+    + (det.length ? ' &middot; +' + det.length + ' detail shot' + (det.length > 1 ? 's' : '') : '')
+    + (sibs.length > 1 ? ' &middot; <span title="This photograph carries ' + sibs.length
+        + ' inventory lines" style="color:var(--bronze);">&#128279; 1 of ' + sibs.length
+        + ' in this photo</span>' : '');
   return '<div style="border-bottom:1px solid var(--border);background:' + (picked ? 'var(--cream)' : 'transparent') + ';">'
     + '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;">'
       + '<input type="checkbox"' + (picked ? ' checked' : '') + ' onchange="_invTogglePick(\'' + sid + '\',this)" '
@@ -21745,6 +21872,7 @@ function _renderInvPanel(job, ref) {
   // the base", "Mom's from Italy", "promised to Karen") and the agent's first input; the
   // detail shots are the close-ups linked to this line at capture, never lines of their own.
   var det = _invDetailRefs(jid, ref.stableId);
+  var sibs = _invPhotoSiblings(jid, ref);
   var fieldHtml = (ref.manual ? '' : '<div style="margin-bottom:10px;">'
     + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">From the field</div>'
     + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Field note</div>'
@@ -21761,7 +21889,16 @@ function _renderInvPanel(job, ref) {
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
         + (ref.driveFileUrl ? '<a class="btn-s" href="' + esc(ref.driveFileUrl) + '" target="_blank" style="text-decoration:none;">Open photo in Drive</a>' : '')
         + '<button class="btn-s" onclick="openCustodyModal(' + jid + ',\'' + ref.stableId + '\')">Chain of custody' + (nC ? ' (' + nC + ')' : '') + '</button>'
-        + (ref.manual ? '<button class="btn-s" onclick="removeInventoryManualItem(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;">Remove line item</button>' : '')
+        // ONE PHOTOGRAPH, ANOTHER OBJECT (2026-09-20). Offered on any photographed line and on
+        // none of the manual ones: a cash entry or an account has no picture to split. It is
+        // here rather than in the row because it is a deliberate act, and here rather than on
+        // the camera because you have to know what the four bottles are.
+        + (ref.manual ? '<button class="btn-s" onclick="removeInventoryManualItem(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;">Remove line item</button>'
+                      : '<button class="btn-s" onclick="invSplitItemClick(' + jid + ',\'' + ref.stableId + '\')" '
+                        + 'title="Another object is in this same photograph — add it as its own line, sharing the image">'
+                        + '&#10133; Another item in this photo</button>')
+        + (sibs.length > 1 ? '<span style="font-size:10.5px;color:var(--gray);">This photograph carries '
+            + sibs.length + ' lines: ' + sibs.map(function(x){ return esc(_invNamed(x)); }).join(' &middot; ') + '</span>' : '')
       + '</div>'
     + '</div>'
     + fieldHtml + secs + '</div>';

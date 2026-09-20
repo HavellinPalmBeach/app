@@ -48,7 +48,8 @@ function rig(opts) {
     // per-slot badge it replaced lived on room cards that no longer exist.
     fns: ['_doPhotoUpload', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_roomShotStripHtml',
           '_invDetailRefs', '_invFileId', '_roomShotThumbStyle',
-          'discardShot', '_shotDesc', '_trashShotFiles'],
+          'discardShot', '_shotDesc', '_trashShotFiles',
+          '_invDerivedRefs', '_invNamed', '_invItemNo'],
     vars: ['PHOTO_UPLOAD_TIMEOUT_MS', '_localShotThumbs'],
     stubs: {
       jobs: [{ id: 1, driveFolder: 'https://drive.google.com/drive/folders/FOLDER' }],
