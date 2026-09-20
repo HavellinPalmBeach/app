@@ -1,5 +1,100 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THREE ASKS IN ONE MORNING — THE BANNER IS THE ROW, THE DIRECTORY IS ALPHABETICAL, THE FIXED FEE IS THE MANAGER'S FIGURE (2026-09-20)
+Anthony, off two screenshots and a voice note, the morning after the Job Plan rethink. On a Home Cleanout plan whose red
+FIREARMS banner and STANDING JOB FLAGS panel both printed *2 pistols*, the crew rule and the protocol link: *"seems sort of
+duplicative. thoughts? or do other intake items flagged show up in the lower section, it's just that this job does not have
+any of them?"* On the Contractor Directory: *"let's have these alphabetized."* And on Build Estimate: *"when we want to go
+to a fixed price estimate, we need to be able to edit the final amount, not just have the premium stuck in because it
+sometimes just makes an awkward looking number. Like if it's $25,275, I'd probably just create a $25,000 estimate … I think
+that's the way we're going to price in the beginning is go fixed price and avoid having to log hours."* App-only, no redeploy.
+
+- **⚠⚠ THE ANSWER TO HIS QUESTION IS YES, AND THE DUPLICATION WAS ONE ROW.** Every ticked flag and both intake answers were
+  only ever in the brief (his own screenshot's *Valuables* row is the proof); firearms alone was in both, because the
+  2026-09-19 banner was layered over a brief that kept its red row. `SF_HOSTS['sf-host-plan']` now carries `{ banner: true }`
+  and `standingFlagsBlock` drops the `severity === 'err'` line on `slim || banner` — one expression, keyed on the row's
+  severity and never on the word. **The banner IS the firearms row on the plan**: a job whose only flag is firearms renders
+  the banner and no brief at all (zero lines → `''`); the dashboard host has no banner and keeps the red row. Reverting the
+  option fails 2, the filter 5.
+  - **⚠ BOTH PLAN RENDERERS SHARE THE HOST ID, SO `renderPrepJobPlan` HAD TO GROW THE BANNER TOO** — its own comment already
+    said the same flags apply to a prep job, and without it a firearms flag on a Home Prep job would have vanished from the
+    plan entirely. Two pinned `fns:` lists (`prep-declutter`, `sourcing-keys`) broke correctly and carry the real banner
+    functions now rather than a stub. Reverting the prep banner fails 1.
+  - **⚠ MY OWN COMMENT TRIPPED THE STANDING `lacks(…, 'firearms')` NET on `standingFlagsBlock`** — the ninth time this file
+    records a needle catching the prose explaining the fix. The comment names *the red line* and *the red banner* instead;
+    the requirement (the renderer never learns the word) is the right one and stands.
+- **THE DIRECTORY SORTS BY THE NAME ON THE CARD** (`_byContractorName`, `localeCompare` with `sensitivity:'base'`), the
+  display-name order the vendor and partner directories already use; the founders keep their *Team* badge and take their
+  alphabetical place. `getAllActiveTC` / `getAllActivePS` sort the same way, so every dropdown built from them reads in the
+  same order — a `<select>` re-selects its stored value by value, so nothing saved moves.
+  - **⚠ THE FIRST SWEEP CAME BACK GREEN ON THE TC DROPDOWN SORT, AND THE FIXTURE WAS WHY:** its active concierges were
+    Anthony, Ashley, Carla — alphabetical by roster order as well as by name, so dropping the sort changed nothing the test
+    could see. An active *Aaron Vale* ahead of both founders is the row that makes it fail (1). The eighteenth time this file
+    records an assertion that could not fail, caught by reverting rather than by reading.
+- **⚠⚠ THE FIXED FEE WAS ALREADY EDITABLE, AND THAT WAS MEASURED ON THE REAL FORM BEFORE ANYTHING WAS BUILT.** A typed figure
+  already rode through save → reopen → client estimate → agreement → all three invoices, and **a fixed-price final already
+  issued with an empty timesheet** (`_noHours` has excluded `_fixed` since it was written). What was wrong was the drift
+  warning beside the field. It compared the fee's effective markup with the 20% contingency (*"2 points of slack absorbs the
+  rounding"*), so rounding **$21,600 down to $21,000** — a 2.8% concession — drew *"This fixed fee is +17% over the hourly
+  basis … The estimate has moved since you set it — the suggested fee is now $21,600. [Use $21,600]"* with nothing moved, and
+  a button offering to put the contingency straight back. **That is the "premium stuck in."** Anthony's own $25,275 → $25,000
+  happens to land inside the two points (19%) and would not have warned; $21,600 → $21,000 does, and any larger round-down
+  does. The warning could not tell *the rooms changed* from *the manager chose a rounder number*, and only one of those is a
+  problem.
+  - **`_fixedAmountBasis` IS THE SUGGESTION THE FIGURE WAS TYPED AGAINST**, set by `markFixedAmountEdited` and the Round chip,
+    re-based by *Keep*, zeroed by the tracker and the three job-switch resets, and saved on the snapshot as `fixedSuggested`
+    so a reopened estimate can still tell. The warning fires on exactly one condition, `_fpFee !== _fixedAmountBasis`, and
+    names both figures — *the suggested fee was $21,600 and is now $23,940 (+$2,340). Your fee is still $21,000* — with *Use*
+    and *Keep*. A round-down draws nothing. A record from before today carries no basis (0), which never claims a move.
+    Reverting the condition to the markup test fails 2; dropping the basis from the snapshot 1, from the restore 1.
+  - **⚠ THE FIELD WAS `type="number"`, WHICH IS THE AWKWARD NUMBER.** It read `21000`, bare, with a `step="100"` spinner — a
+    number input cannot show a `$` or a thousands separator, the rule this file already records on the FMV column. It is a
+    money field now (`$21,000`), and **every reader goes through `_fxAmtGet` / `moneyToNumber`**, because `formatMoneyInput`
+    rewrites the box to `$21,000` and a `parseFloat` on that reads **0**, silently — the prep-cost defect of 2026-08-03. A
+    test `lacks()` `parseFloat` on the field across all five readers; reverting the calcAll read fails 1, the writer 5.
+  - **THE ROUND CHIP** (`fixedFeeRounded`): the suggestion rounded **down** — nearest $1,000 above $20,000, $500 above $5,000,
+    $100 below — so $25,275 becomes $25,000 in one tap. Down, never up: the suggestion already carries the contingency and a
+    quote rounded up charges the client for the rounding. Rounding up fails 6, a flat $1,000 unit 4. A *Suggested $Y* chip
+    hands the field back to the tracker; each chip is withheld when the field already holds its figure.
+  - **⚠ NOT CHANGED, DELIBERATELY, AND SAID TO ANTHONY: nothing on a fixed-price job BLOCKS without hours, but two things
+    still EXPECT them.** The hours fold warns amber on an active job with nothing logged today, and the progress reading on
+    the schedule strip needs the log for its *% of the estimated hours logged* figure and the pace verdict. This file records
+    (2026-09-13) that fixed price decides how hours are billed and has never decided whether they are recorded. If the crew
+    stops logging on fixed jobs, the fold nags daily and the margin panel goes blind — and the log is the only record of
+    whether 20% was the right contingency, which is the very uncertainty he named. His call; one line to quiet the fold if he
+    makes it.
+- **7154 committed checks** (+99: `tests/fixed-price.test.js` new, 74; sixteen more in `intake-house-flags`, nine in
+  `contractor-roster`). **All 20 changes revert-verified individually, ZERO green** — baseline 0 before and after, no
+  unmatched needles; the one first-sweep green was the fixture above, re-done. **The stylesheet is byte-identical** (89,970
+  bytes, measured on the FIRST `<style>` block) — the chips reuse `.btn-s` inline, so the 368-line CSS deletion rule was
+  applied by measurement rather than by diff.
+- **Verified end to end in headless Chromium, 60 checks, 0 failed, 0 page errors** — on a byte-identical copy of the page,
+  so the revert sweep could run on the real file at the same time:
+
+  | | |
+  |---|---|
+  | a Home Cleanout with firearms, cash, valuables and both answers | one red banner, first in the header, with the note and the protocol link · **no `sf-err` row under it** · *2 pistols* and the crew rule each **once** on the header · the brief keeps its header, cash, valuables, the must-find and the safety answer |
+  | a Home Prep job whose only flag is firearms | the prep plan **opens with the banner** · `#sf-host-plan` **empty** |
+  | nothing flagged | no banner, no brief · the dashboard for the estate **keeps the red row** and has no banner |
+  | the Contractor Directory | TC *Aaron Vale · Anthony Graziano · Ashley Jerome · Carla Ortiz* · PS *anthony graziano · Anthony Graziano Jr · Bob Smith* · Team badges intact · the intake TC dropdown in the same order |
+  | fixed on, six rooms | prefill **$21,600**, a text field, tracking, chips *Round to $21,000* only, no warning |
+  | type 21000 | **$21,000**, hand-set, basis 21,600, **no warning**, chip *Suggested $21,600* only, the note reads *your figure, against a suggested $21,600 (20% contingency)* |
+  | a room re-scored (suggestion → $23,940) | the figure survives · **now** the warning: *was $21,600 and is now $23,940 (+$2,340). Your fee is still $21,000* · Use · Keep · chips *Round to $23,000 · Suggested $23,940* |
+  | Keep · save · reset · reopen | warning clears, basis 23,940 · saved `fixedAmount 21000 / fixedSuggested 23940` · reset clears all · reopen **$21,000**, hand-set, no warning |
+  | the Round chip · save | **$23,000** · client estimate *Fixed Project Fee $23,000* with no hour count · agreement *fixed price of $23,000* · invoices **$11,500 · $5,750 · $5,750 = $23,000**, the final **not blocked with zero hours, no PIN** · the same job on T&M refused |
+  | 390px | Build Estimate with the chip row, the Job Plan and Contractors all **overflow 0** |
+
+- Manual **§4** (firearms is the one exception on the plan), **§5c** (the bullet, the tracking note trimmed, and a **new
+  note** on rounding, the chips, the warning's one condition and the old false sentence), **§11** (the header table row, the
+  banner note, the standing-flags note, the protocol-link sentence), **§12a** (an *Order* bullet), **§12** (a fixed-price
+  final issues with nothing logged, measured). Playbook **Step 2** (the fixed-price row), **Step 3** (the fee printed is the
+  one typed), **Step 10** (the banner is the only place firearms shows on the plan; the flags stop), the **protocol note**
+  (the banner carries the link on the plan, the row on the dashboard), and **five** symptom→cause rows (the panel no longer
+  lists firearms · the columns changed order · the warning rewritten · the awkward number · what the invoices bill). Both
+  `.md` copies hand-edited; **32 claims parity-checked, 0 mismatches**; a stale sweep for seven retired wordings returns
+  **0**; tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page
+  errors**; under `print` **16/16 and 17/40** tables as wide as their container, as at HEAD.
+
 ## ⚠⚠ THE FOLDS CAME OFF THE JOB ITSELF — TWO TOOLS AT THE TOP, THE JOB OPEN ON A THREAD, THE SCHEDULE ON THE HEADER (REBUILT 2026-09-20)
 Anthony, the morning after the stage rebuild, in four messages inside an hour. Off the Before Day 1 fold: *"I know we have the rest
 of this in three columns … but this it seems like a waste of space. Maybe for this item, it should stretch all the way across."*
@@ -8871,7 +8966,10 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-20 (thirty-first pass)** — both documents, against the Job Plan rethink: the two
+- Last reconciled against the app: **2026-09-20 (thirty-second pass)** — both documents, against the three asks of the same
+  morning: the brief no longer repeats the firearms banner on the plan, the alphabetical directory, and the fixed fee as the
+  manager's figure with a warning that fires only when the estimate moved; see the entry at the top of this file.
+- Prior pass **2026-09-20 (thirty-first pass)** — both documents, against the Job Plan rethink: the two
   tools folded at the top, the job open on a thread with a NOW node, the schedule strip on the plan header, the sentence-case boxes
   and the lone box that spans the row; see the entry at the top of this file.
 - Prior pass **2026-09-19 (thirtieth pass, late evening)** — both documents, against the Job Plan stage rebuild: the order, the

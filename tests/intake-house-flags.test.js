@@ -432,4 +432,42 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(css, '.sf-tick{', 'the tick is styled');
     has(css, '.sf-brief.sf-slim{', 'and so is the room copy');
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('⚠ THE PLAN HEADER DOES NOT PRINT FIREARMS TWICE (2026-09-20) — the banner IS the row there');
+  {
+    // Anthony, off a screenshot of a Home Cleanout plan: the red FIREARMS banner and the
+    // Standing job flags panel under it both carried "2 pistols", the crew rule and the
+    // protocol link — "seems sort of duplicative". Every other intake flag and both intake
+    // answers were only ever in the brief; firearms alone was in both, because the banner of
+    // 2026-09-19 was layered over a brief that kept its red row. The plan host now says a
+    // banner sits above it, and the brief drops the red row on the strength of that.
+    eq(ctx.SF_HOSTS['sf-host-plan'].banner, true, 'the plan host declares the banner above it');
+    ok(!ctx.SF_HOSTS['sf-host-dash'].banner, 'the dashboard host does not — it has no banner');
+    const plan = ctx.standingFlagsBlock(FULL, { banner: true });
+    lacks(plan, 'sf-row sf-err', '⚠ under a banner the brief carries no firearms row');
+    lacks(plan, 'hall closet safe', 'and not the firearms note either — the banner prints it');
+    has(plan, 'sf-hd', 'the header survives: it is still the standing-flags brief');
+    has(plan, 'read to the crew before Day 1', 'with its title');
+    has(plan, 'freezer and the desk drawer', 'and the other flags are all still there');
+    has(plan, 'small blue box', 'the must-find answer');
+    has(plan, 'pool cage steps', 'the safety answer');
+    eq(ctx.standingFlagsBlock({ id: 1, houseFlags: { firearms: { on: true, note: '2 pistols' } } }, { banner: true }), '',
+       'a job whose only flag is firearms renders no brief on the plan at all — the banner carries the whole of it');
+    has(ctx.standingFlagsBlock({ id: 1, houseFlags: { firearms: { on: true, note: '2 pistols' } } }, {}), '2 pistols',
+       '⚠ the same job on the dashboard, which has no banner, keeps the red row');
+    has(ctx._sfHost('sf-host-dash', FULL), 'sf-row sf-err', 'through the dashboard host');
+    lacks(ctx._sfHost('sf-host-plan', FULL), 'sf-row sf-err', 'and not through the plan host');
+    // Both plan renderers share the host id, so both must carry the banner — or a firearms
+    // flag on a Home Prep job would vanish from the plan entirely.
+    const prepHdr = src.slice(src.indexOf('// Header (set into the shared job-plan-header slot)'), src.indexOf('// Header (set into the shared job-plan-header slot)') + 1200);
+    has(prepHdr, 'var hdr = firearmsBannerHtml(job) +', '⚠ the Home Prep plan opens with the banner too');
+    const labourHdr = src.slice(src.indexOf('function renderJobPlan'), src.indexOf('function renderJobPlan') + 12000);
+    has(labourHdr, 'var hdr = firearmsBannerHtml(job) +', 'as the labour plan always has');
+    // The filter keys on the ROW's severity, never on the word — the doc-carrying test above
+    // already pins that, and the banner option is the same rule on a second surface.
+    const sfb = fnSrc('standingFlagsBlock').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+    has(sfb, "if (opts.slim || opts.banner) lines = lines.filter(function(l) { return l.severity !== 'err'; });",
+        'slim and banner drop the red row by severity, in one expression');
+  }
 };

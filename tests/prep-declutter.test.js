@@ -351,8 +351,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(typeof fn('renderVendorSourcing') === 'string', 'renderVendorSourcing is real (stubbed here only)');
     const planFns = ['renderPrepJobPlan', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
       'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan',
-      '_planTouch'];
-    const planVars = ['PREP_FEE_RATE', 'EST_TOLERANCE_PCT'];
+      '_planTouch',
+      // The prep plan opens with the firearms banner since 2026-09-20 (the brief under it no
+      // longer repeats the firearms row, so the banner has to be on both plan headers).
+      'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf'];
+    const planVars = ['PREP_FEE_RATE', 'EST_TOLERANCE_PCT', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const mkPlan = (dcHrs, loggedTC) => {
       const logs = loggedTC > 0
         ? { 1: [{ date: '2026-10-06', activity: 'declutter',

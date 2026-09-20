@@ -1172,7 +1172,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 5:19am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 10:48am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1984,14 +1984,18 @@ body.no-smf .smf-col{display:none;}
         <div id="fixed-amount-row" style="display:none;align-items:center;gap:8px;margin-top:6px;">
           <div style="flex:1;">
             <div style="font-size:12px;color:var(--gray-dk);font-weight:500;">Fixed project fee</div>
-            <div style="font-size:11px;color:var(--gray);">Prefilled from the suggested fee — edit as needed.</div>
+            <div style="font-size:11px;color:var(--gray);">The figure the client sees. Prefilled from the suggested fee &mdash; type your own, or round it below.</div>
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
-            <span style="font-size:16px;font-weight:600;color:var(--gray-dk);">$</span>
-            <input type="number" id="e-fixed-amount" min="0" step="100" value=""
-              style="width:120px;text-align:right;font-size:16px;font-weight:600;" oninput="markFixedAmountEdited()">
+            <!-- A text field, not type=number: a number input cannot show a $ or a thousands
+                 separator, so the manager typed 25275 to quote $25,275. Every reader goes
+                 through moneyToNumber — formatMoneyInput rewrites this to "$25,275" and a
+                 parseFloat on that reads 0, silently (the prep-cost bug of 2026-08-03). -->
+            <input type="text" inputmode="numeric" id="e-fixed-amount" value="" placeholder="$0"
+              style="width:130px;text-align:right;font-size:16px;font-weight:600;" oninput="markFixedAmountEdited(this)">
           </div>
         </div>
+        <div id="fixed-price-chips" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;"></div>
         <div id="fixed-price-drift"></div>
         <div id="fixed-price-warn" style="margin-top:6px;"></div>
       </div>
@@ -5655,13 +5659,38 @@ function toggleFixedPrice() {
     showFB('e-fb','warn','Probate and contested probate bill time-and-materials on actual logged hours — a fixed price is not available on these matters.');
   }
   var row = document.getElementById('fixed-amount-row');
-  var amt = document.getElementById('e-fixed-amount');
-  if (on && amt && (!amt.value || parseFloat(amt.value) <= 0) && window._fixedPriceSuggested) {
-    amt.value = window._fixedPriceSuggested;
+  if (on && _fxAmtGet() <= 0 && window._fixedPriceSuggested) {
+    _fxAmtSet(window._fixedPriceSuggested);
     _fixedAmountUserSet = false;
+    _fixedAmountBasis = 0;
   }
   if (row) row.style.display = on ? 'flex' : 'none';
   calcAll();
+}
+
+// The one reader and the one writer of the fixed-fee field. It is a MONEY field ("$25,275"),
+// so a bare parseFloat on it reads 0 — every site goes through these two.
+function _fxAmtGet() {
+  var el = document.getElementById('e-fixed-amount');
+  return el ? Math.round(moneyToNumber(el.value)) : 0;
+}
+function _fxAmtSet(n) {
+  var el = document.getElementById('e-fixed-amount');
+  if (!el) return;
+  n = Math.round(n || 0);
+  el.value = n > 0 ? '$' + n.toLocaleString() : '';
+}
+
+// A clean figure below the suggested fee, for the manager who reads $25,275 and wants to
+// quote $25,000 (Anthony, 2026-09-20). Rounds DOWN — the suggestion already carries the
+// contingency, and a quote rounded up charges the client for the rounding — to the nearest
+// $1,000 above $20,000, $500 above $5,000, $100 below that, so a small job is not rounded
+// down by a tenth of itself. A figure that is already round comes back unchanged.
+function fixedFeeRounded(fee) {
+  fee = Math.round(fee || 0);
+  if (fee <= 0) return 0;
+  var unit = fee >= 20000 ? 1000 : fee >= 5000 ? 500 : 100;
+  return Math.floor(fee / unit) * unit;
 }
 
 // True once the manager types a fixed fee by hand. Until then the field TRACKS the
@@ -5676,14 +5705,45 @@ function toggleFixedPrice() {
 // changed afterwards. That number flows onto the client estimate, the agreement and
 // every invoice, so a stale prefill is money.
 var _fixedAmountUserSet = false;
-function markFixedAmountEdited() { _fixedAmountUserSet = true; calcAll(); }
+// ⚠ THE SUGGESTED FEE AT THE MOMENT THE FIGURE WAS TYPED (or last acknowledged). The drift
+// warning compares the CURRENT suggestion with this, and fires only when they differ — i.e.
+// when the estimate really has moved under the fee. It used to compare the fee's effective
+// markup against the 20% contingency, which cannot tell "the rooms changed" from "the manager
+// rounded $21,600 down to $21,000": measured on the real form, the round-down alone drew
+// "This fixed fee is +17% over the hourly basis … The estimate has moved since you set it",
+// with nothing moved, and a button offering to put the contingency straight back. That is the
+// "premium stuck in" Anthony described. Rounding a quote is the manager's decision and draws
+// no warning; the basis moving under a quote still does. 0 = unknown (a record saved before
+// this existed), which never claims a move.
+var _fixedAmountBasis = 0;
+function markFixedAmountEdited(el) {
+  if (el) formatMoneyInput(el);
+  _fixedAmountUserSet = true;
+  _fixedAmountBasis = window._fixedPriceSuggested || 0;
+  calcAll();
+}
 
-// Hand the field back to the tracker. Offered by the drift warning, so a stale fee is one
-// click from correct rather than a number to re-derive by hand.
+// Hand the field back to the tracker. Offered on the chip row and by the drift warning, so a
+// stale fee is one tap from current rather than a number to re-derive by hand.
 function resetFixedToSuggested() {
-  var amt = document.getElementById('e-fixed-amount');
-  if (amt && window._fixedPriceSuggested) amt.value = window._fixedPriceSuggested;
+  if (window._fixedPriceSuggested) _fxAmtSet(window._fixedPriceSuggested);
   _fixedAmountUserSet = false;
+  _fixedAmountBasis = 0;
+  calcAll();
+}
+// The Round chip: the suggestion, rounded down to a clean figure, set by hand in one tap.
+function useRoundedFixedFee() {
+  var r = fixedFeeRounded(window._fixedPriceSuggested);
+  if (!r) return;
+  _fxAmtSet(r);
+  _fixedAmountUserSet = true;
+  _fixedAmountBasis = window._fixedPriceSuggested || 0;
+  calcAll();
+}
+// "Keep" on the drift warning: the manager has read that the estimate moved and stands by the
+// figure, so the warning re-bases on the current suggestion and clears.
+function keepFixedFee() {
+  _fixedAmountBasis = window._fixedPriceSuggested || 0;
   calcAll();
 }
 
@@ -6547,17 +6607,18 @@ function calcAll() {
   var _fpBuf  = fixedPriceBuffer(svcKey);
   var _fpFee  = Math.round(havellinTotalDiscounted * (1 + _fpBuf));
   window._fixedPriceSuggested = _fpFee;
-  var _fxAmtEl = document.getElementById('e-fixed-amount');
-  if (isFixed && _fxAmtEl && !_fixedAmountUserSet && _fpFee > 0) {
+  if (isFixed && !_fixedAmountUserSet && _fpFee > 0) {
     // Not typed by hand yet, so it is still a prefill — keep it current with the estimate
     // instead of freezing it at whatever the total was when the toggle was flipped.
-    if (Math.round(parseFloat(_fxAmtEl.value) || 0) !== _fpFee) _fxAmtEl.value = _fpFee;
+    if (_fxAmtGet() !== _fpFee) _fxAmtSet(_fpFee);
   }
-  var fixedAmount = isFixed ? Math.round(parseFloat(_fxAmtEl ? _fxAmtEl.value : 0) || 0) : 0;
-  // Cleared here and repopulated only by the fixed-price branch below, so it can never
+  var fixedAmount = isFixed ? _fxAmtGet() : 0;
+  // Cleared here and repopulated only by the fixed-price branch below, so neither can
   // survive the toggle being switched off.
   var _fpDriftClear = document.getElementById('fixed-price-drift');
   if (_fpDriftClear) _fpDriftClear.innerHTML = '';
+  var _fpChipsEl = document.getElementById('fixed-price-chips');
+  if (_fpChipsEl) _fpChipsEl.innerHTML = '';
 
   var fpPanel = document.getElementById('fixed-price-panel');
   var fpLabel = document.getElementById('fixed-price-label');
@@ -6604,21 +6665,43 @@ function calcAll() {
       // "$X (+$Y vs. fixed, +20%)" read as though the toggle had added a further 20% on
        // top of the suggested fee shown a moment earlier. Say what the gap IS — it is the
       // contingency, and it is already in the figure above.
+      // The gap is stated as information. While the field tracks the suggestion the gap IS the
+      // contingency; once the manager has typed a figure it is whatever they chose, and the
+      // note says so without calling it wrong.
       if (fpNote)  fpNote.innerHTML    = 'This flat fee replaces hourly billing on the client estimate, agreement, and invoices. '
         + 'Underlying hourly basis <strong>$' + _hrlyRef.toLocaleString() + '</strong>; the fee sits $' + Math.abs(_delta).toLocaleString()
-        + ' (' + (_effPct >= 0 ? '+' : '') + _effPct + '%) ' + (_delta >= 0 ? 'above' : 'below') + ' it — that gap is the contingency, already included. '
+        + ' (' + (_effPct >= 0 ? '+' : '') + _effPct + '%) ' + (_delta >= 0 ? 'above' : 'below') + ' it'
+        + (_fixedAmountUserSet ? ' — your figure, against a suggested $' + _fpFee.toLocaleString() + ' (' + Math.round(_fpBuf * 100) + '% contingency). '
+                               : ' — that gap is the contingency, already included. ')
         + 'Vendor costs remain pass-through at cost.'
-        + (_fixedAmountUserSet ? '' : ' <em>Tracking the estimate — type a number to set the fee by hand.</em>');
+        + (_fixedAmountUserSet ? '' : ' <em>Tracking the estimate — type a figure, or round it, to set the fee by hand.</em>');
+      // The chips: the suggestion rounded down to a clean figure, and the suggestion itself
+      // once the fee has left it. Whichever the field already holds is not offered.
+      var _fpChips = document.getElementById('fixed-price-chips');
+      if (_fpChips) {
+        var _fpRound = fixedFeeRounded(_fpFee);
+        var _chipStyle = 'font-size:11px;padding:4px 10px;';
+        var _chips = '';
+        if (_fpRound > 0 && _fpRound !== _fpFee && fixedAmount !== _fpRound)
+          _chips += '<button class="btn-s" style="' + _chipStyle + '" onclick="useRoundedFixedFee()">Round to $' + _fpRound.toLocaleString() + '</button>';
+        if (_fpFee > 0 && fixedAmount !== _fpFee)
+          _chips += '<button class="btn-s" style="' + _chipStyle + '" onclick="resetFixedToSuggested()">Suggested $' + _fpFee.toLocaleString() + '</button>';
+        _fpChips.innerHTML = _chips;
+      }
       // A hand-typed fee does not retrack, by design. But the basis under it keeps moving,
-      // so say when the two have parted company rather than letting a stale number ride
-      // onto a client document. 2 points of slack absorbs the rounding.
+      // so say when it HAS moved — the suggestion is no longer what it was when the figure
+      // was typed — rather than letting a stale number ride onto a client document. A figure
+      // merely rounded below the suggestion draws nothing: nothing moved.
       var _fpDriftEl = document.getElementById('fixed-price-drift');
       if (_fpDriftEl) {
-        _fpDriftEl.innerHTML = (_fixedAmountUserSet && _fpFee > 0 && Math.abs(_effPct - Math.round(_fpBuf * 100)) > 2)
-          ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">This fixed fee is <strong>' + (_effPct >= 0 ? '+' : '') + _effPct + '%</strong> over the hourly basis, '
-            + 'where the contingency for this service is ' + Math.round(_fpBuf * 100) + '%. The estimate has moved since you set it — '
-            + 'the suggested fee is now <strong>$' + _fpFee.toLocaleString() + '</strong>. '
-            + '<button class="btn-s" style="font-size:11px;padding:3px 9px;margin-left:6px;" onclick="resetFixedToSuggested()">Use $' + _fpFee.toLocaleString() + '</button></div>'
+        var _fpMoved = _fixedAmountUserSet && _fpFee > 0 && _fixedAmountBasis > 0 && _fpFee !== _fixedAmountBasis;
+        var _fpBy = _fpFee - _fixedAmountBasis;
+        _fpDriftEl.innerHTML = _fpMoved
+          ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">The estimate has moved since you set this fee: the suggested fee was '
+            + '<strong>$' + _fixedAmountBasis.toLocaleString() + '</strong> and is now <strong>$' + _fpFee.toLocaleString() + '</strong> ('
+            + (_fpBy >= 0 ? '+' : '&minus;') + '$' + Math.abs(_fpBy).toLocaleString() + '). Your fee is still $' + fixedAmount.toLocaleString() + '. '
+            + '<button class="btn-s" style="font-size:11px;padding:3px 9px;margin-left:6px;" onclick="resetFixedToSuggested()">Use $' + _fpFee.toLocaleString() + '</button>'
+            + '<button class="btn-s" style="font-size:11px;padding:3px 9px;margin-left:6px;" onclick="keepFixedFee()">Keep $' + fixedAmount.toLocaleString() + '</button></div>'
           : '';
       }
     }
@@ -6778,6 +6861,9 @@ function calcAll() {
     hourlyHavellinTotal: Math.round(havellinTotalDiscounted),
     fixedPrice: isFixed,
     fixedAmount: fixedAmount,
+    // The suggested fee the figure was set against, so a reopened estimate can still tell
+    // whether the basis has moved since (restoreEstimateToUI reads it back).
+    fixedSuggested: isFixed ? (_fixedAmountUserSet ? (_fixedAmountBasis || _fpFee) : _fpFee) : 0,
     discountAmt:Math.round(discountAmt),
     discountPct:discountPct,
     rush:isRush, rushPct:RUSH_PCT, rushAmt:rushAmt,
@@ -8055,7 +8141,10 @@ function _sfRowHtml(job, l) {
 function standingFlagsBlock(job, opts) {
   opts = opts || {};
   var lines = standingFlagLines(job);
-  if (opts.slim) lines = lines.filter(function(l) { return l.severity !== 'err'; });
+  // slim: the room workspace pins its own red line ABOVE the scrolling body. banner: the plan
+  // header opens with the red banner. Either way the red row is already on screen, once, where
+  // a scroll cannot hide it; printing it again in the brief is the duplication (2026-09-20).
+  if (opts.slim || opts.banner) lines = lines.filter(function(l) { return l.severity !== 'err'; });
   if (opts.desk) lines = lines.filter(function(l) { return l.kind === 'mustFind' || l.kind === 'safety'; });
   if (!lines.length) return '';
   var hd = opts.slim ? ''
@@ -8070,7 +8159,10 @@ function standingFlagsBlock(job, opts) {
 // repaint the briefs on screen without redrawing the tab around them — the Job Plan redraw
 // destroys a half-typed note, and the dashboard one races the 15-second remote tick. ONE map:
 // a surface added here is a surface the tick repaints, and one added anywhere else is not.
-var SF_HOSTS = { 'sf-host-plan': {}, 'sf-host-dash': {}, 'sf-host-ws': { slim: true }, 'sf-host-desk': { desk: true } };
+// `banner`: the host sits directly under firearmsBannerHtml, which IS the firearms row — big,
+// red, first on the tab — so the brief there must not print it a second time (Anthony,
+// 2026-09-20: "seems sort of duplicative"). The dashboard has no banner and keeps the row.
+var SF_HOSTS = { 'sf-host-plan': { banner: true }, 'sf-host-dash': {}, 'sf-host-ws': { slim: true }, 'sf-host-desk': { desk: true } };
 function _sfHost(id, job) {
   return '<div id="' + id + '" data-job="' + esc(String(job && job.id !== undefined && job.id !== null ? job.id : '')) + '">'
     + standingFlagsBlock(job, SF_HOSTS[id] || {}) + '</div>';
@@ -8114,9 +8206,10 @@ function toggleMustFound(jobId, handle) {
 
 // ⚠⚠ FIREARMS FLAGGED AT INTAKE IS A RED BANNER AT THE TOP OF THE JOB PLAN (2026-09-19), not
 // only a row in the brief. Anthony: *"the firearms flag should be a big red flag at the top if
-// that was flagged at intake."* The brief still lists it beside every other flag; this is the
-// one thing on the tab that cannot be scrolled past, and the room workspace carries a slim
-// version of it so the rule is in front of whoever is standing in the room.
+// that was flagged at intake."* On the plan the banner IS the firearms row — the brief under
+// it lists the other flags and does not repeat this one (SF_HOSTS.banner) — and the room
+// workspace carries a slim version so the rule is in front of whoever is in the room. The
+// dashboard has no banner, so its brief keeps the red row.
 function firearmsFlaggedAtIntake(job) {
   var f = houseFlagsOf(job).firearms;
   return !!(f && f.on);
@@ -8370,6 +8463,7 @@ function applyOpenedEstimate(jobId, job, status) {
   if (_tcReset) _tcReset.value = '1';
   _tc2UserSet = false;
   _fixedAmountUserSet = false;
+  _fixedAmountBasis = 0;
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
@@ -8451,6 +8545,7 @@ function clearEstimateTab() {
   if (_tcReset) _tcReset.value = '1';
   _tc2UserSet = false;
   _fixedAmountUserSet = false;
+  _fixedAmountBasis = 0;
   clearAllRooms();
   collectionsData = [];
   renderCollections();
@@ -8716,6 +8811,7 @@ function resetEstimate() {
   if (_tcReset) _tcReset.value = '1';
   _tc2UserSet = false;
   _fixedAmountUserSet = false;
+  _fixedAmountBasis = 0;
   var _dcR = document.getElementById('e-declutter-hrs'); if (_dcR) _dcR.value = '0';
   vendors=[]; renderVendors(); calcAll();
 }
@@ -10963,11 +11059,13 @@ function restoreEstimateToUI(est) {
   var fxAmtEl = document.getElementById('e-fixed-amount');
   var fxRow = document.getElementById('fixed-amount-row');
   if (fxEl) fxEl.checked = !!est.fixedPrice;
-  if (fxAmtEl) fxAmtEl.value = est.fixedPrice ? (est.fixedAmount || est.havellinTotal || '') : '';
+  if (fxAmtEl) _fxAmtSet(est.fixedPrice ? (est.fixedAmount || est.havellinTotal || 0) : 0);
   if (fxRow) fxRow.style.display = est.fixedPrice ? 'flex' : 'none';
   // A saved flat fee is a price that was agreed, not a prefill — hold it, and let the
-  // drift warning say so if the basis has moved underneath it since.
+  // drift warning say so if the suggestion has moved since it was set. A record from before
+  // fixedSuggested existed carries 0, which never claims a move.
   _fixedAmountUserSet = !!est.fixedPrice;
+  _fixedAmountBasis = est.fixedPrice ? Math.round(est.fixedSuggested || 0) : 0;
 
   // Restore the hours-affecting adjustment toggles from the saved estimate. Without
   // this, the recompute on open drops the +15% difficult-access / +20% multiple-heirs
@@ -28268,7 +28366,10 @@ function renderPrepJobPlan(jobId, job, est) {
     ['Property', addr],
     ['Target Start', fmtDate2(job.start)]
   ];
-  var hdr = '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
+  // The firearms banner first, exactly as on the labour plan: sf-host-plan drops the red row
+  // from the brief on the strength of the banner being above it, so the banner has to be here.
+  var hdr = firearmsBannerHtml(job) +
+    '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
     '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
     hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
     (job.driveFolder ? '<span><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Photos in Drive</a></span>' : '') +
@@ -28507,8 +28608,8 @@ function renderJobPlan(jobId, job, est) {
     _hdrBits.push(['Documentation', formal ? 'Formal (court / attorney grade)' : 'Standard']);
   }
   // ⚠ THE FIREARMS BANNER IS THE FIRST THING ON THE TAB when intake ticked it — above the
-  // client line, above everything. The standing-flags brief below still lists it with the
-  // other flags; the banner is the one that cannot be scrolled past.
+  // client line, above everything. It IS the firearms row here: the brief below carries the
+  // other flags and the two intake answers, and not firearms a second time (SF_HOSTS.banner).
   var hdr = firearmsBannerHtml(job) +
     '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
     '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
@@ -28520,8 +28621,8 @@ function renderJobPlan(jobId, job, est) {
     (est.heirs  ? '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">&#9888; Estimate added 20% to TC hours. Confirm decision authority in the pre-job call.</div>' : '') +
     (custodyMandatory ? '<div class="alert a-err"  style="margin-top:6px;font-size:11px;">&#9888; Chain of custody is mandatory on this job — every item shot in place before it moves, written authority before it leaves.</div>' : '') +
     '</div>' +
-    // What intake was told about this house. Phase 0's "crew briefed — standing job flags read
-    // aloud" checkbox is the paired action.
+    // What intake was told about this house, minus the firearms row the banner already is.
+    // The "crew briefed — standing job flags read aloud" box is the paired action.
     _sfHost('sf-host-plan', job);
 
   // Client info renders at the top of the Job Plan tab (above Log Hours), not inline
@@ -31165,12 +31266,20 @@ function contractorMatchesQuery(c, q) {
   return q.split(/\s+/).every(function(t){ return !t || blob.indexOf(t) !== -1; });
 }
 
+// Alphabetical by the name on the card (Anthony, 2026-09-20: "let's have these alphabetized"),
+// the same display-name order the vendor and partner directories already sort by. The founders
+// keep their Team badge and take their place in the alphabet like everyone else; a founder-first
+// column reads as random the moment a third person joins it.
+function _byContractorName(a, b) {
+  return String(a && a.name || '').localeCompare(String(b && b.name || ''), undefined, { sensitivity: 'base' });
+}
 function renderContractors() {
   var q = contractorSearchQuery();
   function pool(role) {
     return DEFAULT_CONTRACTORS.filter(function(c){ return c.role===role; })
       .concat(contractors.filter(function(c){ return c.role===role; }))
-      .filter(function(c){ return contractorMatchesQuery(c, q); });
+      .filter(function(c){ return contractorMatchesQuery(c, q); })
+      .sort(_byContractorName);
   }
   var allTC = pool('TC');
   var allPS = pool('PS');
@@ -31261,14 +31370,18 @@ function saveContractorQuickEdit() {
   rebuildDropdowns();  // status/name changes feed every TC/PS dropdown in the app
 }
 
+// Sorted the way the directory is, so a dropdown built from these reads in the same order as
+// the cards. A select re-selects its stored value by VALUE, so the order changes nothing saved.
 function getAllActiveTC() {
   return DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='TC'; })
-    .concat(contractors.filter(function(c){ return c.role==='TC' && c.status==='active'; }));
+    .concat(contractors.filter(function(c){ return c.role==='TC' && c.status==='active'; }))
+    .sort(_byContractorName);
 }
 
 function getAllActivePS() {
   return DEFAULT_CONTRACTORS.filter(function(c){ return c.role==='PS'; })
-    .concat(contractors.filter(function(c){ return c.role==='PS' && c.status==='active'; }));
+    .concat(contractors.filter(function(c){ return c.role==='PS' && c.status==='active'; }))
+    .sort(_byContractorName);
 }
 
 function rebuildDropdowns() {

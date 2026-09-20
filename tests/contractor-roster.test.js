@@ -129,4 +129,51 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(b, 'DEFAULT_CONTRACTORS.find', 'it looks in the built-in roster');
     has(b, 'contractors.find', 'and in the added one');
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('THE DIRECTORY READS ALPHABETICALLY (2026-09-20) — by the name on the card, founders in their place');
+  {
+    // Anthony, off a screenshot of the Contractor Directory: "let's have these alphabetized".
+    // The two columns were founders first (DEFAULT_CONTRACTORS) then everyone else in the
+    // order they were added — which reads as random the moment a third person joins. The
+    // order is the display name, the same rule the vendor and partner directories sort by.
+    const { domStub } = require('./harness');
+    const dom = domStub({});
+    const c = sandbox({
+      fns: ['renderContractors', 'contractorMatchesQuery', 'contractorSearchQuery', '_byContractorName',
+            'getAllActiveTC', 'getAllActivePS', 'fmtPhoneDisplay', 'esc'],
+      vars: ['DEFAULT_CONTRACTORS'],
+      stubs: { document: dom,
+               contractors: [
+                 { id: 'c-1', name: 'Bob Smith', role: 'PS', rate: 30, status: 'active' },
+                 { id: 'c-2', name: 'anthony graziano', role: 'PS', rate: 30, status: 'active' },   // lower-case on purpose
+                 { id: 'c-3', name: 'Ashley Jerome', role: 'PS', rate: 30, status: 'inactive' },
+                 { id: 'c-4', name: 'Carla Ortiz', role: 'TC', rate: 60, status: 'active' },
+                 // ⚠ An ACTIVE contractor who sorts above both founders — the first sweep's fixture had
+                 // the founders first by alphabet as well as by roster, so dropping the sort from the
+                 // dropdown list came back green. This is the row that makes that revert fail.
+                 { id: 'c-5', name: 'Aaron Vale', role: 'TC', rate: 60, status: 'active' },
+                 { id: 'c-6', name: 'Zed Quill', role: 'TC', rate: 60, status: 'vetting' },
+               ] },
+    });
+    c.renderContractors();
+    const names = (html) => Array.from(html.matchAll(/font-weight:600;font-size:13px;">([^<]+)/g)).map((m) => m[1].trim());
+    eq(names(dom.getElementById('tc-list').innerHTML), ['Aaron Vale', 'Anthony Graziano', 'Ashley Jerome', 'Carla Ortiz', 'Zed Quill'],
+       'the TC column is alphabetical — a contractor sorts ABOVE a founder when the alphabet says so');
+    eq(names(dom.getElementById('ps-list').innerHTML), ['anthony graziano', 'Anthony Graziano Jr', 'Ashley Jerome', 'Bob Smith'],
+       'and the PS column, case-insensitively — the founder is not pinned to the top');
+    has(dom.getElementById('tc-list').innerHTML, 'Team</span>', 'the founders still wear the Team badge');
+    // The dropdowns are built from the same lists and read in the same order.
+    eq(c.getAllActiveTC().map((x) => x.name), ['Aaron Vale', 'Anthony Graziano', 'Ashley Jerome', 'Carla Ortiz'],
+       '⚠ the active TC list is sorted the same way — the contractor ahead of the founders, the vetting one absent');
+    eq(c.getAllActivePS().map((x) => x.name), ['anthony graziano', 'Anthony Graziano Jr', 'Bob Smith'],
+       'and the active PS list (the inactive one drops out, as before)');
+    // Order is all that changed: a select re-selects its stored value by VALUE.
+    const body = noComments(fn('rebuildDropdowns'));
+    has(body, 'if (curVal) intakeTC.value = curVal;', 'the intake TC select restores its value after the rebuild');
+    // The comparator itself, so a later "tidy" cannot make it case-sensitive.
+    eq(c._byContractorName({ name: 'bob' }, { name: 'Alice' }) > 0, true, 'lower-case bob sorts after Alice');
+    eq(c._byContractorName({ name: 'Bob' }, { name: 'bob' }), 0, 'case alone does not separate two names');
+    eq(c._byContractorName({}, { name: 'X' }) < 0, true, 'a record with no name sorts first rather than throwing');
+  }
 };

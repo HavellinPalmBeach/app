@@ -132,8 +132,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // whole suite passing. It is the concierge's own fee readout, in the field, on money.
     const plan = (est, job) => sandbox({
       fns: ['renderPrepJobPlan', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
-            'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt'],
-      vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE'],
+            'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt',
+            // The prep plan carries the firearms banner since 2026-09-20.
+            'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf'],
+      vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
                standingFlagsBlock: () => '', _sfHost: () => '', planChk: () => '', renderVendorSourcing: () => '',
                vendorDirectory: [] },
