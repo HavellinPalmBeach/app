@@ -185,7 +185,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const refs = [];
     const s = sandbox({
-      fns: ['_captureShot', '_fieldCamCommit', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs'],
+      fns: ['_captureShot', '_fieldCamCommit', '_fieldCamFlushNote', '_fieldCamPendingNote',
+            '_fieldNoteAppend', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs'],
       vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
              '_fieldCam', '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
       stubs: {

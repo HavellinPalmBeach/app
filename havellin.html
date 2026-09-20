@@ -571,7 +571,15 @@ input:checked+.slider:before{transform:translateX(18px);}
 .ws-strip-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin:10px 0 4px;}
 .ws-shots{display:flex;flex-wrap:wrap;gap:8px;}
 .ws-shot{width:96px;font-size:10px;color:var(--gray);}
-.ws-thumb{width:96px;height:96px;border-radius:5px;border:1px solid var(--border);background:var(--white) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.ws-thumb{width:96px;height:96px;border-radius:5px;border:1px solid var(--border);background:var(--white) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;}
+/* The bin sits ON the shot it deletes, because "which photo does this delete" must not be a
+   question. 32px inside a 96px tile is the compromise: a 44px target would cover a third of
+   the photograph, and there is nothing else on the thumb to mis-tap. */
+.ws-del{position:absolute;top:3px;right:3px;width:32px;height:32px;padding:0;border:none;border-radius:5px;background:rgba(31,28,25,.62);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ws-del:hover,.ws-del:active{background:#8b1e1e;}
+/* The same act, in the viewfinder: bin the shot you just took without leaving the camera. */
+.fc-del{flex:0 0 auto;width:38px;height:38px;padding:0;margin-right:8px;border:none;border-radius:6px;background:rgba(255,255,255,.14);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.fc-del:hover,.fc-del:active{background:#8b1e1e;}
 .ws-shot .n{font-weight:700;color:var(--gray-dk);margin-top:2px;}
 .ws-shot .note{font-style:italic;line-height:1.3;}
 #field-cam{position:fixed;inset:0;background:#000;z-index:1200;display:none;flex-direction:column;color:#fff;}
@@ -1176,7 +1184,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 10:49am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 2:11pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5122,7 +5130,7 @@ var CONTRACTOR_TC_NAME = 'Contractor — TC';
 // NO banner, the folder was never created, and the first symptom was a crew in the
 // entryway watching every photograph fail. List what the app CALLS, not what was most
 // recently added.
-var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile'];  // actions this build calls
+var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile'];  // actions this build calls
 var BACKEND_NEEDS_TYPES = ['saveMedia'];                  // and post types
 var _backendVersion = null;
 
@@ -5152,7 +5160,8 @@ var BACKEND_FEATURE_COST = {
   saveMedia:     'the inventory manifest never leaves this device',
   uploadHtml:    'estimates filed to Drive pile up instead of replacing',
   createFolder:  'new clients get no Google Drive folder at all',
-  uploadFile:    'photographs taken on a job cannot be filed to Drive'
+  uploadFile:    'photographs taken on a job cannot be filed to Drive',
+  trashFile:     'a photo deleted in the field still stays in the client\u2019s Drive folder'
 };
 
 function _showBackendStaleBanner(version, missing) {
@@ -18014,20 +18023,106 @@ function _slotRefs(jobId, roomIdx, label) {
 // undone by the next merge from Ashley's laptop.
 // ⚠ AND IT SAYS PLAINLY THAT THE IMAGE GOES. This is the one control here that destroys
 // something — Retry is free, this is not — so it never happens on a single tap.
-function dismissFailedPhoto(jobId, stableId) {
+// What a shot is called when there is no object name on it yet.
+function _shotDesc(ref) {
+  if (!ref) return 'this shot';
+  if (ref.objectName) return ref.objectName;
+  var m = { before: 'As found', inventory: 'Item', detail: 'Detail', after: 'After' };
+  return (m[ref.label] || 'Shot') + ' ' + (ref.seq || '');
+}
+
+// ⚠⚠ THE ONE DISCARD, AND IT COVERS A SHOT THAT LANDED AS WELL AS ONE THAT DID NOT.
+// Reported from the field 2026-09-20: "i took a crummy picture and i want to be able to delete
+// it \u2014 there doesn't appear to be any ability to delete." There WAS one, and it refused every
+// uploaded shot (`if (ref.status === 'uploaded') return`), so the only photograph you could bin
+// was one that had already failed to reach Drive. A good upload of a useless picture \u2014 the
+// ordinary case, a fat-fingered shot re-taken a second later \u2014 had no control anywhere.
+//
+// ⚠ THE ROW IS TOMBSTONED, NEVER SPLICED, the rule every removal here follows: absence is
+// indistinguishable from "the other device has not seen it yet", so a splice is undone by the
+// next merge from the other laptop. The tombstone is STAMPED, which is what wins that merge.
+//
+// ⚠⚠ AND THE LOCAL REMOVAL HAPPENS FIRST, UNCONDITIONALLY. What was asked for is the bad
+// photograph off the screen; a Drive refusal must never leave it sitting in the room. Drive is
+// asked afterwards and reports for itself \u2014 loudly, because "it is still in the client's
+// folder" is a true thing the person may want to act on.
+function discardShot(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
-  if (!ref || ref.status === 'uploaded') return;
-  if (!confirm('Discard this shot?\n\nIt never reached Google Drive, and the image itself is '
-      + 'thrown away with it \u2014 this cannot be undone. Re-shoot the room if you still need it.\n\n'
-      + 'Press Cancel to keep it and try again later instead.')) return;
-  ref.deletedAt = Date.now();
-  _invTouch(ref);
-  _setPhotoRef(jobId, ref);
-  delete _photoRetryData[stableId];
+  if (!ref || ref.deletedAt) return false;
+  // A detail shot is a close-up of THIS object. Binning the object without them would leave
+  // photographs of a thing that is no longer on the manifest.
+  var dets = ref.label === 'inventory' ? _invDetailRefs(jobId, stableId) : [];
+  var inDrive = [ref].concat(dets).filter(function(r){ return !!_invFileId(r); });
+  var msg = 'Delete ' + _shotDesc(ref) + '?';
+  if (dets.length) msg += '\n\nIts ' + dets.length + ' detail shot'
+    + (dets.length > 1 ? 's go' : ' goes') + ' with it.';
+  msg += inDrive.length
+    ? '\n\nRemoved from this job and from the client\u2019s Google Drive folder. Google keeps it in '
+      + 'the Drive bin for 30 days.'
+    : '\n\nIt never reached Google Drive, so the image is thrown away with it.';
+  if (!confirm(msg)) return false;
+
+  [ref].concat(dets).forEach(function(r) {
+    r.deletedAt = Date.now();
+    // ⚠ SO THE UNDO BUFFER CAN TELL THE TRUTH. Restore gives the ROW back — name, value,
+    // disposition, custody — and it cannot give the photograph back, because that is in
+    // Google's own bin. Stamped here rather than in the Drive callback: an async write back
+    // onto the ref races the save below, and "we asked Drive to bin it" is what the row needs
+    // to say. A refusal is reported by _trashShotFiles, loudly.
+    if (_invFileId(r)) r.driveTrashed = 1;
+    _invTouch(r);
+    _setPhotoRef(jobId, r);
+    delete _photoRetryData[r.stableId];
+    delete _localShotThumbs[r.stableId];
+    var fid = _invFileId(r);
+    if (fid) { try { delete _invThumbCache(jobId)[fid]; } catch (e) {} }
+  });
+  _invSaveThumbCache(jobId);
   savePhotoRefs(jobId);
   _savePendingPhotoData(jobId);
+  if (ref.label === 'inventory' || ref.label === 'detail') _scheduleInventorySync(jobId);
+
+  // The camera may be holding the shot that just went. Left pointing at a dead ref it would
+  // draw a "Last:" panel for a photograph that no longer exists and file the next note on it.
+  if (_fieldCam.open && _fieldCam.jobId === jobId) {
+    var gone = {};
+    [ref].concat(dets).forEach(function(r){ gone[r.stableId] = 1; });
+    if (gone[_fieldCam.lastAny]) { _fieldCam.lastAny = null; _fieldCam.lastThumb = ''; }
+    if (gone[_fieldCam.last])    _fieldCam.last = null;
+    if (gone[_fieldCam.noteFor]) { _fieldCam.noteFor = null; _fieldCam.noteDraft = ''; }
+    if (_fieldCam.count > 0) _fieldCam.count -= ([ref].concat(dets)).length;
+    if (_fieldCam.count < 0) _fieldCam.count = 0;
+    _fieldCamPaint();
+  }
   _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
+
+  _trashShotFiles(inDrive.map(function(r){ return _invFileId(r); }));
+  return true;
 }
+
+// Trash each file, one at a time, and say so once at the end. Sequential rather than parallel
+// for the reason this app already pays for elsewhere: one request at a time against Apps
+// Script never waits on a lock we are holding ourselves.
+function _trashShotFiles(ids) {
+  ids = (ids || []).filter(Boolean);
+  if (!ids.length) return;
+  var failed = 0, done = 0;
+  function next(i) {
+    if (i >= ids.length) {
+      // ⚠ A FAILURE SPEAKS. The row has already gone from the manifest, so a silent failure
+      // leaves the photograph in the client's folder with nothing on screen saying so.
+      if (failed) showSyncBadge(failed + ' of ' + ids.length + ' photo'
+        + (ids.length > 1 ? 's' : '') + ' could not be removed from Google Drive \u2014 '
+        + 'they are off this job, but still in the client\u2019s folder.', true);
+      else showSyncBadge(done > 1 ? (done + ' photos deleted from Drive \u2713') : 'Photo deleted from Drive \u2713');
+      return;
+    }
+    driveTrashFile(ids[i], function(ok) { if (ok) done++; else failed++; next(i + 1); });
+  }
+  next(0);
+}
+
+
 
 // After a shot's status moves — lands, fails, is retried, is discarded — the two surfaces
 // that show it are redrawn from the store: the room workspace (the shot strip) and the Job
@@ -18553,7 +18648,15 @@ function _invPaintThumbs(jobId) {
     el.style.backgroundImage = 'url("' + cache[id] + '")';
     el.style.backgroundSize = 'cover';
     el.style.backgroundPosition = 'center';
-    el.textContent = '';
+    // ⚠⚠ TEXT NODES ONLY. This was `el.textContent = ''`, which clears the placeholder glyph
+    // AND EVERY CHILD ELEMENT WITH IT — so it silently deleted the delete button off every room
+    // workspace thumbnail that had a cached photo. Found in the browser 2026-09-20, not by a
+    // test: the strip emitted the button, the rendered tile did not have one, and only a thumb
+    // that had never painted kept it. The tile you can SEE the photograph on is precisely the
+    // one you want to bin, so the control was missing exactly where it was wanted.
+    for (var _i = el.childNodes.length - 1; _i >= 0; _i--) {
+      if (el.childNodes[_i].nodeType === 3) el.removeChild(el.childNodes[_i]);
+    }
   });
 }
 // A thumbnail that cannot be resolved renders a category glyph. NEVER an <img> with an
@@ -20885,6 +20988,7 @@ function _renderRemovedRows(jobId) {
       + '<span>#' + esc(_invItemNo(r)) + ' &middot; ' + esc(r.objectName || '(unnamed)') + '<span style="color:var(--gray);">' + esc(val)
       + (r.apprDoc ? ' · ' + esc(r.apprDoc) : '')
       + (r.deletedAt ? ' · removed ' + esc(fmtDate2(new Date(r.deletedAt).toISOString().slice(0,10))) : '')
+      + (r.driveTrashed ? ' · <span style="color:var(--bronze);" title="Restore gives the row back. The photograph is in Google Drive\u2019s bin, which holds it for 30 days.">photo in the Drive bin</span>' : '')
       + '</span>'
       + (backAgain ? ' <span style="color:var(--bronze);" title="An item with this name is on the list again — this is the older copy you removed, not a second one.">&middot; already back on the list</span>' : '')
       + '</span>'
@@ -20892,10 +20996,15 @@ function _renderRemovedRows(jobId) {
   }).join('');
   return '<div class="card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Removed items <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">('
-    + gone.length + ' &mdash; nothing is thrown away)</span></div>'
+    + gone.length + ')</span></div>'
+    // ⚠ THE HEADER SAID "nothing is thrown away" AND THAT WENT FALSE ON 2026-09-20. A shot
+    // binned in the field has its photograph trashed in Drive as well, on purpose — so the
+    // claim now holds for the ROW, and the row says where the image went.
     + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:6px;">This is the undo buffer, not a second inventory. '
     + 'Nothing here is counted, valued or printed anywhere. Restore returns the row under its original item number, '
-    + 'or the next free one if that number has since been taken.</div>'
+    + 'or the next free one if that number has since been taken. A row marked <em>photo in the Drive bin</em> was '
+    + 'deleted in the field: the row comes back, the photograph has to be restored from Google Drive\u2019s own bin, '
+    + 'which holds it for 30 days.</div>'
     + rows + '</div>';
 }
 
@@ -21791,7 +21900,7 @@ function openFieldCamera(jobId, roomIdx, mode) {
                 disp: FIELD_DISP_DEFAULT, appr: false, detail: false,
                 last: null, lastAny: null, lastThumb: '', count: 0,
                 stream: null, ready: false, native: false, nativeWhy: '',
-                talking: false, recog: null, heard: '' };
+                talking: false, recog: null, heard: '', noteDraft: '', noteFor: null };
   el.innerHTML = _fieldCamShellHtml();
   el.style.display = 'flex';
   _fieldCamPaint();
@@ -21860,6 +21969,8 @@ function _fieldCamPaint() {
     h += '<div class="fc-last">'
       + '<div class="fc-last-thumb" style="' + (st.lastThumb ? 'background-image:url(&quot;' + st.lastThumb + '&quot;);' : '') + '"></div>'
       + '<div style="flex:1;min-width:0;">'
+      + '<button type="button" class="fc-del" title="Delete this photo" aria-label="Delete this photo"'
+      + ' onclick="discardShot(' + st.jobId + ',\'' + lastRef.stableId + '\')">&#128465;&#65039;</button>'
       + '<div><strong>Last:</strong> ' + (lastRef.label === 'detail' ? 'detail of the item before it' : esc(FIELD_CAM_MODES[lastRef.label] || lastRef.label)) + ' \u00b7 shot ' + lastRef.seq
       + (lastRef.status === 'failed' ? ' \u00b7 <span style="color:#ff8a80;">not saved \u2014 held on this device</span>' : '') + '</div>'
       + (lastRef.fieldNote ? '<div style="font-style:italic;color:#ddd;">\u201c' + esc(lastRef.fieldNote) + '\u201d</div>' : '')
@@ -21883,8 +21994,20 @@ function _fieldCamPaint() {
       + ' onpointerdown="fieldCamTalkStart(event)" onpointerup="fieldCamTalkStop()" onpointercancel="fieldCamTalkStop()" onpointerleave="fieldCamTalkStop()">'
       + '&#127908; ' + (st.talking ? 'Release to save' : 'Hold to talk') + '</button>';
   }
-  h += '<input type="text" id="fc-note-input" class="fc-note-in" placeholder="Note on the last shot" onkeydown="if(event.key===\'Enter\')fieldCamTypedNote()"' + (st.lastAny ? '' : ' disabled') + '>'
-    + '<button type="button" class="fc-tog" onclick="fieldCamTypedNote()"' + (st.lastAny ? '' : ' disabled') + '>Add</button>'
+  // ⚠⚠ THE HALF-TYPED NOTE LIVES ON THE STATE, NEVER ONLY IN THE ELEMENT. This strip is
+  // rewritten with innerHTML on every shot, every chip and every thumbnail that lands, which
+  // DESTROYS the input and whatever was in it. Measured on the real page 2026-09-20: type a
+  // note, take the next shot, and the box comes back empty with the words gone. `oninput` is
+  // deliberately a plain state write with no repaint — repainting per keystroke would take the
+  // focus away from the keyboard on every letter.
+  // ⚠⚠ THERE IS NO SAVE BUTTON, DELIBERATELY. Reported 2026-09-20: "we don't need to hit
+  // add, it's another step." THREE things already commit what is in this box — Enter, taking
+  // the next photograph, and Done — so a button to do a fourth time what all three already do
+  // is a step that only exists to be forgotten. A voice note never needed one either: it lands
+  // the instant hold-to-talk is released (see fieldCamTalkStart's onend).
+  h += '<input type="text" id="fc-note-input" class="fc-note-in" placeholder="Note on the last shot — saved automatically"'
+    + ' value="' + esc(st.noteDraft || '') + '" oninput="fieldCamNoteDraft(this.value)"'
+    + ' onkeydown="if(event.key===\'Enter\')fieldCamTypedNote()"' + (st.lastAny ? '' : ' disabled') + '>'
     + '</div>';
   h += '<div class="fc-shutter-row">';
   if (st.native) {
@@ -21919,6 +22042,9 @@ function _fieldCamCommit(dataUrl) {
     groupId: label === 'detail' ? st.last : null,
     onRef: function(ref) {
       if (_fieldCam !== st) return;
+      // ⚠ THE NEXT PHOTOGRAPH COMMITS THE LAST NOTE, and it happens HERE, above the line that
+      // moves `lastAny` — below it the words would be filed against the object just shot.
+      _fieldCamFlushNote();
       st.count++;
       st.lastAny = ref.stableId;
       if (ref.label === 'inventory') st.last = ref.stableId;   // a detail never becomes the primary
@@ -22003,12 +22129,56 @@ function fieldCamTalkStop() {
   var st = _fieldCam;
   if (st.recog) { try { st.recog.stop(); } catch (e) {} }
 }
+// The draft, as typed. Called on every keystroke and does nothing else — see the note row.
+//
+// ⚠⚠ IT PINS THE DRAFT TO THE SHOT IT IS ABOUT, and without that the note lands on the wrong
+// photograph. `st.lastAny` MOVES the moment the next shutter fires, so a note typed about the
+// side table and committed after the next shot would be filed against the next object. The
+// words are about whatever was on screen when they were typed.
+function fieldCamNoteDraft(v) {
+  var st = _fieldCam;
+  if (!st.open) return;
+  st.noteDraft = String(v == null ? '' : v);
+  if (!st.noteDraft) { st.noteFor = null; return; }
+  // ⚠ BELT AND BRACES, AND SAID SO RATHER THAN COVERED BY A CHECK THAT COULD NOT FAIL. The
+  // `if` cannot change an outcome today: `lastAny` only moves on the shutter, and the shutter
+  // flushes the draft first, so there is no path where it moves while a draft is live. It
+  // stays because it makes the rule local — the words belong to the shot they were STARTED
+  // on — and because any future path that moves `lastAny` without flushing would otherwise
+  // re-file a half-typed note onto the wrong object, silently.
+  if (!st.noteFor) st.noteFor = st.lastAny;
+}
+
+// What is in the box right now, whichever surface still holds it. The element is the truth
+// while it exists (the person may have typed since the last paint); the state is what
+// survives the paint that destroys it.
+function _fieldCamPendingNote() {
+  var inp = document.getElementById('fc-note-input');
+  // ⚠ The VALUE has to be a string to be believed. An element with no value is not an empty
+  // box — it is a box that is not there yet — and reading `undefined` off one would stringify
+  // to the word "undefined" and file it as the note.
+  if (inp && typeof inp.value === 'string') return inp.value;
+  return _fieldCam.noteDraft || '';
+}
+
+// Commit whatever is in the box to the shot it was typed about, and clear it. Silent — no
+// repaint — because all three callers repaint for their own reasons a moment later, and the
+// shutter one MUST run before `lastAny` moves or the note lands on the next object.
+function _fieldCamFlushNote() {
+  var st = _fieldCam;
+  var target = st.noteFor || st.lastAny;
+  var text = _fieldCamPendingNote();
+  st.noteDraft = ''; st.noteFor = null;
+  var inp = document.getElementById('fc-note-input');
+  if (inp) inp.value = '';
+  if (!target || !String(text).trim()) return false;
+  return _fieldNoteAppend(st.jobId, target, text);
+}
+
 function fieldCamTypedNote() {
   var st = _fieldCam;
-  var inp = document.getElementById('fc-note-input');
-  if (!st.open || !st.lastAny || !inp) return false;
-  var ok = _fieldNoteAppend(st.jobId, st.lastAny, inp.value);
-  inp.value = '';
+  if (!st.open) return false;
+  var ok = _fieldCamFlushNote();
   _fieldCamPaint();
   if (_roomWs.open && _roomWs.jobId === st.jobId) _paintRoomWorkspace();
   return ok;
@@ -22028,6 +22198,14 @@ function _fieldCamStop() {
 function closeFieldCamera() {
   var st = _fieldCam;
   if (!st.open) return;
+  // ⚠⚠ A NOTE LEFT SITTING IN THE BOX IS SAVED, NOT THROWN AWAY — and this is the defect
+  // that was reported, not a nicety. Measured on the real page 2026-09-20: type a note, press
+  // this button, and the note came back NULL while the photograph saved perfectly. Worse, on
+  // an iPhone the keyboard's own return key is ALSO labelled "done" and DOES save it (it
+  // fires the Enter handler), so one screen carried two buttons called Done that did opposite
+  // things to the same words. Reported as "the done button saved my note without me hitting
+  // the add button" — a true report about the other Done.
+  _fieldCamFlushNote();
   _fieldCamStop();
   st.open = false;
   var el = document.getElementById('field-cam');
@@ -22168,12 +22346,21 @@ function _roomShotStripHtml(jobId, roomIdx) {
       var bg = _roomShotThumbStyle(jobId, r);
       var status = r.status === 'uploaded' ? ''
         : (r.status === 'failed'
+            // ⚠ RETRY ALONE. The ✕ that used to sit here did exactly what the bin on the
+            // corner of the thumbnail now does for every shot, and two controls on one tile
+            // that destroy the same thing is how a person ends up checking which is which.
             ? '<div style="color:#c0392b;font-weight:700;">&#9888; not saved '
-              + '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" class="btn-s" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border-color:#c0392b;">Retry</button> '
-              + '<button onclick="dismissFailedPhoto(' + jobId + ',\'' + r.stableId + '\')" class="btn-s" style="font-size:9px;padding:1px 5px;cursor:pointer;color:#c0392b;border-color:#c0392b;">&#10005;</button></div>'
+              + '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" class="btn-s" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border-color:#c0392b;">Retry</button></div>'
             : '<div style="color:var(--gray);">Uploading\u2026</div>');
+      // ⚠⚠ THE BIN IS ON THE SHOT, ON EVERY SHOT. Asked for from the field 2026-09-20:
+      // "maybe when i go back to the room, there's a little trash can logo or something next
+      // to the photo and i can delete it." Putting it ON the thumbnail rather than under the
+      // tile is what makes "which photograph does this delete" not a question.
       return '<div class="ws-shot">'
-        + '<div class="ws-thumb"' + (id ? ' data-thumb-id="' + esc(id) + '"' : '') + ' style="' + bg + '">' + (bg ? '' : '&#128247;') + '</div>'
+        + '<div class="ws-thumb"' + (id ? ' data-thumb-id="' + esc(id) + '"' : '') + ' style="' + bg + '">' + (bg ? '' : '&#128247;')
+        + '<button type="button" class="ws-del" title="Delete this photo" aria-label="Delete this photo"'
+        + ' onclick="discardShot(' + jobId + ',\'' + r.stableId + '\')">&#128465;&#65039;</button>'
+        + '</div>'
         + '<div class="n">' + (g[0] === 'inventory' ? (r.objectName ? esc(r.objectName) : 'Item ' + r.seq) : g[1] + ' ' + r.seq)
         + (r.needsAppr ? ' <span style="color:var(--bronze);">&#9873;</span>' : '')
         + (g[0] === 'inventory' ? ' \u00b7 ' + (r.disposition ? esc(r.disposition) : 'undecided') : '')
@@ -28918,6 +29105,23 @@ function uploadToDrive(folderId, filename, dataUrl, onDone) {
   // row has to have its id regex'd back out of the URL.
   .then(function(d){ if (onDone) onDone(d.ok, d.fileUrl, d.fileId); })
   .catch(function(){ if (onDone) onDone(false); });
+}
+
+// Trash one file in the client's Drive folder. cb(ok, err).
+//
+// ⚠ NEVER RETRIED. A failed POST does not reveal whether it landed, and this is a delete:
+// the caller has already removed the row locally, so a silent second attempt buys nothing and
+// a loud "it is still in Drive" is the honest answer. Same rule `addVendor` follows.
+function driveTrashFile(fileId, onDone) {
+  if (!SHEETS_SYNC_URL || !fileId) { if (onDone) onDone(false, 'no backend configured'); return; }
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'trashFile', fileId: fileId })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if (onDone) onDone(!!(d && d.ok), d && d.error); })
+  .catch(function(e){ if (onDone) onDone(false, (e && e.message) || String(e)); });
 }
 
 function uploadHtmlToDrive(folderId, filename, html, onDone) {

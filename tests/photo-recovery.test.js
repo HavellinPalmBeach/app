@@ -27,6 +27,11 @@ const fnBody = (name) => {
   const at = SRC.indexOf('function ' + name + '(');
   return SRC.slice(at, SRC.indexOf('\n}\n', at));
 };
+// ⚠ A needle over a function body matches the COMMENTS in it, and a comment worth reading
+// has to quote the line it is explaining. That is what this file's own `textContent` check
+// tripped on. Line-based, not /* */: `accept="image/*"` makes a regex stripper eat 166KB.
+const liveBody = (name) => fnBody(name).split('\n')
+  .filter((l) => !/^\s*\/\//.test(l)).join('\n');
 
 // Drive the REAL upload path. `hang` leaves the Drive request pending forever, which is
 // the reported failure and the one no catch block can see.
@@ -35,13 +40,15 @@ function rig(opts) {
   const badges = [];
   const timers = [];
   const saved = [];
+  const trashed = [];
   let confirmAnswer = opts.confirm === undefined ? true : opts.confirm;
 
   const ctx = sandbox({
     // The room workspace's shot strip is where a failed shot shows now (2026-09-19); the
     // per-slot badge it replaced lived on room cards that no longer exist.
     fns: ['_doPhotoUpload', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_roomShotStripHtml',
-          '_invDetailRefs', '_invFileId', '_roomShotThumbStyle', 'dismissFailedPhoto'],
+          '_invDetailRefs', '_invFileId', '_roomShotThumbStyle',
+          'discardShot', '_shotDesc', '_trashShotFiles'],
     vars: ['PHOTO_UPLOAD_TIMEOUT_MS', '_localShotThumbs'],
     stubs: {
       jobs: [{ id: 1, driveFolder: 'https://drive.google.com/drive/folders/FOLDER' }],
@@ -54,6 +61,12 @@ function rig(opts) {
       _updatePhotoStatusEl() {},
       _invTouch(r) { r.updatedAt = 1; },
       _invThumbCache: () => ({}),
+      _invSaveThumbCache() {},
+      _scheduleInventorySync() {},
+      _fieldCam: { open: false },
+      // The real wire is driven in the browser; here we only need to know a delete really
+      // went out for the right file, which is the half a source check cannot see.
+      driveTrashFile: (fileId, cb) => { trashed.push(fileId); cb(!opts.driveFails, 'nope'); },
       confirm: () => confirmAnswer,
       setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
       clearTimeout: (id) => { if (id) timers[id - 1] = null; },
@@ -67,7 +80,7 @@ function rig(opts) {
     },
   });
   return {
-    ctx, badges, timers, saved,
+    ctx, badges, timers, saved, trashed,
     setConfirm(v) { confirmAnswer = v; },
     fireWatchdog() { timers.filter(Boolean).forEach((t) => t.fn()); },
     ref: () => ctx._photoRefs[1][0],
@@ -135,25 +148,29 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = rig({ ok: false });
     seed(r, 'failed');
     // ⚠ A NEEDLE FOR THE CALL ALONE COULD NOT FAIL, and reverting is what showed it: a
-    // button rendered `hidden` still carries its onclick, so `has(html, 'dismissFailedPhoto')`
+    // button rendered `hidden` still carries its onclick, so a needle for the call alone
     // was green over a control nobody can press. Read the rendered element the way a person
     // would — it has to be THERE and it has to be REACHABLE.
+    // ⚠ THE CONTROL IS THE BIN ON THE THUMBNAIL NOW, on every shot rather than only a red
+    // one. The ✕ that used to sit beside Retry was a second control destroying the same
+    // thing on the same tile. What has to stay true is what it always was: it is THERE and
+    // it is REACHABLE.
     const card = r.ctx._roomShotStripHtml(1, 2);
-    const btn = (card.match(/<button[^>]*dismissFailedPhoto[^>]*>/) || [''])[0];
+    const btn = (card.match(/<button[^>]*class="ws-del"[^>]*>/) || [''])[0];
     ok(btn, 'the strip renders a discard control');
+    has(btn, 'discardShot(1,', 'wired to the one discard');
     lacks(btn, 'hidden', 'not hidden');
-    lacks(btn, 'disabled', 'not disabled');
-    lacks(btn, 'display:none', 'and not styled out of existence');
-    has(btn, 'cursor:pointer', 'it reads as something to press');
+    lacks(btn, 'disabled', 'and not disabled');
+    has(card, 'retryPhotoUpload(1,', 'and Retry is still beside it — discarding is not the only way out');
 
     // ⚠ It destroys the image, so it never happens on one tap.
     r.setConfirm(false);
-    r.ctx.dismissFailedPhoto(1, 's1');
+    r.ctx.discardShot(1, 's1');
     ok(!r.ref().deletedAt, 'declining the confirm changes nothing');
     ok(r.ctx._photoRetryData.s1, 'and the bytes are still there to retry');
 
     r.setConfirm(true);
-    r.ctx.dismissFailedPhoto(1, 's1');
+    r.ctx.discardShot(1, 's1');
     ok(r.ref().deletedAt > 0, 'confirming removes it');
     ok(!r.ctx._photoRetryData.s1, 'and lets go of the image, which the wording promised');
     eq(r.saved.length > 0, true, 'the removal is persisted');
@@ -166,16 +183,113 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // And it really leaves every reading of the slot.
     eq(r.ctx._slotRefs(1, 2, 'before').length, 0, 'the slot no longer counts it');
     eq(r.ctx._roomShotStripHtml(1, 2), '', 'and the strip is clean');
+    eq(r.trashed.length, 0, '⚠ a shot that never reached Drive asks Drive to delete nothing');
     has(fnBody('_slotRefs'), '!r.deletedAt',
         '⚠ the filter tests the tombstone — it did not, so a removed photo went on warning');
   }
 
-  group('⚠ an uploaded photo is not dismissable, and that is not an oversight');
+  // ⚠⚠ THIS GROUP IS THE CONVERSE OF THE ONE IT REPLACES, AND THE OLD ONE WAS RIGHT UNTIL
+  // 2026-09-20. It pinned "an uploaded photo is not dismissable, and that is not an oversight"
+  // — true while nothing could remove a file from Drive, and the reason a crummy shot that
+  // uploaded perfectly had no control anywhere. Reported from the field: "i took a crummy
+  // picture and i want to be able to delete it." The requirement now is the other way round,
+  // and the half worth pinning is that the Drive file really goes with it.
+  group('⚠⚠ a shot that DID land is discardable too — and it leaves Drive with it');
   {
     const r = rig({ ok: true });
     seed(r, 'uploaded');
-    r.ctx.dismissFailedPhoto(1, 's1');
-    ok(!r.ref().deletedAt,
-       'this control exists to clear a DEAD shot; deleting a filed photograph is a different act');
+    r.ref().driveFileId = 'FID1';
+
+    r.setConfirm(false);
+    r.ctx.discardShot(1, 's1');
+    ok(!r.ref().deletedAt, 'it destroys a photograph, so it never happens on one tap');
+    eq(r.trashed.length, 0, 'and nothing is touched in Drive until it is confirmed');
+
+    r.setConfirm(true);
+    ok(r.ctx.discardShot(1, 's1'), 'confirming removes it');
+    ok(r.ref().deletedAt > 0, 'the row is tombstoned');
+    ok(r.ref().updatedAt, 'stamped, so the removal wins the per-item merge');
+    eq(r.ctx._photoRefs[1].length, 1, 'tombstone, never a splice');
+    eq(r.ctx._slotRefs(1, 2, 'before').length, 0, 'gone from every reading of the slot');
+    eq(r.trashed.join(','), 'FID1', '⚠ and the file really left the client\u2019s Drive folder');
+
+    ok(!r.ctx.discardShot(1, 's1'), 'a second press finds nothing to do');
+    eq(r.trashed.length, 1, 'so Drive is not asked twice');
+  }
+
+  // ⚠⚠ FOUND IN THE BROWSER, NOT BY A TEST, AND NO STUB COULD HAVE SEEN IT. The strip emitted
+  // the delete button and the RENDERED tile did not have one — `_invPaintThumbs` cleared the
+  // placeholder glyph with `el.textContent = ''`, which takes every child ELEMENT with it. So
+  // the control vanished off exactly the thumbnails that had a photograph to look at, which
+  // are the ones you want to bin. Pinned at source because the painter has no return value to
+  // drive: what must stay true is that it clears TEXT and never children.
+  group('⚠⚠ painting a thumbnail must not delete the controls sitting on it');
+  {
+    const body = liveBody('_invPaintThumbs');
+    ok(body.length > 60 && body.indexOf('backgroundSize') > 0,
+       'the comment stripper kept the live code');
+    lacks(body, "textContent = ''", 'it does not wipe the element wholesale');
+    has(body, 'nodeType === 3', 'it removes text nodes only');
+    has(body, 'removeChild', 'one at a time, leaving elements alone');
+    // The converse: it still has to clear the glyph, or a photo paints behind a camera icon.
+    has(body, 'backgroundImage', 'and it still paints the photograph');
+  }
+
+  // ⚠⚠ A DETAIL SHOT IS A CLOSE-UP OF THIS OBJECT, so binning the object takes them with it.
+  // Left behind they would be photographs of a thing that is no longer on the manifest, filed
+  // under a `groupId` pointing at a tombstone — and `_invDetailRefs` would go on counting them
+  // on a row that is gone.
+  group('⚠⚠ binning an item takes its detail shots, and their files, with it');
+  {
+    const r = rig({ ok: true });
+    r.ctx._photoRefs[1] = [
+      { stableId: 'i1', roomIdx: 2, label: 'inventory', seq: 1, status: 'uploaded',
+        objectName: 'Side table', driveFileId: 'FID_ITEM', filename: 'a.jpg' },
+      { stableId: 'd1', roomIdx: 2, label: 'detail', seq: 1, status: 'uploaded',
+        groupId: 'i1', driveFileId: 'FID_DET', filename: 'b.jpg' },
+      { stableId: 'i2', roomIdx: 2, label: 'inventory', seq: 2, status: 'uploaded',
+        objectName: 'Lamp', driveFileId: 'FID_OTHER', filename: 'c.jpg' },
+    ];
+    const byId = (id) => r.ctx._photoRefs[1].find((x) => x.stableId === id);
+
+    ok(r.ctx.discardShot(1, 'i1'), 'the item goes');
+    ok(byId('i1').deletedAt > 0, 'tombstoned');
+    ok(byId('d1').deletedAt > 0, '⚠ and so is its detail shot');
+    ok(!byId('i2').deletedAt, 'while the object beside it is untouched');
+    eq(r.trashed.sort().join(','), 'FID_DET,FID_ITEM',
+       '⚠ both files leave Drive — and the other item\u2019s does not');
+    ok(byId('i1').driveTrashed && byId('d1').driveTrashed,
+       'both rows say where the photograph went, so the undo buffer can tell the truth');
+    eq(r.ctx._invDetailRefs(1, 'i1').length, 0, 'and the detail stops counting against the row');
+  }
+
+  group('⚠ the local removal does not wait on Drive, and a Drive refusal says so');
+  {
+    const r = rig({ ok: true, driveFails: true });
+    seed(r, 'uploaded');
+    r.ref().driveFileId = 'FID9';
+    r.ctx.discardShot(1, 's1');
+    ok(r.ref().deletedAt > 0,
+       '⚠ what was asked for is the bad photograph off the screen — a Drive refusal must not block that');
+    ok(r.badges.some(function(b){ return /could not be removed from Google Drive/.test(b); }),
+       'and the failure speaks, because the row has already gone from the manifest');
+  }
+
+  // ⚠ A FLOOR, NOT A "did you bump it" CHECK — it states what THIS feature needs, so it
+  // survives the next real bump instead of breaking on it. `trashFile` landed in 2026-09-20a;
+  // on any deployment older than that, a photo binned in the field comes off the job and
+  // STAYS IN THE CLIENT'S DRIVE FOLDER, which is the one half of the delete a person cannot
+  // see from the app.
+  group('⚠ the backend can actually delete a file, and the app can say when it cannot');
+  {
+    const GS = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8');
+    has(GS, "data.action === 'trashFile'", 'trashFile is dispatched');
+    has(GS, "'trashFile'", 'and declared, so the version probe reports it');
+    has(GS, 'supportsAllDrives', '⚠ and it asks the Shared Drive the estate folders live on');
+    const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
+    ok(bv >= '2026-09-20a',
+       '⚠ BACKEND_VERSION is at or past the release that added trashFile (found ' + bv + ')');
+    has(SRC, "'trashFile'", 'the app lists it in BACKEND_NEEDS, so a stale deployment draws the banner');
+    has(SRC, 'still stays in the client', 'and the banner says what that costs, in consequences');
   }
 };

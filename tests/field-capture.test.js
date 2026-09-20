@@ -75,7 +75,8 @@ function cameraRig(grant) {
   const ctx = sandbox({
     fns: ['openFieldCamera', 'closeFieldCamera', '_fieldCamStop', '_fieldCamGoNative', '_fieldCamShellHtml',
           '_fieldCamPaint', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail', '_fieldCamCommit',
-          'fieldCamTypedNote', 'fieldCamTalkStart', '_fieldCamRoomName', '_planRoom', '_getPhotoRef',
+          'fieldCamTypedNote', 'fieldCamNoteDraft', '_fieldCamPendingNote', '_fieldCamFlushNote',
+          'fieldCamTalkStart', '_fieldCamRoomName', '_planRoom', '_getPhotoRef',
           '_captureShot', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef',
           '_fieldNoteAppend', '_invTouch', '_invDetailRefs'],
     vars: ['_fieldCam', 'FIELD_CAM_MODES', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
@@ -272,6 +273,63 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(fn('_fieldCamCommit'), 'closeFieldCamera', '_fieldCamCommit never closes it');
     lacks(fn('_captureShot'), 'closeFieldCamera', 'nor does the capture core');
     lacks(fn('_fieldNoteAppend'), 'closeFieldCamera', 'nor a note');
+  }
+
+  // ⚠⚠ THE THREE THINGS THAT COMMIT A TYPED NOTE, AND THERE IS NO FOURTH. Reported from the
+  // field 2026-09-20: "we don't need to hit add, it's another step." There is no Add button
+  // now, so what has to hold is that Enter, the next shutter and Done each save the words —
+  // and that they save them against the RIGHT photograph.
+  group('⚠⚠ a typed note is committed by Done, by the next shutter, and by Enter');
+  {
+    // ── Done. Measured on the real page before this was built: the note came back null while
+    //    the photograph saved perfectly, so the words were silently destroyed.
+    const c = cameraRig('ok');
+    c.ctx.openFieldCamera(1, 0, 'before');
+    c.ctx._fieldCamCommit('data:image/jpeg;base64,AAA');
+    const shot = c.ctx._photoRefs[1][0];
+    c.ctx.fieldCamNoteDraft('water stain on the sill');
+    c.dom.getElementById('fc-note-input').value = 'water stain on the sill';
+    c.ctx.closeFieldCamera();
+    eq(shot.fieldNote, 'water stain on the sill',
+       '⚠ Done SAVES the note — it used to blank the overlay and throw it away');
+    eq(c.ctx._fieldCam.open, false, 'and still closes the camera');
+
+    // ── The next shutter, and this is the one that files it on the wrong object when it is
+    //    wrong: `lastAny` moves the instant the next shot lands.
+    const d = cameraRig('ok');
+    d.ctx.openFieldCamera(1, 0, 'inventory');
+    d.ctx._fieldCamCommit('data:image/jpeg;base64,AAA');
+    const first = d.ctx._photoRefs[1][0];
+    d.ctx.fieldCamNoteDraft('mahogany side table');
+    d.dom.getElementById('fc-note-input').value = 'mahogany side table';
+    d.ctx._fieldCamCommit('data:image/jpeg;base64,BBB');
+    const second = d.ctx._photoRefs[1][1];
+    eq(first.fieldNote, 'mahogany side table',
+       '⚠⚠ the words land on the shot they were typed about');
+    ok(!second.fieldNote, 'and NOT on the object photographed next');
+    eq(d.ctx._fieldCam.noteFor, null, 'the draft is spent');
+
+    // ── And the box does not carry it into the next note.
+    d.ctx.fieldCamNoteDraft('walnut chest');
+    d.dom.getElementById('fc-note-input').value = 'walnut chest';
+    d.ctx.closeFieldCamera();
+    eq(second.fieldNote, 'walnut chest', 'the second note is the second shot\u2019s');
+    eq(first.fieldNote, 'mahogany side table', 'and the first is untouched');
+  }
+
+  // ⚠ THE BUTTON IS GONE, DELIBERATELY — the converse of the group above. A control that does
+  // a fourth time what three other things already do is a step that exists to be forgotten.
+  group('⚠ there is no Add / Save-note button to forget');
+  {
+    const c = cameraRig('ok');
+    c.ctx.openFieldCamera(1, 0, 'inventory');
+    c.ctx._fieldCamCommit('data:image/jpeg;base64,AAA');
+    const ui = c.ui();
+    lacks(ui, '>Add<', 'no Add button');
+    lacks(ui, 'Save note', 'and nothing renamed to Save note either');
+    has(ui, 'id="fc-note-input"', 'the box itself is still there');
+    has(ui, 'fieldCamNoteDraft(this.value)', 'and every keystroke is kept');
+    has(ui, 'saved automatically', 'the placeholder says so, since nothing else can');
   }
 
   group('⚠ THE CAMERA DEGRADES TO THE NATIVE INPUT ON THE SAME SURFACE');

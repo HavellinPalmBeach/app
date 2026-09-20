@@ -34,10 +34,10 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-19a';
+var BACKEND_VERSION = '2026-09-20a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
-  'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
+  'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
   'stripeLink', 'stripeStatus'
 ];
 var BACKEND_TYPES = [
@@ -117,6 +117,7 @@ function doPost(e) {
     if (data.action === 'htmlToPdf')     { return jsonOut(htmlToPdfBase64(data.html)); }
     if (data.action === 'getSubfolders') { return handleGetSubfolders(data); }
     if (data.action === 'getThumbnails')  { return jsonOut(getDriveThumbnails(data.fileIds)); }
+    if (data.action === 'trashFile')      { return jsonOut(trashDriveFile(data.fileId)); }
     if (data.action === 'shareFolder')   { return jsonOut(shareFolder(data.folderId, data.email)); }
     if (data.action === 'unshareFolder') { return jsonOut(unshareFolder(data.folderId, data.email)); }
     if (data.action === 'esignSend')     { return jsonOut(esignSendEnvelope(data)); }
@@ -1410,6 +1411,35 @@ function uploadFileToDrive(folderId, filename, dataUrl) {
     Logger.log('uploadFileToDrive error: ' + error.toString());
     return { ok: false, error: error.toString() };
   }
+}
+
+// A shot binned in the field really leaves Drive.
+//
+// ⚠ IT TRASHES RATHER THAN PURGES, which is the same call `trashJobFoldersConfirm` already
+// makes for a whole job folder: Drive's own bin holds it for 30 days. A photograph is the one
+// thing on an estate that cannot be re-typed, and "delete" made irreversible by us buys
+// nothing that Drive's bin does not already give for free.
+//
+// ⚠⚠ BOTH SOURCES ARE ASKED, for exactly the reason `_filesNamedInFolder` below records:
+// the estate folders live on a SHARED DRIVE, where DriveApp and the advanced Drive service
+// disagree about what they can see, and the advanced one needs `supportsAllDrives` to answer
+// at all. A single-path version of this would work on the desk and fail in the field.
+function trashDriveFile(fileId) {
+  fileId = String(fileId || '').trim();
+  if (!fileId) return { ok: false, error: 'No fileId given.' };
+  var why = '';
+  try {
+    DriveApp.getFileById(fileId).setTrashed(true);
+    return { ok: true, trashed: true, fileId: fileId, via: 'DriveApp' };
+  } catch (e) { why = e.toString(); }
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.update) {
+      Drive.Files.update({ trashed: true }, fileId, null, { supportsAllDrives: true });
+      return { ok: true, trashed: true, fileId: fileId, via: 'Drive API' };
+    }
+  } catch (e2) { why = why + ' | ' + e2.toString(); }
+  Logger.log('trashDriveFile ' + fileId + ': ' + why);
+  return { ok: false, error: why || 'The file could not be trashed.' };
 }
 
 // Every file in `folder` carrying exactly this name.

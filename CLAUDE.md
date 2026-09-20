@@ -1,5 +1,90 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A BAD PHOTO COULD NOT BE DELETED, AND "DONE" WAS TWO DIFFERENT BUTTONS (BUILT 2026-09-20)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-20a`; until it lands a photo binned in
+the field comes off the job and **stays in the client's Drive folder**. Anthony, on a phone, in field mode, in a room:
+*"i took a crummy picture and i want to be able to delete it. and there doesn't appear to be any ability to delete … maybe
+when i go back to the room, there's a little trash can logo or something next to the photo."* Then, on the note box:
+*"i'm not sure what the add button does."* Then, twice more: *"the done button saved my note without me hitting the add
+button"* and *"we don't need to hit 'add'. it's another step."*
+
+- **⚠⚠ THE DELETE REALLY WAS MISSING, AND `dismissFailedPhoto` IS WHY IT LOOKED PRESENT.** It opened
+  `if (!ref || ref.status === 'uploaded') return;` and its ✕ rendered only on a tile whose status was `failed` — so the
+  only photograph you could bin was one that had **already failed to reach Drive**. A good upload of a useless picture,
+  which is the ordinary case (a fat-fingered shot re-taken a second later), had no control anywhere in the app. The
+  2026-09-11 note beside it — *"an uploaded photo is not dismissable, and that is not an oversight"* — was right while
+  nothing could remove a file from Drive and is the exact sentence that left this open.
+- **⚠⚠ "DELETE ON DEVICE AND DRIVE" IS ANTHONY'S CALL, PUT TO HIM BECAUSE IT BRANCHES THE BUILD:** *"just delete it on
+  device and drive. i took a bad one, and just took another right after that was better. or if you fat finger and take
+  photo too quickly. there is no probate risk here. don't over think it."* So `trashFile` in `main-sync.gs`, and
+  `discardShot` is the ONE discard for a shot that landed and one that did not.
+  - **⚠ IT TRASHES RATHER THAN PURGES** — `setTrashed(true)`, the same call `trashJobFoldersConfirm` already makes for a
+    whole job folder, so Google's own bin holds it 30 days. Irreversibility buys nothing the bin does not already give.
+  - **⚠ BOTH DRIVE SOURCES ARE ASKED**, `DriveApp` then the advanced service with `supportsAllDrives` — the Shared Drive
+    lesson this file records twice (`_filesNamedInFolder`, `_driveThumbnail`). A single-path version works at the desk
+    and fails in the field.
+  - **⚠⚠ THE LOCAL REMOVAL HAPPENS FIRST, UNCONDITIONALLY.** What was asked for is the bad photograph off the screen; a
+    Drive refusal must never leave it in the room. Drive is asked afterwards and **speaks for itself** — the row has
+    already gone from the manifest, so a silent failure would leave the image in the client's folder with nothing saying
+    so. Reverting the Drive half fails 4; reverting the uploaded-shot refusal fails **14**.
+  - **⚠ A DETAIL SHOT GOES WITH ITS ITEM.** Left behind they are photographs of an object no longer on the manifest,
+    filed under a `groupId` pointing at a tombstone. Reverting the cascade fails 4.
+  - **⚠ THE ROW IS TOMBSTONED AND STAMPED `driveTrashed`**, so the Removed-items panel can tell the truth: Restore gives
+    the ROW back and cannot give the photograph back. **Its header said *"nothing is thrown away"* and that went false
+    today** — corrected, with where the image went.
+- **⚠⚠ FOUND IN THE BROWSER AND BY NOTHING ELSE: `_invPaintThumbs` DELETED THE BUTTON.** The strip emitted the bin and the
+  rendered tile did not have one. `el.textContent = ''` clears the placeholder glyph **and every child ELEMENT with it**,
+  so the control vanished off exactly the thumbnails with a photograph on them — the ones you want to bin. It removes
+  TEXT NODES only now. **A stub cannot see this**: the markup was correct at every source check, and the first browser
+  run measured 3 tiles and 0 bins. Reverting it fails 3.
+- **⚠⚠ THE NOTE BOX: "DONE" WAS TWO BUTTONS, AND I GOT THE FIRST DIAGNOSIS HALF WRONG.** Measured on the real page:
+  typing a note and pressing the app's brown **Done** returned `fieldNote` **null** — destroyed — while the photograph
+  saved perfectly. But on an iPhone the *keyboard's* return key is also labelled **done**, and it fires the Enter handler,
+  which saved. One screen, two buttons called Done, opposite effects on the same words.
+  - **⚠ AND ANTHONY'S SECOND REPORT WAS ABOUT NEITHER: HE USED HOLD-TO-TALK.** `fieldCamTalkStart`'s `recog.onend` calls
+    `_fieldNoteAppend` the instant the button is released, so a **voice** note was already saved before Done was pressed.
+    He was right every time; I had been answering about the typed path. **Check which input a report is about before
+    telling somebody their reading is wrong.**
+  - **THREE THINGS COMMIT A TYPED NOTE NOW AND THERE IS NO FOURTH:** Enter, **the next shutter**, and Done. The Add
+    button is **deleted** — *"it's another step"* — and the placeholder says *saved automatically*, since nothing else can.
+  - **⚠⚠ THE DRAFT IS PINNED TO THE SHOT IT WAS TYPED ABOUT (`noteFor`), AND THE SHUTTER FLUSH RUNS ABOVE THE LINE THAT
+    MOVES `lastAny`.** Below it the words land on the object photographed *next*. Driven in a browser: a note typed about
+    the side table stays on the side table and the next shot comes back `null`. Reverting the shutter flush fails 4.
+  - **⚠ AND THE HALF-TYPED NOTE SURVIVES A REPAINT.** `_fieldCamPaint` rewrites the strip with `innerHTML` on every shot,
+    chip and thumbnail, which destroyed the input and its contents. The draft lives on the state; `oninput` is a plain
+    state write with **no repaint**, or the keyboard would lose focus on every letter.
+  - **⚠ `!st.noteFor` IS BELT AND BRACES AND IS RECORDED AS SUCH RATHER THAN COVERED BY A CHECK THAT COULD NOT FAIL** —
+    `lastAny` only moves on the shutter and the shutter flushes first, so the `if` cannot change an outcome today. The
+    nineteenth time this file draws that distinction.
+- **7214 committed checks** (+30; `photo-recovery` rewritten around the one discard, three groups new in `field-capture`).
+  **All ten changes revert-verified individually** — 14 / 4 / 4 / 2 / 4 / 3 / 2 / 2 / 1, baseline 0 before and after, the
+  sweep snapshotting both files and restoring in a `finally`. **⚠ FIVE CAME BACK GREEN ON THE FIRST SWEEP** — the detail
+  cascade, all three note-commit paths and the version bump — every one of them a behaviour the browser had proven and
+  no check had ever driven. Re-done, only the belt-and-braces line above is green.
+  - **⚠ MY OWN COMMENT TRIPPED MY OWN NEEDLE, the tenth time this file records it:** the comment explaining the
+    `textContent` fix has to QUOTE the retired line to be worth reading. `liveBody()` comment-strips before the check.
+  - **⚠ FOUR PINNED `fns:` LISTS BROKE CORRECTLY** (`field-capture`, `appraisal-track`, `photo-recovery`) as the camera
+    grew `_fieldCamFlushNote` / `_fieldCamPendingNote` / `fieldCamNoteDraft`. **Found by searching every pinned list at
+    once**, which this file records costing a round when it is not.
+  - **⚠ `dismissFailedPhoto` IS DELETED, NOT LEFT AS AN ALIAS.** Nothing called it once the bin covered both cases, and a
+    retired control that still compiles is how one comes back.
+- **Verified end to end in headless Chromium on the real page**, with a fake camera device:
+
+  | | |
+  |---|---|
+  | type a note, press the brown **Done** | **saved** (was `null`) |
+  | type about photo 1, shoot photo 2 | note on **photo 1**, photo 2 `null` |
+  | type, press Enter · type, then a repaint | saved · **text survives** |
+  | buttons left in the note row | **`🎤 Hold to talk` only** |
+  | room workspace, 3 shots | **3 tiles, 3 bins** (was 3 and **0**) |
+  | bin an item carrying a detail shot | both tombstoned, both `driveTrashed`, **Drive asked for both file ids**, the item beside it untouched |
+  | the camera's own bin · 390px | present · **32×32**, overflow **0**, **0 page errors** |
+
+  The first `<style>` block goes **1146 → 1154 lines and 628 → 632 rules, nothing deleted** — the 368-line CSS rule,
+  applied by measurement.
+- ~~**⚠ BOTH DOCUMENTS NEED A PASS** — manual §10/§10a (the bin, what delete means, the Drive bin) and playbook Step 10a
+  (the three note commits, no Add button).~~ **Still outstanding at the end of this session; next session should do it.**
+
 ## ⚠⚠ THREE ASKS IN ONE MORNING — THE BANNER IS THE ROW, THE DIRECTORY IS ALPHABETICAL, THE FIXED FEE IS THE MANAGER'S FIGURE (2026-09-20)
 Anthony, off two screenshots and a voice note, the morning after the Job Plan rethink. On a Home Cleanout plan whose red
 FIREARMS banner and STANDING JOB FLAGS panel both printed *2 pistols*, the crew rule and the protocol link: *"seems sort of
@@ -3890,7 +3975,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/quirky-pasteur-bknj9m`
+- Active feature branch: `claude/dazzling-babbage-ijoew4`
+  (was `claude/quirky-pasteur-bknj9m`)
   (was `claude/focused-knuth-pqw6ff`)
   (was `claude/estimate-view-client-dashboard-024he6`, then `claude/sharp-allen-1cc2ur`)
   ⚠ This session was ASSIGNED that branch, which is an older name still in the list below — a
@@ -3911,7 +3997,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/quirky-pasteur-bknj9m:main`
+  `git push origin claude/dazzling-babbage-ijoew4:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
