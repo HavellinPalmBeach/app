@@ -111,7 +111,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const calls = [];
     const c = sandbox({
       fns: ['markFixedAmountEdited', 'resetFixedToSuggested', 'useRoundedFixedFee', 'keepFixedFee', 'toggleFixedPrice',
-            'fixedFeeRounded', '_fxAmtGet', '_fxAmtSet', 'moneyToNumber', 'formatMoneyInput', 'isTMOnly'],
+            'fixedFeeRounded', '_fxAmtGet', '_fxAmtSet', 'moneyToNumber', 'formatMoneyInput'],
       vars: ['_fixedAmountUserSet', '_fixedAmountBasis'],
       stubs: { document: dom, calcAll: () => calls.push('calc'), showFB: () => {} },
     });
@@ -146,12 +146,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c._fixedAmountBasis, 0, 'with no basis');
     ok(calls.length >= 5, 'every action recalculates (' + calls.length + ' calls)');
 
-    // The toggle on a probate matter still refuses, and refuses before it writes a fee.
-    dom.getElementById('e-svc').value = 'probate';
-    dom.getElementById('e-fixed').checked = true;
-    c.toggleFixedPrice();
-    eq(dom.getElementById('e-fixed').checked, false, 'probate: the box is unticked again');
-    eq(dom.getElementById('fixed-amount-row').style.display, 'none', 'and the row hides');
+    // ⚠ THIS PAIR PINNED THE RETIRED REFUSAL — the toggle used to untick itself and hide the
+    // amount row on a probate matter — and broke correctly when isTMOnly came off on
+    // 2026-09-20. Restated as the converse, which is the requirement now and is the one that
+    // would catch the rule creeping back: the box STAYS ticked on the two matter types that
+    // used to refuse it, the row opens, and the field takes a fee.
+    ['probate', 'contested_probate'].forEach(function (svc) {
+      dom.getElementById('e-svc').value = svc;
+      dom.getElementById('e-fixed').checked = true;
+      c._fixedAmountUserSet = false;
+      c.window._fixedPriceSuggested = 31000;
+      // Emptied on purpose: toggleFixedPrice prefills only into an empty field ("prefill +
+      // override"), so leaving the previous step's $26,100 in it would make the prefill
+      // assertion below pass on a figure this call never wrote.
+      c._fxAmtSet(0);
+      c.toggleFixedPrice();
+      eq(dom.getElementById('e-fixed').checked, true, svc + ': the box stays ticked');
+      eq(dom.getElementById('fixed-amount-row').style.display, 'flex', svc + ': and the amount row opens');
+      eq(amt.value, '$31,000', svc + ': the fee prefills rather than being discarded');
+    });
   }
 
   // ───────────────────────────────────────────────────────────────────────────
