@@ -357,9 +357,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
             '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs',
             '_warnPhotoStoreFull', 'resolveValBasis', 'estateValueDate', '_avdDate',
-            'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat'],
+            'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat',
+            // The as-found index rides the same payload, so the real chain runs here rather
+            // than a stub: this is the one place the manifest and the workbook meet, and a
+            // throw anywhere in it would otherwise surface on a client's spreadsheet.
+            '_asFoundRows', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_afTime'],
       vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS',
-             'INV_VAL_BASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
+             'INV_VAL_BASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AS_FOUND_COLUMNS',
+             'estimateStore', 'jobPlanStore'],
+      stubs: { fmtDate2: (d) => String(d || '') },
     });
     p2.jobs.push({ id: 3, name: 'Estate', hvlId: 'HVL-3' });
     p2._photoRefs[3] = [it('a', { label: 'inventory', category: 'Firearms', fmv: '100' })];

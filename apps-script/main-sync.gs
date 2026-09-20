@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-20a';
+var BACKEND_VERSION = '2026-09-20b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -1383,7 +1383,11 @@ function createJobFolder(hvlId, clientName, svc, subfolderNames, parentFolderId)
     var existing = rootFolder.getFoldersByName(folderName);
     var reused = existing.hasNext();
     var clientFolder = reused ? existing.next() : rootFolder.createFolder(folderName);
-    var names = subfolderNames || ['Estate Inventory', 'Walkthrough Notes', 'Estimate', 'Agreement', 'Change Orders', 'Invoice', 'Job Log'];
+    // ⚠ 'As-Found Record' JOINED THIS LIST ON 2026-09-20 and the app names it explicitly on
+    // every createFolder call, so this default only decides a folder made by the legacy GET
+    // fallback. Reuse-by-name below means re-running against an existing client folder ADDS
+    // the missing one rather than duplicating anything — which is how an old job gets split.
+    var names = subfolderNames || ['Estate Inventory', 'As-Found Record', 'Walkthrough Notes', 'Estimate', 'Agreement', 'Change Orders', 'Invoice', 'Job Log'];
     var subfolders = {};
     names.forEach(function(name) {
       // Same reuse-by-name rule for each subfolder, so re-running never duplicates them.

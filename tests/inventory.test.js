@@ -215,7 +215,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('court inventory: exempt property');
   {
     const COURT_FNS = INV_FNS.concat([
-      '_invMoney', 'printCourtInventory', 'isFormalDoc', 'resolveDocLevel',
+      '_invMoney', '_invDocName', 'printCourtInventory', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
@@ -444,7 +444,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('appraisal worklist: the permanent item number, not the row position');
   {
     const WL_FNS = INV_FNS.concat([
-      'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', '_invRoomName', '_invMoney',
+      'printAppraisalWorklist', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
       'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat', 'invMAIVCategory',
       'isDecedentJob', '_gate706',
@@ -527,7 +527,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // it.itemNo || (i + 1) — a snapshot row taken before item numbers existed carries
     // none, and a position printed in that column reads as a number that was issued.
-    const snapFns = ['printInventorySnapshot', '_invItemNo', '_invMoney', '_invDateTime'];
+    const snapFns = ['printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime'];
     const sctx = sandbox({ fns: snapFns, vars: [] });
     sctx.jobs.push({ id: 1, name: 'Estate of Doe', hvlId: 'HVL-1001', invSnapshots: [{
       ts: 1757000000000, label: 'At filing', count: 2, totalFMV: 5100,

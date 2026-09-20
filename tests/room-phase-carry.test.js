@@ -43,6 +43,7 @@ function rig(refs) {
   const painted = [];
   const ctx = sandbox({
     fns: ['planRoomStatusBtns', 'setPlanRoomStatus', 'roomStatusNormalize', '_invJob', 'lockRefusal',
+      '_roomFoundAttest',
           'lockFlag', 'clearedFlag', '_shotCount', '_slotRefs', 'isDecedentJob', '_planRoomStatus',
           'setRoomStatus', 'getJobPlan', '_planTouch', '_roomFoundDone', 'setRoomFoundDone', '_todayStr',
           '_roomFoundDoneHtml'],

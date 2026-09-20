@@ -229,8 +229,29 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   has(intakeBody, 'createDriveJobFolder(job)', 'the intake save is what creates the Drive folder');
   const mk = src.slice(src.indexOf('function createDriveJobFolder('),
     src.indexOf('function createDriveJobFolder(') + 1400);
-  has(mk, "'Estate Inventory','Walkthrough Notes','Estimates','Agreement','Change Orders','Invoice'",
-    'all six subfolders are made in that one call');
+  // ⚠ STATED AS THE REQUIREMENT RATHER THAN AS THE LIST. This pinned the six names as one
+  // byte sequence and broke on 2026-09-20 when a seventh ('As-Found Record') was genuinely
+  // added — the thirteenth time CLAUDE.md records that shape. What has to hold is that
+  // EVERY subfolder the app ever asks resolveSubfolderId for is created in this one call,
+  // or aliased to one that is: a name the app writes into and the create list omits means
+  // an upload that silently has nowhere to go.
+  const mkList = mk.slice(mk.indexOf('subfolders: ['), mk.indexOf(']', mk.indexOf('subfolders: [')));
+  const created = (mkList.match(/'([^']+)'/g) || []).map((x) => x.slice(1, -1));
+  ok(created.length >= 6, 'the create call names its subfolders (' + created.length + ')');
+  const aliasBlock = src.slice(src.indexOf('var ALIASES = {'), src.indexOf('function look()'));
+  const asked = [];
+  const rx = /resolveSubfolderId\((?:job|spec\.job), '([^']+)'/g;
+  let m;
+  while ((m = rx.exec(src))) if (asked.indexOf(m[1]) < 0) asked.push(m[1]);
+  ok(asked.length >= 4, 'the app resolves several subfolders by name (' + asked.join(', ') + ')');
+  asked.forEach((name) => {
+    const aliased = new RegExp("'" + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "': \\[").test(aliasBlock);
+    ok(created.indexOf(name) >= 0 || aliased,
+      name + ' is either created on client creation or has an alias that is');
+  });
+  ok(created.indexOf('Estate Inventory') >= 0, 'the inventory folder is created');
+  ok(created.indexOf('As-Found Record') >= 0,
+    '⚠ and so is the as-found folder — without it every as-found upload on a new job falls back to the inventory folder and the 2026-09-20 split never happens');
   has(mk, 'if (job && job.driveFolder)', 'and it refuses to mint a second folder for a job that has one');
 
   const drive = b.filter((x) => /Drive/.test(x.label))[0];

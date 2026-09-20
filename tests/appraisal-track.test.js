@@ -185,9 +185,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const refs = [];
     const s = sandbox({
-      fns: ['_captureShot', '_fieldCamCommit', '_fieldCamFlushNote', '_fieldCamPendingNote',
+      fns: ['_captureShot', 'photoSubfolder', '_fieldCamCommit', '_fieldCamFlushNote', '_fieldCamPendingNote',
             '_fieldNoteAppend', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs'],
       vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
+             'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
              '_fieldCam', '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
       stubs: {
         jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] }, estimateStore: {},
@@ -389,7 +390,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: 'Auction' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['printApprovalRequest', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
@@ -435,7 +436,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '9000', disposition: 'Sell', apprId: 'ap1' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['printApprovalRequest', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
@@ -500,7 +501,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: '', condition: 'Good' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['_invDocName', 'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
@@ -529,7 +530,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the empty state no longer names an action the app does not offer');
   {
     const s = sandbox({
-      fns: APPR_FNS.concat(['printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['_invDocName', 'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',

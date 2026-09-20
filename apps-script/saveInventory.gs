@@ -72,6 +72,10 @@ function saveInventory(payload) {
     // Ship the workbook inside the shareable "Estate Inventory" subfolder (falling back
     // to the older "Asset Documentation" folder for jobs created before the merge, then
     // to the client root if neither exists).
+    // ⚠ THE WORKBOOK STAYS IN 'Estate Inventory' AND MUST NOT FOLLOW THE 2026-09-20 FOLDER
+    // SPLIT. Only the as-found PHOTOGRAPHS moved; the workbook is the schedule, its As-Found
+    // Record tab is an index of files that live elsewhere, and moving it would change the
+    // path under every link counsel has already been given.
     var target = clientFolder;
     var subs = clientFolder.getFoldersByName('Estate Inventory');
     if (!subs.hasNext()) subs = clientFolder.getFoldersByName('Asset Documentation');
@@ -90,6 +94,7 @@ function saveInventory(payload) {
 
     _writeInventorySheet(ss, payload);
     _writeSummarySheet(ss, payload);
+    _writeAsFoundSheet(ss, payload);
     SpreadsheetApp.flush();
     return { ok: true, success: true, url: ss.getUrl(), rows: (payload.rows || []).length };
   } catch (err) {
@@ -139,6 +144,60 @@ function _writeInventorySheet(ss, payload) {
     });
   }
   sh.autoResizeColumns(1, Math.min(nCol, 9));
+}
+
+// The as-found index, in the same workbook the representative already has.
+//
+// ⚠⚠ IT IS WRITTEN EVEN WHEN THERE IS NOTHING TO WRITE, and that is deliberate. An absent
+// tab reads as a feature the workbook does not have; an empty one with its heading reads as
+// a pass nobody has shot yet. Those are different facts and only one of them is true, so the
+// sheet says which.
+//
+// ⚠ THE COLUMNS COME FROM THE PAYLOAD. This file used to hold its own copies of the category
+// and disposition lists and they drifted to 6-against-13 and 5-against-7, so the client's
+// Summary silently dropped seven categories. One definition, in the app, sent on the wire.
+// A payload from a build older than 2026-09-20 carries neither `asFound` nor
+// `asFoundColumns`; the tab is then left exactly as it is rather than blanked, because an
+// older app is not a statement that the record is empty.
+function _writeAsFoundSheet(ss, payload) {
+  if (!payload.asFoundColumns) return;
+  var sh = ss.getSheetByName('As-Found Record');
+  if (!sh) sh = ss.insertSheet('As-Found Record');
+  sh.clear();
+
+  var cols = payload.asFoundColumns;
+  var rows = payload.asFound || [];
+  var nCol = cols.length;
+
+  sh.getRange(1, 1, 1, 1).setValue('As-Found Record \u2014 the property as it was found, before anything was moved')
+    .setFontWeight('bold').setFontSize(12);
+  sh.getRange(2, 1, 1, 1).setValue('Photographed before any item was handled. These are evidence of the state of the '
+    + 'property and are not inventory lines \u2014 nothing here is valued, dispositioned or proposed for release.')
+    .setFontColor('#666666');
+  sh.getRange(4, 1, 1, nCol).setValues([cols]).setFontWeight('bold').setBackground('#efe9dd');
+  sh.setFrozenRows(4);
+
+  if (!rows.length) {
+    sh.getRange(5, 1).setValue('No as-found photographs have been taken on this job yet.').setFontColor('#A32D2D');
+    sh.autoResizeColumns(1, nCol);
+    return;
+  }
+  sh.getRange(5, 1, rows.length, nCol).setValues(rows);
+
+  // A gap row and an unsaved link are the two things a reader must not skim past, so they
+  // are coloured rather than left to read as ordinary rows. Resolve the columns by HEADER,
+  // never by a literal index — the Inventory sheet's hardcoded numbers wrote a formula over
+  // the field recording who authorised a firearms release the moment a column was inserted.
+  var cLink = cols.indexOf('Link') + 1;
+  var cFile = cols.indexOf('File') + 1;
+  for (var r = 0; r < rows.length; r++) {
+    if (cFile && rows[r][cFile - 1] === 'NO AS-FOUND PHOTOGRAPHS') {
+      sh.getRange(r + 5, 1, 1, nCol).setFontColor('#A32D2D').setFontWeight('bold');
+    } else if (cLink && rows[r][cLink - 1] === 'NOT SAVED TO DRIVE') {
+      sh.getRange(r + 5, cLink).setFontColor('#A32D2D');
+    }
+  }
+  sh.autoResizeColumns(1, nCol);
 }
 
 function _writeSummarySheet(ss, payload) {

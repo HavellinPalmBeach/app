@@ -38,9 +38,10 @@ const EST = { svc: 'probate', rooms: [{ idx: 0, name: 'Kitchen', tcH: 1, psH: 2 
 function captureRig(over) {
   const uploads = [], synced = [], saved = [];
   const ctx = sandbox({
-    fns: ['_captureShot', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_getPhotoRef',
+    fns: ['_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_getPhotoRef',
           '_setPhotoRef', '_fieldNoteAppend', '_invDetailRefs', '_jobInvRefs', '_invTouch', '_invAssignItemNos'],
     vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
+      'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
            '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
     stubs: Object.assign({
       jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] },
@@ -77,9 +78,10 @@ function cameraRig(grant) {
           '_fieldCamPaint', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail', '_fieldCamCommit',
           'fieldCamTypedNote', 'fieldCamNoteDraft', '_fieldCamPendingNote', '_fieldCamFlushNote',
           'fieldCamTalkStart', '_fieldCamRoomName', '_planRoom', '_getPhotoRef',
-          '_captureShot', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef',
+          '_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef',
           '_fieldNoteAppend', '_invTouch', '_invDetailRefs'],
     vars: ['_fieldCam', 'FIELD_CAM_MODES', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
+           'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
            '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY'],
     stubs: {
       document: dom, navigator: nav,

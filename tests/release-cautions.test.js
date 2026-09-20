@@ -18,7 +18,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['printApprovalRequest', 'printDispositionLedger', '_invBulkApply',
+const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_invBulkApply',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
              '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',

@@ -1194,7 +1194,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 6:24pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 7:14pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -19566,7 +19566,7 @@ function printInventorySnapshot(jobId, ts) {
     + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Captured ' + esc(_invDateTime(snap.ts)) + (snap.label ? ' &middot; ' + esc(snap.label) : '') + ' &middot; ' + snap.count + ' items &middot; total ' + (_invMoney(snap.totalFMV)) + '</div>'
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Item #</th><th style="padding:2px 6px;">Object</th><th style="padding:2px 6px;">Category</th><th style="padding:2px 6px;">Track</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '</div>';
-  _printDocument(pt.innerHTML);
+  _printDocument(pt.innerHTML, _invDocName(job, 'Inventory Snapshot'));
 }
 
 // ── Chain-of-custody event log (per item) ─────────────────────────────────────
@@ -19720,6 +19720,24 @@ function _invProgressStamp(items) {
     + 'Values and dispositions on unreviewed lines may still change.</div>';
 }
 
+// ⚠⚠ EVERY INVENTORY DOCUMENT WAS ARRIVING IN AN ATTORNEY'S DOWNLOADS FOLDER CALLED
+// "Havellin Palm Beach — Job Manager". Chrome names a Save-as-PDF after `document.title`, and
+// not one of these six printers passed a title to `_printDocument` — so the Court Inventory
+// filed with a probate court, the asset schedule sent to counsel and the release approval a
+// personal representative signs were all named after the app's own browser tab. This file
+// records the identical defect three times already (the agreement, the Job Plan, the change
+// order); it is the fourth, and it is the set that reaches a court.
+// ⚠ IT IS DELIBERATELY NOT `docNames`. That is the registry for the five documents carrying a
+// send / file / view verb, and `file` writes into the CLIENT'S OWN Drive folder — which is
+// exactly how an internal worksheet reached a client on 2026-09-08. These six have no verbs
+// and must not acquire any by being named in one place with them. Same shape as the client
+// estimate's name (title · street · date) so a folder of them sorts and reads alike.
+function _invDocName(job, title) {
+  job = job || {};
+  var street = String(job.addr || '').split(',')[0].trim();
+  var stamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
+  return 'Havellin ' + title + (street ? ' - ' + street : '') + ' - ' + stamp;
+}
 function _invDocHead(job, title, extra) {
   var basis = resolveValBasis(job);
   var vdate = estateValueDate(job);
@@ -19857,7 +19875,7 @@ function printEstateInventoryReport(jobId) {
       + 'separately in the personal representative&rsquo;s filing, prepared with counsel. Photographs are reference-numbered '
       + 'to the line items above and retained for seven years.</div>'
     + '</div>';
-  _printDocument(html);
+  _printDocument(html, _invDocName(job, 'Estate Inventory'));
 }
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
@@ -20097,7 +20115,7 @@ function printApprovalRequest(jobId, selectedOnly) {
       + 'Values are Havellin&rsquo;s estimates as of the date shown and are not appraisals unless an appraisal is noted against the line. '
       + 'Return the signed copy to your Transition Concierge; it is filed with the estate record and retained for seven years.</div>'
     + '</div>';
-  _printDocument(html);
+  _printDocument(html, _invDocName(job, 'Release Approval Request'));
 }
 // The other half of the same transaction: the signed request comes back, and the approval
 // is written onto every item it covered in ONE action. Typing a name into twenty rows by
@@ -20225,7 +20243,7 @@ function printCourtInventory(jobId) {
         ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; a final copy is issued once the outstanding items are valued.</div>'
         : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
-  _printDocument(html);
+  _printDocument(html, _invDocName(job, 'Court Inventory'));
 }
 
 function printDispositionLedger(jobId) {
@@ -20270,7 +20288,7 @@ function printDispositionLedger(jobId) {
         : '<div style="font-size:12px;color:#888;">No items have been disposed yet.</div>')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Proceeds are net to the estate less the partner&rsquo;s fees. Havellin charges no commission on sales, consignments, or auction results; Havellin service fees are billed separately and do not appear here.</div>'
     + '</div>';
-  _printDocument(html);
+  _printDocument(html, _invDocName(job, 'Disposition Ledger'));
 }
 
 // The aggregate block on the printed worklist. It renders whether or not any individual
@@ -20450,7 +20468,168 @@ function printAppraisalWorklist(jobId) {
       + ' from the estimate ' + ((f.collections + f.vehicles) > 1 ? 'are' : 'is') + ' not yet in the inventory — add them on the Job Plan to include them here.</div>';
   }
   html += '</div>';
-  _printDocument(html);
+  _printDocument(html, _invDocName(job, 'Appraisal Worklist'));
+}
+
+// ── 01 · The As-Found Record ───────────────────────────────────────
+// ⚠⚠ THE AS-FOUND PASS REACHED NO DOCUMENT AT ALL, AND IT IS THE HALF OF THE RECORD THE
+// REPRESENTATIVE IS MOST LIKELY TO NEED. Every one of those photographs is in Drive and the
+// manifest carries a row for each, and there was no index anywhere: no list of which rooms
+// were shot, when, how many, or where the file sits. `_jobInvRefs` filters to
+// `label === 'inventory'` BY DESIGN — an as-found shot is evidence and never an inventory
+// line — so every one of the six inventory documents steps straight past them. The single
+// question the pass exists to answer, "there was a gold Rolex in my father's desk drawer",
+// was answerable only by somebody who already knew the filename convention and had the
+// folder open.
+//
+// ⚠ IT NAMES THE ROOMS THAT WERE NOT SHOT, AND THAT IS THE LOAD-BEARING HALF. A record
+// listing only what WAS photographed answers "what do we hold" and never "is this complete",
+// which is the question actually being asked of it. Same rule the Court Inventory follows on
+// an unvalued line: state the gap, name it, and refuse to present the total as complete.
+//
+// ⚠⚠ ATTRIBUTION IS THE ROOM'S ATTESTATION, NEVER A PER-SHOT FIELD. A photo ref carries no
+// `by` — nothing in this app has ever recorded who pressed the shutter — so printing the
+// job's currently-assigned concierge against each shot would be a claim the record cannot
+// support, and it would go false the moment a job is reassigned. The attestation tick is the
+// accountable name: the person who stood in the room and said the pass was complete. A room
+// with shots and no attestation says so rather than borrowing a name from the job.
+//
+// ⚠ NOTHING IS CARVED OUT. The Estate Inventory Report separates exempt, homestead and
+// non-probate property because it is a schedule of what the estate owns. This is a record of
+// the STATE OF THE PROPERTY on the morning the team walked in, so every room walked is on it
+// whatever the contents turn out to belong to.
+function asFoundRecord(jobId) {
+  var rs = _planRooms(jobId);
+  var rooms = rs.rooms.map(function(r) {
+    var shots = _slotRefs(jobId, r.idx, 'before').slice()
+      .sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+    var att = _roomFoundAttest(jobId, r.idx);
+    return {
+      idx: r.idx, name: r.name, note: r.note || '',
+      shots: shots, count: shots.length,
+      first: shots.length ? shots[0].ts : null,
+      last: shots.length ? shots[shots.length - 1].ts : null,
+      // A shot that never reached Drive has no link, so the index points at nothing — and
+      // a reader cannot tell that row from a shot nobody took. Counted and reported.
+      unsaved: shots.filter(function(x){ return x.status !== 'uploaded'; }).length,
+      attestedAt: att ? (att.at || '') : '',
+      attestedBy: att ? (att.by || '') : ''
+    };
+  });
+  var shot = rooms.filter(function(r){ return r.count > 0; });
+  return {
+    rooms: rooms,
+    excluded: rs.excluded,
+    shotRooms: shot,
+    missing: rooms.filter(function(r){ return r.count === 0; }),
+    unattested: shot.filter(function(r){ return !r.attestedAt; }),
+    unsaved: rooms.reduce(function(n, r){ return n + r.unsaved; }, 0),
+    total: rooms.reduce(function(n, r){ return n + r.count; }, 0)
+  };
+}
+
+// Time of day off the capture stamp. The DATE is the room's line; the TIME is the shot's,
+// because the order within a room is what places one drawer before another.
+function _afTime(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+function _afDate(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function printAsFoundRecord(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  var rec = asFoundRecord(jobId);
+  if (!rec.rooms.length) { alert('This job has no rooms priced on its estimate, so there is nothing to index.'); return; }
+  if (!rec.total) { alert('No as-found photographs have been taken on this job yet.'); return; }
+
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, 'As-Found Record',
+        'A room-by-room index of the property as it was found, photographed before anything was moved')
+    + '<div style="font-size:11px;color:#3c3228;line-height:1.55;margin-bottom:14px;">'
+      + 'Before any item was handled, each room in scope was photographed as found — wide views, then '
+      + 'drawers, cabinets and closets opened with their contents undisturbed. These photographs are '
+      + '<strong>evidence of the state of the property</strong> and are deliberately not inventory lines: '
+      + 'nothing here is valued, dispositioned or proposed for release. They exist so that a question about '
+      + 'what a drawer held can be answered from the record months later. Every shot below links to its file '
+      + 'in the estate’s Drive folder.'
+    + '</div>';
+
+  // The gap first. A reader works down this page; a caveat printed under the index has
+  // arrived after they have already taken it as complete.
+  if (rec.missing.length) {
+    html += '<div style="border:1px solid #A32D2D;border-radius:3px;padding:10px 12px;margin-bottom:14px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#A32D2D;margin-bottom:4px;">'
+      + rec.missing.length + ' room' + (rec.missing.length > 1 ? 's in scope carry' : ' in scope carries')
+      + ' no as-found photographs</div>'
+      + '<div style="font-size:11px;line-height:1.5;">This record is <strong>not a complete account of the property</strong>. '
+      + 'The room' + (rec.missing.length > 1 ? 's' : '') + ' named below '
+      + (rec.missing.length > 1 ? 'were' : 'was') + ' in scope and '
+      + (rec.missing.length > 1 ? 'have' : 'has') + ' nothing on this index.</div>'
+      + '<div style="font-size:11px;color:#666;margin-top:6px;">'
+      + rec.missing.map(function(r){ return esc(r.name); }).join(' &middot; ')
+      + '</div></div>';
+  }
+  if (rec.unsaved) {
+    html += '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:10px 12px;margin-bottom:14px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#8a6d3b;margin-bottom:4px;">'
+      + rec.unsaved + ' photograph' + (rec.unsaved > 1 ? 's have' : ' has') + ' not reached Drive</div>'
+      + '<div style="font-size:11px;line-height:1.5;">'
+      + (rec.unsaved > 1 ? 'They were' : 'It was') + ' taken and '
+      + (rec.unsaved > 1 ? 'are' : 'is') + ' listed below with no link. The image is still on the device that '
+      + 'took it; open the room on the Job Plan and press Retry.</div></div>';
+  }
+
+  rec.shotRooms.forEach(function(r) {
+    var att = r.attestedAt
+      ? 'Pass confirmed complete ' + esc(fmtDate2(r.attestedAt))
+        + (r.attestedBy ? ' by ' + esc(r.attestedBy) : '')
+      : '<span style="color:#8a6d3b;">Pass not confirmed complete</span>';
+    html += '<div style="margin-bottom:16px;break-inside:avoid;">'
+      + '<h3 style="font-family:\'Cormorant Garamond\',serif;color:#8a6d3b;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:4px;">'
+        + esc(r.name) + ' <span style="font-size:12px;color:#888;">(' + r.count + ' photograph' + (r.count > 1 ? 's' : '') + ')</span></h3>'
+      + '<div style="font-size:10.5px;color:#888;margin-bottom:6px;">' + _afDate(r.first) + ' &middot; ' + att + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+      + '<thead><tr style="text-align:left;color:#888;">'
+        + '<th style="padding:3px 6px;width:52px;"></th>'
+        + '<th style="padding:3px 6px;width:34px;">#</th>'
+        + '<th style="padding:3px 6px;width:70px;">Time</th>'
+        + '<th style="padding:3px 6px;">File</th>'
+        + '<th style="padding:3px 6px;">Noted at the time</th>'
+        + '<th style="padding:3px 6px;width:52px;">Photo</th></tr></thead><tbody>'
+      + r.shots.map(function(x, i) {
+          return '<tr>'
+            + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + _invPrintThumb(jobId, x, 44) + '</td>'
+            + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-weight:700;color:#666;">' + (i + 1) + '</td>'
+            + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(_afTime(x.ts)) + '</td>'
+            + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-family:monospace;font-size:10px;word-break:break-all;">' + esc(x.filename || '—') + '</td>'
+            + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(x.fieldNote || '') + '</td>'
+            + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
+              + (x.driveFileUrl ? '<a href="' + esc(x.driveFileUrl) + '">open</a>'
+                                : '<span style="color:#A32D2D;">not saved</span>') + '</td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  });
+
+  if (rec.excluded.length) {
+    html += '<div style="margin-top:10px;font-size:11px;color:#666;">'
+      + '<strong>Not in scope</strong> — these rooms were excluded from the engagement and were not '
+      + 'photographed: ' + rec.excluded.map(function(r){ return esc(r.name) + (r.note ? ' (' + esc(r.note) + ')' : ''); }).join(' &middot; ')
+      + '</div>';
+  }
+  html += '<div style="margin-top:14px;font-size:10.5px;color:#888;line-height:1.5;">'
+    + rec.total + ' photograph' + (rec.total > 1 ? 's' : '') + ' across ' + rec.shotRooms.length + ' room'
+    + (rec.shotRooms.length > 1 ? 's' : '') + '.'
+    + (rec.unattested.length ? ' ' + rec.unattested.length + ' room' + (rec.unattested.length > 1 ? 's are' : ' is')
+        + ' photographed but not confirmed complete, so the drawers and closets in '
+        + (rec.unattested.length > 1 ? 'them' : 'it') + ' may not all have been opened.' : '')
+    + '</div>';
+  html += '</div>';
+  _printDocument(html, _invDocName(job, 'As-Found Record'));
 }
 
 // ── Collections / Vehicles → Inventory bridge ─────────────────────────────────
@@ -20966,37 +21145,73 @@ function _renderAppraisalGuardrail(job) {
     + rows + '</div>';
 }
 
-// ── Share the Estate Inventory folder with counsel (named viewer, revocable) ──
+// ── Share the estate's photograph folders with counsel (named viewer, revocable) ──
+// ⚠⚠ IT SHARES BOTH FOLDERS, AND THAT IS WHAT THE 2026-09-20 SPLIT COST IF IT DID NOT.
+// Sharing `Estate Inventory` alone used to cover every photograph on the job. The moment
+// the as-found pass filed to its own folder, counsel would have been granted the inventory
+// set and refused the evidence set — and the As-Found Record document hands them a page of
+// links straight into it, so each one would have opened a Google permission wall. A
+// document whose links do not resolve for its reader is worse than no document.
+// ⚠ ON A JOB FOLDER CREATED BEFORE THE SPLIT BOTH NAMES RESOLVE TO THE SAME ID (the alias
+// in resolveSubfolderId), so the ids are deduped and the message says one folder rather
+// than claiming two. Reporting two shares where there is one folder is a false statement
+// about what counsel can now reach.
+function _invShareFolders(job, cb) {
+  resolveSubfolderId(job, 'Estate Inventory', function(a) {
+    resolveSubfolderId(job, AS_FOUND_SUBFOLDER, function(b) {
+      var ids = [];
+      [a, b].forEach(function(id){ if (id && ids.indexOf(id) < 0) ids.push(id); });
+      cb(ids);
+    });
+  });
+}
+// Sequential, never Promise.all: every one of these takes the global Apps Script lock, and
+// this file records in full what parallel sending cost on 2026-09-11.
+function _invShareEach(ids, action, email, done) {
+  var okCount = 0, err = '';
+  (function next(i) {
+    if (i >= ids.length) { done(okCount, err); return; }
+    fetch(SHEETS_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, folderId: ids[i], email: email }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (d && d.ok) okCount++; else err = err || ((d && d.error) || 'unknown error'); next(i + 1); })
+      .catch(function(){ err = err || 'the Apps Script could not be reached'; next(i + 1); });
+  })(0);
+}
 function shareInventoryWithCounsel(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   if (!SHEETS_SYNC_URL) { alert('Google Sheets sync URL is not set (Settings).'); return; }
   if (!job.driveFolder) { alert('This job has no Drive folder yet.'); return; }
-  var email = window.prompt('Share the Estate Inventory folder (read-only) with counsel:', job.probateAttyEmail || job.executorEmail || '');
+  var email = window.prompt('Share the estate\u2019s photographs (read-only) with counsel:', job.probateAttyEmail || job.executorEmail || '');
   if (!email) return;
   email = email.trim();
-  resolveSubfolderId(job, 'Estate Inventory', function(folderId) {
-    if (!folderId) { alert('The Estate Inventory folder was not found yet — capture an item or run a sync first so the folder exists in Drive.'); return; }
-    fetch(SHEETS_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'shareFolder', folderId: folderId, email: email }) })
-      .then(function(r){ return r.json(); })
-      .then(function(d){ alert((d && d.ok) ? ('Shared the Estate Inventory folder (read-only) with ' + email + '.') : ('Share failed: ' + ((d && d.error) || 'unknown error'))); })
-      .catch(function(){ alert('Share failed — check the sync URL and your connection.'); });
+  _invShareFolders(job, function(ids) {
+    if (!ids.length) { alert('No photograph folder was found yet \u2014 capture an item or run a sync first so the folder exists in Drive.'); return; }
+    _invShareEach(ids, 'shareFolder', email, function(okCount, err) {
+      if (!okCount) { alert('Share failed: ' + (err || 'unknown error')); return; }
+      alert('Shared ' + (okCount > 1 ? (okCount + ' photograph folders') : 'the photograph folder')
+        + ' (read-only) with ' + email + '.'
+        + (okCount < ids.length ? '\n\nOne folder could not be shared: ' + err : ''));
+    });
   });
 }
 function unshareInventory(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job || !SHEETS_SYNC_URL || !job.driveFolder) { alert('Nothing to unshare.'); return; }
-  var email = window.prompt('Remove Estate Inventory access for:', job.probateAttyEmail || '');
+  var email = window.prompt('Remove access to the estate\u2019s photographs for:', job.probateAttyEmail || '');
   if (!email) return;
   email = email.trim();
-  resolveSubfolderId(job, 'Estate Inventory', function(folderId) {
-    if (!folderId) { alert('Folder not found.'); return; }
-    fetch(SHEETS_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'unshareFolder', folderId: folderId, email: email }) })
-      .then(function(r){ return r.json(); })
-      .then(function(d){ alert((d && d.ok) ? ('Removed Estate Inventory access for ' + email + '.') : ('Failed: ' + ((d && d.error) || 'unknown error'))); })
-      .catch(function(){ alert('Failed — check your connection.'); });
+  // ⚠ REVOKE SWEEPS BOTH WHATEVER THE SHARE DID. A revoke that covers less than the grant
+  // leaves an address reading the estate's photographs after somebody believed they had
+  // taken it away, and that is the one direction this must never fail in.
+  _invShareFolders(job, function(ids) {
+    if (!ids.length) { alert('Folder not found.'); return; }
+    _invShareEach(ids, 'unshareFolder', email, function(okCount, err) {
+      alert(okCount ? ('Removed access for ' + email + ' on ' + okCount + ' folder' + (okCount > 1 ? 's' : '') + '.'
+                       + (okCount < ids.length ? '\n\nOne folder could not be updated: ' + err : ''))
+                    : ('Failed: ' + (err || 'unknown error')));
+    });
   });
 }
 
@@ -21388,6 +21603,7 @@ function _renderInvWorkbar(job, all) {
       + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', 'Add an asset with no photo (cash, vehicle, account)')
       + '<details style="position:relative;"><summary class="btn-s" style="list-style:none;cursor:pointer;display:inline-block;">More &#9662;</summary>'
         + '<div style="position:absolute;z-index:50;right:0;margin-top:4px;background:var(--paper,#fff);border:1px solid var(--border-md);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px;">'
+        + btn('printAsFoundRecord(' + jid + ')', 'As-Found Record', 'Room-by-room index of the property as it was found — every as-found photograph, when it was taken and a link to the file. Names any room in scope that carries none.')
         + btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory')
         + btn('printDispositionLedger(' + jid + ')', 'Disposition Ledger', 'Proceeds, fees, net to estate, receipts')
         + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', 'Per-specialist packet of every item flagged for appraisal')
@@ -21738,6 +21954,7 @@ function _invExportValue(ref, col, job, seq) {
   }
 }
 
+var AS_FOUND_COLUMNS = ['Room', '#', 'Date', 'Time', 'File', 'Link', 'Pass confirmed', 'Confirmed by'];
 function buildInventoryPayload(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; }) || {};
   var items = _invAssignItemNos(jobId);
@@ -21768,8 +21985,47 @@ function buildInventoryPayload(jobId) {
     driveFolder: job.driveFolder || '',
     lastUpdated: new Date().toISOString(),
     columns: columns,
-    rows: rows
+    rows: rows,
+    // ⚠ THE AS-FOUND SHOTS RIDE THE SAME WORKBOOK AND NOT A SECOND ONE. The personal
+    // representative is given ONE spreadsheet; a separate file they have to be told about
+    // is a file they will not have when the question comes. Flat rows rather than the
+    // nested record, because the sheet writer's whole job is rows and re-deriving the
+    // grouping server-side would be a second opinion of what a room is.
+    asFound: _asFoundRows(jobId),
+    asFoundColumns: AS_FOUND_COLUMNS
   };
+}
+
+// The As-Found Record as sheet rows. Rooms in walkthrough order, shots within a room in
+// capture order — the same ordering the printed document uses, because a reader holding
+// both must not have to reconcile two orders.
+// ⚠ A ROOM IN SCOPE WITH NO PHOTOGRAPHS STILL GETS A ROW. It is the one thing the sheet
+// can say that the files in the folder cannot: that the gap is a gap. Dropping it would
+// make the tab a list of what exists, which is exactly the document that reads as complete
+// while not being.
+function _asFoundRows(jobId) {
+  var rec = asFoundRecord(jobId);
+  var out = [];
+  rec.rooms.forEach(function(r) {
+    if (!r.count) {
+      out.push([r.name, '', '', '', 'NO AS-FOUND PHOTOGRAPHS', '',
+                r.attestedAt ? fmtDate2(r.attestedAt) : '', r.attestedBy || '']);
+      return;
+    }
+    r.shots.forEach(function(x, i) {
+      out.push([
+        r.name,
+        i + 1,
+        x.ts ? new Date(x.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+        _afTime(x.ts),
+        x.filename || '',
+        x.driveFileUrl || (x.status === 'uploaded' ? '' : 'NOT SAVED TO DRIVE'),
+        r.attestedAt ? fmtDate2(r.attestedAt) : '',
+        r.attestedBy || ''
+      ]);
+    });
+  });
+  return out;
 }
 
 // Auto-sync the per-client workbook whenever inventory data changes, like the
@@ -21929,6 +22185,24 @@ function fieldDispToInv(key) {
 }
 var PHOTO_CAPTURE_LABELS = ['before', 'inventory', 'detail', 'after'];
 
+// ⚠⚠ THE AS-FOUND PASS FILES SEPARATELY, AND THE REASON IS WHO READS EACH SET. Anthony,
+// 2026-09-20: *"we are going to provide the inventory back to the personal representative
+// and potentially give them access to the folder… but those won't be tied to any inventory
+// numbers."* He is right that they are a different kind of thing. The inventory photographs
+// are one-per-line and cited by item number on the schedule, the approval request and the
+// receipts; the as-found shots are cited by nothing and are read only when somebody asks
+// what a drawer held. Mixed into one folder, forty wide shots of empty rooms sit between a
+// representative and the photograph of the sideboard they are being asked to authorise.
+//
+// ⚠ ONE DEFINITION, READ BY THE CAPTURE AND BY THE RETRY. Two copies is exactly how a
+// re-sent as-found shot lands back in the folder it was moved out of — and nothing on any
+// screen would say so, because the upload succeeds either way.
+var AS_FOUND_SUBFOLDER = 'As-Found Record';
+var PHOTO_SUBFOLDER = 'Estate Inventory';
+function photoSubfolder(label) {
+  return label === 'before' ? AS_FOUND_SUBFOLDER : PHOTO_SUBFOLDER;
+}
+
 // Small in-memory thumbnails keyed by stableId, so a shot draws in the room workspace the
 // instant it is taken — before Drive has issued the file id the persistent cache is keyed by.
 var _localShotThumbs = {};
@@ -21980,7 +22254,7 @@ function _captureShot(jobId, roomIdx, label, rawDataUrl, opts) {
       if (opts.onThumb) opts.onThumb(ref, small);
     });
     if (opts.onRef) opts.onRef(ref);
-    _doPhotoUpload(jobId, dataUrl, filename, stableId, 'Estate Inventory', function() {
+    _doPhotoUpload(jobId, dataUrl, filename, stableId, photoSubfolder(label), function() {
       // The Inventory tab pulls this back from Drive on any device; caching the copy already
       // in hand just means it is there instantly on THIS one.
       _invCacheLocalThumb(jobId, stableId, dataUrl);
@@ -22757,7 +23031,9 @@ function retryPhotoUpload(jobId, stableId) {
   }
   ref.status = 'uploading';
   _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
-  var subfolder = 'Estate Inventory';
+  // Through the shared rule, never a literal: a retried as-found shot must land where the
+  // first attempt would have, or the folder split quietly stops holding.
+  var subfolder = photoSubfolder(ref.label);
   if (ref.label === 'appraisal') {
     _updateCollDocs(jobId, ref.collId);
     _doPhotoUpload(jobId, dataUrl, ref.filename, stableId, subfolder, function() {
@@ -25326,11 +25602,12 @@ function renderProjection(jobId) {
 // drawers, and a higher shot count would be arbitrary and gameable. So a person says the pass
 // is complete and their name goes on it. Read directly off jobPlanStore, never through
 // getJobPlan, which MINTS a plan for any job it is asked about.
-function _roomFoundDone(jobId, roomIdx) {
+function _roomFoundAttest(jobId, roomIdx) {
   var plan = jobPlanStore[jobId];
   var r = plan && plan.rooms && plan.rooms[roomIdx];
-  return !!(r && r.foundDone && r.foundDone.at);
+  return (r && r.foundDone && r.foundDone.at) ? r.foundDone : null;
 }
+function _roomFoundDone(jobId, roomIdx) { return !!_roomFoundAttest(jobId, roomIdx); }
 function setRoomFoundDone(jobId, roomIdx, on) {
   var plan = getJobPlan(jobId);
   if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
@@ -29335,7 +29612,15 @@ function resolveSubfolderId(job, name, cb) {
   // Aliases keep older jobs working after a folder rename (Estimate → Estimates).
   var ALIASES = { 'Estimates': ['Estimate'], 'Estimate': ['Estimates'],
                   'Invoice': ['Invoices'], 'Invoices': ['Invoice'],
-                  'Estate Inventory': ['Photos', 'Asset Documentation'] };  // older jobs' merged sources
+                  'Estate Inventory': ['Photos', 'Asset Documentation'],  // older jobs' merged sources
+                  // ⚠ A JOB FOLDER CREATED BEFORE THE 2026-09-20 SPLIT HAS NO As-Found Record
+                  // FOLDER, and without this every as-found upload on it would fail outright —
+                  // on the one pass whose order can never be reversed. It falls back to the
+                  // folder those shots have always gone to, so an existing job keeps working
+                  // exactly as it did and only new jobs are split. To split an old job, create
+                  // the folder by hand in Drive: resolveSubfolderId re-reads from Drive when a
+                  // name is missing, so the app picks it up with nothing to run.
+                  'As-Found Record': ['Estate Inventory', 'Photos', 'Asset Documentation'] };
   function look() {
     var id = _subfolderId(job, name);
     if (!id && ALIASES[name]) {
@@ -29845,7 +30130,7 @@ function createDriveJobFolder(job) {
       hvlId: job.hvlId || '',
       clientName: job.name || '',
       svc: job.svc || '',
-      subfolders: ['Estate Inventory','Walkthrough Notes','Estimates','Agreement','Change Orders','Invoice']
+      subfolders: ['Estate Inventory','As-Found Record','Walkthrough Notes','Estimates','Agreement','Change Orders','Invoice']
     })
   })
   .then(function(r){ return r.json(); })
