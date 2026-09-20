@@ -1,5 +1,93 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ NOTHING EVER CLOSED A MUST-FIND, AND THE BRIEF NEVER REACHED THE ROOM (BUILT 2026-09-20)
+Anthony, the evening the field-capture build landed: *"What about the other intake questions, like is there anything
+you want us to find? Money or crypto. All of those questions at intake. Do they get flagged in the job plan?"* Measured
+before answering: **yes, on the Job Plan header and the dashboard, and nowhere the crew actually works.** The room
+workspace carried the firearms line alone, the Inventory tab carried nothing, and **nothing ever closed a must-find** —
+there was no *found it*, so the brief read the same on day 8 as on day 1. Crypto is a detail under *Documents &
+digital*, not a row (*"No #2, not needed"*). Then *"Why is 4 a big ask?"* — it was not; I had overstated it — and
+*"Go, 1, 3 and 4 in one commit."* App + `main-sync.gs` (**`BACKEND_VERSION 2026-09-19a`; the redeploy is optional and
+the app works without it — see the merge note below**).
+
+- **⚠⚠ ONE LINE PER ITEM, AND THE KEY IS THE WORDING.** Intake's first question is a textarea and a paragraph cannot be
+  ticked, so `mustFindItems(job)` reads the answer one line per item (the placeholder on both forms says so), keyed by
+  `_mustFindKey` (lower-case, collapsed whitespace, trailing punctuation dropped). A tick is `job.mustFound[key] = {at, by}`.
+  **Reword a line after it is found and its tick is orphaned — it stops rendering, it is never moved onto words it was not
+  made for.** Accepted for a list that rarely changes after intake; ids minted per line would change the shape of a field
+  two forms and the sync already carry as one string. **A line typed twice collapses to one item**, or the dashboard's
+  unique-onclick net would be right to fail on two ticks for one object. Reverting the split fails **11**, the key
+  normalisation **11**, the dedupe 3.
+- **⚠ `by` IS THE CONCIERGE ASSIGNED TO THE JOB AT THE MOMENT OF THE TICK, FROZEN.** The app has no sign-in; the assigned
+  concierge is who is accountable for the brief, and freezing the name at the tick means a later reassignment does not
+  rewrite who found what. `at` is `_todayStr()` — the local calendar day, never `toISOString` (the 8pm-Eastern rollover
+  this file already records). Both documents say what the name means.
+- **⚠⚠ STAMPED BOTH WAYS, AND `mustFound` JOINS THE BACKEND'S PER-KEY MAPS.** The tick is the first thing the field
+  writes to the JOB record rather than to the plan or the manifest, so it takes the plan's rule: `_jobTouch(job,
+  'mustFound', key)` on every tick AND every untick, `saveJobs(); syncJobToSheets(job)` (the house pairing), and
+  `JOB_KEYED_MAPS = ['docState', 'mustFound']` in `main-sync.gs`. A tick with no stamp is the weakest claim on that merge
+  and loses to a stale laptop's untouched copy; **an untick with no stamp is not a removal at all — absence alone never
+  is — so the stale copy would put it straight back.** Driven through the REAL toggle into the REAL backend in
+  `job-record-merge`: the house ticks at 2pm, the desk edits the notes at 3pm on its morning copy → the tick survives; the
+  house unticks at 4pm, a desk copy still holding it live saves at 5pm → the untick wins. **Until the redeploy lands the
+  tick merges the way `houseFlags` itself always has (newer whole record wins), so a stale laptop can undo it and it has
+  to be pressed again** — recorded in manual §2 and §11 rather than hidden. Reverting the stamp fails 6, the backend list
+  2, the version floor 1.
+- **⚠⚠ ONE RENDERER, THREE SHAPES, FIVE HOSTS.** `standingFlagsBlock(job, opts)`: the default (header, every row — the
+  plan header and the dashboard), `{slim:true}` for the room workspace (no header, **no red row, because the workspace
+  pins `firearmsWorkspaceLine` ABOVE the scrolling body where a scroll cannot hide it**; a job whose only flag is firearms
+  renders no slim brief at all), and `{desk:true}` for the Inventory tab (**the two intake questions only** — the desk
+  names that evening's shots against the must-find list; cash and safes stay on the plan). Every surface renders through
+  `_sfHost(id, job)`, a host carrying the job id, and `SF_HOSTS` is the ONE map: `toggleMustFound` repaints exactly the
+  hosts on screen that show this job, **never the tab around them** — the Job Plan redraw destroys a half-typed note and
+  the dashboard one races the 15-second remote tick. The slim brief is the FIRST thing inside `.ws-body`, above the pass
+  instructions and the cameras; the desk block is above Job Admin. Reverting the workspace host fails 3, the desk host 2,
+  the slim red-row filter 2, the desk filter 4, the host's job check 2, the tick itself 7, Undo 2.
+  - **⚠ THE HANDLE IS BASE64** (`_mfHandle`, the `_custodyHandle` shape): the key is free text, and a party named
+    *O'Hara & Sons* once broke out of an onclick string. Reverting it to the raw wording fails **8**.
+  - **⚠ A STALE HANDLE WRITES NOTHING.** The wording can change between paint and tap (an edit from elsewhere landing);
+    the toggle checks the key is still on the list and repaints rather than recording a tick against a line that is no
+    longer there. Reverting it fails 3.
+  - **Still-missing first, found after** — the brief is read top-down by somebody about to walk in, and what is still
+    missing is the half they need. A found row is green (`.sf-done`) and reads *✓ Found Sep 20, 2026 · Ashley Jerome*
+    with **Undo** — a tick with no way back is a tick nobody dares press.
+- **6835 committed checks** (77 new: seven groups in `tests/intake-house-flags.test.js`, one in `job-record-merge`).
+  **All 22 changes revert-verified individually, ZERO green** — baseline 0 before and after, no unmatched needles; the
+  sweep snapshots BOTH files and restores both in a `finally`.
+  - **⚠ NINE PINNED `fns:`/`vars:` LISTS BROKE CORRECTLY** when the three renderers grew a call to `_sfHost` —
+    `dashboard-schedule`, `dashboard-utility-bar`, `job-progress`, `field-capture`, `firearms-transport`, `sourcing-keys`,
+    `prep-declutter`, plus the byte-sequence pins on `standingFlagsBlock(job)` in `dashboard-actions` and
+    `job-plan-accordion` and the count pin in `intake-house-flags`. **Found by searching every pinned list at once**; the
+    count pin is restated as **five hosts** (both Job Plan headers, the dashboard, the room workspace, the desk block).
+- **Verified end to end in headless Chromium on the real page, 46 checks, first run clean**, driving the real Job Plan,
+  the real workspace, the real Inventory tab and the real dashboard:
+
+  | | |
+  |---|---|
+  | the plan header | firearms banner first · brief order *Firearms · Must find ×3 · Safety · Cash* · three Found it, no Undo |
+  | pressing Found it | stored under the line's key, dated today, *Ashley Jerome*, stamped · row green, **last** of the must-finds, *Found Sep 20, 2026 · Ashley Jerome* · Undo |
+  | the room workspace | firearms line pinned **outside** the body · slim brief the **first thing inside** it, no header, no red row, ticks live · Undo there removes the tick and **keeps the stamp** · a tick there repaints the plan header behind it |
+  | 390px | workspace overflow 0 · body scrolls, cameras reachable, firearms line still on screen |
+  | the Inventory tab | desk host **above** Job Admin · *Must find ×3 · Safety* only, *From intake* header · a tick there lands and repaints |
+  | the dashboard | both ticks reflected · **0 duplicate onclicks** · overflow 0 at 1440 and 390 |
+  | the downsizing job | empty hosts on the plan and in the room, no firearms line |
+  | a reload | both ticks still there (written by `saveJobs`, read back from the cache) |
+  | rewording a found line | its tick gone, the other kept |
+  | both forms | placeholder *One line per item…* · **0 page errors** |
+
+  The stylesheet grew by **8 lines, 0 deleted, one hunk**.
+- Manual **§2** (the redeploy note: optional, and what an older deployment does), **§4** (one line per item), **§10** (the
+  brief in the room and why firearms is not in it twice), **§10a** (the desk block), **§11** (the tick, the attribution,
+  the wording key, the two-device rule and the reload). Playbook **Step 1** (one line per item — **and a stale claim
+  corrected in passing: it still said the panel *"prints with it"*, false since the print was retired on 2026-09-11**),
+  **Step 10a** (the brief above the cameras, and a `.stop` on pressing Found it in the room), **Step 10e** (the desk
+  block) and **four** symptom→cause rows. Both `.md` copies hand-edited; **26 claims parity-checked, 0 mismatches**; tag
+  balance verified (`manual.html`'s `<code>` delta is still the documented false positive at **1**); rendered at
+  1440/390 with **0 overflow, 0 page errors**; under `print` the tables are **byte-identical to HEAD** (16/16 and 17/39
+  as wide as their container, 0 taking the phone rule).
+- **⚠ NOT BUILT, DELIBERATELY: nothing polls the client record mid-job**, so a tick made on the other device shows after
+  a reload — the same rule this file records for the Client Dashboard on 2026-09-12. Both documents say so.
+
 ## ⚠⚠ THE HOUSE IS SHOT TWICE AND NOBODY TYPES A NAME IN IT — THE FIELD-CAPTURE REBUILD, STEP 1 OF 3 (BUILT 2026-09-19)
 Anthony's spec, *Inventory pipeline and Job Plan restructure (decided 2026-09-19)*, answered question by question from a
 car: **step 1 only** (the capture change and the Job Plan cut; Build Inventory and Value are steps 2 and 3 and are NOT
@@ -8575,7 +8663,10 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-17 (twenty-seventh pass)** — both documents, against the DocuSign build.
+- Last reconciled against the app: **2026-09-20 (twenty-ninth pass)** — both documents, against the must-find Found ticks, the brief
+  in the room and the desk block; see the entry at the top of this file. The **twenty-eighth pass (2026-09-19)** was the field-capture
+  rebuild — manual §9a-i, §10 rewritten, §10a, §11; playbook Step 10a rewritten, ten symptom rows — also at the top of this file.
+- Prior pass **2026-09-17 (twenty-seventh pass)** — both documents, against the DocuSign build.
   **⚠⚠ THIS PASS IS MOSTLY CORRECTIONS, AND FOUR OF THEM SAID DOCUSIGN DOES NOT EXIST.** The manual's §1 opener
   (*"DocuSign, Stripe and QuickBooks are not built"*), §3's whole *Not yet built* note, §3's workflow diagram
   (*Record the Signed Agreement*), and §8's e-signature note — which closed *"No provider is connected today; DocuSign

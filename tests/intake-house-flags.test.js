@@ -15,7 +15,7 @@
 // service names, and how the Edit Client modal kept a hardcoded service list that a rename
 // missed. There is a check below that fails if any label is written down twice.
 
-const { sandbox, source } = require('./harness');
+const { sandbox, source, domStub } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -24,11 +24,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // stub that does not match source is what hid the `&amp;amp;` defect in the estimate
   // email — the rendering assertions below are worthless against an approximation.
   const ctx = sandbox({
-    vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
+    vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS'],
     fns: [
       'esc',
       'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines', 'jobHasStandingFlags',
       'houseFlagSummary', 'houseFlagInputsHtml', '_houseFlagRowClass', 'standingFlagsBlock',
+      // The must-find items and the Found tick (2026-09-19), and the hosts the brief renders through.
+      '_sfRowHtml', '_sfHost', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', '_mfUnhandle',
     ],
   });
   const { HOUSE_FLAGS } = ctx;
@@ -219,12 +221,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The Job Plan — BOTH headers. A Home Prep job runs vendors through the same house;
     // an alarm code and a loaded gun safe do not care which service was sold.
-    eq(src.split('standingFlagsBlock(job)').length - 1, 4,
-       'the brief renders on both Job Plan headers, the dashboard, and nowhere unexpected');
+    // Since 2026-09-19 every surface renders the brief through a HOST carrying the job id, so a
+    // Found tick can repaint it in place. The hosts are one map (SF_HOSTS); each is named below.
+    eq(src.split("_sfHost('sf-host-").length - 1, 5,
+       'five hosts — both Job Plan headers, the dashboard, the room workspace, the Inventory desk block — and nowhere unexpected');
     const plan = src.slice(src.indexOf('function renderJobPlan'), src.indexOf('function renderJobPlan') + 12000);
-    has(plan, 'standingFlagsBlock(job)', 'the main Job Plan header carries the brief');
+    has(plan, "_sfHost('sf-host-plan', job)", 'the main Job Plan header carries the brief');
     const prep = src.slice(src.indexOf('// Header (set into the shared job-plan-header slot)'));
-    has(prep.slice(0, 2500), 'standingFlagsBlock(job)', 'so does the Home Prep one');
+    has(prep.slice(0, 2500), "_sfHost('sf-host-plan', job)", 'so does the Home Prep one');
 
     // ⚠ IT USED TO REACH PAPER, AND NO LONGER DOES. The brief went into #job-plan-header
     // rather than into the phase content precisely because printJobPlan carried that element
@@ -278,5 +282,154 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(css, '.hf-tick input[type=checkbox]{width:15px', 'the tick is sized on desktop too');
     has(css, '.sf-brief{', 'the brief has a stylesheet');
     has(css, '.sf-row.sf-err{', 'and a red row');
+  }
+  // ═══════════════════════════════════════════════════════════════════════════════════════
+  // THE FOUND TICK (2026-09-19). Anthony, reading the brief: nothing ever CLOSED a must-find,
+  // so it read the same on day 8 as on day 1. One line per item, a tick per line, the tick on
+  // the job record and merged per key. And the brief reaches the ROOM and the DESK now, not
+  // only the plan header — a crew member shooting the study never saw "the coin collection is
+  // in the study safe" there, and the person naming that evening's shots never saw it at all.
+  // ═══════════════════════════════════════════════════════════════════════════════════════
+  const fnSrc = (name) => { const i = src.indexOf('function ' + name + '('); return src.slice(i, src.indexOf('\n}\n', i)); };
+  const JOB = () => ({ id: 7, tc: 'Ashley Jerome', mustFind: 'The ring\nThe coin collection\nThe deeds', safetyNotes: 'Two dogs',
+    mustFound: { 'the ring': { at: '2026-09-19', by: 'Ashley Jerome' } },
+    houseFlags: { cash: { on: true, note: 'Freezer' } } });
+
+  group('must-find items — one line per item, keyed by wording, a line typed twice is one item');
+  {
+    const items = ctx.mustFindItems({ mustFind: "Coin collection in the study safe\n  Grandmother's ring — blue box \n\ncoin collection in the study safe.\nCash in the freezer" });
+    eq(items.length, 3, 'four lines, one of them typed twice and one blank: three items');
+    eq(items.map((i) => i.text).join('|'), "Coin collection in the study safe|Grandmother's ring — blue box|Cash in the freezer",
+       'trimmed, in the order typed, the duplicate collapsed onto the first');
+    eq(items[0].key, 'coin collection in the study safe', 'the key is the normalised wording');
+    eq(ctx._mustFindKey('  Coin   Collection.  '), 'coin collection', 'case, runs of space and trailing punctuation do not make a new key');
+    eq(ctx.mustFindItems({ mustFind: 'Deeds in the study' })[0].found, null, 'unfound until ticked');
+    eq(ctx.mustFindItems({}).length, 0, 'no answer, no items');
+    eq(ctx.mustFindItems({ mustFind: 'x', mustFound: 'garbage' })[0].found, null, 'a malformed mustFound reads as nothing found rather than throwing');
+    eq(ctx.mustFindItems({ mustFind: 'x', mustFound: { x: 'yes' } })[0].found, null, 'and so does a tick that is not a record');
+  }
+
+  group('the brief: one line per item, still-missing first, found after');
+  {
+    const lines = ctx.standingFlagLines(JOB());
+    eq(lines.map((l) => l.label).join('|'), 'Must find|Must find|Must find|Safety / handling|Cash',
+       'one Must find line per item, then safety, then the flags');
+    eq(lines.slice(0, 3).map((l) => l.note).join('|'), 'The coin collection|The deeds|The ring',
+       '⚠ still-missing first, the found one last — the brief is read top-down by somebody about to walk in');
+    eq(lines[2].severity, 'done', 'a found line is the green one');
+    eq(lines[2].found.by, 'Ashley Jerome', 'and carries who');
+    eq(lines[0].kind + '|' + lines[3].kind + '|' + lines[4].kind, 'mustFind|safety|flag', 'each line says what it is');
+    eq(ctx.standingFlagLines({ mustFind: 'Deeds in the study' }).length, 1, 'one answer, one line — unchanged for a single-line answer');
+  }
+
+  group('the rendered brief carries a Found tick per must-find line, and Undo on a found one');
+  {
+    const block = ctx.standingFlagsBlock(JOB());
+    eq((block.match(/toggleMustFound\(7,'/g) || []).length, 3, 'three ticks, one per line, addressed to this job');
+    eq((block.match(/>Found it</g) || []).length, 2, 'two still to find');
+    has(block, '&#10003; Found 2026-09-19 &middot; Ashley Jerome', 'the found line says when and under whom');
+    has(block, 'class="sf-tick sf-undo"', 'and offers Undo — a tick with no way back is a tick nobody dares press');
+    has(block, 'sf-row sf-done', 'on the green row');
+    const nasty = "O'Hara & Sons' \"ledger\"";
+    eq(ctx._mfUnhandle(ctx._mfHandle(nasty)), nasty, 'the handle round-trips the wording exactly');
+    ok(/^[A-Za-z0-9+/=]+$/.test(ctx._mfHandle(nasty)), 'and is attribute-safe — an apostrophe cannot break out of the onclick string');
+    lacks(ctx.standingFlagsBlock({ mustFind: 'x' }), 'sf-tick', 'no job id, nothing to write against, no tick');
+    const dup = ctx.standingFlagsBlock({ id: 7, mustFind: 'Ring\nring\nRing.' });
+    eq((dup.match(/toggleMustFound\(/g) || []).length, 1,
+       'a line typed three times is ONE tick — the dashboard\'s unique-onclick net would be right to fail on two');
+  }
+
+  group('three shapes of one renderer — slim for the room, desk for the Inventory tab');
+  {
+    const armed = Object.assign(JOB(), { houseFlags: { firearms: { on: true, note: 'Safe' }, cash: { on: true, note: 'Freezer' } } });
+    const full = ctx.standingFlagsBlock(armed), slim = ctx.standingFlagsBlock(armed, { slim: true }), desk = ctx.standingFlagsBlock(armed, { desk: true });
+    has(full, 'sf-row sf-err', 'the full brief carries the red firearms row');
+    lacks(slim, 'sf-row sf-err', '⚠ slim drops it — the workspace pins the firearms line ABOVE the scrolling body, where nothing can push it off screen');
+    lacks(slim, 'sf-hd', 'and has no header');
+    has(slim, 'class="sf-brief sf-slim"', 'but is still the brief');
+    has(slim, 'Freezer', 'cash reaches the room');
+    has(slim, 'The deeds', 'so do the must-finds');
+    has(slim, "toggleMustFound(7,'", 'with their ticks');
+    has(desk, 'From intake &mdash; must find &middot; safety', 'the desk block says what it is');
+    has(desk, 'The deeds', 'the must-finds are on it');
+    has(desk, 'Two dogs', 'and the safety answer');
+    lacks(desk, 'Freezer', 'and nothing else — cash, safes and the rest stay on the plan');
+    lacks(desk, 'sf-row sf-err', 'firearms included');
+    eq(ctx.standingFlagsBlock({ id: 1, houseFlags: { firearms: { on: true } } }, { slim: true }), '', 'a job whose only flag is firearms renders no slim brief at all');
+    eq(ctx.standingFlagsBlock({ id: 1, houseFlags: { cash: { on: true } } }, { desk: true }), '', 'and there is no desk block without a must-find or a safety answer');
+  }
+
+  group('the hosts — one map, five surfaces, and the tick repaints only the hosts showing this job');
+  {
+    eq(Object.keys(ctx.SF_HOSTS).sort().join('|'), 'sf-host-dash|sf-host-desk|sf-host-plan|sf-host-ws', 'four host ids');
+    has(ctx._sfHost('sf-host-ws', JOB()), 'id="sf-host-ws" data-job="7"', 'a host names its job');
+    has(ctx._sfHost('sf-host-ws', JOB()), 'sf-slim', 'and renders its own shape');
+    lacks(ctx._sfHost('sf-host-desk', JOB()), 'Freezer', 'the desk host renders the desk shape');
+    const ws = fnSrc('_paintRoomWorkspace');
+    has(ws, "_sfHost('sf-host-ws', job)", 'the room workspace renders the slim brief');
+    ok(ws.indexOf('<div class="ws-body">') < ws.indexOf("_sfHost('sf-host-ws', job)"), 'inside the scrolling body, first thing');
+    ok(ws.indexOf('firearmsWorkspaceLine(job)') < ws.indexOf('<div class="ws-body">'), 'with the firearms line still pinned above the body');
+    const inv = fnSrc('renderInventoryTab');
+    ok(inv.indexOf("_sfHost('sf-host-desk', job)") > -1 && inv.indexOf("_sfHost('sf-host-desk', job)") < inv.indexOf('renderJobAdmin(jobId, job)'),
+       'the Inventory tab renders the desk block ABOVE Job Admin');
+    has(fnSrc('renderClientDashboard'), "_sfHost('sf-host-dash', job)", 'the dashboard renders through its host');
+
+    const dom = domStub({ 'sf-host-plan': { attrs: { 'data-job': '7' } }, 'sf-host-dash': { attrs: { 'data-job': '8' } } });
+    const r = sandbox({
+      fns: ['_repaintStandingFlags', '_invJob', 'standingFlagsBlock', '_sfRowHtml', 'standingFlagLines', 'activeHouseFlags',
+            'houseFlagsOf', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'esc'],
+      vars: ['SF_HOSTS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+      stubs: { document: dom, jobs: [JOB()] },
+    });
+    r._repaintStandingFlags(7);
+    has(dom.getElementById('sf-host-plan').innerHTML, 'The deeds', 'the plan host showing job 7 is repainted');
+    eq(dom.getElementById('sf-host-dash').innerHTML, '', '⚠ the dashboard host showing ANOTHER job is left alone');
+    eq(dom.getElementById('sf-host-ws').innerHTML, '', 'a host not on screen is not painted');
+  }
+
+  group('toggleMustFound — driven: writes the job, stamps, syncs, and refuses a line that is no longer there');
+  {
+    const calls = [];
+    const j = { id: 7, tc: 'Ashley Jerome', mustFind: 'The ring\nThe deeds', updatedAt: 1000 };
+    const dom = domStub({ 'sf-host-plan': { attrs: { 'data-job': '7' } } });
+    const t = sandbox({
+      fns: ['toggleMustFound', '_repaintStandingFlags', '_invJob', '_jobTouch', '_todayStr', 'mustFindItems', 'mustFoundOf',
+            '_mustFindKey', '_mfHandle', '_mfUnhandle', 'standingFlagsBlock', '_sfRowHtml', 'standingFlagLines', 'activeHouseFlags',
+            'houseFlagsOf', 'esc'],
+      vars: ['SF_HOSTS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+      stubs: { document: dom, jobs: [j], saveJobs: () => calls.push('saveJobs'), syncJobToSheets: (job) => calls.push('sync:' + job.id) },
+    });
+    const h = t._mfHandle('the ring');
+    t.toggleMustFound(7, h);
+    ok(j.mustFound && j.mustFound['the ring'], 'the tick lands on the job under the line\'s key');
+    eq((j.mustFound['the ring'] || {}).by, 'Ashley Jerome', 'attributed to the concierge assigned to the job');
+    ok(/^\d{4}-\d{2}-\d{2}$/.test((j.mustFound['the ring'] || {}).at || ''), 'dated yyyy-mm-dd off the local calendar (_todayStr), never toISOString');
+    ok(j.at && j.at['mustFound:the ring'] > 0, '⚠ and STAMPED — an unstamped key is the weakest claim on the per-key merge');
+    ok(j.updatedAt > 1000, 'the record clock moved');
+    eq(calls.join('|'), 'saveJobs|sync:7', 'saved and synced the way every other job edit is, in that order');
+    has(dom.getElementById('sf-host-plan').innerHTML, 'Found', 'and the brief on screen repainted');
+    lacks(fnSrc('toggleMustFound'), 'toISOString', 'the date is the local calendar day');
+
+    const stamp1 = j.at['mustFound:the ring'];
+    t.toggleMustFound(7, h);
+    ok(!j.mustFound['the ring'], 'pressing it again unticks');
+    ok(j.at['mustFound:the ring'] >= stamp1, '⚠ and the stamp STAYS — an untick with no stamp is not a removal, because absence alone never is');
+
+    const before = JSON.stringify(j); calls.length = 0;
+    t.toggleMustFound(7, t._mfHandle('the ring, reworded'));
+    eq(JSON.stringify(j), before, 'a line that is no longer on the list writes nothing');
+    eq(calls.length, 0, 'and syncs nothing');
+    t.toggleMustFound(99, h);
+    eq(calls.length, 0, 'an unknown job writes nothing');
+  }
+
+  group('both forms say one line per item, and the stylesheet has the tick');
+  {
+    eq(src.split('placeholder="One line per item: what it is, and where they think it might be."').length - 1, 2,
+       'intake and Edit Client both say it — a paragraph cannot be ticked');
+    const css = src.slice(src.indexOf('<style>'), src.indexOf('</style>'));
+    has(css, '.sf-row.sf-done{', 'a green row for a found line');
+    has(css, '.sf-tick{', 'the tick is styled');
+    has(css, '.sf-brief.sf-slim{', 'and so is the room copy');
   }
 };

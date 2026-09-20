@@ -452,8 +452,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(rc, "sectionHdr('Client & Property')", 'no generic heading over the client’s own name');
     // The intake answers stay at the foot of that block: this is where the job is prepped,
     // so it is where a missing answer is still cheap to go back and get.
-    ok(rc.indexOf('standingFlagsBlock(job)') > grid, 'the intake brief stays with the client block');
-    ok(rc.indexOf('standingFlagsBlock(job)') < slot, 'and above the timeline with it');
+    ok(rc.indexOf("_sfHost('sf-host-dash', job)") > grid, 'the intake brief stays with the client block');
+    ok(rc.indexOf("_sfHost('sf-host-dash', job)") < slot, 'and above the timeline with it');
     // One slot, emitted once and replaced once.
     eq((rc.match(/<!--TIMELINE_SLOT-->/g) || []).length, 2, 'one slot: emitted, then replaced');
   }

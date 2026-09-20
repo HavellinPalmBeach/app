@@ -211,6 +211,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // real loss on the one panel that carries the firearms rule — stated here so a revisit
     // knows what it has to give back rather than rediscovering it on a job.
     has(SRC, 'SCREEN-ONLY brief', 'and says plainly that the crew brief lost its paper route');
-    has(SRC, 'standingFlagsBlock(job)', 'the brief itself is untouched and still renders');
+    has(SRC, "_sfHost('sf-host-plan', job)", 'the brief itself still renders on the plan header — through its host, since the Found ticks of 2026-09-19');
   }
 };

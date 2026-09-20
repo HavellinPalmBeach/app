@@ -457,7 +457,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       vars: ['SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders'],
       stubs: {
-        document: dom, isFormalDoc: () => false, standingFlagsBlock: () => '<div class="sf-brief">BRIEF</div>',
+        document: dom, isFormalDoc: () => false,
+        // The brief renders through its host since 2026-09-19 (a Found tick repaints it in place).
+        _sfHost: () => '<div id="sf-host-plan"><div class="sf-brief">BRIEF</div></div>',
         renderVendorSourcing: () => '', renderVendorScorecard: () => '', renderDailyCloseBlock: () => '',
         _importableFromEstimate: () => ({ collections: [], vehicles: [] }), getPlanNote: () => '',
         paymentSplit: () => ({ midpoint: 1000 }), estWorkingDays: () => 0, addWorkingDays: () => '',

@@ -550,6 +550,64 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         '⚠ entering the tab is itself a refresh — not a 20-second wait to see the truth');
   }
 
+  group('⚠ a Found tick made in the house survives an unrelated desk edit — and an untick is a removal, not an absence (2026-09-19)');
+  {
+    // The tick is the first thing the FIELD writes to the job record rather than to the plan
+    // or the manifest, so it takes the plan's rule: keyed, stamped, merged key by key. Driven
+    // through the REAL toggle so the record the backend sees is the one the app writes.
+    const tick = (job, text) => {
+      const t = sandbox({
+        fns: ['toggleMustFound', '_repaintStandingFlags', '_invJob', '_jobTouch', '_todayStr', 'mustFindItems', 'mustFoundOf',
+              '_mustFindKey', '_mfHandle', '_mfUnhandle'],
+        vars: ['SF_HOSTS'],
+        stubs: { jobs: [job], saveJobs() {}, syncJobToSheets() {}, document: { getElementById: () => null } },
+      });
+      t.toggleMustFound(job.id, t._mfHandle(text));
+    };
+    const withList = (j) => Object.assign(j, { tc: 'Ashley Jerome', mustFind: 'The ring\nThe deeds' });
+
+    const S = server();
+    S.saveAllJobsToSheet([withList(clone(morningJob()))]);
+
+    // 2pm — the house ticks "the ring", against its morning copy.
+    const house = withList(clone(morningJob()));
+    tick(house, 'the ring');
+    ok(house.mustFound && house.mustFound['the ring'], 'the house holds the tick');
+    ok(house.at['mustFound:the ring'] > 0, 'stamped by the real _jobTouch');
+    S.saveAllJobsToSheet([house]);
+
+    // 3pm — the desk edits the notes on ITS morning copy: a newer record that never saw the tick.
+    const desk = withList(clone(morningJob()));
+    desk.notes = 'Family arriving Thursday';
+    desk.updatedAt = house.updatedAt + 3600e3;
+    S.saveAllJobsToSheet([desk]);
+
+    let out = S.getJobsFromSheet()[0];
+    ok(out.mustFound && out.mustFound['the ring'], '⚠⚠ the tick survives the newer, untouched desk copy');
+    eq((out.mustFound['the ring'] || {}).by, 'Ashley Jerome', 'with its attribution');
+    eq(out.notes, 'Family arriving Thursday', 'while the desk edit lands too');
+
+    // 4pm — the house unticks it (a false alarm), then a desk copy that synced in between and
+    // still holds the tick LIVE saves an unrelated edit at 5pm. Absence alone would lose here.
+    const synced = clone(out);
+    const house2 = clone(out);
+    tick(house2, 'the ring');
+    ok(!house2.mustFound['the ring'], 'unticked on the house');
+    ok(house2.at['mustFound:the ring'] > out.at['mustFound:the ring'] - 1, 'and the stamp moved forward with it');
+    S.saveAllJobsToSheet([house2]);
+    synced.notes = 'Family arriving Friday';
+    synced.updatedAt = house2.updatedAt + 3600e3;
+    S.saveAllJobsToSheet([synced]);
+
+    out = S.getJobsFromSheet()[0];
+    ok(!(out.mustFound && out.mustFound['the ring']), '⚠ the untick wins over the stale copy still holding the tick live — a stamp with no value is a removal');
+    eq(out.notes, 'Family arriving Friday', 'and the later scalar edit still lands');
+
+    ok(S.JOB_KEYED_MAPS.indexOf('mustFound') >= 0, 'because mustFound is on the backend\'s per-key map list');
+    const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
+    ok(bv >= '2026-09-19a', '⚠ the mustFound merge landed in 2026-09-19a — an older deployment merges a Found tick as a scalar and a stale laptop can undo it');
+  }
+
   function source(name) {
     const re = new RegExp('(^|\\n)function\\s+' + name + '\\s*\\(', 'g');
     const m = re.exec(APP);

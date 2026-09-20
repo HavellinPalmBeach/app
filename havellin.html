@@ -465,6 +465,14 @@ input:checked+.slider:before{transform:translateX(18px);}
 .sf-lbl{flex:0 0 150px;font-weight:700;}
 .sf-txt{flex:1 1 220px;min-width:0;}
 .sf-rule{flex:1 1 100%;margin-left:160px;font-weight:700;}
+/* Must-find rows carry a Found tick (2026-09-19); a found row goes green and drops below the
+   still-missing ones. .sf-slim is the room workspace's copy: no header, tighter rows. */
+.sf-row.sf-done{background:var(--ok-bg);color:var(--ok-tx);}
+.sf-tick{flex:0 0 auto;font:inherit;font-size:10.5px;font-weight:700;padding:5px 12px;min-height:32px;border:1px solid currentColor;border-radius:3px;background:var(--white);color:inherit;cursor:pointer;}
+.sf-undo{font-weight:600;opacity:.75;}
+.sf-found{flex:0 0 auto;font-weight:700;}
+.sf-brief.sf-slim{margin:0 0 10px;}
+.sf-slim .sf-row{padding:5px 10px;font-size:11px;}
 @media (max-width:820px){.sf-lbl{flex:1 1 100%;}.sf-rule{margin-left:0;}}
 /* ── Field capture (2026-09-19): the firearms banner, the room list, the room workspace,
    the in-app camera, the derived lines and Job Admin. The workspace and the camera are
@@ -1112,7 +1120,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 3:03pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 8:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1361,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
         the crew is read before Day 1. A blank answer is a question nobody gets to ask twice.
       </div>
       <label>1. Is there anything in the house you need us to find?<span class="lbl-hint"> &mdash; something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of</span></label>
-      <textarea id="i-mustfind" rows="2" placeholder="What it is, and where they think it might be."></textarea>
+      <textarea id="i-mustfind" rows="2" placeholder="One line per item: what it is, and where they think it might be."></textarea>
       <label style="margin-top:10px;">2. Is there anything we need to be aware of for safety, or that needs special handling?</label>
       <textarea id="i-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, medical sharps, chemicals, a family member who will be difficult on site &mdash; anything the crew should know before they walk in."></textarea>
       <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:13px 0 5px;">What&rsquo;s in the house &mdash; tick if yes, then say what you know</div>
@@ -7803,19 +7811,63 @@ function activeHouseFlags(job) {
 // A row ticked with no note still prints, and says so. Silence there is indistinguishable
 // from "not asked", and this panel carries its own fix the way every other blocker panel
 // in the app does rather than leaving the reader to work out what to do about it.
+// ── MUST-FIND ITEMS: ONE LINE PER ITEM, A FOUND TICK PER LINE (2026-09-19) ──────────────
+// Anthony, reading the brief the crew is handed: nothing ever CLOSED a must-find — there was
+// no "found it", so the brief read the same on day 8 as on day 1. Intake's first question is
+// a textarea and a paragraph cannot be ticked, so the answer is read ONE LINE PER ITEM (the
+// hint on both forms says so) and each line carries its own Found tick, recorded on the job
+// as job.mustFound[key] = { at, by }.
+//
+// ⚠ THE KEY IS THE WORDING. A line is keyed by its normalised text, so rewording a must-find
+// after it is found orphans its tick — the tick simply stops rendering, it is never moved onto
+// a line it was not made for. Accepted for a list that rarely changes after intake; ids minted
+// per line would change the shape of a field that two forms and the sync already carry as one
+// string. A line typed twice collapses to one item, or the brief would carry two ticks for one
+// object and the dashboard's unique-onclick net would be right to fail on it.
+function _mustFindKey(text) {
+  return String(text || '').toLowerCase().replace(/\s+/g, ' ').replace(/[\s.;,]+$/, '').trim();
+}
+// Normalise whatever the record holds into { key:{at,by} }; anything malformed reads as unfound.
+function mustFoundOf(job) {
+  var raw = (job && job.mustFound), out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  Object.keys(raw).forEach(function(k) {
+    var v = raw[k];
+    if (v && typeof v === 'object') out[k] = { at: String(v.at || ''), by: String(v.by || '') };
+  });
+  return out;
+}
+// { key, text, found:{at,by}|null } per line of the must-find answer, in the order typed.
+function mustFindItems(job) {
+  var found = mustFoundOf(job), seen = {}, out = [];
+  String((job && job.mustFind) || '').split(/\r?\n/).forEach(function(raw) {
+    var text = raw.trim(), key = _mustFindKey(text);
+    if (!key || seen[key]) return;
+    seen[key] = 1;
+    out.push({ key: key, text: text, found: found[key] || null });
+  });
+  return out;
+}
+
 function standingFlagLines(job) {
   var NO_DETAIL = 'Ticked at intake, no detail recorded — ask the client before Day 1.';
   var flags = activeHouseFlags(job);
   var line = function(f) {
-    return { severity:f.severity, label:f.label,
+    return { severity:f.severity, label:f.label, kind:'flag',
              note:(f.note || '').trim() || NO_DETAIL, rule:f.crewRule || '',
              doc:f.doc || '', docLabel:f.docLabel || '' };
   };
   var lines = flags.filter(function(f) { return f.severity === 'err'; }).map(line);
-  var mustFind = String((job && job.mustFind) || '').trim();
-  var safety   = String((job && job.safetyNotes) || '').trim();
-  if (mustFind) lines.push({ severity:'warn', label:'Must find', note:mustFind, rule:'' });
-  if (safety)   lines.push({ severity:'warn', label:'Safety / handling', note:safety, rule:'' });
+  // One line per must-find item. Still-missing first, found after: the brief is read top-down
+  // by somebody about to walk in, and what is still missing is the half they need.
+  var items = mustFindItems(job);
+  items.filter(function(i) { return !i.found; }).concat(items.filter(function(i) { return i.found; }))
+    .forEach(function(i) {
+      lines.push({ severity: i.found ? 'done' : 'warn', label:'Must find', kind:'mustFind',
+                   note:i.text, rule:'', mfKey:i.key, found:i.found });
+    });
+  var safety = String((job && job.safetyNotes) || '').trim();
+  if (safety) lines.push({ severity:'warn', label:'Safety / handling', kind:'safety', note:safety, rule:'' });
   return lines.concat(flags.filter(function(f) { return f.severity !== 'err'; }).map(line));
 }
 
@@ -7911,23 +7963,101 @@ function buildHouseFlagInputs() {
 // husband kept the cash and then not telling the two people emptying the house is worse
 // than never asking. Phase 0 has carried a checkbox reading "Standing job flags read
 // aloud to the crew" since long before anything in the app produced any flags to read.
-function standingFlagsBlock(job) {
-  var lines = standingFlagLines(job);
-  if (!lines.length) return '';
-  return '<div class="sf-brief">' +
-    '<div class="sf-hd">&#9888; Standing job flags &mdash; read to the crew before Day 1</div>' +
-    lines.map(function(l) {
-      return '<div class="sf-row sf-' + l.severity + '">' +
-        '<span class="sf-lbl">' + esc(l.label) + '</span>' +
-        '<span class="sf-txt">' + esc(l.note) + '</span>' +
-        (l.rule ? '<span class="sf-rule">' + esc(l.rule) + '</span>' : '') +
-        // target=_blank so a tap on the brief never navigates away from the Job Plan the
-        // crew is working from — losing the tab mid-room is how somebody stops opening it.
-        (l.doc ? '<span class="sf-rule"><a href="' + esc(l.doc) + '" target="_blank" rel="noopener">'
-                 + esc(l.docLabel || 'Read the protocol') + ' &rarr;</a></span>' : '') +
-      '</div>';
-    }).join('') +
+// Attribute-safe handle for a must-find key — free text, so it goes through base64 exactly as
+// _custodyHandle does (a party named O'Hara & Sons once broke out of an onclick string).
+function _mfHandle(key)  { try { return btoa(unescape(encodeURIComponent(String(key || '')))); } catch (e) { return ''; } }
+function _mfUnhandle(h)  { try { return decodeURIComponent(escape(atob(String(h || '')))); } catch (e) { return ''; } }
+
+// One row of the brief. A must-find row carries its Found tick when the job has an id to write
+// against; a found row says when and under whom, and offers Undo — a tick with no way back is a
+// tick nobody dares press. Labels and notes are escaped; the handle is base64 and needs none.
+function _sfRowHtml(job, l) {
+  var jid = job && job.id, tick = '';
+  if (l.kind === 'mustFind' && jid !== undefined && jid !== null && jid !== '') {
+    var on = 'onclick="toggleMustFound(' + jid + ',\'' + _mfHandle(l.mfKey) + '\')"';
+    tick = l.found
+      ? '<span class="sf-found">&#10003; Found' + (l.found.at ? ' ' + esc(fmtDate2(l.found.at)) : '')
+          + (l.found.by ? ' &middot; ' + esc(l.found.by) : '') + '</span>'
+        + '<button type="button" class="sf-tick sf-undo" ' + on + '>Undo</button>'
+      : '<button type="button" class="sf-tick" ' + on + '>Found it</button>';
+  }
+  return '<div class="sf-row sf-' + l.severity + '">' +
+    '<span class="sf-lbl">' + esc(l.label) + '</span>' +
+    '<span class="sf-txt">' + esc(l.note) + '</span>' + tick +
+    (l.rule ? '<span class="sf-rule">' + esc(l.rule) + '</span>' : '') +
+    // target=_blank so a tap on the brief never navigates away from the Job Plan the
+    // crew is working from — losing the tab mid-room is how somebody stops opening it.
+    (l.doc ? '<span class="sf-rule"><a href="' + esc(l.doc) + '" target="_blank" rel="noopener">'
+             + esc(l.docLabel || 'Read the protocol') + ' &rarr;</a></span>' : '') +
   '</div>';
+}
+
+// The brief. ONE renderer, three shapes, so the room, the desk and the plan cannot describe
+// one answer three ways:
+//   (default)      the full brief with its header — the Job Plan header and the dashboard.
+//   { slim:true }  the room workspace: no header, and no red row, because the workspace pins
+//                  firearmsWorkspaceLine ABOVE the scrolling body where nothing can push it
+//                  off screen (severity 'err' is firearms only — see HOUSE_FLAGS).
+//   { desk:true }  the Inventory tab: the two intake questions only, above Job Admin, for the
+//                  person naming that evening's shots — is the ring among them?
+function standingFlagsBlock(job, opts) {
+  opts = opts || {};
+  var lines = standingFlagLines(job);
+  if (opts.slim) lines = lines.filter(function(l) { return l.severity !== 'err'; });
+  if (opts.desk) lines = lines.filter(function(l) { return l.kind === 'mustFind' || l.kind === 'safety'; });
+  if (!lines.length) return '';
+  var hd = opts.slim ? ''
+    : '<div class="sf-hd">&#9888; ' + (opts.desk ? 'From intake &mdash; must find &middot; safety'
+                                                 : 'Standing job flags &mdash; read to the crew before Day 1') + '</div>';
+  return '<div class="sf-brief' + (opts.slim ? ' sf-slim' : '') + '">' + hd +
+    lines.map(function(l) { return _sfRowHtml(job, l); }).join('') +
+  '</div>';
+}
+
+// Every surface the brief renders on wraps it in a host carrying the job id, so a Found tick can
+// repaint the briefs on screen without redrawing the tab around them — the Job Plan redraw
+// destroys a half-typed note, and the dashboard one races the 15-second remote tick. ONE map:
+// a surface added here is a surface the tick repaints, and one added anywhere else is not.
+var SF_HOSTS = { 'sf-host-plan': {}, 'sf-host-dash': {}, 'sf-host-ws': { slim: true }, 'sf-host-desk': { desk: true } };
+function _sfHost(id, job) {
+  return '<div id="' + id + '" data-job="' + esc(String(job && job.id !== undefined && job.id !== null ? job.id : '')) + '">'
+    + standingFlagsBlock(job, SF_HOSTS[id] || {}) + '</div>';
+}
+function _repaintStandingFlags(jobId) {
+  var job = _invJob(jobId);
+  if (!job) return;
+  Object.keys(SF_HOSTS).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && String(el.getAttribute('data-job')) === String(jobId)) el.innerHTML = standingFlagsBlock(job, SF_HOSTS[id]);
+  });
+}
+
+// ⚠ THE FOUND TICK WRITES THE JOB RECORD — the first thing the field writes to the JOB rather
+// than to the plan or the manifest. So it goes out the way every other job edit does (saveJobs
+// for the list and the local cache, syncJobToSheets for the recency bump), and it is STAMPED,
+// because job.mustFound merges per key on the sheet (JOB_KEYED_MAPS in main-sync.gs, from
+// 2026-09-19a). A tick with no stamp is the weakest claim on that merge and loses to a stale
+// laptop's untouched copy; an UNTICK with no stamp is not a removal at all — absence alone is
+// never a deletion — so the stale copy would put it straight back. Until that deployment lands
+// the tick merges the way the intake flags themselves do: newer whole record wins.
+//
+// `by` is the concierge ASSIGNED to the job at the moment of the tick. The app has no sign-in;
+// the assigned concierge is the person accountable for the brief, and freezing the name here
+// means a later reassignment does not rewrite who found what.
+function toggleMustFound(jobId, handle) {
+  var job = _invJob(jobId);
+  if (!job) return;
+  var key = _mfUnhandle(handle);
+  var live = mustFindItems(job).some(function(i) { return i.key === key; });
+  // The wording changed under the button (an edit from elsewhere landed between paint and
+  // tap): redraw rather than record a tick against a line that is no longer there.
+  if (!key || !live) { _repaintStandingFlags(jobId); return; }
+  if (!job.mustFound || typeof job.mustFound !== 'object') job.mustFound = {};
+  if (job.mustFound[key]) delete job.mustFound[key];
+  else job.mustFound[key] = { at: _todayStr(), by: job.tc || '' };
+  _jobTouch(job, 'mustFound', key);
+  saveJobs(); syncJobToSheets(job);
+  _repaintStandingFlags(jobId);
 }
 
 // ⚠⚠ FIREARMS FLAGGED AT INTAKE IS A RED BANNER AT THE TOP OF THE JOB PLAN (2026-09-19), not
@@ -15362,7 +15492,7 @@ function renderClientDashboard(jobId) {
   h += '</div>';
   // The intake answers, in the same brief the Job Plan prints — this is where the job is
   // prepped, so it is where a missing answer is still cheap to go back and get.
-  h += standingFlagsBlock(job);
+  h += _sfHost('sf-host-dash', job);
   h += '</div>';   // close the detail block
   h += '</div>';   // close client info card
 
@@ -21116,7 +21246,10 @@ function renderInventoryTab() {
       + esc(_invThumbFailed[jobId]) + '. The records are all here; only the thumbnails are missing.</div>'
     : '';
 
-  cont.innerHTML = renderJobAdmin(jobId, job)
+  // The two intake questions above Job Admin: the desk names that evening's shots against
+  // the must-find list, and can record a Found the crew phoned in.
+  cont.innerHTML = _sfHost('sf-host-desk', job)
+    + renderJobAdmin(jobId, job)
     + _renderInvWorkbar(job, all)
     + (all.length ? _renderInvFlagStrip(job, all) + _renderInvFilterRow(job, all) : '')
     + thumbNote
@@ -21879,7 +22012,11 @@ function _paintRoomWorkspace() {
     + '<span class="rl-pill" style="color:' + m.color + ';background:' + m.bg + ';">' + m.label + '</span>'
     + '</div>'
     + firearmsWorkspaceLine(job)
-    + '<div class="ws-body">';
+    + '<div class="ws-body">'
+    // The rest of the brief — must-finds with their ticks, safety, cash, the lot — is the first
+    // thing in the scrolling body, so the crew reads the intake answers IN THE ROOM rather than
+    // two taps back on the plan header. Firearms stays pinned above, where a scroll cannot hide it.
+    + _sfHost('sf-host-ws', job);
   if (room.note) h += '<div style="font-size:11.5px;color:var(--gray);font-style:italic;margin-bottom:6px;">&#128203; ' + esc(room.note) + '</div>';
   h += '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.5;">'
     + '<strong>1. As found</strong> \u2014 wide shots from the corners, then every drawer, cabinet and closet open, contents undisturbed. '
@@ -27877,7 +28014,7 @@ function renderPrepJobPlan(jobId, job, est) {
     '</div>' +
     // A prep job runs vendors through the same house, so the same flags apply — an alarm
     // code and a loaded gun safe do not care which service was sold.
-    standingFlagsBlock(job);
+    _sfHost('sf-host-plan', job);
   var _jpHeader = document.getElementById('job-plan-header');
   if (_jpHeader) _jpHeader.innerHTML = hdr;
 
@@ -28124,7 +28261,7 @@ function renderJobPlan(jobId, job, est) {
     '</div>' +
     // What intake was told about this house. Phase 0's "crew briefed — standing job flags read
     // aloud" checkbox is the paired action.
-    standingFlagsBlock(job);
+    _sfHost('sf-host-plan', job);
 
   // Client info renders at the top of the Job Plan tab (above Log Hours), not inline
   // with the phase content below.
@@ -31082,7 +31219,7 @@ function showEditClient(jobId) {
   html += '<div class="sec" style="margin-top:14px;">What&rsquo;s In The House</div>';
   html += '<div style="font-size:10.5px;color:var(--gray);margin-bottom:8px;line-height:1.5;">Asked on the intake call. Everything here prints on the Job Plan as standing job flags &mdash; correct it the moment the client tells you something new.</div>';
   html += '<div class="df" style="margin-bottom:8px;"><div class="dfl">Anything we need to find?</div>' +
-    '<textarea id="ec-mustfind" rows="2" placeholder="What it is, and where they think it might be." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.mustFind||'')+'</textarea></div>';
+    '<textarea id="ec-mustfind" rows="2" placeholder="One line per item: what it is, and where they think it might be." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.mustFind||'')+'</textarea></div>';
   html += '<div class="df" style="margin-bottom:8px;"><div class="dfl">Safety / special handling?</div>' +
     '<textarea id="ec-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, sharps, chemicals, a difficult family member." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.safetyNotes||'')+'</textarea></div>';
   html += houseFlagInputsHtml('ec', job);

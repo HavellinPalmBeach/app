@@ -74,7 +74,9 @@ Then tick what is in the house and **write down what you are told** — the tick
 | **Sentimental must-finds** — photos, letters, specific heirlooms | Name them. "Sentimental things" is not findable; "the blue photo album from the Navy years" is. |
 | **Access & security** | Alarm and codes, cameras, smart locks, who else has keys — caregivers, cleaners, family — and any gate or HOA. Anything we need to disarm. |
 
-> **⚠** **Everything you write here is read out to the crew before Day 1. That is the whole point of asking.** It comes back as a **Standing job flags** panel at the top of the Job Plan and prints with it, so the two people emptying the house know about the cash in the freezer and the ring in the blue box. If you tick a row and leave the note blank, the crew sees *"Ticked at intake, no detail recorded — ask the client before Day 1"* — which is honest, but it means somebody has to make the call you should have made.
+> **⚠** **Everything you write here is read out to the crew before Day 1. That is the whole point of asking.** It comes back as a **Standing job flags** panel at the top of the Job Plan, in every room's workspace and on the dashboard, so the two people emptying the house know about the cash in the freezer and the ring in the blue box. If you tick a row and leave the note blank, the crew sees *"Ticked at intake, no detail recorded — ask the client before Day 1"* — which is honest, but it means somebody has to make the call you should have made.
+>
+> **Question 1: one line per item.** The crew ticks each one off in the house (**Found it**, Step 10a), and a paragraph cannot be ticked. *"Coin collection in the study safe"*, new line, *"the ring in the blue box"*. The box says so.
 >
 > **Firearms is the red one, and it prints first.** It carries the standing rule with it wherever it appears: *nothing moves without written authority, photograph it where it lies, tell the concierge the same day, and let nobody carry one out — family included.* Get the name of who is authorised to take possession while you have them on the phone; that is the answer that stops the job later if you do not have it.
 >
@@ -476,7 +478,7 @@ Open the client and the line above the timeline reads the whole schedule at once
 
 ### a. Shoot the rooms — Job Plan tab
 
-The rooms are the **first thing on the Job Plan** once the job is **Won** — one row per room you priced, in walkthrough order, with its walkthrough note in grey italic, the shot counts (*2 found · 5 items · 1 after*) and a status pill. The rooms the client is keeping are named in one line underneath rather than listed. **Tap a room** and it opens full screen: three camera buttons, the two status taps, and a strip of everything shot in it so far. Rebuilt 2026-09-19 — the old room cards, with a typed name, a category and seven chips before every shot, are gone.
+The rooms are the **first thing on the Job Plan** once the job is **Won** — one row per room you priced, in walkthrough order, with its walkthrough note in grey italic, the shot counts (*2 found · 5 items · 1 after*) and a status pill. The rooms the client is keeping are named in one line underneath rather than listed. **Tap a room** and it opens full screen: three camera buttons, the two status taps, and a strip of everything shot in it so far. Above the cameras is the intake brief — every must-find with a **Found it** tick, the safety answer, the cash and the safes — so you read it in the room, not from memory. Rebuilt 2026-09-19 — the old room cards, with a typed name, a category and seven chips before every shot, are gone.
 
 > **⚠** **Two passes through every room, in this order, and you type nothing in either.**
 >
@@ -508,6 +510,8 @@ The rooms are the **first thing on the Job Plan** once the job is **Won** — on
 > **⚠ There is no printed plan any more, and no printed flags panel with it.** *Print Job Plan* was retired on 2026-09-11 — it ran to **nine pages** of room cards whose status and Take Photo buttons do nothing on paper. So **throw away any plan printed before then**, and do not go looking for the button. The screen is the brief, and it is on every phone that can open the job.
 >
 > If a row reads *"Ticked at intake, no detail recorded"*, that is a question nobody finished asking — ring the client before Day 1 rather than finding out with a crew standing in the driveway. If something turns up that intake never mentioned, put it on the record through **Edit Client** so the next person reading the plan has it too.
+
+> **⚠** **Found the ring? Press *Found it* on its line, in the room.** Every must-find is its own line on the brief — on the Job Plan header, in every room's workspace and above Job Admin on the Inventory tab — with a **Found it** button. The line goes green, drops under the ones still missing and reads *Found Sep 19, 2026 · Ashley Jerome*: the date, and the concierge assigned to the job. **Undo** if it was a false alarm. It saves to the job like everything else, so the desk sees it too. Do not leave it for the evening — a must-find nobody ticked reads as still missing to the next person in, and they go looking for it.
 
 ### b. Log hours — Job Plan tab, every single day
 
@@ -549,6 +553,8 @@ Then two buttons appear on it:
 **This is your end-of-day tab.** The Job Plan is what you use in the house; the Inventory tab is what you open that evening at home or in the office to work through what you shot. Rebuilt 2026-09-01 around exactly that.
 
 The manifest assembles from three places: the shots you took on the Items pass in the house (they arrive with no name — see *Unnamed shots* below), **+ Add line item** for an asset with no photo (cash, an account, a vehicle), and a **From the Estimate Walkthrough** panel that pulls in the collections and vehicles you flagged at estimate time — as a lot or itemised. Nothing can be imported twice.
+
+> **The must-find list is above Job Admin (new 2026-09-19).** *From intake — must find · safety*: each must-find with its **Found it** tick, and the safety answer. Name the evening's shots against it — if the ring is among them, press *Found it* here. Cash, safes and the rest of the brief stay on the Job Plan.
 
 > **Job Admin sits folded at the very top of this tab (new 2026-09-19).** It is the desk paperwork that used to be checkboxes on the Job Plan — the financial close, the §733.604 court list on a probate job, the seven-year archive — with a count on the fold (*0 of 5 ticked · 3 derived items still open*). The lines the app can answer for itself (rooms cleared, hours logged, change orders accepted, final invoice sent) are read off the job and are never ticked; the rest are boxes. It is here rather than on the Client Dashboard because when you are in the middle of a job this tab is where you already are.
 
@@ -921,6 +927,10 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Where did the financial close and the court-filing checklist go? | Under **Job Admin**, folded at the top of the Inventory tab. Tap the fold. |
 | A big red *FIREARMS IN THIS HOUSE* banner is on the Job Plan | Intake flagged firearms for this client. Read it to the crew, read the red line every time you open a room, and follow Step 10f. Nobody on the crew touches one. |
 | Every box you ticked on the plan last week is unticked | Ticks made on a build before 2026-09-19 do not carry: the boxes were numbered by their position in the list and are now named, so an old tick has nothing to attach to. Room statuses, notes, hours, photos and everything on the Inventory tab carried. Re-tick what still applies — most of the old list is gone, or is now a line the app reads for itself. |
+| A must-find line lost its *Found* tick | Somebody reworded that line on Edit Client after it was found. The tick is keyed to the wording, so it clears rather than moving onto words it was not made for. Press *Found it* again; nothing else is lost. |
+| You pressed *Found it* on the iPad and the laptop still shows the line as missing | Reload the laptop. The tick saves to the job and syncs, but nothing polls the client record mid-job; only the device that pressed it repaints at once. Still missing after a reload? The Apps Script is older than `2026-09-19a` and let the laptop's stale copy win (manual §11): redeploy, then press it once more. |
+| The brief in the room is long and the cameras are below it | Scroll. It is the intake answers, and the point is that you read them in the room. Firearms stays pinned above the scroll. |
+| The brief says *Must find* three times | One line per item on the intake answer, so each line is its own row with its own *Found it*. That is what lets one be ticked without the others. |
 | Job Plan rooms are in a strange order | They're in walkthrough order now, matching the estimate. Before 2026-08-03 they were sorted hardest-room-first, which matched nothing. |
 | The client estimate has no third-party vendor section at all | Correct when there are no vendors — the empty heading and its $0 lines are suppressed. Add a vendor and it comes back. A vendor with no direct cost (auction house, estate sale company) still shows. |
 | A client asks how long each stage of the job will take | The document deliberately carries no dates. Answer from the overall working-day estimate and say plainly that the pace depends on how quickly they make decisions — that is the honest answer and it's also the one that protects you. |

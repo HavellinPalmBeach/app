@@ -34,7 +34,7 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-18c';
+var BACKEND_VERSION = '2026-09-19a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -821,7 +821,11 @@ function pruneOrphanRecordsConfirm(force) {
 // absence plus a touch means this device took it out. The stamps union newest-per-key, so
 // the removal keeps winning against every later stale save.
 var JOB_KEYED_LISTS = ['payments', 'appraisers', 'invSnapshots'];
-var JOB_KEYED_MAPS  = ['docState'];
+// `mustFound` (2026-09-19): the Found ticks against intake's must-find list, one key per
+// line — ticked in the house, corrected at the desk, which is exactly the two-device shape
+// docState has. The app stamps every tick AND every untick (an untick with no stamp would
+// read as absence, and absence alone is never a removal).
+var JOB_KEYED_MAPS  = ['docState', 'mustFound'];
 // Per-list identity. ⚠ `payments` used to be minted `max(id)+1` PER DEVICE, so two people
 // each recording a payment both produced the same id and union-by-id would fuse two real
 // payments into one. The app mints a uid now; `id` stays the fallback so a payment written

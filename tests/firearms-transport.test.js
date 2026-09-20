@@ -183,7 +183,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // REAL brief on a job with the flag ticked and read the anchor out of the markup.
     const b = sandbox({
       fns: ['standingFlagsBlock', 'standingFlagLines', 'activeHouseFlags', 'houseFlagsOf',
-            '_houseFlagRowClass', 'esc'],
+            '_houseFlagRowClass', 'esc', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle'],
       vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
     });
     const armed = { id: 1, houseFlags: { firearms: { on: true, note: 'Gun safe in the study, 4 long guns.' } } };

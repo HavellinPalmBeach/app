@@ -363,7 +363,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         ctx = sandbox({ fns: planFns, vars: planVars, stubs: {
           jobs: [PREP_JOB], jobLogs: logs, jobPlans: {}, jobPlanStore: {}, vendorDirectory: [], contractors: [],
           estimateStore: { 1: { estimate: prepEst(dcHrs) } }, _photoRefs: {},
-          standingFlagsBlock: () => '', renderVendorSourcing: () => '',
+          standingFlagsBlock: () => '', _sfHost: () => '', renderVendorSourcing: () => '',
           document: domStub({}) } });
       } catch (err) { return { err: String(err.message || err) }; }
       try { return { html: ctx.renderPrepJobPlan(1, PREP_JOB, prepEst(dcHrs)) }; }

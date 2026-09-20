@@ -135,7 +135,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt'],
       vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
-               standingFlagsBlock: () => '', planChk: () => '', renderVendorSourcing: () => '',
+               standingFlagsBlock: () => '', _sfHost: () => '', planChk: () => '', renderVendorSourcing: () => '',
                vendorDirectory: [] },
     }).renderPrepJobPlan(job.id, job, est);
     const money = (html, re) => (html.match(re) || [])[1];
