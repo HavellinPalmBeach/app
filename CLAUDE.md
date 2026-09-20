@@ -1,5 +1,123 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE AS-FOUND PASS REACHED NO DOCUMENT AT ALL, AND IT FILES IN ITS OWN FOLDER NOW (BUILT 2026-09-20)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs` (`BACKEND_VERSION 2026-09-20b`) **and** `saveInventory.gs`,
+one project and one deployment. Anthony, thinking out loud about the hand-over: *"we are going to provide the inventory
+back to the personal representative and potentially give them access to the folder that gets created in Google Drive so
+that they have access to the images… but those won't be tied to any inventory numbers… obviously if a personal
+representative ever came back and said you know, there was a gold Rolex in the drawer of my dad's desk, we'd have to be
+able to find the image of the desk before we touched anything."* Then: **"i mean, do it all."**
+
+- **⚠⚠ THE PHOTOGRAPHS WERE ALL THERE AND THERE WAS NO INDEX.** Every as-found shot is in Drive and carries a manifest
+  row, and **`_jobInvRefs` filters to `label === 'inventory'` BY DESIGN** — an as-found shot is evidence and never an
+  inventory line — so **all six inventory documents step straight past them**. The one question the pass exists to
+  answer was answerable only by somebody who already knew the filename convention and had the folder open.
+  `asFoundRecord(jobId)` is the derivation (DOM-free), `printAsFoundRecord` the document, and the same index is a tab
+  in the workbook the representative already has.
+- **⚠⚠ IT NAMES THE ROOMS THAT WERE NOT SHOT, AND THAT IS THE LOAD-BEARING HALF.** A record listing only what WAS
+  photographed answers *what do we hold* and never *is this complete*, which is the question being asked of it. Same
+  rule the Court Inventory follows on an unvalued line: state the gap and refuse to read as complete. **The gap block
+  prints ABOVE the index — measured on the rendered page (char 1368 against the first room heading at 2248), never
+  argued** — because a reader works down this page and a caveat under it has arrived after they took it as complete.
+  The release-cautions rule exactly. Reverting the gap fails **5**, moving it below the index 3.
+  - **⚠ AN EXCLUDED ROOM IS IN NEITHER LIST.** It was never in scope, so it is not a gap — it is listed separately as
+    out of scope, because silently absent reads as missed.
+  - **⚠ A SHOT THAT NEVER REACHED DRIVE IS COUNTED AND NAMED.** The index would otherwise point at nothing, and a
+    reader cannot tell that row from a shot nobody took.
+- **⚠⚠ ATTRIBUTION IS THE ROOM'S ATTESTATION, NEVER A PER-SHOT FIELD.** A photo ref carries no `by` — **nothing in this
+  app has ever recorded who pressed the shutter** — so the name is the `foundDone` tick from the room workspace, frozen
+  at the tick. A room with shots and no tick reads *Pass not confirmed complete* and **borrows nobody**: printing the
+  job's currently-assigned concierge would be a claim the record cannot support and would go false on the next
+  reassignment. A test `lacks()` `job.tc` in the derivation; reverting to that fallback fails 1. `_roomFoundAttest`
+  returns the record and `_roomFoundDone` is now a thin boolean over it — one reader, two shapes.
+- **⚠ THE WORKBOOK TAB IS IN THE SAME SPREADSHEET, NOT A SECOND FILE.** The representative is given ONE workbook; a
+  separate file they have to be told about is a file they will not have when the question comes. **The gap rooms are
+  rows there too**, coloured red — the one thing the sheet can say that a folder full of files cannot. Skipping them
+  fails 2. `AS_FOUND_COLUMNS` rides the payload, so the server cannot hold its own copy: the lesson the category lists
+  already paid for at 6-against-13. Dropping it fails 1, and the `.gs` returns early on an old payload rather than
+  blanking the tab (an older app is not a statement that the record is empty) — reverting that fails 1.
+
+### ⚠⚠ THE FOLDER SPLIT, AND THE COUNSEL SHARE THAT HAD TO FOLLOW IT
+- **The two sets are read by different people for different reasons.** Inventory photographs are one per line and cited
+  by item number on the schedule, the approval request and the receipts; as-found shots are cited by nothing. Mixed
+  into one folder, forty wide shots of empty rooms sit between a representative and the photograph of the sideboard
+  they are being asked to authorise. `AS_FOUND_SUBFOLDER` / `photoSubfolder(label)`.
+- **⚠⚠ ONE DEFINITION, READ BY THE CAPTURE AND BY THE RETRY.** Two copies is exactly how a re-sent as-found shot lands
+  back in the folder it was moved out of — **and nothing on any screen would say so, because the upload succeeds either
+  way**. Each hardcode fails 2. A test `lacks()` the literal in both functions.
+- **⚠⚠ THE ALIAS IS WHAT KEEPS AN EXISTING JOB WORKING.** A folder created before today has no such subfolder, and
+  without the fallback **every as-found upload on it would fail outright — on the one pass whose order can never be
+  reversed.** `'As-Found Record': ['Estate Inventory', 'Photos', 'Asset Documentation']`. Only new jobs split; to split
+  an old one, make the folder by hand and `resolveSubfolderId` re-reads Drive and picks it up with nothing to run.
+  Reverting the alias fails 1, dropping it from the new-job list 2.
+- **⚠⚠ THE SHARE COVERS BOTH FOLDERS, AND THAT IS WHAT THE SPLIT WOULD OTHERWISE HAVE COST.** Sharing `Estate Inventory`
+  alone used to cover every photograph on the job. The moment the pass filed elsewhere, counsel would have been granted
+  the inventory set and **refused the evidence set** — and the new document hands them a page of links straight into it,
+  so each one would have opened a Google permission wall. **A document whose links do not resolve for its reader is
+  worse than no document.** `_invShareFolders` resolves both and **dedupes**, because on a pre-split job both names
+  resolve to one id and reporting two shares would be a false statement about what counsel can reach. `_invShareEach`
+  is **sequential, never `Promise.all`** — every one takes the global Apps Script lock. **Revoke sweeps both whatever
+  the share did**, because that is the one direction this must never fail in. Reverting to one folder fails 2.
+
+- **⚠⚠ FOUND ON THE WAY, AND IT IS THE FOURTH TIME: EVERY INVENTORY DOCUMENT WAS ARRIVING IN AN ATTORNEY'S DOWNLOADS
+  CALLED "Havellin Palm Beach — Job Manager".** Chrome names a Save-as-PDF after `document.title` and **not one of the
+  six printers passed one** — so the Court Inventory filed with a probate court, the asset schedule sent to counsel and
+  the release approval a personal representative signs were all named after the app's browser tab. This file records
+  the identical defect three times (the agreement, the Job Plan, the change order); **this is the set that reaches a
+  court.** `_invDocName(job, title)` is the one namer.
+  - **⚠ IT IS DELIBERATELY NOT `docNames`.** That is the registry for the five documents carrying a send / file / view
+    verb, and **`file` writes into the CLIENT'S OWN Drive folder** — exactly how an internal worksheet reached a client
+    on 2026-09-08. These seven have no verbs and must not acquire any by being named in one place with them. A test
+    pins both directions.
+- **7568 committed checks** (`tests/as-found-record.test.js`, 83 new). **All twelve changes revert-verified
+  individually, ZERO green** — the gap half fails 5, the gap's position 3, the workbook gap row / the capture / the
+  retry / the new-job list / the share 2 each, and the rest 1. Baseline **0** before and after, no unmatched needles.
+  - **⚠ SIX SUITES BROKE CORRECTLY AND ALL SIX ARE RESTATED, NONE DELETED.** Found by **searching every suite that
+    lifts the affected functions at once** rather than re-running and fixing one failure at a time — which this file
+    records costing a round. `photoSubfolder` and `_invDocName` are **lifted rather than stubbed**, because each is a
+    real rule; `_asFoundRows` is lifted into `media-merge` because `buildInventoryPayload` is the one place the
+    manifest and the workbook meet.
+  - **⚠ AND `dashboard-utility-bar` PINNED THE SIX SUBFOLDER NAMES AS ONE BYTE SEQUENCE** — the thirteenth time this
+    file records that shape. Restated as the requirement: **every subfolder the app resolves by name is created on
+    client creation or has an alias that is**, which is a net that catches the next one rather than today's list.
+- **⚠ MY OWN VERIFICATION ASSERTION WAS WRONG AND THE CODE WAS RIGHT.** The browser check expected
+  *Pass confirmed complete 2026-09-18*; `fmtDate2` formats it, so the page reads *Sep 18, 2026*. Found by dumping the
+  rendered `innerText` rather than trusting the regex.
+- **Verified end to end in headless Chromium on the real page**, driving the real Job Admin & Inv tab and the real
+  button. ⚠ The manifest hydrates inside `renderInventoryTab`, so the tab has to be opened on the job **before**
+  anything reads `_photoRefs` — the first run measured `total: 0` against four seeded shots, which is the 2026-08-24
+  defect reproduced in a test rig:
+
+  | | |
+  |---|---|
+  | a probate estate, 3 rooms in scope, 1 excluded | shot **Entry & Living ×2 · Kitchen ×2** · **missing Study** |
+  | the gap block | **first on the page**, names Study, *not a complete account of the property* |
+  | attestation | *Pass confirmed complete Sep 18, 2026 by Ashley Jerome* · the other room *Pass not confirmed complete* |
+  | a failed shot | listed, *not saved*, its own amber block above the index · links **3 of 4** |
+  | the workbook | **5 rows** — 4 shots and one **NO AS-FOUND PHOTOGRAPHS** row for Study |
+  | the PDF filename | *Havellin As-Found Record - 69 Beach Blvd - Sep 20 2026* |
+  | folder routing | `before` → As-Found Record · inventory / detail / after / unknown → Estate Inventory |
+  | 1440 / 390px | overflow **0 / 0**, **0 page errors** |
+
+  The first `<style>` block is **byte-identical at 93,071 bytes / 635 rules** — the 368-line CSS deletion rule, applied
+  by measurement.
+- Manual **§2** (the redeploy note, and what an older deployment does — no workbook tab, and a legacy-fallback folder
+  keeps everything together), **§4** (the one-folder claim was FALSE and is corrected), **§10a** (the document, and
+  four notes: the gap, the attestation, not-an-inventory-schedule, and the filenames), **§15** (the folder table and
+  the split note with how to split an old job). Playbook **Step 10a** (the *"filed to the client's Estate Inventory
+  folder"* claim was FALSE and is corrected), **Step 10e** (the document, what the red block means, and a `.stop`
+  against using it as an inventory) and **five** symptom→cause rows. Both `.md` copies hand-edited; **37 claims
+  parity-checked, 0 mismatches** — ⚠ three apparent misses were smart quotes against straight ones, **verified by
+  normalising rather than assumed**. A stale sweep for seven retired wordings returns **0 across all four files**. Tag
+  balance clean on both HTML files; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **17/40 and
+  16/16** tables as wide as their container, as at HEAD.
+- **⚠ NOT BUILT, AND IT IS THE NEXT THING: one photograph, many inventory lines.** Anthony, off a photo of a bar
+  console: *"this same picture is going to serve as reference to multiple items — four bottles of booze, a Banksy, a
+  hutch — so we really don't have to photograph each individual item unless we know it's extremely valuable."* Derived
+  rows sharing a source photo's `driveFileId`, carrying `derivedFrom` so they do not inflate `_slotRefs` shot counts,
+  cascading on discard. A crop box from the identifying agent would be a further win. It is the biggest of the
+  remaining pieces and it sits immediately before Agent One.
+
 ## ⚠⚠ FIXED PRICE ON EVERY ENGAGEMENT — AND A FIXED-FEE CONTRACT HAD NO WAY TO END (2026-09-20)
 Anthony, hours after the hours decision: *"extend fixed pricing to all engagement types, including probate and contested
 probate… My gut tells me that executors or personal representatives are going to want to know a number, not here's my best
@@ -4276,10 +4394,12 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/great-turing-ac4h9i`
-  (`claude/gracious-rubin-u3r5pe` shipped alongside it on 2026-09-20 — two sessions ran
-  concurrently, the fixed-price-on-every-engagement build and this one; both are on
-  `main` and neither is stale.)
+- Active feature branch: `claude/charming-dirac-9f9zvh`
+  (`claude/great-turing-ac4h9i` and `claude/gracious-rubin-u3r5pe` shipped alongside it on
+  2026-09-20 — THREE sessions ran concurrently that day: the fixed-price-on-every-engagement
+  build, the fold/job-tab-sync build, and the inventory naming + as-found build. All three
+  are on `main` and none is stale. ⚠ Each of the three merged the others' work as it landed,
+  so this list is a record of who was working, not a stack of supersessions.)
   (was `claude/dazzling-babbage-ijoew4`)
   (was `claude/quirky-pasteur-bknj9m`)
   (was `claude/focused-knuth-pqw6ff`)
