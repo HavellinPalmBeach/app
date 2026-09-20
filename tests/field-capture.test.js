@@ -653,8 +653,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const ref = { stableId: 'p', label: 'inventory', objectName: '', seq: 4, category: 'General/Household', fieldNote: 'signed on the base' };
     const row = rowCtx._renderInvRow({ id: 1 }, ref);
-    has(row, 'Unnamed', 'an unnamed line says so');
-    has(row, 'shot 4', 'and which shot it was');
+    // RESTATED 2026-09-20, NOT DELETED. These pinned the sentence "Unnamed — shot 4, name it
+    // below", which was true and useless: there was nothing below to name it with, because
+    // objectName was editable only on a hand-typed row. The requirement is the converse now —
+    // an unnamed row carries the box itself, wired to the one writer, so the evening pile is
+    // worked in the list rather than through forty panel opens.
+    has(row, '_invEdit(1,\'p\',\'objectName\',this)', 'an unnamed line carries its own name box');
+    has(row, '<input type="text"', 'and it is a real control, not a prompt to go elsewhere');
+    lacks(row, 'name it below', 'the sentence that pointed at a field that was not there is gone');
     has(row, 'signed on the base', 'the field note is on the row');
     has(row, '+1 detail shot', 'and the detail count');
     rowCtx._invOpen.p = true;
@@ -662,6 +668,66 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(open, "_invEdit(1,'p','fieldNote',this)", 'the panel lets the desk edit the note');
     has(open, 'Detail shots \u00b7 1', 'and shows the linked close-ups');
     has(open, 'data-thumb-id="DFILE"', 'as thumbnails the painter can fill');
+  }
+
+  // ⚠⚠ THE DESK CAN NAME AND FILE WHAT THE CAMERA TOOK. Until 2026-09-20 it could not: these
+  // three columns are `kind:'capture'` and _invColEditable gated them on `ref.manual`, which
+  // was right while the camera captured a name and wrong from the moment it stopped. The
+  // consequence was not cosmetic — General/Household is not intrinsic, so nothing photographed
+  // in the field reached the appraisal worklist or the MAIV aggregate BY CATEGORY, and the
+  // Unnamed count could never reach zero. Driven on the real predicate, both directions.
+  group('⚠⚠ NAME, CATEGORY AND ROOM ARE EDITABLE ON A PHOTO ROW, NOT ONLY A TYPED ONE');
+  {
+    const c = sandbox({ fns: ['_invColEditable', 'invIsFirearm', 'invIsMAIV', 'invMAIVDefaultCat', 'invCatMeta'],
+                        vars: ['INVENTORY_COLUMNS', 'INV_TAXONOMY', 'MAIV_CATEGORIES'],
+                        stubs: { INV_FIREARM_CATEGORY: 'Firearms' } });
+    const col = (k) => c.INVENTORY_COLUMNS.filter((x) => x.key === k)[0];
+    const photo  = { stableId: 'p', label: 'inventory', category: 'General/Household' };
+    const manual = { stableId: 'm', manual: true, category: 'General/Household' };
+
+    ['objectName', 'category', 'room'].forEach((k) => {
+      ok(c._invColEditable(photo, col(k)), 'a photographed row can set ' + k);
+      ok(c._invColEditable(manual, col(k)), 'and a hand-typed row still can too');
+    });
+
+    // ⚠ THE CONVERSE, or the fix would read as "everything is editable now". A derived column
+    // is still never typed over, and the two columns that describe a class of object are still
+    // withheld from rows they cannot describe.
+    ok(!c._invColEditable(photo, { key: 'net', kind: 'formula' }), 'a formula column is still computed, never typed');
+    ok(!c._invColEditable(photo, col('flagNFA')), 'NFA is still refused on a row that is not a firearm');
+    ok(c._invColEditable({ category: 'Firearms' }, col('flagNFA')), 'and still offered on one that is');
+
+    // The rule must not have been written as a list of today's row shapes.
+    lacks(liveLines(fn('_invColEditable')), 'ref.manual',
+          '⚠ and it no longer branches on how the row was created at all');
+  }
+
+  // ⚠ THE COUNT AND THE LIST MOVE INDEPENDENTLY, DELIBERATELY. Naming an item must not redraw
+  // the list — the Unnamed pile is worked top to bottom and a list that reflows under a typing
+  // hand is unusable — but the chip above it must not then sit on a stale number.
+  group('⚠ THE CHIP STRIP REPAINTS ON ITS OWN, AND THE LIST DOES NOT');
+  {
+    const body = fn('_invEdit');
+    has(body, '_invRefreshFlagStrip(jobId)', 'every edit repaints the six counts');
+    lacks(body.slice(body.indexOf('_invRefreshFlagStrip')), "'objectName'",
+          '⚠ and nothing keys the repaint on a list of fields that would fall out of step with INV_WORK_FLAGS');
+    const redraw = body.indexOf('renderInventoryTab');
+    ok(redraw < 0 || !/objectName/.test(body.slice(redraw - 200, redraw)),
+       '⚠ naming an item does NOT redraw the list under the person typing');
+    has(fn('_invRefreshFlagStrip'), 'inv-flagstrip', 'the strip is addressed by id');
+    has(src, 'id="inv-flagstrip"', 'and the tab really emits that id — the two ends have to meet');
+  }
+
+  // Filing twenty pieces of furniture one row at a time is how a category never gets set.
+  group('⚠ THE BULK BAR CAN FILE A CATEGORY, AND SAYS WHERE THE WORK WENT');
+  {
+    const bar = fn('_renderInvBulk');
+    has(bar, "menu('category'", 'the bar offers a category menu');
+    has(bar, 'INV_CATEGORIES', 'built from the one catalogue, never a hand-written list');
+    const apply = fn('_invBulkApply');
+    has(apply, "key === 'category'", 'and the confirmation has an arm of its own');
+    has(apply, 'invNeedsAppraisal(r, job)',
+        '⚠ which MEASURES how many actually reached the worklist rather than assuming the category routes');
   }
 
   group('⚠ THE TWO NEW KEYS SURVIVE A SAVE AND A MERGE');

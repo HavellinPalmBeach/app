@@ -24,7 +24,7 @@
 // everywhere, and nothing in the store is migrated.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { sandbox, source, domStub } = require('./harness');
+const { sandbox, source, domStub, fn } = require('./harness');
 
 // ⚠ LINE-BASED, NOT A REGEX OVER THE WHOLE FILE. The usual `/\/\*[\s\S]*?\*\//` stripper pairs
 // the `/*` inside every `accept="image/*"` attribute with a distant `*/` and silently eats
@@ -34,7 +34,7 @@ const liveLines = (s) => String(s).split('\n')
   .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')); })
   .join('\n');
 
-const ESTATE = { id: 7, name: 'Butler Estate', svc: 'probate', won: true, status: 'won' };
+const ESTATE = { id: 7, name: 'Butler Estate', svc: 'probate', won: true, status: 'won', tc: 'Ashley Jerome' };
 const LIVING = { id: 8, name: 'Ellsworth', svc: 'downsizing', won: true, status: 'won' };
 const SHOT = (jobId, roomIdx, label) => ({ stableId: jobId + '_r' + roomIdx + '_' + label + '_x', roomIdx, label,
                                            seq: 1, collId: null, status: 'uploaded', ts: 1 });
@@ -44,7 +44,8 @@ function rig(refs) {
   const ctx = sandbox({
     fns: ['planRoomStatusBtns', 'setPlanRoomStatus', 'roomStatusNormalize', '_invJob', 'lockRefusal',
           'lockFlag', 'clearedFlag', '_shotCount', '_slotRefs', 'isDecedentJob', '_planRoomStatus',
-          'setRoomStatus', 'getJobPlan', '_planTouch'],
+          'setRoomStatus', 'getJobPlan', '_planTouch', '_roomFoundDone', 'setRoomFoundDone', '_todayStr',
+          '_roomFoundDoneHtml'],
     vars: ['ROOM_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
            'DECEDENT_SERVICES', 'jobPlanStore', '_roomWs'],
     stubs: {
@@ -52,6 +53,7 @@ function rig(refs) {
       _photoRefs: refs || {},
       saveJobPlan() {}, renderProjection() {},
       _paintRoomWorkspace() { painted.push('ws'); }, _repaintPlan() { painted.push('plan'); },
+      esc: (x) => String(x == null ? '' : x), fmtDate2: (d) => String(d || ''),
       document: domStub({}),
     },
   });
@@ -107,20 +109,85 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(bare.ctx._roomWs.msg, 'Shoot the room as found first. On an estate job nothing is locked without it.',
        'the refusal is handed to the workspace to show');
 
-    // One as-found shot, and the room can lock.
+    // ⚠⚠ RESTATED 2026-09-20: A SHOT IS NO LONGER THE WHOLE GATE. These three pinned "one
+    // as-found photograph and the room can lock", which was the rule and was not the standard.
+    // The field copy has told the crew since 2026-09-19 to shoot every drawer, cabinet and
+    // closet open; the gate under it accepted a single wide frame, and one wide frame is not
+    // an answer to "was there a watch in the desk". The app cannot count drawers, so a person
+    // attests and their name goes on it.
     const shot = rig({ 7: [SHOT(7, 3, 'before')] });
+    const half = shot.ctx.planRoomStatusBtns(7, 3, 'pending');
+    ok(/<button[^>]*disabled/.test(half), 'a shot alone no longer unlocks Lock');
+    has(half, 'every drawer, cabinet and closet', 'and the second half of the gate names the standard');
+    lacks(half, 'Shoot the room as found first', 'it is past the first half, so it stops saying that');
+    eq(shot.ctx.setPlanRoomStatus(7, 3, 'locked'),
+       'Confirm the as-found pass first — every drawer, cabinet and closet opened and photographed. Tick it under the As found camera.',
+       '⚠⚠ the SETTER refuses here too, so nothing reaching around the tick can lock it');
+
+    // Attested, and the room can lock.
+    shot.ctx.setRoomFoundDone(7, 3, true);
+    ok(shot.ctx._roomFoundDone(7, 3), 'the attestation is recorded');
+    eq(shot.ctx.jobPlanStore[7].rooms[3].foundDone.by, 'Ashley Jerome', '⚠ with WHO said it, frozen at the tick');
+    ok(shot.ctx.jobPlanStore[7].rooms[3].foundDone.at, 'and the day they said it');
+    ok(shot.ctx.jobPlanStore[7].at && shot.ctx.jobPlanStore[7].at['rooms:3'] > 0,
+       '⚠ and stamped, or the other device puts it back to unattested on the next sync');
     const ok1 = shot.ctx.planRoomStatusBtns(7, 3, 'pending');
-    ok(!/<button[^>]*disabled/.test(ok1), 'with an as-found shot the button is live');
-    lacks(ok1, 'Shoot the room as found first', 'and the refusal is gone');
+    ok(!/<button[^>]*disabled/.test(ok1), 'with the shot AND the tick the button is live');
     eq(shot.ctx.setPlanRoomStatus(7, 3, 'locked'), '', 'the setter accepts');
     eq(shot.ctx.jobPlanStore[7].rooms[3].status, 'locked', 'and writes it');
-    ok(shot.ctx.jobPlanStore[7].at && shot.ctx.jobPlanStore[7].at['rooms:3'] > 0, 'stamped for the per-key merge');
     ok(shot.painted.indexOf('plan') >= 0, 'and the plan is repainted so the room list catches up');
+
+    // ⚠ UNTICKING IS A REAL OPERATION and must reclose the gate, or a mis-tap could never be
+    // corrected once the room was locked.
+    shot.ctx.setRoomFoundDone(7, 3, false);
+    ok(!shot.ctx._roomFoundDone(7, 3), 'the attestation can be withdrawn');
+    ok(shot.ctx.lockRefusal(shot.ctx.jobs[0], 7, 3), 'and the gate closes again behind it');
+
+    // ⚠ THE ORDER OF THE TWO HALVES IS THE MESSAGE. No shots at all must still say SHOOT IT,
+    // never "tick the box" — the box is not the work.
+    const attestedOnly = rig({ 7: [] });
+    attestedOnly.ctx.setRoomFoundDone(7, 3, true);
+    has(attestedOnly.ctx.lockRefusal(attestedOnly.ctx.jobs[0], 7, 3), 'Shoot the room as found first',
+        '⚠ a tick with no photograph behind it is refused on the FIRST half, not the second');
 
     // A failed shot still counts as an as-found shot: the bytes are held on the device and
     // Retry will land it. Refusing here would strand a room on a bad signal.
     const failed = rig({ 7: [Object.assign(SHOT(7, 3, 'before'), { status: 'failed' })] });
+    failed.ctx.setRoomFoundDone(7, 3, true);
     eq(failed.ctx.lockRefusal(failed.ctx.jobs[0], 7, 3), '', 'a shot held on the device is a shot');
+  }
+
+  // ⚠⚠ THE GATE HAS TO BE REACHABLE OR IT IS NOT A GATE, IT IS A DEAD END. Lock now waits on an
+  // attestation; if the control that makes it were ever dropped from the workspace the room
+  // could never be locked again, and every source check on the refusal would still pass. That
+  // is the shape this build reverted and found GREEN, so it is pinned in both directions: the
+  // control renders and is wired, and the workspace really emits it.
+  group('⚠⚠ THE ATTESTATION TICK IS ON THE SCREEN THE CONCIERGE IS STANDING IN FRONT OF');
+  {
+    const { ctx } = rig({ 7: [SHOT(7, 3, 'before')] });
+    const off = ctx._roomFoundDoneHtml(7, 3, true);
+    has(off, 'setRoomFoundDone(7,3,this.checked)', 'wired to the one writer');
+    has(off, 'type="checkbox"', 'and it is a real control');
+    has(off, 'every drawer, cabinet and closet', 'stating the standard it is attesting to');
+    has(off, 'Lock waits on this', '⚠ and on an estate job it says what it is holding up');
+    // The global form rule is label{text-transform:uppercase}, which turned a stage of plan
+    // checkboxes into a wall of capitals once already.
+    has(off, 'text-transform:none', '⚠ and it opts out of the global label rule explicitly');
+
+    ctx.setRoomFoundDone(7, 3, true);
+    const on = ctx._roomFoundDoneHtml(7, 3, true);
+    has(on, 'checked', 'a recorded attestation reads back as ticked');
+    has(on, 'Ashley Jerome', '⚠ naming who said it');
+    lacks(on, 'Lock waits on this', 'and it stops saying it is holding anything up');
+
+    // On a living-client job Lock is never refused, so the line must not claim it is.
+    lacks(ctx._roomFoundDoneHtml(7, 3, false), 'Lock waits on this',
+          'the warning is decedent-only, like the gate it describes');
+
+    // ⚠ AND THE WORKSPACE REALLY CALLS IT. Driven separately from the gate, because a control
+    // that renders correctly and is never placed is exactly the dead end above.
+    has(fn('_paintRoomWorkspace'), '_roomFoundDoneHtml(jobId, roomIdx, decedent)',
+        '⚠⚠ the room workspace emits the tick — without this the gate is unsatisfiable');
   }
 
   group('⚠ ON A LIVING-CLIENT JOB IT FLAGS AND NEVER REFUSES — the owner is standing there');
@@ -142,11 +209,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const r = rig({ 7: [SHOT(7, 3, 'before')] });
     eq(r.ctx.setPlanRoomStatus(7, 3, 'cleared'), 'Lock the room first.', 'a pending room cannot skip to Cleared');
+    // Lock is the step this group depends on, and since 2026-09-20 Lock wants the as-found
+    // pass attested as well as shot. Ticking it here keeps this group about Cleared.
+    r.ctx.setRoomFoundDone(7, 3, true);
     r.ctx.setPlanRoomStatus(7, 3, 'locked');
     has(r.ctx.planRoomStatusBtns(7, 3, 'locked'), 'No after photo on this room yet', 'a locked room with no after-photo says so');
     eq(r.ctx.setPlanRoomStatus(7, 3, 'cleared'), '', 'but Cleared is accepted — it flags, it does not refuse');
     eq(r.ctx.jobPlanStore[7].rooms[3].status, 'cleared', 'and lands');
     const withAfter = rig({ 7: [SHOT(7, 3, 'before'), SHOT(7, 3, 'after')] });
+    withAfter.ctx.setRoomFoundDone(7, 3, true);
     lacks(withAfter.ctx.planRoomStatusBtns(7, 3, 'locked'), 'No after photo', 'and the flag clears with an after shot');
   }
 

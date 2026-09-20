@@ -1184,7 +1184,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 3:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 6:14pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18049,6 +18049,23 @@ function _shotDesc(ref) {
 function discardShot(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref || ref.deletedAt) return false;
+  // AN AS-FOUND SHOT IS NOT THE CONCIERGE'S TO THROW AWAY, and this is the one discard that
+  // refuses outright. The 2026-09-20 rule ("just delete it on device and drive... there is no
+  // probate risk here") was decided about an ITEM shot, which is a fat-fingered picture
+  // re-taken a second later. This is the opposite case and it is the case that rule did not
+  // consider: the as-found pass is the record of the property's condition on arrival, and it
+  // is the only thing that answers "there was a gold Rolex in my father's desk drawer" two
+  // years after the house was emptied. You do not curate an evidence set. A useless frame
+  // costs nothing to leave in it; a missing one cannot be re-taken, because the contents are
+  // gone. So: refused, with the reason and the alternative, on BOTH bins (the camera's own
+  // and the room strip) because both route through here.
+  if (ref.label === 'before') {
+    alert('As-found shots cannot be deleted.\n\nThis is the record of how the room looked '
+      + 'before anything was touched, and it is what answers a question about a drawer months '
+      + 'from now. A poor frame does no harm sitting in the record.\n\nShoot another if you '
+      + 'need a better one — the pass is never worse for having an extra picture in it.');
+    return false;
+  }
   // A detail shot is a close-up of THIS object. Binning the object without them would leave
   // photographs of a thing that is no longer on the manifest.
   var dets = ref.label === 'inventory' ? _invDetailRefs(jobId, stableId) : [];
@@ -19071,8 +19088,16 @@ function _invColEditable(ref, col) {
   // describes nothing, and the column is already one of twenty-eight.
   if (col.key === 'maivCat') return invIsMAIV(ref);
   if (col.edit) return true;                       // manage columns + disposition
-  // Capture-origin columns are editable only on manual (non-photo) rows.
-  if (ref.manual && (col.key === 'objectName' || col.key === 'room' || col.key === 'category')) return true;
+  // ⚠⚠ THE DESK NAMES AND FILES WHAT THE FIELD PHOTOGRAPHED, so these three are editable on
+  // EVERY row rather than only on a hand-typed one. The old rule was `ref.manual && …`, which
+  // was right while the camera still captured a name and wrong from the moment it stopped.
+  // Since 2026-09-19 every field shot lands with an empty objectName and the default category,
+  // so a photographed item could be named by nobody and filed by nobody: the Unnamed shots
+  // count could never reach zero, and General/Household is not intrinsic, so nothing the
+  // camera took ever reached the appraisal worklist or the §20.2031-6(b) aggregate BY
+  // CATEGORY. Measured in a browser before the fix — two photo rows and one manual row, all
+  // three panels open, exactly ONE editable name control and it belonged to the manual row.
+  if (col.key === 'objectName' || col.key === 'room' || col.key === 'category') return true;
   return false;
 }
 
@@ -19230,6 +19255,10 @@ function _invEdit(jobId, stableId, key, el) {
   }
   // FMV / category / the flag itself can move an item in or out of the appraisal guardrail.
   if (key === 'fmv' || key === 'category' || key === 'needsAppr') _invRefreshGuardrail(jobId);
+  // Every one of the six counts is derived from a field editable on this row, so the strip is
+  // repainted whatever changed rather than on a list of keys that would fall out of step with
+  // INV_WORK_FLAGS the first time a seventh count is added.
+  _invRefreshFlagStrip(jobId);
   // Forcing MAIV on or off changes whether the class beside it is editable at all, so
   // that row has to be redrawn rather than left showing a control that no longer applies.
   // Changing the disposition moves the item into a different section, and changing the
@@ -20820,6 +20849,15 @@ function waiveAppraisal(jobId, stableId) {
   _setPhotoRef(jobId, _invTouch(ref)); savePhotoRefs(jobId);
   _invRefreshGuardrail(jobId); _invRefreshSummary(jobId); _scheduleInventorySync(jobId);
 }
+// The six counts, repainted in place. Naming an item clears it off the Unnamed chip and
+// filing it can move it onto the appraisal one, and neither redraws the list, deliberately,
+// because a list that reflows under a typing hand is unusable. So the chips refresh alone.
+function _invRefreshFlagStrip(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var el = document.getElementById('inv-flagstrip');
+  if (job && el) el.innerHTML = _renderInvFlagStrip(job, _jobInvRefs(jobId));
+}
+
 function _invRefreshGuardrail(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-guardrail');
@@ -21169,6 +21207,10 @@ function _invPickGroup(jobId, key, on) {
   renderInventoryTab();
 }
 function _invClearPicks() { _invPick = {}; renderInventoryTab(); }
+// "for a Art Appraiser" reads as a typo on a confirmation somebody trusts. Vowel test only —
+// the appraiser names are a closed list and none of them is an "hour"-shaped exception.
+function _anArticle(w) { return /^[aeiou]/i.test(String(w || '')) ? 'an' : 'a'; }
+
 function _invBulkApply(jobId, key, value) {
   var picked = _invPicked(jobId);
   if (!picked.length) return;
@@ -21207,6 +21249,19 @@ function _invBulkApply(jobId, key, value) {
         + c.badge.toLowerCase() + ' \u2014 ' + hit.map(_invNamed).join(', ') + '.';
     }).join('');
     if (_swept) what += _swept + ' Check before the release request goes to the representative.';
+  }
+  // THE CATEGORY IS THE ONE FIELD ON THIS BAR THAT ROUTES WORK, so the confirmation says where
+  // the work went. Filing three things as Art and Decor puts them in front of an appraiser by
+  // itself, and a bar answering "3 items updated" leaves that invisible, which is most of the
+  // reason the category read as cosmetic. The count is MEASURED off the real predicate after
+  // the write, never inferred from the category being intrinsic: an item already carrying a
+  // value below the threshold does not join the worklist, and saying it had would be a false
+  // statement about what happens next.
+  else if (key === 'category') {
+    what = items + ' filed as ' + value + '.';
+    var _onList = picked.filter(function(r){ return invNeedsAppraisal(r, job); }).length;
+    if (_onList) what += ' ' + _onList + ' of them ' + (_onList > 1 ? 'are' : 'is') + ' now on the appraisal worklist'
+      + (invAppraiserFor(value) ? ' for ' + _anArticle(invAppraiserFor(value)) + ' ' + invAppraiserFor(value) : '') + '.';
   }
   else if (key === 'roomIdx')      what = items + ' moved to ' + _invRoomName(jobId, picked[0].roomIdx) + '.';
   else if (key === 'valSource')    what = 'Valuation source set to ' + value + ' on ' + items + '.';
@@ -21341,7 +21396,19 @@ function _renderInvRow(job, ref) {
       + '<span style="font-size:10px;color:var(--gray);font-weight:700;width:26px;flex:0 0 auto;">' + esc(_invItemNo(ref)) + '</span>'
       + '<div style="flex:1;min-width:0;">'
         + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
-        + (ref.objectName ? esc(ref.objectName) : '<span style="color:var(--bronze);">Unnamed \u2014 shot ' + esc(ref.seq || '') + ', name it below</span>')
+        // AN UNNAMED ROW CARRIES ITS OWN NAME BOX, and that is the difference between a
+        // worklist and a chore. The Unnamed pile is worked top to bottom in one sitting, so
+        // making somebody open the panel, type, and close it again for every shot of the day
+        // is how a count of forty never gets cleared. A named row stays plain text: once the
+        // agent is proposing these, the box is the exception rather than the shape of the list.
+        // AND `_invEdit` DELIBERATELY DOES NOT REDRAW ON `objectName`, so the row does not
+        // reflow out from under the person typing. The chip strip repaints on its own instead.
+        + (ref.objectName
+            ? esc(ref.objectName)
+            : '<input type="text" value="" placeholder="What is it? e.g. Chesterfield sofa, brown leather" '
+              + 'onchange="_invEdit(' + jid + ',\'' + sid + '\',\'objectName\',this)" '
+              + 'style="width:100%;max-width:360px;font-size:11.5px;padding:3px 6px;box-sizing:border-box;'
+              + 'border:1px solid var(--bronze);border-radius:3px;background:#fffdf9;">')
         + (ref.manual ? ' <span style="font-size:8px;color:var(--bronze);" title="Manual line item (no photo)">M</span>' : '') + '</div>'
         + '<div style="font-size:10px;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sub
         + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
@@ -21502,6 +21569,7 @@ function _renderInvBulk(job) {
     + 'border-radius:6px;padding:9px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;'
     + 'box-shadow:0 -2px 14px rgba(0,0,0,.15);">'
     + '<strong style="font-size:12px;">' + n + ' selected</strong>'
+    + menu('category',    'Set category…', INV_CATEGORIES, _invBulkCommon(picked, 'category'))
     + menu('disposition', 'Set disposition…', INV_DISPOSITIONS, _invBulkCommon(picked, 'disposition'))
     + menu('valSource',   'Set valuation source…', INV_VAL_SOURCES, _invBulkCommon(picked, 'valSource'))
     + menu('roomIdx',     'Move to room…', roomVals, _invBulkRoomCommon(picked))
@@ -21551,7 +21619,7 @@ function renderInventoryTab() {
   cont.innerHTML = _sfHost('sf-host-desk', job)
     + renderJobAdmin(jobId, job)
     + _renderInvWorkbar(job, all)
-    + (all.length ? _renderInvFlagStrip(job, all) + _renderInvFilterRow(job, all) : '')
+    + (all.length ? '<div id="inv-flagstrip">' + _renderInvFlagStrip(job, all) + '</div>' + _renderInvFilterRow(job, all) : '')
     + thumbNote
     + _renderDuplicateImportNotice(jobId)
     + body
@@ -22256,13 +22324,18 @@ function _shotCount(jobId, roomIdx, label) { return _slotRefs(jobId, roomIdx, la
 // flagged and never refused: the owner is standing there and can say what was in the drawer.
 function lockRefusal(job, jobId, roomIdx) {
   if (!job || !isDecedentJob(job)) return '';
-  if (_shotCount(jobId, roomIdx, 'before') > 0) return '';
-  return 'Shoot the room as found first. On an estate job nothing is locked without it.';
+  if (_shotCount(jobId, roomIdx, 'before') === 0) return 'Shoot the room as found first. On an estate job nothing is locked without it.';
+  // The second half of the same gate. Shots exist; nobody has said the pass is finished.
+  if (!_roomFoundDone(jobId, roomIdx)) return 'Confirm the as-found pass first — every drawer, cabinet and closet opened and photographed. Tick it under the As found camera.';
+  return '';
 }
 function lockFlag(job, jobId, roomIdx) {
   if (!job || isDecedentJob(job)) return '';
-  if (_shotCount(jobId, roomIdx, 'before') > 0) return '';
-  return 'No as-found shots on this room. Shoot it before anything moves.';
+  if (_shotCount(jobId, roomIdx, 'before') === 0) return 'No as-found shots on this room. Shoot it before anything moves.';
+  // Flags and never refuses on a living-client job, the standing rule: the owner is alive and
+  // can be asked what was in the drawer, so the evidence is worth having and is not load-bearing.
+  if (!_roomFoundDone(jobId, roomIdx)) return 'The as-found pass is not confirmed complete — drawers, cabinets and closets.';
+  return '';
 }
 function clearedFlag(jobId, roomIdx) {
   return _shotCount(jobId, roomIdx, 'after') > 0 ? '' : 'No after photo on this room yet. Cleared means empty and photographed.';
@@ -22408,6 +22481,9 @@ function _paintRoomWorkspace() {
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'inventory\')">&#128247; Items<small>' + nI + ' shot' + (nI === 1 ? '' : 's') + '</small></button>'
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'after\')">&#128247; After<small>' + nA + ' shot' + (nA === 1 ? '' : 's') + '</small></button>'
     + '</div>';
+  // The second half of the as-found gate, under the cameras because that is the pass it is
+  // about. The app cannot count drawers, so this is a person's word with their name on it.
+  h += _roomFoundDoneHtml(jobId, roomIdx, decedent);
   h += planRoomStatusBtns(jobId, roomIdx, status);
   h += '<div id="room-ws-msg" class="ws-why err" style="' + (ws.msg ? '' : 'display:none;') + '">' + esc(ws.msg || '') + '</div>';
   h += '<div class="ws-strip">' + _roomShotStripHtml(jobId, roomIdx) + '</div>';
@@ -22415,6 +22491,30 @@ function _paintRoomWorkspace() {
   h += '</div>';   // .ws-panel
   el.innerHTML = h;
   _invPaintThumbs(jobId);
+}
+
+// ⚠ EXPLICIT `text-transform:none` AND `letter-spacing:normal`, and they are load-bearing.
+// The global form rule is `label{font-size:10px;text-transform:uppercase;letter-spacing:.05em}`,
+// so a bare <label> here renders as a line of capitals — the defect this file already paid for
+// once on the plan checkboxes, where a stage of thirteen boxes read as a wall of shouting.
+// Inline wins over the global rule; a class would work too but this control has one site.
+function _roomFoundDoneHtml(jobId, roomIdx, decedent) {
+  var plan = jobPlanStore[jobId];
+  var r = plan && plan.rooms && plan.rooms[roomIdx];
+  var fd = r && r.foundDone;
+  var on = !!(fd && fd.at);
+  // Named and dated once it is ticked, because an attestation nobody signed is not one.
+  var stamp = on
+    ? ' <span style="color:var(--gray);">' + esc(fmtDate2(fd.at)) + (fd.by ? ' · ' + esc(fd.by) : '') + '</span>'
+    : '';
+  return '<label style="display:flex;gap:8px;align-items:flex-start;margin:9px 0 2px;font-size:11.5px;'
+    + 'line-height:1.45;cursor:pointer;text-transform:none;letter-spacing:normal;color:'
+    + (on ? 'var(--ok-tx)' : 'var(--gray-dk)') + ';">'
+    + '<input type="checkbox"' + (on ? ' checked' : '') + ' onchange="setRoomFoundDone(' + jobId + ',' + roomIdx + ',this.checked)"'
+    + ' style="width:16px;height:16px;flex:0 0 auto;margin-top:1px;cursor:pointer;accent-color:var(--ok-tx);">'
+    + '<span>As-found pass complete — every drawer, cabinet and closet opened and photographed.'
+    + (decedent && !on ? ' <strong>Lock waits on this.</strong>' : '')
+    + stamp + '</span></label>';
 }
 
 // The room list on the Job Plan: one row per room, tap to open the workspace.
@@ -25139,6 +25239,33 @@ function renderProjection(jobId) {
     projBandHtml(snap.psBand, 'PS', snap.projPS, snap.triggerPS, snap.estPS, snap.psPct) +
     '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Actual: ' + snap.actTC.toFixed(1) + ' TC + ' + snap.actPS.toFixed(1) + ' PS = ' + snap.actTotal.toFixed(1) + ' total hrs' +
     (snap.aboveFloor ? '' : ' — below ' + PROJ_CREW_DAY + '-hr noise floor') + '</div>';
+}
+
+// THE AS-FOUND PASS IS ATTESTED, NOT COUNTED, and the distinction is the whole point. The
+// field copy has told the crew since 2026-09-19 to shoot "every drawer, cabinet and closet
+// open, contents undisturbed" — and the gate under it accepted ONE photograph of the room.
+// One wide shot is not an answer to "was there a watch in the desk"; the app cannot count
+// drawers, and a higher shot count would be arbitrary and gameable. So a person says the pass
+// is complete and their name goes on it. Read directly off jobPlanStore, never through
+// getJobPlan, which MINTS a plan for any job it is asked about.
+function _roomFoundDone(jobId, roomIdx) {
+  var plan = jobPlanStore[jobId];
+  var r = plan && plan.rooms && plan.rooms[roomIdx];
+  return !!(r && r.foundDone && r.foundDone.at);
+}
+function setRoomFoundDone(jobId, roomIdx, on) {
+  var plan = getJobPlan(jobId);
+  if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
+  // Stamped with WHO, because this is an attestation about the property rather than a
+  // preference, and the concierge assigned to the job is who is accountable for it. Frozen at
+  // the tick, so a later reassignment does not rewrite who stood in the room.
+  plan.rooms[roomIdx].foundDone = on
+    ? { at: _todayStr(), by: (_invJob(jobId) || {}).tc || '' }
+    : null;
+  _planTouch(plan, 'rooms', roomIdx);
+  saveJobPlan(jobId);
+  if (_roomWs.open) _paintRoomWorkspace();
+  _repaintPlan(jobId);
 }
 
 function setRoomStatus(jobId, roomIdx, status) {

@@ -205,7 +205,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull',
             '_invTouch', 'moneyToNumber', '_invHasVal', 'invStickyValue'],
       vars: ['INV_STICKY_FIELDS'],
-      stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _scheduleInventorySync() {},
+      stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _scheduleInventorySync() {},
                _invNetDisplay: () => '', renderInventoryTab() {} },
     });
     m._photoRefs[3] = [{ stableId: 'a', label: 'inventory', collId: null }];
