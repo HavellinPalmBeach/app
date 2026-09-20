@@ -154,7 +154,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const { out } = plan(JOB(), EST(), { plan: { rooms: { 0: { status: 'locked' } }, tasks: { crew_briefed: true } } });
     has(out, '<span class="stg-count">1 of 2 locked &middot; 0 cleared</span>', 'the house card counts the statuses');
-    has(out, '<span class="stg-count">1 of 6 ticked</span>', 'Before Day 1 counts its ticks (six boxes on an estate settlement)');
+    has(out, '<span class="stg-count">1 of 5 ticked</span>',
+        'Before Day 1 counts its ticks (five boxes on an estate settlement — six until the per-job NDA went, 2026-09-20)');
     has(out, 'nothing on the estimate</span>', 'Vendors says so when the estimate carries no lines');
     has(out, 'today 0 hrs &middot; 0 of 15 logged', 'the Hours fold reads today and the running total against the estimate');
     const logged = plan(JOB({ status: 'active' }), EST(), { logs: [{ date: '2026-01-01', members: [{ hours: 4 }] }] }).out;
@@ -237,11 +238,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the checklists: a sentence, not a form label; a lone box spans the row');
   {
     const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx'],
-                        vars: ['PLAN_TASKS', 'jobPlanStore'], stubs: { _planTaskDone: (j, k) => k === 'nda_signed', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
+                        vars: ['PLAN_TASKS', 'jobPlanStore'], stubs: { _planTaskDone: (j, k) => k === 'coi_provided', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
     const box = c.planChk(7, 'precall', 'Pre-job call placed');
     has(box, '<label class="plan-chk">', 'the box is a class, not seven inline properties');
     lacks(box, 'style=', 'no inline style at all');
-    has(c.planChk(7, 'nda_signed', 'NDA'), '<label class="plan-chk plan-chk-done"><input type="checkbox" checked', 'a ticked box carries the done class');
+    has(c.planChk(7, 'coi_provided', 'COI'), '<label class="plan-chk plan-chk-done"><input type="checkbox" checked', 'a ticked box carries the done class');
     const ctx = c.planTaskCtx({ svc: 'cleanout' }, { svc: 'cleanout' });
     const p0 = c.planTaskSectionsHtml(7, c.planTasksFor(c.PLAN_TASKS, 'p0', ctx), ctx, ['Pre-job call']);
     eq((p0.match(/<label class="plan-chk/g) || []).length, 1, 'the pre-job call section is one box');

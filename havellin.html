@@ -290,6 +290,10 @@ input:checked+.slider:before{transform:translateX(18px);}
    success ground. */
 .jt-doc{margin-top:10px;padding-top:9px;border-top:0.5px solid var(--bronze-lt);}
 .jt-doc-hd{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);margin-bottom:6px;}
+/* ⚠ ONE ROW, BOTH KINDS OF BUTTON (2026-09-20). It carries the document's buttons AND the
+   step's primary and secondaries, in that order, because two sibling flex rows put four buttons
+   two over two on a row that fits eight. Only the ORDER is load-bearing; the wrap is what a
+   phone needs, and at 390px the same four wrap to two rows with zero overflow. */
 .jt-doc-acts{display:flex;flex-wrap:wrap;gap:7px;}
 .jt-next-blk .jt-doc{border-top-color:var(--err-tx);}
 .jt-next-blk .jt-doc-hd{color:var(--err-tx);}
@@ -1172,7 +1176,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 10:48am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 10:49am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -15824,6 +15828,31 @@ function renderClientDashboard(jobId) {
     // consult the document, then you act on it. The band still OPENS with NEXT / <step>, so
     // the one thing to do next is still read first, and the call to action is the last thing
     // before the eye leaves the band.
+    // ⚠⚠ ONE ACTION ROW, NOT TWO (2026-09-20). Anthony, off a band whose four buttons sat
+    // two over two: *"let's make the four ... move horizontally rather than stacked two over
+    // two to save a little vertical scrolling."* He is right that nothing was wrapping: the
+    // tray's buttons and the step's were two SIBLING flex rows, so the 2×2 was by construction
+    // and not by width. Measured on the rendered page at 1440: the four buttons run 599px in an
+    // 1182px content box — 50.7% of the row — and still stacked. The band goes 163px to 126px.
+    // They are one row now, in the order the two rows already read top to bottom — the
+    // document's buttons, then the primary, then the secondaries — so the tray still comes
+    // before the primary and the call to action is still the last thing before the eye leaves
+    // the band. The row wraps on a phone, which is what `flex-wrap` was always for.
+    // ⚠ THE STEP'S BUTTONS ARE BUILT ONCE, INTO A STRING, because they are now emitted at two
+    // SITES — inside the tray when a document is in play, alone when one is not — and a
+    // second `jt-btn-p` literal is exactly what `dashboard-actions` pins at one emitting site.
+    var _actsHtml = '';
+    if (_jtA) {
+      // ⚠ EXACTLY ONE FILLED BUTTON IN THE BAND. The tray's View/Print/Edit are bronze
+      // OUTLINE `.jt-btn`; this is the only `.jt-btn-p`. Two filled buttons side by side make
+      // the reader choose between two primaries, which costs the band its whole meaning — and
+      // sharing a row with the tray does not weaken that, it is what makes the primary the one
+      // thing in the row the eye lands on.
+      if (_jtA.primary) _actsHtml += '<button class="jt-btn jt-btn-p" onclick="' + _jtA.primary.call + '">' + _jtA.primary.label + '</button>';
+      _jtA.secondary.forEach(function (a) {
+        _actsHtml += '<button class="jt-btn' + (a.danger ? ' jt-btn-d' : '') + '" onclick="' + a.call + '">' + a.label + '</button>';
+      });
+    }
     if (_bandDoc) {
       h += '<div class="jt-doc">';
       h += '<div class="jt-doc-hd">' + esc(_bandDoc.title) + '</div>';
@@ -15833,18 +15862,11 @@ function renderClientDashboard(jobId) {
       _bandDoc.acts.forEach(function (a) {
         h += '<button class="jt-btn" onclick="' + a.call + '">' + a.label + '</button>';
       });
-      h += '</div></div>';
-    }
-    if (_jtA && (_jtA.primary || _jtA.secondary.length)) {
-      h += '<div class="jt-acts">';
-      // ⚠ EXACTLY ONE FILLED BUTTON IN THE BAND. The tray's View/Print/Edit are bronze
-      // OUTLINE `.jt-btn`; this is the only `.jt-btn-p`. Two filled buttons side by side make
-      // the reader choose between two primaries, which costs the band its whole meaning.
-      if (_jtA.primary) h += '<button class="jt-btn jt-btn-p" onclick="' + _jtA.primary.call + '">' + _jtA.primary.label + '</button>';
-      _jtA.secondary.forEach(function (a) {
-        h += '<button class="jt-btn' + (a.danger ? ' jt-btn-d' : '') + '" onclick="' + a.call + '">' + a.label + '</button>';
-      });
-      h += '</div>';
+      h += _actsHtml + '</div></div>';
+    } else if (_actsHtml) {
+      // No document at this step — four rows map to none (intake, walkthrough, job active,
+      // work complete). The step's own row, exactly as before.
+      h += '<div class="jt-acts">' + _actsHtml + '</div>';
     }
     h += '</div>';
   }
@@ -25370,7 +25392,6 @@ var PLAN_TASKS = [
   { key:'materials_onsite',   phase:'p0', sec:'Access &amp; crew', label:'Moving materials on site for Day 1 morning' },
   { key:'access_tested',      phase:'p0', sec:'Access &amp; crew', label:'Keys and access codes tested; elevator and parking confirmed', mm:' (and the moving truck)' },
   { key:'crew_briefed',       phase:'p0', sec:'Access &amp; crew', label:'Crew confirmed by name and briefed — standing job flags read aloud' },
-  { key:'nda_signed',         phase:'p0', sec:'Access &amp; crew', label:'NDA signed by every crew member and contractor before entry' },
   { key:'coi_provided',       phase:'p0', sec:'Access &amp; crew', label:'Certificate of Insurance provided to the attorney, PR or HOA as required' },
   { key:'pr_authority',       phase:'p0', sec:'Probate gate', when:function(c){ return c.isProbate; },
     label:'Personal Representative authority confirmed — full vs limited, limitations noted' },
@@ -30027,7 +30048,18 @@ function probateAgreementHtml(job, est) {
   content += secHdr(7,'Confidentiality &amp; Privacy');
   content += pp('All information encountered during this engagement — including but not limited to property contents, asset values, financial records, legal documents, family matters, and estate details — is strictly confidential. Havellin agrees to:');
   var conf = [
-    'Require all team members and contractors to sign a Non-Disclosure Agreement before accessing the property',
+    // ⚠⚠ THIS BULLET PROMISED A PER-JOB NDA AND HAVELLIN DOES NOT TAKE ONE (corrected
+    // 2026-09-20). Anthony: *"we do not require NDAs for staff on all jobs. confidentiality is
+    // baked into our 1099 employment agreements."* So the estate form — the one signed by a
+    // personal representative, on the matters where the contents are most sensitive — carried
+    // a commitment nothing in the business performed, and the Job Plan's `nda_signed` box was
+    // the operational half of it. The obligation is REAL and it is STANDING rather than
+    // per-job: nobody works a Havellin engagement who has not signed a contractor agreement
+    // carrying it. That is what the bullet says now. ⚠ Do not "restore" the NDA wording
+    // without the box and the process behind it — a clause the firm does not perform is the
+    // defect this file records on the 15% vendor fee, the licence claim and cost-plus
+    // materials, every one of them found by reading a document rather than the code.
+    'Engage every team member and contractor under a written agreement carrying confidentiality obligations, executed before they work on any Havellin engagement',
     'Not disclose any information about the Client, property, estate, or family to any third party without written consent, except as required by law',
     // ⚠⚠ THIS BULLET USED TO END *without express written consent*, WHICH IS AN OPT-IN — and it
     // sits three paragraphs above an opt-out §7.2. A contract that states both is construed against

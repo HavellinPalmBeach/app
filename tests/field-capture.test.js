@@ -382,9 +382,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Which boxes a job gets.
     const on = (job, est) => t.planTasksFor(t.PLAN_TASKS, null, t.planTaskCtx(job, est)).map((x) => x.key);
     const estate = on({ svc: 'cleanout', houseFlags: { firearms: { on: true, note: 'hall safe' } } }, { svc: 'cleanout' });
-    ['precall', 'access_tested', 'crew_briefed', 'nda_signed', 'coi_provided', 'firearms_in_place', 'nfa_check',
+    ['precall', 'access_tested', 'crew_briefed', 'coi_provided', 'firearms_in_place', 'nfa_check',
      'docs_sequestered', 'cash_logged', 'coc_pickup_present', 'shred_done', 'broom_clean', 'home_empty',
      'satisfaction_call', 'review_ask', 'referral_ask'].forEach((key) => ok(estate.indexOf(key) >= 0, 'estate settlement keeps ' + key));
+    // ⚠⚠ RESTATED 2026-09-20, NOT DELETED. This list pinned `nda_signed` as a box every labour
+    // job gets. Anthony: *"we do not require NDAs for staff on all jobs. confidentiality is baked
+    // into our 1099 employment agreements."* So the box asked a person to attest to a signature
+    // nobody takes, and the estate agreement's §7 bullet promising it was corrected in the same
+    // commit. The requirement is now the converse, and it is the one worth pinning: the box is
+    // gone from every service, and nothing may put it back without the process behind it.
+    ok(estate.indexOf('nda_signed') < 0,
+       '⚠⚠ and NOT a per-job NDA — confidentiality is standing, in the contractor agreement');
     ok(estate.indexOf('pr_authority') < 0, 'but not the probate gate — no Letters on an estate settlement');
     ok(estate.indexOf('mv_eta') < 0 && estate.indexOf('nh_floorplan') < 0, 'nor move day');
     ok(estate.length >= 14 && estate.length <= 22, 'about fifteen to twenty (found ' + estate.length + ')');
@@ -526,8 +534,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['p2', 'p4'].forEach((ph) => has(out, 'plan-derived-' + ph + '-7', ph + ' still has its derived lines'));
     lacks(out, 'plan-derived-p0-7', 'and Before Day 1 does not repeat the chips as lines');
     ["'firearms_in_place'", "'nfa_check'", "'docs_sequestered'", "'cash_logged'", "'coc_pickup_present'", "'shred_done'",
-     "'broom_clean'", "'home_empty'", "'satisfaction_call'", "'precall'", "'nda_signed'", "'crew_briefed'"]
+     "'broom_clean'", "'home_empty'", "'satisfaction_call'", "'precall'", "'crew_briefed'"]
       .forEach((k) => has(out, k, k + ' is a real box'));
+    // ⚠ RESTATED 2026-09-20: driven on the real plan, the per-job NDA box is not on it. See the
+    // kept-list group above for why — the obligation is in the contractor agreement, not a tick.
+    lacks(out, "'nda_signed'", '⚠⚠ and the per-job NDA box is not drawn on any job');
     ["'fin_vendor_invoices'", "'ct_inventory'", "'rec_archived'"].forEach((k) => lacks(out, k, k + ' is desk work, not on the plan'));
     ["'pr_authority'", "'mv_eta'", "'nh_floorplan'", "'re_disclosed'"].forEach((k) => lacks(out, k, k + ' does not apply to this job'));
     const boxes = (out.match(/type="checkbox"/g) || []).length;

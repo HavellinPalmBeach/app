@@ -94,6 +94,92 @@ that's the way we're going to price in the beginning is go fixed price and avoid
   `.md` copies hand-edited; **32 claims parity-checked, 0 mismatches**; a stale sweep for seven retired wordings returns
   **0**; tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page
   errors**; under `print` **16/16 and 17/40** tables as wide as their container, as at HEAD.
+## ⚠⚠ THE BAND'S FOUR BUTTONS WERE TWO CONTAINERS, NOT A WRAP — AND THE NDA BOX WAS A CLAUSE (2026-09-20)
+Anthony, off a screenshot of the Client Dashboard band reading *Final invoice sent* over four buttons stacked two over two:
+*"let's make the four … move horizontally rather than stacked two over two to save a little vertical scrolling."* Then,
+separately, off the Before Day 1 card: *"we do not require NDAs for staff on all jobs. confidentiality is baked into our 1099
+employment agreements."* App-only, no redeploy.
+
+- **⚠⚠ NOTHING WAS WRAPPING, AND NO WIDTH WOULD EVER HAVE FIXED IT.** The tray's buttons (`.jt-doc-acts`) and the step's
+  (`.jt-acts`) were two SIBLING flex rows, so the 2×2 was by construction. **Measured on the rendered page at 1440: the four
+  buttons run 599px in an 1182px content box — 50.7% of the row — and still stacked.** They are one row now:
+  `_actsHtml` is built ONCE and appended inside `.jt-doc-acts` after the tray's buttons, or emitted alone in `.jt-acts` when
+  the step has no document. **Band 163px → 126px**, page scrollHeight 1401 → 1364; the 37px is a 28px button row plus
+  `.jt-acts`'s 9px `margin-top`.
+  - **⚠ THE STRING EXISTS BECAUSE THERE ARE NOW TWO EMIT SITES AND `dashboard-actions` PINS ONE.** That suite counts
+    `jt-btn-p` at exactly 1 over the comment-stripped body — a second literal fails it, correctly. Build once, place twice.
+  - **⚠ THE ORDER IS THE ONLY LOAD-BEARING PART: tray, then primary, then secondaries.** Left-to-right is the reading order
+    the two rows already had top-to-bottom, so *"consult the document, then act"* survives — and one filled button in a row of
+    outlines is what makes it the thing the eye lands on. A test drives the rendered row and asserts every tray button's index
+    is below the `jt-btn-p`.
+  - **⚠ THE NO-DOCUMENT CASE IS A SEPARATE BRANCH AND A SEPARATE TEST.** Four rail rows map to no document (intake,
+    walkthrough, job active, work complete); there `.jt-acts` renders alone exactly as before — **95px on both builds**, so
+    `.jt-acts` is NOT dead CSS and a later unused-rule sweep would be wrong to take it. ⚠ `walkthrough: ''` does NOT light the
+    walkthrough row (it lights *Estimate approved*); the reachable no-doc fixture is **deposit paid, not yet activated**.
+- **⚠⚠ THE NDA BOX WAS THE OPERATIONAL HALF OF A CONTRACT CLAUSE, AND THAT IS THE REAL FIND.** `nda_signed` was a Before
+  Day 1 box on every labour job. The estate/probate agreement's §7 promised the personal representative, in writing, that
+  Havellin would *"Require all team members and contractors to sign a Non-Disclosure Agreement before accessing the property"*
+  — **a signed commitment, on the matters where the contents are most sensitive, that the firm does not perform.** Deleting
+  the checkbox alone would have left the clause promising it with nothing behind it. §7 now reads *"Engage every team member
+  and contractor under a written agreement carrying confidentiality obligations, executed before they work on any Havellin
+  engagement"* — the duty is unchanged in substance and **standing rather than per-job**.
+  - **⚠ THE CONVERSE IS THE HALF THAT MATTERS AND IT IS TESTED.** Deleting the bullet outright would be the opposite defect:
+    a confidentiality section on an estate engagement that says nothing about the crew is worse than one that overpromises,
+    because the representative is reading it to find exactly that. `agreement-rates` asserts the form carries no
+    `Non-Disclosure` in any wording AND still states the obligation AND that the living-client form never gains one.
+  - **⚠ THE STANDARD (LIVING-CLIENT) FORM NEVER MADE THE PROMISE.** Its §9 puts the duty on Havellin and permits disclosure
+    to *"its personnel, contractors, and vendors who need it"*. Untouched — do not "harmonise" the two forms by adding one.
+  - **✅ CONFIRMED BY ANTHONY THE SAME DAY, so the clause is true as written:** *"yes, everyone signs the 1099 before they
+    work."* Put to him deliberately, because *executed before they work on any Havellin engagement* is a promise on a signed
+    contract and had to hold for the worst case rather than the usual one. **If that process ever changes, this clause changes
+    with it** — it is the one sentence in either agreement that depends on a hiring practice rather than on anything the app does.
+- **⚠ THREE PRE-EXISTING ASSERTIONS PINNED THE OLD BOX AND BROKE CORRECTLY; ALL RESTATED, NONE DELETED** — `field-capture`'s
+  kept-list and its driven needle list, and `job-plan-stages`' *1 of 6 ticked*. The requirement is now the converse (the box is
+  on no job), which is the one worth pinning. A fourth site used `nda_signed` as an arbitrary fixture key for `planChk` and was
+  repointed to `coi_provided`, because a retired key left in a test reads as though the box still exists.
+- **⚠ THE PER-SERVICE BOX COUNTS ARE MEASURED, NOT ARITHMETIC.** Driven through the real `renderJobPlan`, same six-room
+  house, counting `type="checkbox"`: Home Editing **9→8**, Home Transition **28→27**, Home Cleanout **13→12**, Estate
+  Settlement **17→16**, Probate and Contested **18→17**. Home Prep unchanged at 6 — different renderer, no `PLAN_TASKS`.
+- **7071 committed checks** (+16). **All three changes revert-verified individually, ZERO green** — the band's two rows back
+  fails **5**, the NDA box back **4**, the estate form promising an NDA again **4**; baseline 0 before and after. ⚠ The sweep
+  ran on a **full copy of the repo in the scratchpad** rather than in place, because read-only agents were measuring
+  `havellin.html` in a browser at the time and a sweep that mutates the file under them would have produced false findings in
+  both directions. `tests/harness.js` resolves the app as `path.join(__dirname, '..', 'havellin.html')`, so a `tar` of the tree
+  minus `.git` is a complete, isolated test bed — worth knowing, and note that copying only `havellin.html` + `tests/` gives a
+  **10-failure baseline**, because suites also read the `.gs` files and the three HTML documents.
+- **⚠ FOUND IN PASSING, NOT FIXED, AND IT CORRECTS AN ANSWER I HAD ALREADY GIVEN ANTHONY: `houseFlagSummary` HAS ZERO LIVE
+  READERS.** Asked where the intake answers surface, I said the client list carries a *House flags* line in its expandable
+  detail row. It does not. `renderJobs` builds **54 lines of `detailHtml`** — phone, email, address, sqft, notes, *House flags*
+  — and then never appends it, under the comment *"Detail expand suppressed — click row to open Client Dashboard"*. So the
+  field is real in the source, dead on the screen, and the only thing that reads `houseFlagSummary` is that dead block.
+  **Measured in a browser rather than argued: `House flags` appears nowhere in the rendered panel and `#detail-7` does not
+  exist.** Two things follow — the flags surface on **four** screens, not five (dashboard, Job Plan header, room workspace,
+  and must-find/safety only on the Inventory tab); and there is a dead renderer here of exactly the shape this file records on
+  `privateNote` and `copyStripeLink`. Left alone deliberately: deleting 54 lines of a live renderer is not what *"make the
+  buttons horizontal"* asked for, and whether the summary should come BACK to the list is Anthony's call, not a cleanup.
+- **Verified end to end in headless Chromium on the real page**, and the pre-change build was
+  driven from `git show HEAD:havellin.html` rather than reasoned about:
+
+  | | HEAD | now |
+  |---|---|---|
+  | containers in `.jt-next` (document state) | `.jt-doc-acts` + `.jt-acts` = **2** | **1** |
+  | the four buttons' y | `659, 659, 696, 696` — two rows | **`659` ×4 — one row** |
+  | band height · page scrollHeight | 163px · 1401 | **126px · 1364** |
+  | eight lifecycle states swept | 2 rows on every document state | **1 row on every one** |
+  | the no-document state (`job_active`) | 95px, `.jt-acts` alone | **95px, unchanged** |
+  | one `.jt-btn-p` · duplicate onclicks · overflow 1440/390 · page errors | — | **1 · 0 · 0/0 · 0** |
+
+  The first `<style>` block goes 1142 → 1146 lines and **628 → 628 rules** — one hunk, four lines, all of it comment.
+- **⚠ TWO OF MY OWN COMMENTS OVERSTATED THE MEASUREMENT AND THE BROWSER AGENT CAUGHT BOTH.** I wrote that the buttons *"fit
+  across the card three times over"* (really **1.97×**) and that the row is *"wide enough for twelve"* (really **eight**). The
+  argument was right and the multipliers were invented. **This file's rule is measured, never asserted — and it applies to the
+  prose explaining a fix, not only to the fix.** Both corrected to the figures off the rendered page.
+- Manual **§9a-ii** (the band now describes one row, with a note carrying the measurement and Anthony's words), **§11** (the
+  stage table drops NDA from Before Day 1; the per-service counts; a new note with the contract correction and a
+  do-not-restore warning); playbook **§ the stages** (NDA off the Before Day 1 list, with why). Both `.md` copies hand-edited;
+  a stale sweep for `NDA` across all four files returns **only the notes explaining the change** plus two false positives on
+  the letters inside *CALENDAR* and *STANDALONE* — the shape this file records over and over. Tag balance clean on both HTML
+  files with the stylesheet stripped.
 
 ## ⚠⚠ THE FOLDS CAME OFF THE JOB ITSELF — TWO TOOLS AT THE TOP, THE JOB OPEN ON A THREAD, THE SCHEDULE ON THE HEADER (REBUILT 2026-09-20)
 Anthony, the morning after the stage rebuild, in four messages inside an hour. Off the Before Day 1 fold: *"I know we have the rest
@@ -2851,9 +2937,10 @@ asked which to take and chose all of them in one redeploy.
   Kitchen reads **PENDING** before and **LOCKED** after one tick of the watch with nobody reloading — 0
   redraws on a second tick over the same answer, 0 fetches while a write is queued. Overflow 0 at 1440 and
   390px on the dashboard, no page errors.
-- **⚠ NOTED, NOT INTRODUCED, NOT FIXED: the Job Plan overflows 94px at 390px**, on `plan-room-block-p1-15`
-  (the Garage card). Measured **identical before and after** against the pre-change tree, same element, same
-  number. It belongs to a layout pass, and it is on the device this tab is actually used on.
+- ~~**⚠ NOTED, NOT INTRODUCED, NOT FIXED: the Job Plan overflows 94px at 390px**, on `plan-room-block-p1-15`
+  (the Garage card).~~ **GONE — re-measured 0 at 390px on 2026-09-20 with a fully populated plan, and the element it
+  names has not existed since the rooms were rebuilt on 2026-09-19.** *Kept rather than deleted, per the standing rule
+  that a fixed flag left standing reads as outstanding work.*
 - Manual **§2** (two notes — the job merge with the redeploy and the re-record instruction, and the hours-log
   delete with the check-the-total instruction) and **§11** (the tab now follows the other device, the two
   things it deliberately will not do, and that nothing else polls); playbook a `.note` on Step 10 and **four**
@@ -3803,7 +3890,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/focused-knuth-pqw6ff`
+- Active feature branch: `claude/quirky-pasteur-bknj9m`
+  (was `claude/focused-knuth-pqw6ff`)
   (was `claude/estimate-view-client-dashboard-024he6`, then `claude/sharp-allen-1cc2ur`)
   ⚠ This session was ASSIGNED that branch, which is an older name still in the list below — a
   session's assignment wins over whatever is recorded here, so it is promoted rather than
@@ -3823,7 +3911,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/focused-knuth-pqw6ff:main`
+  `git push origin claude/quirky-pasteur-bknj9m:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -4150,9 +4238,10 @@ tab that tells him whether the business is converting.**
   client dropped remotely takes its row off the lost table live (*3 · 1 · 75% · $4,200*); and a job
   won on the other device moves the report through `jobsWatchTick` (*4 · 2 · 67%*). Overflow 0 at
   1440px, no page errors.
-- **⚠ NOTED, NOT INTRODUCED, NOT FIXED: the lost-prospects table overflows 88px at 390px.** Measured
-  **identical before and after** against the pre-change tree — it is the eight-column table, already
-  on the audit list with the Inventory tab's sideways scroll. Belongs to a layout pass, not this one.
+- ~~**⚠ NOTED, NOT INTRODUCED, NOT FIXED: the lost-prospects table overflows 88px at 390px.**~~ **GONE — closed by
+  the `.tbl-scroll` wrap of 2026-09-11 (the entry recording that fix is above this one), and re-measured 0 at 390px on
+  2026-09-20 with three lost prospects and a retained-deposit job on the tab.** *Kept rather than deleted, per the
+  standing rule.*
 - No document pass: neither the manual nor the playbook describes this tab's refresh behaviour, and
   nothing client-facing changed wording.
 
@@ -5971,14 +6060,11 @@ ships three standing bug fixes, and adds no buttons.
   Same trap as `.hf-tick`: a phone-scoped rule mistaken for a general one. The row wraps
   explicitly now and `.jt-lbl` takes the slack. Measured at 1400 / 1100 / 900 / 390px: no
   label wraps at any width.
-- **⚠ NOTED, NOT INTRODUCED, NOT FIXED: the drilldown overflows 83px at 1100px, 183px at
-  1000px and 283px at 900px.** Measured **identical before and after** against the
-  pre-change tree, so it belongs to a layout pass rather than this one — it is the band
-  between the desktop layout and the 820px phone breakpoint, the same shape as the
-  estimate tab's documented 63px at 1120px. **What DID move is the phone: the widest
-  element at 390px was the old strip's `tl-step` at 651px inside its sideways-scrolling
-  container, and is now the card itself at 379px.** The rail reflows where the strip
-  scrolled.
+- ~~**⚠ NOTED, NOT INTRODUCED, NOT FIXED: the drilldown overflows 83px at 1100px, 183px at
+  1000px and 283px at 900px.**~~ **GONE — re-measured 0 at all three widths on 2026-09-20, three
+  times independently, on a drilldown deliberately loaded with everything it can hold.** The rail and
+  track work since this note was written evidently closed it. *Kept rather than deleted, per the
+  standing rule that a fixed flag left standing reads as outstanding work.*
 - **The `.tl-strip` / `.tl-step` CSS is deliberately KEPT** although nothing reads it today. It is
   three lines, and removing a rule no test reads is how this stylesheet lost 368 lines once already.
 - No document pass needed: nothing user-facing changed wording, and the manual and playbook do not
@@ -8969,6 +9055,8 @@ teaching people to ignore it.
 - Last reconciled against the app: **2026-09-20 (thirty-second pass)** — both documents, against the three asks of the same
   morning: the brief no longer repeats the firearms banner on the plan, the alphabetical directory, and the fixed fee as the
   manager's figure with a warning that fires only when the estimate moved; see the entry at the top of this file.
+- Also on 2026-09-20, from the concurrent session merged here: *"Docs: the playbook still described the two-row band; §8a had no
+  record of the NDA clause"* — see that session's entry near the top of this file.
 - Prior pass **2026-09-20 (thirty-first pass)** — both documents, against the Job Plan rethink: the two
   tools folded at the top, the job open on a thread with a NOW node, the schedule strip on the plan header, the sentence-case boxes
   and the lone box that spans the row; see the entry at the top of this file.
