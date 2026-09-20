@@ -1184,7 +1184,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 3:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 5:23pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2009,7 +2009,6 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div id="fixed-price-chips" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;"></div>
         <div id="fixed-price-drift"></div>
-        <div id="fixed-price-warn" style="margin-top:6px;"></div>
       </div>
       </div>
 
@@ -4833,11 +4832,14 @@ function _svcChangeConsequences(prev, next, job) {
     out.push('The room grid opens up and concierge and specialist hours start billing. Score the house on the walkthrough — until you do, the estimate prices on square footage alone.');
     out.push('The prep vendors already entered stay, and still carry the ' + Math.round(prepFeeRate()*100) + '% fee.');
   }
-  if (isTMOnly(next) && !isTMOnly(prev)) {
-    out.push('Fixed price is not offered on probate matters — they bill time-and-materials on logged hours, itemized for the Personal Representative and the court. A fixed fee set here will be cleared.');
-  }
-  if (isTMOnly(prev) && !isTMOnly(next)) {
-    out.push('Fixed price becomes available again on this matter.');
+  // Fixed price is offered on every service since 2026-09-20, so a change of matter type no
+  // longer withdraws it and the two arms that said so are gone. What DOES move is the
+  // contingency the suggested fee carries — 20% on the living-client services, 25% on
+  // probate, 35% on contested — so the suggested flat fee reprices under a fixed-price
+  // estimate the moment the service changes. Say it: that figure is on the client's page.
+  if (fixedPriceBuffer(next) !== fixedPriceBuffer(prev)) {
+    out.push('The fixed-price contingency on this matter type is ' + Math.round(fixedPriceBuffer(next)*100)
+      + '% rather than ' + Math.round(fixedPriceBuffer(prev)*100) + '%, so the suggested flat fee changes. A fee you typed by hand stays as it is, and the panel will flag that the suggestion has moved.');
   }
   // Estate Settlement carries no case number, deadline or attorney of record; the two
   // probate services do, and nothing on this tab collects them.
@@ -5408,25 +5410,38 @@ function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS, fixedOnsit
   };
 }
 
-// ─── BILLING BASIS ────────────────────────────────────────────────────────────
-// Every service bills time-and-materials by default. The concierge may choose to quote
-// a firm flat fee instead on any job EXCEPT probate and contested probate, where the
-// Personal Representative's expenses are reviewed by the court and the defensible
-// posture is itemized hours on the record — a flat fee that can't be tied back to
-// logged time is exactly what a judge or an heir's counsel questions.
+// ─── BILLING BASIS ────────────────────────────────────────────────────────
+// Every engagement bills time-and-materials by default, and the concierge may quote a firm
+// flat fee instead on ANY of them. There is no service-keyed exclusion, and there must not
+// be one again.
 //
-// This is a hard rule, not a nudge. It used to be a warning that said "confirm this is
-// appropriate", which left the fee in place on a matter where it isn't defensible. The
-// toggle is now disabled for these two and the math ignores the flag even if a stale
-// checkbox arrives checked (a saved pre-rule estimate, or a service type changed after
-// the toggle was set).
+// ⚠⚠ PROBATE AND CONTESTED PROBATE WERE WITHHELD UNTIL 2026-09-20, AND THE RULE CAME OFF
+// BECAUSE ITS GROUND DISSOLVED — NOT AS A RELAXATION. isTMOnly(svcKey) returned true on
+// those two: the toggle was disabled, calcAll cleared a stale checked box, and the panel
+// showed the flat figure as an internal reference nobody outside the office ever saw. The
+// stated reason was that the Personal Representative's expenses are reviewed by the court
+// and "a flat fee that can't be tied back to logged time is exactly what a judge or an
+// heir's counsel questions". That sentence stopped being true the same morning this came
+// off: HOURS ARE LOGGED ON EVERY JOB NOW, fixed price included, mandatory for the concierge
+// (Anthony, 2026-09-20). The log exists on a flat-fee probate exactly as it does on a T&M
+// one — the fee is simply not billed FROM it. It can still be tied back to it.
 //
-// Estate Settlement is NOT on this list. It is a private engagement with a family or
-// trustee — no court reviews the fee — so a flat quote is available there, at the
-// concierge's discretion, like any other non-probate job.
-function isTMOnly(svcKey) {
-  return svcKey === 'probate' || svcKey === 'contested_probate';
-}
+// Anthony's own reason, and it is the other half: "executors or personal representatives
+// are going to want to know a number, not here's my best estimate of hours and I could go
+// over, and if I go over by 15% I'll just keep getting change orders to you." A
+// representative answerable to heirs and to a court wants a ceiling more than an
+// itemisation, and the change-order treadmill is the thing they are trying to avoid.
+//
+// ⚠ WHAT IS NOT WAIVED, and it is what keeps a flat fee defensible on a court-reviewed
+// matter: the hours are still recorded, and the CONTINGENCY on those two stays wider than
+// everywhere else (25% probate, 35% contested — see fixedPriceBuffer). Quoting a number
+// changes how Havellin is paid. It changes nothing about what the court may review.
+//
+// ⚠ THE ONE ENGAGEMENT WITH NO FIXED-PRICE TOGGLE IS HOME PREP, AND THAT IS NOT THE SAME
+// KIND OF RULE. Prep is fee-only by construction: computeEngineV3 zeroes every hour on it
+// and its whole revenue is prepFeeRate() of managed vendor spend, so there is no hourly
+// basis for a flat fee to replace and the toggle would price nothing. isPrep gates it
+// inside calcAll and always did — do not re-express that as a service exclusion here.
 
 // ─── LIVING CLIENT vs DECEASED CLIENT ────────────────────────────────────────
 // THE RULE, and every client-facing document must obey it: the person we are
@@ -5521,22 +5536,27 @@ function sameSvcFamily(a, b) {
   return !!fa && fa === svcFamily(b);
 }
 
-// ─── FIXED-PRICE BUFFER ───────────────────────────────────────────────────────
-// Contingency buffer added on top of the hourly estimate for fixed-price proposals.
-// Probate and contested probate keep a buffer figure because the panel still shows what
-// a flat quote WOULD run as an internal reference — it is never offered to the client.
-// Contingency added to the hourly basis when quoting a firm fixed fee. Flat 20% on every
-// service you can actually quote fixed — Estate Settlement was 25% and came down to match,
-// because 25% on top of an already-buffered hourly estimate reads as padding to a client
-// comparing quotes.
+// Contingency added to the hourly basis when quoting a firm fixed fee. 20% on the
+// living-client services — Estate Settlement was 25% and came down to match, because 25%
+// on top of an already-buffered hourly estimate reads as padding to a client comparing
+// quotes.
 //
-// Probate and contested probate keep higher numbers and are NOT an inconsistency: those
-// two are time-and-materials only (isTMOnly), so their buffer is never quoted to anyone.
-// It exists solely as the internal "what would a fixed fee have run" reference on this
-// tab, where a wider band on the riskiest work is the honest figure.
+// ⚠⚠ PROBATE 25% AND CONTESTED 35% ARE QUOTED FIGURES NOW, NOT AN INTERNAL REFERENCE.
+// Until 2026-09-20 those two were time-and-materials only, so these two numbers only ever
+// drove the "what a fixed quote would run" line on the Build Estimate panel and reached no
+// client. Fixed price is available on every service now, so they land on the personal
+// representative's own page, in front of the people the fee is reviewed by.
+//
+// Kept at 25 / 35 on Anthony's call rather than flattened to 20, and the reason is worth
+// keeping: the buffer IS the risk Havellin absorbs, and the change-order triggers the
+// estate agreement already lists — beneficiary disputes, legal holds and work stoppages,
+// ancillary probate in another state — are precisely the conditions that make a matter
+// run long. Under-buffering the riskiest work and then eating the overrun is the worse
+// error. The suggestion is only a starting figure in any case: the field is editable and
+// the Round chip is there, so the manager rounds it down by hand on most jobs.
 function fixedPriceBuffer(svcKey) {
-  if (svcKey === 'contested_probate') return 0.35;   // reference only — T&M billed
-  if (svcKey === 'probate')           return 0.25;   // reference only — T&M billed
+  if (svcKey === 'contested_probate') return 0.35;
+  if (svcKey === 'probate')           return 0.25;
   return 0.20;
 }
 
@@ -5662,15 +5682,11 @@ var _tc2UserSet = false;
 function toggleFixedPrice() {
   var el = document.getElementById('e-fixed');
   var on = el ? el.checked : false;
-  // The box is disabled on probate / contested matters, but guard here too: this is the
-  // only entry point that writes a fee, so a stale enabled checkbox must not be able to
-  // set one.
-  var svcEl = document.getElementById('e-svc');
-  if (on && svcEl && isTMOnly(svcEl.value)) {
-    if (el) el.checked = false;
-    on = false;
-    showFB('e-fb','warn','Probate and contested probate bill time-and-materials on actual logged hours — a fixed price is not available on these matters.');
-  }
+  // No service-keyed refusal here any more. This read isTMOnly(e-svc) and cleared the box
+  // on probate / contested probate; a flat fee is available on every engagement as of
+  // 2026-09-20 (see BILLING BASIS). Home Prep is gated by isPrep inside calcAll, which is
+  // where that one belongs — it is fee-only by construction rather than a policy call, so
+  // there is nothing here to refuse.
   var row = document.getElementById('fixed-amount-row');
   if (on && _fxAmtGet() <= 0 && window._fixedPriceSuggested) {
     _fxAmtSet(window._fixedPriceSuggested);
@@ -6586,34 +6602,31 @@ function calcAll() {
       : '';
   }
 
-  // Billing model: fixed-price (living jobs) vs itemized hourly / time-and-materials
-  // (Estate Settlement, Probate, Contested) — the latter bill on actual logged hours
-  // for Personal-Representative and court defensibility, with no fixed-price buffer.
-  // Fixed-price mode: quote a firm flat fee instead of hourly. Prep jobs are already
-  // fee-only, so fixed mode doesn't apply there.
-  // Billing basis. T&M is the default everywhere; the flat-fee option is withheld on
-  // probate / contested probate (see isTMOnly). Enforced in the UI as well as the math —
-  // a checked box sitting next to a fixed price the engine is ignoring reads as a bug,
-  // so clear it and say why rather than quietly discarding the number.
-  var _tmOnly = isTMOnly(svcKey);
+  // Billing basis. T&M is the default on every engagement and the concierge may quote a
+  // firm flat fee instead on any of them. The service-keyed refusal that used to live here
+  // (isTMOnly — probate and contested probate, the toggle disabled and a stale checked box
+  // cleared with a notice) came off on 2026-09-20; the BILLING BASIS note above
+  // fixedPriceBuffer records why, and the short version is that hours are logged on every
+  // job now, so a flat fee on a probate matter can still be tied back to the record.
+  //
+  // ⚠ PREP IS STILL EXCLUDED AND IT IS NOT THE SAME KIND OF RULE, so do not collapse the
+  // two. Home Prep books no hours at all — computeEngineV3 zeroes them — and earns
+  // prepFeeRate() of vendor spend, so there is no hourly basis for a flat fee to replace
+  // and the toggle would price nothing. The whole control is hidden on prep rather than
+  // disabled-with-a-reason, because on that engagement the question does not arise.
   var _fxEl = document.getElementById('e-fixed');
-  var _fixedCleared = false;
-  if (_fxEl) {
-    _fxEl.disabled = _tmOnly;
-    if (_tmOnly && _fxEl.checked) { _fxEl.checked = false; _fixedCleared = true; }
-  }
-  var _fxWrap = document.getElementById('fixed-toggle-wrap');
-  if (_fxWrap) _fxWrap.style.opacity = _tmOnly ? '0.55' : '';
+  // ⚠ NOTHING RE-ENABLES THE BOX HERE, DELIBERATELY. The first cut of this replaced the
+  // old `_fxEl.disabled = _tmOnly` with `_fxEl.disabled = false`, which looks like tidying
+  // and is not: applyEstimateLock disables every input in #panel-estimate on a SUBMITTED or
+  // APPROVED estimate, and calcAll runs after it — so that line would have handed the
+  // billing basis back to anyone looking at an estimate a manager is reviewing, and left
+  // the data-lock-restore bookkeeping inconsistent as well. Nothing disables this box any
+  // more except the lock, so nothing here should speak to it. Same for the wrapper's
+  // opacity, which only the retired probate arm ever dimmed.
   var _fxSub = document.getElementById('fixed-toggle-sub');
-  if (_fxSub) _fxSub.textContent = _tmOnly
-    ? 'Not available on probate or contested probate — these bill time-and-materials on actual logged hours, itemized for the Personal Representative and the court.'
-    : 'Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.';
+  if (_fxSub) _fxSub.textContent = 'Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.';
   var isFixed = _fxEl ? _fxEl.checked : false;
-  if (isPrep || _tmOnly) isFixed = false;
-  if (_fixedCleared) {
-    var _fxRow = document.getElementById('fixed-amount-row');
-    if (_fxRow) _fxRow.style.display = 'none';
-  }
+  if (isPrep) isFixed = false;
   // The suggested fee, computed here rather than inside the panel block below, because
   // the field TRACKS it until the manager types a number and so has to be resolved before
   // fixedAmount is read. Probate / contested keep their own reference buffer.
@@ -6639,26 +6652,18 @@ function calcAll() {
   var fpNote  = document.getElementById('fixed-price-note');
   if (fpPanel && havellinTotalDiscounted > 0 && !isPrep) {
     fpPanel.style.display = 'block';
-    if (_tmOnly) {
-      // Probate / contested probate bill on actual logged hours. We still surface what a
-      // fixed-price quote WOULD run, with the contingency buffer, as an internal manager
-      // reference — this panel is on the Build Estimate tab only, never on the
-      // client-facing document, and it does not change the billing.
-      var _refBuf = _fpBuf;
-      var _refFixed = _fpFee;
-      if (fpLabel) fpLabel.textContent = 'Time & materials — billed on actual logged hours';
-      if (fpVal)   fpVal.textContent   = '$' + Math.round(havellinTotalDiscounted).toLocaleString();
-      if (fpNote)  fpNote.innerHTML    = 'The final invoice bills actual TC + PS hours, itemized for the Personal Representative and court — no fixed-price contingency, vendor costs at cost. '
-        + '<span style="color:var(--gray-dk);">Internal reference: a fixed-price quote would run <strong>$' + _refFixed.toLocaleString() + '</strong> (incl. ' + Math.round(_refBuf * 100) + '% contingency).</span>';
-    } else {
-      // The expedited premium is already inside havellinTotalDiscounted, so it carries
-      // into the suggested fixed fee without being applied a second time here.
-      var buf = _fpBuf, fpFee = _fpFee;
-      if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services × ' + Math.round(buf * 100) + '% contingency';
-      if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
-      if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
-        + (isRush ? ' Includes the ' + Math.round(RUSH_PCT * 100) + '% expedited-delivery premium.' : '');
-    }
+    // Probate and contested probate used to take a separate arm here that read
+    // 'Time & materials — billed on actual logged hours' and offered the flat figure as an
+    // internal reference only. Fixed price is available on every service since 2026-09-20,
+    // so there is one arm: the suggested fee, on whatever contingency this matter type
+    // carries.
+    // The expedited premium is already inside havellinTotalDiscounted, so it carries
+    // into the suggested fixed fee without being applied a second time here.
+    var buf = _fpBuf, fpFee = _fpFee;
+    if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services × ' + Math.round(buf * 100) + '% contingency';
+    if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
+    if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
+      + (isRush ? ' Includes the ' + Math.round(RUSH_PCT * 100) + '% expedited-delivery premium.' : '');
     // When fixed-price mode is ON, the panel reflects the CHOSEN flat fee (the number
     // the client will actually see) plus the margin vs. the hourly basis.
     if (isFixed) {
@@ -6722,16 +6727,10 @@ function calcAll() {
     fpPanel.style.display = 'none';
   }
 
-  // Warning for probate / contested matters, which typically require T&M billing.
-  var fpWarnEl = document.getElementById('fixed-price-warn');
-  if (fpWarnEl) {
-    // The old text here warned that fixed pricing on a probate matter "may not be
-    // defensible" and asked the estimator to confirm — while leaving the fee in place.
-    // The rule is now enforced, so the only thing left to report is a flag we cleared.
-    fpWarnEl.innerHTML = _fixedCleared
-      ? '<div class="alert a-warn" style="font-size:11px;margin-top:0;">&#9888; Fixed pricing was turned off — this is a probate matter and bills time-and-materials on actual logged hours. Any flat fee entered has been discarded; the quote below is the hourly basis.</div>'
-      : '';
-  }
+  // The 'fixed pricing was turned off' notice is GONE, with the element it wrote into.
+  // It reported a flag calcAll set when it cleared a checked box on a probate matter, and
+  // nothing clears one any more. A retired notice that still compiles is how the rule it
+  // describes comes back.
 
   // Blended rate badge
   var blendedBadgeEl = document.getElementById('blended-rate-badge');
@@ -9135,7 +9134,17 @@ function _cePhases(e, job) {
   }
 
   // ── Phase 5 · Close-out ─────────────────────────────────────────────────────
-  var closeBody = 'We walk every room, closet, attic, garage and outdoor space with you and confirm the property is finished. Vendor invoices are collected and reconciled, hours are reconciled against the estimate, and your final invoice is generated from the actual logged hours — not from the estimate.';
+  // ⚠⚠ THIS SENTENCE WAS FALSE ON EVERY FIXED-PRICE JOB AND HAD BEEN SINCE FIXED PRICING
+  // SHIPPED. It closed "your final invoice is generated from the actual logged hours — not
+  // from the estimate", which is what renderInvoice does on T&M and the exact opposite of
+  // what it does on a flat fee: _fixed anchors every stage to _fixedTotal and the final
+  // never consults the log. So the stage narrative contradicted this document's own Terms
+  // four inches below it, on the one page a client reads end to end. _cePhases carried no
+  // fixedPrice reference at all. Found while opening fixed price up to probate (2026-09-20),
+  // which makes a flat fee the common case on exactly the matters that read this closely.
+  var closeBody = e.fixedPrice
+    ? 'We walk every room, closet, attic, garage and outdoor space with you and confirm the property is finished. Vendor invoices are collected and reconciled, and your final invoice closes out the agreed fixed fee — it does not move with the hours worked.'
+    : 'We walk every room, closet, attic, garage and outdoor space with you and confirm the property is finished. Vendor invoices are collected and reconciled, hours are reconciled against the estimate, and your final invoice is generated from the actual logged hours — not from the estimate.';
   // The finishing trades had no home in the sequence at all: a cleaning vendor
   // appeared on the estimate and was named nowhere in the method.
   if (vend.finish.length) {
@@ -9158,7 +9167,12 @@ function _cePhases(e, job) {
   if (hasColl) records.push('A disposition record for every collection: where it went, through whom, and for what');
   records.push('Every third-party vendor invoice, collected and reconciled');
   if (hasDisp) records.push('Donation receipts, for your tax records');
-  records.push('A final invoice built from the actual logged hours, reconciled line by line against this estimate');
+  // Same defect one list down: what the client is left HOLDING. A fixed-fee engagement does
+  // not hand back an hours reconciliation, and promising one on the records list is a promise
+  // the final invoice cannot keep.
+  records.push(e.fixedPrice
+    ? 'A final invoice closing out the agreed fixed fee, with every approved change order itemised against it'
+    : 'A final invoice built from the actual logged hours, reconciled line by line against this estimate');
   // The court-grade records exist only where Havellin produced the inventory. On a
   // capture-only job the custody log still exists (we handled every listed item) but the
   // valued inventory and the appraisals are counsel's; on a no-documentation job none of it
@@ -30135,7 +30149,13 @@ function probateAgreementHtml(job, est) {
   content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney); tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
   // SECTION 3: FEES
   content += secHdr(3,'Fees, Billing &amp; Payment Terms');
-  content += subHdr('3.1 Hourly Rate Structure');
+  // The rate card below STAYS on a fixed-fee engagement and is load-bearing there: the
+  // Fixed Project Fee paragraph under this table says the hourly rates "apply only to
+  // Change-Order work authorized beyond that scope", so removing them would leave a signed
+  // contract with a change-order mechanism and no rate to price it at. Only the heading
+  // moves — a section called "Hourly Rate Structure" on a contract whose fee is firm is the
+  // kind of internal contradiction this file records being construed against the drafter.
+  content += subHdr(isFixedAgr ? '3.1 Fee Structure' : '3.1 Hourly Rate Structure');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Role</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Billing Rate</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Description</th></tr></thead><tbody>';
   // ⚠ READ FROM THE ESTIMATE — see agrBillingRates. A literal here is how this table came to
@@ -30203,7 +30223,16 @@ function probateAgreementHtml(job, est) {
     'Discovery of specialized assets requiring additional appraisal: firearms, significant art, wine collections, cryptocurrency',
     'Hoarder conditions, biohazard materials, pest infestation, or structural issues affecting work scope',
     'Client request to add services not included in original scope',
-    'Actual hours projected to exceed estimate by more than 15%',
+    // ⚠ AN HOURS TRIGGER ON A FIXED FEE DESCRIBES NOTHING THAT CAN HAPPEN. §3.1 states two
+    // paragraphs above that the price is firm and does not vary with the actual hours worked,
+    // so a change-order trigger keyed to hours overrunning the estimate is a mechanism that
+    // cannot fire — and a contract asserting both is read against us. On a flat fee the
+    // trigger is a change in SCOPE, which is what §3.2 already says and what the rest of this
+    // list is made of. Live on every fixed-price Estate Settlement before 2026-09-20; opening
+    // fixed price up to probate is what surfaced it.
+    (isFixedAgr
+      ? 'Any work requested by the Client, or required by conditions at the property, beyond the scope of work described in Exhibit A'
+      : 'Actual hours projected to exceed estimate by more than 15%'),
     'Discovery of contested assets, disputes among beneficiaries, or legal holds requiring work stoppage',
     'Multi-state property requiring ancillary probate coordination not identified at intake'
   ];
@@ -30348,7 +30377,59 @@ function probateAgreementHtml(job, est) {
   content += secHdr(8,'Termination');
   content += subHdr('8.1 Termination by Client');
   content += pp('The Client may terminate this Agreement at any time with written notice. Upon termination:');
-  var termC = [
+  // ⚠⚠ A FIXED-FEE CONTRACT WITH NO PARTIAL-TERMINATION FORMULA. Every bullet below was
+  // written for T&M — "responsible for all hours worked", "a final invoice reflecting actual
+  // hours and materials" — and §3.1 states three sections above that on a fixed fee the price
+  // is firm and does not vary with the actual hours worked. So a fixed-price estate matter
+  // terminated at 60% had TWO answers to what is owed and they contradicted each other, on a
+  // contract a probate court may read. Anthony, 2026-09-20: "i don't want anything about hours
+  // worked if we are going down the fixed price route. what if we've worked fewer hours than
+  // underpin the model/pricing."
+  //
+  // ⚠⚠ HE IS RIGHT AND THE REASON IS THE GOOD ONE: an hours-based exit payment claws back
+  // exactly the upside the 20–35% contingency was paid for. Fixed price transfers the risk —
+  // Havellin eats the overrun and keeps the gain on an efficient job — and computing the exit
+  // from hours reverses that on the one job where it was earned.
+  //
+  // ⚠⚠ WHAT IT IS NOT IS "THEY OWE THE FULL FEE", WHICH IS WHERE HE STARTED AND WHERE THIS
+  // WOULD HAVE BROKEN. A clause taking the whole contract price regardless of work performed
+  // is tested as liquidated damages and survives only if the figure is a reasonable forecast
+  // of actual loss made at signing; the full price on a matter stopped at 10% is not, because
+  // the cost was never incurred and the crew is free to take other work. The failure mode is
+  // the bad one — a court that calls it a penalty strikes the clause OUTRIGHT and drops us to
+  // common-law damages, i.e. below what a smaller enforceable number would have collected.
+  // On probate it is worse still: the representative pays from estate funds and the fee is
+  // reviewed, so an over-reaching exit clause can taint the reasonableness finding on the fee
+  // itself. Over-reaching here buys nothing and can cost the protection entirely.
+  //
+  // SO: A STAGE-BASED EARN-OUT ON THE 50/25/25 SCHEDULE THE CLIENT ALREADY SIGNED (§3.3).
+  // No hours, no new arithmetic, and it reads as compensation rather than a penalty because
+  // each step is tied to a milestone actually reached. It also lands where Anthony wanted in
+  // every realistic case: nobody terminates a concierge engagement on day one for no reason,
+  // and a mid-job termination differs from "the full amount" only by the last 25%.
+  //
+  // ⚠ THE DEPOSIT IS EARNED ON SIGNATURE, NOT "AFTER PROJECT START". The old bullet said the
+  // latter and nothing in this Agreement defines project start, so a client who signed, paid
+  // and cancelled the day before the crew arrived got all of it back — the opposite of the
+  // one thing Anthony asked to protect ("50% up front is gone no matter what happens").
+  //
+  // ⚠ AND "FOR CAUSE" IS DEFINED AND CURABLE, which is the single most important line here.
+  // If cause meant "the client is unhappy", every convenience termination gets relabelled and
+  // the earn-out protects nothing. It is a material breach, described in writing, uncured
+  // after seven days — and it is stated inline rather than cross-referenced, because §8.2 is
+  // Havellin's own right to terminate and says nothing about cure.
+  //
+  // ⚠ NOT A LAWYER, AND FLORIDA LIQUIDATED DAMAGES IS FACT-SPECIFIC. This goes to counsel with
+  // the firearms protocol before the first real engagement signs on a flat fee.
+  var termC = isFixedAgr ? [
+    'Havellin will cease all work and secure the property upon receipt of written notice',
+    'The fixed fee is earned in stages against the payment schedule in Section 3.3. The deposit is earned in full on signature of this Agreement and is not refundable. Seventy-five percent (75%) of the fixed fee is earned once the midpoint milestone stated in that schedule is reached. The full fixed fee is earned on completion of the scope of work described in Exhibit A.',
+    'The Client remains responsible for the portion of the fixed fee earned as of the termination date, together with any third-party vendor commitments Havellin has entered into on the Client\'s behalf that cannot be cancelled without charge',
+    'No part of the fee is calculated from hours worked. The fixed fee does not vary with the time Havellin spends, on termination or otherwise',
+    'Where Havellin is in material breach of this Agreement and has not cured that breach within seven (7) days of the Client\'s written notice describing it, no further portion of the fee is earned from the date of that notice, and Havellin will refund any amount it holds above the portion earned before it',
+    'A final invoice stating the portion of the fixed fee earned will be issued within 10 business days of termination',
+    'Havellin will provide the Client with all documentation completed through the termination date'
+  ] : [
     'Havellin will cease all work and secure the property upon receipt of written notice',
     'The Client is responsible for all hours worked and materials used through the termination date',
     'The deposit is non-refundable if termination occurs after project start',
@@ -30786,9 +30867,29 @@ function agreementHtml(job, est) {
   // ── SECTION 12 ────────────────────────────────────────────────────────────
   content += agrSection('12. Term and Termination',
     p(b('12.1 Term.')+'  This Agreement commences on the Effective Date and continues until Services are completed, unless earlier terminated.')+
-    p(b('12.2 Termination for Convenience.')+'  Either Party may terminate for convenience upon 7 days\' written notice. Client shall pay Contractor for all Services performed and costs incurred through the termination date, including non-cancelable vendor commitments.')+
+    // ⚠⚠ THE FIXED ARM IS NEW AND THE T&M ONE IS UNTOUCHED. "Client shall pay Contractor for
+    // all Services performed" is an hours-flavoured measure, and §3.3 states on a fixed fee
+    // that the price does not change based on the actual hours worked — the same contradiction
+    // the estate form's §8.1 carried. The earn-out below is the one decided on 2026-09-20; the
+    // whole argument for it, and against "they owe the full fee", is written out at that §8.1.
+    (isFixedAgr
+      ? p(b('12.2 Termination for Convenience.')+'  Either Party may terminate for convenience upon 7 days\' written notice.  '+b('The fixed project fee is earned in stages against the payment schedule in Section 3.2: the deposit is earned in full on signature of this Agreement and is not refundable; seventy-five percent (75%) of the fixed project fee is earned once the midpoint milestone stated in that schedule is reached; and the full fixed project fee is earned on completion of the scope of work described in the Estimate.')+'  Client shall pay the portion earned as of the termination date, together with any non-cancelable vendor commitments Contractor has entered into on Client\'s behalf.  No part of the fee is calculated from hours worked; the fixed project fee does not vary with the time Contractor spends, on termination or otherwise.')
+      : p(b('12.2 Termination for Convenience.')+'  Either Party may terminate for convenience upon 7 days\' written notice. Client shall pay Contractor for all Services performed and costs incurred through the termination date, including non-cancelable vendor commitments.'))+
     p(b('12.3 Termination for Cause.')+'  Either Party may terminate upon written notice if the other Party materially breaches any provision and fails to cure within 7 days of written notice. Contractor may terminate immediately if: (a) conditions at the property pose an immediate threat to health or safety; (b) Client behavior is abusive, threatening, or obstructive; or (c) Client fails to make required payments more than 14 days past due.')+
-    p(b('12.4 Effect of Termination.')+'  Upon termination, Contractor will cease work, remove its personnel and equipment, and provide a final invoice. Any deposit will be applied to amounts due. If the deposit exceeds the amount owed, Contractor will refund the unused balance less any non-cancelable costs.')
+    // ⚠⚠ THIS CLAUSE ACTIVELY REFUNDED THE DEPOSIT ON A FIXED FEE, WHICH IS THE OPPOSITE OF
+    // WHAT WAS ASKED FOR. "If the deposit exceeds the amount owed, Contractor will refund the
+    // unused balance" is right under a T&M reading, where the amount owed is the hours worked;
+    // under a flat fee terminated early it hands most of the 50% back. Anthony, 2026-09-20:
+    // "i'm willing to take some risk after getting 50% up front, and that is gone no matter
+    // what happens. we need to protect that payment." The estate form at least said the deposit
+    // was non-refundable after project start; the living-client form said nothing at all.
+    //
+    // ⚠ THE ONE EXIT IS AN UNCURED MATERIAL BREACH BY US, and here it CAN be cross-referenced:
+    // §12.3 already carries the notice-and-seven-days-to-cure mechanism, unlike the estate
+    // form's §8.2.
+    (isFixedAgr
+      ? p(b('12.4 Effect of Termination.')+'  Upon termination, Contractor will cease work, remove its personnel and equipment, and provide a final invoice stating the portion of the fixed project fee earned under Section 12.2. The deposit is applied against that amount.  '+b('The deposit is earned on signature and is not refundable')+', except where Client terminates under Section 12.3 for a material breach by Contractor that Contractor has failed to cure, in which case Contractor will refund any amount it holds above the portion earned.')
+      : p(b('12.4 Effect of Termination.')+'  Upon termination, Contractor will cease work, remove its personnel and equipment, and provide a final invoice. Any deposit will be applied to amounts due. If the deposit exceeds the amount owed, Contractor will refund the unused balance less any non-cancelable costs.'))
   );
 
   // ── SECTION 13 ────────────────────────────────────────────────────────────
