@@ -453,7 +453,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['renderJobPlan', 'planTaskCtx', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'planDerivedHtml', 'planDerivedLines', '_planRooms', '_planRoomStatus',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
-            'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey'],
+            'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
+            // The stages (2026-09-19, evening): the gate chips, the fold counts, the current stage.
+            'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr'],
       vars: ['SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders'],
       stubs: {
@@ -496,11 +498,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // behind a tap on "Phase 1", and the driven Playwright run could not click a room at all.
     // domStub has no notion of display, so nothing in this file could see it. The rooms sit
     // ABOVE the accordion now; the assertion is on rendered ORDER, which is what a closed body hides.
-    ok(out.indexOf('id="plan-rooms-7"') < out.indexOf('id="phase-body-'),
-       '⚠ the room list sits above the phase accordion, never inside a closed phase body');
+    // ⚠ RESTATED 2026-09-19 (evening). The rooms sat ABOVE every fold for a day; Anthony read that as out
+    // of order (vendors and the pre-job call come first in a real job). The requirement was never
+    // "first" — it was NEVER INSIDE A CLOSED BODY. They sit between Before Day 1 and Hours now, and the
+    // end marker planPhaseWrap emits is what lets a string prove it. job-plan-stages.test.js has the rest.
+    ok(out.indexOf('id="plan-rooms-7"') > out.indexOf('<!--/stage-p0-->') && out.indexOf('id="plan-rooms-7"') < out.indexOf('id="phase-body-hours"'),
+       '⚠ the room list sits between two folds, never inside a closed phase body');
 
     // The lines and the boxes.
-    ['p0', 'p1', 'p2', 'p4'].forEach((ph) => has(out, 'plan-derived-' + ph + '-7', 'Phase ' + ph + ' has its derived lines'));
+    // ⚠ RESTATED 2026-09-19 (evening). Before Day 1's derived lines are the GATE CHIPS at the top of the
+    // plan and the rooms-locked line is the count on the rooms header; only Midpoint & pickups and
+    // Close-out still draw a derived block. Four surfaces, one rule each.
+    has(out, 'id="plan-gates-7"', 'the gates render as a chip row');
+    ['agreement_signed', 'deposit_received', 'attorney_on_file'].forEach((k) => has(out, 'data-gate="' + k + '"', k + ' is a gate chip'));
+    has(out, '<span class="rl-meta">0 of 2 locked &middot; 0 cleared</span>', 'the rooms header carries the locked count');
+    ['p2', 'p4'].forEach((ph) => has(out, 'plan-derived-' + ph + '-7', ph + ' still has its derived lines'));
+    lacks(out, 'plan-derived-p0-7', 'and Before Day 1 does not repeat the chips as lines');
     ["'firearms_in_place'", "'nfa_check'", "'docs_sequestered'", "'cash_logged'", "'coc_pickup_present'", "'shred_done'",
      "'broom_clean'", "'home_empty'", "'satisfaction_call'", "'precall'", "'nda_signed'", "'crew_briefed'"]
       .forEach((k) => has(out, k, k + ' is a real box'));
@@ -598,12 +611,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(live, 'capture="environment" style="display:none;" onchange="attachJobPlanPhoto', 'no native inputs on room cards');
 
     // The overlays are siblings of the panels, never inside the container the plan rewrites.
-    const ws = src.indexOf('<div id="room-ws"></div>'), cam = src.indexOf('<div id="field-cam"></div>');
+    const ws = src.indexOf('<div id="room-ws"'), cam = src.indexOf('<div id="field-cam"></div>');
     ok(ws > 0 && cam > 0, 'both containers exist in the markup');
     const jp = src.indexOf('<div id="job-plan-content">');
     ok(ws < jp && cam < jp, 'and sit outside #job-plan-content, which innerHTML rewrites on every redraw');
-    has(src, '#room-ws{position:fixed', 'the workspace is fixed full-screen');
+    has(src, '#room-ws{position:fixed;inset:0;', 'the workspace overlay is fixed over the whole viewport');
     has(src, '#field-cam{position:fixed', 'and so is the camera');
     has(src, 'z-index:1200', 'above the modal layer');
+    // ⚠ A POP-UP, NOT A PAGE (2026-09-19, late evening). Anthony read the full-screen takeover as leaving
+    // the Job Plan for a new web page. The overlay is a dimmed backdrop now and the dialog is .ws-panel,
+    // centred and capped on a desk, the whole screen on a phone; the backdrop and Esc both close it.
+    has(src, '#room-ws{position:fixed;inset:0;background:rgba(', 'the overlay is a dimmed backdrop, not a cream page');
+    has(src, '.ws-panel{display:flex;flex-direction:column;width:100%;max-width:760px;', 'the dialog is capped at 760px on a desk');
+    has(src, '@media (max-width:820px){#room-ws{padding:0;}.ws-panel{max-width:none;max-height:none;height:100%;border-radius:0;}}', 'and IS the screen on a phone');
+    has(src, '<div id="room-ws" onclick="if(event.target===this)closeRoomWorkspace()">', 'a tap on the backdrop closes it — the house pattern on every modal overlay');
+    has(fn('_paintRoomWorkspace'), '<div class="ws-panel" role="dialog" aria-modal="true">', 'the painter wraps the workspace in the panel');
+    const esc = src.slice(src.indexOf("document.addEventListener('keydown', function(e){\n  if (e.key !== 'Escape') return;"));
+    has(esc.slice(0, 700), 'if (_roomWs.open) { closeRoomWorkspace(); return; }', 'Esc closes the workspace like any other dialog');
+    ok(esc.indexOf('if (_fieldCam.open) { closeFieldCamera(); return; }') < esc.indexOf('if (_roomWs.open)'), 'and the camera above it closes first');
   }
 };

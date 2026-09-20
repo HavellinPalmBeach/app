@@ -1,5 +1,128 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE JOB PLAN RUNS IN THE ORDER A CONCIERGE RUNS A JOB, AND THE PHASE NUMBERS ARE GONE (REBUILT 2026-09-19, LATE EVENING)
+Anthony, reading the plan the field-capture build shipped that afternoon: *"the rooms come before the phase zero pre-job
+authority, so that seems out of order … vendor and partner sourcing should be at the top before we get to the rooms, because
+we're going to make these calls and line these people up before the job even starts … there's only phase two and phase four,
+there's no phase three … apply some human logic to how we would run a job and the order in which these things should present
+themselves."* Then, on what should fold: the hours when nobody is entering them, the pre-job authority as flags rather than a
+section, the call notes not a section of their own, the vendors at the top and collapsible; and the room rows *"take up a lot of
+horizontal real estate — maybe three columns."* He liked the room workspace and it is untouched. Seven decisions were put to
+him and he took all seven: **"Go, build it. then update manual and playbook."** App-only, no redeploy.
+
+- **⚠⚠ HE WAS RIGHT ON EVERY POINT, AND THE MORNING'S FIX IS WHAT PRODUCED THE DISORDER.** The rooms sat ABOVE the accordion
+  because the first cut had put them inside Phase 1, where a closed fold hid the camera — that fix bought reachability and
+  cost chronology. Vendors and collections sat INSIDE a folded Phase 0, below the work they precede. And Phase 3 is Move Day,
+  which only Home Transition has, so every other service counted **0, 1, 2, 4** and read as a form with a page missing.
+- **THE ORDER NOW, top to bottom:** gate chips → **Vendors & partners** (folded, *N of M confirmed* on the fold) → **Before
+  Day 1** (the pre-job call as a box, its notes as a box under it, access & crew) → **Rooms** (the cards, never folded, the
+  four in-house boxes under the grid) → **Hours & daily close** (folded, today's hours on the fold) → **Midpoint & pickups** →
+  **Move day** (Transition only) → **Close-out**. Named stages; **the task keys `p0`…`p4` are unchanged underneath**, because a
+  saved tick is keyed by them and this file records what renaming a key costs — every tick made since the morning carries.
+- **⚠⚠ THE ROOMS SIT BETWEEN TWO FOLDS AND ARE NEVER INSIDE ONE, AND THE TEST PROVES POSITION, NOT PRESENCE.** `planPhaseWrap`
+  now closes every stage with `<!--/stage-ID-->`, so `job-plan-stages` asserts the rooms container lands after
+  `<!--/stage-p0-->` and before `phase-body-hours` — the thing a closed body hides. The browser then clicks a card and opens
+  the workspace, because *the stub proves what a function returns; only the browser proves what a person can reach.*
+  Putting the rooms back above the vendors fails 4; folding the in-house boxes away from them fails 6 and throws 1.
+- **⚠⚠ THE HOURS LOG IS STATIC MARKUP AND IT IS MOVED, NOT REBUILT.** `#plan-log-section` — the entry form, the summary, the
+  projection, the history — has always sat above the plan as fixed HTML, and everything the hours code writes to is an id
+  inside it. Its place in the order is under the rooms, so `_placeHoursSection` moves the node into `#plan-hours-slot` after
+  every render and `_parkHoursSection` moves it back outside `#job-plan-content` BEFORE anything rewrites that container:
+  **an `innerHTML` write over a container holding the form destroys the form, its half-typed entry and every id.** Parked is
+  exactly where it always was, so a prep plan (no slot) reads as before and hides it as before. Driven in the browser across
+  7 → 8 → 9 → 10 (prep) → 7 and a redraw: **one node in the DOM at every step**, `#log-job` following the job. Dropping the
+  slot fails 1 and throws 1; dropping either half of park/place fails 1 each; dropping them from `_repaintPlan` fails 1.
+- **⚠ THE GATES ARE ONE ROW OF CHIPS, AND BEFORE DAY 1 COUNTS ITS TICKS ONLY.** `planGateChipsHtml` renders the `p0` derived
+  lines (agreement signed, deposit received, the Letters, the §733.604 deadline, the attorney) plus a **Vendors lined up**
+  chip, green or red, with every red chip's fix printed under the row — a tooltip is unreachable on the iPad this tab is
+  worked from. `planStageMeta` therefore counts ticks alone for `p0`, or the same five facts would be reported twice, once as
+  chips and once as *still open*. Repeating them as lines inside the fold fails 3; dropping the chips fails 5 and throws 1.
+- **⚠ "LINED UP" NEVER COUNTS THE LOGISTICS SLOTS, and that answers Anthony's question about them.** The end-of-job logistics
+  (junk removal, dumpster, shredding, storage, movers — `LOGISTICS_CATEGORIES`) are **five standing placeholders on every
+  labour job**, deduped against whatever the estimate already carries, never populated from it. `vendorSourcingProgress`
+  counts service vendors at Confirmed, collection partners assigned and prep lines Confirmed, and nothing else — a job with no
+  dumpster is not a job with a vendor missing. Counting them fails 2.
+- **⚠ THE STAGE THE JOB IS IN OPENS BY ITSELF, ONCE PER JOB PER SESSION, AND NOTHING ABOUT IT IS PERSISTED.**
+  `planCurrentStage`: every room cleared and the midpoint paid → Close-out; every room locked → Midpoint & pickups; the job
+  active → nothing but the rooms (never folded); anything unconfirmed on the estimate → Vendors; else Before Day 1. **The
+  locked test is asked before the active test on purpose** — an active job with every room locked is at the midpoint, not
+  in the house. `_planOpenStageFor` keys on `_planLastJob`, so a redraw keeps whatever the crew opened and a different job
+  starts from its own stage; `togglePhase` still touches no store (the existing `lacks()` on `saveJobPlan` covers it) and
+  the browser reloads the page to prove the open set comes back from the rule and not from a record. The four arms fail 1
+  each when reverted; the reset-on-every-redraw revert fails 1.
+- **⚠ THE HOURS FOLD WARNS IN AMBER ON AN ACTIVE JOB WITH NOTHING LOGGED TODAY**, the one guard Anthony asked for: a closed
+  card must not hide a day that was never written down. `planHoursMeta` reads `jobLogEntries` (the live view, so a voided
+  line does not count) and `_todayStr()` (local calendar, never UTC); the fold reads *today 7 hrs · 7 of 14 logged* the
+  moment hours land. Dropping the warning fails 1.
+- **THE ROOM CARDS ARE A CSS GRID: three across on a desk, two under 1100px, one under 820px.** The name and the status pill
+  on the top line, the counts under it, the walkthrough note on one truncated line. Measured in the browser: **3 columns / 1
+  row at 1440, 2 / 2 at 900, 1 / 3 at 390**, overflow 0 at each. One column on a desk fails 1; the note back inside the name
+  fails 1.
+- **⚠⚠ THE ROOM WORKSPACE IS A POP-UP OVER THE PLAN, NOT A PAGE — added mid-build on Anthony's message, before anything was
+  committed.** Off a screenshot of the build then on `main` (full-width rows): *"Did I mention that this is a massive waste of
+  space? … maybe we should go back to having … three rooms across rather than one. And honestly, instead of opening a new
+  browser window, maybe we just open a pop-up so when I click on the entryway foyer, it gives me a pop-up … and I don't go
+  to a new web page … the problem all along has been that this job tab extends on and on. And it feels overwhelming."* The
+  three columns and the folds were already in this build; the third ask was new and small. `#room-ws` was a fixed,
+  cream, full-viewport takeover (`inset:0`), which on a desk is indistinguishable from having left the Job Plan. It is the
+  **dimmed backdrop** now (`rgba(31,28,25,.55)`) and the dialog is **`.ws-panel`**, centred and no wider than 760px, closed by
+  *← Rooms*, a tap on the backdrop (`onclick="if(event.target===this)closeRoomWorkspace()"`, the house pattern on every
+  modal overlay and already exempt from the string-call tripwire by keyword) or **Esc**, which is wired into the existing
+  Escape handler — **the camera closes first**, or Esc would drop the workspace out from under an open viewfinder. **Under
+  the phone breakpoint the panel IS the screen**, deliberately: in the house a phone gets one room at a time with nothing
+  behind it, which was the whole point of the original design and is unchanged. The camera still sits above at
+  `z-index:1200`. Four reverts (the wrapper, the backdrop tap, the desk cap, Esc) fail 1 / 1 / 1 / 2. Measured in the
+  browser: a **760px dialog at left 340** over a plan still holding its three cards, backdrop at the stated colour, the
+  firearms line pinned outside the scrolling body inside the panel, backdrop tap closes, Esc closes, and at 390 the panel
+  measures **390×780 at 0,0**.
+- **`renderDailyCloseBlock` IS DELETED, NOT LEFT DEAD.** It repeated the projection bands the Forward Variance Projection card
+  already draws, at the foot of two phases; the one sentence worth keeping (*log the hours, read the projection, over the
+  line means a Change Order before the next room*) sits under the hours slot.
+- **⚠⚠ FOUND IN THE BROWSER, NOT BY THE RENDER: *"No vendors were assigned in Phase 0 sourcing."*** The vendor scorecard's
+  empty state, on the Close-out stage of any job with no vendors — and the stage suite **stubs the scorecard out**, so its
+  *no "Phase N" anywhere on the plan* check was green over it. A fixture cannot render every empty state, and the string
+  that survives is always the one nobody rendered. The net is now the **source**: no live (non-comment) line anywhere in
+  `havellin.html` may name a phase by number. Reads *under Vendors & partners* now.
+- **6935 committed checks** (`tests/job-plan-stages.test.js` new, 89; `field-capture` restated — the rooms pin reads the end
+  marker, the derived-lines loop became the gate-chip and `rl-meta` assertions, and seven pins on the pop-up). **All 24
+  changes revert-verified individually, ZERO green** — baseline 0 before and after, no unmatched needles; three reverts
+  crashed the file as well as failing it and are read as red on the fails they also report, per the standing rule.
+- **Verified end to end in headless Chromium on the real page, 67 checks**, four seeded jobs driven through the real loader,
+  the real folds and the real workspace:
+
+  | | |
+  |---|---|
+  | a won estate, one vendor unconfirmed | order `gates > vendors > p0 > rooms > hours > p2 > p4` · no Move day · no phase numbers · 4 red chips with their fixes · **Vendors open by itself** · *0 of 1 confirmed* · *0 of 6 ticked* · *today 0 hrs · 0 of 22 logged* · log in its slot, shown, one in the DOM |
+  | the rooms | *0 of 3 locked · 0 cleared* · **3 cards, 3 columns, 1 row at 1440** · the in-house boxes under the grid · not inside any fold · a tap opens the Study · 2 columns at 900 · 1 at 390 · overflow 0 at both |
+  | the workspace | **a 760px dialog at left 340 over the dimmed plan**, three cameras and the firearms line inside the panel · backdrop tap closes · Esc closes · at 390 the panel is **390×780 at 0,0**, overflow 0 |
+  | opening Before Day 1 by hand, then a redraw | both stay open; the log is back in its slot |
+  | a won downsizing, nothing on the estimate | **Before Day 1 opens by itself** · *nothing on the estimate* · no Vendors chip · the log followed the job, `#log-job` = 8 |
+  | back on the estate | its own open set again (Vendors only) |
+  | an active, funded Transition, every room locked | `… > p2 > p3 > p4` · every chip green, no fixes block · **Midpoint opens by itself** · *2 of 2 locked* · **amber *no hours logged today · 0 of 14 logged*** at `rgb(243,200,107)` · *0 of 13 ticked* on Move day |
+  | 7 hrs logged today, redraw | *today 7 hrs · 7 of 14 logged*, no amber, Midpoint still open |
+  | every room cleared, midpoint paid, reloaded | **Close-out opens by itself** · *2 of 2 locked · 2 cleared* · the log still one, in its slot |
+  | a prep job | no slot, no folds · the log **parked outside the plan**, one, hidden · back on the estate it is in the slot and shown |
+  | a page reload | the plan store carries no open-phase state; Vendors opens again from the rule |
+  | page errors | **0** |
+
+- **The app's own stylesheet: 5 lines deleted, 26 added, in 3 hunks, all in the `.rl` / `#room-ws` region** (588 → 605 rules) — the
+  368-line CSS deletion rule, applied by reading the diff of the FIRST `<style>` block (a regex over every `<style` in the
+  file matches four "blocks" totalling a megabyte, because the JS carries that tag in strings; measure the stylesheet, not
+  the file).
+- Manual **§4** (the crew-briefed box is under Before Day 1), **§6c**, **§10** (the cards, and the rooms-never-in-a-fold note
+  rewritten with the morning's correction), **§11** (the intro, a **stage table**, four notes — the numbers, the gates as
+  chips, the hours fold, the auto-open — the room-order note, the firearms note, the per-service table with **Stages
+  7/8/7/7/7/7/—**, and the two §11 pointers in the will note repointed at the stage names). Playbook: the firearms and
+  flags `.stop`s, a new **"The plan, top to bottom"** section under Step 10 with the auto-open note, 10a/10b/10c paragraphs,
+  the three symptom rows that named phases rewritten and **five new rows** (one stage open, where the hours log went, the
+  amber fold, no Phase 3, three-across cards), and the workspace sentence in **§10 and Step 10a** now says pop-up over the
+  plan, whole screen on a phone. Both `.md` copies hand-edited; **80 claims parity-checked, 0 mismatches**, a stale sweep for
+  nine retired wordings returns **0** — ⚠ two apparent misses, both verified rather than assumed: the standing-flags brief
+  being *"the first thing on the Job Plan tab"* (still true, and about the brief, not the rooms; the needle was narrowed, not
+  the sentence) and `&larr;` against a literal arrow in the `.md`. Tag balance clean on both HTML files (measured with the stylesheet stripped, so the documented `<code>` false
+  positive is not counted), rendered at 1440/390 with **0 overflow, 0 page errors**, and under `print` **no table takes the
+  phone rule** — 16 and **40** tables (39 before; the one new table is §11's stage table).
+
 ## ⚠⚠ NOTHING EVER CLOSED A MUST-FIND, AND THE BRIEF NEVER REACHED THE ROOM (BUILT 2026-09-19, EVENING)
 Anthony, the evening the field-capture build landed: *"What about the other intake questions, like is there anything
 you want us to find? Money or crypto. All of those questions at intake. Do they get flagged in the job plan?"* Measured
@@ -8663,7 +8786,10 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-19 (twenty-ninth pass, evening)** — both documents, against the must-find Found ticks, the brief
+- Last reconciled against the app: **2026-09-19 (thirtieth pass, late evening)** — both documents, against the Job Plan stage
+  rebuild: the order, the named stages, the gate chips, the hours fold, the auto-open rule and the three-across room cards; see the
+  entry at the top of this file.
+- Prior pass **2026-09-19 (twenty-ninth pass, evening)** — both documents, against the must-find Found ticks, the brief
   in the room and the desk block; see the entry at the top of this file. The **twenty-eighth pass (2026-09-19)** was the field-capture
   rebuild — manual §9a-i, §10 rewritten, §10a, §11; playbook Step 10a rewritten, ten symptom rows — also at the top of this file.
 - Prior pass **2026-09-17 (twenty-seventh pass)** — both documents, against the DocuSign build.

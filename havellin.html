@@ -485,16 +485,37 @@ input:checked+.slider:before{transform:translateX(18px);}
 .fa-link{display:inline-block;margin-top:8px;color:#fff;font-weight:700;text-decoration:underline;}
 .fa-line{background:#8b1e1e;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;}
 .fa-line a{color:#fff;}
-.rl{display:flex;flex-direction:column;gap:6px;}
-.rl-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;border:1px solid var(--border-md);border-radius:6px;background:var(--white);cursor:pointer;font-family:inherit;color:var(--gray-dk);min-height:48px;}
+/* Room cards: three across on a desk, two on the iPad, one on a phone (2026-09-19, evening). Full-width
+   rows spent the whole browser on one room each — Anthony asked for three columns so the list is not a scroll. */
+.rl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+@media (max-width:1100px){.rl{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:820px){.rl{grid-template-columns:minmax(0,1fr);}}
+.rl-row{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--border-md);border-radius:6px;background:var(--white);cursor:pointer;font-family:inherit;color:var(--gray-dk);min-height:48px;}
 .rl-row:active{background:var(--cream);}
 .rl-name{flex:1 1 auto;min-width:0;font-size:13px;font-weight:700;line-height:1.3;}
-.rl-note{display:block;font-size:10.5px;font-weight:400;color:var(--gray);font-style:italic;}
-.rl-counts{flex:0 1 auto;font-size:10.5px;color:var(--gray);white-space:nowrap;}
+.rl-top{display:flex;align-items:center;gap:8px;min-width:0;}
+.rl-meta{font-size:11px;font-weight:600;color:var(--gray);text-transform:none;letter-spacing:0;}
+.rl-note{display:block;font-size:10.5px;font-weight:400;color:var(--gray);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rl-counts{font-size:10.5px;color:var(--gray);white-space:nowrap;}
+/* The gates: one row of chips at the top of the plan, a red one carrying its fix under the row. */
+.gates{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.gate-chip{font-size:11px;font-weight:700;padding:5px 10px;border-radius:12px;border:1px solid;white-space:nowrap;}
+.gate-ok{background:var(--ok-bg);color:var(--ok-tx);border-color:#b9d49a;}
+.gate-no{background:var(--err-bg);color:var(--err-tx);border-color:#e3b7b7;}
+.gate-fixes{flex:1 1 100%;font-size:11px;color:var(--gray-dk);line-height:1.5;}
+.stage-meta{font-size:11px;font-weight:600;color:var(--cream);opacity:.85;white-space:nowrap;}
+.stage-warn{color:#f3c86b;font-weight:700;}
 .rl-fail{color:#c0392b;font-weight:700;}
 .rl-pill{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:12px;padding:3px 9px;white-space:nowrap;}
 .rl-excl{margin-top:8px;font-size:11px;color:#A32D2D;background:#fbeded;border:1px solid #E3B7B7;border-radius:4px;padding:6px 10px;line-height:1.5;}
-#room-ws{position:fixed;inset:0;background:var(--cream);z-index:1100;display:none;flex-direction:column;overflow:hidden;}
+/* The room workspace is a POP-UP over the plan, not a page (2026-09-19, late evening). Anthony, on the
+   full-screen version: "instead of opening a new browser window … a pop-up … and I don't go to a new
+   web page." #room-ws is the dimmed backdrop over the whole viewport; .ws-panel is the dialog, centred
+   and no wider than 760px on a desk. Under the phone breakpoint the panel IS the screen — in the house
+   a phone gets one room at a time with nothing behind it, which was the point of the original design. */
+#room-ws{position:fixed;inset:0;background:rgba(31,28,25,.55);z-index:1100;display:none;align-items:center;justify-content:center;padding:24px;}
+.ws-panel{display:flex;flex-direction:column;width:100%;max-width:760px;max-height:calc(100vh - 48px);background:var(--cream);border-radius:10px;overflow:hidden;box-shadow:0 18px 48px rgba(0,0,0,.35);}
+@media (max-width:820px){#room-ws{padding:0;}.ws-panel{max-width:none;max-height:none;height:100%;border-radius:0;}}
 .ws-top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--gray-dk);color:var(--cream);}
 .ws-top .btn-back{background:none;border:1px solid rgba(255,255,255,.4);color:var(--cream);border-radius:5px;padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer;min-height:44px;white-space:nowrap;}
 .ws-title{flex:1;min-width:0;font-size:15px;font-weight:700;line-height:1.2;}
@@ -1120,7 +1141,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 8:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.19 · 9:06pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1964,7 +1985,7 @@ body.no-smf .smf-col{display:none;}
 <!-- The room workspace and the in-app camera (2026-09-19). Siblings of the panels, never
      children of #job-plan-content: that container is rewritten by innerHTML on every plan
      redraw, and a live <video> inside it would be torn down mid-shot. -->
-<div id="room-ws"></div>
+<div id="room-ws" onclick="if(event.target===this)closeRoomWorkspace()"></div>
 <div id="field-cam"></div>
 
 <div class="modal-overlay" id="qp-modal" style="display:none;">
@@ -22006,7 +22027,9 @@ function _paintRoomWorkspace() {
   var m = ROOM_STATUS_META[status];
   var nB = _shotCount(jobId, roomIdx, 'before'), nI = _shotCount(jobId, roomIdx, 'inventory'), nA = _shotCount(jobId, roomIdx, 'after');
   var decedent = isDecedentJob(job);
-  var h = '<div class="ws-top">'
+  // The panel is the dialog; #room-ws around it is the backdrop, and a tap on the backdrop closes it.
+  var h = '<div class="ws-panel" role="dialog" aria-modal="true">'
+    + '<div class="ws-top">'
     + '<button type="button" class="btn-back" onclick="closeRoomWorkspace()">&#8592; Rooms</button>'
     + '<div class="ws-title">' + esc(room.name) + '</div>'
     + '<span class="rl-pill" style="color:' + m.color + ';background:' + m.bg + ';">' + m.label + '</span>'
@@ -22031,7 +22054,8 @@ function _paintRoomWorkspace() {
   h += planRoomStatusBtns(jobId, roomIdx, status);
   h += '<div id="room-ws-msg" class="ws-why err" style="' + (ws.msg ? '' : 'display:none;') + '">' + esc(ws.msg || '') + '</div>';
   h += '<div class="ws-strip">' + _roomShotStripHtml(jobId, roomIdx) + '</div>';
-  h += '</div>';
+  h += '</div>';   // .ws-body
+  h += '</div>';   // .ws-panel
   el.innerHTML = h;
   _invPaintThumbs(jobId);
 }
@@ -22044,11 +22068,14 @@ function _planRoomListHtml(jobId) {
     var m = ROOM_STATUS_META[st];
     var nB = _shotCount(jobId, r.idx, 'before'), nI = _shotCount(jobId, r.idx, 'inventory'), nA = _shotCount(jobId, r.idx, 'after');
     var failed = (_photoRefs[jobId] || []).some(function(x){ return x.roomIdx === r.idx && !x.collId && !x.deletedAt && x.status === 'failed'; });
+    // A card, three across on a desk (two on the iPad, one on a phone — .rl in the stylesheet):
+    // name and status on the top line, the counts under it, the walkthrough note on one line.
     return '<button type="button" class="rl-row" onclick="openRoomWorkspace(' + jobId + ',' + r.idx + ')">'
-      + '<span class="rl-name">' + esc(r.name) + (r.note ? '<span class="rl-note">' + esc(r.note) + '</span>' : '') + '</span>'
+      + '<span class="rl-top"><span class="rl-name">' + esc(r.name) + '</span>'
+      + '<span class="rl-pill" style="color:' + m.color + ';background:' + m.bg + ';">' + m.label + '</span></span>'
       + '<span class="rl-counts">' + nB + ' found \u00b7 ' + nI + ' items \u00b7 ' + nA + ' after'
       + (failed ? ' <span class="rl-fail">&#9888; not saved</span>' : '') + '</span>'
-      + '<span class="rl-pill" style="color:' + m.color + ';background:' + m.bg + ';">' + m.label + '</span>'
+      + (r.note ? '<span class="rl-note">' + esc(r.note) + '</span>' : '')
       + '</button>';
   }).join('');
   var excl = rs.excluded.length
@@ -22072,7 +22099,9 @@ function _repaintPlan(jobId) {
   var estRec = estimateStore[jobId];
   if (!job || !estRec || !estRec.estimate) return;
   if (!((estRec.approved || job.approved) && isJobWon(job))) return;
+  _parkHoursSection();
   content.innerHTML = (job.svc === 'prep') ? renderPrepJobPlan(jobId, job, estRec.estimate) : renderJobPlan(jobId, job, estRec.estimate);
+  _placeHoursSection();
 }
 
 function attachJobPlanCollectionPhoto(input, jobId, collId) {
@@ -24782,6 +24811,7 @@ function planCollectionStatusBtns(jobId, collId, status) {
 function loadJobPlanTab() {
   var jobId = parseInt(document.getElementById('plan-job').value);
   var content = document.getElementById('job-plan-content');
+  _parkHoursSection();   // the hours log may be inside the plan from the last render — see _placeHoursSection
   var empty = function(msg) {
     content.innerHTML = '<div class="tab-empty">' + msg + '</div>';
     var hdrEl = document.getElementById('job-plan-header'); if (hdrEl) hdrEl.innerHTML = '';
@@ -24864,6 +24894,8 @@ function loadJobPlanTab() {
   // writing to — and writing hours to the wrong job is not a defect anything downstream notices.
   var _isPrepPlan = (job.svc === 'prep');
   var _prepDcHrs  = _isPrepPlan ? estDeclutterHrs(est) : 0;
+  // The stage the job is in opens by itself the first time this job loads in the session.
+  _planOpenStageFor(jobId, job, est);
   if (_isPrepPlan) {
     content.innerHTML = renderPrepJobPlan(jobId, job, est);
     if (_prepDcHrs === 0) {
@@ -24873,6 +24905,7 @@ function loadJobPlanTab() {
     }
   } else {
     content.innerHTML = renderJobPlan(jobId, job, est);
+    _placeHoursSection();
     // A photo landing from the other device redraws the plan; the room somebody has open
     // must show it too, or the workspace and the list disagree about what was shot.
     if (_roomWs.open && _roomWs.jobId === jobId) _paintRoomWorkspace();
@@ -24962,34 +24995,149 @@ function planSubsec(title) {
     'color:var(--gray);margin:12px 0 4px;">' + title + '</div>';
 }
 
-function planPhaseWrap(id, title, body) {
+function planPhaseWrap(id, title, body, meta) {
   // Re-open whatever the crew had open before this redraw. See _planOpenPhases.
   var open = !!_planOpenPhases[id];
+  // `meta` is the count on the fold ("3 of 7 ticked", "2 of 4 confirmed"), so a closed stage still
+  // says how it stands. The end marker lets a test prove a block sits BETWEEN two folds rather
+  // than inside one — a closed body hides whatever is in it, and the browser is the only other
+  // thing that can tell.
   return '<div style="margin-bottom:12px;">' +
     '<div onclick="togglePhase(\'' + id + '\')" style="display:flex;justify-content:space-between;' +
     'align-items:center;cursor:pointer;padding:10px 14px;background:var(--gray-dk);color:var(--cream);' +
-    'border-radius:5px 5px 0 0;">' +
+    'border-radius:5px 5px 0 0;gap:10px;">' +
     '<span style="font-weight:700;font-size:13px;">' + title + '</span>' +
-    '<span id="phase-chev-' + id + '">' + (open ? '▼' : '▶') + '</span></div>' +
+    '<span style="display:flex;align-items:center;gap:10px;">' +
+    (meta ? '<span class="stage-meta">' + meta + '</span>' : '') +
+    '<span id="phase-chev-' + id + '">' + (open ? '▼' : '▶') + '</span></span></div>' +
     '<div id="phase-body-' + id + '" style="display:' + (open ? '' : 'none') + ';padding:12px 14px 14px;border:1px solid var(--border);' +
-    'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div>';
+    'border-top:none;border-radius:0 0 5px 5px;">' + body + '</div></div><!--/stage-' + id + '-->';
 }
 
-// The projection read-out at the foot of a working phase. It used to end in a per-day
-// checkbox — "Daily projection checked and signed off" — a self-attestation that recorded
-// nothing the projection above it did not already show. The reading stays; the tick went
-// with the rest of the box-ticking on 2026-09-19.
-function renderDailyCloseBlock(jobId, phase) {
-  var snap = computeProjection(jobId);
-  var projHtml = snap
-    ? projBandHtml(snap.tcBand,'TC',snap.projTC,snap.triggerTC,snap.estTC,snap.tcPct) +
-      projBandHtml(snap.psBand,'PS',snap.projPS,snap.triggerPS,snap.estPS,snap.psPct)
-    : '<div style="font-size:12px;color:var(--gray);">No estimate data — log hours first.</div>';
-  return '<div style="background:var(--tan);border-radius:5px;padding:10px 12px;margin-top:14px;">' +
-    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-dk);margin-bottom:8px;">Daily Close</div>' +
-    projHtml +
-    '<div style="font-size:11px;color:var(--gray);margin:6px 0 4px;">Log today\'s hours above, then read the projection. Over the line? Stop \u2014 Change Order before the next room.</div></div>';
+// ═══════════ THE STAGES, IN THE ORDER A CONCIERGE RUNS A JOB (2026-09-19, evening) ═══════════
+// Anthony, reading the plan the field-capture build shipped: *"the rooms come before the phase
+// zero pre-job authority, so that seems out of order … vendor and partner sourcing should be at
+// the top before we get to the rooms, because we're going to make these calls and line these
+// people up before the job even starts … there's only phase two and phase four, there's no phase
+// three … apply some human logic to how we would run a job."* He was right on every point: the
+// rooms sat above the accordion so the camera would not be behind a closed "Phase 1" bar, which
+// fixed reachability and broke chronology; the vendors and the collections sat INSIDE a folded
+// Phase 0, below the work they precede; and Phase 3 is Move Day, which only Home Transition has,
+// so every other job counted 0, 1, 2, 4.
+//
+// The order now: gates (a chip row, nothing to tick) → Vendors & partners (folded, open while
+// anything is unconfirmed) → Before Day 1 (the pre-job call and the access & crew boxes) →
+// Rooms (always open, the four in-house boxes under the grid) → Hours & daily close (folded,
+// today's hours on the fold) → Midpoint & pickups → Move day (Transition only) → Close-out.
+// Named stages; the phase NUMBERS are gone. The task keys (`p0`…`p4`) stay internal, because a
+// saved tick is keyed by them and this file records what renaming a key costs.
+
+// What "lined up" means, for the fold and for the gate chip: every service vendor on the estimate
+// at Confirmed, every collection partner assigned, every prep line Confirmed. The end-of-job
+// logistics slots are standing placeholders (LOGISTICS_CATEGORIES) and never count — a job with
+// no dumpster is not a job with a vendor missing.
+function vendorSourcingProgress(jobId, job, est) {
+  var done = 0, total = 0;
+  var vsrc = (job && job.vendorSourcing) || {}, csrc = (job && job.collSourcing) || {}, psrc = (job && job.prepSourcing) || {};
+  ((est && est.vendors) || []).forEach(function(v, i) { total++; var rec = vsrc[_srcLineKey(v, i)]; if (rec && rec.status === 'Confirmed') done++; });
+  ((est && est.collections) || []).forEach(function(c) { total++; var rec = csrc[c.id]; if (rec && rec.vendorId) done++; });
+  ((est && est.prepItems) || []).forEach(function(p, i) { total++; var rec = psrc[_srcLineKey(p, i)]; if (rec && rec.status === 'Confirmed') done++; });
+  return { done: done, total: total };
 }
+
+// The gates as ONE row of chips at the top of the plan. They are the Before-Day-1 derived lines
+// (agreement signed, deposit received, the Letters, the attorney, the §733.604 deadline) plus the
+// vendor count — facts the app already holds, so a section you cannot tick is furniture. A red
+// chip carries its fix underneath, because a panel that reports a blocker must say how to clear
+// it and a tooltip is unreachable on the iPad this tab is worked from.
+function planGateChipsHtml(jobId, job, est) {
+  var lines = planDerivedLines(jobId, job, est, 'p0');
+  var vp = vendorSourcingProgress(jobId, job, est);
+  if (vp.total) lines.push({ key: 'vendors_lined_up', ok: vp.done === vp.total, label: 'Vendors lined up',
+                             detail: vp.done + ' of ' + vp.total + ' confirmed &mdash; Vendors &amp; partners, below' });
+  if (!lines.length) return '';
+  var chips = lines.map(function(l) {
+    return '<span class="gate-chip ' + (l.ok ? 'gate-ok' : 'gate-no') + '" data-gate="' + l.key + '">' + (l.ok ? '&#10003; ' : '&#9679; ') + l.label + '</span>';
+  }).join('');
+  var open = lines.filter(function(l) { return !l.ok; });
+  var fixes = open.length ? '<div class="gate-fixes">' + open.map(function(l) {
+    return '<div><strong>' + l.label + ':</strong> ' + (l.detail || '') + '</div>';
+  }).join('') + '</div>' : '';
+  return '<div class="gates" id="plan-gates-' + jobId + '">' + chips + fixes + '</div>';
+}
+
+// The count on a stage's fold: ticks done of ticks offered, plus the derived lines still open.
+// Before Day 1 shows ticks only — its derived lines are the gate chips above the fold.
+function planStageMeta(jobId, job, est, phase, ctx) {
+  var tasks = planTasksFor(PLAN_TASKS, phase, ctx || planTaskCtx(job, est));
+  var done = tasks.filter(function(t) { return _planTaskDone(jobId, t.key); }).length;
+  var open = (phase === 'p0') ? 0 : planDerivedLines(jobId, job, est, phase).filter(function(l) { return !l.ok; }).length;
+  var txt = tasks.length ? done + ' of ' + tasks.length + ' ticked' : 'nothing to tick';
+  return txt + (open ? ' &middot; ' + open + ' still open' : '');
+}
+
+function _hrsTxt(h) { return String(Math.round((parseFloat(h) || 0) * 10) / 10); }
+// Today's hours and the running total against the estimate, for the Hours fold. `warn` is the
+// one guard Anthony asked for: on a working day with nothing logged yet the fold says so in
+// amber, so a closed card cannot hide a day that was never written down.
+function planHoursMeta(jobId, job, est) {
+  var today = _todayStr(), t = 0, all = 0;
+  (jobLogEntries(jobId) || []).forEach(function(e) {
+    (e.members || []).forEach(function(m) { var h = parseFloat(m.hours) || 0; all += h; if (e.date === today) t += h; });
+  });
+  var estH = (parseFloat(est && est.totTC) || 0) + (parseFloat(est && est.totPS) || 0);
+  return { today: t, logged: all, est: estH, warn: !!(job && job.status === 'active' && t === 0) };
+}
+function planHoursMetaHtml(jobId, job, est) {
+  var m = planHoursMeta(jobId, job, est);
+  return (m.warn ? '<span class="stage-warn">no hours logged today</span>' : 'today ' + _hrsTxt(m.today) + ' hrs')
+    + ' &middot; ' + _hrsTxt(m.logged) + ' of ' + _hrsTxt(m.est) + ' logged';
+}
+
+// Which stage the job is in, so it opens by itself on load. Before Day 1 opens Vendors while
+// anything is unconfirmed, then Before Day 1; once the job is active only Rooms is open (it is
+// never inside a fold); every room locked opens Midpoint & pickups; every room cleared with the
+// midpoint paid opens Close-out. Anything the crew opens or closes stays that way for the session.
+function planCurrentStage(jobId, job, est) {
+  var rooms = _planRooms(jobId).rooms;
+  var nL = rooms.filter(function(r) { return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
+  var nC = rooms.filter(function(r) { return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
+  if (rooms.length && nC === rooms.length && stagePaidTotal(job, 'midpoint') > 0) return 'p4';
+  if (rooms.length && nL === rooms.length) return 'p2';
+  if (job && job.status === 'active') return '';
+  var vp = vendorSourcingProgress(jobId, job, est);
+  if (vp.total && vp.done < vp.total) return 'vendors';
+  return 'p0';
+}
+var _planLastJob = null;
+function _planOpenStageFor(jobId, job, est) {
+  if (_planLastJob === jobId) return;          // a redraw keeps whatever the crew has open
+  _planLastJob = jobId;
+  _planOpenPhases = {};
+  var stage = planCurrentStage(jobId, job, est);
+  if (stage) _planOpenPhases[stage] = true;
+}
+
+// ⚠ THE HOURS LOG IS STATIC MARKUP (#plan-log-section — the entry form, the summary, the
+// projection, the history) and it used to sit ABOVE the plan. Its place in the order is after the
+// rooms, inside the Hours & daily close fold, so the loader MOVES the node into the fold's slot
+// after every render and parks it back outside #job-plan-content BEFORE anything rewrites that
+// container — an innerHTML write over a container holding the form would destroy the form, its
+// half-typed entry and every id the hours code writes to. Parked is where it always was, so a
+// prep plan (which has no slot) reads exactly as before.
+function _parkHoursSection() {
+  var ls = document.getElementById('plan-log-section'), content = document.getElementById('job-plan-content');
+  if (ls && content && content.parentNode && ls.parentNode !== content.parentNode) content.parentNode.insertBefore(ls, content);
+}
+function _placeHoursSection() {
+  var ls = document.getElementById('plan-log-section'), slot = document.getElementById('plan-hours-slot');
+  if (ls && slot && ls.parentNode !== slot) slot.appendChild(ls);
+}
+
+// renderDailyCloseBlock is GONE (2026-09-19, evening). It repeated the projection bands that the
+// Forward Variance Projection card in the hours log already draws, at the foot of two phases;
+// the hours log sits in its own stage now and the one sentence worth keeping — log the hours,
+// read the projection, over the line means a Change Order before the next room — is under it.
 
 // ═══════════════════ THE JOB PLAN'S CHECKBOXES, KEYED BY NAME (2026-09-19) ═══════════════════
 // ⚠⚠ THE OLD PLAN HAD ROUGHLY SIXTY CHECKBOXES IN TWENTY-FOUR SECTIONS AND NO CATALOGUE. Each
@@ -26045,7 +26193,7 @@ function computeVendorAvg(vendorId) {
 function renderVendorScorecard(jobId, job) {
   var vlist = _assignedVendorsForJob(job);
   if (!vlist.length) {
-    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendors were assigned in Phase 0 sourcing.</div>';
+    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendors were assigned under Vendors &amp; partners.</div>';
   }
   var ratings = job.vendorRatings || {};
   var rows = vlist.map(function(v){
@@ -26940,6 +27088,10 @@ function saveVendorQuickEdit() {
 // Escape closes whichever directory form / confirm is open (matches the app's other modals).
 document.addEventListener('keydown', function(e){
   if (e.key !== 'Escape') return;
+  // The room workspace is a pop-up: Esc closes it like any other dialog. The camera sits above it
+  // and closes first, or Esc would drop the workspace out from under an open viewfinder.
+  if (_fieldCam.open) { closeFieldCamera(); return; }
+  if (_roomWs.open) { closeRoomWorkspace(); return; }
   ['add-vendor-modal','v-quick-modal','add-referral-modal','r-quick-modal','c-quick-modal','dir-delete-pin-modal'].forEach(function(mid){
     var m = document.getElementById(mid);
     if (m && m.style.display === 'flex') m.style.display = 'none';
@@ -28211,7 +28363,7 @@ function renderJobPlan(jobId, job, est) {
   var custodyMandatory = formal || isProbate; // mandatory on formal jobs + all probate; NOT on premium-rate alone
   var rooms = _planRooms(jobId).rooms;
 
-  // Midpoint billing: "all rooms locked" = Phase 1 complete = the contractual midpoint, and
+  // Midpoint billing: "all rooms locked" = the contractual midpoint, and
   // the moment to send the 25% invoice (collection takes time). Read off the document record,
   // never a hand-ticked box.
   var _hav = est.havellinTotal || job.havellinEst || 0;
@@ -28289,40 +28441,46 @@ function renderJobPlan(jobId, job, est) {
     return placeholder + sourcingCard + roomDocsCard;
   }
 
-  // ── Phase 0 ──────────────────────────────────────────────────────────────────
+  // ── Gates: the facts the app already knows, as one row of chips ─────────────────────
+  var gates = planGateChipsHtml(jobId, job, est);
+
+  // ── Vendors & partners: the calls made before the job starts ────────────────────────
+  var vprog = vendorSourcingProgress(jobId, job, est);
+  var vendorsBody = '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>';
+  var vendorsMeta = vprog.total ? vprog.done + ' of ' + vprog.total + ' confirmed' : 'nothing on the estimate';
+
+  // ── Before Day 1: the pre-job call, its notes, and the access & crew boxes ───────────
   var p0CallNote = getPlanNote(jobId, 'p0_call_notes');
-  var p0 = planDerivedHtml(jobId, job, est, 'p0') +
-    planTasksHtml(jobId, 'p0', ctx, ['Pre-job call']) +
+  var p0 = planTasksHtml(jobId, 'p0', ctx, ['Pre-job call']) +
     '<div style="margin:6px 0 10px;">' +
     '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:4px;">Pre-Job Call Notes</div>' +
     '<textarea id="p0-call-notes-'+jobId+'" rows="4" style="width:100%;font-size:12px;padding:7px 9px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;" placeholder="Emotional tone, family dynamics, anything the client mentioned that isn\'t in a checkbox..." oninput="savePlanNote('+jobId+',\'p0_call_notes\',this.value)">'+p0CallNote+'</textarea>' +
     '</div>' +
-    planSubsec('Vendor &amp; Partner Sourcing') +
-    '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>' +
     planTasksHtml(jobId, 'p0', ctx, null, ['Pre-job call']);
 
-  // The rooms are the field surface, so they sit ABOVE the phase accordion where every
-  // phase starts closed — a crew standing in a room should not have to find "Phase 1" to
-  // reach the camera. The phases below are the checklist; this is the work.
-  var roomsBlock = '<div style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
-    + '<div class="sec" style="margin-bottom:10px;">Rooms &mdash; tap a room to shoot it and lock it</div>'
-    + roomsCard + '</div>';
+  // ── Rooms: the work. Never inside a fold. The four in-house boxes sit under the grid ──
+  var nLocked = rooms.filter(function(r){ return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
+  var nCleared = rooms.filter(function(r){ return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
+  var inHouse = planTasksHtml(jobId, 'p1', ctx);
+  var roomsBlock = '<div id="plan-rooms-block-' + jobId + '" style="border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+    + '<div class="sec" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">'
+    + '<span>Rooms &mdash; tap a room to shoot it and lock it</span>'
+    + '<span class="rl-meta">' + nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared</span></div>'
+    + roomsCard
+    + (inHouse ? planSubsec('While you are in the house') + inHouse : '')
+    + '</div>';
 
-  // ── Phase 1 ──────────────────────────────────────────────────────────────────
-  // The handful of in-house actions that are not the camera's job to enforce.
-  var p1 = planDerivedHtml(jobId, job, est, 'p1') +
-    planTasksHtml(jobId, 'p1', ctx) +
-    renderDailyCloseBlock(jobId, 1);
+  // ── Hours & daily close: the loader moves #plan-log-section into this slot ──────────
+  var hoursBody = '<div id="plan-hours-slot"></div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-top:8px;line-height:1.5;">Log today\'s hours, then read the projection. Over the line? Stop — Change Order before the next room.</div>';
 
-  // ── Phase 2 ──────────────────────────────────────────────────────────────────
-  var p2 = planDerivedHtml(jobId, job, est, 'p2') +
-    planTasksHtml(jobId, 'p2', ctx) +
-    renderDailyCloseBlock(jobId, 2);
+  // ── Midpoint & pickups ───────────────────────────────────────────────────────────────
+  var p2 = planDerivedHtml(jobId, job, est, 'p2') + planTasksHtml(jobId, 'p2', ctx);
 
-  // ── Phase 3 (Home Transition only) ───────────────────────────────────────────
-  var p3 = isMM ? planPhaseWrap('p3', 'Phase 3 — Move Day', planTasksHtml(jobId, 'p3', ctx)) : '';
+  // ── Move day (Home Transition only) ─────────────────────────────────────────────────
+  var p3 = isMM ? planPhaseWrap('p3', 'Move day', planTasksHtml(jobId, 'p3', ctx), planStageMeta(jobId, job, est, 'p3', ctx)) : '';
 
-  // ── Phase 4 ──────────────────────────────────────────────────────────────────
+  // ── Close-out ────────────────────────────────────────────────────────────────────────
   var p4 = planDerivedHtml(jobId, job, est, 'p4') +
     planTasksHtml(jobId, 'p4', ctx) +
     planSubsec('Vendor Scorecard') +
@@ -28347,12 +28505,14 @@ function renderJobPlan(jobId, job, est) {
       + '. They are added deliberately rather than automatically, because the job decides the disposition, not the estimate. '
       + 'Bring them in from <strong>Inventory &rarr; From the Estimate Walkthrough</strong>.</div>' : '';
 
-  return _midBanner + _pendBanner + roomsBlock +
-    planPhaseWrap('p0','Phase 0 — Pre-Job'+(isDocJob?' &amp; Authority':''), p0) +
-    planPhaseWrap('p1','Phase 1 — In the house'+(isDocJob?' (documentation)':''), p1) +
-    planPhaseWrap('p2','Phase 2 — '+(isDisposal?'Disposition &amp; clear':'Pack &amp; clear'), p2) +
+  return _midBanner + _pendBanner + gates +
+    planPhaseWrap('vendors', 'Vendors &amp; partners', vendorsBody, vendorsMeta) +
+    planPhaseWrap('p0', 'Before Day 1', p0, planStageMeta(jobId, job, est, 'p0', ctx)) +
+    roomsBlock +
+    planPhaseWrap('hours', 'Hours &amp; daily close', hoursBody, planHoursMetaHtml(jobId, job, est)) +
+    planPhaseWrap('p2', 'Midpoint &amp; pickups', p2, planStageMeta(jobId, job, est, 'p2', ctx)) +
     p3 +
-    planPhaseWrap('p4','Phase 4 — Close-Out', p4);
+    planPhaseWrap('p4', 'Close-out', p4, planStageMeta(jobId, job, est, 'p4', ctx));
 }
 
 // ⚠⚠ WHICH PHASES ARE OPEN IS THE CREW'S STATE, NOT THE RENDERER'S. The accordion lived
