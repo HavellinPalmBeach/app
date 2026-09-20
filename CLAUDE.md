@@ -1,6 +1,6 @@
 # Havellin Palm Beach — App Notes
 
-## ⚠⚠ NOTHING EVER CLOSED A MUST-FIND, AND THE BRIEF NEVER REACHED THE ROOM (BUILT 2026-09-20)
+## ⚠⚠ NOTHING EVER CLOSED A MUST-FIND, AND THE BRIEF NEVER REACHED THE ROOM (BUILT 2026-09-19, EVENING)
 Anthony, the evening the field-capture build landed: *"What about the other intake questions, like is there anything
 you want us to find? Money or crypto. All of those questions at intake. Do they get flagged in the job plan?"* Measured
 before answering: **yes, on the Job Plan header and the dashboard, and nowhere the crew actually works.** The room
@@ -8663,7 +8663,7 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-20 (twenty-ninth pass)** — both documents, against the must-find Found ticks, the brief
+- Last reconciled against the app: **2026-09-19 (twenty-ninth pass, evening)** — both documents, against the must-find Found ticks, the brief
   in the room and the desk block; see the entry at the top of this file. The **twenty-eighth pass (2026-09-19)** was the field-capture
   rebuild — manual §9a-i, §10 rewritten, §10a, §11; playbook Step 10a rewritten, ten symptom rows — also at the top of this file.
 - Prior pass **2026-09-17 (twenty-seventh pass)** — both documents, against the DocuSign build.
