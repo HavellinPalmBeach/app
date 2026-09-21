@@ -11,7 +11,7 @@
 const { sandbox } = require('./harness');
 
 const INV_FNS = [
-  'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal',
+  'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
   'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal',
@@ -397,7 +397,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const g = sandbox({
       fns: ['_renderAppraisalGuardrail', '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal',
-            '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal',
+            '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
             'resolveDocLevel', 'docLevelFloor', '_gate706', 'isDecedentJob'],
@@ -740,9 +740,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the column switcher is gone — the groups are the item panel now');
   {
-    const v = sandbox({ fns: ['_invPanelCols', '_invPanelSection'],
-                        vars: ['INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS'] });
-    const panel = v._invPanelCols().map((c) => c.key);
+    const v = sandbox({ fns: ['_invPanelCols', '_invPanelSection', 'invFiduciaryMode', 'isDecedentJob'],
+                        vars: ['INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DECEDENT_SERVICES'] });
+    // ⚠ THE PANEL IS PER JOB SINCE 2026-09-21 — this called _invPanelCols() bare and broke
+    // correctly. Axis 2 columns come off a living job; everything else is on both.
+    const ESTATE = { id: 1, svc: 'probate' };
+    const LIVING = { id: 2, svc: 'downsizing_move' };
+    const panel = v._invPanelCols(ESTATE).map((c) => c.key);
+    const living = v._invPanelCols(LIVING).map((c) => c.key);
 
     // The row already carries these three. Two inputs bound to one value is how a panel
     // and a row silently disagree about what an item is worth.
@@ -753,10 +758,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(panel.indexOf('gross') >= 0, 'the proceeds are');
     ok(panel.indexOf('flagMAIV') >= 0, 'and the flags');
 
+    // ⚠⚠ WHAT A LIVING JOB DOES NOT SEE, and each one is a false statement rather than clutter:
+    // the asset track defaults to 'Probate' on a living owner's sofa, §732.402 is an allowance
+    // against a probate estate, §20.2031-6 governs a federal estate tax return, and the three
+    // valuation-support fields describe where a date-of-death figure came from.
+    ['assetTrack', 'flagExempt', 'flagMAIV', 'maivCat', 'valDate', 'valSource', 'valNote']
+      .forEach((k) => ok(living.indexOf(k) < 0, k + ' is off a living job'));
+    // The converse is the half that matters: the record itself is untouched on both.
+    ['objectName', 'category', 'room', 'qty', 'condition', 'serial', 'channel', 'needsAppr',
+     'flagBequest', 'flagDisputed', 'flagNFA', 'dispDate', 'receiptDoc', 'gross', 'fees']
+      .forEach((k) => {
+        ok(living.indexOf(k) >= 0, k + ' is on a living job');
+        ok(panel.indexOf(k) >= 0, k + ' is on an estate job too');
+      });
+    ok(living.length < panel.length, 'a living job sees strictly fewer columns, never more');
+    // ⚠ THE COLUMN IS DROPPED AND THE DATA IS NEVER TOUCHED. INVENTORY_COLUMNS is the export,
+    // and the workbook still carries every column on every service — see buildInventoryPayload.
+    eq(v.INVENTORY_COLUMNS.filter((c) => c.fid).map((c) => c.key).sort().join(','),
+       'assetTrack,flagExempt,flagMAIV,maivCat,valDate,valNote,valSource',
+       'exactly seven columns are marked fiduciary-only');
+
     // EVERY panel field must land in a section that is actually rendered, or it exists
     // in the data and nowhere on screen — the same unreachability the old view test guarded.
     const sections = v.INV_PANEL_SECTIONS.map((s) => s.key);
-    const orphan = v._invPanelCols().filter((c) => sections.indexOf(v._invPanelSection(c)) < 0);
+    const orphan = v._invPanelCols(ESTATE).filter((c) => sections.indexOf(v._invPanelSection(c)) < 0);
     eq(orphan.map((c) => c.key), [], 'no panel field falls outside a rendered section');
 
     eq(v._invPanelSection({ key: 'objectName' }), 'item', 'identity fields head the panel');

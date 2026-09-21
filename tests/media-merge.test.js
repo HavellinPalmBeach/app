@@ -372,7 +372,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const payload = p2.buildInventoryPayload(3);
 
     eq(payload.categories.length, 13, 'the payload carries all 13 app categories');
-    eq(payload.dispositions.length, 7, 'and all 7 dispositions');
+    // ⚠ WAS 7. The requirement is that the payload carries the APP's list whatever its length,
+    // so the server's Summary rollup cannot hold its own copy — that is what drifted 6-against-13
+    // on categories and silently dropped seven of them from a client's workbook.
+    eq(payload.dispositions.length, p2.INV_DISPOSITIONS.length, 'and every disposition the app has');
+    eq(payload.dispositions.join(','), p2.INV_DISPOSITIONS.join(','), 'in the app\'s own order');
     ok(payload.categories.indexOf('Silver & Precious Metal') >= 0,
        'including the ones the old hardcoded list dropped');
     ok(payload.dispositions.indexOf('Auction') >= 0, 'and Auction, which it also dropped');

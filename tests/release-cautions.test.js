@@ -27,10 +27,12 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              // The appraisal caution added 2026-09-11 is DERIVED rather than a flag on the row,
              // so the whole chain behind it has to be lifted for real. Stubbing
              // invAwaitingAppraisal would be testing the stub.
-             'invAwaitingAppraisal', 'invNeedsAppraisal', '_invHasAppraisal', '_jobAppraisers',
-             'invAppraisalThreshold', 'gateDispute', '_gateYes', 'invIsIntrinsic', 'invCatMeta'];
+             'invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode', '_invHasAppraisal', '_jobAppraisers',
+             'invAppraisalThreshold', 'gateDispute', '_gateYes', 'invIsIntrinsic', 'invCatMeta',
+             'isDecedentJob'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
-              'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'];
+              'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+              'DECEDENT_SERVICES'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler', tc: 'Anthony Graziano' };

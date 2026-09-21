@@ -14,7 +14,7 @@ const { sandbox } = require('./harness');
 const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
   'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'invListingThreshold',
-  'isDecedentJob', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
+  'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
   'docStandardEffect',
 ];
 const VARS = [
