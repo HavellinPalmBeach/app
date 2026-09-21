@@ -372,9 +372,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const calls = [];
     const d = sandbox({
       fns: ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
-            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey'],
+            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
       vars: ['DECEDENT_SERVICES', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'jobPlanStore',
-             'estimateStore', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders'],
+             'estimateStore', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: {
         isFormalDoc: () => false,
         isAgreementSigned: (j) => { calls.push('isAgreementSigned'); return !!j.sig; },
@@ -437,8 +437,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ CHECKBOXES ARE NAMED, NEVER prefix + array index');
   {
-    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf'],
-                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
+    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
                         stubs: { isFormalDoc: () => false } });
     const keys = t.PLAN_TASKS.map((x) => x.key);
     eq(new Set(keys).size, keys.length, 'every key is distinct');
@@ -498,9 +498,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const a = sandbox({
       fns: ['renderJobAdmin', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'planDerivedHtml',
             'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
-            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey'],
+            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
       vars: ['DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
-             'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders'],
+             'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { isFormalDoc: () => false, isJobWon: (j) => !!j.won, docSentAt: () => null, jobLogEntries: () => [],
                isAgreementSigned: () => false, isJobFunded: () => false, depositPaidTotal: () => 0, stagePaidTotal: () => 0,
                _photoRefs: { 7: [] } },
@@ -510,13 +510,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const folded = a.renderJobAdmin(7, { id: 7, svc: 'probate', won: true });
     has(folded, 'class="ja-card"', 'a card for a won job');
     has(folded, 'toggleJobAdmin(7)', 'folded, with a header to open it');
-    has(folded, '0 of 12 ticked', 'counting the probate list');
+    // ⚠ ELEVEN, NOT TWELVE, SINCE 2026-09-21, AND THE MISSING ONE IS CORRECT. The compliance
+    // list keys on the engagement tier now, and a job carrying no tier reads as `values` through
+    // the same map the migration uses — so `ct_appraisals` is withheld until the contract says
+    // appraisals are ours or the job actually holds one. The full grid is in job-desk-scope.
+    has(folded, '0 of 11 ticked', 'counting the probate list at the tier a legacy job reads as');
     lacks(folded, 'type="checkbox"', 'no boxes until opened');
     a._jobAdminOpen[7] = true;
     const open = a.renderJobAdmin(7, { id: 7, svc: 'probate', won: true });
     has(open, "'ct_filed'", 'opened, the court list is there');
     has(open, "'fin_vendor_invoices'", 'and the financial close');
-    has(open, 'plan-derived-p4-7', 'above the close-out facts the app derives');
+    // ⚠ `admin`, NOT `p4`, SINCE 2026-09-21. The desk card and the Job Plan's Close-out stage
+    // share the close-out facts and NOT the two lines naming the matter type and the engagement
+    // tier, whose whole subject is the §733.604 list that renders here and nowhere else.
+    has(open, 'plan-derived-admin-7', 'above the close-out facts the app derives');
+    has(open, 'All rooms cleared', 'which are the same close-out facts p4 carries');
     ok(!a.jobPlanStore[7], '⚠⚠ rendering twelve unticked boxes minted NO plan record for the job');
 
     has(fn('renderInventoryTab'), 'renderJobAdmin(jobId, job)', 'the Inventory tab renders it, first');
@@ -538,9 +546,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // The stages (2026-09-19, evening): the gate chips, the fold counts, the current stage.
             'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
             // The open job body (2026-09-20): stage cards on a thread, marked off the stage the job is in.
-            'planStageCard', 'planStageState', 'planCurrentStage'],
+            'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
-             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders'],
+             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: {
         document: dom, isFormalDoc: () => false,
         // The brief renders through its host since 2026-09-19 (a Found tick repaints it in place).

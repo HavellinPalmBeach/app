@@ -1,5 +1,122 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE DESK CHECKLIST TOLD A PROBATE JOB TO DO COUNSEL'S WORK AND AN ESTATE SETTLEMENT NOTHING (2026-09-21)
+Step 4 of `ESTATE_SCOPE_SPEC.md`. `planTaskCtx` exposed thirteen SERVICE questions — what Havellin was HIRED to do —
+and nothing about what it was CONTRACTED to hand over or which instrument the estate feeds, so the whole §733.604
+compliance list keyed on `isProbate`. App-only, no redeploy.
+
+- **⚠⚠ MEASURED ON THE REAL CATALOGUE BEFORE ANYTHING WAS CHANGED, AND D6 UNDERSTATES IT — IT FAILED IN BOTH
+  DIRECTIONS AT ONCE.**
+
+  | | HEAD | now |
+  |---|---|---|
+  | **Estate Settlement**, any tier, any matter | **5 boxes, NO compliance list** | 5 · **9–12 on a probate matter, by tier** |
+  | **Probate / Contested**, any tier, any matter | **12 boxes, the full list** | 11 legacy · 9–12 by tier · **5 on a trust matter** |
+  | tier × matter, all 20 combinations × 7 services | **changed nothing, anywhere** | the grid above |
+
+  So a probate estate contracted at **None** — where the agreement says counsel does the whole inventory — was told
+  to *"verify date-of-death FMV on every line"* and *"attach all professional appraisals"*, two instructions nobody
+  on the job could follow. And an Estate Settlement administering a probate estate at the top tier got no checklist
+  at all. **The tier and the matter type both shipped this morning and neither had reached this surface.**
+- **⚠⚠ `produces` IS ON THE `DOC_TIERS` CATALOGUE AND IS NEVER DERIVED FROM `scope`.** `scope` is the PRICING
+  projection (*how much of the work do we do*); this answers *what does the client get*, which is the separation step
+  3 exists for. **The two top tiers are the proof it cannot be derived**: identical `scope`, different deliverable —
+  a test asserts exactly that, and `lacks()` `.scope` inside `docTierProduces`. Three booleans per tier
+  (`inventory` · `values` · `appraisals`), read through one accessor.
+  - **⚠ AN UNANSWERED TIER READS AS `values` THROUGH `DOC_TIER_FROM_SCOPE.full`, NOT A SECOND LITERAL** — so a job
+    recorded before the tier existed behaves exactly as it did yesterday, and the fallback cannot drift from the
+    migration. A service with no `document` step produces nothing at all, or the fallback would quietly claim a
+    downsizing hands over a valued inventory.
+- **⚠⚠ `probateTrack` FALLS BACK TO THE SERVICE AND `trustTrack` DOES NOT, AND THE ASYMMETRY IS THE LOAD-BEARING
+  PART.** A recorded matter decides. An **unanswered** one on a probate service still means a court case was open at
+  intake — that is what the service name records — so the checklist every existing probate job has today survives
+  rather than disappearing on every job created before step 2. **Nothing in a service name says trust**, so there is
+  no honest fallback that way and an unanswered matter is never a trust matter. Reverting the whole predicate fails
+  **18**; reverting just the service fallback fails 8; giving `trustTrack` one fails 1.
+- **⚠ TWO BOXES TAKE THE TIER AND FOUR DO NOT, and the split is what they are checks ON.** `ct_inventory` (we state
+  the values) and `ct_appraisals` (we were engaged to obtain them) are checks on **Havellin's own deliverable**;
+  serving, filing, the accounting and the PR's sign-off happen on a probate matter **whoever built the schedule**.
+  `ct_nonprobate` takes the tier too — a carve-out from a schedule we do not produce is nobody's check here.
+  - **⚠ `ct_appraisals` ALSO FIRES ON `hasAppraisers`.** The tier says whose job it was to OBTAIN one; a report that
+    exists has to be attached however it arrived, and a box vanishing off a job holding three appraisals would be
+    the silent omission this step removes. **The one legacy change is here**: `full` migrates to `values`, which does
+    not make appraisals ours, so a legacy probate job renders **11** where it rendered 12 — and the box returns the
+    moment an appraiser is on the roster. Reverting the rescue fails 1, the tier gate 11.
+- **⚠ `pr_authority` IS THE SAME DEFECT ONE LIST OVER, AND IT IS ONE WORD.** A personal representative is a fact
+  about the MATTER, not about which service was sold. Re-keyed with the rest; reverting fails 3. The trust twin of
+  that box waits on step 7 with the rest of the trust variant.
+- **⚠⚠ A TRUST MATTER CORRECTLY GETS NO COURT LIST, AND THAT IS NOT THE OMISSION IT LOOKS LIKE — IT IS STEP 7's.**
+  The trustee's schedule those boxes would verify **does not exist yet**, and a checklist against a document nothing
+  can produce is the box people learn to tick blind. Same deliberate deferral step 2 made on the trustee's schedule
+  itself. Pinned in both directions so step 7 has to come back here.
+- **⚠⚠ `ctx.matter` AND `ctx.tier` CAME BACK GREEN ON THE FIRST SWEEP — TWO FIELDS WITH NO READER, WHICH IS THE
+  THING TO FIX RATHER THAN THE THING TO COVER.** The fix is two DERIVED lines on the Job Admin card, and they close
+  a gap this step itself opened: once the court section keys on two recorded answers, **an empty one is ambiguous on
+  its face** — the desk cannot tell *this estate has no probate in it* from *nobody answered the question*.
+  **Matter type recorded** and **Contracted to produce**, green naming the answer, open naming what is being withheld
+  and where to answer it. Re-done they fail 2 and 4.
+  - **⚠ A NEW `admin` PHASE, because `p4` IS SHARED.** `renderJobAdmin` and the Job Plan's Close-out card both render
+    the p4 derived lines, deliberately — the close-out facts belong on both. These two do not: their whole subject is
+    a list that renders on the desk card and nowhere near the Job Plan. `planDerivedLines` answers both for the
+    close-out facts and the pair for `admin` alone. Reverting the gate fails 3, the phase 1.
+  - **⚠ DERIVED, NEVER TICKED.** Both are recorded at intake and corrected on Edit Client, so a box would be a second
+    store of one fact — which is what the two midpoint booleans were before they were deleted.
+  - **⚠ BOTH READ THE CTX AND SYMMETRICALLY.** `ctx.matter` was resolved through `matterTypeOf` (which applies the
+    living-client gate and discards an unrecognised value), so `MATTER_TYPES[ctx.matter]` is the catalogue lookup on
+    an answered key — exactly what `docTierDef(ctx.tier)` is beside it, and not a second opinion.
+- **⚠ THE THIRTEEN SERVICE QUESTIONS ARE UNTOUCHED AND MUST STAY.** Each is correct *as* a service question, and a
+  test asserts `isProbate` survives on the ctx. This is an axis added beside them, not a sweep.
+- **8577 committed checks** (`tests/job-desk-scope.test.js` new at 189). **All 31 changes revert-verified
+  individually, ZERO green after the two above were re-done**; baseline 0 before and after, no unmatched needles.
+  - **⚠ SIX PINNED `fns:` LISTS ACROSS TWO SUITES BROKE CORRECTLY** when `planTaskCtx` grew calls to `matterDef`,
+    `matterTypeOf`, `docTierOf` and `docTierProduces` — **found by searching every suite that lifts `planTaskCtx` at
+    once**, which this file records costing a round when it is not. Lifted rather than stubbed: each is a real rule,
+    and a stub is exactly what would let the two sides drift.
+  - **⚠ TWO PRE-EXISTING ASSERTIONS BROKE CORRECTLY AND BOTH ARE RESTATED, NEITHER DELETED.** `field-capture`'s
+    *"0 of 12 ticked"* is **11** now, for the legacy reason above; and its `plan-derived-p4-7` is `plan-derived-admin-7`,
+    restated to also assert the close-out facts are still on the card.
+  - **⚠ AND ONE OF MY OWN FIXTURES MEASURED THE WRONG JOB.** `planTaskCtx` takes the **estimate's** service over the
+    job's, so a fixture moving only `job.svc` measures a Home Editing job wearing an estate estimate. Three checks
+    failed on correct code until both moved together.
+- **Verified end to end in headless Chromium on the real page, 47 checks, 0 failed, 0 page errors**, driving the real
+  intake form, the real Inventory tab and the real `renderJobPlan`:
+
+  | | |
+  |---|---|
+  | an Estate Settlement on a probate matter | **11 boxes**, the §733.604 verification on the card — it rendered **5 and no list** |
+  | the same estate at each tier | appraisals **12** · values **11** · contents **10** · none **9** |
+  | contracted at None | *date-of-death FMV on every line* **gone from the rendered card** · the court procedure stays |
+  | a contents engagement, then one appraiser on the roster | attach box **absent**, then **back** |
+  | a trust matter | **no court section, and `733.604` appears nowhere on the card** · 5 boxes, never empty |
+  | a legacy probate job (no tier, no matter) | **11** — the one it loses is the attach box the migration refuses to claim |
+  | the two derived lines | green naming *Probate* and *Inventory with values*; open reading *withheld until it is* / *before the agreement goes out* |
+  | the Job Plan | PR authority **yes** on Estate Settlement/probate · **no** on probate/trust · **yes** unanswered |
+  | four living services, both fields forced on | **0 compliance boxes each** |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  The step-1, step-2 and step-3 browser scripts were re-run as regressions: **59 / 33 / 56**, 0 failed. The first
+  `<style>` block is **byte-identical at 93,431 bytes / 1,169 lines / 635 rules** — this step touched no CSS, and the
+  diff is **13 hunks, all inside `DOC_TIERS`, `PLAN_TASKS`, `JOB_ADMIN_TASKS`, `planTaskCtx`, `planDerivedLines` and
+  `renderJobAdmin`**.
+- Manual **§10a** (the court-list clause corrected, plus three notes: the box→renders-when table, the
+  unanswered-is-not-trust rule with the 11-not-12 measurement, and the two derived lines with why the trust checklist
+  is not built) and **§11** (the per-service table's *Under Job Admin* column is a **range** now — Estate Settlement
+  *5, or 9–12*; Probate *11 — 9–12 by tier, 5 on a trust matter* — the Probate row's PR-authority claim corrected,
+  and a note saying why a range is the point). Playbook **§e** (a `.stop` in field language naming all three
+  consequences) and **three** symptom→cause rows — including the two that will actually happen: *the court boxes are
+  not on a probate job* and *an Estate Settlement has suddenly grown a court checklist*. Both `.md` copies
+  hand-edited; **37 claims parity-checked, 0 mismatches** — ⚠ one apparent miss was an `<em>`/`*` boundary in my own
+  stripper, **verified by dumping the surrounding bytes rather than assumed**. A stale sweep for six retired wordings
+  returns **0 across all four files**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at
+  1440/390 with **0 overflow, 0 page errors**; under `print` **20/47 and 17/17** tables as wide as their container
+  against **20/46 and 17/17** at HEAD — the manual gained exactly one table, and it sits inside a `.note`, which is
+  where the other twenty-six uncounted ones sit.
+- **⚠ NEXT: step 5 — the contents-list document.** `_agrProbateCompliance`'s capture arm and the client estimate both
+  promise counsel *"a photographed, room-by-room list of the property contents (description, location and
+  condition)"* and **no such document exists** — every inventory printer carries an FMV column, and
+  `printAsFoundRecord` is the before-photo index, not a contents list. That is the deliverable the `contents` tier
+  now names on the agreement, the estimate and the desk card.
+
 ## ⚠⚠ THE APP PRICED THE WORK AND RECORDED NOTHING ABOUT WHAT THE CLIENT WAS PROMISED (BUILT 2026-09-21)
 Step 3 of `ESTATE_SCOPE_SPEC.md`. Anthony, on what Havellin actually sells: *"we claim that our documentation is
 basically whatever scope they want us to do. But I don't think there's anywhere in the app to actually capture that

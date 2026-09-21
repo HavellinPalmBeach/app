@@ -37,9 +37,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
-            'planCurrentStage'],
+            'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
-             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders'],
+             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: {
         document: dom, isFormalDoc: () => false, _sfHost: () => '', renderVendorSourcing: () => '<i>SOURCING</i>',
         renderVendorScorecard: () => '', _importableFromEstimate: () => ({ collections: [], vehicles: [] }), getPlanNote: () => '',
@@ -253,8 +253,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the checklists: a sentence, not a form label; a lone box spans the row');
   {
-    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob'],
-                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'jobPlanStore'], stubs: { _planTaskDone: (j, k) => k === 'coi_provided', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
+    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'jobPlanStore', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'], stubs: { _planTaskDone: (j, k) => k === 'coi_provided', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
     const box = c.planChk(7, 'precall', 'Pre-job call placed');
     has(box, '<label class="plan-chk">', 'the box is a class, not seven inline properties');
     lacks(box, 'style=', 'no inline style at all');

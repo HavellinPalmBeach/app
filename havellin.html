@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 3:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 4:03pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4113,18 +4113,22 @@ function activeDocScope() { return docScopeDef(_estimateDocScope) ? _estimateDoc
 // split goes; do not collapse the two tiers in the meantime.
 var DOC_TIERS = [
   {key:'contents',   scope:'capture', floor:'',
+   produces:{inventory:true,  values:false, appraisals:false},
    label:'Contents list — photographed, described and located; no values',
    we:'A room-by-room list with a photograph, a description, a location and a condition for every item of consequence.',
    they:'Counsel values it, arranges any appraisal, and prepares the filing.'},
   {key:'values',     scope:'full',    floor:'',
+   produces:{inventory:true,  values:true,  appraisals:false},
    label:'Inventory with values — estimated FMV, basis stated',
    we:'The contents list plus an estimated fair market value at the valuation date, with the basis of each value stated.',
    they:'Counsel prepares the filing.'},
   {key:'appraisals', scope:'full',    floor:'formal',
+   produces:{inventory:true,  values:true,  appraisals:true},
    label:'Inventory + appraisals — specialist reports coordinated and attached',
    we:'The valued inventory plus specialist appraisers engaged, scheduled and their reports attached to the record.',
    they:'Counsel prepares the filing.'},
   {key:'none',       scope:'none',    floor:'',
+   produces:{inventory:false, values:false, appraisals:false},
    label:'None — counsel inventories; Havellin sorts, stages and sets aside',
    we:'Sorting, staging and set-aside against counsel’s own schedule. No inventory is produced.',
    they:'Counsel’s office does the whole inventory and the filing.'}
@@ -4157,6 +4161,21 @@ function docTierOf(job) {
 // always has — the estimate still shows a number — and refusing to PRICE an unanswered one is
 // a separate gate on Build Estimate, not something to bury in a lookup.
 function docTierScope(tier) { var d = docTierDef(tier); return d ? d.scope : 'full'; }
+// ⚠⚠ WHAT THE CONTRACT SAYS WE HAND OVER, asked one way. `produces` is on the catalogue
+// entry rather than derived from `scope`, and that separation is the whole point of the tier:
+// `scope` is the PRICING projection and answers "how much of the work do we do", while this
+// answers "what does the client get" — the question this step exists to make askable. Keying a
+// deliverable check off the pricing projection would collapse the two axes back together.
+//
+// ⚠ AN UNANSWERED TIER READS AS `values`, through the same map the migration uses rather than
+// a second literal beside it — so a job recorded before the tier existed behaves exactly as it
+// did yesterday instead of silently losing a check. A service that prices no documentation
+// step produces nothing at all, which is what keeps a downsizing out of every reader below.
+function docTierProduces(job, what) {
+  if (!svcHasDocStep(job && (job.svc || job.serviceType))) return false;
+  var d = docTierDef(docTierOf(job)) || docTierDef(DOC_TIER_FROM_SCOPE.full);
+  return !!(d && d.produces && d.produces[what]);
+}
 function svcHasDocStep(svc) { return !!(JOB_STEPS[svc] && JOB_STEPS[svc].document); }
 // The step set the engine actually prices: the catalogue entry with `document` scaled or
 // removed. Always a COPY — JOB_STEPS itself is never mutated, so the client-document code
@@ -27103,7 +27122,12 @@ var PLAN_TASKS = [
   { key:'access_tested',      phase:'p0', sec:'Access &amp; crew', label:'Keys and access codes tested; elevator and parking confirmed', mm:' (and the moving truck)' },
   { key:'crew_briefed',       phase:'p0', sec:'Access &amp; crew', label:'Crew confirmed by name and briefed — standing job flags read aloud' },
   { key:'coi_provided',       phase:'p0', sec:'Access &amp; crew', label:'Certificate of Insurance provided to the attorney, PR or HOA as required' },
-  { key:'pr_authority',       phase:'p0', sec:'Probate gate', when:function(c){ return c.isProbate; },
+  // ⚠ THE SAME DEFECT ONE LIST OVER, and it is one word: a personal representative is a fact
+  // about the MATTER, not about which service was sold. An Estate Settlement administering a
+  // probate estate has a PR whose authority is full or limited and never got asked; a probate
+  // job recorded as a trust administration has a successor trustee instead, and was. The trust
+  // twin of this box waits on step 7 with the rest of the trust variant.
+  { key:'pr_authority',       phase:'p0', sec:'Probate gate', when:function(c){ return c.probateTrack; },
     label:'Personal Representative authority confirmed — full vs limited, limitations noted' },
   { key:'nh_floorplan',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'New home floor plan obtained or sketched to scale' },
   { key:'nh_placement',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'New home measured; furniture placement plan drafted against the keep list' },
@@ -27172,13 +27196,33 @@ var JOB_ADMIN_TASKS = [
   { key:'fin_settlement',        sec:'Financial close', when:function(c){ return c.isDisposal; },
     label:'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received' },
   { key:'fin_donation_receipts', sec:'Financial close', label:'Donation receipts collected and filed for tax records' },
-  { key:'ct_inventory',   sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'§733.604 inventory verified — date-of-death FMV on every line' },
-  { key:'ct_appraisals',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'All professional appraisals attached as supporting documentation' },
-  { key:'ct_nonprobate',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Non-probate assets excluded (joint with survivorship, POD/TOD, trust, beneficiary-designated)' },
-  { key:'ct_served',      sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Inventory served on all interested parties; proof of service filed' },
-  { key:'ct_filed',       sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Filed within the 60-day deadline, or an extension petitioned for cause' },
-  { key:'ct_accounting',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'Final accounting prepared: sale proceeds, donations, disposal costs, professional fees' },
-  { key:'ct_pr_signoff',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.isProbate; }, label:'PR sign-off obtained on the final disposition summary' },
+  // ⚠⚠ THE COMPLIANCE LIST IS KEYED ON WHICH INSTRUMENT THE ESTATE FEEDS AND ON WHAT WE ARE
+  // CONTRACTED TO PRODUCE — never on the service type, which records what Havellin was HIRED to
+  // do rather than what it promised. Keyed on `isProbate` it failed in both directions at once,
+  // measured before it was changed: an Estate Settlement administering a probate estate got no
+  // compliance list at all whatever it was contracted for, and a probate job contracted at
+  // `None` got all seven — told to verify date-of-death FMV and attach appraisals its own
+  // agreement says counsel produces.
+  //
+  // ⚠ TWO OF THEM TAKE THE TIER AS WELL, because they are checks on HAVELLIN'S OWN DELIVERABLE
+  // rather than on the court's procedure. Serving, filing, the accounting and the PR's sign-off
+  // happen on a probate matter whoever built the schedule; verifying a value we did not state,
+  // or attaching a report we were not engaged to obtain, is an instruction nobody can follow.
+  //
+  // ⚠ A TRUST MATTER CORRECTLY GETS NONE OF THESE, AND THAT IS NOT THE OMISSION IT LOOKS LIKE:
+  // the trustee's schedule these would verify does not exist yet (step 7 of ESTATE_SCOPE_SPEC),
+  // and a checklist against a document nothing can produce is the box people learn to tick
+  // blind. It is listed as outstanding in both documents rather than guessed at here.
+  { key:'ct_inventory',   sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack && c.weValue; }, label:'§733.604 inventory verified — date-of-death FMV on every line' },
+  // ⚠ OR the job actually HAS an appraiser on the record. The tier says whose job it was to
+  // obtain one; a report that exists has to be attached however it arrived, and a box that
+  // vanishes off a job holding three appraisals would be the silent omission this step removes.
+  { key:'ct_appraisals',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack && (c.weAppraise || c.hasAppraisers); }, label:'All professional appraisals attached as supporting documentation' },
+  { key:'ct_nonprobate',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack && c.weInventory; }, label:'Non-probate assets excluded (joint with survivorship, POD/TOD, trust, beneficiary-designated)' },
+  { key:'ct_served',      sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Inventory served on all interested parties; proof of service filed' },
+  { key:'ct_filed',       sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Filed within the 60-day deadline, or an extension petitioned for cause' },
+  { key:'ct_accounting',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Final accounting prepared: sale proceeds, donations, disposal costs, professional fees' },
+  { key:'ct_pr_signoff',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'PR sign-off obtained on the final disposition summary' },
   { key:'rec_archived',   sec:'Records', label:'Job folder complete and archived in Drive — 7-year retention' }
 ];
 
@@ -27194,8 +27238,31 @@ function planTaskCtx(job, est) {
   var isDisposal = isCleanout || isDocJob;
   var collections = (est && est.collections) || [];
   var formal = isFormalDoc(job);
+  // ⚠⚠ THE CONTRACT AXES. Every field above is a SERVICE question — what Havellin was HIRED
+  // to do — and until 2026-09-21 the desk checklist had nothing else to ask, so it keyed the
+  // whole §733.604 compliance list on `isProbate`. Measured before it was changed: an Estate
+  // Settlement got FIVE desk boxes and no compliance list at all whatever it was contracted
+  // for, while a probate job contracted at `None` still got all twelve — told to verify
+  // date-of-death FMV on an inventory the agreement says counsel produces. Tier and matter
+  // type changed nothing across all twenty combinations on every one of the seven services.
+  //
+  // ⚠ `probateTrack` FALLS BACK TO THE SERVICE AND `trustTrack` DOES NOT, and the asymmetry is
+  // deliberate. A matter recorded on the job decides. An UNANSWERED one on a probate service
+  // still means a court case was open at intake — that is what the service name records — so
+  // the checklist a probate job has today survives rather than disappearing on every job
+  // created before the field existed. Nothing in a service name says trust, so there is no
+  // honest fallback in that direction and an unanswered matter is never a trust matter.
+  var mdef = matterDef(job);
   return { svc: svc, isMM: isMM, isDownsizing: isDownsizing, isCleanout: isCleanout, isEstate: isEstate,
            isProbate: isProbate, isDocJob: isDocJob, isDisposal: isDisposal,
+           matter: matterTypeOf(job),
+           probateTrack: mdef ? !!mdef.onProbate : isProbate,
+           trustTrack: mdef ? !!mdef.trust : false,
+           tier: docTierOf(job),
+           weInventory: docTierProduces(job, 'inventory'),
+           weValue: docTierProduces(job, 'values'),
+           weAppraise: docTierProduces(job, 'appraisals'),
+           hasAppraisers: !!(job && job.appraisers && job.appraisers.length),
            // ⚠ THE TWO AXES, so a `when` predicate has somewhere honest to ask them. Every other
            // field here is a SERVICE question and they are all correct as such — do NOT rewrite
            // them to use these, which would churn the measured per-service box counts for nothing.
@@ -27313,7 +27380,11 @@ function planDerivedLines(jobId, job, est, phase) {
                  detail: rcpt ? 'attached' : donating.length + ' item' + (donating.length > 1 ? 's' : '') + ' going to donation — attach the receipt on the Job Admin & Inv tab (Receipt / Doc)' });
     }
   }
-  if (phase === 'p4') {
+  // ⚠ `admin` IS THE DESK CARD AND `p4` IS THE JOB PLAN'S CLOSE-OUT STAGE, and they share the
+  // close-out facts deliberately — a concierge closing a room and a concierge at the desk want
+  // the same answers. What they do not share is the pair below, whose whole subject is the
+  // §733.604 list that renders on the desk card alone.
+  if (phase === 'p4' || phase === 'admin') {
     var nC = roomsAt(PS_DONE_STATUSES);
     out.push({ key: 'rooms_cleared', ok: rooms.length > 0 && nC === rooms.length, label: 'All rooms cleared', detail: nC + ' of ' + rooms.length });
     var logs = jobLogEntries(jobId);
@@ -27337,6 +27408,27 @@ function planDerivedLines(jobId, job, est, phase) {
     var fin = !!docSentAt(job, 'invoice', 'final');
     out.push({ key: 'final_invoice_sent', ok: fin, label: 'Final invoice sent',
                detail: fin ? 'sent' : 'from the Client Dashboard, once the hours are in' });
+    // ⚠⚠ THE TWO ANSWERS THAT DECIDE WHAT THE REST OF THIS CARD SAYS. Since 2026-09-21 the
+    // Florida court list keys on the matter type and the engagement tier, so an EMPTY court
+    // section is now ambiguous on its face: the desk cannot tell "this estate has no probate in
+    // it" from "nobody answered the question". Naming both closes that, and it is the same rule
+    // the Court Inventory follows — state the gap rather than render a silent absence.
+    //
+    // ⚠ DERIVED, NEVER TICKED. Both are recorded at intake and corrected on Edit Client, so a
+    // box here would be a second store of one fact — which is what the two midpoint booleans
+    // were before they were deleted.
+    if (phase === 'admin' && ctx.isDocJob) {
+      // ⚠ BOTH READ THE CTX, and symmetrically. `ctx.matter` was resolved through `matterTypeOf`
+      // — which is what applies the living-client gate and discards an unrecognised value — so
+      // this is the catalogue lookup on an answered key, exactly as `docTierDef(ctx.tier)` is
+      // beside it, and not a second opinion of what the matter type means.
+      var mdf = ctx.matter ? MATTER_TYPES[ctx.matter] : null;
+      out.push({ key: 'matter_type', ok: !!mdf, label: 'Matter type recorded',
+                 detail: mdf ? mdf.label : 'not recorded &mdash; the Florida court list is withheld until it is. Edit Client' });
+      var tdf = docTierDef(ctx.tier);
+      out.push({ key: 'doc_tier', ok: !!tdf, label: 'Contracted to produce',
+                 detail: tdf ? tdf.label : 'not recorded &mdash; Edit Client, before the agreement goes out' });
+    }
   }
   return out;
 }
@@ -27366,7 +27458,7 @@ function renderJobAdmin(jobId, job) {
   var ctx = planTaskCtx(job, est);
   var tasks = planTasksFor(JOB_ADMIN_TASKS, null, ctx);
   var done = tasks.filter(function(t){ return _planTaskDone(jobId, t.key); }).length;
-  var derived = planDerivedLines(jobId, job, est, 'p4');
+  var derived = planDerivedLines(jobId, job, est, 'admin');
   var openLines = derived.filter(function(l){ return !l.ok; }).length;
   var open = !!_jobAdminOpen[jobId];
   return '<div class="ja-card">'
@@ -27375,7 +27467,7 @@ function renderJobAdmin(jobId, job) {
       + '<span>Job Admin — desk paperwork</span>'
       + '<span class="ja-n">' + done + ' of ' + tasks.length + ' ticked' + (openLines ? ' · ' + openLines + ' derived item' + (openLines > 1 ? 's' : '') + ' still open' : '') + '</span>'
     + '</div>'
-    + (open ? '<div class="ja-body">' + planDerivedHtml(jobId, job, est, 'p4') + planTaskSectionsHtml(jobId, tasks, ctx) + '</div>' : '')
+    + (open ? '<div class="ja-body">' + planDerivedHtml(jobId, job, est, 'admin') + planTaskSectionsHtml(jobId, tasks, ctx) + '</div>' : '')
     + '</div>';
 }
 
