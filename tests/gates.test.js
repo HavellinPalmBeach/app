@@ -13,12 +13,14 @@ const { sandbox, domStub } = require('./harness');
 
 const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
+  'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep',
   'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'invListingThreshold',
   'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
   'docStandardEffect',
 ];
 const VARS = [
   'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
   'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD', 'INV_TAXONOMY',
 ];
 

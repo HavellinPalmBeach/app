@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 3:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 3:54pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1401,13 +1401,13 @@ body.no-smf .smf-col{display:none;}
           </div>
         </div>
         <div class="row">
-          <div class="gate-cell"><label>Who builds the inventory?</label>
-            <select id="i-docscope">
-              <option value="full">Havellin &mdash; inventory &amp; estimated value</option>
-              <option value="capture">Havellin photographs &amp; lists; counsel values</option>
-              <option value="none">Counsel&rsquo;s office &mdash; Havellin sorts &amp; stages</option>
-            </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal?</em> This seeds the estimate&rsquo;s Documentation scope, which prices it; the walkthrough can still override it there. Default to the first until they say otherwise.</div>
+          <!-- ⚠ THE OPTIONS ARE RENDERED FROM DOC_TIERS AT LOAD, NOT TYPED HERE. A menu written
+               into the markup is a second copy of the catalogue, and this file records exactly
+               that going wrong when the Edit Client modal kept its own hardcoded service list
+               and a rename missed it. buildDocTierOptions() fills both this and the label. -->
+          <div class="gate-cell"><label>What are we contracted to produce?</label>
+            <select id="i-doc-tier" onchange="onDocGateChange()"></select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal? And do you want appraisals arranged?</em> This is the <strong>deliverable the agreement promises</strong>; it also seeds the estimate&rsquo;s Documentation scope, which prices it, and the walkthrough can still override that there. Leave it blank only if they genuinely have not decided.</div>
           </div>
           <div></div>
         </div>
@@ -4088,6 +4088,75 @@ function docScopeDef(key) {
   return null;
 }
 function activeDocScope() { return docScopeDef(_estimateDocScope) ? _estimateDocScope : 'full'; }
+
+// ─── WHAT WE ARE CONTRACTED TO HAND OVER ──────────────────────────────────
+// ⚠⚠ `docScope` ANSWERS "HOW MUCH OF THE WORK DO WE DO", NOT "WHAT DOES THE CLIENT GET", AND
+// NOTHING RECORDED THE SECOND. Anthony, on what Havellin actually sells: "we claim that our
+// documentation is basically whatever scope they want us to do. But I don't think there's
+// anywhere in the app to actually capture that … we have to know if we are doing a full
+// documentation with valuation and that should be captured somewhere, probably at intake,
+// certainly before we offer an estimate of cost." The website promises "as little or as much
+// of the inventory work as required"; the app had three pricing settings and no contract term.
+//
+// So the TIER is what the client is told they will receive, and `docScope` is its pricing
+// projection. One closed menu, picked at intake — Anthony's call, against a free-text field or
+// a per-deliverable checklist: a menu is quotable, and anything the estimator can type is
+// something the agreement cannot promise.
+//
+// ⚠ FOUR TIERS AGAINST THREE SCOPES, AND THE 4→3 IS DELIBERATE RATHER THAN SLOPPY. The top two
+// price identically TODAY, because appraiser coordination already sits inside the `document`
+// step's coordination column and nothing prices it separately. What they do not share is the
+// DOCUMENTATION STANDARD: `appraisals` raises the Strict Mode floor, which turns the appraisal
+// guardrail from an amber nudge into a red block and holds the Court Inventory at DRAFT until
+// every flagged item is appraised or waived. That machinery already exists — this is the tier
+// that names it. ⚠ If appraisal coordination is ever priced on its own, this is where the
+// split goes; do not collapse the two tiers in the meantime.
+var DOC_TIERS = [
+  {key:'contents',   scope:'capture', floor:'',
+   label:'Contents list — photographed, described and located; no values',
+   we:'A room-by-room list with a photograph, a description, a location and a condition for every item of consequence.',
+   they:'Counsel values it, arranges any appraisal, and prepares the filing.'},
+  {key:'values',     scope:'full',    floor:'',
+   label:'Inventory with values — estimated FMV, basis stated',
+   we:'The contents list plus an estimated fair market value at the valuation date, with the basis of each value stated.',
+   they:'Counsel prepares the filing.'},
+  {key:'appraisals', scope:'full',    floor:'formal',
+   label:'Inventory + appraisals — specialist reports coordinated and attached',
+   we:'The valued inventory plus specialist appraisers engaged, scheduled and their reports attached to the record.',
+   they:'Counsel prepares the filing.'},
+  {key:'none',       scope:'none',    floor:'',
+   label:'None — counsel inventories; Havellin sorts, stages and sets aside',
+   we:'Sorting, staging and set-aside against counsel’s own schedule. No inventory is produced.',
+   they:'Counsel’s office does the whole inventory and the filing.'}
+];
+function docTierDef(key) {
+  for (var i = 0; i < DOC_TIERS.length; i++) if (DOC_TIERS[i].key === key) return DOC_TIERS[i];
+  return null;
+}
+// ⚠⚠ THE MIGRATION IS A READ, NEVER A WRITE SWEEP. Every job recorded before 2026-09-21 carries
+// a `docScope` and no tier, and a sweep needs a writer, a version gate and every device to run
+// it; a derivation fixes them all on the next paint with nothing to run. This file records that
+// choice paying off on isAgreementSent, and the same rule applies: the TIER is the truth and
+// `docScope` is the mirror, written alongside it so nothing downstream had to be repointed.
+//
+// ⚠ `full` MIGRATES TO `values`, NOT TO `appraisals`. The top tier raises the documentation
+// floor, so mapping every existing job onto it would put every one of them into Strict Mode —
+// a behaviour change nobody asked for, arriving silently, on jobs already priced and papered.
+var DOC_TIER_FROM_SCOPE = { full: 'values', capture: 'contents', none: 'none' };
+// ⚠ KEYED ON svcHasDocStep, NOT ON isDecedentJob/invFiduciaryMode. The tier is what we hand
+// over, so the question is whether this service prices a documentation step at all — the same
+// test estimateDocScope two functions above already uses, and the reason a downsizing reads
+// 'none' there whatever its record says. The two select the same three services today and a
+// test pins that they must; they are separate questions and the names should stay separate.
+function docTierOf(job) {
+  if (!job || !svcHasDocStep(job.svc || job.serviceType)) return '';
+  if (docTierDef(job.docTier)) return job.docTier;
+  return DOC_TIER_FROM_SCOPE[job.docScope] || '';
+}
+// The pricing projection. An unanswered tier prices at `full` exactly as an unanswered scope
+// always has — the estimate still shows a number — and refusing to PRICE an unanswered one is
+// a separate gate on Build Estimate, not something to bury in a lookup.
+function docTierScope(tier) { var d = docTierDef(tier); return d ? d.scope : 'full'; }
 function svcHasDocStep(svc) { return !!(JOB_STEPS[svc] && JOB_STEPS[svc].document); }
 // The step set the engine actually prices: the catalogue entry with `document` scaled or
 // removed. Always a COPY — JOB_STEPS itself is never mutated, so the client-document code
@@ -4116,16 +4185,26 @@ function estimateDocScope(e) {
 // shape as the production rate — Settings holds α's default, the job holds this one — and
 // with the same rule: it seeds a new build and never moves an estimate already priced.
 function seedDocScopeFromJob(job) {
+  // ⚠ THE TIER FIRST, AND IT ALREADY COVERS A LEGACY JOB — docTierOf migrates a stored docScope
+  // on read, so this answers exactly what it used to for every job recorded before the tier
+  // existed. The raw-scope fallback is for a job that somehow carries neither.
+  var t = docTierOf(job);
+  if (t) return docTierScope(t);
   return (job && docScopeDef(job.docScope)) ? job.docScope : 'full';
 }
 // When the estimate is priced at a different scope than intake recorded, say so under the
 // dropdown. Not a warning — overriding on the walkthrough is legitimate — but the two
 // answers must never silently disagree, because the attorney was told one of them.
 function _docScopeIntakeNote(job, active) {
-  if (!job || !docScopeDef(job.docScope)) return '';
-  if (job.docScope === active) return '';
-  var i = docScopeDef(job.docScope), a = docScopeDef(active);
-  return 'Intake recorded ' + i.label.split(' \u2014 ')[0] + '; this estimate is priced at ' + a.label.split(' \u2014 ')[0] + '.';
+  // ⚠ IT NAMES THE TIER, BECAUSE THAT IS WHAT THE ATTORNEY WAS TOLD. The scope is our pricing
+  // word for it; "Intake recorded Capture only" is not a sentence anybody said on the call.
+  var t = docTierOf(job);
+  if (!t) return '';
+  var seeded = docTierScope(t);
+  if (seeded === active) return '';
+  var a = docScopeDef(active);
+  return 'Intake recorded ' + docTierDef(t).label.split(' \u2014 ')[0]
+       + '; this estimate is priced at ' + (a ? a.label.split(' \u2014 ')[0] : active) + '.';
 }
 function setEstimateDocScope(key) {
   _estimateDocScope = docScopeDef(key) ? key : 'full';
@@ -7982,7 +8061,11 @@ function saveIntake() {
     docLevel:(document.getElementById('i-doclevel')||{}).value||'',
     gate706:            (document.getElementById('i-gate-706')||{}).value||'',
     gateDispute:        (document.getElementById('i-gate-dispute')||{}).value||'',
-    docScope:           (document.getElementById('i-docscope')||{}).value||'full',   // seeds the estimate's Documentation scope
+    // ⚠ THE TIER IS THE TRUTH AND docScope IS THE MIRROR, written alongside it so the twenty-odd
+    // readers of the scope did not have to be repointed in one commit. docTierOf migrates a
+    // stored scope on read, so a job recorded before the tier existed needs nothing run on it.
+    docTier:            (document.getElementById('i-doc-tier')||{}).value||'',        // what the agreement promises
+    docScope:           docTierScope((document.getElementById('i-doc-tier')||{}).value||''),   // its pricing projection
     matterType:         (document.getElementById('i-matter-type')||{}).value||'',    // probate | trust | both | neither — never defaulted, see MATTER_TYPES
     status:'new',
     havellinEst:null, totalEst:null, inRange:null, approved:false,
@@ -8278,6 +8361,22 @@ function buildHouseFlagInputs() {
   if (host) host.innerHTML = houseFlagInputsHtml('i', null);
 }
 
+// One catalogue, every menu. Client Intake and the Edit Client modal both build their
+// engagement-tier options from DOC_TIERS rather than listing them, so a tier cannot be
+// renamed on one form and not the other.
+function docTierOptionsHtml(selected) {
+  var out = '<option value="">Select \u2014 ask the attorney</option>';
+  for (var i = 0; i < DOC_TIERS.length; i++) {
+    var t = DOC_TIERS[i];
+    out += '<option value="' + t.key + '"' + (t.key === selected ? ' selected' : '') + '>' + esc(t.label) + '</option>';
+  }
+  return out;
+}
+function buildDocTierOptions() {
+  var el = document.getElementById('i-doc-tier');
+  if (el) el.innerHTML = docTierOptionsHtml('');
+}
+
 // The standing job flags, rendered for the Job Plan header — what the crew has open in
 // the house. Also shown on the client dashboard, where the job is prepped.
 // ⚠ It used to reach PAPER too, because printJobPlan printed #job-plan-header along with
@@ -8436,7 +8535,7 @@ function firearmsWorkspaceLine(job) {
 // text. The Clear button's list was missing a different five.
 //
 // Add new intake fields HERE and both paths stay correct.
-var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no', 'i-docscope': 'full' };
+var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no' };
 var INTAKE_FIELDS = [
   'i-svc', 'i-fname', 'i-lname', 'i-phone', 'i-email', 'i-addr', 'i-city', 'i-zip',
   'i-src', 'i-referredby', 'i-refpartner',
@@ -8448,7 +8547,7 @@ var INTAKE_FIELDS = [
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
-  'i-gate-706', 'i-gate-dispute', 'i-docscope', 'i-matter-type',
+  'i-gate-706', 'i-gate-dispute', 'i-doc-tier', 'i-matter-type',
   'i-dest-addr', 'i-dest-city', 'i-dest-zip', 'i-dest-sqft', 'i-dest-beds', 'i-dest-baths'
 ];
 
@@ -30164,6 +30263,13 @@ function docLevelFloor(job) {
   if (job.svc === 'contested_probate') return 'formal';   // contested is always formal
   if (gateDispute(job)) return 'formal';                  // G6
   if (_gate706(job) && isDecedentJob(job, job.svc)) return 'formal';  // G2, decedent work only
+  // ⚠ THE TOP ENGAGEMENT TIER RAISES THE FLOOR, AND IT IS NOT A DECORATION. `Inventory +
+  // appraisals` is the tier where the client is paying for specialist reports to be engaged
+  // and attached — which is exactly the machinery Strict Mode turns on: the appraisal
+  // guardrail becomes a red block rather than an amber nudge, and the Court Inventory holds at
+  // DRAFT until every flagged item is appraised or waived. Escalate-only is unbroken: this
+  // raises the floor and can never lower one the gates have already set.
+  if (docTierOf(job) === 'appraisals') return 'formal';
   return 'standard';
 }
 
@@ -30177,6 +30283,12 @@ function docLevelFloorReason(job) {
     return String(job.gate706 || '') === 'yes'
       ? 'A federal estate tax return (Form 706) is being filed, so the §20.2031-6 documentation standard applies.'
       : 'The 706 question is unanswered, and unknown counts as yes. Answer it with the attorney or PR to lift this.';
+  }
+  // ⚠ LAST IN THE CHAIN ON PURPOSE. The three above are facts about the matter — a contested
+  // case, a recorded dispute, a federal return — and this one is a contractual choice. When
+  // both apply, the reader wants the fact, because the fact is the one they cannot change.
+  if (docTierOf(job) === 'appraisals') {
+    return 'This engagement is contracted at Inventory + appraisals, so every flagged item is held to the specialist standard until it is appraised or waived.';
   }
   return '';
 }
@@ -30198,6 +30310,9 @@ function onDocGateChange(pfx, docLevelFallback) {
   var draft = {
     svc: g('svc'),
     gate706: g('gate-706'), gateDispute: g('gate-dispute'),
+    // The engagement tier raises the floor too, so the readout has to see it or the dropdown
+    // disables itself with no reason on screen — the defect this whole area was fixed for.
+    docTier: g('doc-tier'),
     // The control wins when it says something; otherwise the saved level. At intake the two
     // are the same answer (a blank dropdown and no fallback both mean "not set by hand"), and
     // in Edit Client there is no control at all, so the job's own level is the only source.
@@ -33523,9 +33638,12 @@ function showEditClient(jobId) {
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('Date of Death', '<input type="date" id="ec-date-of-death" value="'+(job.deathDate||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
   html += fld('How is this estate being administered?', '<select id="ec-matter-type" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select — ask the attorney'}].concat(Object.keys(MATTER_TYPES).map(function(k){ return { v:k, l: MATTER_TYPES[k].label }; })), matterTypeOf(job))+'</select>', true);
-  html += fld('Who builds the inventory?', '<select id="ec-docscope" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'full',l:'Havellin — inventory & estimated value'},{v:'capture',l:'Havellin photographs & lists; counsel values'},{v:'none',l:'Counsel\'s office — Havellin sorts & stages'}], (typeof docScopeDef === 'function' && docScopeDef(job.docScope)) ? job.docScope : 'full')+'</select>', false);
+  // Built from DOC_TIERS through the same helper Client Intake uses, so a tier cannot be
+  // renamed on one form and not the other. Prefilled through docTierOf, which migrates a job
+  // recorded before the tier existed off its stored scope — nothing had to be run on them.
+  html += fld('What are we contracted to produce?', '<select id="ec-doc-tier" onchange="ecDocGateChange()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+docTierOptionsHtml(docTierOf(job))+'</select>', false);
   html += '</div>';
-  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer seeds a new estimate\'s Documentation scope; an estimate already priced keeps its own setting. <strong>How it is administered</strong> decides which instrument the documents take \u2014 a probate court schedule or a trustee\'s; it is never guessed, and a job recorded before 2026-09-21 carries no answer at all.</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer seeds a new estimate\'s Documentation scope; an estimate already priced keeps its own setting \u2014 correcting the tier here never reprices a quote already given. <strong>How it is administered</strong> decides which instrument the documents take \u2014 a probate court schedule or a trustee\'s; it is never guessed, and a job recorded before 2026-09-21 carries no answer at all.</div>';
 
   // ⚠ EDITABLE HERE BECAUSE STRICT MODE WAS A ONE-WAY DOOR. docLevelFloorReason tells the
   // reader to "answer it with the attorney or PR to lift this" — and until now there was
@@ -33722,8 +33840,15 @@ function saveClientEdit(jobId) {
   // strictly the estate is documented. Holding them would make a wrong 706 answer permanent
   // the moment an estimate was approved, which is the one-way door this change exists to close.
   if (isEstateEdit) {
-    var _ecDs = document.getElementById('ec-docscope');
-    if (_ecDs && typeof docScopeDef === 'function' && docScopeDef(_ecDs.value)) job.docScope = _ecDs.value;
+    // ⚠ THE TIER IS WRITTEN AND THE SCOPE IS MIRRORED FROM IT, never set independently — that
+    // is what stops the deliverable the agreement promises drifting from the work the estimate
+    // priced. A blank clears both; an unrecognised value is discarded rather than stored, the
+    // same rule the matter type follows below.
+    var _ecTier = document.getElementById('ec-doc-tier');
+    if (_ecTier) {
+      job.docTier  = docTierDef(_ecTier.value) ? _ecTier.value : '';
+      job.docScope = docTierScope(job.docTier);
+    }
     job.deathDate    = (document.getElementById('ec-date-of-death') || {}).value || '';
     // ⚠ AN UNRECOGNISED VALUE IS DISCARDED RATHER THAN STORED. matterTypeOf already refuses
     // to resolve one, so storing it would leave a job reading unanswered on every screen while
@@ -34138,6 +34263,7 @@ renderVendors();
 rebuildDropdowns();
 populateIntakeTCDropdown();
 buildHouseFlagInputs();
+buildDocTierOptions();
 // Force Client Intake date fields to use the calendar picker only — block manual
 // keyboard entry so you can't type a malformed or impossible date.
 (function(){

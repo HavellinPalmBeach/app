@@ -96,6 +96,103 @@ merged.
   still say to set the track by hand on a trust matter. It must not follow the matter type until the trustee's
   schedule exists, or a trust matter's contents move off the wrong schedule and onto no schedule at all.
 
+## ⚠⚠ THE APP PRICED THE WORK AND RECORDED NOTHING ABOUT WHAT THE CLIENT WAS PROMISED (BUILT 2026-09-21)
+Step 3 of `ESTATE_SCOPE_SPEC.md`. Anthony, on what Havellin actually sells: *"we claim that our documentation is
+basically whatever scope they want us to do. But I don't think there's anywhere in the app to actually capture that
+… we have to know if we are doing a full documentation with valuation and that should be captured somewhere,
+probably at intake, certainly before we offer an estimate of cost."* App-only, no redeploy — `docTier` rides the
+per-key job merge and the Jobs sheet stores `JSON.stringify(job)`.
+
+- **⚠⚠ `docScope` ANSWERS *HOW MUCH OF THE WORK DO WE DO*, NOT *WHAT DOES THE CLIENT GET*, AND NOTHING RECORDED THE
+  SECOND.** The website promises *"as little or as much of the inventory work as required"*; the app had **three
+  pricing settings and no contract term**. `DOC_TIERS` is what the client is told they will receive — **Contents
+  list** (photographed, described, located; no values) · **Inventory with values** (estimated FMV, basis stated) ·
+  **Inventory + appraisals** (specialist reports coordinated and attached) · **None** (counsel inventories) — and
+  `docScope` is its **pricing projection**, mirrored onto the job so the twenty-odd readers of the scope did not have
+  to be repointed in one commit. Every tier carries `we` and `they`: **what THEY produce is the half that makes it a
+  contract term** rather than a label.
+- **⚠ ONE CLOSED MENU, AND THAT WAS THE CHOICE.** Against a free-text field or a per-deliverable checklist: a menu
+  is quotable, and **anything the estimator can type is something the agreement cannot promise**. Both forms build
+  their options from one catalogue (`docTierOptionsHtml` / `buildDocTierOptions`) and the intake markup ships the
+  `<select>` **EMPTY** — this file records what a second hardcoded list costs, on the Edit Client modal that kept
+  its own service list through a rename.
+- **⚠⚠ FOUR TIERS ONTO THREE SCOPES, AND THE 4→3 IS DELIBERATE RATHER THAN SLOPPY.** The top two price
+  **identically today**, because appraiser coordination already sits inside the `document` step's coordination
+  column and nothing prices it separately. What they do not share is the documentation **STANDARD**: `appraisals`
+  raises `docLevelFloor` to `formal`, which is exactly the machinery the tier is named after — the appraisal
+  guardrail becomes a red block rather than an amber nudge, the individual-listing threshold drops **$1,000 → $100**,
+  and the Court Inventory holds at **DRAFT** until every flagged item is appraised or waived. **If appraisal
+  coordination is ever priced on its own, that is where the split goes; do not collapse the two tiers meanwhile.**
+- **⚠⚠ THE MIGRATION IS A READ, AND `full` MAPS TO `values` RATHER THAN `appraisals`.** A write sweep needs a
+  writer, a version gate and every device to run it; a derivation fixes them all on the next paint with nothing to
+  run — the rule `isAgreementSent` already pays for. And mapping every existing job onto the TOP tier would have put
+  **every estate already on the books into Strict Mode overnight**, silently, on jobs already priced and papered.
+  Reverting that one map entry fails 3.
+- **⚠ THE FLOOR REASON IS LAST IN `docLevelFloorReason`'s CHAIN, UNDER CONTESTED / DISPUTE / 706.** Those three are
+  facts about the matter; this one is a contractual choice, and when both apply **the reader wants the fact they
+  cannot change**. Putting it first (the converse) fails 1.
+- **⚠ NO DEFAULT, AND INTAKE DOES NOT REFUSE A BLANK — deliberately, and it is not the same decision as the matter
+  type.** On the first call the attorney may genuinely not have decided, and a guess printed onto an agreement is
+  worse than a blank. **Step 8 of the spec is what turns that into a gate**, at the estimate, where the cost of the
+  answer is incurred. Both documents say it must be answered before the agreement goes out.
+- **⚠ KEYED ON `svcHasDocStep`, NOT ON `isDecedentJob`/`invFiduciaryMode`.** The tier is what we hand over, so the
+  question is whether this service prices a documentation step at all — the same test `estimateDocScope` already
+  uses. The two select the same three services today and a test pins that they must; they are separate questions and
+  the names stay separate. Reverting that gate fails 5.
+- **8306 committed checks** (`tests/doc-tier.test.js`, 95 new; five suites' pinned `fns:` lists restated as
+  `docLevelFloor` grew a call to `docTierOf` — **found by searching every pinned list at once**, which this file
+  records costing a round when it is not). **All 31 changes revert-verified individually, ZERO green**; baseline 0
+  before and after.
+  - **⚠⚠ THREE CAME BACK GREEN ON THE FIRST SWEEP AND ALL THREE WERE THE SAME GAP: every check drove a PIECE and
+    nothing drove the JOIN.** The intake markup ships an EMPTY `<select>`, so a build that stops calling
+    `buildDocTierOptions()` at load renders **the one question this whole step exists to ask as a blank box** — with
+    the catalogue, the builder and the markup all still looking right on their own. The other two were Edit Client's
+    `onchange="ecDocGateChange()"` (correct the tier there and the readout stays stale, on a form that **has no
+    documentation-level dropdown at all**, so that readout is the only explanation there is) and `saveClientEdit`
+    storing an unrecognised tier. All three are driven now; re-done, they fail 1 / 1 / 1, and two further reverts
+    beside them fail 6 and 5.
+  - **⚠ ONE NEEDLE MATCHED NOTHING** and the `NEEDLE x0` guard caught it — my revert of the reason chain's ordering
+    quoted the contested-probate sentence from memory rather than from the file. Re-anchored, it fails 1.
+  - **⚠ `byStep.document` IS AN OBJECT `{tc, ps}`, NOT A PAIR.** My first assertion read `[1]`, which is `undefined`
+    on both sides, so the comparison passed on any build. Caught by measuring rather than by reading: full is
+    `{tc:5.6826, ps:38.745}`, capture `{tc:0, ps:19.3725}` — half the pool and **none** of the coordination — and
+    None has no entry at all.
+- **Verified end to end in headless Chromium on the real page, 56 checks, 0 failed, 0 page errors**, driving the real
+  intake form, the real gate readout, the real `saveIntake`, the real Edit Client modal and the real engine:
+
+  | | |
+  |---|---|
+  | the intake menu | **four tiers plus a blank**, and they ARE `DOC_TIERS` — opens blank, labelled *What are we contracted to produce?* |
+  | which services ask it | `cleanout` · `probate` · `contested_probate` **yes**; editing, transition, cleanout, prep **no** |
+  | picking *Inventory + appraisals* | level dropdown **disabled**, readout reads **Strict Mode** and names the tier, **visible** |
+  | the same with a 706 | the reason names **Form 706** — the fact, not the choice |
+  | saving with a blank tier | **accepted** (1 job made); with *Contents list* → `docTier contents` / `docScope capture` |
+  | a legacy job in Edit Client | `full`→**values**, `capture`→**contents**, `none`→**none**, and **never** `appraisals` |
+  | correcting it there | readout repaints into Strict Mode on the change; saved as `appraisals`/`full` |
+  | the estimate seed | contents→capture · values→full · none→none · legacy→capture; the note names the **tier** |
+  | pricing | **byte-identical `byStep` per tier**; PS hours **112 / 93 / 73** for full / capture / none |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  The step-1 and step-2 browser scripts were re-run as regressions: **59** and **33** checks, 0 failed. The first
+  `<style>` block is **byte-identical at 93,431 bytes / 1,168 lines / 635 rules** — this step touched no CSS.
+- **⚠ A TEST-HARNESS BUG MANUFACTURED A DISPUTE AND IT IS WORTH REMEMBERING.** `i-gate-dispute`'s **blank IS "no"** —
+  there is no `'no'` option — so the browser script's *"first option with a value"* fallback picked **`'yes'`**,
+  put the job in Strict Mode, and the readout correctly reported a dispute nobody had entered. The app was right;
+  the fixture was wrong. Set that field's value directly.
+- Manual **§4** (a new subsection: the four-tier table, the 4→3 note, the Strict Mode note, the blank-and-migration
+  note) with three standing claims **corrected** — the *Who builds the inventory?* name, *Auto* resolving from the
+  gates alone, and the seeding note's quoted hint, which now names the tier; **§5c** the scope bullet says it is
+  seeded from the tier. Playbook **Step 1** (the bullet rewritten with a four-row table, plus a `.stop` on the top
+  tier and on the blank), **Step 2** (the scope row says it opens off intake), and **six** symptom→cause rows —
+  including the two that will actually happen: *the level dropdown is greyed out and the reason names a tier* and
+  *an old estate shows a tier nobody picked*. Both `.md` copies hand-edited; **63 claims parity-checked, 0
+  mismatches** — ⚠ two apparent misses were `<em>` boundaries in my own stripper, **verified by dumping the
+  surrounding bytes rather than assumed**. A stale sweep for the retired wordings returns **0** except *Who builds
+  the inventory?*, whose only survivors are the historical note and the sentence saying it has been replaced — the
+  shape this file records over and over. Tag balance clean on both HTML files with the stylesheet stripped;
+  rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **20/43 and 17/17** tables as wide as their
+  container, against **19/42 and 16/16** at HEAD — each document gained exactly one table and each is full-width.
+
 ## ⚠⚠ THE CLIENT'S OWN WORKBOOK ASSERTED A DEATH, AND NEITHER AGREEMENT COVERED THE WRITTEN RECORD (2026-09-21)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs`, `BACKEND_VERSION 2026-09-21a`. Two halves of the same
 gap, both falling out of the room-by-room item record going to all six labour services the day before. Anthony, on

@@ -92,7 +92,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = src.indexOf('id="i-matter-type"');
     ok(at > estateOpen && at < probateOpen,
        'it sits in the estate block, so every decedent service is asked it and no probate-only block hides it');
-    has(src, "'i-gate-706', 'i-gate-dispute', 'i-docscope', 'i-matter-type',",
+    has(src, "'i-gate-706', 'i-gate-dispute', 'i-doc-tier', 'i-matter-type',",
         'and it is cleared with the other intake fields, so the last client\'s answer cannot ride onto the next');
     // ⚠ NO DEFAULT, unlike the scope question beside it. Doing the most is a defensible
     // assumption about scope; there is none about probate versus trust.
@@ -120,7 +120,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake'], vars: ['SVC_LABELS'],
+        fns: ['saveIntake', 'docTierScope', 'docTierDef'], vars: ['SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d, jobs: [],
           showFB: (el, kind, msg) => said.push({ kind, msg }),
@@ -151,12 +151,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('Edit Client carries it, and discards an answer it does not recognise');
   {
     const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecIsProbateSvc', 'ecIsEstateSvc',
-                    'ecDocGateChange', 'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf',
-                    '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',
+                    'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf',
+                    '_houseFlagRowClass', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706',
                     'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                     'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf',
                     'matterDef', 'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
     const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                      'INV_LISTING_THRESHOLD_STANDARD', 'INV_LISTING_THRESHOLD_STRICT',
                      'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
                      'DOC_SCOPES'];
@@ -195,7 +196,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the Court Inventory stops being signed on a matter with no probate in it');
   {
     const FNS = ['printCourtInventory', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
-                 'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'gateDispute',
+                 'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
                  'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invFiduciaryMode',
                  'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', '_invHasAppraisal',
@@ -203,6 +204,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf'];
     const VARS = ['DECEDENT_SERVICES', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                   'EXEMPT_CAP_732_402', 'MATTER_TYPES'];
     const item = (id, name, fmv, track) => ({ stableId: id, label: 'inventory', jobId: 7,
       objectName: name, category: 'Furniture', fmv: fmv, assetTrack: track, condition: 'Good',

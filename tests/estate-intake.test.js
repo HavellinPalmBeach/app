@@ -19,7 +19,7 @@ const { sandbox, domStub, source } = require('./harness');
 
 // Facts about a DECEDENT — every one of these must be reachable on Estate Settlement.
 const ESTATE_IDS = [
-  'i-date-of-death', 'i-docscope', 'i-gate-706', 'i-gate-dispute', 'i-gate-readout',
+  'i-date-of-death', 'i-doc-tier', 'i-matter-type', 'i-gate-706', 'i-gate-dispute', 'i-gate-readout',
   'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
   'i-probate-atty-phone', 'i-probate-atty-email',
 ];
@@ -71,9 +71,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = classDom({ 'i-svc': svc }, {});
       const c = sandbox({
         fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
-              'docLevelFloor', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
+              'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'invListingThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD'],
         stubs: { document: d },
       });
@@ -104,9 +105,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = classDom({ 'i-svc': svc }, marks);
       const c = sandbox({
         fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
-              'docLevelFloor', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
+              'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'invListingThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD'],
         stubs: { document: d },
       });
@@ -137,8 +139,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake'],
-        vars: ['SVC_LABELS'],
+        fns: ['saveIntake', 'docTierScope', 'docTierDef'],
+        vars: ['SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d,
           jobs: [],
@@ -242,13 +244,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Every one of them is something a person sees and no source needle noticed.
   group('driving the Edit Client modal');
   {
-    const EC_FNS = ['showEditClient', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecDocGateChange',
+    const EC_FNS = ['showEditClient', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'esc',
                     'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass',
-                    'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
+                    'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                     'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'ecToggleProbate',
                     'matterTypeOf', 'invFiduciaryMode'];
     const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                      'INV_LISTING_THRESHOLD_STANDARD', 'INV_LISTING_THRESHOLD_STRICT',
                      'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES'];
     // ⚠ THE THREE CONTROLS THE READOUT READS ARE SEEDED, BECAUSE domStub DOES NOT PARSE MARKUP.
