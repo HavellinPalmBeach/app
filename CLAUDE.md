@@ -1,5 +1,137 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE SPLIT WRITES ONCE FOR N LINES, AND THE MANIFEST WRITE STOPPED BEING ABLE TO FAIL (2026-09-21)
+Anthony pasted a performance note off the 2026-09-20 split build — four items, hour estimates, opening
+*"splitting is now the desk's main action, and it repaints the whole tab"* — and asked what I made of it.
+App-only, no redeploy. **Three of its four claims held, one did not, and its headline framing was the same
+mistake I had made the day before.**
+
+- **⚠⚠ THE FRAMING WAS WRONG AND IT IS THE SAME ERROR TWICE. *"Splitting is now the desk's main action"* —
+  it is not**, and Anthony had said so in the message immediately before (*"or is the agent splitting it? this
+  should not be manual"*). So the note's headline figure, **44 minutes of lag across the 2,800 splits a house
+  needs**, is the cost of a workflow that was rejected the day it was described. The agent path has no click
+  and therefore no repaint at all. **Its own #2 was the right #1.**
+- **WHAT HELD, WHAT DID NOT, MEASURED RATHER THAN READ:**
+
+  | the claim | verdict |
+  |---|---|
+  | `invSplitItemClick` rebuilds every row through `innerHTML` | **confirmed** |
+  | `savePhotoRefs` re-serialises the WHOLE manifest per call (53-key pick × every row) | **confirmed — and this is the agent-path cost** |
+  | the network sync fires N times | **NO.** `_scheduleInventorySync` was already debounced per job; only the localStorage write was ever N times |
+  | 66 ms per keystroke-edit in `_invEdit` | **NO.** It is wired on `onchange` at six sites and `oninput` at none, so it fires on commit, not per keystroke. There is no per-keystroke save on that path and the item was dropped |
+  | manifest ~1.33MB, growing toward 1.7MB | **understated.** Measured **1.50MB** fresh and **2.48MB** fully named and valued |
+  | the repaint at ~3,000 rows | **understated.** 872 ms claimed; measured **1,420 ms** here, on 301/1001/3001 rows reading **123 / 327 / 1,420 ms** |
+
+  - **⚠ MY OWN FIRST MEASUREMENT WAS WRONG AND I CAUGHT IT IN THE SAME MINUTE.** I filled every absent
+    whitelist field with `null` and got 3.39MB. `JSON.stringify` **omits** `undefined` and serialises `null`,
+    and a real row simply does not have most of those keys — so I had measured `"qty":null` × 53 × 3,290 rows.
+    Re-measured with absent fields left `undefined`: **476 B a fresh split row, 791 B once named and valued.**
+    The rule this file keeps paying for applies to the measurement as much as to the fix.
+
+### ⚠⚠ ITEM 1 — THE BATCH, BECAUSE AGENT ONE IS THE CALLER
+- **`invSplitItemN(jobId, stableId, count)` mints N and writes ONCE**; `invSplitItem` is a thin wrapper over
+  it, so there is one minting rule and one set of refusals rather than two that drift. Measured in the browser:
+  fifteen single splits write the manifest **15 times**, the batch writes it **once**, for fifteen distinct
+  rows all sharing the source's Drive file and its `ts`.
+- **⚠ IT OWNS THE WRITE RATHER THAN TAKING A `defer` FLAG, and that was a deliberate rejection.** A caller
+  that batches with a flag and forgets to flush leaves the new lines **in memory only** — gone on the next
+  reload with nothing on any screen saying so, which is the silent-loss shape this file records over and over.
+  There is no half-used form of the function.
+- **⚠ THE REFUSALS RUN ONCE, ABOVE THE LOOP, AND A REFUSED BATCH MINTS NOTHING.** A partial batch is the worst
+  outcome available: some lines land, the caller is told no, and nothing says how many of the fifteen made it.
+  The Drive check cannot change between one row and the next, so it is asked once.
+- **`INV_SPLIT_MAX = 200` — a cap, because the caller is about to be a model.** A frame really can hold thirty
+  pieces of jewellery, so it is deliberately generous; what it catches is an agent returning hundreds of blank
+  lines into a manifest a court may read. **It refuses and mints NOTHING rather than truncating**, because a
+  silent truncation is indistinguishable from the agent having found fewer objects.
+- **⚠ AN EXPLICIT `0` MINTS ZERO AND AN UNREADABLE COUNT MINTS ONE.** Zero is a real answer from an identifying
+  agent — *nothing else in this frame* — and minting a blank line for it would be inventing an object. An
+  absent or unparseable count is a caller mistake, and there the single-split default is the safe read.
+
+### ⚠⚠ ITEM 2 — THE QUOTA WALL, AND IT IS WORSE THAN THE NOTE SAID
+- **`hav_media_<id>` is only ever removed when a job is DELETED (`_purgeLocalJobRecords`), never when one is
+  finished**, so a device carries every estate it has ever worked. At **2.48MB** for a fully named 3,290-line
+  manifest, against a ~5MB origin quota the **2MB thumbnail cache** already shares, the third estate is where
+  it lands — and one photograph carrying many lines gets it there faster. The failure loses the **RECORD**
+  rather than time: the lines are in memory, the write throws, one alert fires, and the next reload has none.
+- **⚠⚠ I CHANGED THE SHAPE FROM THE STATED PLAN, ON PURPOSE. Proactive eviction ("keep only the open job")
+  costs a network round trip on every job switch and breaks offline access to a job you just closed, for a
+  wall you may never hit. On-pressure costs nothing until it matters** and covers thumbnails and any other
+  source of pressure with it. `savePhotoRefs` reclaims in its `catch` and writes again.
+- **⚠⚠ ONE TIER PER CALL, AND THE RETRY IS THE MEASUREMENT.** Tier 1 is other jobs' thumbnail caches (pure
+  cache, refetched from Drive, always safe); tier 2 is other jobs' manifests. The caller retries the write
+  after **each** tier, so tier 2 is only ever paid for when the cache alone was not enough. Freeing both in one
+  pass would drop finished jobs to make room the thumbnails had already made, and the ranking would be
+  decoration — **which is exactly what the first cut did, and the test caught it.** Retrying also removes the
+  byte arithmetic: how much a browser charges for a key is not observable from here.
+- **⚠⚠ IT NEVER TOUCHES `hav_media_pending_<id>`.** Those are the bytes of a photograph that FAILED to reach
+  Drive: the only copy in existence, and Retry is the only thing that can still file them. Dropping them for
+  room would trade a recoverable record for an unrecoverable photograph.
+- **Safe to drop means THE SHEET CAN HAND IT BACK**, and `_invManifestEvictable` tests four things: not the job
+  being written, not while `SHEETS_SYNC_URL` is unset (there the device IS the record), not while a debounced
+  write is still waiting, and not while one is queued in `_pendingWrites` or `_outbox`.
+- **⚠ `_invSyncTimer` HAD TO BECOME A TRUTHFUL FLAG FIRST.** It was set and never cleared, which was harmless
+  while nothing read it — the eviction guard reads it now, and a timer id left standing would have marked every
+  job that has ever synced as permanently unsafe to reclaim. It is nulled as the first line **inside** the
+  callback, not around it.
+- **It says what it did.** *cleared N KB of other jobs off this device*. A recovery that silently changes what a
+  device holds is how somebody later reports an old job "losing its inventory" when it is sitting on the sheet.
+
+- **7720 committed checks** (+78; `tests/manifest-quota.test.js` new at 42, 36 more in `photo-split`).
+  **All sixteen changes revert-verified individually, ZERO green after the four below were re-done**; baseline
+  0 before and after. The stylesheet is **byte-identical at 92,226 bytes / 635 rules**.
+  - **⚠⚠ THE SWEEP HUNG FOR TWENTY MINUTES AND MY OWN TEST WAS WHY.** The cap revert raised
+    `INV_SPLIT_MAX` to `1e9` and a test asked for `INV_SPLIT_MAX` rows — a billion of them. **A test must never
+    mint a value a revert can raise.** It states the cap as a **RANGE** now (generous enough for a real drawer,
+    small enough to still be a cap), which is the requirement rather than today's number, and mints thirty. The
+    sweep also runs each suite under a timeout, so a hang reads as a failure rather than stalling the run.
+  - **⚠⚠ AND I RAN A SUITE WHILE THE SWEEP WAS MUTATING THE SAME FILE.** This file records that hazard in full
+    from 2026-09-11 (*"a sweep that mutates the file under them would have produced false findings in both
+    directions"*) and I did it anyway, four hours after reading it.
+  - **⚠ FOUR CAME BACK GREEN.** The tier-skip line is **belt-and-braces and is recorded as such rather than
+    covered by a check that could not fail** — a tier that freed nothing cannot make the write succeed, so
+    retrying would throw and fall through anyway; it saves one doomed `setItem` and changes no outcome. The
+    thumbnail-tier revert was **meaningless** (dropping thumbs in both passes is idempotent) and is re-aimed at
+    the manifest pass, where it fails. The keep-job guard was green because **on the happy path the retry writes
+    the manifest straight back** — it is load-bearing only when the retry ALSO fails, and there is a driven case
+    for that now: the device keeps the rows it already had rather than losing those too. And the harness stub
+    was green because **my own tests passed their own `localStorage`**, so nothing exercised it; one group now
+    drives the reclaim against the harness's default store.
+  - **⚠ THE HARNESS `localStorage` STUB HAD NO `length` OR `key()`.** Against it the reclaim's walk is
+    `0 < undefined`, the loop never runs, and it reports "nothing to free" on a device full of it. A stub that
+    does not match the real contract is worse than no stub — the third time this file records that.
+- **Verified end to end in headless Chromium on the real page**, driving the real split, the real
+  `savePhotoRefs` and the REAL browser `localStorage` behind a quota wall:
+
+  | | |
+  |---|---|
+  | fifteen single splits · the same fifteen as a batch | **15 manifest writes** · **1** |
+  | the batch's rows | 15, all distinct, all one Drive file, all the source's `ts`, all blank |
+  | `_slotRefs` on that room | still **1 shot** — the lines do not inflate the room count |
+  | 201 lines off one frame | refused, and **nothing minted** (16 lines before and after) |
+  | a full device, real `localStorage` | the manifest **saved, 16 rows**, and **0 alerts** |
+  | what it cleared | the other job's thumbnails **and** manifest |
+  | what it kept | the open job's thumbnails · the failed-upload bytes · every non-manifest store |
+  | `renderInventoryTab` at 301 / 1001 / 3001 rows | **123 / 327 / 1,420 ms** |
+  | overflow · page errors | **0 · 0** |
+
+- Manual **§10a** (a note carrying the measured row sizes, why a device fills up, what the reclaim drops and in
+  what order, and that an older job's list comes back from the sheet but needs a connection); playbook **two**
+  symptom→cause rows — the two that will actually happen: *an older job's inventory reads empty* and *a badge
+  says it cleared other jobs*. Both `.md` copies hand-edited; **30 claims parity-checked, 0 mismatches**; tag
+  balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page
+  errors**; under `print` **17/40 and 16/16** tables as wide as their container, as at HEAD.
+- **⚠ ITEM 3 IS DELIBERATELY NOT BUILT: the repaint.** `invSplitItemClick` still rebuilds the tab, and at
+  1,420 ms on a 3,000-row estate that is a bad second of lag on one click. It is worth fixing — the file already
+  has three in-place refreshers (`_invRefreshSummary`, `_invRefreshFlagStrip`, `_invRefreshGuardrail`) and the
+  documented reason for them — but it is the **correction** path, not the work path, so it waits until Agent One
+  is scoped and that is all that is left on it. **Do not cost it at 44 minutes**; that number assumed the desk
+  splitting a house by hand.
+- **⚠ AND THE SIZING IS WORTH KEEPING IN VIEW: 3,000 lines off 290 photographs is ten objects per frame across
+  an entire house.** A realistic estate is 300 to 1,200 lines, where the repaint is ~123–327 ms and annoying
+  rather than fatal. **The quota wall bites regardless**, at three estates.
+
+
 ## ⚠⚠ ONE PHOTOGRAPH, MANY INVENTORY LINES (BUILT 2026-09-20)
 App-only, no redeploy — `derivedFrom` rides the existing per-item manifest merge. Anthony, off a photograph of a bar
 console: *"this same picture is going to serve as reference to multiple items — four bottles of booze, a Banksy, a
@@ -4478,12 +4610,13 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/charming-dirac-9f9zvh`
+- Active feature branch: `claude/festive-dijkstra-3uqyoh`
   (`claude/great-turing-ac4h9i` and `claude/gracious-rubin-u3r5pe` shipped alongside it on
   2026-09-20 — THREE sessions ran concurrently that day: the fixed-price-on-every-engagement
   build, the fold/job-tab-sync build, and the inventory naming + as-found build. All three
   are on `main` and none is stale. ⚠ Each of the three merged the others' work as it landed,
   so this list is a record of who was working, not a stack of supersessions.)
+  (was `claude/charming-dirac-9f9zvh`)
   (was `claude/dazzling-babbage-ijoew4`)
   (was `claude/quirky-pasteur-bknj9m`)
   (was `claude/focused-knuth-pqw6ff`)
@@ -4506,7 +4639,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/great-turing-ac4h9i:main`
+  `git push origin claude/festive-dijkstra-3uqyoh:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

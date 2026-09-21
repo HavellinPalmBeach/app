@@ -44,22 +44,23 @@ function rig(refs, over) {
   over = over || {};
   const alerts = [];
   const saved = [];
+  const synced = [];
   const ctx = sandbox({
-    fns: ['invSplitItem', 'invSplitItemClick', '_invDerivedRefs', '_invPhotoSource',
+    fns: ['invSplitItem', 'invSplitItemN', 'invSplitItemClick', '_invDerivedRefs', '_invPhotoSource',
           '_invPhotoSiblings', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invNamed', '_invItemNo', '_invAssignItemNos'],
-    vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY'],
+    vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],
     stubs: {
       jobs: [{ id: 7, hvlId: 'HVL-0007' }],
       _photoRefs: { 7: refs || [] },
       savePhotoRefs: (j) => saved.push(j),
       _invTouch(r) { r.updatedAt = 1; return r; },
-      _scheduleInventorySync() {},
+      _scheduleInventorySync: (j) => synced.push(j),
       renderInventoryTab() {},
       alert: (m) => alerts.push(String(m)),
     },
   });
-  return { ctx, alerts, saved };
+  return { ctx, alerts, saved, synced };
 }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
@@ -328,5 +329,105 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const manual = rowCtx._renderInvRow({ id: 1 }, rowCtx._getPhotoRef(1, 'm'));
     lacks(manual, 'invSplitItemClick',
           '\u26a0 and NOT on a manual line \u2014 cash and an account have no photograph to split');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('\u26a0\u26a0 THE BATCH WRITES ONCE \u2014 BECAUSE AGENT ONE IS THE CALLER');
+  {
+    // `savePhotoRefs` re-serialises the WHOLE manifest on every call, so the cost of a split
+    // is the size of the estate rather than the size of the row. An identifying agent that
+    // finds fifteen objects in a drawer photograph and calls the single form fifteen times
+    // pays that fifteen times over, and it goes quadratic across a house.
+    const one = rig([SRC()]);
+    for (let i = 0; i < 15; i++) one.ctx.invSplitItem(7, 's_bar');
+    eq(one.saved.length, 15, 'fifteen single splits write the manifest fifteen times');
+
+    const many = rig([SRC()]);
+    const rows = many.ctx.invSplitItemN(7, 's_bar', 15);
+    ok(Array.isArray(rows), 'the batch returns the rows');
+    eq(rows.length, 15, 'all fifteen of them');
+    eq(many.saved.length, 1, '\u26a0 and writes the manifest ONCE');
+    eq(many.synced.length, 1, 'and schedules one sync, not fifteen');
+
+    // The rows have to be real, distinct lines or the saving is worthless.
+    eq(new Set(rows.map((r) => r.stableId)).size, 15, 'every row has an id of its own');
+    ok(rows.every((r) => r.derivedFrom === 's_bar'), 'every row points at the one photograph');
+    ok(rows.every((r) => r.driveFileId === 'FID'), 'and shares its image');
+    ok(rows.every((r) => r.ts === 1000), 'and inherits the shot\u2019s timestamp, so one frame stays together');
+    ok(rows.every((r) => r.objectName === '' && r.disposition === ''),
+       'and carries no prefilled answer \u2014 fifteen objects, fifteen blank lines to name');
+
+    // Driven through the real reader: the source first, then the batch in the order it was minted.
+    const listed = many.ctx._jobInvRefs(7);
+    eq(listed.length, 16, 'the photograph and its fifteen lines are all on the manifest');
+    eq(listed[0].stableId, 's_bar', 'the photograph sorts first');
+    eq(listed[1].stableId, rows[0].stableId, 'then the batch, in the order it was made');
+    eq(listed[15].stableId, rows[14].stableId, 'through to the last of them');
+
+    // The single form is a wrapper, so there is ONE minting rule rather than two that drift.
+    const w = rig([SRC()]);
+    const single = w.ctx.invSplitItem(7, 's_bar');
+    ok(!Array.isArray(single) && typeof single === 'object',
+       'invSplitItem still returns ONE row, not an array \u2014 invSplitItemClick reads it');
+    eq(w.saved.length, 1, 'and still writes once');
+    lacks(liveLines(fn('invSplitItem')), 'derivedFrom',
+          '\u26a0 and mints nothing of its own \u2014 it delegates, or the two shapes drift apart');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('\u26a0 A REFUSED BATCH MINTS NOTHING, AND THE CHECK RUNS ABOVE THE LOOP');
+  {
+    // A partial batch is the worst outcome: some lines land, the caller is told no, and
+    // nothing on any screen says how many of the fifteen made it.
+    const up = rig([SRC({ status: 'uploading', driveFileUrl: '', driveFileId: '' })]);
+    const r1 = up.ctx.invSplitItemN(7, 's_bar', 15);
+    ok(typeof r1 === 'string', 'a shot that has not reached Drive is refused');
+    has(r1, 'Retry', 'and the refusal names the fix');
+    eq(up.ctx._jobInvRefs(7).length, 1, '\u26a0 and NOTHING was minted \u2014 not one of the fifteen');
+    eq(up.saved.length, 0, 'and nothing was written');
+
+    const af = rig([SRC({ label: 'before' })]);
+    ok(typeof af.ctx.invSplitItemN(7, 's_bar', 4) === 'string', 'an as-found shot is refused');
+    eq(af.saved.length, 0, 'and writes nothing');
+
+    const gone = rig([SRC({ deletedAt: 5 })]);
+    ok(typeof gone.ctx.invSplitItemN(7, 's_bar', 4) === 'string', 'a discarded photograph is refused');
+
+    // No chains, in the batch form too: splitting a derived line rebases onto the photograph.
+    const ch = rig([SRC()]);
+    const first = ch.ctx.invSplitItem(7, 's_bar');
+    const second = ch.ctx.invSplitItemN(7, first.stableId, 3);
+    ok(second.every((r) => r.derivedFrom === 's_bar'),
+       'splitting a LINE rebases onto the photograph, so removing a middle line orphans nothing');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('\u26a0 THE CAP REFUSES AND MINTS NOTHING, BECAUSE THE CALLER IS A MODEL');
+  {
+    const c = rig([SRC()]);
+    const over = c.ctx.invSplitItemN(7, 's_bar', c.ctx.INV_SPLIT_MAX + 1);
+    ok(typeof over === 'string', 'past the cap it refuses');
+    has(over, String(c.ctx.INV_SPLIT_MAX), 'and names the limit');
+    eq(c.ctx._jobInvRefs(7).length, 1,
+       '\u26a0 and mints NOTHING rather than truncating \u2014 a silent truncation reads as the agent finding fewer');
+    eq(c.saved.length, 0, 'and writes nothing');
+
+    const atCap = rig([SRC()]);
+    ok(atCap.ctx.INV_SPLIT_MAX >= 30 && atCap.ctx.INV_SPLIT_MAX <= 1000,
+       '\u26a0 the cap is a RANGE, not today\u2019s number: generous enough for a real drawer and '
+       + 'small enough to still be a cap');
+    eq(atCap.ctx.invSplitItemN(7, 's_bar', 30).length, 30,
+       'thirty off one frame works \u2014 a drawer really can hold that much jewellery');
+
+    // An explicit zero is a real answer from an identifying agent and must not invent a line.
+    const z = rig([SRC()]);
+    eq(z.ctx.invSplitItemN(7, 's_bar', 0).length, 0, 'zero objects mints zero lines');
+    eq(z.saved.length, 0, 'and writes nothing');
+
+    // An absent or unreadable count is a CALLER mistake, and there one row is the safe read.
+    const d = rig([SRC()]);
+    eq(d.ctx.invSplitItemN(7, 's_bar').length, 1, 'no count at all mints one');
+    eq(d.ctx.invSplitItemN(7, 's_bar', 'four').length, 1, 'and an unreadable one mints one');
+    eq(d.ctx.invSplitItemN(7, 's_bar', -3).length, 1, 'and so does a negative');
   }
 };
