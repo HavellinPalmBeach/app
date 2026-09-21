@@ -231,19 +231,29 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('intake asks who builds the inventory, and SEEDS the estimate rather than pricing it');
   {
     const ctx = sandbox({
-      fns: ['seedDocScopeFromJob', '_docScopeIntakeNote', 'docScopeDef'],
-      vars: ['EST_TOLERANCE_PCT', 'DOC_SCOPES'],
+      fns: ['seedDocScopeFromJob', '_docScopeIntakeNote', 'docScopeDef', 'docTierOf', 'docTierDef',
+            'docTierScope', 'svcHasDocStep'],
+      vars: ['EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });
-    eq(ctx.seedDocScopeFromJob({ docScope: 'none' }), 'none', 'a fresh estimate opens at the intake answer');
-    eq(ctx.seedDocScopeFromJob({ docScope: 'capture' }), 'capture', 'capture too');
-    eq(ctx.seedDocScopeFromJob({}), 'full', 'a job from before the question was asked opens at full');
-    eq(ctx.seedDocScopeFromJob({ docScope: 'bogus' }), 'full', 'garbage on the job opens at full');
+    // ⚠ THE FIXTURES CARRY A SERVICE NOW, AND THAT IS THE POINT RATHER THAN A CHORE. The tier is
+    // what we hand over, so it only exists on a service that prices a documentation step — the
+    // same test estimateDocScope already applies. A bare { docScope } is not a job.
+    const j = (o) => Object.assign({ svc: 'cleanout' }, o);
+    eq(ctx.seedDocScopeFromJob(j({ docScope: 'none' })), 'none', 'a fresh estimate opens at the intake answer');
+    eq(ctx.seedDocScopeFromJob(j({ docScope: 'capture' })), 'capture', 'capture too');
+    eq(ctx.seedDocScopeFromJob(j({})), 'full', 'a job from before the question was asked opens at full');
+    eq(ctx.seedDocScopeFromJob(j({ docScope: 'bogus' })), 'full', 'garbage on the job opens at full');
     eq(ctx.seedDocScopeFromJob(null), 'full', 'no job at all opens at full');
+    // And the tier, once recorded, is what seeds it.
+    eq(ctx.seedDocScopeFromJob(j({ docTier: 'contents' })), 'capture', 'a contents list prices as capture');
+    eq(ctx.seedDocScopeFromJob(j({ docTier: 'appraisals' })), 'full', 'and the top tier as full');
 
-    eq(ctx._docScopeIntakeNote({ docScope: 'capture' }, 'capture'), '', 'no note when the estimate agrees with intake');
-    eq(ctx._docScopeIntakeNote({}, 'none'), '', 'no note when intake never answered — there is nothing to disagree with');
-    has(ctx._docScopeIntakeNote({ docScope: 'capture' }, 'full'), 'Intake recorded Capture only; this estimate is priced at Full', 'the two answers never silently disagree');
-    has(ctx._docScopeIntakeNote({ docScope: 'none' }, 'capture'), 'Intake recorded None; this estimate is priced at Capture only', 'in either direction');
+    eq(ctx._docScopeIntakeNote(j({ docScope: 'capture' }), 'capture'), '', 'no note when the estimate agrees with intake');
+    eq(ctx._docScopeIntakeNote(j({}), 'none'), '', 'no note when intake never answered — there is nothing to disagree with');
+    // ⚠ THE NOTE NAMES THE TIER, because that is the sentence somebody said to the attorney.
+    // "Intake recorded Capture only" is our pricing word for it and nobody's actual answer.
+    has(ctx._docScopeIntakeNote(j({ docScope: 'capture' }), 'full'), 'Intake recorded Contents list; this estimate is priced at Full', 'the two answers never silently disagree');
+    has(ctx._docScopeIntakeNote(j({ docScope: 'none' }), 'capture'), 'Intake recorded None; this estimate is priced at Capture only', 'in either direction');
 
     const src = source();
     // ⚠ THIS USED TO PIN THE QUESTION BELOW THE GATES INSIDE #probate-fields, and the layout
@@ -254,15 +264,38 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // shown only on a court case.
     const estateOpen  = src.indexOf('id="estate-fields"');
     const probateOpen = src.indexOf('id="probate-fields"');
-    const q = src.indexOf('id="i-docscope"');
+    // ⚠ THE CONTROL IS THE ENGAGEMENT TIER FROM 2026-09-21, and `i-docscope` is gone. It asked
+    // "how much of the work do we do" — our pricing question — where what the attorney is
+    // actually agreeing to is what they RECEIVE. The tier is that, and the scope is derived
+    // from it, so the two can no longer be set independently and disagree.
+    const q = src.indexOf('id="i-doc-tier"');
     ok(estateOpen > 0 && probateOpen > estateOpen, 'the estate block exists and precedes the probate block');
     ok(q > estateOpen && q < probateOpen, 'the intake question sits in the estate block, not the probate one');
-    has(src, "docScope:           (document.getElementById('i-docscope')||{}).value||'full',", 'intake saves the answer on the job');
-    has(src, "'i-gate-706', 'i-gate-dispute', 'i-docscope',", 'and clears it with the other intake fields');
-    has(src, "'i-docscope': 'full'", 'a cleared form resets to full, not to a blank select');
-    // Edit-client carries it for EVERY estate service, not only probate.
-    ok(src.indexOf("if (isEstateEdit) {\n    var _ecDs = document.getElementById('ec-docscope');") > 0, 'the edit-client save runs for Estate Settlement as well as probate');
-    has(src, "id=\"ec-docscope\"", 'the edit-client modal offers it');
+    lacks(src, 'id="i-docscope"', 'and the old scope control is gone rather than left beside it — two controls answering one question is the drift');
+    has(src, "docTier:            (document.getElementById('i-doc-tier')||{}).value||'',", 'intake saves the tier on the job');
+    has(src, "docScope:           docTierScope((document.getElementById('i-doc-tier')||{}).value||'')", 'and mirrors the scope it derives, so nothing downstream had to be repointed');
+    has(src, "'i-gate-706', 'i-gate-dispute', 'i-doc-tier',", 'and clears it with the other intake fields');
+    // ⚠ THE CONVERSE OF THE OLD ASSERTION, AND DELIBERATE. The scope defaulted to `full`
+    // because doing the most is a defensible assumption about how much work we do. The TIER is
+    // a contract term, and "we did not ask" is a real state an intake call can end in — so a
+    // cleared form opens BLANK and the estimate is what refuses to price an unanswered one.
+    const defs = src.slice(src.indexOf('var INTAKE_FIELD_DEFAULTS'));
+    lacks(defs.slice(0, defs.indexOf('\n')), 'i-doc-tier', 'a cleared form resets to blank — the tier has no defensible default');
+    // Edit-client carries it for EVERY estate service, not only probate — and it is the TIER
+    // it carries now. ⚠ The old pin was a byte sequence (`if (isEstateEdit) { var _ecDs = …`)
+    // and broke on a true change; the requirement is that the estate branch is where it is
+    // written, and that the scope is MIRRORED from the tier rather than set beside it.
+    const ecBody = src.slice(src.indexOf('function saveClientEdit('));
+    const ecFn = ecBody.slice(0, ecBody.indexOf('\nfunction formatPhone'));
+    const ecEst = ecFn.indexOf('if (isEstateEdit) {');
+    const ecPro = ecFn.indexOf('if (ecIsProbateSvc(svc)) {');
+    ok(ecEst > 0 && ecPro > ecEst, 'the estate branch runs first, and the probate branch after it');
+    ok(ecFn.indexOf('job.docTier') > ecEst && ecFn.indexOf('job.docTier') < ecPro,
+       'the edit-client save writes the tier for Estate Settlement as well as probate');
+    ok(ecFn.indexOf('job.docScope = docTierScope(job.docTier)') > ecEst,
+       'and derives the scope from it rather than letting the two be set apart');
+    has(src, 'id="ec-doc-tier"', 'the edit-client modal offers it');
+    lacks(src, 'id="ec-docscope"', 'and the old scope control is gone from that form too');
     // The intake answer never restates a priced estimate: the restore path reads the
     // snapshot's own pin, and only the fresh-build path reads the job.
     has(src, "_estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';", 'a saved estimate restores its OWN scope, never intake\'s');

@@ -216,12 +216,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const COURT_FNS = INV_FNS.concat([
       '_invMoney', '_invDocName', 'printCourtInventory', 'isFormalDoc', 'resolveDocLevel',
-      'docLevelFloor', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
+      'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
       'matterDef', 'matterTypeOf', 'invFiduciaryMode',
     ]);
-    const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES']);
+    const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
+                                        'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS']);
 
     function courtCtx(items) {
       const ctx = sandbox({ fns: COURT_FNS, vars: COURT_VARS });
@@ -401,9 +402,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
-            'resolveDocLevel', 'docLevelFloor', '_gate706', 'isDecedentJob'],
+            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', '_gate706', 'isDecedentJob'],
       vars: ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-             'DECEDENT_SERVICES'],
+             'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });
     const job = { id: 5, svc: 'cleanout', gate706: 'yes',
                   appraisers: [{ id: 77, name: 'Marie Wayland', firm: 'Appraisals by the Sea', credential: 'ISA' }] };
