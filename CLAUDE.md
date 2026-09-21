@@ -1,5 +1,30 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE BROWSER REGRESSIONS ARE IN THE REPO NOW, AND THIS FILE SAYS WHY THAT MATTERS (2026-09-21)
+`tests/browser/step1.js` … `step6.js` plus `tests/browser/run.sh`. **270 checks across the six, 0 failed**,
+re-verified from the repo after the move.
+
+- **⚠⚠ THEY EXISTED ONLY IN A SESSION SCRATCHPAD, WHICH IS SESSION-SCOPED — SO THEY WERE ONE COMPACTION AWAY
+  FROM BEING REWRITTEN FROM SCRATCH.** This file already records that failure in full, about the earlier unit
+  harnesses: *"The older counts — 382 across eight suites, 230, 222, 138, 136, 112, 94, 77, 50, 47, 46, 40 — are
+  NOT in the repository and were never committed. Every one of those harnesses was written into a session
+  scratchpad and died with the session that wrote it… The fix is committing them, not rewriting them from
+  scratch."* Six browser suites were in exactly that state this afternoon.
+- **⚠ THEY ARE NOT `npm test` AND MUST NOT BECOME IT.** `tests/run.js` is 8,878 source-driven checks that run in
+  seconds with no dependencies; these need Chromium and take minutes. Different tools for different questions —
+  and the standing rule is that only the browser proves what a person can actually reach.
+- **⚠ `playwright` IS DELIBERATELY NOT A REPO DEPENDENCY.** Chromium is already at `/opt/pw-browsers` and every
+  script passes `executablePath`, so there is nothing to download; adding it to `package.json` would put a
+  hundred-megabyte install in front of `npm test`. Point `NODE_PATH` at any `node_modules` that has it.
+- **Each step re-runs every earlier one**, which is how the step-5 build caught that step 4's strip assertions
+  still held and how step 6 caught two of step 5's that no longer did.
+- **⚠ TWO TRAPS ARE IN THE RUNNER'S HEADER BECAUSE THIS FILE PAID FOR BOTH**: the option is `viewport` and not
+  `viewportSize` (the wrong one silently leaves the page at 1280 and every width measurement is a lie), and
+  `innerText` applies CSS `text-transform`, so a case-sensitive match against an uppercased heading finds nothing.
+- **⚠ STILL IN THE SCRATCHPAD AND STILL DISPOSABLE:** the revert sweeps (`revert_s*.py`), the measurement scripts
+  and the doc parity checker. Those are written fresh per step against that step's own edits, so they are genuinely
+  single-use — unlike a regression, which is worth exactly as much as the number of times it is re-run.
+
 ## ⚠⚠ AT THE *NONE* TIER THE PRIMARY BUTTON HANDED OVER AN INVENTORY WE WERE CONTRACTED NOT TO PRODUCE (2026-09-21)
 Step 6 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `invDocContractBlock(job, kind)` is the one predicate;
 the strip withholds the button and the printer refuses with the same sentence.
