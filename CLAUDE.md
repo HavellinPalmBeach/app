@@ -4610,12 +4610,13 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/charming-dirac-9f9zvh`
+- Active feature branch: `claude/festive-dijkstra-3uqyoh`
   (`claude/great-turing-ac4h9i` and `claude/gracious-rubin-u3r5pe` shipped alongside it on
   2026-09-20 — THREE sessions ran concurrently that day: the fixed-price-on-every-engagement
   build, the fold/job-tab-sync build, and the inventory naming + as-found build. All three
   are on `main` and none is stale. ⚠ Each of the three merged the others' work as it landed,
   so this list is a record of who was working, not a stack of supersessions.)
+  (was `claude/charming-dirac-9f9zvh`)
   (was `claude/dazzling-babbage-ijoew4`)
   (was `claude/quirky-pasteur-bknj9m`)
   (was `claude/focused-knuth-pqw6ff`)
@@ -4638,7 +4639,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/great-turing-ac4h9i:main`
+  `git push origin claude/festive-dijkstra-3uqyoh:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
