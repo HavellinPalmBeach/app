@@ -289,4 +289,35 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(render('probate', 'Probate').h, normal.h,
        'an explicit probate answer renders the same document, byte for byte, as no answer at all');
   }
+
+  group('⚠ THE SECOND READER — the workbook Summary, and the net that catches the next one');
+  {
+    // The Court Inventory was the first reader. The Summary sheet became the second on
+    // 2026-09-21 (a trust estate's own workbook opened with "Letters Issued" and a §733.604
+    // deadline over two empty cells). What matters here is not that there are two, but that
+    // NEITHER holds its own idea of which answers are on-probate — the 6-against-13 category
+    // drift is what a second copy of a catalogue costs.
+    const src = source();
+    const live = String(src).split('\n')
+      .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')); })
+      .join('\n');
+    ok(live.length > src.length * 0.5, 'the comment stripper did not eat the file');
+    const fnBody = (n) => { const i = live.indexOf('function ' + n + '('); return live.slice(i, live.indexOf('\n}', i) + 2); };
+
+    // ⚠⚠ THE CATALOGUE'S KEYS ARE UNQUOTED, so a QUOTED key anywhere in live code is a reader
+    // testing the answer by name — and a reader that tests by name is a reader that forgets
+    // `both`, which really does have a probate estate beside the trust. Both readers ask
+    // `onProbate` off MATTER_TYPES instead.
+    ["'trust'", "'both'", "'neither'"].forEach((tok) => {
+      eq(live.split(tok).length - 1, 0,
+         '⚠⚠ no live line compares a matter type to ' + tok + ' — they ask the catalogue');
+    });
+    // The stronger form of the same rule: ONE reader of the raw field, and it is the resolver.
+    eq(live.split('.matterType').length - 1, 2,
+       '⚠ `.matterType` is touched twice: read once in matterTypeOf, written once by Edit Client '
+       + '(intake sets it as an object-literal key). A third touch is a reader going round the resolver.');
+    has(fnBody('matterTypeOf'), 'job.matterType', '…and the single read is the resolver\'s own');
+    has(live, 'function invProbateRows(', 'the Summary rows go through a named predicate');
+    has(live, 'onProbate: invProbateRows(job)', '…which is what rides the workbook payload');
+  }
 };

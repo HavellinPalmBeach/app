@@ -34,12 +34,13 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-// ⚠ 2026-09-21a is `saveInventory.gs`, not this file — one project, one deployment, and
-// this constant is the ONLY thing the app can read to tell which vintage is serving. The
-// Summary sheet branches on `payload.docSet` from that version; an older deployment
-// ignores the flag and keeps printing Date of Death, Letters Issued and a §733.604 court
-// deadline on a LIVING client's own workbook.
-var BACKEND_VERSION = '2026-09-21a';
+// ⚠ 2026-09-21a AND -b ARE BOTH `saveInventory.gs`, not this file — one project, one
+// deployment, and this constant is the ONLY thing the app can read to tell which vintage is
+// serving. The Summary sheet branches on `payload.docSet` from -a and on `payload.onProbate`
+// from -b. An older deployment ignores whichever flag it predates and keeps printing Date of
+// Death, Letters Issued and a §733.604 court deadline — on a LIVING client's own workbook
+// before -a, and on a TRUST estate's before -b.
+var BACKEND_VERSION = '2026-09-21b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',

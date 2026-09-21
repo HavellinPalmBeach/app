@@ -225,6 +225,21 @@ function _writeSummarySheet(ss, payload) {
   // a payload with no `asFoundColumns`: an older app is not a statement about the record.
   var fid = String(payload.docSet || 'estate') === 'estate';
 
+  // ⚠⚠ AND IT ASSERTED A COURT ON A TRUST MATTER (fixed 2026-09-21). Anthony: "most homes will
+  // be in trust. so we need to get this right." Letters of Administration are issued by a
+  // probate court, §733.604 is a filing deadline in that proceeding, and the §732.402 exempt
+  // allowance is petitioned for in it — so a successor trustee's workbook opened with a
+  // statutory deadline over an empty cell. The valuation block is NOT probate-specific and
+  // stays: date-of-death FMV is the §1014 basis, the Form 706 figure and the §736.08135
+  // carrying value alike, and the step-up reaches revocable trust assets.
+  //
+  // ⚠⚠ ABSENT MEANS TRUE, same direction `docSet` takes. An app build older than 2026-09-21b
+  // sends no flag, and every job recorded before the matter type existed answers '' — stripping
+  // a court deadline off a live probate matter on the strength of an unasked question is the
+  // bad failure. Only an explicit false withholds, and the app only sends false on `trust` or
+  // `neither`. Compared as a STRING so a boolean and a stringified boolean read alike.
+  var pr = fid && String(payload.onProbate) !== 'false';
+
   // ⚠ THE FILE NAME AND THE FOLDER STAY 'Estate Inventory' ON BOTH SIDES — Anthony's call,
   // and `saveInventory` looks the workbook up BY NAME, so a branched name would not rename
   // the existing file, it would create a second workbook beside it and leave every link
@@ -238,8 +253,8 @@ function _writeSummarySheet(ss, payload) {
   put(h,1, fid ? 'Client / Estate' : 'Client'); put(h,2, payload.estate || ''); h++;
   put(h,1,'Job ID');            put(h,2, payload.hvlId || '');   h++;
   put(h,1,'Property Address');  put(h,2, payload.address || ''); h++;
-  if (fid) {
-    put(h,1,'Date of Death');   put(h,2, payload.deathDate || '');   h++;
+  if (fid) { put(h,1,'Date of Death'); put(h,2, payload.deathDate || ''); h++; }
+  if (pr) {
     put(h,1,'Letters Issued');  put(h,2, payload.lettersDate || ''); h++;
     put(h,1,'§733.604 Inventory Deadline'); put(h,2, payload.deadline || ''); h++;
   }
@@ -279,8 +294,12 @@ function _writeSummarySheet(ss, payload) {
   t++;
 
   put(t,1,'FLAGS'); bold(t,1); t++;
+  // ⚠ THE EXEMPT COUNT GOES WITH THE COURT AND THE BEQUEST COUNT DOES NOT. §732.402 is a right
+  // claimed against an administration; a will's specific gift is directed by the instrument
+  // whether or not anything probates, and the column it counts is literally headed "Specific
+  // Bequest" — renaming the rollup would make the Summary disagree with the sheet beside it.
+  if (pr) { put(t,1,'Exempt §732.402'); sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.exmt) + ',"Yes")'); t++; }
   if (fid) {
-    put(t,1,'Exempt §732.402');   sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.exmt) + ',"Yes")'); t++;
     put(t,1,'Specific Bequests'); sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.beq) + ',"Yes")');  t++;
   } else {
     // The flag itself survives and only its NAME changes, the wording the on-screen summary
@@ -348,9 +367,15 @@ function _writeSummarySheet(ss, payload) {
   // counterpart and is REPLACED rather than reworded. What the family's copy needs stated is
   // the opposite thing: that this is a record of where property went and not a valuation of
   // it — the same disclaimer the agreement's Project Records clause carries.
-  put(r,4, fid
-    ? 'Tangible personal property only. The §733.604 court inventory (real property, accounts, securities, business interests) is the PR’s filing, prepared with counsel.'
-    : 'A record of the contents documented on this engagement and where each item went. It is not an appraisal or a statement of value, and it does not evidence ownership or the legal effect of any transfer.');
+  // ⚠ THE TRUST FOOTER NAMES WHAT IS OUT AND CITES NOTHING. It is deliberately NOT the trustee's
+  // schedule — Chapter 736 citations, a successor-trustee signature block and the line stating
+  // this SUPPORTS rather than constitutes a §736.08135 accounting are a separate build, and
+  // half-building them here is how Havellin drifts into fiduciary accounting work.
+  put(r,4, !fid
+    ? 'A record of the contents documented on this engagement and where each item went. It is not an appraisal or a statement of value, and it does not evidence ownership or the legal effect of any transfer.'
+    : (pr
+      ? 'Tangible personal property only. The §733.604 court inventory (real property, accounts, securities, business interests) is the PR’s filing, prepared with counsel.'
+      : 'Tangible personal property only. Real property, accounts, securities and business interests are administered under the trust instrument and are not part of this schedule.'));
   sh.autoResizeColumns(1, 6);
 }
 

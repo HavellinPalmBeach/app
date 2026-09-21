@@ -117,6 +117,102 @@ compliance list keyed on `isProbate`. App-only, no redeploy.
   `printAsFoundRecord` is the before-photo index, not a contents list. That is the deliverable the `contents` tier
   now names on the agreement, the estimate and the desk card.
 
+## ⚠⚠ THE SAME WORKBOOK THEN ASSERTED A COURT ON A TRUST MATTER (2026-09-21)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY — `saveInventory.gs`, `BACKEND_VERSION 2026-09-21b`. ⚠ ANTHONY HAD ALREADY
+DEPLOYED `-a` THAT MORNING AND HAS TO DEPLOY AGAIN** (*"i redeployed"* — that was the living-client half). Two changes
+to one sheet on one day, two deployments. Anthony: *"yes, do the trust matter workbook fix"* — the flag the entry
+below this one left standing, written up there as the concurrent session's area and taken here once its work had
+merged.
+
+- **⚠⚠ IT IS THE SAME DEFECT ONE LEVEL IN, AND THE ON-SCREEN SUMMARY HAD IT TOO — which is the part the first
+  reading missed.** `_fid` is `invFiduciaryMode(job)`, so a **trust** estate is an estate and kept the whole estate
+  layout: **Letters Issued**, a **§733.604 Inventory Deadline** and an **Exempt §732.402** count, on a matter with no
+  court in it. Letters of Administration are issued by a probate court appointing a PR; §733.604 is a filing deadline
+  **in that proceeding**; and the §732.402 allowance is **petitioned for** in it. A successor trustee's own
+  spreadsheet opened with a statutory court deadline over an empty cell — and the screen said the same thing, so the
+  two surfaces agreed **on the wrong answer**. Both are gated now. *The previous build's whole finding was that the
+  screen and the spreadsheet must not disagree; the converse is that fixing one and not the other recreates it.*
+- **⚠⚠ THE VALUATION BLOCK IS NOT A PROBATE THING AND MUST NOT GO WITH THEM.** `Date of Death`, the valuation basis,
+  the §2032 AVD tick, `Total Estimated FMV`, `Items Awaiting Valuation` and the MAIV aggregate all stay — this is
+  `MATTER_TYPES`' own **do-not-add-a-trust-valuation-date** note applied in the other direction. Date-of-death FMV is
+  the §1014 stepped-up basis, the Form 706 figure and the **carrying value a §736.08135 accounting opens with**, and
+  the step-up reaches revocable trust assets, so a successor trustee needs the number a PR needs. Reverting the
+  predicate to withhold everything fails **9**.
+  - **⚠ `Specific Bequests` STAYS TOO, and that is a different call from the living-client one.** A will's specific
+    gift is directed by the instrument whether or not anything probates, the person IS dead, and **the column it
+    counts is literally headed `Specific Bequest`** — renaming the rollup would make the Summary disagree with the
+    sheet beside it. On a living job it was renamed because *bequest* asserts a death; here it does not.
+- **⚠⚠ `docSet: 'contents'` WAS CONSIDERED AND IS THE WRONG ANSWER, and so is a third `docSet` value.** Sending
+  `contents` would strip the whole valuation block off a real estate. And an `'estate_trust'` third value is **worse
+  than the defect**: an un-redeployed server evaluates `String(payload.docSet || 'estate') === 'estate'` → false and
+  renders the **CONTENTS** layout on a trust estate. So it is a **new field**, `onProbate`, sent **derived**.
+- **⚠⚠ THE APP STATES IT AND SENDS THE DERIVED BOOLEAN, NEVER THE MATTER TYPE.** Sending `matterType: 'trust'` raw
+  would make the server need its own copy of `MATTER_TYPES` to know which answers are on-probate — the 6-against-13
+  category drift again, on a rule where forgetting `both` puts a pour-over will's real probate estate off its own
+  schedule. `onProbate: invProbateRows(job)` rides `buildInventoryPayload` beside `docSet`. Reverting the join to a
+  literal fails 2.
+- **⚠⚠ THE DEFAULT IS THE WHOLE DECISION: ONLY AN EXPLICIT `trust` OR `neither` WITHHOLDS.** `probate`, `both` and
+  `''` all keep the court rows, and `''` is **every job recorded before 2026-09-21** plus an unrecognised value plus
+  a payload from an app build older than today. Stripping a live §733.604 deadline off a real probate matter on the
+  strength of a question nobody was asked is the bad failure — the same safe direction `docSet` takes on an absent
+  flag. Reverting the app-side default fails **11**; reverting the server's `String(payload.onProbate) !== 'false'`
+  to `=== true` (absent → withhold) fails **9**.
+- **⚠ ONE PREDICATE, AND IT READS `onProbate` OFF THE CATALOGUE RATHER THAN TESTING THE KEY.** `invProbateRows(job)`
+  is `!d || !!d.onProbate` over `matterDef`, which is byte-for-byte the question the Court Inventory already asks
+  (`!!(_mt && !_mt.onProbate)`), so the two cannot drift and **`both` is right by construction** rather than by
+  somebody remembering it. A test pins that no live line anywhere in the file carries a quoted `'trust'`, `'both'` or
+  `'neither'` — the catalogue's keys are unquoted, so a quoted one is a reader going round the resolver — and that
+  `.matterType` is touched exactly twice, read once in `matterTypeOf` and written once by Edit Client.
+- **⚠ THE TRUST FOOTER NAMES WHAT IS OUT AND CITES NOTHING.** *"Real property, accounts, securities and business
+  interests are administered under the trust instrument and are not part of this schedule."* Same shape as the
+  probate one (what is in / what is out), no citation to defend. **⚠ IT IS DELIBERATELY NOT STEP 7** — Chapter 736
+  citations, a successor-trustee signature block, the carve-out reversed and the *supports rather than constitutes a
+  §736.08135 accounting* line are a separate build, and half-building them in a footer is how Havellin drifts into
+  fiduciary accounting work. A test asserts the trust footer names neither `736.08135` nor *accounting*.
+- **⚠ THE HEADER BLOCK IS STILL SEQUENTIAL AND THAT IS WHY TWO MORE ROWS COULD COME OFF CHEAPLY** — measured rather
+  than assumed: on a trust matter **Prepared By follows Date of Death by 1**, and the category total's back-reference
+  reads **B12** against the probate sheet's **B14**, following the row the FMV total actually landed on.
+- **8347 committed checks** (+63). **All eleven changes revert-verified individually, ZERO green**; baseline 0 before
+  and after both sweeps. The first `<style>` block is **byte-identical at 93,438 bytes / 635 rules** — no CSS.
+  - **⚠ TWO NEEDLES MATCHED NOTHING AND THE `NEEDLE x0` GUARD CAUGHT BOTH.** Both were the Exempt §732.402 revert,
+    app side and server side: my needle read `hdrRow('§732.402'` where the source says `hdrRow('Exempt §732.402'`.
+    Re-anchored, each fails 1. Without the guard they would have read as two green reverts on the one row that is a
+    judgement call rather than a certainty.
+  - **⚠ THREE SUITES BROKE CORRECTLY** when `_renderInventorySummary` and `buildInventoryPayload` grew a call —
+    `living-inventory`, `media-merge`, `as-found-record`. **Found by searching every suite for the two affected
+    callers at once** rather than re-running and fixing one failure at a time, which this file records costing a
+    round. `invProbateRows` / `matterDef` / `matterTypeOf` are **lifted rather than stubbed**, because a stub is
+    exactly what would let the two sides of the flag drift.
+  - **⚠ AND ONE OF MY OWN BROWSER ASSERTIONS MEASURED THE WRONG THING.** The header-contiguity check indexed into the
+    flat list of cell VALUES, where a label and its value are two entries, so it reported `false` on correct code.
+    Re-measured on sheet ROWS — which is what the unit test already did — it is 1. *A check that reads a different
+    quantity from the one it names is not a check.*
+- **Verified end to end in headless Chromium on the real page, driving the real `_renderInventorySummary`, the real
+  `buildInventoryPayload` and the REAL `saveInventory.gs` writer:**
+
+  | matter | on screen: court rows | valuation rows | workbook: Letters · §733.604 · §732.402 | footer |
+  |---|---|---|---|---|
+  | **trust** | **NONE** | **6/6** | **— · — · —** | trust instrument |
+  | probate | Letters · §733.604 · §732.402 | 6/6 | yes · yes · yes | §733.604 court inventory |
+  | **both** (pour-over) | Letters · §733.604 · §732.402 | 6/6 | yes · yes · yes | §733.604 court inventory |
+  | **unanswered** | Letters · §733.604 · §732.402 | 6/6 | yes · yes · yes | §733.604 court inventory |
+  | a living client | NONE | 0/6 | — · — · — | not an appraisal |
+
+  An **older app build's payload** (no `onProbate` at all) on a trust matter renders **byte-for-byte the probate
+  sheet** and keeps the §733.604 row. Overflow **0 · 0** at 1440/390, **0 page errors**.
+- Manual **§2** (the redeploy note now covers both deployments and what each older one prints), **§4** (a new note:
+  the two readers, both of which WITHHOLD rather than add, and that the asset track still defaults to Probate
+  whatever you answer) and **§10a** (the fix, plus a note on what deliberately does not come off and must not be
+  "finished"). Playbook **§e** (a note before the Court Inventory `.stop`) and **three** symptom→cause rows — a trust
+  workbook still showing a court deadline (check the matter type BEFORE blaming the deployment), and the two
+  *this is correct, do not ask for it to be removed* rows for the valuation block and for `both`. Both `.md` copies
+  hand-edited; **30 claims parity-checked, 0 mismatches**; tag balance clean on both HTML files with the stylesheet
+  stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **19/45 and 16/16** tables as wide
+  as their container, **0 taking the phone rule** — as at HEAD.
+- **⚠ STILL NOT BUILT, AND UNCHANGED BY THIS: `_invTrack` DEFAULTS EVERY UNSET ITEM TO `'Probate'`.** Both documents
+  still say to set the track by hand on a trust matter. It must not follow the matter type until the trustee's
+  schedule exists, or a trust matter's contents move off the wrong schedule and onto no schedule at all.
+
 ## ⚠⚠ THE APP PRICED THE WORK AND RECORDED NOTHING ABOUT WHAT THE CLIENT WAS PROMISED (BUILT 2026-09-21)
 Step 3 of `ESTATE_SCOPE_SPEC.md`. Anthony, on what Havellin actually sells: *"we claim that our documentation is
 basically whatever scope they want us to do. But I don't think there's anywhere in the app to actually capture that
@@ -255,7 +351,10 @@ inventory is fine. could be a fancy name for a big house. not always a dead pers
   *FMV BY CATEGORY* → **ITEMS BY CATEGORY** (counts, never money — a column headed FMV over blanks reads as a
   valuation of the house). The footer is **replaced, not reworded**: its whole subject is what counsel files
   instead, so the living version says the converse — this is not an appraisal.
-- **⚠ NOT DONE, AND IT IS THE CONCURRENT SESSION'S AREA: `matterType` DOES NOT REACH THE WORKBOOK.** The same
+- ~~**⚠ NOT DONE, AND IT IS THE CONCURRENT SESSION'S AREA: `matterType` DOES NOT REACH THE WORKBOOK.**~~ **BUILT THE
+  SAME DAY** — Anthony, once the merge had landed: *"yes, do the trust matter workbook fix"*. See the entry at the top
+  of this file. *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding
+  work.* The original note follows. The same
   session added probate/trust/both/neither and fixed the Court Inventory for it; the Summary sheet is untouched, so
   **a TRUST estate's workbook still prints a §733.604 Inventory Deadline**. Same class of defect one level in.
   Flagged rather than built — widening into another session's change mid-merge is how two fixes collide.

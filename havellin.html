@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 4:03pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 4:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5703,6 +5703,29 @@ function matterTypeOf(job) {
   return MATTER_TYPES[v] ? v : '';
 }
 function matterDef(job) { var k = matterTypeOf(job); return k ? MATTER_TYPES[k] : null; }
+
+// ⚠⚠ THE PROBATE ROWS — one predicate, read by the on-screen summary, the workbook payload and
+// nothing else yet. Fla. Stat. §733.604 is a filing deadline in a probate proceeding, Letters of
+// Administration are issued by a probate court appointing a personal representative, and the
+// §732.402 exempt-property allowance is a right PETITIONED FOR in that administration. A trust
+// matter has none of the three, so a successor trustee's workbook was opening with a statutory
+// court deadline over an empty cell — the same class of claim the living-client fix took off the
+// same sheet, one level in.
+//
+// ⚠⚠ AN UNANSWERED MATTER TYPE KEEPS THEM, and that is the load-bearing half. `matterTypeOf`
+// returns '' for every job recorded before 2026-09-21, for an unrecognised value, and for living
+// work — and stripping a §733.604 deadline off a live probate matter on the strength of a
+// question nobody was asked is the bad failure. Only an explicit `trust` or `neither` withholds.
+// Same safe direction `docSet` already takes on an absent flag.
+//
+// ⚠ IT READS `onProbate` OFF THE CATALOGUE RATHER THAN TESTING THE KEY, so `both` — a pour-over
+// will, which really does have a probate estate beside the trust — keeps them without anybody
+// having to remember it, and the Court Inventory's own `!_mt.onProbate` test cannot drift from
+// this one.
+function invProbateRows(job) {
+  var d = matterDef(job);
+  return !d || !!d.onProbate;
+}
 
 // ─── SERVICE FAMILIES — what a job may be RECLASSIFIED to on the walkthrough ───
 // A job is entered at intake on the best information a phone call gives you, and the
@@ -19711,6 +19734,11 @@ function _renderInventorySummary(job, items) {
   // checkbox, "Letters Issued —" and "§733.604 Inventory Deadline —". Each is a control for a
   // proceeding that does not exist, and one of them is an editable dropdown.
   var _fid = invFiduciaryMode(job);
+  // ⚠⚠ AND THE SAME SHEET ASSERTED A COURT ON A TRUST MATTER. Anthony: "most homes will be in
+  // trust." Letters, the §733.604 deadline and the §732.402 allowance are all creatures of a
+  // probate administration; the valuation apparatus above them is NOT and stays, because
+  // date-of-death FMV does the same three jobs for a successor trustee that it does for a PR.
+  var _pr = _fid && invProbateRows(job);
   var header = '<div>'
     + hdrRow(_fid ? 'Client / Estate' : 'Client', esc(job.name || '—'))
     + hdrRow('Job ID', esc(job.hvlId || '—'))
@@ -19719,8 +19747,9 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Date of Death', dt(job.deathDate))
     + hdrRow('Valuation Basis', '<select onchange="setValBasis(' + job.id + ',this.value)" style="font-size:11px;padding:2px 4px;">' + INV_VAL_BASES.map(function(b){ return '<option' + (b === resolveValBasis(job) ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>')
     + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>')
+    + (!_pr ? '' : ''
     + hdrRow('Letters Issued', dt(job.lettersDate))
-    + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline)))
+    + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))))
     + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
     + hdrRow('Last Updated', _invDateTime(Date.now()))
     + '</div>';
@@ -19737,7 +19766,7 @@ function _renderInventorySummary(job, items) {
         : '0') : '')
     + hdrRow('Disputed / Hold', String(nDisp))
     + hdrRow(_fid ? 'Specific Bequests' : 'Promised to someone', String(nBequest))
-    + (_fid ? hdrRow('Exempt §732.402', String(nExempt)) : '')
+    + (_pr ? hdrRow('Exempt §732.402', String(nExempt)) : '')
     + hdrRow('Gross Proceeds', _money(gross) || '$0')
     + hdrRow('Fees', _money(fees) || '$0')
     + hdrRow(_fid ? 'Net to Estate' : 'Net received', _money(gross - fees) || '$0')
@@ -19758,7 +19787,13 @@ function _renderInventorySummary(job, items) {
     + (_fid ? _maivSummaryNotice(job, maiv) : '')
     // The footer's whole subject is what is NOT in this schedule because counsel files it.
     // There is no living-client counterpart, so it simply goes rather than being reworded.
-    + (_fid ? '<div style="font-size:10px;color:var(--gray);margin-top:10px;font-style:italic;">Tangible personal property only. The §733.604 court inventory (real property, accounts, securities) is the PR’s filing, prepared with counsel.</div>' : '')
+    + (!_fid ? '' : '<div style="font-size:10px;color:var(--gray);margin-top:10px;font-style:italic;">' + (_pr
+        ? 'Tangible personal property only. The §733.604 court inventory (real property, accounts, securities) is the PR’s filing, prepared with counsel.'
+        // ⚠ THE TRUST FOOTER NAMES WHAT IS OUT AND CITES NOTHING. It is deliberately not the
+        // trustee's schedule — Chapter 736 citations, a successor-trustee block and the line
+        // stating this SUPPORTS rather than constitutes a §736.08135 accounting are step 7,
+        // and half-building them here is how Havellin drifts into fiduciary accounting work.
+        : 'Tangible personal property only. Real property, accounts, securities and business interests are administered under the trust instrument and are not part of this schedule.') + '</div>')
     + '</div>';
 }
 
@@ -22962,6 +22997,15 @@ function buildInventoryPayload(jobId) {
     // ⚠ A payload with no `docSet` renders the ESTATE layout server-side, so an app build
     // older than 2026-09-21 is unchanged rather than stripped.
     docSet: invFiduciaryMode(job) ? 'estate' : 'contents',
+    // ⚠⚠ AND THE PROBATE HALF OF AXIS 2, for the same reason and with the same default. A
+    // trust estate's workbook opened with "Letters Issued" and a "§733.604 Inventory Deadline"
+    // over two empty cells on a matter with no court in it — Anthony: "most homes will be in
+    // trust. so we need to get this right." The server may not derive it: it would need its own
+    // copy of MATTER_TYPES to know which answers are on-probate, which is the 6-against-13
+    // category drift again. It is sent DERIVED rather than as the matter type itself so there
+    // is exactly one place that knows what `both` means.
+    // ⚠ ABSENT MEANS TRUE server-side, so an app build older than today keeps the probate rows.
+    onProbate: invProbateRows(job),
     preparedBy: 'Havellin Palm Beach, LLC',
     valBasis: resolveValBasis(job),
     // Sent so the workbook's Summary rollups cannot drift from the app again. The

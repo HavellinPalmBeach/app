@@ -62,6 +62,7 @@ const PRINT_FNS = [
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
   '_invCautionNotices', '_invPicked', 'invFirearmAuthorized', '_invAwaitingApproval',
   '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
+  'invProbateRows', 'matterDef', 'matterTypeOf',
   '_maivSummaryNotice', 'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVCategory',
   'invMAIVDefaultCat',
   'invReleaseBlocked', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
@@ -72,7 +73,7 @@ const PRINT_FNS = [
 const PRINT_VARS = [
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',
-  'DECEDENT_SERVICES', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',
+  'DECEDENT_SERVICES', 'MATTER_TYPES', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',
   'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_TRANSPORT_REASONS', 'INV_UNDECIDED',
   'estimateStore', '_invFilter', '_invShowRoll', '_invOpen', '_invPick',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
@@ -694,7 +695,101 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // deployment ignores docSet and keeps printing a court deadline on a living client.
     const main = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8');
     const bv = (main.match(/BACKEND_VERSION = '([^']+)'/) || [])[1];
-    ok(bv >= '2026-09-21a',
-       '⚠⚠ the deployment must be at least 2026-09-21a or the workbook still asserts a death');
+    ok(bv >= '2026-09-21b',
+       '⚠⚠ the deployment must be at least 2026-09-21b or the workbook still asserts a death — '
+       + 'on every job before -a, and on a trust estate before -b');
+
+    // ─────────────────────────────────────────────────────────────────────────
+    group('⚠⚠ …AND A COURT ON A TRUST MATTER — the same sheet, one level in');
+
+    // Anthony, on where the volume is: "most homes will be in trust. so we need to get this
+    // right." Letters of Administration are issued by a probate court appointing a PR, §733.604
+    // is a filing deadline in that proceeding, and the §732.402 exempt allowance is petitioned
+    // for in it. A successor trustee's workbook opened with all three.
+    const T = labels(render(Object.assign({ docSet: 'estate', onProbate: false }, base)));
+    const B = labels(render(Object.assign({ docSet: 'estate', onProbate: true  }, base)));
+
+    ['Letters Issued', '§733.604 Inventory Deadline', 'Exempt §732.402'].forEach((row) => {
+      ok(T.indexOf(row) < 0, '⚠ "' + row + '" is off a trust matter\'s workbook');
+      ok(B.indexOf(row) >= 0, '…and still on a probate one');
+    });
+
+    // ⚠⚠ THE VALUATION BLOCK IS NOT PROBATE-SPECIFIC AND MUST NOT GO WITH THEM. Date-of-death
+    // FMV is the §1014 basis, the Form 706 figure and the §736.08135 carrying value alike, and
+    // the step-up reaches revocable trust assets — so a successor trustee needs the same number.
+    // ⚠ The bequest count stays too: a will's specific gift is directed by the instrument
+    // whether or not anything probates, and the column it counts is headed "Specific Bequest".
+    ['Date of Death', 'Total Estimated FMV', 'Items Awaiting Valuation', 'Specific Bequests',
+     'Net to Estate', 'FMV BY CATEGORY', 'Client / Estate', 'ESTATE TOTALS'].forEach((row) => {
+      ok(T.indexOf(row) >= 0, '⚠⚠ "' + row + '" STAYS on a trust matter');
+    });
+    eq(B.join('|'), E.join('|'), 'and an explicit probate answer is byte-for-byte the sheet as it was');
+
+    // The header block is sequential, so two rows disappearing must not leave a hole and the
+    // category total's back-reference must still follow the row the FMV total landed on.
+    const Tc = render(Object.assign({ docSet: 'estate', onProbate: false }, base));
+    eq(rowOf(Tc, 'Prepared By') - rowOf(Tc, 'Date of Death'), 1,
+       '⚠ no gap where Letters and the deadline were');
+    const tFmv = rowOf(Tc, 'Total Estimated FMV');
+    ok(Tc.some((x) => x.c === 4 && x.v === 'Total (should equal B' + tFmv + ')'),
+       '⚠ and the reconciliation label follows the row the FMV total actually landed on');
+
+    ok(!T.some((v) => v.indexOf('733.604') >= 0), '⚠ the trust footer names no court filing');
+    ok(T.some((v) => v.indexOf('administered under the trust instrument') >= 0),
+       '…and says what is out of the schedule instead');
+    ok(!T.some((v) => /736\.08135|accounting/.test(v)),
+       '⚠⚠ and it is NOT the trustee\'s schedule — Chapter 736, a successor-trustee block and '
+       + 'the not-an-accounting line are a separate build');
+
+    // ⚠⚠ ABSENT MEANS PROBATE, and defaulting the other way is the bad failure: it would strip a
+    // live court deadline off a real probate matter on the strength of an unasked question.
+    eq(labels(render(Object.assign({ docSet: 'estate' }, base))).join('|'), B.join('|'),
+       '⚠⚠ an app build older than 2026-09-21b keeps every probate row');
+    eq(labels(render(Object.assign({ docSet: 'estate', onProbate: 'false' }, base))).join('|'), T.join('|'),
+       'and a stringified false reads the same as a boolean one');
+    eq(labels(render(Object.assign({ docSet: 'contents', onProbate: true }, base))).join('|'), L.join('|'),
+       '⚠ the flag says nothing about a living job — Axis 2 already withheld the lot');
+
+    // ── THE PREDICATE, and the default that makes it safe to read anywhere.
+    const TRUST = Object.assign({}, ESTATE, { matterType: 'trust' });
+    const mt = sandbox({ fns: ['invProbateRows', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob'],
+                         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES'] });
+    const mk = (v) => Object.assign({}, ESTATE, { matterType: v });
+    eq(mt.invProbateRows(TRUST), false, 'a trust matter withholds the probate rows');
+    eq(mt.invProbateRows(mk('neither')), false, 'and so does a family distribution with no court');
+    eq(mt.invProbateRows(mk('probate')), true, 'probate keeps them');
+    eq(mt.invProbateRows(mk('both')), true,
+       '⚠ and so does `both` — a pour-over will really does have a probate estate beside the trust');
+    eq(mt.invProbateRows(ESTATE), true,
+       '⚠⚠ an UNANSWERED matter type keeps them — that is every job recorded before 2026-09-21');
+    eq(mt.invProbateRows(mk('zzz')), true, '…as does a value the catalogue does not recognise');
+    eq(mt.invProbateRows(LIVING), true, 'and a living job has no matter type to answer with');
+
+    // ⚠ IT READS `onProbate` OFF THE CATALOGUE RATHER THAN TESTING THE KEY, so `both` cannot be
+    // forgotten here and the Court Inventory's own `!_mt.onProbate` test cannot drift from it.
+    const _pri = live.indexOf('function invProbateRows(');
+    const prBody = live.slice(_pri, live.indexOf('\n}', _pri) + 2);
+    ok(_pri > 0 && prBody.length < 400, 'invProbateRows is bounded and present');
+    has(prBody, 'onProbate', 'the predicate asks the catalogue');
+    lacks(prBody, "'trust'", '⚠ and never tests a key by name');
+    lacks(prBody, "'both'", '…which is what keeps `both` right by construction');
+
+    // ── THE ON-SCREEN SUMMARY, driven. The screen and the spreadsheet must not disagree —
+    // that was the whole finding of the living-client fix, and this is the same sheet.
+    const Tr = rig(TRUST, [ITEM('t', { fmv: '', disposition: 'Keep' })]);
+    const Th = Tr.ctx._renderInventorySummary(Object.assign({}, TRUST), Tr.ctx._jobInvRefs(7));
+    const Pr = rig(ESTATE, [ITEM('p', { fmv: '', disposition: 'Keep' })]);
+    const Ph = Pr.ctx._renderInventorySummary(Object.assign({}, ESTATE), Pr.ctx._jobInvRefs(7));
+    ['Letters Issued', '§733.604', '§732.402'].forEach((r) => {
+      lacks(Th, r, '⚠ "' + r + '" is off a trust estate\'s summary');
+      has(Ph, r, '…and on a probate one');
+    });
+    ['Date of Death', 'Valuation Basis', 'Value as of', 'Total Estimated FMV',
+     'Items Awaiting Valuation', 'Specific Bequests', 'Net to Estate'].forEach((r) => {
+      has(Th, r, '⚠⚠ "' + r + '" stays — the valuation block is not a probate thing');
+    });
+    has(Th, 'trust instrument', 'the footer says what is administered elsewhere');
+    lacks(Th, 'court inventory', '⚠ and cites no court filing');
+    has(Ph, 'court inventory', '…while the probate footer is untouched');
   }
 };
