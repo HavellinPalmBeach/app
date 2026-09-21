@@ -158,26 +158,35 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ DATE OF DEATH IS REQUIRED ON ALL THREE, NOT ONLY PROBATE. It used to be checked in the
     // probate branch, on a field the form did not render outside probate — so every Estate
     // Settlement ever created carries deathDate '', and estateValueDate returns '' with it.
-    const noDod = run({});
+    const noDod = run({ 'i-matter-type': 'probate' });
     eq(noDod.said.kind, 'warn', 'an Estate Settlement with no date of death is refused');
     has(noDod.said.msg, 'Date of death', 'and the refusal names it');
     eq(noDod.jobs.length, 0, 'and nothing is written');
 
-    const ok1 = run({ 'i-date-of-death': '2026-08-14' });
+    const ok1 = run({ 'i-date-of-death': '2026-08-14', 'i-matter-type': 'probate' });
     eq(ok1.said.kind, 'ok', 'with a date of death it saves — the attorney is NOT required here');
     eq(ok1.jobs.length, 1, 'and the job lands');
     eq(ok1.jobs[0].deathDate, '2026-08-14', 'carrying the date every value on it will be stated at');
     eq(ok1.jobs[0].docScope, 'full', 'and the scope answer the form actually showed somebody');
 
-    const pr = run({ 'i-svc': 'probate', 'i-date-of-death': '2026-08-14' });
+    const pr = run({ 'i-svc': 'probate', 'i-date-of-death': '2026-08-14', 'i-matter-type': 'probate' });
     eq(pr.said.kind, 'warn', 'a probate matter with no attorney and no case number is refused');
     has(pr.said.msg, 'Attorney first name', 'naming the attorney');
     has(pr.said.msg, 'Probate case number', 'and the case number');
     lacks(pr.said.msg, 'Date of death', 'but not the date of death, which was supplied');
 
-    const gates = run({ 'i-date-of-death': '2026-08-14', 'i-gate-706': 'no', 'i-gate-dispute': 'yes' });
+    const gates = run({ 'i-date-of-death': '2026-08-14', 'i-matter-type': 'trust', 'i-gate-706': 'no', 'i-gate-dispute': 'yes' });
     eq(gates.jobs[0].gate706, 'no', 'the 706 answer reaches the job from an Estate Settlement intake');
     eq(gates.jobs[0].gateDispute, 'yes', 'and so does the dispute answer');
+    eq(gates.jobs[0].matterType, 'trust', 'and the matter type, which nothing else in the app could have told us');
+
+    // ⚠ REQUIRED AND NEVER DEFAULTED. The scope question beside it opens at Full because doing
+    // the most is a defensible assumption; there is no defensible assumption about probate
+    // versus trust, and guessing probate is what puts a court schedule in front of a trustee.
+    const noMatter = run({ 'i-date-of-death': '2026-08-14' });
+    eq(noMatter.said.kind, 'warn', 'an estate job with no matter type is refused');
+    has(noMatter.said.msg, 'How this estate is being administered', 'and the refusal names it');
+    eq(noMatter.jobs.length, 0, 'and nothing is written');
   }
 
   group('Edit Client carries the same split, so Strict Mode is no longer a one-way door');
@@ -237,10 +246,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                     'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass',
                     'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
-                    'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'ecToggleProbate'];
+                    'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'ecToggleProbate',
+                    'matterTypeOf', 'invFiduciaryMode'];
     const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
                      'INV_LISTING_THRESHOLD_STANDARD', 'INV_LISTING_THRESHOLD_STRICT',
-                     'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'];
+                     'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES'];
     // ⚠ THE THREE CONTROLS THE READOUT READS ARE SEEDED, BECAUSE domStub DOES NOT PARSE MARKUP.
     // showEditClient writes one innerHTML string; a real browser then has those selects in it,
     // carrying the values the string gave them, and the stub does not. Seeding them from the job

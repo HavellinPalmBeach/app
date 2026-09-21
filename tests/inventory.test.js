@@ -219,8 +219,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docLevelFloor', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
+      'matterDef', 'matterTypeOf', 'invFiduciaryMode',
     ]);
-    const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED']);
+    const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES']);
 
     function courtCtx(items) {
       const ctx = sandbox({ fns: COURT_FNS, vars: COURT_VARS });

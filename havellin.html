@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 1:47pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 2:18pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1389,6 +1389,18 @@ body.no-smf .smf-col{display:none;}
             <input type="date" id="i-date-of-death">
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Every value on this estate is a fair market value <em>at this date</em> — it is what the schedule, the 706 and a trustee’s opening carrying value all state. It is on the death certificate; ask for it on the call.</div>
           </div>
+          <div class="gate-cell"><label>How is this estate being administered?</label>
+            <select id="i-matter-type">
+              <option value="">Select &mdash; ask the attorney</option>
+              <option value="probate">Probate &mdash; administered through the court</option>
+              <option value="trust">Trust &mdash; a successor trustee administers it</option>
+              <option value="both">Both &mdash; pour-over will; some assets probate into the trust</option>
+              <option value="neither">Neither &mdash; family distribution, no court and no trust</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Which <em>instrument</em> the work feeds, not what we were hired to do. <strong>Deliberately has no default</strong> &mdash; guessing probate is what puts a court schedule in front of a successor trustee. A pour-over will is usually <em>Both</em>.</div>
+          </div>
+        </div>
+        <div class="row">
           <div class="gate-cell"><label>Who builds the inventory?</label>
             <select id="i-docscope">
               <option value="full">Havellin &mdash; inventory &amp; estimated value</option>
@@ -1397,6 +1409,7 @@ body.no-smf .smf-col{display:none;}
             </select>
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal?</em> This seeds the estimate&rsquo;s Documentation scope, which prices it; the walkthrough can still override it there. Default to the first until they say otherwise.</div>
           </div>
+          <div></div>
         </div>
         <div class="sec" style="margin:12px 0 6px;font-size:11px;">Estate Attorney <span id="i-atty-req-note" style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(all fields required)</span></div>
         <div class="row">
@@ -5552,6 +5565,47 @@ function isDecedentJob(job, svcKey) {
 // isDecedentJob, which this file records for the same pair of questions one level up.
 function invFiduciaryMode(job) { return isDecedentJob(job, job && (job.svc || job.serviceType)); }
 
+// ─── WHICH INSTRUMENT THE WORK FEEDS ──────────────────────────────────────
+// ⚠⚠ THE APP HAD NO IDEA WHETHER AN ESTATE WAS BEING ADMINISTERED THROUGH PROBATE OR THROUGH A
+// TRUST, AND IT IS BUILT PROBATE-FIRST. Anthony, on where the volume actually is: "most homes
+// will be in trust. so we need to get this right. the probate cases will be more rare if we
+// stick to our upmarket business plan." The intake block, the desk checklist, the Court
+// Inventory and the agreement's compliance section all key on isProbate — which is the SERVICE
+// TYPE, i.e. whether a probate case was opened at intake, and says nothing about a decedent
+// whose assets pass under a revocable trust. That is most of them here.
+//
+// ⚠ IT IS NOT DERIVABLE FROM ANYTHING THE APP ALREADY HOLDS, which is why it is a field.
+// `svc` is what we were hired to do; `executorRole` is who signs (and already offers Trustee,
+// which is a hint and not an answer — a PR can also be the successor trustee); the asset track
+// is per ITEM and its default is 'Probate', so on a trust matter every line silently claims to
+// be probate property until somebody sets it by hand.
+//
+// ⚠⚠ AND THE VALUATION DATE IS NOT ONE OF THE THINGS THAT DIFFERS — do not add a trust
+// valuation date. At death tangible personal property is valued at date-of-death FMV, and that
+// one number does three jobs: the §1014 stepped-up basis, the Form 706 figure, and the CARRYING
+// VALUE a §736.08135 accounting opens with. The §1014 step-up reaches revocable trust assets,
+// so a successor trustee needs the same number a personal representative does. What differs is
+// the instrument, the citation, who signs, and that our schedule supports a trustee's
+// accounting rather than being one.
+var MATTER_TYPES = {
+  probate: { label: 'Probate — administered through the court',                  onProbate: true,  trust: false },
+  trust:   { label: 'Trust — a successor trustee administers it',                 onProbate: false, trust: true  },
+  both:    { label: 'Both — pour-over will; some assets probate into the trust',  onProbate: true,  trust: true  },
+  neither: { label: 'Neither — family distribution, no court and no trust',       onProbate: false, trust: false }
+};
+// ⚠ AN UNANSWERED MATTER TYPE ANSWERS NOTHING, and that is the load-bearing half. Every job
+// created before 2026-09-21 carries none, and defaulting one to `probate` would put exactly the
+// claim this field exists to stop back on a court document — silently, on the matters where it
+// is most often wrong. It returns '' and every reader is written to do nothing with that.
+// Living-client work has no matter type at all, so a job re-typed out of the decedent family
+// stops claiming one rather than keeping a stale answer.
+function matterTypeOf(job) {
+  if (!job || !invFiduciaryMode(job)) return '';
+  var v = String(job.matterType || '');
+  return MATTER_TYPES[v] ? v : '';
+}
+function matterDef(job) { var k = matterTypeOf(job); return k ? MATTER_TYPES[k] : null; }
+
 // ─── SERVICE FAMILIES — what a job may be RECLASSIFIED to on the walkthrough ───
 // A job is entered at intake on the best information a phone call gives you, and the
 // walkthrough is where that gets tested. A Home Prep client who turns out to need the
@@ -7818,6 +7872,12 @@ function saveIntake() {
     // with it, which is the date every value on that estate's schedule is stated AT. There is
     // no honest default to invent for it and it is on the death certificate.
     if (!document.getElementById('i-date-of-death').value) missing.push('Date of death');
+    // ⚠ REQUIRED, AND DELIBERATELY WITHOUT A DEFAULT — unlike the scope question beside it,
+    // which opens at Full because doing the most is a defensible assumption. There is no
+    // defensible assumption about probate versus trust: guessing probate is precisely what
+    // puts a §733.604 court schedule in front of a successor trustee, and here that guess
+    // would be wrong on most Palm Beach estates. Ask the attorney.
+    if (!(document.getElementById('i-matter-type')||{}).value) missing.push('How this estate is being administered');
   }
 
   // Additional mandatory fields for probate. The attorney is required HERE and merely offered
@@ -7900,6 +7960,7 @@ function saveIntake() {
     gate706:            (document.getElementById('i-gate-706')||{}).value||'',
     gateDispute:        (document.getElementById('i-gate-dispute')||{}).value||'',
     docScope:           (document.getElementById('i-docscope')||{}).value||'full',   // seeds the estimate's Documentation scope
+    matterType:         (document.getElementById('i-matter-type')||{}).value||'',    // probate | trust | both | neither — never defaulted, see MATTER_TYPES
     status:'new',
     havellinEst:null, totalEst:null, inRange:null, approved:false,
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
@@ -8364,7 +8425,7 @@ var INTAKE_FIELDS = [
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
-  'i-gate-706', 'i-gate-dispute', 'i-docscope',
+  'i-gate-706', 'i-gate-dispute', 'i-docscope', 'i-matter-type',
   'i-dest-addr', 'i-dest-city', 'i-dest-zip', 'i-dest-sqft', 'i-dest-beds', 'i-dest-baths'
 ];
 
@@ -20666,8 +20727,39 @@ function printCourtInventory(jobId) {
   // question; arithmetic is not.
   var unvalued = items.filter(function(r){ return _invOnProbateSchedule(r) && !_invHasValue(r); });
   var _draftWhy = [];
+  // ⚠⚠ AN EMPTY SCHEDULE IS NEVER FINAL, AND THIS IS THE SAME RULE AS THE FLOOR ABOVE, APPLIED
+  // TO THE CARVE-OUT. Measured on a seeded estate holding $19,000 of furniture, every line
+  // tracked Trust (and identically for Non-probate and Homestead): the schedule rendered
+  // **FINAL** in green, **Total tangible personal property: $0**, with a signature block
+  // reading "Reviewed and adopted by … Personal Representative / authorized fiduciary" under
+  // it. The only thing on the page saying otherwise was a 10px italic footnote. A fiduciary
+  // adopting that files a §733.604 schedule asserting the estate held nothing.
+  //
+  // ⚠ THE DEFAULT IS WHAT MADE IT RARE AND MAKES IT WORSE. `_invTrack` defaults an unset item
+  // to 'Probate', so the person who does the right thing — setting the track on a trust
+  // matter — is the one who gets the $0 FINAL. Doing nothing lists trust property on a court
+  // schedule instead. Both are wrong; only one of them is signed.
+  //
+  // Nothing recorded at all and everything carved out are different facts and say so, because
+  // the fix differs: one is "go and do the inventory", the other is "this is the wrong document".
+  var onSched = items.filter(function(r){ return _invOnProbateSchedule(r); });
+  if (!onSched.length) _draftWhy.push(items.length
+    ? 'no recorded item is on the probate schedule'
+    : 'nothing is recorded on this estate yet');
   if (formal && guard.length) _draftWhy.push(guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal');
   if (unvalued.length) _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
+  // ⚠⚠ THE MATTER TYPE IS READ HERE AND NOWHERE ELSE YET, AND IT ONLY EVER SPEAKS WHEN ANSWERED.
+  // Every job created before 2026-09-21 carries none; matterTypeOf returns '' for those and for
+  // living-client work, and this block does nothing with it — so the document is unchanged on
+  // every existing job rather than acquiring a claim nobody made.
+  //
+  // ⚠ THIS IS NOT THE TRUSTEE'S SCHEDULE. That document — Chapter 736 citations, a
+  // successor-trustee signature block, the carve-out reversed, and the line stating it SUPPORTS
+  // rather than constitutes a §736.08135 accounting — is a separate build. What this does is
+  // stop the PROBATE one being signed on a matter that has no probate in it.
+  var _mt = matterDef(job);
+  var _mtOff = !!(_mt && !_mt.onProbate);
+  if (_mtOff) _draftWhy.push('this estate is not being administered through probate');
   var draft = _draftWhy.length > 0;
   var status = draft ? 'DRAFT — ' + _draftWhy.join(' \u00b7 ') : 'FINAL';
   var basis = resolveValBasis(job);
@@ -20727,6 +20819,22 @@ function printCourtInventory(jobId) {
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
     + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
+    // ⚠ ABOVE THE TABLE, NOT UNDER IT. A reader works down this page and takes the schedule as
+    // what it says it is; a caveat printed after the total has arrived once they have already
+    // read it as a court filing. Same placement rule the release cautions and the as-found gap
+    // block both follow, and the same reason.
+    + (_mtOff
+        ? '<div style="margin-bottom:12px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;line-height:1.5;">'
+          + '<strong>This estate is not being administered through probate.</strong> It is recorded as <em>' + esc(_mt.label) + '</em>. '
+          + 'A &sect;733.604 schedule is the wrong instrument for it — there is no court filing for it to be adopted into, and the property '
+          + (_mt.trust ? 'passes under the trust rather than through the estate' : 'is being distributed without a court or a trust')
+          + '. This copy is issued as a working record only.'
+          + (_mt.trust ? ' The trustee\'s schedule, prepared to support the accounting rather than to be one, is a separate document.' : '')
+          + '</div>'
+        : '')
+    + ((_mt && _mt.onProbate && _mt.trust)
+        ? '<div style="margin-bottom:12px;font-size:10.5px;color:#8a6d3b;font-style:italic;line-height:1.5;">Recorded as <em>' + esc(_mt.label) + '</em>, so some property passes under the trust rather than through the estate. Anything tracked Trust is excluded from this schedule and belongs on the trustee\'s.</div>'
+        : '')
     + body
     + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">'
       + (unvalued.length ? 'Total recorded so far (' + esc(basis) + ') &mdash; not a complete total: &nbsp;' : 'Total tangible personal property (' + esc(basis) + '): &nbsp;')
@@ -33317,9 +33425,10 @@ function showEditClient(jobId) {
   html += '<div class="sec" style="margin-top:14px;">Estate Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('Date of Death', '<input type="date" id="ec-date-of-death" value="'+(job.deathDate||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
+  html += fld('How is this estate being administered?', '<select id="ec-matter-type" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select — ask the attorney'}].concat(Object.keys(MATTER_TYPES).map(function(k){ return { v:k, l: MATTER_TYPES[k].label }; })), matterTypeOf(job))+'</select>', true);
   html += fld('Who builds the inventory?', '<select id="ec-docscope" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'full',l:'Havellin — inventory & estimated value'},{v:'capture',l:'Havellin photographs & lists; counsel values'},{v:'none',l:'Counsel\'s office — Havellin sorts & stages'}], (typeof docScopeDef === 'function' && docScopeDef(job.docScope)) ? job.docScope : 'full')+'</select>', false);
   html += '</div>';
-  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer seeds a new estimate\'s Documentation scope; an estimate already priced keeps its own setting.</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer seeds a new estimate\'s Documentation scope; an estimate already priced keeps its own setting. <strong>How it is administered</strong> decides which instrument the documents take \u2014 a probate court schedule or a trustee\'s; it is never guessed, and a job recorded before 2026-09-21 carries no answer at all.</div>';
 
   // ⚠ EDITABLE HERE BECAUSE STRICT MODE WAS A ONE-WAY DOOR. docLevelFloorReason tells the
   // reader to "answer it with the attorney or PR to lift this" — and until now there was
@@ -33519,6 +33628,12 @@ function saveClientEdit(jobId) {
     var _ecDs = document.getElementById('ec-docscope');
     if (_ecDs && typeof docScopeDef === 'function' && docScopeDef(_ecDs.value)) job.docScope = _ecDs.value;
     job.deathDate    = (document.getElementById('ec-date-of-death') || {}).value || '';
+    // ⚠ AN UNRECOGNISED VALUE IS DISCARDED RATHER THAN STORED. matterTypeOf already refuses
+    // to resolve one, so storing it would leave a job reading unanswered on every screen while
+    // the record held something — and the one thing this field must never do is look answered
+    // when it is not. Same shape as the docScopeDef guard beside it.
+    var _ecMt = document.getElementById('ec-matter-type');
+    if (_ecMt) job.matterType = MATTER_TYPES[_ecMt.value] ? _ecMt.value : '';
     job.gate706      = (document.getElementById('ec-gate-706')      || {}).value || '';
     job.gateDispute  = (document.getElementById('ec-gate-dispute')  || {}).value || '';
     var attyFname = (document.getElementById('ec-atty-fname').value||'').trim();

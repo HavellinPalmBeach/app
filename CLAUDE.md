@@ -1,5 +1,115 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE APP DID NOT KNOW WHETHER AN ESTATE WAS PROBATE OR TRUST, AND SIGNED A $0 COURT SCHEDULE (2026-09-21)
+Step 2 of `ESTATE_SCOPE_SPEC.md`, same day as step 1. Anthony, on where the volume actually is:
+*"most homes will be in trust. so we need to get this right. the probate cases will be more rare if we stick to
+our upmarket busienss plan."* App-only, no redeploy.
+
+- **⚠⚠ THE DEFECT WAS MEASURED BEFORE THE FIELD WAS BUILT, AND IT IS WORSE THAN THE SPEC SAID.** `printCourtInventory`
+  lists Probate-track and Exempt-track items only, so an estate whose lines are all tagged **Trust** produces an
+  EMPTY schedule. Driven on the real function, a seeded estate holding **$19,000** of furniture:
+
+  | every line tracked | HEAD | now |
+  |---|---|---|
+  | **Trust** | **FINAL, green · $0 · signature block** | DRAFT · no signature · *no recorded item is on the probate schedule* |
+  | **Non-probate** | **FINAL, green · $0 · signature block** | the same refusal |
+  | **Homestead** | **FINAL, green · $0 · signature block** | the same refusal |
+  | Probate (the control) | FINAL · $19,000 · signed | **byte-identical** |
+
+  The spec named only trust; it is **all three non-probate pots**. A fiduciary adopting that page files a §733.604
+  schedule asserting the estate held nothing, and the only thing on it saying otherwise was a **10px italic
+  footnote** under the total. The signature line reads *"Reviewed and adopted by … Personal Representative /
+  authorized fiduciary."*
+- **⚠⚠ THE DEFAULT IS WHY IT WAS RARE AND IS WHY IT IS WORSE THAN IT LOOKS.** `_invTrack` defaults an unset item to
+  `'Probate'`, so **the person who does the right thing gets the $0 FINAL** — setting the track on a trust matter is
+  what empties the schedule. Doing nothing instead lists trust property on a court filing. Both are wrong; only one
+  of them is signed.
+- **⚠⚠ LAYER ONE NEEDS NO FIELD AT ALL, AND THAT IS DELIBERATE — every job recorded before today is covered by it.**
+  An empty schedule is never FINAL and is never signed, which is the rule that function **already applied to an
+  unvalued line** (*report the floor and refuse to conclude*) extended to the case where everything was carved out.
+  It also says **which** of the two empties it is, because the fix differs: *nothing is recorded on this estate yet*
+  means go and do the inventory; *no recorded item is on the probate schedule* means this is the wrong document.
+  Reverting it fails **9**.
+- **⚠⚠ `MATTER_TYPES` — probate · trust · both · neither, AND IT IS NOT DERIVABLE FROM ANYTHING THE APP HELD.**
+  `svc` is what Havellin was hired to do (*Probate Estate Settlement* means a case was open at intake, and says
+  nothing about a decedent whose assets pass under a revocable trust); `executorRole` is who signs and already
+  offers *Trustee*, which is a hint and not an answer, since a PR is frequently the successor trustee too; the
+  asset track is **per item** and defaults to Probate. None of the three answers it.
+  - **⚠ `both` IS GENUINELY BOTH, which is why this is not a boolean.** A pour-over will has assets on each side,
+    so the probate schedule is the right instrument for the probate half and still finalises — it simply notes that
+    anything tracked Trust belongs on the trustee's. Collapsing `both` to probate-only fails 3; dropping `neither`
+    fails 2.
+  - **⚠⚠ NO DEFAULT, AND REQUIRED — unlike the scope question sitting beside it.** Doing the most is a defensible
+    assumption about scope; there is none about probate versus trust, and on this book the guess would be wrong
+    more often than right. `matterTypeOf` returns `''` for an unanswered job, for an unrecognised value and for
+    every living-client service, and **every reader is written to do nothing with that** — so no job recorded
+    before today acquires a claim nobody made. Giving it a default of `probate` fails 1; dropping the refusal on
+    an unrecognised value fails 1; dropping the living-client gate fails 4.
+- **⚠ THE VALUATION DATE IS NOT ONE OF THE THINGS THAT DIFFERS. Do not add a trust valuation date.** At death,
+  tangible personal property is valued at date-of-death FMV, and that one number does three jobs: the IRC §1014
+  stepped-up basis, the Form 706 figure, and the **carrying value** a §736.08135 accounting opens with. The §1014
+  step-up reaches revocable trust assets, so a successor trustee needs the same number a PR does. What differs is
+  the instrument, the citation, who signs, and that our schedule **supports** a trustee's accounting rather than
+  being one — which is what keeps Havellin out of fiduciary accounting work.
+- **⚠ THE BLOCK IS ABOVE THE TABLE, AND THAT IS ARITHMETIC RATHER THAN TYPOGRAPHY.** A reader works down this page
+  and takes it as what it says it is; a caveat printed under the total has arrived after they read it as a court
+  filing. Same placement rule the release cautions and the as-found gap block already follow. Moving it below fails 2.
+- **⚠ WHAT THIS IS NOT: the trustee's schedule.** Chapter 736 citations, a successor-trustee signature block, the
+  carve-out reversed, and the not-an-accounting line are a separate build (step 7). This stops the PROBATE document
+  being signed on a matter with no probate in it, and says so on its own face.
+- **8203 committed checks** (+89; `tests/matter-type.test.js` new). **All eighteen changes revert-verified
+  individually, ZERO green after the two below were re-done**; baseline 0 before and after, no unmatched needles.
+  The stylesheet is **byte-identical at 93,431 bytes / 635 rules** — step 2 added no CSS.
+  - **⚠⚠ TWO CAME BACK GREEN AND IT WAS ONE BAD PROBE.** My test read the block by searching for *"not being
+    administered through probate"* — which is **also the DRAFT reason pushed into the status chip at the top of the
+    page**. So deleting the block entirely, and moving it below the table, both passed: the substring survived in
+    the chip either way, and the ordering test compared the chip's position rather than the block's. It reads a
+    sentence the block alone carries now (*"is the wrong instrument for it"*), and the reverts fail 1 and 2.
+    **A probe that matches two different things on one page is not a probe.**
+  - **⚠ AND ONE OF MY OWN ASSERTIONS WAS A TAUTOLOGY I WROTE MYSELF** — `eq(X, cond ? X : '')` where `cond`
+    compared a value to itself. It compares the two rendered documents **byte for byte** now, so a note added to
+    the probate arm later fails rather than passing unnoticed. The twenty-second time this file records an
+    assertion that could not fail.
+  - **⚠ `LOAD IS NOT DRIVE`, AND THE DEPENDENCY RESOLVER PROVED IT TWICE.** Resolving `printCourtInventory`'s
+    dependencies by loading it into a sandbox reported **zero**; calling it reported 28 functions and 4 vars. And
+    even then `_invHasValue` was missed on the first pass, because with every item tracked Trust
+    `_invOnProbateSchedule(r) && !_invHasValue(r)` short-circuits before it is reached — **the very fixture that
+    reproduces the bug is the one that hides a dependency of the fix.**
+- **Verified end to end in headless Chromium on the real page, 33 checks, 0 failed, 0 page errors** (plus step 1's
+  59 re-run green as a regression), driving the real intake form, the real save, the real Edit Client modal and the
+  real `printCourtInventory`:
+
+  | | |
+  |---|---|
+  | the question on the three decedent services | shown · **blank**, four answers plus a forced choice |
+  | on a downsizing or a prep job | not shown |
+  | saving without it | **refused by name**, 0 jobs written |
+  | saving with it | `matterType trust` on the job · the form resets **blank** for the next client |
+  | Edit Client | offered, prefilled `trust`, corrected to `both` and saved |
+  | date of death vs the select beside it | **940px vs 940px**, the scope question on the row below |
+  | Court Inventory, all lines Trust | **not FINAL · not signed · $0** |
+  | the same estate, lines Probate | **FINAL · signed · $19,000** |
+  | matter recorded `trust`, lines Probate | the red block, **above the table** · not FINAL · not signed |
+  | matter recorded `both` | **FINAL · signed**, and told its trust assets are elsewhere |
+  | overflow 1440 · 390 | **0 · 0** |
+
+- Manual **§4** (a new subsection: the four answers, why it is not derivable, why it has no default, and the
+  do-not-add-a-trust-valuation-date note) and **§10a** (the asset-track bullet corrected — it said *Probate-track*
+  where it is Probate **and Exempt**, and now carries the trust-default warning; the Court Inventory bullet; three
+  notes carrying the measurement, the above-the-table rule and what is still not built). Playbook **Step 1** (the
+  question in the words to say on the call), a **`.stop`** naming the $0 FINAL and telling anyone who printed one
+  before today to throw it away and check nobody signed it, and **five** symptom→cause rows. Both `.md` copies
+  hand-edited; **33 claims parity-checked, 0 mismatches**; tag balance clean on both HTML files with the stylesheet
+  stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **19/42 and 16/16** tables as
+  wide as their container (18/41 before — the one new table is §4's).
+- **⚠ NOT DONE, DELIBERATELY, AND IT IS STEP 6/7's TO TAKE: `_invTrack` still defaults every unset item to
+  `'Probate'`.** Making the default follow the matter type is a one-function change with about ten call sites, and
+  **it must not ship before the trustee's schedule exists** — today it would move a trust matter's contents off the
+  wrong schedule and onto no schedule at all. Both documents say to set the track by hand on a trust matter.
+- **⚠ NEXT: step 3 — the engagement tier**, from which `docScope` is derived (Contents list · Inventory with values
+  · Inventory + appraisals · None). That is the menu Anthony asked for at the start of this, and it is what makes
+  *"as little or as much of the inventory work as required"* a thing the app can actually quote.
+
 ## ⚠⚠ AN ESTATE SETTLEMENT WAS ASKED NONE OF THE ESTATE QUESTIONS (FIXED 2026-09-21)
 Step 1 of `ESTATE_SCOPE_SPEC.md`. Anthony, on what Havellin actually sells: *"we claim that our documentation is
 basically whatever scope they want us to do. But I don't think there's anywhere in the app to actually capture

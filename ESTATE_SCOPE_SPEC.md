@@ -152,7 +152,9 @@ Two required fields on decedent jobs, each answering a genuinely different quest
 Forced order. Each is a separate commit, tested, revert-verified, with a manual and playbook pass where user-facing wording changes.
 
 1. ~~**Split the intake block.**~~ **DONE 2026-09-21.** Date of death, the 706 gate, the dispute gate, the scope question **and the estate attorney** moved out of `#probate-fields` into `#estate-fields`, shown on all three decedent services; case number, Letters, the §733.604 deadline and the sale question stay probate-only. Edit Client gained `ec-date-of-death`, `ec-gate-706`, `ec-gate-dispute` and the attorney, so Strict Mode is no longer a one-way door. Date of death is now required on all three; the attorney is required on probate and offered on an Estate Settlement. ⚠ The attorney was NOT in the original scope of this step and was added on measuring `planDerivedLines`' `attorney_on_file` line, which fires on `isDocJob` — Estate Settlement included — and told the reader *“not recorded — Edit Client”* on a service where Edit Client had never offered the field. *Closes D1.*
-2. **Add matter type** at intake and Edit Client, required on decedent jobs.
+2. ~~**Add matter type** at intake and Edit Client, required on decedent jobs.~~ **DONE 2026-09-21.** `MATTER_TYPES` (probate / trust / both / neither) with `matterTypeOf` and `matterDef`; required at intake on all three decedent services, **deliberately without a default** — an unanswered one resolves to `''` and every reader treats that as unanswered rather than as probate, so no job recorded before today acquires a claim nobody made. Edit Client carries it and discards a value it does not recognise.
+   ⚠ **It shipped with readers rather than as a dead field**, and measuring D9 first is what found the worse half of it: the Court Inventory stamped **FINAL** in green over a **$0** total with a signature block, on a seeded estate holding **$19,000** of furniture, whenever every line was tracked Trust — and identically for Non-probate and Homestead. So an empty schedule now reports DRAFT and withholds the signature block (**no field needed, so every existing job is covered**), and a matter recorded `trust` or `neither` says on its face, above the table, that a §733.604 schedule is the wrong instrument. `both` is not refused — the probate half is real. *Closes the signable half of D9; the trustee's schedule itself is still step 7.*
+   ⚠ **NOT done, and it is step 6/7's to take:** `_invTrack` still defaults every unset item to `'Probate'`, so on a trust matter every line silently claims to be probate property until somebody sets it by hand. Making the default follow the matter type is a one-function change with about ten call sites — **and it must not ship before the trust schedule exists**, or a trust matter's contents move from the wrong schedule onto no schedule at all.
 3. **Add the engagement tier**, derive `docScope` from it, migrate the three existing values. *Closes the §4 gap.*
 4. **Wire scope into `planTaskCtx`** and re-key the `ct_*` desk tasks off tier and matter type instead of `isProbate`. *Closes D2 (job plan) and D6.*
 5. **Build the contents-list document** the capture contract already promises. *Closes D5.*
@@ -161,7 +163,7 @@ Forced order. Each is a separate commit, tested, revert-verified, with a manual 
 8. **Gate the estimate** so Build Estimate will not price until tier and matter type are answered. *Decision 3.*
 9. **Either implement or retire `invListingThreshold`.** *Closes D8.*
 
-Step 1 shipped 2026-09-21. **Step 2 is next**, and is independent of everything below it.
+Steps 1 and 2 shipped 2026-09-21. **Step 3 is next** — the engagement tier, from which `docScope` is derived.
 
 ---
 
