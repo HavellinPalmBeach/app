@@ -4752,6 +4752,10 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 
 ## Branches
 - Active feature branch: `claude/festive-dijkstra-3uqyoh`
+  (`claude/wizardly-franklin-8awd9o` shipped alongside it on 2026-09-21 — two sessions ran
+  concurrently that day: the estate-intake split and the room-by-room-inventory-on-every-job-type
+  build. Both are on `main`, and this branch merged theirs on the way through; the merge
+  conflicted on nothing but the build stamp.)
   (`claude/great-turing-ac4h9i` and `claude/gracious-rubin-u3r5pe` shipped alongside it on
   2026-09-20 — THREE sessions ran concurrently that day: the fixed-price-on-every-engagement
   build, the fold/job-tab-sync build, and the inventory naming + as-found build. All three
