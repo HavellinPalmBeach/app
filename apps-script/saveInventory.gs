@@ -208,15 +208,43 @@ function _writeSummarySheet(ss, payload) {
   var put  = function(r, c, v) { sh.getRange(r, c).setValue(v); };
   var bold = function(r, c) { sh.getRange(r, c).setFontWeight('bold'); };
 
+  // ⚠⚠ THIS SHEET ASSERTED THAT SOMEBODY HAD DIED, ON EVERY JOB (fixed 2026-09-21). The
+  // room-by-room inventory runs on all six labour services, so a Home Editing client's own
+  // workbook opened with "Date of Death", "Letters Issued" and "§733.604 Inventory Deadline"
+  // over three empty cells, then counted "Items Awaiting Valuation" on an engagement that
+  // does not value anything and "Exempt §732.402" against a statute that needs a decedent.
+  // Anthony, on the FILE name: *"i think 'estate' inventory is fine. could be a fancy name
+  // for a big house. not always a dead persons estate."* A fancy name is a fancy name; a
+  // statutory court deadline is a claim. Only the claims come off.
+  //
+  // ⚠⚠ AN ABSENT `docSet` MEANS ESTATE, AND DEFAULTING THE OTHER WAY WOULD BE THE BAD
+  // FAILURE. A payload from an app build older than 2026-09-21 carries no flag at all, and
+  // every sheet it has ever written was the estate layout — so an old tab left open must
+  // render exactly what it rendered yesterday rather than stripping the §733.604 deadline
+  // off a live probate matter on its first write. Same rule `_writeAsFoundSheet` follows on
+  // a payload with no `asFoundColumns`: an older app is not a statement about the record.
+  var fid = String(payload.docSet || 'estate') === 'estate';
+
+  // ⚠ THE FILE NAME AND THE FOLDER STAY 'Estate Inventory' ON BOTH SIDES — Anthony's call,
+  // and `saveInventory` looks the workbook up BY NAME, so a branched name would not rename
+  // the existing file, it would create a second workbook beside it and leave every link
+  // already given to a client pointing at the stale one.
   put(1,1,'ESTATE INVENTORY — SUMMARY'); bold(1,1);
-  put(3,1,'Client / Estate');  put(3,2, payload.estate || '');
-  put(4,1,'Job ID');           put(4,2, payload.hvlId || '');
-  put(5,1,'Property Address');  put(5,2, payload.address || '');
-  put(6,1,'Date of Death');    put(6,2, payload.deathDate || '');
-  put(7,1,'Letters Issued');   put(7,2, payload.lettersDate || '');
-  put(8,1,'§733.604 Inventory Deadline'); put(8,2, payload.deadline || '');
-  put(9,1,'Prepared By');      put(9,2, payload.preparedBy || 'Havellin Palm Beach, LLC');
-  put(10,1,'Last Updated');    put(10,2, payload.lastUpdated || new Date().toISOString());
+
+  // The header block is laid out SEQUENTIALLY rather than at fixed rows, for the reason the
+  // category block below already carries: rows 6-8 only came off cleanly because nothing
+  // underneath was addressed by number. Three rows disappearing must not leave a hole.
+  var h = 3;
+  put(h,1, fid ? 'Client / Estate' : 'Client'); put(h,2, payload.estate || ''); h++;
+  put(h,1,'Job ID');            put(h,2, payload.hvlId || '');   h++;
+  put(h,1,'Property Address');  put(h,2, payload.address || ''); h++;
+  if (fid) {
+    put(h,1,'Date of Death');   put(h,2, payload.deathDate || '');   h++;
+    put(h,1,'Letters Issued');  put(h,2, payload.lettersDate || ''); h++;
+    put(h,1,'§733.604 Inventory Deadline'); put(h,2, payload.deadline || ''); h++;
+  }
+  put(h,1,'Prepared By');       put(h,2, payload.preparedBy || 'Havellin Palm Beach, LLC'); h++;
+  put(h,1,'Last Updated');      put(h,2, payload.lastUpdated || new Date().toISOString());  h++;
 
   // Column letters are looked up by HEADER, not hardcoded, so inserting a column in
   // INVENTORY_COLUMNS cannot silently repoint a formula at the wrong data.
@@ -235,20 +263,43 @@ function _writeSummarySheet(ss, payload) {
   };
   var rng = function(letter) { return 'Inventory!' + letter + '2:' + letter; };
 
-  put(12,1,'ESTATE TOTALS'); bold(12,1);
-  put(13,1,'Total Items');              sh.getRange(13,2).setFormula('=COUNTIF(' + rng(C.item) + ',">0")');
-  put(14,1,'Total Estimated FMV');      sh.getRange(14,2).setFormula('=SUM(' + rng(C.fmv) + ')').setNumberFormat('$#,##0');
-  put(15,1,'Items Awaiting Valuation'); sh.getRange(15,2).setFormula('=COUNTIFS(' + rng(C.item) + ',">0",' + rng(C.fmv) + ',"")');
+  var t = h + 1;
+  put(t,1, fid ? 'ESTATE TOTALS' : 'TOTALS'); bold(t,1); t++;
+  put(t,1,'Total Items'); sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.item) + ',">0")'); t++;
+  // ⚠ "Items Awaiting Valuation" IS THE ONE THAT WOULD HAVE READ AS AN OUTSTANDING TASK
+  // FOREVER. Nobody enters a value on a living-client job — Anthony ruled valuation out of
+  // them — so the count would equal the item count on every write and never fall, which is
+  // how a reader learns to skip the whole block.
+  var fmvRow = 0;
+  if (fid) {
+    fmvRow = t;
+    put(t,1,'Total Estimated FMV');      sh.getRange(t,2).setFormula('=SUM(' + rng(C.fmv) + ')').setNumberFormat('$#,##0'); t++;
+    put(t,1,'Items Awaiting Valuation'); sh.getRange(t,2).setFormula('=COUNTIFS(' + rng(C.item) + ',">0",' + rng(C.fmv) + ',"")'); t++;
+  }
+  t++;
 
-  put(17,1,'FLAGS'); bold(17,1);
-  put(18,1,'Exempt §732.402');   sh.getRange(18,2).setFormula('=COUNTIF(' + rng(C.exmt) + ',"Yes")');
-  put(19,1,'Specific Bequests'); sh.getRange(19,2).setFormula('=COUNTIF(' + rng(C.beq) + ',"Yes")');
-  put(20,1,'Disputed / Hold');   sh.getRange(20,2).setFormula('=COUNTIF(' + rng(C.disp2) + ',"Yes")+COUNTIF(' + rng(C.disp) + ',"Hold")');
+  put(t,1,'FLAGS'); bold(t,1); t++;
+  if (fid) {
+    put(t,1,'Exempt §732.402');   sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.exmt) + ',"Yes")'); t++;
+    put(t,1,'Specific Bequests'); sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.beq) + ',"Yes")');  t++;
+  } else {
+    // The flag itself survives and only its NAME changes, the wording the on-screen summary
+    // already uses: a bequest is a will term, and the living-client fact underneath it is
+    // that the owner has promised the thing to somebody.
+    put(t,1,'Promised to someone'); sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.beq) + ',"Yes")'); t++;
+  }
+  put(t,1,'Disputed / Hold'); sh.getRange(t,2).setFormula('=COUNTIF(' + rng(C.disp2) + ',"Yes")+COUNTIF(' + rng(C.disp) + ',"Hold")'); t++;
+  t++;
 
-  put(22,1,'PROCEEDS (reconciliation)'); bold(22,1);
-  put(23,1,'Gross');         sh.getRange(23,2).setFormula('=SUM(' + rng(C.gross) + ')').setNumberFormat('$#,##0');
-  put(24,1,'Fees');          sh.getRange(24,2).setFormula('=SUM(' + rng(C.fees) + ')').setNumberFormat('$#,##0');
-  put(25,1,'Net to Estate'); sh.getRange(25,2).setFormula('=SUM(' + rng(C.net) + ')').setNumberFormat('$#,##0');
+  // ⚠ GROSS / FEES / NET STAY ON BOTH SIDES. A figure actually received from a consignment
+  // or an auction is a RECORDED ACTUAL rather than an estimate, and it is the first thing a
+  // family asks about the dining table — the same reason the printed Contents Record keeps
+  // these three while carrying no FMV at all.
+  put(t,1, fid ? 'PROCEEDS (reconciliation)' : 'PROCEEDS RECEIVED'); bold(t,1); t++;
+  put(t,1,'Gross'); sh.getRange(t,2).setFormula('=SUM(' + rng(C.gross) + ')').setNumberFormat('$#,##0'); t++;
+  put(t,1,'Fees');  sh.getRange(t,2).setFormula('=SUM(' + rng(C.fees) + ')').setNumberFormat('$#,##0');  t++;
+  put(t,1, fid ? 'Net to Estate' : 'Net received');
+  sh.getRange(t,2).setFormula('=SUM(' + rng(C.net) + ')').setNumberFormat('$#,##0'); t++;
 
   // The app sends its own lists; the fallbacks only catch a pre-2026-08-24 payload.
   var cats  = (payload.categories   && payload.categories.length)   ? payload.categories   : INV_CATEGORIES_FALLBACK;
@@ -257,19 +308,32 @@ function _writeSummarySheet(ss, payload) {
   // Both blocks are laid out SEQUENTIALLY. They used to start at fixed rows 3 and 12,
   // which was only safe while the category list was six long; at thirteen the category
   // rows would have run straight through the disposition heading.
-  var r = 2;
-  put(r,4,'FMV BY CATEGORY'); bold(r,4); put(r,5,'FMV'); put(r,6,'Count');
-  r++;
-  for (var i = 0; i < cats.length; i++, r++) {
-    put(r,4,cats[i]);
-    sh.getRange(r,5).setFormula('=SUMIF(' + rng(C.cat) + ',$D' + r + ',' + rng(C.fmv) + ')').setNumberFormat('$#,##0');
-    sh.getRange(r,6).setFormula('=COUNTIF(' + rng(C.cat) + ',$D' + r + ')');
+  var r = 2, first;
+  if (fid) {
+    put(r,4,'FMV BY CATEGORY'); bold(r,4); put(r,5,'FMV'); put(r,6,'Count');
+    r++; first = r;
+    for (var i = 0; i < cats.length; i++, r++) {
+      put(r,4,cats[i]);
+      sh.getRange(r,5).setFormula('=SUMIF(' + rng(C.cat) + ',$D' + r + ',' + rng(C.fmv) + ')').setNumberFormat('$#,##0');
+      sh.getRange(r,6).setFormula('=COUNTIF(' + rng(C.cat) + ',$D' + r + ')');
+    }
+    // A total under the category rows, so a reader can see at a glance that the breakdown
+    // reconciles to Total Estimated FMV. When it did not, nothing on the sheet said so.
+    put(r,4,'Total (should equal B' + fmvRow + ')'); bold(r,4);
+    sh.getRange(r,5).setFormula('=SUM(E' + first + ':E' + (r - 1) + ')').setNumberFormat('$#,##0');
+    sh.getRange(r,6).setFormula('=SUM(F' + first + ':F' + (r - 1) + ')');
+  } else {
+    // Counts, not money. A column headed FMV over an engagement that prices nothing is an
+    // invitation to read the blanks as zeroes and the total as a valuation of the house.
+    put(r,4,'ITEMS BY CATEGORY'); bold(r,4); put(r,5,'Count');
+    r++; first = r;
+    for (var k = 0; k < cats.length; k++, r++) {
+      put(r,4,cats[k]);
+      sh.getRange(r,5).setFormula('=COUNTIF(' + rng(C.cat) + ',$D' + r + ')');
+    }
+    put(r,4,'Total'); bold(r,4);
+    sh.getRange(r,5).setFormula('=SUM(E' + first + ':E' + (r - 1) + ')');
   }
-  // A total under the category rows, so a reader can see at a glance that the breakdown
-  // reconciles to Total Estimated FMV. When it did not, nothing on the sheet said so.
-  put(r,4,'Total (should equal B14)'); bold(r,4);
-  sh.getRange(r,5).setFormula('=SUM(E3:E' + (r - 1) + ')').setNumberFormat('$#,##0');
-  sh.getRange(r,6).setFormula('=SUM(F3:F' + (r - 1) + ')');
   r += 2;
 
   put(r,4,'DISPOSITION'); bold(r,4); put(r,5,'Count');
@@ -280,7 +344,13 @@ function _writeSummarySheet(ss, payload) {
   }
   r++;
 
-  put(r,4,'Tangible personal property only. The §733.604 court inventory (real property, accounts, securities, business interests) is the PR’s filing, prepared with counsel.');
+  // ⚠ THE FOOTER'S WHOLE SUBJECT IS WHAT COUNSEL FILES INSTEAD, so it has no living-client
+  // counterpart and is REPLACED rather than reworded. What the family's copy needs stated is
+  // the opposite thing: that this is a record of where property went and not a valuation of
+  // it — the same disclaimer the agreement's Project Records clause carries.
+  put(r,4, fid
+    ? 'Tangible personal property only. The §733.604 court inventory (real property, accounts, securities, business interests) is the PR’s filing, prepared with counsel.'
+    : 'A record of the contents documented on this engagement and where each item went. It is not an appraisal or a statement of value, and it does not evidence ownership or the legal effect of any transfer.');
   sh.autoResizeColumns(1, 6);
 }
 

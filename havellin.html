@@ -1194,7 +1194,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 1:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 2:18pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -22684,6 +22684,14 @@ function buildInventoryPayload(jobId) {
     deathDate: job.deathDate || '',
     lettersDate: job.lettersDate || '',
     deadline: job.probateDeadline || '',
+    // ⚠⚠ AXIS 2 ON THE WIRE. The workbook's Summary asserted a death on every job it
+    // was ever written for — Date of Death, Letters Issued and a §733.604 court deadline over
+    // three empty cells on a Home Editing client's own spreadsheet. The server cannot derive
+    // that from the rows, so the app states it, the same way it sends `categories` and
+    // `dispositions` rather than letting the backend keep its own copies and drift.
+    // ⚠ A payload with no `docSet` renders the ESTATE layout server-side, so an app build
+    // older than 2026-09-21 is unchanged rather than stripped.
+    docSet: invFiduciaryMode(job) ? 'estate' : 'contents',
     preparedBy: 'Havellin Palm Beach, LLC',
     valBasis: resolveValBasis(job),
     // Sent so the workbook's Summary rollups cannot drift from the app again. The
@@ -31600,7 +31608,7 @@ function probateAgreementHtml(job, est) {
   // confidentiality question, and inserting a numbered section here would renumber Termination,
   // Dispute Resolution and General Provisions — on a contract a court may read, against
   // agreements already issued citing those numbers.
-  content += subHdr('7.1 Documentation Media');
+  content += subHdr('7.1 Documentation Media and Project Records');
   content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, the &sect;733.604 inventory, appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how the estate is accounted for.');
   content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained for seven years as part of the fiduciary record. It is never sold or licensed. It is not shared with any third party except a vendor performing Services on this engagement, or as required by law or court order, and is not published except as Section 7.2 permits.');
   // ⚠⚠ THE SAME CLAUSE AND THE SAME BOX AS THE LIVING-CLIENT FORM'S §10.2, and the flat
@@ -31613,6 +31621,24 @@ function probateAgreementHtml(job, est) {
   // SHARED list, because it was the half of it still true under an opt-out and the standard form
   // never had it at all: restrictions (a)–(e) are worth nothing if a vendor on the matter is not
   // bound by them, and the temptation to publish arrives after the engagement rather than during it.
+  // ⚠⚠ THE WRITTEN RECORD IS APPENDED HERE RATHER THAN GIVEN A §7.3, and that is the same
+  // constraint that made §7.1 and §7.2 subsections in the first place: a new number after §7.2
+  // would separate the two custody paragraphs with the marketing clause wedged between them,
+  // and a new number anywhere else renumbers Termination, Dispute Resolution and General
+  // Provisions against agreements already issued citing them. Only the heading grew.
+  // ⚠⚠ AND IT CARVES ITSELF OUT OF §7'S RETURN-OR-DESTROY BULLET, which is a live conflict
+  // rather than belt and braces: *Destroy or return all Client documents upon project
+  // completion or written request* sits five bullets above a seven-year fiduciary retention.
+  // It reads to me as covering the estate's OWN documents we encounter — the will, deeds,
+  // financial records — rather than records we create, but a contract is construed against
+  // its drafter and that is not a thing to leave to inference on a matter a court may read.
+  content += pp('Havellin also maintains a written record of the estate&rsquo;s contents and their disposition: an itemized list of the property documented, its location and condition, the disposition authorized for each item, the date it was carried out, the person who authorized it, and, where an item was released to a beneficiary or to a third party, the name of that recipient and the reference of any receipt obtained under Section 5.3 (together with the Documentation Media, the &ldquo;Project Records&rdquo;). Where an item was sold or consigned and proceeds were actually received, the Project Records state the amount received, any fees deducted, and the net amount.');
+  content += pp('The Project Records are Havellin&rsquo;s work product, prepared for the Personal Representative and forming part of the fiduciary record of this engagement. They are held on the terms stated above and are retained for seven years. Havellin will provide them to the Personal Representative, to counsel of record, and to any other person the Personal Representative authorizes in writing, and will produce them as required by law or court order. This obligation survives completion of the engagement, and the Project Records are not Client documents for the purposes of the return-or-destroy provision in Section 7. No part of the Project Records is used for marketing or promotional purposes, and Section 7.2 does not apply to them.');
+  // ⚠ THE DISCLAIMER NAMES §733.604 AND BEQUEST SATISFACTION, which the living-client form's
+  // equivalent must never do. A representative holding a tidy itemized list with recipients
+  // against it is exactly the reader who might file it, or treat a delivery recorded on it as
+  // proof that a devise was satisfied. Neither is what this document is.
+  content += pp(bb('What the Project Records are and are not.')+'  The Project Records are Havellin&rsquo;s contemporaneous record of work performed at the direction of the Personal Representative. They are not an appraisal or a statement of value, they are not the inventory required by Fla. Stat. &sect;733.604, and they do not evidence that any distribution satisfied a devise or bequest or that title to any item has passed. Responsibility for the estate&rsquo;s inventory, accounting and distributions rests with the Personal Representative and counsel.');
   content += subHdr('7.2 Marketing &amp; Promotional Use');
   content += _mktClause(pp, '', 'Havellin', '7.2');
   // SECTION 8: TERMINATION
@@ -32070,7 +32096,12 @@ function agreementHtml(job, est) {
   );
 
   // ── SECTION 10 ────────────────────────────────────────────────────────────
-  content += agrSection('10. Photography Authorization',
+  // ⚠ THE HEADING RENAME RENUMBERS NOTHING — checked: the string 'Photography
+  // Authorization' occurs once in the file and no clause cross-references Section 10 by
+  // its title. §11 is still §11. It had to change because §10 now carries a WRITTEN record
+  // as well as images, and a reader looking for what we keep should find it all in one
+  // section rather than in whichever one the defined term happened to land in.
+  content += agrSection('10. Documentation and Records Authorization',
     p(b('10.1 Documentation Photography.')+'  As part of the Services, Contractor will photograph and/or record video of the property, its contents, and all significant assets for the purposes of condition documentation, asset identification, work progress records, and service record-keeping ("Documentation Media"). Client hereby authorizes this documentation as a necessary component of the engagement. All Documentation Media is stored securely in the Client\'s designated Google Drive folder, and any marketing or promotional use of it is governed by Section 10.2 below, which the Client may decline.')+
     // ⚠ NO INITIALS HERE, AND REMOVING THEM IS THE POINT RATHER THAN TIDYING. Anthony:
     // *"I don't think they need to initial to say that we're going to document their property for
@@ -32093,6 +32124,28 @@ function agreementHtml(job, est) {
     // ⚠ AND WRITTEN NOTICE IS AN EQUAL ROUTE OUT, which is the sentence that stands behind a box a
     // client misses or a tab that fails to place. It is stated BEFORE the box rather than after, so
     // a reader who stops at the tick has already been told.
+    // ⚠⚠ EVERY PROMISE IN §10.1a ATTACHES TO A DEFINED TERM MEANING PHOTOGRAPHS AND VIDEO,
+    // AND THE ROOM-BY-ROOM RECORD IS NEITHER (2026-09-21). Since the item record went on to
+    // all six labour services, a living-client engagement produces a WRITTEN document naming
+    // who took what — the client’s daughter, a charity, an auction house — held for seven
+    // years, and the custody, retention and non-disclosure terms three lines above did not
+    // reach it. §9’s general confidentiality is *commercially reasonable efforts* about the
+    // Client’s own information and is looser again: it permits disclosure to any vendor who
+    // *needs it*, which is not a standard to hold a list of third-party names to.
+    // ⚠ THE RECIPIENTS ARE NOT PARTIES AND NEVER SIGNED ANYTHING. That is the whole reason
+    // the third paragraph exists: it states why the name is recorded, that it is used for
+    // nothing else, that the Client warrants they may give it to us, and that they can ask
+    // for it to be left out. Do not collapse it into the custody paragraph — custody is about
+    // where the record lives, this is about somebody who is not in the room.
+    // ⚠ AND IT DISCLAIMS ITS OWN EVIDENTIARY WEIGHT, which matters more on this form than on
+    // the estate one: §5.3 of the estate agreement already requires a signed receipt from the
+    // recipient, so there the record is corroborated. Here there is no receipt requirement, so
+    // the document is our one-sided note of what the Client told us and must not read as
+    // evidence of a gift, a sale or a transfer of title.
+    p(b('10.1b Project Records.')+'  In addition to Documentation Media, Contractor maintains a written record of the Client&rsquo;s contents and their disposition: an itemized list of the property documented, its location and condition, the disposition the Client directed for each item, the date that disposition was carried out, and, where an item was released to a person or organization other than the Client, the name of that recipient (the &ldquo;Project Records&rdquo;). Where an item was sold or consigned and proceeds were actually received, the Project Records state the amount received, any fees deducted, and the net amount. Contractor provides the Client a copy of the Project Records at the conclusion of the engagement.')+
+    p('The Project Records are Contractor&rsquo;s work product and are held on the same terms as Documentation Media under Section 10.1a: stored in the Client&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Client authorizes in writing, retained for seven years as part of the service record, never sold or licensed, and not disclosed to any third party except a vendor performing Services on this engagement, or as required by law or court order. No part of the Project Records is used for marketing or promotional purposes, and Section 10.2 does not apply to them.')+
+    p(b('Recipient names.')+'  Contractor records the name of a recipient because the Client directs an item to that person or organization, and records it solely so that the Client has a record of where the item went. Contractor does not contact a recipient, verify their identity, or use their information for any other purpose. The Client confirms that they are entitled to direct the disposition of the items documented and to identify recipients to Contractor. If the Client asks in writing that a recipient not be named, Contractor will record the disposition without the name.')+
+    p(b('What the Project Records are and are not.')+'  The Project Records are Contractor&rsquo;s contemporaneous record of work performed at the Client&rsquo;s direction. They are not an appraisal, a valuation, or a statement of what any item is worth; they do not evidence ownership, title, or the legal effect of any transfer; and they are not a substitute for any tax, insurance, or estate-planning record. The Client is responsible for obtaining any valuation, receipt or acknowledgment they need for those purposes.')+
     _mktClause(p, b('10.2 Marketing &amp; Promotional Use.')+'  ', 'Contractor', '10.2')
   );
 
