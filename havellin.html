@@ -1194,7 +1194,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.20 · 7:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 8:11am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18035,7 +18035,87 @@ function _savePendingPhotoData(jobId) {
   }
 }
 
+// ── Reclaiming room for the manifest write ───────────────────────────────────
+// Safe to drop means THE SHEET CAN HAND IT BACK. Four things have to be true, and the first
+// two are the ones that would lose work outright rather than cost a fetch.
+function _invManifestEvictable(jobId, keepJobId) {
+  if (String(jobId) === String(keepJobId)) return false;  // the job being written
+  if (!SHEETS_SYNC_URL) return false;                     // no server: this device IS the record
+  // A debounced write still waiting, or one queued after a failure — either way the sheet has
+  // not seen these rows yet and the local copy is the only one.
+  try { if (_invSyncTimer[jobId]) return false; } catch (e) { return false; }
+  var k = 'main/saveMedia:' + jobId;
+  try { if (typeof _pendingWrites === 'object' && _pendingWrites && _pendingWrites[k]) return false; } catch (e) {}
+  try { if (typeof _outbox === 'object' && _outbox && _outbox[k]) return false; } catch (e) {}
+  return true;
+}
+
+// What it reclaims, ONE TIER PER CALL — and the order is a SAFETY ranking, not a size one:
+//   tier 1 — every OTHER job's thumbnail cache, which is pure cache and is refetched from
+//            Drive on demand, so it can always go;
+//   tier 2 — every OTHER job's manifest that the sheet demonstrably already holds.
+// ⚠⚠ ONE TIER PER CALL IS THE WHOLE REASON THE ORDER MEANS ANYTHING. The caller retries the
+// write after each tier, so tier 2 is only ever paid for when the cache alone was not enough.
+// Freeing both in one pass would drop finished jobs off the device to make room that the
+// thumbnails had already made, and the ranking would be decoration. Retrying is also what
+// removes the byte arithmetic: how much a browser charges for a key is not observable from
+// here, so the write itself is the measurement.
+// ⚠⚠ IT NEVER TOUCHES `hav_media_pending_<id>`. Those are the bytes of a photograph that
+// FAILED to reach Drive: they are the only copy in existence and Retry is the only thing that
+// can still file them. Dropping them to make room would trade a recoverable record for an
+// unrecoverable photograph, which is the wrong way round.
+// ⚠ IT MUST NEVER THROW. It runs inside savePhotoRefs's catch, on the write that must not fail.
+function _invReclaimSpace(keepJobId, tier) {
+  var out = { bytes: 0, jobs: [], thumbs: 0 };
+  var keep = String(keepJobId);
+  var all = (tier === undefined || tier === null);
+  var keys = [];
+  try { for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i)); }
+  catch (e) { return out; }
+  function drop(key) {
+    try {
+      var v = localStorage.getItem(key);
+      if (v == null) return 0;
+      localStorage.removeItem(key);
+      return key.length + v.length;
+    } catch (e) { return 0; }
+  }
+  if (all || tier === 1) keys.forEach(function(k){
+    if (!k || k.indexOf('hav_media_thumb_') !== 0) return;
+    if (k.slice(16) === keep) return;
+    var n = drop(k);
+    if (n) { out.bytes += n; out.thumbs++; }
+  });
+  if (all || tier === 2) keys.forEach(function(k){
+    if (!k || k.indexOf('hav_media_') !== 0) return;
+    if (k.indexOf('hav_media_thumb_') === 0 || k.indexOf('hav_media_pending_') === 0) return;
+    var id = k.slice(10);
+    if (!_invManifestEvictable(id, keep)) return;
+    var n = drop(k);
+    if (n) { out.bytes += n; out.jobs.push(id); }
+  });
+  return out;
+}
+
+// It says what it did. A recovery that silently changes what this device holds is how somebody
+// later reports an old job "losing its inventory" when it is sitting on the sheet waiting to be
+// refetched — so the wording names where it went and how it comes back.
+function _invNoteReclaim(freed) {
+  var kb = Math.round(freed.bytes / 1024);
+  var parts = [];
+  if (freed.jobs.length) parts.push(freed.jobs.length + (freed.jobs.length === 1 ? ' other job' : ' other jobs'));
+  if (freed.thumbs) parts.push(freed.thumbs + (freed.thumbs === 1 ? ' thumbnail cache' : ' thumbnail caches'));
+  console.warn('[Photos] out of local space — reclaimed ' + kb + 'KB from ' + parts.join(' and ')
+    + '; they come back from the sheet when reopened. Jobs cleared:', freed.jobs);
+  try {
+    if (typeof showSyncBadge === 'function') {
+      showSyncBadge('Inventory saved \u2713 \u2014 cleared ' + kb + 'KB of other jobs off this device');
+    }
+  } catch (e) {}
+}
+
 function savePhotoRefs(jobId) {
+  var json = null;
   try {
     var refs = (_photoRefs[jobId] || []).map(function(r) {
       return { stableId:r.stableId, roomIdx:r.roomIdx, label:r.label, collId:r.collId, manual:r.manual,
@@ -18053,8 +18133,38 @@ function savePhotoRefs(jobId) {
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
-    localStorage.setItem('hav_media_' + jobId, JSON.stringify(refs));
-  } catch(e) { _warnPhotoStoreFull(e); }
+    json = JSON.stringify(refs);
+    localStorage.setItem('hav_media_' + jobId, json);
+    return;
+  } catch(e) {
+    // ⚠⚠ A QUOTA FAILURE HERE USED TO BE THE END OF IT, AND IT LOSES THE RECORD RATHER THAN
+    // TIME: the lines are in memory, the write throws, one alert fires, and the next reload has
+    // none of them. `hav_media_<id>` is only ever removed when a job is DELETED
+    // (_purgeLocalJobRecords), never when one is finished, so a device carries every estate it
+    // has ever worked. Measured off this very whitelist: ~476 bytes a fresh split row and ~791
+    // once it is named and valued, so a 1,200-line estate is ~0.9MB and a 3,000-line one ~2.5MB
+    // — against a ~5MB origin quota that the 2MB thumbnail cache already shares. The third
+    // estate is where it lands, and one photograph splitting into many lines is what gets it
+    // there faster.
+    // ⚠ RECLAIM AND WRITE AGAIN ONCE. Recovering beats warning, and the only thing dropped is
+    // what the sheet can hand back.
+    var freed = { bytes: 0, jobs: [], thumbs: 0 };
+    for (var tier = 1; tier <= 2 && json !== null; tier++) {
+      var got = _invReclaimSpace(jobId, tier);
+      freed.bytes += got.bytes; freed.thumbs += got.thumbs;
+      freed.jobs = freed.jobs.concat(got.jobs);
+      // ⚠ BELT AND BRACES, and said so rather than pinned by a check that could not fail:
+      // a tier that freed nothing cannot make the write succeed, so retrying would throw again
+      // and fall through here anyway. It saves one doomed setItem and changes no outcome.
+      if (!got.bytes) continue;
+      try {
+        localStorage.setItem('hav_media_' + jobId, json);
+        _invNoteReclaim(freed);
+        return;
+      } catch(e2) { e = e2; }
+    }
+    _warnPhotoStoreFull(e);
+  }
 }
 
 function _getPhotoRef(jobId, stableId) {
@@ -18834,16 +18944,48 @@ function _invPhotoSiblings(jobId, ref) {
   return all.filter(function(r){ return !r.deletedAt; });
 }
 
-// Split another object out of a photograph already taken. Returns the new row, or a string
-// naming the refusal.
+// ⚠ A CAP, BECAUSE THE CALLER IS ABOUT TO BE A MODEL. A single frame really can hold thirty
+// pieces of jewellery in a drawer, so the number is deliberately generous; what it catches is an
+// identifying agent returning hundreds of blank lines into a manifest a court may read. It
+// refuses and mints NOTHING rather than truncating, because a silent truncation is
+// indistinguishable from the agent having found fewer objects.
+var INV_SPLIT_MAX = 200;
+
+// Split N objects out of a photograph already taken. Returns the new rows, or a string naming
+// the refusal. `invSplitItem` below is the single-row wrapper over this, so there is ONE
+// minting rule and one set of refusals rather than two that can drift.
+//
+// ⚠⚠ THE BATCH IS FOR AGENT ONE AND IT IS THE WHOLE REASON FOR THE SHAPE. `savePhotoRefs`
+// re-serialises the ENTIRE manifest on every call — a 53-key pick over every row — so an agent
+// that finds fifteen objects in a drawer photograph and calls the single form fifteen times
+// writes the whole manifest fifteen times. Measured off the real whitelist at ~476 bytes a
+// fresh row, a 1,200-line estate is half a megabyte per call and the cost goes quadratic across
+// a house. This mints N and writes ONCE.
+// ⚠ IT OWNS THE WRITE RATHER THAN TAKING A `defer` FLAG. A caller that batches with a flag and
+// forgets to flush leaves the new lines in memory only — gone on the next reload, with nothing
+// on any screen saying so, which is the silent-loss shape this file records over and over.
+// There is deliberately no half-used form of this function.
+// ⚠ THE SYNC IS ALREADY DEBOUNCED per job, so the network write was never the N-times problem;
+// only the localStorage serialisation was. Do not "fix" the sync as well.
 //
 // ⚠⚠ IT REFUSES ON A SHOT THAT HAS NOT REACHED DRIVE, and that is the reason the status
 // question never has to be answered anywhere else. A derived row carries the source's
 // `driveFileId` so its thumbnail and its link resolve; taken from a shot still uploading, it
 // would carry nothing, and nothing would ever come back and fill it in — the line would print
 // on the attorney's schedule with an empty photo box for the rest of the engagement. Retry the
-// shot first, then split it.
-function invSplitItem(jobId, stableId) {
+// shot first, then split it. The check runs ONCE for the batch, above the loop: the answer
+// cannot change between one row and the next.
+function invSplitItemN(jobId, stableId, count) {
+  var n = (count === undefined || count === null || count === '') ? 1 : parseInt(count, 10);
+  // An explicit 0 is a real answer from an identifying agent — "nothing else in this frame" —
+  // and minting a blank line for it would be inventing an object. An absent or unreadable
+  // count is a caller mistake, and there one row is the safe read.
+  if (isNaN(n) || n < 0) n = 1;
+  if (n === 0) return [];
+  if (n > INV_SPLIT_MAX) {
+    return 'That is ' + n + ' lines off one photograph, past the limit of ' + INV_SPLIT_MAX
+      + '. Nothing was added. Split it in smaller batches, or check what asked for this.';
+  }
   var src = _getPhotoRef(jobId, stableId);
   if (!src || src.deletedAt) return 'That photograph is not on this job.';
   if (src.derivedFrom) src = _invPhotoSource(jobId, src) || src;   // split off the photograph, never off a line
@@ -18852,30 +18994,39 @@ function invSplitItem(jobId, stableId) {
     return 'This photograph has not reached Google Drive yet, so a line split off it would have '
       + 'no image and never get one. Press Retry on the shot first, then split it.';
   }
-  var ref = {
-    stableId: jobId + '_d' + _photoUid(),
-    derivedFrom: src.stableId,
-    roomIdx: src.roomIdx, label: 'inventory', collId: null, seq: src.seq,
-    // The image, and only the image. Name, category, value, disposition, flags and custody are
-    // deliberately NOT copied: this is a different object, and a prefilled answer on a blank
-    // line is the silence-reads-as-Keep defect the Undecided default exists to stop.
-    filename: src.filename, driveFileUrl: src.driveFileUrl, driveFileId: src.driveFileId,
-    // ⚠⚠ `ts` IS THE SOURCE'S, NOT NOW, AND THE BROWSER IS WHAT FOUND IT. Everywhere else in
-    // the manifest `ts` means WHEN THE PHOTOGRAPH WAS TAKEN — `_jobInvRefs` sorts on it, the
-    // Today filter groups on it, the As-Found Record orders on it. Stamped with the moment of
-    // the split, the four objects in one frame scattered: three under today and the console
-    // under the day it was shot, and on a 200-item estate a hundred rows apart from each other
-    // in the list. Inheriting it keeps one frame's lines together and keeps `ts` meaning one
-    // thing. They tie, and a stable sort then breaks the tie on insertion order — source first,
-    // then each split in the order it was made, which is the order somebody typed them in.
-    status: 'uploaded', ts: src.ts,
-    objectName: '', category: INV_DEFAULT_CATEGORY, disposition: ''
-  };
-  _invTouch(ref);
-  _setPhotoRef(jobId, ref);
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    var ref = {
+      stableId: jobId + '_d' + _photoUid(),
+      derivedFrom: src.stableId,
+      roomIdx: src.roomIdx, label: 'inventory', collId: null, seq: src.seq,
+      // The image, and only the image. Name, category, value, disposition, flags and custody are
+      // deliberately NOT copied: this is a different object, and a prefilled answer on a blank
+      // line is the silence-reads-as-Keep defect the Undecided default exists to stop.
+      filename: src.filename, driveFileUrl: src.driveFileUrl, driveFileId: src.driveFileId,
+      // ⚠⚠ `ts` IS THE SOURCE'S, NOT NOW, AND THE BROWSER IS WHAT FOUND IT. Everywhere else in
+      // the manifest `ts` means WHEN THE PHOTOGRAPH WAS TAKEN — `_jobInvRefs` sorts on it, the
+      // Today filter groups on it, the As-Found Record orders on it. Stamped with the moment of
+      // the split, the four objects in one frame scattered: three under today and the console
+      // under the day it was shot, and on a 200-item estate a hundred rows apart from each other
+      // in the list. Inheriting it keeps one frame's lines together and keeps `ts` meaning one
+      // thing. They tie, and a stable sort then breaks the tie on insertion order — source first,
+      // then each split in the order it was made, which is the order somebody typed them in.
+      status: 'uploaded', ts: src.ts,
+      objectName: '', category: INV_DEFAULT_CATEGORY, disposition: ''
+    };
+    _invTouch(ref);
+    _setPhotoRef(jobId, ref);
+    out.push(ref);
+  }
+  // ONE write and one sync for the whole batch, however many rows it minted.
   savePhotoRefs(jobId);
   _scheduleInventorySync(jobId);
-  return ref;
+  return out;
+}
+function invSplitItem(jobId, stableId) {
+  var out = invSplitItemN(jobId, stableId, 1);
+  return (typeof out === 'string') ? out : out[0];
 }
 function invSplitItemClick(jobId, stableId) {
   var out = invSplitItem(jobId, stableId);
@@ -22173,6 +22324,11 @@ function _scheduleInventorySync(jobId) {
   if (!SHEETS_SYNC_URL) return;
   clearTimeout(_invSyncTimer[jobId]);
   _invSyncTimer[jobId] = setTimeout(function(){
+    // ⚠ CLEARED AS THE FIRST THING THE CALLBACK DOES, so `_invSyncTimer[jobId]` means "a write
+    // for this job is still waiting to be sent" and nothing else. It was set and never cleared,
+    // which was harmless while nothing read it — `_invManifestEvictable` reads it now, and a
+    // timer id left standing would mark every job that has ever synced as unsafe to reclaim.
+    _invSyncTimer[jobId] = 0;
     // TWO writes, and they are not the same thing.
     //   saveMedia     — the durable manifest. Every field, merged per item, kept in the
     //                   MAIN sheet next to jobs and estimates. This is the record.

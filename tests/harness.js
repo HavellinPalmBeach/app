@@ -189,6 +189,13 @@ function sandbox({ fns = [], vars = [], stubs = {} } = {}) {
       getItem(k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
       setItem(k, v) { store[k] = String(v); },
       removeItem(k) { delete store[k]; },
+      // ⚠ length + key() ARE PART OF THE REAL API AND CODE ENUMERATES WITH THEM.
+      // _invReclaimSpace walks every key to find other jobs' manifests; against a stub with
+      // neither, `i < localStorage.length` is `0 < undefined`, the loop never runs, and the
+      // reclaim reads as "nothing to free" while the real browser would have freed plenty.
+      // A stub that does not match the contract is worse than no stub.
+      get length() { return Object.keys(store).length; },
+      key(i) { const k = Object.keys(store); return i >= 0 && i < k.length ? k[i] : null; },
     },
     alert() {},
     // Browser globals the app uses for real: btoa for the Drive data: URIs and for every
