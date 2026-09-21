@@ -1,5 +1,130 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE CLIENT'S OWN WORKBOOK ASSERTED A DEATH, AND NEITHER AGREEMENT COVERED THE WRITTEN RECORD (2026-09-21)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs`, `BACKEND_VERSION 2026-09-21a`. Two halves of the same
+gap, both falling out of the room-by-room item record going to all six labour services the day before. Anthony, on
+the two flags I had left open: *"def clear up inventory for non dead people. that needs to be done. but also update
+the docs with your language. i don't want docs with stale language in the app. i can have an attorney review the
+entirety of the agreements before we go live."* Plus, on the naming half, which he overruled: *"i think 'estate'
+inventory is fine. could be a fancy name for a big house. not always a dead persons estate."*
+
+### ⚠⚠ THE WORKBOOK — THE ON-SCREEN SUMMARY WAS GATED AND THE SPREADSHEET WAS NOT
+- **`_renderInventorySummary` branched on `invFiduciaryMode` from 2026-09-21 and `_writeSummarySheet` in
+  `saveInventory.gs` did not — and the workbook is the copy the client KEEPS.** A Home Editing client's own file
+  opened with **Date of Death**, **Letters Issued** and a **§733.604 Inventory Deadline** over three empty cells,
+  counted **Items Awaiting Valuation** on an engagement that values nothing, and flagged **Exempt §732.402**
+  against a statute that needs a decedent. The screen was right and the document in their Drive folder was not.
+- **⚠⚠ THE NAME WAS THE HALF ANTHONY WAVED OFF, AND HE IS RIGHT — A FANCY NAME IS NOT A CLAIM.** The file stays
+  `Estate Inventory — HVL-xxxx`, the folder stays `Estate Inventory`, and the Summary title stays
+  `ESTATE INVENTORY — SUMMARY`. **⚠ It is also load-bearing: `saveInventory` looks the workbook up BY NAME**, so a
+  branched name would not rename the existing file, it would mint a second one beside it and leave every link
+  already given to a client pointing at the stale copy. Only the CLAIMS came off. ⚠ Note the on-screen block reads
+  *Inventory — Summary* on a living job, so the two surfaces now differ by one word; kept his way deliberately.
+- **⚠⚠ AN ABSENT `docSet` MEANS ESTATE, AND DEFAULTING THE OTHER WAY IS THE BAD FAILURE.** A payload from a build
+  older than today carries no flag, and every sheet it has ever written was the estate layout — so an old browser
+  tab left open must render exactly what it rendered yesterday rather than **stripping the §733.604 deadline off a
+  live probate matter on its first write**. Same rule `_writeAsFoundSheet` follows on a payload with no
+  `asFoundColumns`: an older app is not a statement about the record. Reverting the default fails 6.
+- **⚠ THE APP STATES IT; THE SERVER MAY NOT DERIVE IT.** `docSet: invFiduciaryMode(job) ? 'estate' : 'contents'`
+  rides `buildInventoryPayload`, the way `categories` and `dispositions` do — the lesson the category lists already
+  paid for at 6-against-13. The server cannot see the service type at all.
+- **⚠ THE HEADER BLOCK IS SEQUENTIAL NOW**, for the reason the category block below it already carried in a comment:
+  three rows disappearing must not leave a hole, and the category total's *"should equal B14"* back-reference has to
+  follow the row the FMV total actually landed on. Reverting to fixed rows fails 2.
+- **What came off and what stayed.** Off: the three date rows, *Total Estimated FMV*, *Items Awaiting Valuation*,
+  *Exempt §732.402*, the FMV-by-category rollup and the §733.604 footer. Stayed: *Total Items*, **Gross / Fees /
+  Net**, the disposition counts and the *Disputed / Hold* flag. **⚠ `Items Awaiting Valuation` is the one that would
+  have read as an outstanding task forever** — nobody enters a value on a living job, so the count would equal the
+  item count on every write and never fall, which is how a reader learns to skip the whole block.
+- **Renamed rather than dropped where the FACT survives the wording**, mirroring the on-screen block exactly:
+  *Specific Bequests* → **Promised to someone**, *Net to Estate* → **Net received**, *Client / Estate* → **Client**,
+  *FMV BY CATEGORY* → **ITEMS BY CATEGORY** (counts, never money — a column headed FMV over blanks reads as a
+  valuation of the house). The footer is **replaced, not reworded**: its whole subject is what counsel files
+  instead, so the living version says the converse — this is not an appraisal.
+- **⚠ NOT DONE, AND IT IS THE CONCURRENT SESSION'S AREA: `matterType` DOES NOT REACH THE WORKBOOK.** The same
+  session added probate/trust/both/neither and fixed the Court Inventory for it; the Summary sheet is untouched, so
+  **a TRUST estate's workbook still prints a §733.604 Inventory Deadline**. Same class of defect one level in.
+  Flagged rather than built — widening into another session's change mid-merge is how two fixes collide.
+
+### ⚠⚠ THE AGREEMENTS — EVERY PROMISE ATTACHED TO A DEFINED TERM MEANING PHOTOGRAPHS
+- **`Documentation Media` is photographs and video, and the item record is neither.** Since the record went to all
+  six services both engagements produce a **written** document naming who took what — a daughter, a charity, an
+  auction house — held for seven years, and the custody, retention and non-disclosure terms three lines above did
+  not reach it. The standard form's §9 is looser again: *commercially reasonable efforts*, with disclosure permitted
+  to any vendor who *needs it*, which is not a standard to hold a list of third-party names to.
+- **`Project Records` is the new defined term on both forms**, held on the same terms as the images and **expressly
+  outside the marketing clause** — a client who does not tick the opt-out is not thereby authorising publication of
+  a list naming their daughter. Reverting that carve-out fails 2.
+- **⚠ THE STANDARD FORM'S §10 IS RENAMED *Documentation and Records Authorization*.** Checked before doing it: the
+  string *Photography Authorization* occurs **once** in the file and no clause cross-references §10 by its title, so
+  §11 is still §11. Reverting the rename fails 3.
+- **⚠ THE ESTATE FORM GAINS NO NUMBER AT ALL — §7.1's heading grows and three paragraphs are appended.** A §7.3
+  would wedge the marketing clause between the two custody clauses; a number anywhere else renumbers Termination,
+  Dispute Resolution and General Provisions against agreements already issued citing them. That is the same
+  constraint that made §7.1 and §7.2 subsections in the first place.
+- **⚠⚠ THE ASYMMETRIES ARE DELIBERATE AND EACH IS PINNED IN BOTH DIRECTIONS**, or the next sweep "harmonises" the
+  two forms and takes a real distinction out with the difference. Only the estate form has a **production duty**
+  (PR, counsel of record, court) and cites the **signed receipt §5.3 already requires**; only the living form lets
+  a client ask in writing that a **recipient not be named** (a PR cannot suppress a beneficiary from a fiduciary
+  record); only the estate form disclaims **§733.604** and **bequest satisfaction**, which the living form must
+  never mention.
+- **⚠⚠ AND IT CARVES THE ESTATE RECORD OUT OF §7'S RETURN-OR-DESTROY BULLET, WHICH IS A LIVE CONFLICT.**
+  *"Destroy or return all Client documents upon project completion or written request"* sits five bullets above a
+  seven-year fiduciary retention. It reads as covering the estate's OWN documents we encounter — the will, deeds,
+  financial records — rather than records we create, but a contract is construed against its drafter and that is not
+  a thing to leave to inference on a matter a court may read. Reverting the carve-out fails 2.
+- **⚠ THE LIVING FORM'S DISCLAIMER DOES MORE WORK THAN THE ESTATE ONE'S, AND THE REASON IS §5.3.** On an estate the
+  record is corroborated by a receipt the recipient signed. On a living job there is no receipt requirement, so the
+  document is our **one-sided note of what the client told us** and must not read as evidence of a gift, a sale or a
+  transfer of title. Reverting the recipient half of both clauses fails 3.
+- **⚠⚠ NOT A LAWYER, AND THREE THINGS GO TO COUNSEL WITH IT** — Anthony: *"just come up with language and i'll get
+  it reviewed. do your best."* (1) The standard form now states **two confidentiality standards** and the narrower
+  should govern; §9 may want tightening rather than relying on the specific overriding the general. (2) **Seven
+  years** was chosen to match the images and is derived from nothing. (3) The recipients are **non-parties who never
+  signed anything**, and their names sit in our hands for seven years.
+- **8284 committed checks after the merge** (+80 mine: 41 in `living-inventory`, 39 in `agreement-rates`).
+  **All 19 changes revert-verified individually, ZERO green**; baseline 0 before and after.
+  - **⚠ TWO FIRST-PASS REVERTS WERE TOO WEAK AND BOTH READ AS SUSPICIOUSLY LOW RATHER THAN GREEN.** `0&&p(…)` and
+    `''&&pp(…)` disabled only the FIRST paragraph of a four- and a three-paragraph clause, so the rest of the text
+    still satisfied most needles — 2 and 3. Re-done as full regex removals of the whole block they fail **10** and
+    **11**. *A revert that only partly undoes the change proves only part of the point.*
+  - **⚠⚠ AND ONE OF MY OWN TESTS READ THE CLOCK.** `_writeSummarySheet` defaults `lastUpdated` to `new Date()`, so
+    the byte-for-byte layout comparison failed whenever two renders straddled a millisecond — a sweep baseline came
+    back 1 red and did not reproduce. **⚠ I first blamed a documentation edit landing mid-sweep and that was wrong**;
+    the right diagnosis only appeared when the same check failed again with the two timestamps one millisecond apart
+    printed side by side. The fixture pins the value; three consecutive runs are clean. *A test must not read the
+    clock, and an intermittent failure is not evidence for whichever hazard you happen to have just read about.*
+  - **⚠ `media-merge` BROKE CORRECTLY** when `buildInventoryPayload` grew a call to `invFiduciaryMode` — its sandbox
+    lifts that function and `DECEDENT_SERVICES` now, rather than stubbing the flag, because a stub is exactly what
+    would let the two sides of it drift.
+- **Verified end to end in headless Chromium on the real builders, 38 checks, 0 failed, 0 page errors:**
+
+  | | |
+  |---|---|
+  | the living form | §10 renamed · §10.1b present · names the recipient · *Section 10.2 does not apply* · the name opt-out · **no `733.604` anywhere** · no production duty |
+  | the estate form | §7.1 renamed · **no §7.3** · *Section 8 · Termination* still §8 · cites §5.3 · counsel of record · disclaims §733.604 and bequest satisfaction · the retention carve-out · **no** name opt-out |
+  | reading order | the record clause is read **before** the opt-out box that excludes it |
+  | **every e-signature anchor** | still **exactly 1 per form**, both forms, all five |
+  | the payload | Home Transition → `contents` · probate → `estate` |
+  | overflow 1440 / 390 · page errors | **0 · 0 · 0** |
+
+  The first `<style>` block is **byte-identical at 93,071 bytes / 635 rules**.
+- Manual **§2** (the redeploy, and that an older deployment keeps printing a court deadline on a living client),
+  **§10a** (a new subsection: the two axes as a table, the capture-was-never-gated correction, the Contents Record,
+  Move vs Distribute as a table, and the workbook branch with Anthony's words on the name), **§8** (the clause pair,
+  the four-row asymmetry table, and the three things for counsel). Playbook **Step 6** (what the agreement now
+  promises, and the name opt-out), **Step 10e** (every labour job, where the recipient goes, a `.stop` that a blank
+  recipient is the gap this record exists to close, and a `.stop` to bin any estate document printed for a living
+  client) and **eight** symptom→cause rows. Both `.md` copies hand-edited; **47 claims parity-checked, 0
+  mismatches** — ⚠ two apparent misses were markdown emphasis markers and a tag-to-space artefact in my own checker,
+  **verified by normalising rather than assumed**. Tag balance clean on both HTML files with the stylesheet
+  stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **19/45 and 16/16** tables as wide
+  as their container, **0 taking the phone rule**.
+- **⚠ THE PR IS REFUSED AND THAT IS EXPECTED, NOT A FAILURE.** This branch and `main` are the same commit, because
+  the repo's standing practice is to push to both — so GitHub answers *No commits between main and
+  claude/wizardly-franklin-8awd9o*. The note further down this file already records it; recorded again here so the
+  next session does not go looking for the PR.
+
 ## ⚠⚠ THE APP DID NOT KNOW WHETHER AN ESTATE WAS PROBATE OR TRUST, AND SIGNED A $0 COURT SCHEDULE (2026-09-21)
 Step 2 of `ESTATE_SCOPE_SPEC.md`, same day as step 1. Anthony, on where the volume actually is:
 *"most homes will be in trust. so we need to get this right. the probate cases will be more rare if we stick to
