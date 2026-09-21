@@ -151,7 +151,7 @@ Two required fields on decedent jobs, each answering a genuinely different quest
 
 Forced order. Each is a separate commit, tested, revert-verified, with a manual and playbook pass where user-facing wording changes.
 
-1. **Split the intake block.** Date of death, the 706 gate, the dispute gate and the scope question move out of `#probate-fields` into an estate block shown on all three decedent services. Case number, Letters and the §733.604 deadline stay probate-only. Add `ec-gate-706` / `ec-gate-dispute` on Edit Client so Strict Mode stops being a one-way door. *Closes D1.*
+1. ~~**Split the intake block.**~~ **DONE 2026-09-21.** Date of death, the 706 gate, the dispute gate, the scope question **and the estate attorney** moved out of `#probate-fields` into `#estate-fields`, shown on all three decedent services; case number, Letters, the §733.604 deadline and the sale question stay probate-only. Edit Client gained `ec-date-of-death`, `ec-gate-706`, `ec-gate-dispute` and the attorney, so Strict Mode is no longer a one-way door. Date of death is now required on all three; the attorney is required on probate and offered on an Estate Settlement. ⚠ The attorney was NOT in the original scope of this step and was added on measuring `planDerivedLines`' `attorney_on_file` line, which fires on `isDocJob` — Estate Settlement included — and told the reader *“not recorded — Edit Client”* on a service where Edit Client had never offered the field. *Closes D1.*
 2. **Add matter type** at intake and Edit Client, required on decedent jobs.
 3. **Add the engagement tier**, derive `docScope` from it, migrate the three existing values. *Closes the §4 gap.*
 4. **Wire scope into `planTaskCtx`** and re-key the `ct_*` desk tasks off tier and matter type instead of `isProbate`. *Closes D2 (job plan) and D6.*
@@ -161,7 +161,7 @@ Forced order. Each is a separate commit, tested, revert-verified, with a manual 
 8. **Gate the estimate** so Build Estimate will not price until tier and matter type are answered. *Decision 3.*
 9. **Either implement or retire `invListingThreshold`.** *Closes D8.*
 
-Steps 1 and 2 are independent of everything else and can ship immediately.
+Step 1 shipped 2026-09-21. **Step 2 is next**, and is independent of everything below it.
 
 ---
 
@@ -176,4 +176,6 @@ Steps 1 and 2 are independent of everything else and can ship immediately.
 - §736.08135 carrying-value mechanics — confirm before the trust schedule's wording is fixed.
 - Treas. Reg. §20.2031-6(b) — already implemented as the MAIV aggregate.
 
-**Not decided:** whether Havellin ever wants its own figure on a document a court reads at the `Inventory with values` tier. The app does this today and the agreement promises it (`_agrProbateCompliance` full arm, 30593). Worth a deliberate answer rather than an inherited one, given §733.604(3).
+**Decided — Havellin states values, and that is the product (Anthony, 2026-09-21):** *“why wouldn't we want a valuation figure? agent 2 is supposed to take care of that.”* An earlier draft of this section asked whether Havellin ever wants its own figure on a document a court reads. That was the wrong question and it is struck: at the `Inventory with values` tier the figure **is** the deliverable, Agent Two is the plan for producing it, and the agreement already promises it (`_agrProbateCompliance` full arm, 30593).
+
+What survives of it is **attribution**, which is a different thing and is the half §733.604(3) actually reaches: Havellin's *estimated fair market value with a stated basis* is not a credentialed appraiser's signed opinion, and every document has to say which of the two it is carrying. The app already has the fields for it — `valSource`, `valNote` (Valuation Basis / Comps) and the appraiser link — and the §733.604(3) right to a written explanation of how each value was determined is the reason to fill them in, not a reason to withhold the value.

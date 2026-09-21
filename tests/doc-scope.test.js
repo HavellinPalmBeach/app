@@ -246,11 +246,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ctx._docScopeIntakeNote({ docScope: 'none' }, 'capture'), 'Intake recorded None; this estimate is priced at Capture only', 'in either direction');
 
     const src = source();
-    // The question lives INSIDE the estate block, so a downsizing intake never shows it.
-    const estateOpen = src.indexOf('id="estate-auth-fields"');
+    // ⚠ THIS USED TO PIN THE QUESTION BELOW THE GATES INSIDE #probate-fields, and the layout
+    // was the least of it: that block renders on the two PROBATE services alone, so an Estate
+    // Settlement was never shown the question and took the 'full' default — priced at full
+    // documentation whatever counsel had asked for. The requirement is CONTAINMENT, not order:
+    // the question lives in the block shown on every decedent service, and never in the one
+    // shown only on a court case.
+    const estateOpen  = src.indexOf('id="estate-fields"');
+    const probateOpen = src.indexOf('id="probate-fields"');
     const q = src.indexOf('id="i-docscope"');
-    const readout = src.indexOf('id="i-gate-readout"');
-    ok(estateOpen > 0 && q > estateOpen && q > readout, 'the intake question sits in the estate block, after the documentation gates');
+    ok(estateOpen > 0 && probateOpen > estateOpen, 'the estate block exists and precedes the probate block');
+    ok(q > estateOpen && q < probateOpen, 'the intake question sits in the estate block, not the probate one');
     has(src, "docScope:           (document.getElementById('i-docscope')||{}).value||'full',", 'intake saves the answer on the job');
     has(src, "'i-gate-706', 'i-gate-dispute', 'i-docscope',", 'and clears it with the other intake fields');
     has(src, "'i-docscope': 'full'", 'a cleared form resets to full, not to a blank select');

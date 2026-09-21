@@ -139,7 +139,11 @@ textarea{height:70px;resize:vertical;}
    Reserve two lines for the label and stop pushing the control to the bottom, so the
    controls align across the row whatever length the hints run to. */
 .gate-cell>label{min-height:2.7em;display:block;}
-.gate-cell>select{margin-top:0;}
+/* Every control kind, not a list of the ones a gate-cell happens to hold today. The rule
+   belongs to the CELL — it does not push its control to the bottom — and a date input
+   dropped into one would otherwise sit an inch below the select beside it while the
+   selector still read as though it had been handled. */
+.gate-cell>input,.gate-cell>select,.gate-cell>textarea{margin-top:0;}
 .btn-p{background:var(--gray-dk);color:var(--cream);border:none;padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:background .15s;}
 .btn-p:hover{background:var(--bronze);}
 .btn-s{background:none;color:var(--gray);border:1px solid var(--border-md);padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Raleway',sans-serif;transition:all .15s;}
@@ -1194,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 12:47pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 1:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1363,66 +1367,28 @@ body.no-smf .smf-col{display:none;}
           <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
         </div>
       </div>
-      <div id="probate-fields" style="display:none;">
+      <!-- ⚠⚠ THESE ARE FACTS ABOUT A DECEDENT, SO THEY BELONG ON ALL THREE DECEDENT
+           SERVICES — Estate Settlement, Probate and Contested Probate (isDecedentJob).
+           Every field in here used to sit inside #probate-fields, which renders on the two
+           PROBATE services alone, so an Estate Settlement was never asked one of them. It
+           took the 'full' documentation default and was priced at full documentation
+           whatever counsel had actually asked for; its 706 question was never answered, and
+           unknown counts as yes, so it sat in permanent Strict Mode with the explanation
+           rendering into a div nobody could see; and it carried no date of death, although
+           every valuation on an estate schedule is measured at one (estateValueDate).
+           What stays probate-only below is the COURT record and nothing else: the case
+           number, the Letters, the §733.604 clock, the sale question.
+           ⚠ The attorney keys stay `i-probate-atty-*` / job.probateAtty* deliberately —
+           twenty-odd readers and every saved job are keyed on them, and a rename here buys
+           a label. Only the heading moved, to the name the Job Plan already uses. -->
+      <div id="estate-fields" style="display:none;">
         <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Probate Attorney <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(all fields required)</span></div>
+        <div class="sec" style="margin:10px 0 6px;font-size:11px;">Estate Details</div>
         <div class="row">
-          <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-fname" placeholder="First name"></div>
-          <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-lname" placeholder="Last name"></div>
-        </div>
-        <div class="row">
-          <div><label>Firm <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-firm" placeholder="Law firm name"></div>
-          <div><label>Attorney phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" oninput="formatPhone(this)" maxlength="14"></div>
-        </div>
-        <div class="row">
-          <div><label>Attorney email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-probate-atty-email" placeholder="Direct email"></div>
-          <div></div>
-        </div>
-        <div class="sec" style="margin:10px 0 6px;font-size:11px;">Probate Details</div>
-        <div class="row">
-          <div><label>Date of death <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="date" id="i-date-of-death" onchange="computeInventoryDeadline()"></div>
-          <div><label>Letters issued</label>
-            <input type="date" id="i-letters-date" onchange="computeInventoryDeadline()"></div>
-        </div>
-        <div class="row">
-          <div><label>Case number <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234"></div>
-          <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
-        </div>
-        <div class="row">
-          <div><label>Property sale required?</label><select id="i-probate-sale"><option value="">Select</option><option value="yes">Yes — property must be sold</option><option value="no">No — heirs retaining property</option><option value="maybe">Under discussion</option></select></div>
-          <div></div>
-        </div>
-
-        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Documentation Standard</div>
-        <div style="font-size:10.5px;color:var(--gray);margin-bottom:7px;line-height:1.5;">
-          Answered once, at engagement. These set how strictly the estate is documented, and they are
-          <strong>facts, not judgment calls</strong> &mdash; get them from the representative or counsel.
-          The strictness they produce <strong>cannot be lowered</strong> later.
-        </div>
-        <div class="row">
-          <div class="gate-cell"><label>Federal estate tax return (Form 706) being filed?</label>
-            <select id="i-gate-706" onchange="onDocGateChange()">
-              <option value="">Unknown &mdash; treated as yes</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Unknown counts as yes. Do not downgrade this on a verbal &ldquo;probably not&rdquo; &mdash; it needs an answer from the attorney or PR.</div>
+          <div class="gate-cell"><label>Date of death <span style="color:#A32D2D;font-weight:700;">*</span></label>
+            <input type="date" id="i-date-of-death">
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Every value on this estate is a fair market value <em>at this date</em> — it is what the schedule, the 706 and a trustee’s opening carrying value all state. It is on the death certificate; ask for it on the call.</div>
           </div>
-          <div class="gate-cell"><label>Known dispute, contest, or elective share?</label>
-            <select id="i-gate-dispute" onchange="onDocGateChange()">
-              <option value="">No / not known</option>
-              <option value="yes">Yes &mdash; contested or likely to be</option>
-            </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Contested Probate already counts as disputed &mdash; leave this alone there. Tick it when an <em>ordinary</em> probate turns contested mid-job, so documentation tightens without changing the service type and re-pricing the engagement. Ticking it drops the specialist-appraisal threshold to $500 per item.</div>
-          </div>
-        </div>
-        <div id="i-gate-readout" style="margin-bottom:6px;"></div>
-        <!-- Who builds the inventory. Asked here because this is where the attorney
-             conversation happens; it SEEDS the estimate's Documentation scope and the
-             estimate's own dropdown remains the thing that prices (see DOC_SCOPES).
-             Changing this later re-seeds nothing already priced. -->
-        <div class="row" style="margin-top:4px;">
           <div class="gate-cell"><label>Who builds the inventory?</label>
             <select id="i-docscope">
               <option value="full">Havellin &mdash; inventory &amp; estimated value</option>
@@ -1431,9 +1397,61 @@ body.no-smf .smf-col{display:none;}
             </select>
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal?</em> This seeds the estimate&rsquo;s Documentation scope, which prices it; the walkthrough can still override it there. Default to the first until they say otherwise.</div>
           </div>
+        </div>
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Estate Attorney <span id="i-atty-req-note" style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(all fields required)</span></div>
+        <div class="row">
+          <div><label>First name <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-fname" placeholder="First name"></div>
+          <div><label>Last name <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-lname" placeholder="Last name"></div>
+        </div>
+        <div class="row">
+          <div><label>Firm <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-firm" placeholder="Law firm name"></div>
+          <div><label>Attorney phone <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" oninput="formatPhone(this)" maxlength="14"></div>
+        </div>
+        <div class="row">
+          <div><label>Attorney email <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-probate-atty-email" placeholder="Direct email"></div>
           <div></div>
         </div>
+
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Documentation Standard</div>
+        <div style="font-size:10.5px;color:var(--gray);margin-bottom:8px;line-height:1.5;">Answered once, at engagement. These set how strictly the estate is documented, and they are <strong>facts, not judgment calls</strong> &mdash; ask the attorney or the personal representative rather than guessing. The strictness they produce <strong>cannot be lowered</strong> later.</div>
+        <div class="row">
+          <div class="gate-cell"><label>Federal estate tax return (Form 706) being filed?</label>
+            <select id="i-gate-706" onchange="onDocGateChange()">
+              <option value="">Unknown &mdash; treated as yes</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Unknown counts as yes. Do not downgrade this on a verbal &ldquo;probably not&rdquo; &mdash; portability elections mean estates well under the exemption still file.</div>
+          </div>
+          <div class="gate-cell"><label>Known dispute, contest, or elective share?</label>
+            <select id="i-gate-dispute" onchange="onDocGateChange()">
+              <option value="">No / not known</option>
+              <option value="yes">Yes &mdash; contested or likely to be</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Contested Probate already counts as disputed whatever this says; tick it here when an <em>uncontested</em> matter turns. Ticking it drops the specialist-appraisal threshold to $500 per item.</div>
+          </div>
+        </div>
+        <div id="i-gate-readout" style="margin-bottom:6px;"></div>
+      </div>
+      <div id="probate-fields" style="display:none;">
         <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Probate Details <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the case, the Letters and the §733.604 clock)</span></div>
+        <div class="row">
+          <div><label>Letters issued</label>
+            <input type="date" id="i-letters-date" onchange="computeInventoryDeadline()"></div>
+          <div><label>Case number <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234"></div>
+        </div>
+        <div class="row">
+          <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
+          <div><label>Property sale required?</label>
+            <select id="i-probate-sale">
+              <option value="">Select</option>
+              <option value="yes">Yes &mdash; property must be sold</option>
+              <option value="no">No &mdash; heirs retaining property</option>
+              <option value="maybe">Under discussion</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="divider"></div>
       <div class="sec" style="margin-bottom:6px;">What&rsquo;s In The House <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(ask on every intake call)</span></div>
@@ -7657,12 +7675,30 @@ function toggleIntakeFields() {
   // isEstate IS the living/deceased answer — see isDecedentJob. These three services are
   // the deceased-client half of the catalogue and the other four are the living half;
   // there is no in-between case and nothing here asks the user to disambiguate one.
-  // Probate-only fields
+  // Probate-only fields — the COURT record. Case number, Letters, the §733.604 clock.
   var pf = document.getElementById('probate-fields');
   if (pf) pf.style.display = isProbate ? 'block' : 'none';
+  // ⚠ EVERYTHING THAT IS A FACT ABOUT A DECEDENT RATHER THAN ABOUT A COURT CASE — date of
+  // death, who builds the inventory, and the two documentation gates. These sat inside
+  // #probate-fields until 2026-09-21, so an Estate Settlement was asked none of them and was
+  // priced, documented and valued off three defaults nobody had ever been shown.
+  var ef = document.getElementById('estate-fields');
+  if (ef) ef.style.display = isEstate ? 'block' : 'none';
   // Authorized rep (estate + probate)
   var af = document.getElementById('estate-auth-fields');
   if (af) af.style.display = isEstate ? 'block' : 'none';
+  // ⚠ THE ATTORNEY IS REQUIRED ON PROBATE AND MERELY OFFERED ON AN ESTATE SETTLEMENT, which
+  // frequently never opens probate at all — a trust administration or a small estate has no
+  // attorney of record to name. saveIntake enforces exactly that split; these marks say so
+  // rather than asserting five required fields the save will happily accept blank. Matched by
+  // CLASS, not by an id list, so a sixth attorney field cannot be added and quietly missed.
+  var attyNote = document.getElementById('i-atty-req-note');
+  if (attyNote) attyNote.textContent = isProbate
+    ? '(all fields required)'
+    : '(if there is one — many estate settlements never open probate)';
+  document.querySelectorAll('.req-probate').forEach(function(el){
+    el.style.display = isProbate ? 'inline' : 'none';
+  });
   // Downsizing destination
   var df = document.getElementById('downsizing-dest-fields');
   if (df) df.style.display = (svc === 'downsizing_move') ? 'block' : 'none';
@@ -7749,12 +7785,20 @@ function saveIntake() {
     if (!document.getElementById('i-executor-role').value) missing.push('Authorized rep role');
     if (!document.getElementById('i-executor-phone').value.trim()) missing.push('Authorized rep phone');
     if (!document.getElementById('i-executor-email').value.trim()) missing.push('Authorized rep email');
+    // ⚠ REQUIRED ON ALL THREE DECEDENT SERVICES, NOT ONLY PROBATE. It used to sit in the
+    // probate branch below, on a field the form did not even render outside probate, so every
+    // Estate Settlement ever created carries deathDate '' — and estateValueDate returns ''
+    // with it, which is the date every value on that estate's schedule is stated AT. There is
+    // no honest default to invent for it and it is on the death certificate.
+    if (!document.getElementById('i-date-of-death').value) missing.push('Date of death');
   }
 
-  // Additional mandatory fields for probate
+  // Additional mandatory fields for probate. The attorney is required HERE and merely offered
+  // on an Estate Settlement, which frequently never opens probate and has no attorney of
+  // record to name; toggleIntakeFields hides the asterisks to match rather than marking five
+  // fields required that this save accepts blank.
   if (svc === 'probate' || svc === 'contested_probate') {
     var probateMissing = [];
-    if (!document.getElementById('i-date-of-death').value) probateMissing.push('Date of death');
     if (!document.getElementById('i-probate-case').value.trim()) probateMissing.push('Probate case number');
     if (!document.getElementById('i-probate-atty-fname').value.trim()) probateMissing.push('Attorney first name');
     if (!document.getElementById('i-probate-atty-lname').value.trim()) probateMissing.push('Attorney last name');
@@ -29516,16 +29560,29 @@ function docLevelFloorReason(job) {
 
 // Draw the live readout under the gates and enforce escalate-only on the dropdown.
 // Reads the FORM, not a saved job, because it runs while intake is being filled in.
-function onDocGateChange() {
-  var g = function(id){ var el = document.getElementById(id); return el ? el.value : ''; };
+//
+// ⚠ ONE FUNCTION, TWO FORMS, KEYED ON A PREFIX — and that is the whole reason Edit Client
+// may carry the gates at all. The two forms ask one question about one estate, so a second
+// copy written beside the Edit Client markup is how the two come to answer it differently:
+// the drift this file records more often than anything else. `ec` has no documentation-level
+// dropdown, so `sel` is simply null there and the escalate-only arm is skipped; the manual
+// level it cannot read comes in as `docLevelFallback` off the saved job, or the readout would
+// report a hand-set Formal as merely the floor.
+function onDocGateChange(pfx, docLevelFallback) {
+  pfx = pfx || 'i';
+  var g = function(id){ var el = document.getElementById(pfx + '-' + id); return el ? el.value : ''; };
+  var sel = document.getElementById(pfx + '-doclevel');
   var draft = {
-    svc: (document.getElementById('i-svc') || {}).value || '',
-    gate706: g('i-gate-706'), gateDispute: g('i-gate-dispute'), docLevel: g('i-doclevel')
+    svc: g('svc'),
+    gate706: g('gate-706'), gateDispute: g('gate-dispute'),
+    // The control wins when it says something; otherwise the saved level. At intake the two
+    // are the same answer (a blank dropdown and no fallback both mean "not set by hand"), and
+    // in Edit Client there is no control at all, so the job's own level is the only source.
+    docLevel: (sel && sel.value) ? sel.value : (docLevelFallback || '')
   };
   var floor  = docLevelFloor(draft);
   var reason = docLevelFloorReason(draft);
-  var sel = document.getElementById('i-doclevel');
-  var out = document.getElementById('i-gate-readout');
+  var out = document.getElementById(pfx + '-gate-readout');
 
   if (sel) {
     if (floor === 'formal') {
@@ -32715,8 +32772,15 @@ function showEditClient(jobId) {
   function sel(opts, val) {
     return opts.map(function(o){ return '<option value="'+o.v+'"'+(o.v===val?' selected':'')+'>'+o.l+'</option>'; }).join('');
   }
+  // req: true = always required, 'probate' = required only while the service is a probate
+  // one (the estate attorney), falsy = optional. The conditional mark carries a class rather
+  // than being rebuilt, so ecToggleProbate can flip all five when the service type changes
+  // mid-edit without re-rendering the modal under whoever is typing in it.
   function fld(lbl, inp, req) {
-    return '<div class="df"><div class="dfl">'+lbl+(req?'<span style="color:#A32D2D;"> *</span>':'')+'</div>'+inp+'</div>';
+    var mark = '';
+    if (req === 'probate') mark = '<span class="ec-req-probate" style="color:#A32D2D;'+(isProbate?'':'display:none;')+'"> *</span>';
+    else if (req)          mark = '<span style="color:#A32D2D;"> *</span>';
+    return '<div class="df"><div class="dfl">'+lbl+mark+'</div>'+inp+'</div>';
   }
   function txt(id, val, ph, type) {
     type = type || 'text';
@@ -32779,33 +32843,48 @@ function showEditClient(jobId) {
   html += fld('Hard Target', '<input type="date" id="ec-completion" value="'+(job.completion||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += '</div>';
 
-  // Probate fields
-  html += '<div id="ec-probate-fields" style="display:'+(isProbate?'block':'none')+';">';
-  html += '<div class="sec" style="margin-top:14px;">Probate Information</div>';
-  html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Probate Case Number', txt('probate-case', job.probateCase, 'e.g. 50-2026-CP-001234'), true);
-  html += fld('Court Deadline', '<input type="date" id="ec-probate-deadline" value="'+(job.probateDeadline||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">');
-  html += fld('Property Sale Required', '<select id="ec-probate-sale" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select'},{v:'yes',l:'Yes — property must be sold'},{v:'no',l:'No — heirs retaining property'},{v:'maybe',l:'Under discussion'}], job.probateSale)+'</select>', false);
-  html += '</div>';
-
-  html += '<div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);margin:12px 0 8px;">Probate Attorney</div>';
-  html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('First Name', txt('atty-fname', job.probateAttyFname || (job.probateAttyName ? job.probateAttyName.split(' ')[0] : ''), 'First name'), true);
-  html += fld('Last Name', txt('atty-lname', job.probateAttyLname || (job.probateAttyName ? job.probateAttyName.split(' ').slice(1).join(' ') : ''), 'Last name'), true);
-  html += fld('Firm', txt('atty-firm', job.probateAttyFirm, 'Law firm name'), true);
-  html += fld('Phone', tel('atty-phone', job.probateAttyPhone), true);
-  html += fld('Email', txt('atty-email', job.probateAttyEmail, 'attorney@lawfirm.com', 'email'), true);
-  html += '</div>';
-
-  html += '</div>'; // end probate fields
-
-  // Authorized Representative — shown for Estate Settlement + Probate
+  // ⚠⚠ THE ESTATE BLOCK COMES FIRST, AND EVERY FACT ABOUT THE DECEDENT IS IN IT — the same
+  // split Client Intake makes. Date of death, who builds the inventory, the two documentation
+  // gates and the estate attorney are facts about a DECEDENT; the case number, the court
+  // deadline and the sale question are facts about a COURT CASE. All of them sat in the
+  // probate block until 2026-09-21, so an Estate Settlement could not record the attorney its
+  // own Job Plan asks for by name, and could not correct a 706 answer that had locked it into
+  // Strict Mode.
   html += '<div id="ec-estate-auth-fields" style="display:'+(isEstate?'block':'none')+';">';
-  html += '<div class="sec" style="margin-top:14px;">Inventory</div>';
+  html += '<div class="sec" style="margin-top:14px;">Estate Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('Date of Death', '<input type="date" id="ec-date-of-death" value="'+(job.deathDate||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
   html += fld('Who builds the inventory?', '<select id="ec-docscope" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'full',l:'Havellin — inventory & estimated value'},{v:'capture',l:'Havellin photographs & lists; counsel values'},{v:'none',l:'Counsel\'s office — Havellin sorts & stages'}], (typeof docScopeDef === 'function' && docScopeDef(job.docScope)) ? job.docScope : 'full')+'</select>', false);
   html += '</div>';
-  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Seeds a new estimate\'s Documentation scope. An estimate already priced keeps its own setting.</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer seeds a new estimate\'s Documentation scope; an estimate already priced keeps its own setting.</div>';
+
+  // ⚠ EDITABLE HERE BECAUSE STRICT MODE WAS A ONE-WAY DOOR. docLevelFloorReason tells the
+  // reader to "answer it with the attorney or PR to lift this" — and until now there was
+  // nowhere to answer it, so an estate whose 706 question went unanswered at intake stayed in
+  // Strict Mode for the life of the job. These are FACTS that arrive from counsel days later,
+  // not judgment calls, and correcting one is the intended way out. The escalate-only rule is
+  // untouched: a documentation level set by hand still cannot go below the floor these set.
+  html += '<div class="sec" style="margin-top:14px;">Documentation Standard</div>';
+  html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('Form 706 being filed?', '<select id="ec-gate-706" onchange="ecDocGateChange()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Unknown — treated as yes'},{v:'yes',l:'Yes'},{v:'no',l:'No'}], job.gate706||'')+'</select>', false);
+  html += fld('Known dispute or elective share?', '<select id="ec-gate-dispute" onchange="ecDocGateChange()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'No / not known'},{v:'yes',l:'Yes — contested or likely to be'}], job.gateDispute||'')+'</select>', false);
+  html += '</div>';
+  // ⚠ THE MANUAL LEVEL RIDES ON THE ELEMENT, NOT IN A MODULE VARIABLE. This modal is
+  // rebuilt per client and there is no documentation-level control in it, so the value
+  // onDocGateChange cannot read has to come from somewhere — and a module variable left
+  // pointing at the last client opened is the wrong-job hazard this file records over and
+  // over. Parked on the readout it is destroyed with the markup that carries it.
+  html += '<div id="ec-gate-readout" data-doclevel="'+esc(job.docLevel||'')+'" style="margin:6px 0 0;"></div>';
+
+  html += '<div class="sec" style="margin-top:14px;">Estate Attorney <span id="ec-atty-req-note" style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">'+(isProbate?'(all fields required)':'(if there is one — many estate settlements never open probate)')+'</span></div>';
+  html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('First Name', txt('atty-fname', job.probateAttyFname || (job.probateAttyName ? job.probateAttyName.split(' ')[0] : ''), 'First name'), 'probate');
+  html += fld('Last Name', txt('atty-lname', job.probateAttyLname || (job.probateAttyName ? job.probateAttyName.split(' ').slice(1).join(' ') : ''), 'Last name'), 'probate');
+  html += fld('Firm', txt('atty-firm', job.probateAttyFirm, 'Law firm name'), 'probate');
+  html += fld('Phone', tel('atty-phone', job.probateAttyPhone), 'probate');
+  html += fld('Email', txt('atty-email', job.probateAttyEmail, 'attorney@lawfirm.com', 'email'), 'probate');
+  html += '</div>';
+
   html += '<div class="sec" style="margin-top:14px;">Authorized Representative</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('First Name', txt('exec-fname', job.executorFname || (job.executor ? job.executor.split(' ')[0] : ''), 'First name'), true);
@@ -32815,7 +32894,17 @@ function showEditClient(jobId) {
   html += fld('Email', txt('exec-email', job.executorEmail, 'rep@email.com', 'email'), true);
   html += fld('Authorization Status', '<select id="ec-exec-auth" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'pending',l:'Pending'},{v:'received',l:'Received'},{v:'notneeded',l:'Not Required'}], job.executorAuth||'pending')+'</select>', false);
   html += '</div>';
-  html += '</div>'; // end estate auth fields
+  html += '</div>'; // end estate block
+
+  // Probate-only — the COURT record, and nothing else.
+  html += '<div id="ec-probate-fields" style="display:'+(isProbate?'block':'none')+';">';
+  html += '<div class="sec" style="margin-top:14px;">Probate Information</div>';
+  html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('Probate Case Number', txt('probate-case', job.probateCase, 'e.g. 50-2026-CP-001234'), true);
+  html += fld('Court Deadline', '<input type="date" id="ec-probate-deadline" value="'+(job.probateDeadline||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">');
+  html += fld('Property Sale Required', '<select id="ec-probate-sale" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select'},{v:'yes',l:'Yes — property must be sold'},{v:'no',l:'No — heirs retaining property'},{v:'maybe',l:'Under discussion'}], job.probateSale)+'</select>', false);
+  html += '</div>';
+  html += '</div>'; // end probate fields
 
   // Footer
   html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
@@ -32826,6 +32915,17 @@ function showEditClient(jobId) {
 
   m.innerHTML = html;
   m.style.display = 'flex';
+  // Paint the documentation readout on open, not only on a change — the reason an estate is
+  // in Strict Mode is the thing somebody opening this modal has come to find out.
+  if (isEstate) ecDocGateChange();
+}
+
+// The Edit Client half of onDocGateChange. One function decides the level for both forms;
+// this only supplies the prefix and the manual level the modal has no control for.
+function ecDocGateChange() {
+  var out = document.getElementById('ec-gate-readout');
+  if (!out) return;
+  onDocGateChange('ec', out.dataset.doclevel || '');
 }
 
 // ⚠ BOTH ARMS WERE WRONG ON contested_probate, AND THE SAVE READS THOSE FIELDS.
@@ -32842,10 +32942,23 @@ function showEditClient(jobId) {
 // render or from what the save reads.
 function ecToggleProbate() {
   var svcVal = document.getElementById('ec-svc') ? document.getElementById('ec-svc').value : '';
+  var isP = ecIsProbateSvc(svcVal);
   var pf = document.getElementById('ec-probate-fields');
-  if (pf) pf.style.display = ecIsProbateSvc(svcVal) ? 'block' : 'none';
+  if (pf) pf.style.display = isP ? 'block' : 'none';
   var af = document.getElementById('ec-estate-auth-fields');
   if (af) af.style.display = ecIsEstateSvc(svcVal) ? 'block' : 'none';
+  // The estate attorney is required on probate and merely offered on an Estate Settlement,
+  // which frequently never opens probate at all. Matched by CLASS so a sixth attorney field
+  // cannot be added and quietly left marked wrong — the same net Client Intake uses.
+  var note = document.getElementById('ec-atty-req-note');
+  if (note) note.textContent = isP
+    ? '(all fields required)'
+    : '(if there is one — many estate settlements never open probate)';
+  document.querySelectorAll('.ec-req-probate').forEach(function(el){
+    el.style.display = isP ? 'inline' : 'none';
+  });
+  // Contested probate is formal by rule, so the floor really does move with this dropdown.
+  if (typeof ecDocGateChange === 'function') ecDocGateChange();
 }
 // The two service tests Edit Client runs, in one place each. These ARE the decedent three —
 // ecIsEstateSvc and isDecedentJob now select exactly the same set, and a test asserts it. They
@@ -32928,25 +33041,37 @@ function saveClientEdit(jobId) {
   if (!_locked) job.premium = document.getElementById('ec-premium').value === 'yes';
 
   var isEstateEdit = ecIsEstateSvc(svc);
-  // Who builds the inventory — every estate service, not only probate. Seeds the next
-  // fresh estimate; an estimate already priced keeps its own pin.
+  // ⚠ EVERY DECEDENT FACT IS READ HERE, ON ALL THREE ESTATE SERVICES — not in the probate
+  // branch below. The attorney in particular: the Job Plan's own `attorney_on_file` derived
+  // line fires on isDocJob, which includes Estate Settlement, and told the reader "not
+  // recorded — Edit Client" on a service where Edit Client had never offered the field.
+  //
+  // ⚠ NONE OF THESE IS HELD BY `_locked`, AND THAT IS DELIBERATE. The lock exists for the
+  // three inputs that feed the hours engine (service type, sqft, premium), because moving one
+  // silently desynchronises the job from a price the client has accepted. These feed no price:
+  // docScope seeds a NEW estimate and a priced one keeps its own pin, and the gates set how
+  // strictly the estate is documented. Holding them would make a wrong 706 answer permanent
+  // the moment an estimate was approved, which is the one-way door this change exists to close.
   if (isEstateEdit) {
     var _ecDs = document.getElementById('ec-docscope');
     if (_ecDs && typeof docScopeDef === 'function' && docScopeDef(_ecDs.value)) job.docScope = _ecDs.value;
-  }
-  // Probate-only fields (attorney + case info)
-  if (ecIsProbateSvc(svc)) {
+    job.deathDate    = (document.getElementById('ec-date-of-death') || {}).value || '';
+    job.gate706      = (document.getElementById('ec-gate-706')      || {}).value || '';
+    job.gateDispute  = (document.getElementById('ec-gate-dispute')  || {}).value || '';
     var attyFname = (document.getElementById('ec-atty-fname').value||'').trim();
     var attyLname = (document.getElementById('ec-atty-lname').value||'').trim();
-    job.probateCase      = document.getElementById('ec-probate-case').value;
-    job.probateDeadline  = document.getElementById('ec-probate-deadline').value;
-    job.probateSale      = document.getElementById('ec-probate-sale').value;
     job.probateAttyFname = attyFname;
     job.probateAttyLname = attyLname;
     job.probateAttyName  = (attyFname + ' ' + attyLname).trim();
     job.probateAttyFirm  = document.getElementById('ec-atty-firm').value;
     job.probateAttyPhone = document.getElementById('ec-atty-phone').value;
     job.probateAttyEmail = document.getElementById('ec-atty-email').value;
+  }
+  // Probate-only — the court record.
+  if (ecIsProbateSvc(svc)) {
+    job.probateCase      = document.getElementById('ec-probate-case').value;
+    job.probateDeadline  = document.getElementById('ec-probate-deadline').value;
+    job.probateSale      = document.getElementById('ec-probate-sale').value;
   }
   // Authorized rep fields — estate settlement + probate
   if (isEstateEdit) {

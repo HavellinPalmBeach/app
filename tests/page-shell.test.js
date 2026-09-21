@@ -64,6 +64,37 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(css, 'body.no-smf', 'the SMF column hide');
   }
 
+  // ⚠ A RULE NO TEST READ, AND IT WENT GREEN ON THE REVERT SWEEP. `.row>*>input,select,textarea`
+  // pushes a control to the BOTTOM of its cell so two controls stay on one baseline however
+  // tall their labels run; `.gate-cell` is the exception for cells that carry a hint UNDER the
+  // control, and it undoes that push. The rule listed only `select`, because until 2026-09-21 a
+  // gate-cell only ever held one — so dropping a date input into one left it sitting an inch
+  // below the select beside it with the selector still reading as though it had been handled.
+  // The requirement is the NET: every control kind a gate-cell actually holds is covered.
+  group('a gate-cell does not push its control to the bottom, whatever kind of control it is');
+  {
+    has(css, '.row>*>input,.row>*>select,.row>*>textarea{margin-top:auto',
+        'the base rule that makes the exception necessary is still there');
+    const rule = /\.gate-cell>[^{]*\{margin-top:0;\}/.exec(css);
+    ok(!!rule, 'the gate-cell exception exists');
+    const covered = (rule ? rule[0] : '').split('{')[0].split(',')
+      .map((sel) => sel.trim().replace('.gate-cell>', ''));
+
+    // Every control the markup actually puts inside a gate-cell, read off the page rather
+    // than listed here — so a textarea added to one tomorrow fails this.
+    const kinds = new Set();
+    const re = /class="gate-cell"([\s\S]*?)<\/div>\s*\n\s*(?:<div|<\/div>)/g;
+    let m, cells = 0;
+    while ((m = re.exec(src)) !== null) {
+      cells++;
+      (m[1].match(/<(input|select|textarea)\b/g) || []).forEach((t) => kinds.add(t.slice(1)));
+    }
+    ok(cells >= 3, 'the markup really has gate-cells to check (' + cells + ')');
+    ok(kinds.size >= 2, 'holding more than one kind of control (' + Array.from(kinds).join(', ') + ')');
+    kinds.forEach((k) => ok(covered.indexOf(k) >= 0,
+      'the gate-cell rule covers <' + k + '>, which the markup puts in one'));
+  }
+
   group('the build stamp is in the markup, not in the stylesheet');
   {
     const OPEN = '<span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">';
