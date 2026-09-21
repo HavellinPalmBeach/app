@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 6:17pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 6:28pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -20773,7 +20773,14 @@ function printEstateInventoryReport(jobId) {
       + '<th style="padding:2px 6px;">Expected back</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  var noPhoto = all.filter(function(r){ return !r.manual && !_invThumbFor(jobId, r); }).length;
+  // ⚠⚠ TWO DIFFERENT FACTS, AND UNTIL 2026-09-21 THEY WERE ONE COUNT. A row whose file
+  // never reached Drive is a PERMANENT gap in the record; a row whose thumbnail this device
+  // has not fetched is a network fact that fixes itself. This function never read
+  // `_invFileId`, so it reported the first as the second — telling counsel to reconnect for a
+  // photograph that does not exist, on the one sentence that reports either. The advice below
+  // is scoped to the rows it can actually fix, and the lost ones are named as what they are.
+  var noPhoto = all.filter(function(r){ return !r.manual && _invFileId(r) && !_invThumbFor(jobId, r); }).length;
+  var noFile  = all.filter(function(r){ return !r.manual && !_invFileId(r); }).length;
   var totalFMV = all.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
@@ -20784,6 +20791,9 @@ function printEstateInventoryReport(jobId) {
     + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:12px;border-top:2px solid #333;padding-top:6px;">'
       + 'Total estimated ' + esc(resolveValBasis(job).toLowerCase()) + ': &nbsp;' + _invMoney(totalFMV) + '</div>'
     + apprBlock
+    + (noFile ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
+        + noFile + ' item' + (noFile > 1 ? 's were' : ' was') + ' photographed and the image did not reach the '
+        + 'estate&rsquo;s Drive folder. Those photographs are not held anywhere and the line is listed without one.</div>' : '')
     + (noPhoto ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
         + noPhoto + ' item' + (noPhoto > 1 ? 's have' : ' has') + ' no photograph available on this device. '
         + 'The photographs are filed in the estate&rsquo;s Drive folder; re-open this tab with a connection to include them.</div>' : '')

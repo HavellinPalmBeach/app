@@ -16,12 +16,18 @@ const FNS = [
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   'invNeedsAppraisal', 'invAppraisalThreshold', 'invIsIntrinsic', 'invCatMeta',
   'gateDispute', '_gateYes', '_invJob', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat',
+  // The Estate Inventory Report, so its twin of this document's defect can be driven — see
+  // the last group in this file. Nothing in the suite had ever called it.
+  'printEstateInventoryReport', '_invGroupItems', '_invDispLabel', '_invIsExempt',
+  '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
+  'resolveValBasis',
 ];
 const VARS = [
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
   'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_CATEGORIES', 'INV_TAXONOMY',
   'MAIV_BY_CATEGORY', 'MAIV_OTHER', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS',
+  'INV_GROUP_ORDER', 'INV_DISPOSITIONS', 'INV_ASSET_TRACKS', 'INV_VAL_BASES', 'INV_UNDECIDED',
 ];
 
 const ESTATE = {
@@ -545,5 +551,42 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The Contents Record is untouched and still carries what it always did.
     has(src, "_invDocName(job, 'Contents Record')", 'the Contents Record still names itself');
     has(fnLive('printContentsRecord'), 'Net received', 'and still states what came in');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ THE SAME DEFECT ONE DOCUMENT OVER — the Estate Inventory Report told counsel to reconnect for a photograph that does not exist');
+  {
+    // ⚠ NOTHING IN THIS SUITE HAD EVER DRIVEN THIS PRINTER. It appears in four files and in
+    // every one of them only as a STRING, inside a strip assertion — which is exactly how a
+    // false sentence on the client / attorney deliverable survived. It is driven here because
+    // the defect is this document's twin and the fix is the same shape.
+    const { ctx, last } = rig(ESTATE, [
+      IT('a', { roomIdx: 1, objectName: 'Sargent portrait', fmv: 48000, valSource: 'Appraisal' }),
+      IT('b', { roomIdx: 4, objectName: 'Lost lamp', fmv: 200, valSource: 'Comparable',
+                driveFileId: '', driveFileUrl: '' }),
+    ]);
+    ctx.printEstateInventoryReport(7);
+    const t = text(last().html);
+    // The row whose file never reached Drive is named as what it is: a permanent gap.
+    has(t, '1 item was photographed and the image did not reach the estate’s Drive folder',
+        'the lost photograph is reported …');
+    has(t, 'not held anywhere', '… and said to be unrecoverable, not stale');
+    // And the reconnect advice no longer claims it. THE COUNT is what moves — the old code
+    // folded both rows into one number, so it said "2 items have"; both sentences are
+    // legitimately present now, which is why a `lacks` on the wording would prove nothing.
+    lacks(t, '2 items have no photograph available on this device',
+          '⚠ the lost row is NOT counted among the ones a connection would fix');
+    // The converse: a row that HAS a file and no cached thumbnail still gets the old advice,
+    // because that is the one case reconnecting fixes.
+    has(t, '1 item has no photograph available on this device',
+        'the genuine stale-device case still says so, and only it');
+    has(t, 're-open this tab with a connection', 'with the advice that works for it');
+    // The two counts are separate reads, and the distinguishing one is the file id.
+    has(fnLive('printEstateInventoryReport'), '_invFileId',
+        '⚠ the function reads the file id at all — it never did, which is why it could not tell them apart');
+    // The document is otherwise untouched: it is still the VALUED schedule.
+    has(t, 'Estate Inventory', 'still the asset schedule …');
+    has(t, 'FMV (total)', '… still carrying the value column …');
+    has(t, 'Location', '… and still the Location field the deliverables page promises');
   }
 };

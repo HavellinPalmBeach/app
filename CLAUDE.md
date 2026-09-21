@@ -70,8 +70,15 @@ Step 5 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `contentsList` is the D
   `_invTrack` across both functions; adding the carve-out fails 1.
 - **⚠ THE ROOM HEADING IS THE LOCATION AND THERE IS NO COLUMN REPEATING IT.** The app records no sub-location —
   there is no *third drawer of the desk* field — so the room is the whole of what can honestly be stated, and the
-  footer says so in those words. ⚠ The Estate Inventory Report prints a Location column **under a room heading
-  that already states it**; that is pre-existing and not fixed here. Adding the column fails 2.
+  footer says so in those words. Adding the column fails 2.
+  - **⚠ I FLAGGED THE ESTATE INVENTORY REPORT'S OWN Location COLUMN AS REDUNDANT AND THAT FLAG WAS WRONG —
+    WITHDRAWN, DO NOT "TIDY" IT.** It does print under a room sub-heading that already states the room. But the
+    comment above that function quotes the published deliverables page — *"a categorized asset schedule with
+    description, **location**, quantity, condition, date-of-death fair market value, and the valuation source
+    stated"* — and closes *every clause is a requirement*. **Location is a promised field**, and it survives a row
+    being quoted back or retyped into counsel's own schedule. A test now pins it on the rendered document. The
+    Contents List omits it for a different and narrower reason: its whole grouping IS the room, and it says so on
+    its face.
 - **⚠ A ROOM NOTE NEVER PRINTS.** *"Family very sensitive about the study"* is our working observation, not part
   of the promised list, and this page goes to counsel — the rule that keeps the internal estimate worksheet out of
   a client's folder.
@@ -86,8 +93,21 @@ Step 5 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `contentsList` is the D
   than copied**, so the estate's own threshold (halved on a recorded dispute) still decides which items it names.
 - **⚠ THE RECONNECT ADVICE IS SCOPED TO A PHOTOGRAPH THAT EXISTS.** A row whose file never reached Drive is
   already in the gap block, and *"re-open this tab with a connection"* cannot fix a photograph that was never
-  uploaded. Measured: 5 rows → 4. ⚠ **`printEstateInventoryReport` has the same false advice and is not fixed
-  here** — same one-line shape, on a document going to counsel; flagged rather than swept into this commit.
+  uploaded. Measured: 5 rows → 4.
+  - **⚠⚠ AND `printEstateInventoryReport` HAD THE SAME DEFECT, WORSE — FIXED THE SAME DAY, on Anthony asking
+    whether the two things flagged here needed doing first.** That function **never read `_invFileId` at all**, so
+    it could not tell a stale device from a lost photograph — and that one sentence is the **only** place it
+    reports either. So counsel read *"N items have no photograph available on this device"*, opened the shared
+    Drive folder, and found nothing there: a permanent gap in the record, described as a connection problem, on
+    the client / attorney deliverable. Two counts now, and the lost rows are named as what they are
+    (*"not held anywhere"*). Reverting the file-id read fails 5, dropping the sentence 2.
+  - **⚠⚠ NOTHING IN THE SUITE HAD EVER DRIVEN THAT PRINTER, WHICH IS EXACTLY WHY IT SURVIVED.**
+    `printEstateInventoryReport` appears in four test files and in every one of them **only as a string**, inside
+    a strip assertion. The document the website's §02 promises, and no test had ever called it. It is driven now,
+    in `contents-list.test.js`, because the defect is the Contents List's twin.
+  - **⚠ AND THE FIRST VERSION OF THAT TEST COULD NOT FAIL FOR THE REASON IT NAMED** — a `lacks()` on the
+    reconnect wording, which both rows legitimately produce. **The COUNT is what moves**: the old code folded the
+    two into one number and said *2 items*. Restated.
 - **⚠ THE STRIP'S PRIMARY FOLLOWS THE TIER, AND THAT ONE GATE IS STEP 5's RATHER THAN STEP 6's.** A document with
   no reader is the thing to fix rather than to cover — this file records two of those from step 4 four hours ago.
   The condition reads as the contract: `docTierProduces(job,'inventory') && !docTierProduces(job,'values')`, true
