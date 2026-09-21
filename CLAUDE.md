@@ -1,5 +1,156 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE CONTRACT PROMISED COUNSEL A CONTENTS LIST THREE TIMES AND NOTHING PRODUCED ONE (2026-09-21)
+Step 5 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `contentsList` is the DOM-free derivation and
+`printContentsList` the document; it is the primary button on an estate contracted at the `contents` tier.
+
+- **⚠⚠ THE PROMISE IS MADE THREE TIMES AND TWO OF THEM ARE ON A SIGNED CONTRACT.** `_agrProbateCompliance`'s
+  capture arm — *"Havellin will deliver a photographed, room-by-room list of the property contents (description,
+  location and condition) to the estate attorney for use in preparing the inventory required under Florida
+  Statute §733.604"* — and `_agrScopeServices`' capture arm — *"room-by-room photography and listing of property
+  contents … without valuation"* — plus the client estimate's records list. All three pinned against live source,
+  so a reword has to bring the document with it.
+- **⚠⚠ MEASURED ACROSS EVERY INVENTORY PRINTER BEFORE ANYTHING WAS BUILT, AND THE CLOSEST ONE CARRIES THE COLUMN
+  THE CONTRACT SAYS IS NOT OURS.**
+
+  | printer | columns | grouped by |
+  |---|---|---|
+  | **Estate Inventory Report** | Photo · Ref · Description · Location · Qty · Condition · **FMV (total)** · Valuation source | disposition, then room |
+  | Court Inventory | Description · Condition · **FMV (total)** | category |
+  | Approval Request | Photo · Ref · Item · Qty · **Est. value** · disposition · Initial | — |
+  | Disposition Ledger | Item · Disposition · recipient · **Gross · Fees · Net** · Date · Receipt | — |
+  | Contents Record | Item · Room · where it went · **Net received** | disposition |
+  | Inventory Snapshot | Item # · Object · Category · Track · **FMV** | — |
+  | Appraisal Worklist | flagged items only | appraiser |
+  | As-Found Record | the before-photo index, not an item list | room |
+
+  **Driven on HEAD against a probate estate contracted at `contents`, not argued:** the primary button was
+  **Estate Inventory PDF**, the page was headed **Estate Inventory — Asset Schedule**, it carried the **FMV
+  (total)** column, printed ***not stated*** in red **on all three lines**, and named neither the empty room in
+  scope nor the excluded one. So the options were a schedule whose value column is empty on every line — on a
+  page going to the lawyer doing the valuing — or nothing.
+- **⚠⚠ IT IS ROOM-FIRST, AND THAT IS WHY IT IS NOT `printEstateInventoryReport` WITH THE MONEY HIDDEN.**
+  `_invGroupItems` groups by **disposition** with rooms inside it — right for a schedule of assets sorted by what
+  happens to them, and wrong here twice over: the promise says room-by-room in all three places it is made, and on
+  a capture engagement the disposition is usually **blank**, because deciding it is what counsel does *after* they
+  have valued the list. Measured on HEAD: *Kitchen* appeared **twice**, once under Keep and once under Auction.
+  A test drives two items in one room with different dispositions and asserts they stay in one group; another
+  `lacks()` the disposition grouper in the derivation. Reverting the room-first build fails **8**.
+- **⚠⚠ THE GROUPS ARE BUILT FROM THE ROOM LIST AND NEVER FROM THE ITEMS, which is the half that answers *is this
+  complete*.** An empty room in scope cannot appear if the headings are derived from what was photographed — the
+  As-Found Record's own load-bearing rule. The test asserts the `rs.rooms.map` precedes any read of the items.
+  - **⚠ AN EXCLUDED ROOM IS AN ANSWER, NOT A GAP**, reported in its own line (*not in scope on this engagement*).
+    Listing it among the gaps reports our own contract as a failure; leaving it out entirely reads as a room
+    somebody missed.
+  - **⚠ AN ITEM WHOSE ROOM HAS LEFT THE ESTIMATE IS KEPT** and labelled *not on the current room list*. It is
+    still in the house. Reverting the rescue fails 2, the label 1.
+- **⚠⚠ NOT ONE VALUE REACHES THE PAGE, IN ANY FORM — the rule the contract turns on.** Driven with FMV, gross,
+  fees, a valuation source and a comps note on the rows: **zero dollar signs**, no figure in any formatting, no
+  value column under any of the wordings the other six documents use, and the basis note absent. Pinned at source
+  as well (`lacks` on `_invMoney`, `r.fmv`, `valSource`), because a later edit must not be able to reach for the
+  money helper. Adding a value column back fails **4**.
+  - **⚠⚠ AND IT STATES THE ABSENCE, WHICH IS THE ONE PLACE THE STANDING RULE YIELDS.** *Do not explain an
+    absence* — except where the absence **shifts a responsibility**, which is exactly why the client estimate's
+    sorting stage already says *"Valuation is not part of this engagement"*. A reader who skipped the line would
+    assume Havellin carries it. **Three arms**, because it must never tell an estate that counsel is valuing a
+    list Havellin was paid to value: `contents` names counsel and says we *"state no opinion of value"*; `values`
+    points at the Estate Inventory — Asset Schedule; a living job says only *"This list states no values."*
+    Collapsing the three fails 4.
+  - **⚠ `_invDocHead`'S DEFAULT TAIL ASSERTS A VALUATION BASIS AND A DATE OF DEATH**, so this document passes an
+    `extra` — the mechanism the Contents Record already uses for the same reason. Reverting it fails **5**.
+  - **⚠ AND `_invProgressStamp` HAD THE SAME DEFECT ONE HELPER OVER.** Its caveat reads *"Values and dispositions
+    on unreviewed lines may still change"* — a promise to revise two things this page never states. It takes an
+    `opts.noValues` now and says *descriptions and conditions* instead; **the default is untouched and a test pins
+    that**, because six other documents carry it correctly. Reverting fails 4.
+- **⚠ NOTHING IS CARVED OUT, deliberately, and it is the As-Found Record's reasoning.** The Estate Inventory
+  Report separates exempt, homestead and non-probate property because it is a schedule of what the estate OWNS.
+  Which pot an item falls into is a determination this engagement explicitly does not make — **and `_invTrack`
+  still defaults every unset item to `'Probate'`** — so carving would assert a track nobody set, on the page
+  handed to the person whose job it is to decide. A test `lacks()` `_invIsExempt`, `_invIsProbateAsset` and
+  `_invTrack` across both functions; adding the carve-out fails 1.
+- **⚠ THE ROOM HEADING IS THE LOCATION AND THERE IS NO COLUMN REPEATING IT.** The app records no sub-location —
+  there is no *third drawer of the desk* field — so the room is the whole of what can honestly be stated, and the
+  footer says so in those words. ⚠ The Estate Inventory Report prints a Location column **under a room heading
+  that already states it**; that is pre-existing and not fixed here. Adding the column fails 2.
+- **⚠ A ROOM NOTE NEVER PRINTS.** *"Family very sensitive about the study"* is our working observation, not part
+  of the promised list, and this page goes to counsel — the rule that keeps the internal estimate worksheet out of
+  a client's folder.
+  - **⚠⚠ ITS FIRST REVERT WAS A NO-OP AND CAME BACK GREEN.** It rendered `g.note`, and the group object
+    deliberately does not carry one, so it printed `undefined` → nothing. **The absence is enforced in TWO places**
+    — the derivation does not read the note and the printer does not render it — so the true revert restores both.
+    Re-done, it fails 2. *A revert that only partly undoes the change proves only part of the point.*
+- **⚠ THE THREE FLAGS, AND THE WORDING IS THE POINT.** *Designated to a named person* · *Disputed — held* ·
+  **Specialist suggested**. It does NOT reuse `_invCautionBadges`: that renders `INV_RELEASE_CAUTIONS`, whose
+  third entry reads **NOT YET APPRAISED** — true on a release request and a **false accusation here**, because on
+  a capture engagement obtaining the appraisal was never Havellin's to do. `invNeedsAppraisal` is **read rather
+  than copied**, so the estate's own threshold (halved on a recorded dispute) still decides which items it names.
+- **⚠ THE RECONNECT ADVICE IS SCOPED TO A PHOTOGRAPH THAT EXISTS.** A row whose file never reached Drive is
+  already in the gap block, and *"re-open this tab with a connection"* cannot fix a photograph that was never
+  uploaded. Measured: 5 rows → 4. ⚠ **`printEstateInventoryReport` has the same false advice and is not fixed
+  here** — same one-line shape, on a document going to counsel; flagged rather than swept into this commit.
+- **⚠ THE STRIP'S PRIMARY FOLLOWS THE TIER, AND THAT ONE GATE IS STEP 5's RATHER THAN STEP 6's.** A document with
+  no reader is the thing to fix rather than to cover — this file records two of those from step 4 four hours ago.
+  The condition reads as the contract: `docTierProduces(job,'inventory') && !docTierProduces(job,'values')`, true
+  on the `contents` tier and nothing else. **A `None`-tier estate is NOT offered it** (counsel does the whole
+  inventory), nor is a legacy job with no tier, nor a living job. Reverting fails 2. **Every OTHER document on
+  that strip is still ungated by tier — that is step 6.**
+- **8767 committed checks** (`tests/contents-list.test.js` new at 127). **All 25 changes revert-verified
+  individually, ZERO green after the two above were re-done**; baseline 0 before and after.
+  - **⚠ THE `NEEDLE x2` GUARD EARNED ITS KEEP.** `unnamed: items.filter(function(r){ return !r.objectName; })`
+    is **byte-identical in `dispositionRecord`**, so the bare needle matched twice and the revert would have been
+    applied to the wrong function. Re-anchored on its neighbour, it fails 2.
+  - **⚠ AND THE SWEEP'S OWN GUARD WAS WRONG FOR AN INSERTION** — the same shape this file records from
+    2026-09-18. `assert chk.count(needle) == n - 1` is correct for a deletion and false for a revert that PUTS
+    SOMETHING BACK, because the replacement legitimately contains the needle. It now asserts that only when the
+    replacement does not contain it.
+  - **⚠ ONE GREEN REVERT AND IT WAS THE TEST'S FAULT:** the excluded-rooms group drove the DERIVATION
+    (`rec.excluded`) and asserted nothing about the rendered page, so the whole block could be deleted with the
+    suite passing. It reads the rendered text now; re-done, it fails 2.
+  - **⚠ ONE SUITE BROKE CORRECTLY** — `living-inventory` lifts `_renderInvWorkbar`, which grew a call to
+    `docTierProduces`. **Lifted rather than stubbed**, because the strip's button and the contract must not drift.
+  - **⚠ AND ONE OF MY OWN ASSERTIONS WAS MALFORMED** — an `eq()` comparing an expression with itself plus
+    arithmetic, written while reaching for a converse. Deleted; the line beside it already asserted the thing.
+- **Verified end to end in headless Chromium on the real page, 46 checks, 0 failed, 0 page errors**, driving the
+  real intake form, the real strip and the real printer:
+
+  | | HEAD | now |
+  |---|---|---|
+  | the primary button on a `contents` estate | **Estate Inventory PDF** | **Contents List** |
+  | the document it produces | *Estate Inventory — Asset Schedule* | *Contents List — Room by Room* |
+  | dollar signs on the page · FMV column | 1 · **yes** | **0** · no |
+  | *not stated* in red | **3** | 0 |
+  | grouping | disposition, then room — *Kitchen* **twice** | **Entry & Living > Kitchen > Study > Room 99 > Unassigned**, once each |
+  | the empty room in scope · the excluded room | **named nowhere** · **named nowhere** | named as a gap · *not in scope on this engagement* |
+  | the four gaps | — | empty room · unnamed item · blank condition · photograph not on Drive, all **above** the first room heading |
+  | the flags | — | *Designated to a named person* · *Disputed — held* · *Specialist suggested*, never *NOT YET APPRAISED* |
+  | the stamp's caveat | — | *Descriptions and conditions…*, never *Values and dispositions…* |
+  | the room note | — | **absent** |
+  | tier `values` · `appraisals` · `none` · legacy · living | — | asset schedule · asset schedule · asset schedule · asset schedule · Contents Record |
+  | the PDF filename | — | *Havellin Contents List - 69 Beach Blvd - Sep 21 2026*, page title restored after |
+  | overflow 1440 · 390 · page errors | — | **0 · 0 · 0** |
+
+  ⚠ **Two of my own browser assertions were wrong and the code was right.** The title-restore check read
+  `document.title` at 400ms — `_printDocument` restores it in a **nested** timeout (150ms to the dialog, then
+  500ms), so it was caught mid-flight; and the room-heading regex captured its own trailing `<`. Both measured
+  rather than reasoned about.
+  The step-1 to step-4 browser scripts were re-run as regressions: **59 / 33 / 56 / 47**, 0 failed. The first
+  `<style>` block is **byte-identical at 93,431 bytes / 1,169 lines / 635 rules** — this step touched no CSS, and
+  the diff is **5 hunks**, in `_invProgressStamp`, one new section between `_invPrintThumb` and *02 · After
+  Inventory*, and `_renderInvWorkbar`.
+- Manual **§10a** (the document in the exports list, plus four notes: the three promises and the printer
+  measurement, why it is room-first and why there is no Location column, the no-carve-out and no-room-note rule,
+  and which primary each tier gets) and playbook **§e** (the document, a `.stop` on not contradicting the tier on
+  the phone, and **three** symptom→cause rows — including the one that will actually happen: *there is no Estate
+  Inventory PDF button on this estate job*). Both `.md` copies hand-edited; **42 claims parity-checked, 0
+  mismatches**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with
+  **0 overflow, 0 page errors**; under `print` **20/47 and 17/17** tables as wide as their container with **0**
+  taking the phone rule — **byte-for-byte the same as HEAD**, because this pass added notes, list items and table
+  rows and no new table.
+- **⚠ NEXT: step 6 — make the documents scope-aware and gate the strip.** Step 5 wired the one gate its own
+  document needed; **every other printer on that strip is still offered on every estate whatever the tier and
+  matter type say** — a `None`-tier estate is still offered the Court Inventory and the Appraisal Worklist, and a
+  trust matter is still offered the §733.604 schedule. *Closes D2 (documents), D3, D4, D7.*
+
 ## ⚠⚠ THE DESK CHECKLIST TOLD A PROBATE JOB TO DO COUNSEL'S WORK AND AN ESTATE SETTLEMENT NOTHING (2026-09-21)
 Step 4 of `ESTATE_SCOPE_SPEC.md`. `planTaskCtx` exposed thirteen SERVICE questions — what Havellin was HIRED to do —
 and nothing about what it was CONTRACTED to hand over or which instrument the estate feeds, so the whole §733.604

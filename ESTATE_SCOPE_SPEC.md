@@ -166,13 +166,13 @@ Forced order. Each is a separate commit, tested, revert-verified, with a manual 
    ⚠ **`probateTrack` FALLS BACK TO THE SERVICE AND `trustTrack` DOES NOT.** A recorded matter decides; an unanswered one on a probate *service* still means a court case was open at intake, so every job created before step 2 keeps its checklist rather than losing it silently. Nothing in a service name says trust, so there is no honest fallback that way. The one legacy change is `ct_appraisals`: a job carrying only `docScope` migrates to `values`, which does not make appraisals ours — **11 boxes, not 12** — and it returns the moment an appraiser is on the roster.
    ⚠ **A TRUST MATTER GETS NO COURT LIST, AND THAT IS NOT AN OMISSION — it is step 7's.** The trustee's schedule those boxes would verify does not exist, and a checklist against a document nothing can produce is the box people learn to tick blind. What *is* built is the pair of derived lines that stop an empty court section being ambiguous: **Matter type recorded** and **Contracted to produce**, on a new `admin` phase so they render on the desk card and not on the Job Plan's Close-out stage.
    ⚠ **`ctx.matter` AND `ctx.tier` CAME BACK GREEN ON THE FIRST REVERT SWEEP** — two fields with no reader, which is the thing to fix rather than to cover. Those two derived lines are the fix; re-done, they fail 2 and 4.
-5. **Build the contents-list document** the capture contract already promises. *Closes D5.*
+5. ~~**Build the contents-list document** the capture contract already promises.~~ **DONE 2026-09-21** — `contentsList` / `printContentsList`, room-first in walkthrough order, description · location · condition and **no value in any form**. It is the primary button on an estate contracted at `contents`. *Closes D5.*
 6. **Make the documents scope-aware and gate the strip** by service, tier and matter type. *Closes D2 (documents), D3, D4, D7.*
 7. **Trust schedule variant** — carve-out, citations, signature block, the not-an-accounting line. Gate `_agrProbateCompliance` on matter type. *Closes D9, D10.*
 8. **Gate the estimate** so Build Estimate will not price until tier and matter type are answered. *Decision 3.*
 9. **Either implement or retire `invListingThreshold`.** *Closes D8.*
 
-Steps 1, 2, 3 and 4 shipped 2026-09-21. **Step 5 is next** — build the contents-list document the capture contract already promises (`_agrProbateCompliance`'s capture arm and the client estimate both name a photographed, room-by-room list of description, location and condition, and no such document exists). *Closes D5.*
+Steps 1, 2, 3, 4 and 5 shipped 2026-09-21. **Step 6 is next** — make the documents scope-aware and gate the strip by service, tier and matter type. Step 5 wired the ONE gate its own document needed (the primary button follows the tier); every other document on that strip is still offered on every estate whatever the tier says. *Closes D2 (documents), D3, D4, D7.*
 
 ---
 

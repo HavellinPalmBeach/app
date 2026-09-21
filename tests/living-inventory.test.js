@@ -63,6 +63,7 @@ const PRINT_FNS = [
   '_invCautionNotices', '_invPicked', 'invFirearmAuthorized', '_invAwaitingApproval',
   '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   'invProbateRows', 'matterDef', 'matterTypeOf',
+  'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   '_maivSummaryNotice', 'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVCategory',
   'invMAIVDefaultCat',
   'invReleaseBlocked', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
@@ -78,6 +79,7 @@ const PRINT_VARS = [
   'estimateStore', '_invFilter', '_invShowRoll', '_invOpen', '_invPick',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
   'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'MAIV_BY_CATEGORY',
+  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
 ];
 
 function rig(job, refs) {

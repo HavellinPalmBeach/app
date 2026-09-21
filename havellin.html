@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 4:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 6:17pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -20384,7 +20384,7 @@ function _invMoney(v) { var n = parseFloat(v); return isNaN(n) ? '—' : '$' + M
 // work to clients during an engagement." A document that refuses to print until the
 // review is finished is precisely what stops that. So an unfinished review is STAMPED,
 // never gated — the reader is told what they are holding and can act on it either way.
-function _invProgressStamp(items) {
+function _invProgressStamp(items, opts) {
   var st = _invReviewStats(items);
   if (st.complete) {
     return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#357a50;'
@@ -20393,8 +20393,14 @@ function _invProgressStamp(items) {
   return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#8a6d3b;'
     + 'border-radius:3px;padding:1px 8px;margin-bottom:12px;">IN PROGRESS &mdash; ' + st.done + ' of ' + st.total
     + ' items reviewed</div>'
+    // ⚠ THE CAVEAT HAS TO NAME WHAT THE DOCUMENT IT IS STAMPED ON ACTUALLY CARRIES.
+    // The Contents List states no value and no disposition anywhere on the page, so the
+    // default sentence would promise to revise two things it never stated — which is the
+    // same defect `_invDocHead`'s `extra` argument exists to avoid one helper over.
     + '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin:-8px 0 12px;">This is a working copy issued during the engagement. '
-    + 'Values and dispositions on unreviewed lines may still change.</div>';
+    + ((opts && opts.noValues)
+        ? 'Descriptions and conditions on unreviewed lines may still change.'
+        : 'Values and dispositions on unreviewed lines may still change.') + '</div>';
 }
 
 // ⚠⚠ EVERY INVENTORY DOCUMENT WAS ARRIVING IN AN ATTORNEY'S DOWNLOADS FOLDER CALLED
@@ -20440,6 +20446,240 @@ function _invPrintThumb(jobId, ref, px) {
       + (INV_CAT_GLYPH[ref.category] || '\u{1F4E6}') + '</div>';
   }
   return '<img src="' + src + '" style="' + box + '" alt="">';
+}
+
+// ── 02a · The Contents List — the capture-tier deliverable ──────────────
+// ⚠⚠ THREE CLIENT-FACING SURFACES PROMISED THIS DOCUMENT AND NOTHING PRODUCED IT. The
+// signed estate agreement says it twice — `_agrProbateCompliance`'s capture arm ("Havellin
+// will deliver a photographed, room-by-room list of the property contents (description,
+// location and condition) to the estate attorney") and `_agrScopeServices`' capture arm
+// ("room-by-room photography and listing of property contents ... without valuation") — and
+// the client estimate's records list promises "a photographed, room-by-room list of the
+// contents of consequence — description, location and condition, for counsel to value".
+//
+// ⚠⚠ MEASURED ACROSS EVERY INVENTORY PRINTER BEFORE THIS WAS BUILT, AND THE CLOSEST ONE
+// CARRIES THE COLUMN THE CONTRACT SAYS IS NOT OURS:
+//
+//   Estate Inventory Report  Photo · Ref · Description · Location · Qty · Condition ·
+//                            **FMV (total)** · Valuation source      — grouped by disposition
+//   Court Inventory          Description · Condition · **FMV (total)**
+//   Approval Request         Photo · Ref · Item · Qty · **Est. value** · disposition
+//   Disposition Ledger       Item · Disposition · recipient · **Gross · Fees · Net**
+//   Contents Record          Item · Room · where it went · **Net received**  — by disposition
+//   Inventory Snapshot       Item · Object · Category · Track · **FMV**
+//   Appraisal Worklist       flagged items only, grouped by appraiser
+//   As-Found Record          the before-photo index, not an item list
+//
+// So a capture-tier estate had one of two documents to send counsel: a schedule headed
+// "Estate Inventory" whose FMV column is empty on every line and whose valuation source
+// reads **not stated** in red — on an engagement whose own agreement says valuation is
+// counsel's — or nothing.
+//
+// ⚠⚠ IT IS GROUPED ROOM-FIRST AND THAT IS WHY IT IS NOT `printEstateInventoryReport` WITH
+// THE MONEY COLUMNS HIDDEN. `_invGroupItems` groups by DISPOSITION and rooms within it, which
+// is right for a schedule of assets sorted by what happens to them and wrong here twice over:
+// the promise says room-by-room in all three places it is made, and on a capture engagement
+// the disposition is usually blank, because deciding it is what counsel does after they have
+// valued the list. Scattering one room's contents across seven headings is the opposite of
+// the document being asked for.
+//
+// ⚠ NOTHING IS CARVED OUT, deliberately — the As-Found Record's rule for the same reason.
+// The Estate Inventory Report separates exempt, homestead and non-probate property because it
+// is a schedule of what the estate owns. Which pot a chair falls into is a determination this
+// engagement explicitly does not make, and `_invTrack` still defaults every unset item to
+// 'Probate', so carving here would assert a track nobody set on a document handed to the
+// person whose job it is to decide.
+//
+// ⚠ THE ROOM HEADING IS THE LOCATION, so there is no Location column repeating it on every
+// row. The app records no sub-location — there is no "third drawer of the desk" field — so the
+// room is the whole of what we can honestly state, and the footer says so in those words.
+//
+// ⚠ ROOM NOTES ARE NOT ON IT. A walkthrough note is our working observation ("family very
+// sensitive about the study"), not part of the promised list, and this document goes to
+// counsel. The same rule that keeps the internal estimate worksheet out of a client's folder.
+function contentsList(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var items = job ? _invAssignItemNos(jobId) : [];
+  var rs = _planRooms(jobId);
+
+  var byRoom = {};
+  items.forEach(function(r){
+    var k = (r.roomIdx == null || r.roomIdx === '') ? '~' : String(r.roomIdx);
+    (byRoom[k] = byRoom[k] || []).push(r);
+  });
+
+  // ⚠ THE GROUPS ARE BUILT FROM THE ROOM LIST, NEVER FROM THE ITEMS. A room in scope that
+  // carries nothing has to appear, and it cannot appear if the headings are derived from what
+  // was photographed — which is the half that makes this answer "is this complete" rather
+  // than only "what do we hold". Walkthrough order, the order the crew worked the house.
+  var placed = {};
+  var groups = rs.rooms.map(function(r){
+    var k = String(r.idx);
+    placed[k] = true;
+    return { key: k, idx: r.idx, name: r.name, items: byRoom[k] || [], offPlan: false };
+  });
+  // An item whose room is no longer on the estimate — marked out of scope after capture, or
+  // dropped entirely. It is still in the house and must never be silently absent.
+  Object.keys(byRoom).forEach(function(k){
+    if (k === '~' || placed[k]) return;
+    groups.push({ key: k, idx: parseInt(k, 10), name: _invRoomName(jobId, parseInt(k, 10)),
+                  items: byRoom[k], offPlan: true });
+  });
+  // Manual line items — a vehicle, an account, a rug already in storage — carry no room.
+  // Last, under the wording the room picker itself uses.
+  if (byRoom['~']) groups.push({ key: '~', idx: null, name: _invRoomName(jobId, null), items: byRoom['~'], offPlan: false });
+
+  return {
+    job: job,
+    items: items,
+    groups: groups,
+    total: items.length,
+    excluded: rs.excluded,
+    // Rooms in scope with nothing listed. An off-plan group is never empty by construction,
+    // and the unassigned group is not a room, so neither can land here.
+    empty: groups.filter(function(g){ return !g.offPlan && g.key !== '~' && !g.items.length; }),
+    unnamed: items.filter(function(r){ return !r.objectName; }).length,
+    // Condition is one of the three fields this document is contracted to carry, so a blank
+    // one is a gap in the deliverable rather than an empty cell.
+    noCondition: items.filter(function(r){ return !r.condition; }).length,
+    // A photographed row whose file never reached Drive. Distinct from a thumbnail this
+    // device has not fetched: that is a network fact, this is a missing photograph.
+    unsaved: items.filter(function(r){ return !r.manual && !_invFileId(r); }).length
+  };
+}
+
+// ⚠ THE THREE FLAGS THIS DOCUMENT CARRIES, AND THE WORDING IS THE POINT. It does NOT use
+// `_invCautionBadges`: that renders `INV_RELEASE_CAUTIONS`, whose third entry reads NOT YET
+// APPRAISED — true on a release request and a false accusation here, because on a capture
+// engagement obtaining an appraisal was never Havellin's to do. `invNeedsAppraisal` is read
+// rather than copied, so the estate's own threshold still decides which items it names.
+function _clFlags(r, job, jobId) {
+  var out = [];
+  if (r.flagBequest) out.push({ t: 'DESIGNATED TO A NAMED PERSON', c: '#8a5a1e' });
+  if (r.flagDisputed) out.push({ t: 'DISPUTED — HELD', c: '#A32D2D' });
+  if (invNeedsAppraisal(r, job)) out.push({ t: 'SPECIALIST SUGGESTED', c: '#6b5a3a' });
+  return out;
+}
+
+function printContentsList(jobId) {
+  var rec = contentsList(jobId);
+  var job = rec.job;
+  if (!job || !document.getElementById('print-target')) return;
+  if (!rec.total) {
+    alert('Nothing has been photographed or listed on this job yet, so there is no contents list to produce.');
+    return;
+  }
+  var fid = invFiduciaryMode(job);
+  var weValue = docTierProduces(job, 'values');
+
+  // ⚠ `_invDocHead`'S DEFAULT TAIL STATES THE VALUATION BASIS AND THE DATE OF DEATH. The
+  // `extra` argument is how this document avoids asserting a basis it does not carry — the
+  // same reason the Contents Record passes one.
+  var head = _invDocHead(job, 'Contents List — Room by Room',
+    'Description, location and condition &middot; <strong>no values are stated on this list</strong>');
+
+  // ⚠⚠ THE GAP BLOCK GOES ABOVE THE LIST. The As-Found Record's rule and the
+  // release-cautions rule: a reader works down this page, so a caveat printed under the list
+  // has arrived after they have already taken it as complete.
+  var gaps = [];
+  if (rec.empty.length) gaps.push('<strong>' + rec.empty.length + '</strong> room'
+    + (rec.empty.length === 1 ? '' : 's') + ' in scope with nothing listed — '
+    + esc(rec.empty.map(function(g){ return g.name; }).join(', ')));
+  if (rec.unnamed) gaps.push('<strong>' + rec.unnamed + '</strong> photographed item'
+    + (rec.unnamed === 1 ? '' : 's') + ' not yet named');
+  if (rec.noCondition) gaps.push('<strong>' + rec.noCondition + '</strong> item'
+    + (rec.noCondition === 1 ? '' : 's') + ' with no condition recorded');
+  if (rec.unsaved) gaps.push('<strong>' + rec.unsaved + '</strong> item'
+    + (rec.unsaved === 1 ? '' : 's') + ' whose photograph has not reached the estate’s Drive folder');
+  var gapBlock = gaps.length
+    ? '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#3c3228;line-height:1.55;">'
+      + '<strong style="color:#8a6d3b;">This list is not yet complete.</strong><ul style="margin:5px 0 0 16px;padding:0;">'
+      + gaps.map(function(g){ return '<li>' + g + '</li>'; }).join('') + '</ul></div>'
+    : '';
+
+  // ⚠ AN EXCLUDED ROOM IS AN ANSWER, NOT A GAP — the As-Found Record's rule again. It was
+  // never in scope, so listing it among the gaps would report our own contract as a failure;
+  // leaving it out entirely reads as a room somebody missed.
+  var exBlock = rec.excluded.length
+    ? '<div style="font-size:10.5px;color:#666;margin-bottom:12px;line-height:1.5;">'
+      + '<strong>Not in scope on this engagement:</strong> '
+      + esc(rec.excluded.map(function(r){ return r.name; }).join(', '))
+      + '. These rooms were not worked and their contents are not listed below.</div>'
+    : '';
+
+  function row(r) {
+    var q = parseInt(r.qty, 10);
+    var flags = _clFlags(r, job, jobId).map(function(f){
+      return '<div style="font-size:9.5px;font-weight:700;letter-spacing:.4px;color:' + f.c + ';">'
+        + '&#9888; ' + esc(f.t) + '</div>';
+    }).join('');
+    return '<tr>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:34px;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
+        + '<strong>' + esc(r.objectName || '—') + '</strong>'
+        + (r.category ? '<div style="color:#888;font-size:10px;">' + esc(r.category) + '</div>' : '')
+        + (r.serial ? '<div style="color:#888;font-size:10px;">Serial ' + esc(r.serial) + '</div>' : '')
+      + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
+        + (r.condition ? esc(r.condition) : '<span style="color:#8a6d3b;">not recorded</span>') + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + flags + '</td>'
+      + '</tr>';
+  }
+
+  var body = rec.groups.map(function(g){
+    var count = g.items.length
+      ? g.items.length + ' item' + (g.items.length === 1 ? '' : 's')
+      : 'nothing listed';
+    return '<div style="break-inside:avoid;margin-bottom:14px;">'
+      + '<div style="font-size:12px;font-weight:700;border-bottom:1px solid #333;padding-bottom:2px;margin-bottom:4px;">'
+        + esc(g.name) + ' <span style="font-weight:400;color:#888;">· ' + count
+        + (g.offPlan ? ' · not on the current room list' : '') + '</span></div>'
+      + (g.items.length
+          ? '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+            + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Item #</th>'
+            + '<th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;text-align:right;">Qty</th>'
+            + '<th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;">Notes</th>'
+            + '</tr></thead><tbody>' + g.items.map(row).join('') + '</tbody></table>'
+          : '<div style="font-size:10.5px;color:#8a6d3b;font-style:italic;">No contents listed in this room yet.</div>')
+      + '</div>';
+  }).join('');
+
+  // ⚠⚠ THE STANDING RULE AGAINST EXPLAINING AN ABSENCE YIELDS HERE, for the reason it
+  // already yields in the client estimate's sorting stage: this absence SHIFTS A
+  // RESPONSIBILITY, and a reader who skipped the line would assume Havellin carries it. The
+  // three arms exist so the document never tells an estate that counsel is valuing a list
+  // Havellin was in fact engaged to value.
+  var whoValues = !fid
+    ? 'This list states no values.'
+    : (weValue
+        ? 'Estimated values are stated separately on the Estate Inventory — Asset Schedule, which is the valued version of this list.'
+        : 'Valuation of the property and the court filing are the responsibility of the Client and the estate attorney, who receive this list for that purpose. Havellin has not valued anything on it and states no opinion of value.');
+
+  // ⚠ A ROW WITH NO FILE ON DRIVE IS ALREADY IN THE GAP BLOCK, and the advice below —
+  // re-open with a connection — cannot work for a photograph that was never uploaded. So
+  // this counts only the rows whose file EXISTS and whose thumbnail this device has not
+  // fetched, which is the one case the advice fixes.
+  var noThumb = rec.items.filter(function(r){
+    return !r.manual && _invFileId(r) && !_invThumbFor(jobId, r);
+  }).length;
+
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + head
+    + _invProgressStamp(rec.items, { noValues: true })
+    + gapBlock
+    + exBlock
+    + body
+    + (noThumb ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
+        + noThumb + ' item' + (noThumb > 1 ? 's have' : ' has') + ' no photograph available on this device. '
+        + 'The photographs are filed in the estate’s Drive folder; re-open this tab with a connection to include them.</div>' : '')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
+      + 'Every item above was photographed in the room it is listed under, and that room is its '
+      + 'recorded location. Tangible personal property only. ' + whoValues + ' '
+      + 'Photographs are reference-numbered to the line items above and retained for seven years.'
+    + '</div></div>';
+  _printDocument(html, _invDocName(job, 'Contents List'));
 }
 
 // ── 02 · After Inventory ──────────────────────────────────────────────────────
@@ -22544,7 +22784,17 @@ function _renderInvWorkbar(job, all) {
       // on every line; the Court Inventory would have printed a §733.604 schedule for a living
       // owner with an adoption block to sign. The primary button on a living job is the record
       // the family is actually promised.
-      + (fid
+      // ⚠⚠ AND THE TIER DECIDES WHICH ESTATE DOCUMENT IS THE PRIMARY (2026-09-21). An
+      // estate contracted at `contents` is one whose own agreement says valuation is
+      // counsel's — so the Estate Inventory Report is the wrong document to put under the
+      // concierge's thumb there: its FMV column is empty on every line and its valuation
+      // source prints **not stated** in red, on a page going to the lawyer who is doing
+      // the valuing. The condition reads as the contract: the inventory is ours to
+      // produce and the values are not, which is true of the `contents` tier and of
+      // nothing else.
+      + (fid && docTierProduces(job, 'inventory') && !docTierProduces(job, 'values')
+          ? btn('printContentsList(' + jid + ')', 'Contents List', 'The photographed, room-by-room list the agreement promises counsel — description, location and condition, no values', true)
+          : fid
           ? btn('printEstateInventoryReport(' + jid + ')', 'Estate Inventory PDF', 'The client / attorney asset schedule — photo, description, location, quantity, condition, date-of-death FMV and the valuation source stated', true)
           : btn('printContentsRecord(' + jid + ')', 'Contents Record', 'What stayed, what went, where each piece went and who took it — the record the family keeps', true))
       + btn('exportInventoryCSV(' + jid + ')', 'CSV', 'Every column, as a spreadsheet file to attach to an email')
