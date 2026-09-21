@@ -361,14 +361,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // Axis 2 rides the payload as `docSet` so the workbook Summary can stop
             // asserting a death on a living client's own spreadsheet. Lifted, not
             // stubbed — a stub here would let the two sides of that flag drift.
-            'invFiduciaryMode', 'isDecedentJob',
+            'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf',
             // The as-found index rides the same payload, so the real chain runs here rather
             // than a stub: this is the one place the manifest and the workbook meet, and a
             // throw anywhere in it would otherwise surface on a client's spreadsheet.
             '_asFoundRows', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_afTime'],
       vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS',
              'INV_VAL_BASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AS_FOUND_COLUMNS',
-             'DECEDENT_SERVICES',
+             'DECEDENT_SERVICES', 'MATTER_TYPES',
              'estimateStore', 'jobPlanStore'],
       stubs: { fmtDate2: (d) => String(d || '') },
     });
@@ -385,6 +385,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(payload.categories.indexOf('Silver & Precious Metal') >= 0,
        'including the ones the old hardcoded list dropped');
     ok(payload.dispositions.indexOf('Auction') >= 0, 'and Auction, which it also dropped');
+
+    // ⚠⚠ THE PROBATE HALF OF AXIS 2, DRIVEN — a build that derives the flag and then puts a
+    // literal on the payload contains every string a source check looks for, and its failure is
+    // silent: a trust estate's workbook goes on printing a §733.604 deadline forever.
+    p2.jobs.push({ id: 4, name: 'Trust Estate',  hvlId: 'HVL-4', svc: 'probate', matterType: 'trust' });
+    p2.jobs.push({ id: 5, name: 'Court Estate',  hvlId: 'HVL-5', svc: 'probate', matterType: 'probate' });
+    p2.jobs.push({ id: 6, name: 'Pour-over',     hvlId: 'HVL-6', svc: 'probate', matterType: 'both' });
+    p2.jobs.push({ id: 8, name: 'Old Estate',    hvlId: 'HVL-8', svc: 'probate' });
+    [4, 5, 6, 8].forEach(function (id) { p2._photoRefs[id] = [it('a' + id, { label: 'inventory' })]; });
+    eq(p2.buildInventoryPayload(4).onProbate, false, '⚠⚠ a trust matter tells the server to withhold them');
+    eq(p2.buildInventoryPayload(5).onProbate, true,  'a probate matter keeps them');
+    eq(p2.buildInventoryPayload(6).onProbate, true,  '⚠ and so does `both` — a pour-over will has a probate estate');
+    eq(p2.buildInventoryPayload(8).onProbate, true,
+       '⚠⚠ and a job recorded before the question existed keeps them, rather than losing a live court deadline');
+    eq(p2.buildInventoryPayload(4).docSet, 'estate',
+       '⚠ a trust estate is still an ESTATE — only the COURT rows come off, not the valuation ones');
 
     // The server must PREFER the payload and only fall back for an old app build.
     const gs = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
