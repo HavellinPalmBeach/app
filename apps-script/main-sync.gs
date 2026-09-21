@@ -34,7 +34,12 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-var BACKEND_VERSION = '2026-09-20b';
+// ⚠ 2026-09-21a is `saveInventory.gs`, not this file — one project, one deployment, and
+// this constant is the ONLY thing the app can read to tell which vintage is serving. The
+// Summary sheet branches on `payload.docSet` from that version; an older deployment
+// ignores the flag and keeps printing Date of Death, Letters Issued and a §733.604 court
+// deadline on a LIVING client's own workbook.
+var BACKEND_VERSION = '2026-09-21a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',

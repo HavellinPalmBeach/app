@@ -284,4 +284,76 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(noComments(src), 'NDA signed by every crew member',
           '⚠⚠ and the Job Plan box that attested to it is gone from live code');
   }
+
+  group('⚠⚠ THE WRITTEN RECORD IS COVERED BY BOTH FORMS — it was covered by neither');
+  {
+    // ⚠⚠ EVERY CUSTODY, RETENTION AND NON-DISCLOSURE PROMISE IN THE TWO FORMS ATTACHED TO
+    // "Documentation Media", A DEFINED TERM MEANING PHOTOGRAPHS AND VIDEO. Since the item
+    // record went on to all six labour services (2026-09-21) both engagements produce a
+    // WRITTEN document naming who took what, held seven years, and the clauses three lines
+    // above did not reach it.
+    const a = standardDoc(LIVING, est());
+    const pr = probateDoc(PROBATE, est());
+
+    [['the living-client form', a, 'Contractor', 'Section 10.2', 'Section 10.1a'],
+     ['the estate form', pr, 'Havellin', 'Section 7.2', null]].forEach(function (r) {
+      const [label, doc, us, mkt] = r;
+      has(doc, 'Project Records', label + ' defines the written record');
+      has(doc, 'the name of that recipient', '…and says the recipient is named in it');
+      has(doc, 'retained for seven years', '…under the same seven-year retention as the images');
+      has(doc, 'the amount received, any fees deducted, and the net amount',
+          '…and states proceeds only where they were actually received');
+      has(doc, 'What the Project Records are and are not',
+          '⚠ ' + label + ' disclaims the record\'s evidentiary weight');
+      has(doc, 'They are not an appraisal',
+          '…starting with the one a tidy itemised list most invites');
+      // ⚠ NEITHER FORM MAY LET THE MARKETING CLAUSE REACH IT. A client who does not tick the
+      // opt-out is not thereby authorising publication of a list naming their daughter.
+      has(doc, mkt + ' does not apply to them',
+          '⚠⚠ ' + label + ' holds the record outside the marketing opt-out');
+      has(doc, us + '&rsquo;s work product', 'and the obligated party is substituted, as everywhere else');
+    });
+
+    // ⚠ THE ASYMMETRIES ARE DELIBERATE AND EACH IS PINNED IN BOTH DIRECTIONS, or the next
+    // sweep "harmonises" the two forms and takes a real distinction out with the difference.
+    has(a, 'Recipient names',
+        '⚠ only the living form lets a recipient go unnamed — a PR cannot suppress a beneficiary');
+    has(a, 'recipient not be named', '…stated as an instruction the Client can actually give');
+    lacks(pr, 'recipient not be named', '…and the estate form does not offer it');
+    has(a, 'estate-planning record',
+        'the living disclaimer points at tax, insurance and estate planning');
+    lacks(a, '733.604',
+          '⚠⚠ and never at a court schedule — there is no probate on a living-client job');
+    has(pr, 'not the inventory required by Fla. Stat. &sect;733.604',
+        '⚠ while the estate one disclaims exactly that');
+    has(pr, 'satisfied a devise or bequest',
+        '…and that a delivery recorded on it proves a bequest was satisfied');
+    has(pr, 'any receipt obtained under Section 5.3',
+        '⚠ the estate record cites the signed receipt §5.3 already requires');
+    lacks(a, 'Section 5.3', '…which the living form has no counterpart to and must not cite');
+    has(pr, 'to counsel of record',
+        '⚠ only the estate form has an affirmative production duty');
+    lacks(a, 'counsel of record', '…a living client\'s record is theirs and nobody else\'s');
+    has(pr, 'not Client documents for the purposes of the return-or-destroy provision',
+        '⚠⚠ and only the estate form carves itself out of §7\'s return-or-destroy bullet');
+    has(pr, 'Destroy or return all Client documents',
+        '…which is a live conflict rather than a hypothetical: the bullet is still there');
+
+    // The heading had to grow on both, and §10\'s stopped being about photography.
+    has(a, '10. Documentation and Records Authorization',
+        '§10 is renamed — it carries a written record now, not only images');
+    lacks(a, 'Photography Authorization', '…and the old heading is gone, not duplicated');
+    has(a, '11.', '⚠ the rename renumbers nothing — §11 is still §11');
+    has(pr, '7.1 Documentation Media and Project Records',
+        '⚠ the estate form grows a heading and NO new number');
+    lacks(pr, '7.3',
+        '⚠⚠ a §7.3 would wedge marketing between the two custody clauses and renumber §8 onwards');
+    has(pr, '7.2 Marketing', 'so §7.2 is where it was');
+    has(pr, 'Section 8 &middot; Termination', 'and Termination is still §8, against agreements already issued');
+
+    // ⚠ NOT A LAWYER, AND IT SAYS SO. Drafted here and unreviewed; it goes to counsel with
+    // the rest of both forms before the first real engagement signs.
+    ok(text(a).indexOf('Project Records') < text(a).indexOf('Marketing'),
+       '⚠ the record clause is read BEFORE the opt-out box that excludes it');
+  }
 };

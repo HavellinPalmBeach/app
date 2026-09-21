@@ -572,4 +572,129 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(live, 'if (isDecedentJob(job)) return probateAgreementHtml(job, est);',
         '⚠ the agreement form still routes on isDecedentJob, not on the fiduciary predicate');
   }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ THE CLIENT\'S WORKBOOK ASSERTED A DEATH ON EVERY JOB IT WAS EVER WRITTEN FOR');
+  {
+    // The on-screen summary was gated when the item record went to all six services. The
+    // WORKBOOK — the spreadsheet that lands in the client's own Drive folder — was not, and
+    // it is the copy they keep. Measured on the pre-change writer with a living payload:
+    // "Date of Death", "Letters Issued" and "§733.604 Inventory Deadline" over three empty
+    // cells, "Items Awaiting Valuation" on an engagement that values nothing, and an
+    // "Exempt §732.402" flag counting against a statute that needs a decedent.
+    //
+    // Anthony, on the file NAME: "i think 'estate' inventory is fine. could be a fancy name
+    // for a big house. not always a dead persons estate." So the name stays on both sides and
+    // only the CLAIMS come off — and the file name is load-bearing besides, since
+    // `saveInventory` looks the workbook up by it.
+    const fs = require('fs'); const path = require('path'); const vm = require('vm');
+    const gs = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
+    const pick = (name) => {
+      const m = gs.match(new RegExp('function ' + name + '\\([\\s\\S]*?\\n\\}'));
+      ok(!!m, name + ' is present in saveInventory.gs');
+      return m[0];
+    };
+    const gctx = { INV_CATEGORIES_FALLBACK: [], INV_DISPOSITIONS_FALLBACK: [] };
+    vm.createContext(gctx);
+    vm.runInContext(pick('_invColLetter') + '\n' + pick('_writeSummarySheet'), gctx,
+                    { filename: 'saveInventory.gs (extracted)' });
+
+    // Capture what the writer PUTS, rather than reading its source — a build that computes
+    // the flag and then writes the estate rows anyway contains every string a grep looks for.
+    const render = (payload) => {
+      const cells = [];
+      const sheet = {
+        clear() {}, autoResizeColumns() {},
+        getRange(r, c) {
+          return {
+            setValue(v) { cells.push({ r, c, v: String(v) }); return this; },
+            setFormula(f) { cells.push({ r, c, v: String(f), formula: true }); return this; },
+            setNumberFormat() { return this; }, setFontWeight() { return this; },
+          };
+        },
+      };
+      gctx._writeSummarySheet({ getSheetByName: () => sheet, insertSheet: () => sheet }, payload);
+      return cells;
+    };
+    // ⚠ `lastUpdated` IS PINNED BECAUSE THE WRITER FALLS BACK TO `new Date()`, and the
+    // byte-for-byte comparison below then fails whenever two renders straddle a millisecond.
+    // It did, intermittently, before this line existed. A test must not read the clock.
+    const base = { estate: 'Margaret Ellsworth', hvlId: 'HVL-0011', address: '14 Coconut Row',
+                   deathDate: '', lettersDate: '', deadline: '', lastUpdated: '2026-09-21T00:00:00.000Z',
+                   columns: ['Job ID'].concat(rig(LIVING, []).ctx.INVENTORY_COLUMNS.map((c) => c.header)),
+                   categories: ['Furniture', 'Art & Décor'], dispositions: ['Keep', 'Donate'] };
+    const labels = (cells) => cells.filter((x) => !x.formula).map((x) => x.v);
+    const L = labels(render(Object.assign({ docSet: 'contents' }, base)));
+    const E = labels(render(Object.assign({ docSet: 'estate' }, base)));
+
+    ['Date of Death', 'Letters Issued', '§733.604 Inventory Deadline',
+     'Items Awaiting Valuation', 'Total Estimated FMV', 'Exempt §732.402', 'Specific Bequests']
+      .forEach((row) => {
+        ok(L.indexOf(row) < 0, '⚠ "' + row + '" is off a living client\'s workbook');
+        ok(E.indexOf(row) >= 0, '…and still on the estate one');
+      });
+    ok(L.indexOf('Promised to someone') >= 0,
+       '⚠ the bequest FLAG survives under the wording the on-screen summary already uses');
+    ok(E.indexOf('Promised to someone') < 0, '…and the estate form keeps the will term');
+    ok(L.indexOf('Net received') >= 0 && L.indexOf('Net to Estate') < 0,
+       'there is no estate for the net to be net to');
+    ok(E.indexOf('Net to Estate') >= 0, '…and the estate wording survives');
+    ok(L.indexOf('Client') >= 0 && L.indexOf('Client / Estate') < 0, 'and it is a Client, not an Estate');
+
+    // ⚠ GROSS / FEES / NET AND THE ITEM COUNT ARE ON BOTH. A figure actually received from a
+    // consignment is a recorded actual, and it is the first thing a family asks.
+    ['Total Items', 'Gross', 'Fees', 'DISPOSITION'].forEach((row) => {
+      ok(L.indexOf(row) >= 0 && E.indexOf(row) >= 0, '"' + row + '" is on both');
+    });
+    ok(L.indexOf('ITEMS BY CATEGORY') >= 0, '⚠ the category block counts on a living job');
+    ok(L.indexOf('FMV BY CATEGORY') < 0,
+       '…rather than pricing it — a column headed FMV over blanks reads as a valuation of the house');
+    ok(E.indexOf('FMV BY CATEGORY') >= 0, '…and the estate rollup is untouched');
+
+    // ⚠ THE HEADER BLOCK IS SEQUENTIAL NOW. Three rows disappearing must not leave a hole,
+    // and the category total's back-reference must follow the FMV row it names.
+    const rowOf = (cells, label) => (cells.find((x) => x.v === label && x.c === 1) || {}).r;
+    const Lc = render(Object.assign({ docSet: 'contents' }, base));
+    const Ec = render(Object.assign({ docSet: 'estate' }, base));
+    eq(rowOf(Lc, 'Prepared By') - rowOf(Lc, 'Property Address'), 1,
+       '⚠ no gap where the three estate rows were');
+    eq(rowOf(Ec, 'Date of Death') - rowOf(Ec, 'Property Address'), 1, 'and the estate block is contiguous too');
+    const fmvRow = rowOf(Ec, 'Total Estimated FMV');
+    ok(Ec.some((x) => x.c === 4 && x.v === 'Total (should equal B' + fmvRow + ')'),
+       '⚠⚠ the reconciliation label points at the row the FMV total actually landed on');
+
+    // ⚠⚠ THE FOOTER IS REPLACED, NOT REWORDED. Its whole subject is what counsel files
+    // instead; there is no living counterpart, and what the family needs stated is the
+    // converse — that this is not a valuation.
+    ok(L.some((v) => v.indexOf('not an appraisal or a statement of value') >= 0),
+       'the living footer disclaims value, mirroring the agreement\'s Project Records clause');
+    ok(!L.some((v) => v.indexOf('733.604') >= 0), '⚠ and names no court filing anywhere');
+    ok(E.some((v) => v.indexOf('§733.604 court inventory') >= 0), '…while the estate footer is unchanged');
+
+    // ⚠⚠ AN ABSENT FLAG MEANS ESTATE, AND DEFAULTING THE OTHER WAY IS THE BAD FAILURE. An app
+    // build older than 2026-09-21 sends no docSet; it must render exactly what it rendered
+    // yesterday rather than stripping the §733.604 deadline off a live probate matter.
+    const OLD = labels(render(Object.assign({}, base)));
+    ['Date of Death', 'Letters Issued', '§733.604 Inventory Deadline', 'Exempt §732.402',
+     'Total Estimated FMV'].forEach(function (row) {
+      ok(OLD.indexOf(row) >= 0,
+         '⚠⚠ no docSet keeps "' + row + '" — an old tab must not strip it off a live probate matter');
+    });
+    eq(OLD.join('|'), E.join('|'), '⚠⚠ and the whole layout is byte-for-byte the estate one');
+
+    // And the app actually SENDS it — the join a source check cannot see.
+    const p = sandbox({ fns: ['invFiduciaryMode', 'isDecedentJob'], vars: ['DECEDENT_SERVICES'] });
+    eq(p.invFiduciaryMode(LIVING) ? 'estate' : 'contents', 'contents', 'a Home Transition is a contents job');
+    eq(p.invFiduciaryMode(ESTATE) ? 'estate' : 'contents', 'estate', 'and a probate matter is not');
+    has(live, "docSet: invFiduciaryMode(job) ? 'estate' : 'contents'",
+        '⚠ buildInventoryPayload puts Axis 2 on the wire rather than letting the server guess');
+
+    // ⚠ A FLOOR, NOT TODAY'S LITERAL — the constant is bumped on every backend change and a
+    // pinned value breaks on the next one. What this states is the consequence: an older
+    // deployment ignores docSet and keeps printing a court deadline on a living client.
+    const main = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8');
+    const bv = (main.match(/BACKEND_VERSION = '([^']+)'/) || [])[1];
+    ok(bv >= '2026-09-21a',
+       '⚠⚠ the deployment must be at least 2026-09-21a or the workbook still asserts a death');
+  }
 };
