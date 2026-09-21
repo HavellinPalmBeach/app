@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { sandbox } = require('./harness');
+const { sandbox, domStub } = require('./harness');
 
 const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
@@ -135,7 +135,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('a normal starting state is not painted as an error');
   {
     const src = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8');
-    const f = src.slice(src.indexOf('function onDocGateChange()'));
+    const f = src.slice(src.indexOf('function onDocGateChange('));
     const body = f.slice(0, f.indexOf('\nfunction resolveDocLevel'));
     // 706 defaults to Unknown, so EVERY new estate job opens in Strict Mode. Amber on all
     // of them reads as something being wrong. Amber is reserved for the one case with an
@@ -159,12 +159,67 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the dropdown cannot pretend to lower it');
   {
     const src = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8');
-    const f = src.slice(src.indexOf('function onDocGateChange()'));
+    const f = src.slice(src.indexOf('function onDocGateChange('));
     const body = f.slice(0, f.indexOf('\nfunction resolveDocLevel'));
     has(body, 'sel.disabled = true', 'the control disables itself when the gates force Formal');
     has(body, 'sel.title = reason', 'and says why on hover');
     has(body, "sel.disabled = false", 'and re-enables when the floor lifts');
-    has(body, "document.getElementById('i-svc')",
-        'it reads the real service field — i-service does not exist and would silently disable G2');
+  }
+
+  // ⚠ WAS A SOURCE PIN ON `document.getElementById('i-svc')`, WHICH BROKE ON A TRUE CHANGE —
+  // the function is keyed on a prefix now so Edit Client can reuse it, and the literal moved.
+  // The requirement was never the byte sequence: it is that the readout reads the REAL service
+  // field, because reading one that does not exist resolves to '' and silently disables G2 on
+  // every estate job. Driven, so a renamed id fails rather than a renamed expression.
+  group('the readout reads the real form, not an id that resolves to nothing');
+  {
+    const run = (seed) => {
+      const d = domStub(seed);
+      const c = sandbox({ fns: FNS.concat(['onDocGateChange', 'esc']), vars: VARS, stubs: { document: d } });
+      c.onDocGateChange();
+      return d.getElementById('i-gate-readout').innerHTML;
+    };
+    // Estate Settlement, 706 unanswered: unknown counts as yes, so this is Strict Mode.
+    // If the service field were misnamed this comes back Standard and nothing says so.
+    has(run({ 'i-svc': 'cleanout' }), 'Strict Mode',
+        'an Estate Settlement with the 706 unanswered reads as Strict — G2 really fired');
+    has(run({ 'i-svc': 'cleanout' }), 'a-warn', 'and amber, because the question is still open');
+    has(run({ 'i-svc': 'cleanout', 'i-gate-706': 'no' }), '$1,000',
+        'answering it No lifts the floor and the readout states the Standard numbers');
+    lacks(run({ 'i-svc': 'cleanout', 'i-gate-706': 'no' }), 'Strict Mode',
+          'and stops claiming Strict');
+    has(run({ 'i-svc': 'cleanout', 'i-gate-dispute': 'yes' }), 'a-info',
+        'a recorded dispute is a settled state, not an open question');
+    eq(run({ 'i-svc': 'downsizing' }).indexOf('Strict Mode'), -1,
+       'a living-client job is never dragged into Strict Mode by an unanswered 706');
+  }
+
+  // The SAME function serves Edit Client. One estate, one question — a second copy written
+  // beside that modal is how the two forms come to answer it differently.
+  group('one function, two forms');
+  {
+    // ⚠ THE FIXTURE HAS TO MAKE THE TWO PREFIXES DISAGREE, or a function that read `i-` and
+    // wrote `ec-` passes: blank intake fields resolve to Standard, and so did the first version
+    // of this case. An Estate Settlement with the 706 unanswered is Strict; a blank service is
+    // not. That is the difference a hardcoded prefix cannot fake. (Caught by reverting.)
+    const d = domStub({ 'ec-svc': 'cleanout' });
+    const c = sandbox({ fns: FNS.concat(['onDocGateChange', 'esc']), vars: VARS, stubs: { document: d } });
+    c.onDocGateChange('ec');
+    has(d.getElementById('ec-gate-readout').innerHTML, 'Strict Mode',
+        'the ec prefix reads the ec fields — the intake fields beside them are blank and say Standard');
+    eq(d.getElementById('i-gate-readout').innerHTML, '',
+       'and never touches the intake readout');
+    eq(d.getElementById('i-doclevel').disabled, false,
+       'nor disables the intake dropdown from a modal that is not on screen');
+
+    // Edit Client has no documentation-level dropdown, so the manual level it cannot read is
+    // passed in. Without it a hand-set Formal reads back as merely the floor.
+    const d2 = domStub({ 'ec-svc': 'cleanout', 'ec-gate-706': 'no' });
+    const c2 = sandbox({ fns: FNS.concat(['onDocGateChange', 'esc']), vars: VARS, stubs: { document: d2 } });
+    c2.onDocGateChange('ec', 'formal');
+    has(d2.getElementById('ec-gate-readout').innerHTML, 'set by hand',
+        'a documentation level set by hand is reported as such, not as the floor');
+    eq(d2.getElementById('ec-doclevel').disabled, false,
+       'and nothing is disabled — there is no such control in that modal to disable');
   }
 };
