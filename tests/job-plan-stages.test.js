@@ -32,13 +32,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     opts = opts || {};
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
             'planCurrentStage'],
-      vars: ['SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
+      vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders'],
       stubs: {
         document: dom, isFormalDoc: () => false, _sfHost: () => '', renderVendorSourcing: () => '<i>SOURCING</i>',
@@ -96,7 +96,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(mm, '<span class="stg-title">Move day', 'Home Transition gets Move day');
     ok(idx(mm, 'id="stage-p2"') < idx(mm, 'id="stage-p3"') && idx(mm, 'id="stage-p3"') < idx(mm, 'id="stage-p4"'),
        'between Midpoint & pickups and Close-out');
-    lacks(mm, 'Before anything leaves the house', 'a living-client job with nothing to sequester has no in-house boxes and no empty heading');
+    // ⚠ WAS `lacks(... 'Before anything leaves the house')` — true while a living job had nothing
+    // to do in that section, and false from 2026-09-21, when every labour job started keeping a
+    // room-by-room item record. The requirement was never "no heading": it is that the heading
+    // renders only when the job has a box under it, and that a living job never picks up the
+    // DECEDENT boxes. Restated in both directions rather than deleted.
+    has(mm, 'Before anything leaves the house',
+        'a living job has an in-house section now — the record is made before the room is emptied');
+    has(mm, 'Every room photographed and every item of consequence logged before it is moved',
+        'and that is the one box it carries');
+    ['sequestered', 'PR sign-off', 'chain of custody']
+      .forEach((t) => lacks(mm, t, '⚠ and none of the decedent boxes: "' + t + '"'));
+    // The converse: the estate job keeps its heavier set and does NOT gain the living box.
+    const est = plan(JOB({ svc: 'probate' }), EST({ svc: 'probate' })).out;
+    has(est, 'sequestered', 'the estate job still sequesters the legal file');
+    lacks(est, 'Every room photographed and every item of consequence logged before it is moved',
+          '⚠ and is not told the same thing twice — its as-found and custody boxes already say it');
   }
 
   group('⚠ the node on each card: green behind you, bronze NOW, grey ahead — off the stage the job is in');
@@ -238,8 +253,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the checklists: a sentence, not a form label; a lone box spans the row');
   {
-    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx'],
-                        vars: ['PLAN_TASKS', 'jobPlanStore'], stubs: { _planTaskDone: (j, k) => k === 'coi_provided', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
+    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob'],
+                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'jobPlanStore'], stubs: { _planTaskDone: (j, k) => k === 'coi_provided', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
     const box = c.planChk(7, 'precall', 'Pre-job call placed');
     has(box, '<label class="plan-chk">', 'the box is a class, not seven inline properties');
     lacks(box, 'style=', 'no inline style at all');

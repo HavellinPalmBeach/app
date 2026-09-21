@@ -145,7 +145,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       l.includes('text-align:center;padding:3rem;') && l.includes('color:var(--gray)'));
     eq(olds, [], 'no hand-rolled empty state survives');
 
-    ['Select a client to view their estate inventory', 'Select a job to load its plan',
+    // ⚠ WAS 'their estate inventory'. Four of the six services this tab serves have no estate,
+    // and that sentence was the first thing a concierge read on a Home Editing job (2026-09-21).
+    ['Select a client to view their inventory', 'Select a job to load its plan',
      'Select a job and stage to generate an invoice', 'Select a saved estimate from the dropdown',
      'Select a job with an approved estimate'].forEach((msg) => {
       const at = src.indexOf(msg);

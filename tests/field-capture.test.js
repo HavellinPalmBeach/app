@@ -40,7 +40,7 @@ function captureRig(over) {
   const ctx = sandbox({
     fns: ['_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_getPhotoRef',
           '_setPhotoRef', '_fieldNoteAppend', '_invDetailRefs', '_jobInvRefs', '_invTouch', '_invAssignItemNos'],
-    vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
+    vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_DISPOSITIONS', 'PHOTO_CAPTURE_LABELS',
       'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
            '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
     stubs: Object.assign({
@@ -76,6 +76,7 @@ function cameraRig(grant) {
   const ctx = sandbox({
     fns: ['openFieldCamera', 'closeFieldCamera', '_fieldCamStop', '_fieldCamGoNative', '_fieldCamShellHtml',
           '_fieldCamPaint', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail', '_fieldCamCommit',
+          'fieldDispChips', '_jobHasDestination', '_invJob',
           'fieldCamTypedNote', 'fieldCamNoteDraft', '_fieldCamPendingNote', '_fieldCamFlushNote',
           'fieldCamTalkStart', '_fieldCamRoomName', '_planRoom', '_getPhotoRef',
           '_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef',
@@ -139,19 +140,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.synced.length, 1, 'and only the inventory line schedules the manifest sync');
   }
 
-  group('⚠⚠ NO CHIP CHOSEN FILES AS UNDECIDED, NEVER AS KEEP — and the five piles map to the desk\'s seven');
+  group('⚠⚠ NO CHIP CHOSEN FILES AS UNDECIDED, NEVER AS KEEP — and every pile maps to a desk value');
   {
     const r = captureRig();
     r.ctx._captureShot(1, 0, 'inventory', 'data:image/jpeg;base64,AAA', {});
     eq(r.refs()[0].disposition, '', '⚠⚠ an unsorted shot lands in "Not yet decided" — the worklist — not in Keep');
     eq(r.ctx.FIELD_DISP_DEFAULT, 'undecided', 'because Undecided is the default');
-    eq(r.ctx.FIELD_DISPOSITIONS.map((d) => d.key), ['keep', 'donate', 'sell', 'remove', 'undecided'],
-       'five chips: the piles a room is sorted into');
+    // ⚠ WAS A PINNED FIVE-KEY BYTE SEQUENCE and broke correctly when Move and Distribute landed
+    // (2026-09-21). The requirement was never the list — it is that EVERY chip maps to a real
+    // desk value or to the undecided bucket, so a pile cannot be tapped in a room and then land
+    // in a section the desk never renders.
+    eq(r.ctx.FIELD_DISPOSITIONS.map((d) => d.key),
+       ['keep', 'move', 'distribute', 'donate', 'sell', 'remove', 'undecided'],
+       'seven piles a room is sorted into');
+    r.ctx.FIELD_DISPOSITIONS.forEach((d) => {
+      const v = r.ctx.fieldDispToInv(d.key);
+      ok(v === '' || r.ctx.INV_DISPOSITIONS.indexOf(v) >= 0,
+         d.label + ' maps to a real disposition or to the undecided bucket');
+    });
     eq(r.ctx.fieldDispToInv('keep'), 'Keep', 'Keep is Keep');
     eq(r.ctx.fieldDispToInv('donate'), 'Donate', 'Donate is Donate');
     eq(r.ctx.fieldDispToInv('sell'), 'Sell', 'Sell is Sell — the desk refines it into Auction, Consign or Sell');
     eq(r.ctx.fieldDispToInv('remove'), 'Junk', '⚠ Remove is the manifest\'s Junk');
     eq(r.ctx.fieldDispToInv('undecided'), '', 'Undecided is the empty bucket');
+    eq(r.ctx.fieldDispToInv('move'), 'Move', '⚠ New home is the manifest\'s Move');
+    eq(r.ctx.fieldDispToInv('distribute'), 'Distribute', '⚠ To a person is Distribute — the "with whom" pile');
     eq(r.ctx.fieldDispToInv('hold'), '', '⚠ Hold is a desk flag, never a pile — the field cannot say it');
     eq(r.ctx.fieldDispToInv('appraise'), '', 'and Appraise is a toggle, not a pile');
   }
@@ -358,9 +371,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const calls = [];
     const d = sandbox({
-      fns: ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', '_planRooms', 'roomStatusNormalize',
+      fns: ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey'],
-      vars: ['TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'jobPlanStore',
+      vars: ['DECEDENT_SERVICES', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'jobPlanStore',
              'estimateStore', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders'],
       stubs: {
         isFormalDoc: () => false,
@@ -424,8 +437,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ CHECKBOXES ARE NAMED, NEVER prefix + array index');
   {
-    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'firearmsFlaggedAtIntake', 'houseFlagsOf'],
-                        vars: ['PLAN_TASKS', 'JOB_ADMIN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
+    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf'],
+                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
                         stubs: { isFormalDoc: () => false } });
     const keys = t.PLAN_TASKS.map((x) => x.key);
     eq(new Set(keys).size, keys.length, 'every key is distinct');
@@ -483,10 +496,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ JOB ADMIN IS ON THE INVENTORY TAB, and reading a tick never mints a plan');
   {
     const a = sandbox({
-      fns: ['renderJobAdmin', 'planTaskCtx', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'planDerivedHtml',
+      fns: ['renderJobAdmin', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'planDerivedHtml',
             'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey'],
-      vars: ['JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+      vars: ['DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders'],
       stubs: { isFormalDoc: () => false, isJobWon: (j) => !!j.won, docSentAt: () => null, jobLogEntries: () => [],
                isAgreementSigned: () => false, isJobFunded: () => false, depositPaidTotal: () => 0, stagePaidTotal: () => 0,
@@ -518,7 +531,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', '_planRooms', '_planRoomStatus',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
@@ -526,7 +539,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
             // The open job body (2026-09-20): stage cards on a thread, marked off the stage the job is in.
             'planStageCard', 'planStageState', 'planCurrentStage'],
-      vars: ['SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
+      vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders'],
       stubs: {
         document: dom, isFormalDoc: () => false,
@@ -646,9 +659,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!w.INV_WORK_FLAGS[0].test({ objectName: 'Sideboard' }), 'and drops off once named');
 
     const rowCtx = sandbox({
-      fns: ['_renderInvRow', '_renderInvPanel', '_invDetailRefs',
+      fns: ['_renderInvRow', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed'],
-      vars: ['INVENTORY_COLUMNS', '_invOpen', '_invPick'],
+      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick'],
       stubs: { _invInput: () => '', _invThumbHTML: (j, r, px) => '<div data-thumb-id="' + (r.driveFileId || '') + '" style="w:' + px + '"></div>',
                _invItemNo: () => '3', _invRoomName: () => 'Kitchen', invIsFirearm: () => false, invReleaseBlocked: () => false,
                invAwaitingAppraisal: () => false, custodyEvents: () => [], _invPanelCols: () => [], INV_PANEL_SECTIONS: [],

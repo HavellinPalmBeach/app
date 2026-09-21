@@ -12,7 +12,7 @@
 const { sandbox } = require('./harness');
 
 const FNS = [
-  'invCatMeta', 'invIsIntrinsic', 'invNeedsAppraisal', 'invAppraisalThreshold',
+  'invCatMeta', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'invAppraisalThreshold',
   '_gateYes', '_gate706', 'gateDispute', 'isDecedentJob',
   'invMAIVDefaultCat', 'invIsMAIV', 'invMAIVCategory', 'maivAggregate',
   'maivFilingApplies', 'maivStatement', 'maivStatement_', '_maivWorklistBlock',

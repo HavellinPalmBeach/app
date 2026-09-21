@@ -26,10 +26,11 @@ const noComments = (s) => String(s)
 
 // The chain behind invAwaitingAppraisal is lifted for real rather than stubbed. Stubbing the
 // predicate would be testing the stub — the lesson this project paid for on `_cePhases`.
-const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', '_invHasAppraisal',
+const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
                   '_jobAppraisers', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
                   'invIsIntrinsic', 'invCatMeta', '_invJob'];
-const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'];
+const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
+                   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler' };
@@ -65,7 +66,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and the client workbook's rollup can all key on it and mean the same thing.
     eq(s.INV_DISPOSITIONS.indexOf('Appraise'), -1,
        '⚠ Appraise is NOT a disposition — every value here is a terminal destination');
-    eq(s.INV_DISPOSITIONS.length, 7, 'the seven destinations are unchanged');
+    // ⚠ WAS `length === 7` AND THAT WAS A COUNT, NOT A REQUIREMENT. Restated 2026-09-21 when
+    // Move and Distribute landed: the rule is that every value is a TERMINAL DESTINATION, which
+    // is what makes Appraise inadmissible above and what the grouping check below rests on.
+    // ⚠ AND THE FIRST RESTATEMENT PINNED ANOTHER COUNT, which is the same mistake one round later.
+    // The requirement is the SET relationship, checked below and against the grouping — a length
+    // is only here to catch a silent truncation, so it is stated against the group order rather
+    // than against a literal that will break again on the next addition.
+    eq(s.INV_DISPOSITIONS.length, s.INV_GROUP_ORDER.length - 1,
+       'every destination has a place in the grouping and vice versa — the undecided bucket is the extra');
+    ok(s.INV_DISPOSITIONS.indexOf('Move') >= 0, 'Move — goes with the client to the new home');
+    ok(s.INV_DISPOSITIONS.indexOf('Distribute') >= 0, 'Distribute — a named person takes it');
+    eq(s.INV_DISPOSITIONS.indexOf('Gift'), -1,
+       '⚠ NOT Gift — on an estate a bequest is a distribution under the will, not a gift');
+    eq(s.INV_DISPOSITIONS.slice().sort().join(','), s.INV_DISPOSITIONS.join(','),
+       'and the list stays alphabetical, the existing convention');
     s.INV_RELEASE_DISPOSITIONS.forEach((d) => {
       ok(s.INV_DISPOSITIONS.indexOf(d) >= 0, d + ' is a real disposition');
     });
@@ -154,7 +169,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // field. The camera overlay carries the five piles and the ⚑ Appraise toggle instead.
     const dom = domStub({});
     const s = sandbox({
-      fns: ['_fieldCamPaint', '_getPhotoRef', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail'],
+      fns: ['_fieldCamPaint', '_getPhotoRef', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail',
+            'fieldDispChips', '_jobHasDestination', '_invJob'],
       vars: ['_fieldCam', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'FIELD_CAM_MODES'],
       stubs: { document: dom, _photoRefs: { 1: [] } },
     });
@@ -171,8 +187,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ⚠ A TOGGLE, NOT A SIXTH CHIP — pressing it must not deselect the pile, because the two
     // answers are independent. That is the whole "two avenues" point.
-    s.FIELD_DISPOSITIONS.forEach((d) => has(ui(), "fieldCamSetDisp('" + d.key + "')", d.label + ' is a chip'));
+    // ⚠ WAS `FIELD_DISPOSITIONS.forEach(...)` AND THAT BROKE CORRECTLY when Move arrived, because
+    // Move is withheld where the job has no new home to move to. The requirement is not "every
+    // entry renders" — it is "every entry THIS JOB OFFERS renders, and nothing else does".
+    s.fieldDispChips(s._invJob(1)).forEach((d) => has(ui(), "fieldCamSetDisp('" + d.key + "')", d.label + ' is a chip'));
     lacks(ui(), "fieldCamSetDisp('appraise')", '⚠ appraise is not a chip');
+    // The converse, and it is the load-bearing half: offered on a Transition, withheld elsewhere.
+    lacks(ui(), "fieldCamSetDisp('move')", '⚠ no New home chip — this job has nowhere to move to');
     s.fieldCamToggleAppr();
     eq(s._fieldCam.appr, true, 'one press sets it');
     has(ui(), 'fc-tog on" onclick="fieldCamToggleAppr()"', '⚠ painted lit — the same bronze the "⚑ appraise" badge wears on the Inventory tab');

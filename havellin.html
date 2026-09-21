@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 1:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 1:47pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5525,6 +5525,33 @@ function isDecedentJob(job, svcKey) {
   return !!DECEDENT_SERVICES[svc];
 }
 
+// ─── THE TWO AXES OF THE ITEM RECORD ──────────────────────────────────────
+// ⚠⚠ UNTIL 2026-09-21 "does this job keep a room-by-room item record" AND "must that record
+// satisfy a court and a fiduciary" WERE ONE QUESTION, ANSWERED BY THE SERVICE TYPE. They are
+// two, and collapsing them is what put a Treas. Reg. §20.2031-6(b) aggregate and a §733.604
+// court schedule in front of a living downsizing client. Anthony, opening the record to every
+// job type: "it won't be full estate inventory work, with pricing estimates for all items, but
+// it will be an inventory of what stays and goes and how it goes … the time cost of the
+// photography is inconsequential … it will keep us on track and honest with what goes to
+// donation, appraisers, auction houses, etc. and will be a good record for the family of where
+// stuff winds up and with whom."
+//
+//   AXIS 1 — is there an item record at all?  ALL SIX LABOUR SERVICES. Free, unpriced,
+//            identification only. There is no predicate for it because there is no gate: the
+//            room grid, the camera and the manifest have never been service-gated.
+//   AXIS 2 — must it satisfy a COURT and a FIDUCIARY? invFiduciaryMode. Date-of-death FMV, the
+//            §733.604 schedule, written release authority, MAIV, the asset track, chain of
+//            custody. This is what the `document` step PRICES, which is why it is decedent-only.
+//
+// ⚠ IT IS AN ALIAS OF isDecedentJob TODAY AND MUST NOT BE COLLAPSED INTO IT. That one answers
+// WHO WE ARE WRITING TO — the voice of the estimate and which agreement form the job takes —
+// and this one answers WHAT STANDARD THE RECORD IS HELD TO. They coincide now; the first time a
+// living client wants a court-grade inventory (a trust officer's client, a pre-nuptial schedule)
+// they will not, and every read site would have to be sorted out under time pressure. Two names
+// now is what makes that a one-line change later. Same reasoning as svcHasDocStep vs
+// isDecedentJob, which this file records for the same pair of questions one level up.
+function invFiduciaryMode(job) { return isDecedentJob(job, job && (job.svc || job.serviceType)); }
+
 // ─── SERVICE FAMILIES — what a job may be RECLASSIFIED to on the walkthrough ───
 // A job is entered at intake on the best information a phone call gives you, and the
 // walkthrough is where that gets tested. A Home Prep client who turns out to need the
@@ -9115,13 +9142,24 @@ function _cePhases(e, job) {
   // ONCE, in the stage, that valuation is counsel's — the standing rule against explaining
   // an absence yields here because this absence shifts a responsibility, and a reader who
   // skipped the line would assume Havellin carries it.
+  // ⚠⚠ `!isDeceased && hasDoc` IS UNREACHABLE AND IS LEFT AS THE TRAP'S ONLY MARKER. hasDoc comes
+  // from estimateDocScope, which answers 'none' for every service with no `document` step — so on
+  // downsizing, downsizing_move and home_cleanout it is false whatever any pin says. The obvious
+  // way to make a living job "have an inventory" is to give one of them a document step, and
+  // MEASURED BY FORCING IT the result disagrees THREE ways: this title says "Documentation &
+  // Inventory", the body chain below tests `isDownsizing` FIRST and returns copy that never
+  // mentions a record, and the records list promises "an itemised inventory … and estimated
+  // value" — the valuation Anthony explicitly ruled out, on Exhibit A to a signed agreement.
+  // The living job's record is named in the BODY and in the records list instead (2026-09-21).
+  // Do not "tidy" this arm away: deleting it removes the only sign the trap is there.
   var sortTitle = !isDeceased ? (hasDoc ? 'Sorting, Documentation &amp; Inventory' : 'Sorting &amp; Decisions')
                 : docScope === 'full' ? 'Sorting, Documentation &amp; Inventory'
                 : captureOnly ? 'Sorting, Photography &amp; Listing'
                 : 'Sorting &amp; Set-Aside';
   var sortBody, sortNeed, sortDone;
   if (isDownsizing) {
-    sortBody = 'We work alongside you, one room at a time, in the same order the estimate lists them. Every item is sorted into keep, sell, donate, or dispose — and nothing is decided for you. Property Specialists do the handling and the lifting so you are making decisions rather than moving furniture, and your Transition Concierge keeps the plan moving room to room.';
+    sortBody = 'We work alongside you, one room at a time, in the same order the estimate lists them. Every item is sorted into what you keep, what comes with you, what goes to a particular person, what is sold or donated, and what is disposed of — and nothing is decided for you. Property Specialists do the handling and the lifting so you are making decisions rather than moving furniture, and your Transition Concierge keeps the plan moving room to room.'
+      + ' <strong>Each piece is photographed and logged as it is sorted</strong> — what it is, the room it came from, where it is going and, where something goes to a named person, who received it. You are left with a record of where everything went rather than a memory of it.';
     sortNeed = 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.';
     sortDone = 'A room is complete when every item in it has been routed and the keep list is confirmed with you in writing.';
   } else if (isDeceased && docScope === 'full') {
@@ -9139,7 +9177,8 @@ function _cePhases(e, job) {
     sortNeed = 'Counsel\'s inventory or schedule of the contents, the list of any items designated to a named person, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = 'A room is complete when every item in it is sorted and staged and specific bequests are set aside, checked against counsel\'s schedule.';
   } else {
-    sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting contents and routing each item to where it is going. Anything that looks like it carries value is pulled aside and reviewed with you before the room is cleared, so nothing of consequence leaves the house by accident.';
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting contents and routing each item to where it is going. Anything that looks like it carries value is pulled aside and reviewed with you before the room is cleared, so nothing of consequence leaves the house by accident.'
+      + ' <strong>Each piece is photographed and logged as it is sorted</strong> — what it is, the room it came from, where it went and who received it — so what left the property is a record rather than a recollection.';
     sortNeed = 'A decision on anything you want kept, and a contact who can answer a question the same day. You do not need to be here for the rest — anything of consequence is set aside and reviewed with you before the room is cleared.';
     sortDone = 'A room is complete when every item in it has been routed and anything set aside has been reviewed with you.';
   }
@@ -9226,6 +9265,13 @@ function _cePhases(e, job) {
   // What the client is left holding. This used to be a separate section after the
   // stages; it belongs here, because this is the stage at which they receive it.
   var records = ['Photographs of every room, before and after'];
+  // ⚠ EVERY LABOUR JOB PRODUCES AN ITEM RECORD SINCE 2026-09-21 and the client's own document
+  // never said so. ⚠⚠ IT DELIBERATELY DOES NOT PROMISE A VALUE. Anthony: "it won't be full
+  // estate inventory work, with pricing estimates for all items … it will be an inventory of what
+  // stays and goes and how it goes." The estate line below promises an ESTIMATED VALUE on every
+  // item; saying that here would sell the valuation he ruled out, on Exhibit A to a signed
+  // agreement. The two lines are separate for exactly that reason — do not merge them.
+  if (!isDeceased) records.push('A record of the contents — every item photographed and logged with the room it came from, where it went, and who received it');
   if (docScope === 'full') records.push('An itemised inventory of the contents of consequence — description, location, condition, and estimated value');
   else if (captureOnly) records.push('A photographed, room-by-room list of the contents of consequence — description, location and condition, for counsel to value');
   if (hasColl) records.push('A disposition record for every collection: where it went, through whom, and for what');
@@ -9301,8 +9347,8 @@ function _ceGroupedSpaces(rooms) {
 function proposedPlanRow(e) {
   var narratives = {
     downsizing: 'We work alongside you room by room, editing what comes with you to the next home — sorting every item into keep, sell, donate, and dispose, then packing and organizing what stays. Your Transition Concierge directs the plan and manages every vendor while Property Specialists handle the hands-on sorting, packing, and heavy lifting; the hours below reflect that careful, decision-by-decision pace.',
-    downsizing_move: 'We work alongside you room by room — sorting into keep, sell, donate, and dispose, then packing what stays for the move. On move day your Transition Concierge supervises the crew at both the current and new home and directs placement room by room, so you arrive to an organized home rather than a wall of boxes.',
-    home_cleanout: 'We clear the home in an orderly sequence, sorting contents room by room and routing everything to the right destination — haul-away, donation, consignment or sale, and secure shredding. Anything of value is set aside and reviewed with you before the home is emptied, and your Transition Concierge coordinates every vendor and pickup along the way.',
+    downsizing_move: 'We work alongside you room by room — sorting into what you keep, what comes with you, what goes to family, and what is sold, donated or disposed of, with every item photographed and logged against where it went — then packing what comes with you for the move. On move day your Transition Concierge supervises the crew at both the current and new home and directs placement room by room, so you arrive to an organized home rather than a wall of boxes.',
+    home_cleanout: 'We clear the home in an orderly sequence, sorting contents room by room and routing everything to the right destination — haul-away, donation, consignment or sale, and secure shredding — with every item photographed and logged against where it went. Anything of value is set aside and reviewed with you before the home is emptied, and your Transition Concierge coordinates every vendor and pickup along the way.',
     cleanout: 'We settle the estate room by room — inventorying contents, documenting and setting aside items of value, and routing the remainder to sale, donation, or disposal. High-value items are photographed and tracked under chain of custody, and your Transition Concierge keeps the representative and any other heirs informed throughout.',
     probate: 'We settle the estate room by room under the documentation standards probate requires — a full inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records the court and counsel may request and keeps all parties informed.',
     contested_probate: 'We settle the estate room by room under heightened documentation standards — a full inventory, photographs, and chain-of-custody tracking for every item of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge keeps meticulous, neutral records and takes direction only from the authorized representative.',
@@ -18443,6 +18489,17 @@ function invIsIntrinsic(cat){ return !!invCatMeta(cat).intrinsic; }
 function invNeedsAppraisal(ref, job){
   if (!ref) return false;
   if (ref.needsAppr) return true;            // explicit flag (e.g. an imported collector vehicle)
+  // ⚠⚠ ON A LIVING JOB THE FLAG IS THE EXPLICIT TICK AND NOTHING ELSE (2026-09-21). The
+  // automatic arm below fires on an intrinsic category with NO VALUE ENTERED — and a living job
+  // never enters values, by Anthony's decision, so it would fire on every Art, Antique, Jewelry,
+  // Silver, Rug, Collectible, Firearm, Wine and Instrument row FOREVER, driving the work chip,
+  // the row badge, the guardrail panel and a release caution that can never be cleared. A count
+  // that cannot go down is what trains people to stop reading the strip — and this strip also
+  // carries the firearms row. The tick still works, and on a living job it means a CHANNEL
+  // (this is going out to a specialist, an auction house or a dealer), not a valuation.
+  // ⚠ THE `job &&` GUARD IS LOAD-BEARING: with no job the estate behaviour must survive, which
+  // is also the safe direction — the same rule invAwaitingAppraisal states two functions down.
+  if (job && !invFiduciaryMode(job)) return false;
   if (!invIsIntrinsic(ref.category)) return false;
   var v = parseFloat(ref.fmv);
   return isNaN(v) || v >= invAppraisalThreshold(job);
@@ -18485,7 +18542,63 @@ function invAwaitingAppraisal(ref, jobId) {
 // somewhere, and INV_GROUP_ORDER, the bulk bar, the ledger and the client workbook's FMV-by-
 // disposition rollup all key on this list. CLAUDE.md records the app's and the backend's copies
 // of it drifting 5-against-7 once already.
-var INV_DISPOSITIONS = ['Auction','Consign','Donate','Hold','Junk','Keep','Sell'];
+//
+// ⚠⚠ `Move` AND `Distribute` ARE THE TWO DESTINATIONS THE LIST COULD NOT EXPRESS (2026-09-21).
+// Anthony named four buckets — "what's going to the new home, what's going to be donated,
+// what's going to be sent to the kids, what's going to be auctioned" — and two of them had no
+// value. `Keep` was carrying both: on a Home Transition it is ambiguous between "stays here"
+// and "on the truck", and "sent to the kids" was false as Keep twice over (the client is not
+// keeping it, and it IS leaving the property).
+//   Move       goes with the client — the new home, storage, a second residence. NOT a release:
+//              it is the client's own property arriving at the client's own address, so it is
+//              deliberately absent from INV_RELEASE_DISPOSITIONS.
+//   Distribute a named person takes it permanently. IS a release.
+// ⚠ `Distribute` AND NOT `Gift`, AND THE WORD IS LOAD-BEARING ACROSS THE LIVING/DECEDENT LINE.
+// One stored string has to be true on both halves of the catalogue — the workbook rollup, the
+// group order and the release test are one list, and this file records what two copies cost. On
+// an estate a specific bequest is a DISTRIBUTION UNDER THE WILL and calling it a gift is wrong
+// in substance (it is not gratuitous, and gift and estate transfers differ for basis and for
+// Form 709 against Form 706); on a living job "distributed to Marie" reads correctly too.
+// ⚠⚠ ADDING Distribute FIXED A LIVE DEFECT ON PROBATE, which is how it was found. With no value
+// meaning "given to a named person", a specific bequest released to its beneficiary had nothing
+// to set — Keep is not a release, Hold is not an action, and Sell/Donate/Auction/Consign/Junk
+// are all false — so _invAwaitingApproval never returned it and the Release Approval Request
+// never printed it. The one act that document exists to authorise was the one act it could not
+// ask for. flagBequest only ever painted a caution on rows that reached the request for some
+// OTHER reason. Same shape as the 2026-09-11 "the flags reached no printed document" find.
+var INV_DISPOSITIONS = ['Auction','Consign','Distribute','Donate','Hold','Junk','Keep','Move','Sell'];
+
+// A job whose contents have somewhere of the client's own to go. `destAddr` is the recorded new
+// address; the `downsizing_move` arm is load-bearing because that address is captured at intake
+// and is frequently still blank on the walkthrough, when the chip is first needed.
+// ⚠ Move is OFFERED off this and never STORED off it: a row that already carries Move keeps it
+// (see _invDispOptions), or re-typing a job would silently clobber a destination somebody set.
+function _jobHasDestination(job) {
+  return !!(job && (String(job.destAddr || '').trim() || (job.svc || job.serviceType) === 'downsizing_move'));
+}
+// ONE builder, read by the desk select AND the bulk menu. Two copies is how the row you can set
+// and the row you can bulk-set come to offer different answers. The current value is always
+// forced in, so a value already stored is never silently dropped by a filter.
+function _invDispOptions(job, current) {
+  var out = INV_DISPOSITIONS.filter(function(d){ return d !== 'Move' || _jobHasDestination(job); });
+  if (current && out.indexOf(current) < 0) out.push(current);
+  return out;
+}
+function _jobDestLabel(job) {
+  if (!job) return '';
+  return [job.destAddr, job.destCity ? job.destCity + ', FL' : ''].filter(Boolean).join(', ');
+}
+// ⚠ WHO ENDED UP WITH IT — DERIVED, NEVER WRITTEN BACK ONTO THE ROW. A Move row's destination
+// is already on the job record, so typing it into `channel` per item is 140 keystrokes for a
+// fact the app knows. Defaulting it by WRITING job.destAddr onto ref.channel would be worse:
+// invTransportBlocked's `dealer` arm is satisfied by any non-empty channel, so every firearm on
+// the job would silently read as having a named receiving dealer.
+function _invRecipient(job, ref) {
+  var c = String((ref && ref.channel) || '').trim();
+  if (c) return c;
+  if (ref && ref.disposition === 'Move') return _jobDestLabel(job);
+  return '';
+}
 
 // ── Marked artistic or intrinsic value (Treas. Reg. §20.2031-6(b)) ────────────
 // THE TEST IS AN AGGREGATE, AND THAT IS THE WHOLE POINT OF THIS BLOCK. The app already
@@ -18718,9 +18831,9 @@ var INVENTORY_COLUMNS = [
   // in `_invColEditable`; it is simply blank on the objects that do not carry one.
   {key:'serial',       header:'Serial Number',       kind:'manage',  edit:'text',      group:'val'},
   {key:'fmv',          header:'Estimated FMV',       kind:'manage',  edit:'currency',  group:'val'},
-  {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date',      group:'val'},
-  {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select',    group:'val'},
-  {key:'valNote',      header:'Valuation Basis / Comps', kind:'manage', edit:'text',   group:'val'},
+  {key:'valDate',      header:'Valuation Date',      kind:'manage',  edit:'date',      group:'val', fid:true},
+  {key:'valSource',    header:'Valuation Source',    kind:'manage',  edit:'select',    group:'val', fid:true},
+  {key:'valNote',      header:'Valuation Basis / Comps', kind:'manage', edit:'text',   group:'val', fid:true},
   // ⚠ UNTIL 2026-09-11 `needsAppr` HAD EXACTLY ONE WRITER IN THE WHOLE FILE — the collector-
   // vehicle import — so there was no way for a PERSON to say "this needs an appraisal" at all.
   // The automatic rule (intrinsic category, no value or over the threshold) covers art, jewelry
@@ -18729,13 +18842,13 @@ var INVENTORY_COLUMNS = [
   // field half of it.
   {key:'needsAppr',    header:'Needs Appraisal',     kind:'manage',  edit:'flag',      group:'val'},
   {key:'apprDoc',      header:'Appraisal Doc',       kind:'manage',  edit:'text',      group:'val'},
-  {key:'flagMAIV',     header:'MAIV §20.2031-6',     kind:'manage',  edit:'maivSelect',    group:'flags'},
-  {key:'maivCat',      header:'MAIV Class',          kind:'manage',  edit:'maivCatSelect', group:'flags'},
-  {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage',  edit:'flag',      group:'flags'},
+  {key:'flagMAIV',     header:'MAIV §20.2031-6',     kind:'manage',  edit:'maivSelect',    group:'flags', fid:true},
+  {key:'maivCat',      header:'MAIV Class',          kind:'manage',  edit:'maivCatSelect', group:'flags', fid:true},
+  {key:'flagExempt',   header:'Exempt §732.402',     kind:'manage',  edit:'flag',      group:'flags', fid:true},
   {key:'flagBequest',  header:'Specific Bequest',    kind:'manage',  edit:'flag',      group:'flags'},
   {key:'flagDisputed', header:'Disputed',            kind:'manage',  edit:'flag',      group:'flags'},
   {key:'flagNFA',      header:'NFA Item',            kind:'manage',  edit:'flag',      group:'flags'},
-  {key:'assetTrack',   header:'Asset Track',         kind:'manage',  edit:'trackSelect', group:'flags'},
+  {key:'assetTrack',   header:'Asset Track',         kind:'manage',  edit:'trackSelect', group:'flags', fid:true},
   {key:'disposition',  header:'Disposition',         kind:'capture', edit:'dispSelect', group:'disp'},
   {key:'channel',      header:'Channel / Recipient', kind:'manage',  edit:'text',      group:'disp'},
   {key:'authBy',       header:'Authorized By',       kind:'manage',  edit:'text',      group:'disp'},
@@ -18750,9 +18863,20 @@ var INVENTORY_COLUMNS = [
 // buttons that swapped which slice of a 29-column spreadsheet was on screen — a control
 // that existed only to work around the width of the thing below it. The table is gone;
 // the groups are now the item panel's sections (see _invPanelSection).
-function _invPanelCols() {
+// ⚠⚠ `fid` COLUMNS ARE AXIS 2 AND COME OFF A LIVING JOB ENTIRELY (2026-09-21). Every one of
+// them is court-and-fiduciary apparatus describing an estate that does not exist: the asset
+// track defaults to 'Probate' on a living owner's sofa, §732.402 is the surviving family's
+// allowance against a PROBATE estate, §20.2031-6 governs what is filed with a federal estate
+// tax return, and the three valuation-support fields exist to show where a date-of-death figure
+// came from. Anthony ruled valuation out of living jobs, so they are three boxes nobody fills
+// against values nobody enters. ⚠ THE COLUMN IS DROPPED, THE DATA IS NEVER TOUCHED — a job can
+// only be re-typed WITHIN its family (see svcFamilyOptions), so no living job can become an
+// estate and find its track missing, and anything stored stays stored.
+function _invPanelCols(job) {
+  var fid = invFiduciaryMode(job);
   return INVENTORY_COLUMNS.filter(function(c) {
     if (c.hideInTab) return false;
+    if (c.fid && !fid) return false;
     // seq is the row's identity, fmv and disposition are edited on the row itself. Two
     // inputs bound to one value is how a panel and a row silently disagree.
     return c.key !== 'seq' && c.key !== 'fmv' && c.key !== 'disposition';
@@ -19141,7 +19265,12 @@ function _invTouch(ref) { if (ref) ref.updatedAt = Date.now(); return ref; }
 // ⚠ `fieldNote` AND `groupId` ARE ON IT (2026-09-19) for the same reason `serial` is: both are
 // taken standing in the room — what the concierge said over the shot, and which shot it is a
 // detail of — and neither can be re-derived at the desk once the crew has moved on.
-var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc', 'serial',
+// ⚠ `channel` IS STICKY AND WAS NOT UNTIL 2026-09-21, WHICH WAS A LIVE DEFECT ON ESTATE WORK.
+// Every one of its neighbours in the same column group is on this list — authBy, approvalDate,
+// dispDate, receiptDoc — so a two-device merge kept WHEN the sideboard left and the receipt
+// number against it and lost WHO TOOK IT. It is the only field in the app that records that,
+// and once Distribute exists it is the whole of "with whom".
+var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc', 'serial', 'channel',
                          'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId',
                          // ⚠ `derivedFrom` IS STICKY BECAUSE LOSING IT TURNS A LINE INTO A PHANTOM
                          // PHOTOGRAPH. It is set once, at the split, and never cleared through the
@@ -19398,33 +19527,41 @@ function _renderInventorySummary(job, items) {
       + '<span style="color:var(--gray);min-width:0;flex:1 1 auto;">' + l + '</span>'
       + '<span style="font-weight:600;text-align:right;flex:0 0 auto;max-width:62%;">' + v + '</span></div>';
   };
+  // ⚠ FIVE CONSECUTIVE ESTATE ROWS ON A LIVING OWNER'S SUMMARY, measured: "Date of Death —",
+  // a Valuation Basis select, "Value as of — (date of death)" with a §2032 alternate-valuation
+  // checkbox, "Letters Issued —" and "§733.604 Inventory Deadline —". Each is a control for a
+  // proceeding that does not exist, and one of them is an editable dropdown.
+  var _fid = invFiduciaryMode(job);
   var header = '<div>'
-    + hdrRow('Client / Estate', esc(job.name || '—'))
+    + hdrRow(_fid ? 'Client / Estate' : 'Client', esc(job.name || '—'))
     + hdrRow('Job ID', esc(job.hvlId || '—'))
     + hdrRow('Property Address', esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—'))
+    + (!_fid ? '' : ''
     + hdrRow('Date of Death', dt(job.deathDate))
     + hdrRow('Valuation Basis', '<select onchange="setValBasis(' + job.id + ',this.value)" style="font-size:11px;padding:2px 4px;">' + INV_VAL_BASES.map(function(b){ return '<option' + (b === resolveValBasis(job) ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>')
     + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>')
     + hdrRow('Letters Issued', dt(job.lettersDate))
-    + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))
+    + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline)))
     + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
     + hdrRow('Last Updated', _invDateTime(Date.now()))
     + '</div>';
   var maiv = maivAggregate(items);
   var totals = '<div>'
     + hdrRow('Total Items', String(items.length))
-    + hdrRow('Total Estimated FMV', _money(totalFMV) || '$0')
-    + hdrRow('Items Awaiting Valuation', String(awaiting))
-    + hdrRow('Needs Specialist Appraisal', String(nAppr))
-    + hdrRow('MAIV Articles (§20.2031-6(b))', maiv.count
+    // ⚠ "Items Awaiting Valuation" reads every row on a living job forever, because nobody is
+    // entering values — a count that cannot go down trains people to stop reading the block.
+    + (_fid ? hdrRow('Total Estimated FMV', _money(totalFMV) || '$0') : '')
+    + (_fid ? hdrRow('Items Awaiting Valuation', String(awaiting)) : '')
+    + hdrRow(_fid ? 'Needs Specialist Appraisal' : 'Going to a specialist', String(nAppr))
+    + (_fid ? hdrRow('MAIV Articles (§20.2031-6(b))', maiv.count
         ? String(maiv.count) + ' &middot; ' + (maiv.settled ? '' : 'at least ') + _invMoney(maiv.total)
-        : '0')
+        : '0') : '')
     + hdrRow('Disputed / Hold', String(nDisp))
-    + hdrRow('Specific Bequests', String(nBequest))
-    + hdrRow('Exempt §732.402', String(nExempt))
+    + hdrRow(_fid ? 'Specific Bequests' : 'Promised to someone', String(nBequest))
+    + (_fid ? hdrRow('Exempt §732.402', String(nExempt)) : '')
     + hdrRow('Gross Proceeds', _money(gross) || '$0')
     + hdrRow('Fees', _money(fees) || '$0')
-    + hdrRow('Net to Estate', _money(gross - fees) || '$0')
+    + hdrRow(_fid ? 'Net to Estate' : 'Net received', _money(gross - fees) || '$0')
     + '</div>';
   var catRows = INV_CATEGORIES.map(function(c){
     return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td><td style="text-align:right;">' + (_money(catAgg[c].fmv) || '$0') + '</td></tr>';
@@ -19436,11 +19573,13 @@ function _renderInventorySummary(job, items) {
     return '<tr><td>' + esc(d) + '</td><td style="text-align:right;">' + (dispAgg[d] || 0) + '</td></tr>';
   }).join('');
   var dispTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Disposition</th><th style="text-align:right;">Count</th></tr></thead><tbody>' + dispRows + '</tbody></table>';
-  return '<div class="card" style="margin-bottom:1rem;"><div class="sec">Estate Inventory — Summary</div>'
+  return '<div class="card" style="margin-bottom:1rem;"><div class="sec">' + (_fid ? 'Estate Inventory' : 'Inventory') + ' — Summary</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:14px;">' + header + totals + '</div>'
     + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;">' + catTable + dispTable + '</div>'
-    + _maivSummaryNotice(job, maiv)
-    + '<div style="font-size:10px;color:var(--gray);margin-top:10px;font-style:italic;">Tangible personal property only. The §733.604 court inventory (real property, accounts, securities) is the PR’s filing, prepared with counsel.</div>'
+    + (_fid ? _maivSummaryNotice(job, maiv) : '')
+    // The footer's whole subject is what is NOT in this schedule because counsel files it.
+    // There is no living-client counterpart, so it simply goes rather than being reworded.
+    + (_fid ? '<div style="font-size:10px;color:var(--gray);margin-top:10px;font-style:italic;">Tangible personal property only. The §733.604 court inventory (real property, accounts, securities) is the PR’s filing, prepared with counsel.</div>' : '')
     + '</div>';
 }
 
@@ -19547,7 +19686,9 @@ function _invInput(jobId, ref, col, job) {
       return '<select ' + on + ' ' + base + '>' + o + '</select>';
     }
     case 'dispSelect': {
-      var od = '<option value="">—</option>' + INV_DISPOSITIONS.map(function(x){ return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      // _invDispOptions, not INV_DISPOSITIONS: withholds Move where there is no destination and
+      // ALWAYS forces the row's stored value in, so re-typing a job cannot silently clobber one.
+      var od = '<option value="">—</option>' + _invDispOptions(job, v).map(function(x){ return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
       return '<select ' + on + ' ' + base + '>' + od + '</select>';
     }
     case 'catSelect': {
@@ -19638,7 +19779,7 @@ function _invEdit(jobId, stableId, key, el) {
   }
   // FMV / category / the flag itself can move an item in or out of the appraisal guardrail.
   if (key === 'fmv' || key === 'category' || key === 'needsAppr') _invRefreshGuardrail(jobId);
-  // Every one of the six counts is derived from a field editable on this row, so the strip is
+  // Every one of the counts is derived from a field editable on this row, so the strip is
   // repainted whatever changed rather than on a list of keys that would fall out of step with
   // INV_WORK_FLAGS the first time a seventh count is added.
   _invRefreshFlagStrip(jobId);
@@ -19731,6 +19872,13 @@ function invReleaseBlocked(ref) { return invIsFirearm(ref) && !invFirearmAuthori
 function invTransportBlocked(ref) {
   if (!invIsFirearm(ref)) return '';
   if (ref.flagNFA) return 'nfa';
+  // ⚠⚠ A FIREARM REACHES A BENEFICIARY THROUGH AN FFL, NEVER OUT OF OUR VAN, and this arm sits
+  // ABOVE `authority` because no authority can cure it — a representative cannot authorise an
+  // unlicensed transfer to a person any more than they can authorise an NFA one. It exists
+  // because `dealer` below is satisfied by ANY non-empty channel: the moment that field started
+  // routinely holding a recipient's name, a firearm marked Distribute would have read as CLEARED
+  // TO CARRY with "Marie Delgado (daughter)" standing in for a licensed dealer.
+  if (ref.disposition === 'Distribute') return 'beneficiary';
   if (!invFirearmAuthorized(ref)) return 'authority';
   if (!String(ref.serial || '').trim()) return 'serial';
   if (!String(ref.channel || '').trim()) return 'dealer';
@@ -19740,6 +19888,7 @@ function invTransportBlocked(ref) {
 // own sentence is how the screen and the gate come to disagree about what is wrong.
 var INV_TRANSPORT_REASONS = {
   nfa:       'NFA item — never transported by Havellin. It transfers from the estate to the dealer on ATF paperwork.',
+  beneficiary: 'Going to a named person — never handed over directly. The transfer runs through a licensed dealer, who does the background check and the paperwork. Route it to the dealer and record them here.',
   authority: 'No written authority on file — record Authorized By and Approval Date.',
   serial:    'No serial number recorded — the authorisation names each firearm by serial.',
   dealer:    'No dealer named — record the receiving dealer in Channel / Recipient.'
@@ -20232,7 +20381,12 @@ function exportInventoryCSV(jobId) {
 // property. Verbal approval is never accepted."  The app recorded the RESULT of an
 // approval (Authorized By + Approval Date) and had nothing that produced the REQUEST.
 // Keep and Hold are excluded by definition: nothing is leaving.
-var INV_RELEASE_DISPOSITIONS = ['Auction','Consign','Sell','Donate','Junk'];
+// ⚠ `Distribute` IS A RELEASE AND `Move` IS NOT, and the line between them is whose address
+// the property is going to. A distribution leaves permanently to a third party — that is the
+// act this document exists to authorise, and until 2026-09-21 it was the one act it could not
+// ask for. A Move is the client's own property arriving at the client's own new home; asking
+// them to authorise releasing it to themselves is ceremony that would bury the real lines.
+var INV_RELEASE_DISPOSITIONS = ['Auction','Consign','Distribute','Sell','Donate','Junk'];
 function _invAwaitingApproval(jobId) {
   return _jobInvRefs(jobId).filter(function(r){
     return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !r.approvalDate;
@@ -20308,7 +20462,10 @@ var INV_RELEASE_CAUTIONS = [
   // It sorts LAST because the two above are questions about AUTHORITY — whether this is the
   // estate's property to sell at all — and this one is about PRICE, which only arises once the
   // answer to that is yes.
-  { key: 'needsAppraisal', badge: 'NOT YET APPRAISED', tone: '#8a5a1e',
+  // fid: the body below is a valuation-and-federal-return caution end to end. On a living job
+  // invNeedsAppraisal already reduces to the explicit tick, so this would rarely fire — but when
+  // it did it would tell a downsizing client their property is "reported under oath".
+  { key: 'needsAppraisal', fid: true, badge: 'NOT YET APPRAISED', tone: '#8a5a1e',
     test: function(r, jobId){ return invAwaitingAppraisal(r, jobId); },
     head: 'Property on this request has not been valued yet',
     body: 'These lines are flagged for a specialist appraisal and no appraiser has been engaged '
@@ -20326,7 +20483,14 @@ var INV_RELEASE_CAUTIONS = [
 // its appraiser roster, and inventing either would report the wrong answer confidently.
 function invReleaseCautions(ref, jobId) {
   if (!ref) return [];
-  return INV_RELEASE_CAUTIONS.filter(function(c){ return !!c.test(ref, jobId); });
+  // ⚠ A `fid` CAUTION IS ABOUT A FIDUCIARY STANDARD, NOT ABOUT THE OBJECT. The not-yet-appraised
+  // one says the estate would have "no independent record of what the property was worth when it
+  // left" and that on a federal return "that figure is reported under oath" — neither sentence is
+  // true of a living owner who watched the piece go. Bequest and dispute are NOT fid: a promised
+  // piece and a family argument are both ordinary on a downsizing, and both are reworded rather
+  // than suppressed, because they are exactly what Anthony asked the record to keep honest.
+  var fid = invFiduciaryMode(_invJob(jobId));
+  return INV_RELEASE_CAUTIONS.filter(function(c){ return (fid || !c.fid) && !!c.test(ref, jobId); });
 }
 // The badge that rides the item's own row. A reader working down a list initialling lines has
 // to meet this IN the line — a note under the table is read after the signature it needed to
@@ -20368,6 +20532,12 @@ function printApprovalRequest(jobId, selectedOnly) {
   var wanted = {};
   items.forEach(function(r){ wanted[r.stableId] = 1; });
   items = _invAssignItemNos(jobId).filter(function(r){ return wanted[r.stableId]; });
+  var _fid = invFiduciaryMode(job);
+  var total = items.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
+  // ⚠ A COLUMN OF EM DASHES FOOTED "estimated value $0" READS AS A DOCUMENT THAT FAILED TO
+  // LOAD. A living job enters no values by design, so the column is dropped there — unless
+  // something actually carries one, in which case withholding it would hide real money.
+  var showVal = _fid || total > 0;
   var rows = items.map(function(r) {
     var q = parseInt(r.qty, 10);
     return '<tr>'
@@ -20377,14 +20547,22 @@ function printApprovalRequest(jobId, selectedOnly) {
         + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + ' &middot; ' + esc(_invRoomName(jobId, r.roomIdx)) + '</div>'
         + _invCautionBadges(r, jobId) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>'
+      + (showVal ? '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>' : '')
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition || '—')
         + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '') + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">&nbsp;</td>'
       + '</tr>';
   }).join('');
-  var total = items.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
-  var who = job.executor || 'Personal Representative';
+  // ⚠⚠ MEASURED ON A LIVING CLIENT AND IT WAS AN ESTATE DOCUMENT END TO END (2026-09-21):
+  // "To Personal Representative:", a basis line reading "Fair Market Value as of date of death
+  // (—)", an Est. value column of em dashes footed "estimated value $0", a signature line
+  // reading "authorized fiduciary" and a footer filing it "with the estate record". The button
+  // was never service-gated, so any living job with a Donate row could already print it — and
+  // `Distribute`, the pile Anthony asked for by name, makes that the common case.
+  // ⚠ THE DOCUMENT IS KEPT ON A LIVING JOB, NOT WITHHELD. "Keep us on track and honest with
+  // what goes to donation, appraisers, auction houses" is exactly what a signed list of what
+  // left the house is for. What changes is who it addresses and what it claims.
+  var who = _fid ? (job.executor || 'Personal Representative') : (job.name || 'Client');
   // ⚠ TWO ROUTES, NOT ONE. Until 2026-09-13 this document closed "Havellin does not
   // transport them" over every firearm on the list — the third false notice of that day and
   // the worst of them, because this is the page the representative SIGNS. A non-NFA firearm
@@ -20394,10 +20572,16 @@ function printApprovalRequest(jobId, selectedOnly) {
   var firearms = gunRows.length;
   var nfaRows  = gunRows.filter(function(r){ return !!r.flagNFA; }).length;
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
-    + _invDocHead(job, 'Release Approval Request')
+    // ⚠ The third argument is how this avoids _invDocHead's default tail, which states the
+    // valuation basis and the date of death — neither of which a living job has.
+    + _invDocHead(job, 'Release Approval Request', _fid ? null
+        : 'Everything leaving the property, for your sign-off · Prepared by Havellin Palm Beach, LLC · '
+          + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))
     + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
       + 'To <strong>' + esc(who) + '</strong>: the items listed below are ready to be released from the property. '
       + 'Please initial each line you approve, then sign and date at the foot. '
+      // ⚠ "Verbal approval is not accepted" STAYS ON BOTH ARMS. It is on the published
+      // deliverables page, it is not decedent-specific, and it is the whole control.
       + '<strong>Nothing on this list will be moved, sold, donated or disposed of until this request is returned signed. '
       + 'Verbal approval is not accepted.</strong></div>'
     // ⚠ ABOVE THE TABLE, NOT BELOW IT. The reader works down this list initialling lines, so a
@@ -20407,11 +20591,12 @@ function printApprovalRequest(jobId, selectedOnly) {
     + _invCautionNotices(items, jobId)
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
       + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Item</th>'
-      + '<th style="padding:2px 6px;text-align:right;">Qty</th><th style="padding:2px 6px;text-align:right;">Est. value</th>'
-      + '<th style="padding:2px 6px;">Proposed disposition</th><th style="padding:2px 6px;">Initial</th>'
+      + '<th style="padding:2px 6px;text-align:right;">Qty</th>'
+      + (showVal ? '<th style="padding:2px 6px;text-align:right;">Est. value</th>' : '')
+      + '<th style="padding:2px 6px;">' + (_fid ? 'Proposed disposition' : 'Where it is going') + '</th><th style="padding:2px 6px;">Initial</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div style="display:flex;justify-content:flex-end;font-size:12px;font-weight:700;margin-top:8px;border-top:2px solid #333;padding-top:6px;">'
-      + items.length + ' item' + (items.length > 1 ? 's' : '') + ' &middot; estimated value ' + _invMoney(total) + '</div>'
+      + items.length + ' item' + (items.length > 1 ? 's' : '') + (showVal ? ' &middot; estimated value ' + _invMoney(total) : '') + '</div>'
     + (firearms ? '<div style="font-size:10.5px;color:#A32D2D;font-style:italic;margin-top:8px;">'
         + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Every one goes to a '
         + '<strong>licensed dealer</strong>, named by you on counsel&rsquo;s advice. Where you authorise it separately in writing, '
@@ -20424,10 +20609,11 @@ function printApprovalRequest(jobId, selectedOnly) {
         + '</div>' : '')
     + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
       + 'Approved by: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
-      + '<span style="color:#888;">' + esc(who) + ' / authorized fiduciary</span></div>'
+      + '<span style="color:#888;">' + esc(who) + (_fid ? ' / authorized fiduciary' : '') + '</span></div>'
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
-      + 'Values are Havellin&rsquo;s estimates as of the date shown and are not appraisals unless an appraisal is noted against the line. '
-      + 'Return the signed copy to your Transition Concierge; it is filed with the estate record and retained for seven years.</div>'
+      + (_fid ? 'Values are Havellin&rsquo;s estimates as of the date shown and are not appraisals unless an appraisal is noted against the line. ' : '')
+      + 'Return the signed copy to your Transition Concierge; it is filed with '
+      + (_fid ? 'the estate record and retained for seven years.' : 'your job record.') + '</div>'
     + '</div>';
   _printDocument(html, _invDocName(job, 'Release Approval Request'));
 }
@@ -20438,7 +20624,8 @@ function invRecordApproval(jobId) {
   var picked = _invPicked(jobId);
   if (!picked.length) { alert('Select the items the signed approval covers.'); return; }
   var job = _invJob(jobId);
-  var who = (window.prompt('Who signed the approval? (name as signed)', (job && job.executor) || '') || '').trim();
+  var who = (window.prompt('Who signed the approval? (name as signed)',
+    (job && (invFiduciaryMode(job) ? job.executor : job.name)) || '') || '').trim();
   if (!who) return;
   var when = (window.prompt('Date of the signed approval (YYYY-MM-DD):', new Date().toISOString().slice(0,10)) || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(when)) { alert('Enter the date as YYYY-MM-DD.'); return; }
@@ -20610,7 +20797,11 @@ function printDispositionLedger(jobId) {
 // catching — many modest articles, none individually flagged — is exactly the one where
 // the list above is empty.
 function _maivWorklistBlock(job, items, maiv) {
-  if (!maiv.count) return '';
+  // ⚠ Treas. Reg. §20.2031-6(b) GOVERNS WHAT IS FILED WITH A FEDERAL ESTATE TAX RETURN, so on
+  // a living owner every word of this block is false. Measured before the gate: a Home Editing
+  // job with one oil painting and one ring printed a full aggregate naming "the gross estate"
+  // and "the §733.604 probate schedule" on the packet handed to a specialist.
+  if (!maiv.count || !invFiduciaryMode(job)) return '';
   var byClass = {};
   items.forEach(function(r){
     if (!invIsMAIV(r)) return;
@@ -20785,6 +20976,160 @@ function printAppraisalWorklist(jobId) {
   _printDocument(html, _invDocName(job, 'Appraisal Worklist'));
 }
 
+// ── 04 · The Contents Record — the living-client deliverable ──────────────────
+// ⚠⚠ ANTHONY ASKED FOR A DOCUMENT THAT DID NOT EXIST (2026-09-21): "it will be an inventory of
+// what stays and goes and how it goes … a good record for the family of where stuff winds up
+// and with whom." Measured before building it, on a real living Home Editing client: the
+// Approval Request printed "To Personal Representative" and "Fair Market Value as of date of
+// death (—)"; the Estate Inventory Report was headed "Estate Inventory" and flagged "not
+// stated" in red on every line; the Disposition Ledger read "Fiduciary accounting of disposed
+// items · proceeds net to the estate" over a column of em dashes. Every document the family
+// could have been handed described an estate they are not.
+//
+// ⚠⚠ A SECOND PRINTER, NOT A BRANCHED LEDGER, AND HERE IS THE TEST THIS BUILD APPLIES
+// EVERYWHERE: branch the strings when the SPINE is shared; write a second printer when the
+// spine differs. The estate ledger's spine is the money reconciliation — gross, fees, net,
+// totals, "authorized by" — and it groups by nothing because an accounting is a flat list. This
+// one's spine is DESTINATION AND RECIPIENT, grouped so a family can find a thing. Same test is
+// why the As-Found Record keeps ONE printer with branched strings: rooms → shots → links is the
+// same spine on both sides of the catalogue.
+//
+// ⚠ IT IS BOTH THE MID-JOB CONTROL AND THE HAND-OVER, and it needs no new mechanism for that:
+// _invProgressStamp already stamps IN PROGRESS until every line is reviewed and REVIEWED after,
+// and the standing rule is that client documents are never withheld. So the concierge prints it
+// on a Tuesday to see what is still undecided, and the family gets the same page at close-out.
+//
+// ⚠ NO FMV, NO VALUATION BASIS, NO APPRAISAL FLAG LIST — Anthony ruled valuation out of these
+// jobs ("not the pricing agent"). But GROSS / FEES / NET stay, on rows that already carry one,
+// because a figure actually received from a consignment or an auction is a RECORDED ACTUAL and
+// not an estimate. It is the first thing a family asks about the dining table, and withholding
+// it would be reading the brief upside down.
+
+// DOM-free, so the printer, a future workbook tab and the tests all read one derivation —
+// the asFoundRecord shape. Returns the groups in reading order with the undecided pile LAST.
+function dispositionRecord(jobId) {
+  var job = _invJob(jobId) || {};
+  var items = _invAssignItemNos(jobId);
+  var byDisp = {};
+  items.forEach(function(r){
+    var d = r.disposition || '';
+    (byDisp[d] = byDisp[d] || []).push(r);
+  });
+  // INV_GROUP_ORDER opens with the undecided bucket because on SCREEN it is the evening's
+  // worklist. On a page handed to a family that would open their record with the pile nobody
+  // has decided about, so it moves to the end — sorted in the printer, never by adding a
+  // second catalogue the screen and the document could then disagree about.
+  var order = INV_GROUP_ORDER.filter(function(d){ return d !== ''; }).concat(['']);
+  var groups = [];
+  order.forEach(function(d){
+    if (!byDisp[d]) return;
+    groups.push({ disposition: d, label: _invDispLabel(d), rows: byDisp[d].slice().sort(function(a, b){
+      var ra = (a.roomIdx == null) ? 9999 : a.roomIdx, rb = (b.roomIdx == null) ? 9999 : b.roomIdx;
+      return ra - rb || (_invItemNo(a) || 0) - (_invItemNo(b) || 0);
+    }) });
+    delete byDisp[d];
+  });
+  // Anything the catalogue does not know still prints — dropping a row because its value is
+  // unrecognised is how property goes missing from the one record that says where it went.
+  Object.keys(byDisp).sort().forEach(function(d){
+    groups.push({ disposition: d, label: _invDispLabel(d), rows: byDisp[d] });
+  });
+  var leaving = items.filter(function(r){ return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
+  return {
+    job: job,
+    items: items,
+    groups: groups,
+    total: items.length,
+    undecided: items.filter(function(r){ return !r.disposition; }).length,
+    unnamed: items.filter(function(r){ return !r.objectName; }).length,
+    leaving: leaving.length,
+    // The gap this document exists to close: it left the property and nobody wrote down who
+    // took it. Move is excluded — its destination is the job's own recorded new address.
+    noRecipient: leaving.filter(function(r){ return !_invRecipient(job, r); }).length
+  };
+}
+
+function printContentsRecord(jobId) {
+  var rec = dispositionRecord(jobId);
+  var job = rec.job;
+  if (!job || !document.getElementById('print-target')) return;
+  var fid = invFiduciaryMode(job);
+
+  var head = _invDocHead(job, 'Contents Record', 'What stayed, what went, and where each piece went'
+    + ' &middot; Prepared by Havellin Palm Beach, LLC &middot; '
+    + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+  // ⚠ _invDocHead's default tail states the valuation basis and the date of death. The `extra`
+  // argument is how this document avoids it — it must never assert a basis it does not carry.
+
+  // ⚠ THE GAP BLOCK GOES ABOVE THE INDEX, the As-Found Record's rule and the release-cautions
+  // rule: a reader works down this page, so a caveat printed under the list has arrived after
+  // they have already taken it as complete.
+  var gaps = [];
+  if (rec.undecided) gaps.push('<strong>' + rec.undecided + '</strong> item' + (rec.undecided === 1 ? '' : 's')
+    + ' with no destination recorded yet — listed at the end under &ldquo;Not yet decided&rdquo;');
+  if (rec.unnamed) gaps.push('<strong>' + rec.unnamed + '</strong> photographed item'
+    + (rec.unnamed === 1 ? '' : 's') + ' not yet named');
+  if (rec.noRecipient) gaps.push('<strong>' + rec.noRecipient + '</strong> item'
+    + (rec.noRecipient === 1 ? ' that has' : 's that have') + ' left the property with no recipient recorded');
+  var gapBlock = gaps.length
+    ? '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#3c3228;line-height:1.55;">'
+      + '<strong style="color:#8a6d3b;">This record is not yet complete.</strong><ul style="margin:5px 0 0 16px;padding:0;">'
+      + gaps.map(function(g){ return '<li>' + g + '</li>'; }).join('') + '</ul></div>'
+    : '';
+
+  var body = rec.groups.map(function(g){
+    var rows = g.rows.map(function(r){
+      var who = _invRecipient(job, r);
+      var money = [r.gross, r.fees].some(function(v){ return !isNaN(parseFloat(v)); });
+      var net = money ? ((parseFloat(r.gross) || 0) - (parseFloat(r.fees) || 0)) : null;
+      return '<tr>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;width:44px;">' + _invPrintThumb(jobId, r, 34) + '</td>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;white-space:nowrap;">' + esc(_invItemNo(r) || '—') + '</td>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—')
+          + _invCautionBadges(r, jobId) + '</td>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;">' + (who ? esc(who) : '<span style="color:#b0863a;">not recorded</span>') + '</td>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;">'
+          + (net === null ? '—' : _invMoney(net)) + '</td>'
+        + '</tr>';
+    }).join('');
+    // The heading says what the pile MEANS, because "Move" and "Distribute" are our words.
+    var gloss = CONTENTS_RECORD_GLOSS[g.disposition] || '';
+    return '<div style="break-inside:avoid;margin-bottom:14px;">'
+      + '<div style="font-size:12px;font-weight:700;border-bottom:1px solid #333;padding-bottom:2px;margin-bottom:4px;">'
+      + esc(g.label) + ' <span style="font-weight:400;color:#888;">· ' + g.rows.length + ' item' + (g.rows.length === 1 ? '' : 's')
+      + (gloss ? ' · ' + esc(gloss) : '') + '</span></div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:10.5px;"><thead><tr style="color:#888;text-align:left;">'
+      + ['', 'Item #', 'Item', 'Room', 'Where it went / who took it', 'Date', 'Net received']
+          .map(function(h){ return '<th style="padding:2px 5px;">' + h + '</th>'; }).join('')
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }).join('');
+
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + head
+    + _invProgressStamp(rec.items)
+    + gapBlock
+    + (rec.total
+        ? body
+        : '<div style="font-size:12px;color:#888;">Nothing has been photographed or listed on this job yet.</div>')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
+    + 'Every line was photographed in the room it came from. Amounts shown are what was actually '
+    + 'received from a sale, consignment or auction, net of that partner’s fees — Havellin charges '
+    + 'no commission on them, and Havellin’s own fees are billed separately and do not appear here. '
+    + 'Blank means nothing has been received. This record does not state what anything is worth.'
+    + (fid ? '' : ' Photographs of every item are in the Drive folder shared with you.')
+    + '</div></div>';
+  _printDocument(html, _invDocName(job, 'Contents Record'));
+}
+// Our two words need glossing on a page a family reads; the five that are ordinary English do
+// not, and a gloss on every heading would read as an app explaining itself.
+var CONTENTS_RECORD_GLOSS = {
+  'Move': 'went with you to the new home',
+  'Distribute': 'given to a named person',
+  '': 'no destination recorded yet'
+};
+
 // ── 01 · The As-Found Record ───────────────────────────────────────
 // ⚠⚠ THE AS-FOUND PASS REACHED NO DOCUMENT AT ALL, AND IT IS THE HALF OF THE RECORD THE
 // REPRESENTATIVE IS MOST LIKELY TO NEED. Every one of those photographs is in Drive and the
@@ -20869,7 +21214,7 @@ function printAsFoundRecord(jobId) {
       + '<strong>evidence of the state of the property</strong> and are deliberately not inventory lines: '
       + 'nothing here is valued, dispositioned or proposed for release. They exist so that a question about '
       + 'what a drawer held can be answered from the record months later. Every shot below links to its file '
-      + 'in the estate’s Drive folder.'
+      + '' + (invFiduciaryMode(job) ? 'in the estate’s Drive folder' : 'in this job’s Drive folder') + '.'
     + '</div>';
 
   // The gap first. A reader works down this page; a caveat printed under the index has
@@ -21675,7 +22020,11 @@ function _renderDuplicateImportNotice(jobId) {
 
 // Not yet decided sorts FIRST because it is the worklist. The rest run in the order the
 // decisions actually get made, not alphabetically like INV_DISPOSITIONS.
-var INV_GROUP_ORDER = ['', 'Keep', 'Auction', 'Consign', 'Sell', 'Donate', 'Junk', 'Hold'];
+// ⚠ EVERY EXISTING VALUE KEEPS ITS RELATIVE PLACE. The two new piles slot in beside Keep,
+// where the eye already looks for "staying with the client", so nobody's mental model of the
+// tab moves. An unlisted value still renders — _invGroupItems appends it — but it would sort
+// below Hold, i.e. the family's two most important piles would land at the bottom of the tab.
+var INV_GROUP_ORDER = ['', 'Keep', 'Move', 'Distribute', 'Auction', 'Consign', 'Sell', 'Donate', 'Junk', 'Hold'];
 var INV_UNDECIDED = 'Not yet decided';
 var _invFilter    = { when: 'all', room: '', q: '', flag: '' };
 var _invOpen      = {};   // stableId -> panel expanded
@@ -21701,11 +22050,26 @@ var INV_WORK_FLAGS = [
   // desk's job (and, next, the agent's) — so this is the evening's first pile.
   {key:'unnamed',   label:'Unnamed shots',   test:function(r){ return !r.objectName; }},
   {key:'undecided', label:'Not yet decided', test:function(r){ return !r.disposition; }},
-  {key:'noval',     label:'No value yet',    test:function(r){ return _invNeedsValue(r); }},
-  {key:'appr',      label:'Needs appraiser',  test:function(r, job){ return invNeedsAppraisal(r, job); }},
+  // fid: a living job enters no values, so this would count every row on the job forever.
+  {key:'noval',     label:'No value yet',    fid:true, test:function(r){ return _invNeedsValue(r); }},
+  {key:'appr',      label:'Needs appraiser',  test:function(r, job){ return invNeedsAppraisal(r, job); },
+   livingLabel:'To a specialist'},
+  // ⚠ THE COUNT ANTHONY'S DECISION TURNS ON: what is leaving the property with nobody recorded
+  // as taking it. "Keep us on track and honest with what goes to donation, appraisers, auction
+  // houses" is a completeness check, and until now nothing counted it. Useful on an estate too —
+  // there it is the release whose recipient was never written down.
+  {key:'norecip',   label:'No recipient',     test:function(r){ return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !String(r.channel || '').trim(); }},
   {key:'firearm',   label:'Firearms held',    test:function(r){ return invIsFirearm(r) && invReleaseBlocked(r); }},
   {key:'hold',      label:'Disputed / Hold',  test:function(r){ return !!r.flagDisputed || r.disposition === 'Hold'; }}
 ];
+// The chips this job shows, and what each is called on it. One list, filtered — never a second
+// catalogue, which is how the app's and the backend's disposition lists drifted 5-against-7.
+function invWorkFlags(job) {
+  var fid = invFiduciaryMode(job);
+  return INV_WORK_FLAGS.filter(function(f){ return fid || !f.fid; }).map(function(f){
+    return (!fid && f.livingLabel) ? { key:f.key, label:f.livingLabel, test:f.test } : f;
+  });
+}
 
 function _invMatchesFilter(r, job) {
   var f = _invFilter;
@@ -21713,7 +22077,7 @@ function _invMatchesFilter(r, job) {
   if (f.when === 'week'  && (r.ts || 0) < _invDayStart(6)) return false;
   if (f.room !== '' && String(r.roomIdx == null ? '' : r.roomIdx) !== String(f.room)) return false;
   if (f.flag) {
-    var fl = INV_WORK_FLAGS.filter(function(x){ return x.key === f.flag; })[0];
+    var fl = invWorkFlags(job).filter(function(x){ return x.key === f.flag; })[0];
     if (fl && !fl.test(r, job)) return false;
   }
   if (f.q) {
@@ -21896,6 +22260,7 @@ function _invProgressBar(st, width) {
 function _renderInvWorkbar(job, all) {
   var st = _invReviewStats(all);
   var jid = job.id;
+  var fid = invFiduciaryMode(job);
   var btn = function(fn, label, title, primary) {
     return '<button class="btn-s" onclick="' + fn + '" title="' + esc(title) + '" style="'
       + (primary ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '') + '">' + label + '</button>';
@@ -21911,18 +22276,35 @@ function _renderInvWorkbar(job, all) {
       + _invProgressBar(st, 150)
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-      + btn('printEstateInventoryReport(' + jid + ')', 'Estate Inventory PDF', 'The client / attorney asset schedule — photo, description, location, quantity, condition, date-of-death FMV and the valuation source stated', true)
+      // ⚠⚠ THE ESTATE SET WAS ON SCREEN FOR EVERY SERVICE AND NOTHING GATED IT (2026-09-21).
+      // Measured on a living Home Editing client: the Approval Request rendered "To Personal
+      // Representative", "Fair Market Value as of date of death (—)" and "authorized fiduciary";
+      // the Estate Inventory Report was titled "Estate Inventory" and flagged "not stated" in red
+      // on every line; the Court Inventory would have printed a §733.604 schedule for a living
+      // owner with an adoption block to sign. The primary button on a living job is the record
+      // the family is actually promised.
+      + (fid
+          ? btn('printEstateInventoryReport(' + jid + ')', 'Estate Inventory PDF', 'The client / attorney asset schedule — photo, description, location, quantity, condition, date-of-death FMV and the valuation source stated', true)
+          : btn('printContentsRecord(' + jid + ')', 'Contents Record', 'What stayed, what went, where each piece went and who took it — the record the family keeps', true))
       + btn('exportInventoryCSV(' + jid + ')', 'CSV', 'Every column, as a spreadsheet file to attach to an email')
-      + btn('printApprovalRequest(' + jid + ')', 'Approval Request', 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.')
-      + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', 'Add an asset with no photo (cash, vehicle, account)')
+      + btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
+          ? 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.'
+          : 'Written, itemised list of everything leaving the property, for the client to sign off.')
+      + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', fid
+          ? 'Add an asset with no photo (cash, vehicle, account)'
+          : 'Add something with no photo — a vehicle, a rug already rolled, anything in storage')
       + '<details style="position:relative;"><summary class="btn-s" style="list-style:none;cursor:pointer;display:inline-block;">More &#9662;</summary>'
         + '<div style="position:absolute;z-index:50;right:0;margin-top:4px;background:var(--paper,#fff);border:1px solid var(--border-md);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px;">'
         + btn('printAsFoundRecord(' + jid + ')', 'As-Found Record', 'Room-by-room index of the property as it was found — every as-found photograph, when it was taken and a link to the file. Names any room in scope that carries none.')
-        + btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory')
-        + btn('printDispositionLedger(' + jid + ')', 'Disposition Ledger', 'Proceeds, fees, net to estate, receipts')
-        + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', 'Per-specialist packet of every item flagged for appraisal')
-        + btn('takeInventorySnapshot(' + jid + ')', 'Snapshot', 'Point-in-time copy of the inventory')
-        + btn('shareInventoryWithCounsel(' + jid + ')', 'Share w/ Counsel', 'Read-only access to the Estate Inventory Drive folder')
+        + (fid ? btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory') : '')
+        + (fid ? btn('printDispositionLedger(' + jid + ')', 'Disposition Ledger', 'Proceeds, fees, net to estate, receipts') : '')
+        + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', fid
+            ? 'Per-specialist packet of every item flagged for appraisal'
+            : 'Per-specialist packet of everything going out to an appraiser, auction house or dealer')
+        + (fid ? btn('takeInventorySnapshot(' + jid + ')', 'Snapshot', 'Point-in-time copy of the inventory') : '')
+        + btn('shareInventoryWithCounsel(' + jid + ')', fid ? 'Share w/ Counsel' : 'Share photographs', fid
+            ? 'Read-only access to the Estate Inventory Drive folder'
+            : "Read-only access to this job's photograph folders")
         + btn('unshareInventory(' + jid + ')', 'Revoke', "Revoke an email's access")
         + btn('invToggleRollups()', (_invShowRoll ? 'Hide' : 'Show') + ' summary &amp; rollups', 'Totals, FMV by category, MAIV aggregate')
         + '</div></details>'
@@ -21934,7 +22316,7 @@ function _renderInvWorkbar(job, all) {
 }
 
 function _renderInvFlagStrip(job, all) {
-  var chips = INV_WORK_FLAGS.map(function(f){
+  var chips = invWorkFlags(job).map(function(f){
     var n = all.filter(function(r){ return f.test(r, job); }).length;
     var on = _invFilter.flag === f.key;
     var dim = (n === 0 && !on);
@@ -21972,6 +22354,24 @@ function _renderInvFilterRow(job, all) {
       + 'id="inv-q" style="font-size:11px;padding:3px 6px;flex:1;min-width:140px;max-width:260px;">'
     + (active ? '<button class="btn-s" onclick="invClearFilters()" style="font-size:10.5px;">Clear filters</button>' : '')
     + '</div>';
+}
+
+// Reads `channel`, the column already headed "Channel / Recipient". ⚠ NOT a new manifest key:
+// a key not on the savePhotoRefs whitelist is dropped silently on every save, and this file
+// records that costing four separate builds. Reusing it also means the Disposition Ledger, the
+// approval request, the CSV, the workbook and the search blob all already carry it.
+function _invRecipientInput(jid, ref, job) {
+  var isMove = ref.disposition === 'Move';
+  var ph = isMove ? (_jobDestLabel(job) || 'the new home') : 'Who took it?';
+  var empty = !String(ref.channel || '').trim();
+  return '<input type="text" value="' + esc(ref.channel || '') + '"'
+    + ' title="' + esc(ref.channel || ph) + '" placeholder="' + esc(ph) + '"'
+    + ' onchange="_invEdit(' + jid + ',\'' + ref.stableId + '\',\'channel\',this)"'
+    + ' style="width:100%;font-size:11px;padding:3px 6px;box-sizing:border-box;border-radius:3px;'
+    // Bronze while a LEAVING row has nobody named, quiet on a Move (the address is known) and
+    // once filled — the same rule the object-name box follows, so the two piles read alike.
+    + ((empty && !isMove) ? 'border:1px solid var(--bronze);background:#fffdf9;'
+                          : 'border:1px solid transparent;background:transparent;') + '">';
 }
 
 function _renderInvRow(job, ref) {
@@ -22030,8 +22430,25 @@ function _renderInvRow(job, ref) {
         + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
         + (ref.fieldNote ? '<div style="font-size:10.5px;color:var(--gray-dk);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(ref.fieldNote) + '">&#127908; ' + esc(ref.fieldNote) + '</div>' : '')
       + '</div>'
+      // ⚠ THE FMV BOX STAYS ON A LIVING JOB, DELIBERATELY. Anthony ruled out VALUING the contents
+      // as work we do and charge for; he did not ask for the field to be taken away, and a client
+      // asking "put a number on the dining set for my insurer" is ordinary. It is also the only
+      // editable home FMV has — _invPanelCols excludes it precisely because the row carries it —
+      // so hiding it here would make the value unreachable rather than merely unpromoted. What IS
+      // gated is the three fields that exist to DEFEND a figure to a court: valDate, valSource,
+      // valNote (see the `fid` columns), and the "No value yet" chip that would never clear.
       + '<div style="width:104px;flex:0 0 auto;">' + _invInput(jid, ref, fmvCol, job) + '</div>'
       + '<div style="width:110px;flex:0 0 auto;">' + _invInput(jid, ref, dispCol, job) + '</div>'
+      // ⚠⚠ "WITH WHOM" IS HALF OF WHAT ANTHONY ASKED THE RECORD TO CARRY, and it was buried as
+      // free text in the Disposition section of a panel behind a chevron — so the one field that
+      // answers it was the one nobody would ever open a row to fill. It renders on the row for a
+      // LEAVING disposition only: on Keep, Move and Hold there is nobody to name, and an empty
+      // box on every row is what makes a form look unfinished. A Move shows its destination as
+      // placeholder text off the job record and stores nothing, because the address is already
+      // recorded once and writing it per item would also satisfy the firearms `dealer` gate.
+      + (INV_RELEASE_DISPOSITIONS.indexOf(ref.disposition) >= 0 || ref.disposition === 'Move'
+          ? '<div style="width:150px;flex:0 0 auto;">' + _invRecipientInput(jid, ref, job) + '</div>'
+          : '')
       + '<label style="flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;font-size:10px;color:' + (ref.reviewed ? 'var(--ok-tx)' : 'var(--gray)') + ';cursor:pointer;white-space:nowrap;" '
         + 'title="' + (ref.reviewed && ref.reviewedBy ? 'Reviewed by ' + esc(ref.reviewedBy) : 'Tick when this line has been checked') + '">'
         + '<input type="checkbox"' + (ref.reviewed ? ' checked' : '') + ' onchange="_invSetReviewed(' + jid + ',\'' + sid + '\',this.checked)" '
@@ -22046,7 +22463,7 @@ function _renderInvRow(job, ref) {
 // column switcher. One definition of a column, two surfaces.
 function _renderInvPanel(job, ref) {
   var jid = job.id;
-  var cols = _invPanelCols();
+  var cols = _invPanelCols(job);
   var secs = INV_PANEL_SECTIONS.map(function(sec){
     var mine = cols.filter(function(c){ return _invPanelSection(c) === sec.key; });
     if (!mine.length) return '';
@@ -22196,9 +22613,15 @@ function _renderInvBulk(job) {
     + 'box-shadow:0 -2px 14px rgba(0,0,0,.15);">'
     + '<strong style="font-size:12px;">' + n + ' selected</strong>'
     + menu('category',    'Set category…', INV_CATEGORIES, _invBulkCommon(picked, 'category'))
-    + menu('disposition', 'Set disposition…', INV_DISPOSITIONS, _invBulkCommon(picked, 'disposition'))
+    + menu('disposition', 'Set disposition…', _invDispOptions(job, _invBulkCommon(picked, 'disposition')), _invBulkCommon(picked, 'disposition'))
     + menu('valSource',   'Set valuation source…', INV_VAL_SOURCES, _invBulkCommon(picked, 'valSource'))
     + menu('roomIdx',     'Move to room…', roomVals, _invBulkRoomCommon(picked))
+    // ⚠ A DISTRIBUTION IS DOZENS OF ITEMS TO ONE PERSON — clearing a child's bedroom is forty
+    // rows and one name. menu() builds a <select>; a recipient is free text, so it is its own
+    // control. _invBulkApply needs no change: its else branch is `ref[key] = value` and its
+    // placeholder guard already returns early on ''.
+    + '<input id="inv-bulk-recip" type="text" placeholder="Who took them…" style="' + selStyle + '">'
+    + '<button onclick="_invBulkApply(' + jid + ',\'channel\',(document.getElementById(\'inv-bulk-recip\')||{}).value||\'\')" style="' + btnStyle + '">Set recipient</button>'
     + '<button onclick="_invBulkApply(' + jid + ',\'reviewed\',1)" style="' + btnStyle + '">Mark reviewed</button>'
     + '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
     + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
@@ -22212,7 +22635,7 @@ function renderInventoryTab() {
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
   var cont = document.getElementById('inventory-content');
   if (!cont) return;
-  if (!jobId) { cont.innerHTML = '<div class="tab-empty">Select a client to view their estate inventory.</div>'; return; }
+  if (!jobId) { cont.innerHTML = '<div class="tab-empty">Select a client to view their inventory.</div>'; return; }
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) { cont.innerHTML = '<div class="tab-empty">Job not found.</div>'; return; }
   _invEnsureLoaded(jobId);
@@ -22508,13 +22931,27 @@ function _photoStamp(ms) {
 // refinement of a field Sell, Remove is the manifest's Junk, and Hold is a desk flag, never a
 // pile. Undecided maps to '' — the "Not yet decided" bucket the Inventory tab was built to
 // receive — and it is the DEFAULT, so an unsorted shot is never silently filed as Keep.
+// ⚠ `Move` CARRIES needsDest AND IS WITHHELD WHERE THERE IS NO NEW HOME. Offered on a Home
+// Cleanout it would be read as "move it to the garage", which is a staging note and not a
+// destination — and the row would then print on the family's record as having gone somewhere
+// it did not. ⚠ `Distribute` IS OFFERED EVERYWHERE, including on an estate, where it is the
+// bequest release; the recipient is named at the desk off the voice note, not typed in the room
+// (the 2026-09-19 rule is that the field types nothing).
 var FIELD_DISPOSITIONS = [
-  { key: 'keep',      label: 'Keep',      disposition: 'Keep' },
-  { key: 'donate',    label: 'Donate',    disposition: 'Donate' },
-  { key: 'sell',      label: 'Sell',      disposition: 'Sell' },
-  { key: 'remove',    label: 'Remove',    disposition: 'Junk' },
-  { key: 'undecided', label: 'Undecided', disposition: '' }
+  { key: 'keep',       label: 'Keep',       disposition: 'Keep' },
+  { key: 'move',       label: 'New home',   disposition: 'Move', needsDest: true },
+  { key: 'distribute', label: 'To a person', disposition: 'Distribute' },
+  { key: 'donate',     label: 'Donate',     disposition: 'Donate' },
+  { key: 'sell',       label: 'Sell',       disposition: 'Sell' },
+  { key: 'remove',     label: 'Remove',     disposition: 'Junk' },
+  { key: 'undecided',  label: 'Undecided',  disposition: '' }
 ];
+// The chips this job offers. A filter over the one list, never a second list — fieldDispToInv
+// and FIELD_DISP_DEFAULT still read the whole of it, so the never-file-as-Keep-by-silence rule
+// and every stored value survive a job being re-typed.
+function fieldDispChips(job) {
+  return FIELD_DISPOSITIONS.filter(function(d){ return !d.needsDest || _jobHasDestination(job); });
+}
 var FIELD_DISP_DEFAULT = 'undecided';
 function fieldDispToInv(key) {
   var f = FIELD_DISPOSITIONS.filter(function(d){ return d.key === key; })[0];
@@ -22735,7 +23172,7 @@ function _fieldCamPaint() {
       + '</div></div>';
   }
   if (st.mode === 'inventory') {
-    h += '<div class="fc-chips">' + FIELD_DISPOSITIONS.map(function(d) {
+    h += '<div class="fc-chips">' + fieldDispChips(_invJob(st.jobId)).map(function(d) {
       return '<button type="button" class="fc-chip' + (st.disp === d.key ? ' on' : '') + '" onclick="fieldCamSetDisp(\'' + d.key + '\')">' + esc(d.label) + '</button>';
     }).join('') + '</div>';
     h += '<div class="fc-row">'
@@ -26464,6 +26901,16 @@ var PLAN_TASKS = [
     label:'Firearms photographed where they lie and left there — nothing moves without written authority' },
   { key:'nfa_check',          phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.firearms || c.isDocJob; },
     label:'Each firearm checked for NFA items — a suppressor looks like a plain metal tube, a short-barrelled rifle or shotgun looks ordinary — see the protocol' },
+  // ⚠ THE ONE BOX THE ITEM RECORD EARNS, and it is deliberately ONE box rather than a section.
+  // Anthony's stated purpose is a control — "keep us on track and honest with what goes to
+  // donation, appraisers, auction houses" — and the thing that makes the record worth anything
+  // is that it is made BEFORE the room is emptied. `!isDocJob` because a decedent job already
+  // carries the heavier as-found and chain-of-custody boxes above; adding this there would be
+  // the same instruction twice. ⚠ The RECIPIENT half is a DERIVED line (recipients_recorded),
+  // never a box: a derived line is never ticked, which is the rule this file already records.
+  { key:'record_walked',      phase:'p1', sec:'Before anything leaves the house',
+    when:function(c){ return c.hasItemRecord && !c.isDocJob; },
+    label:'Every room photographed and every item of consequence logged before it is moved' },
   { key:'docs_sequestered',   phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
     label:'Wills, trusts, deeds, titles, financial and military records sequestered and handed to the PR or attorney against a signed receipt' },
   { key:'cash_logged',        phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
@@ -26534,6 +26981,12 @@ function planTaskCtx(job, est) {
   var formal = isFormalDoc(job);
   return { svc: svc, isMM: isMM, isDownsizing: isDownsizing, isCleanout: isCleanout, isEstate: isEstate,
            isProbate: isProbate, isDocJob: isDocJob, isDisposal: isDisposal,
+           // ⚠ THE TWO AXES, so a `when` predicate has somewhere honest to ask them. Every other
+           // field here is a SERVICE question and they are all correct as such — do NOT rewrite
+           // them to use these, which would churn the measured per-service box counts for nothing.
+           // `fid` is the court-and-fiduciary standard; `hasItemRecord` is "this job keeps a
+           // room-by-room record at all", which since 2026-09-21 is every labour service.
+           fid: invFiduciaryMode(job), hasItemRecord: isDownsizing || isDisposal,
            hasPlaybook: isDownsizing || isDisposal, formal: formal,
            hasCOC: formal || collections.length > 0 || isDocJob,
            firearms: firearmsFlaggedAtIntake(job), re: !!(job && job.re === 'yes'),
@@ -26620,13 +27073,23 @@ function planDerivedLines(jobId, job, est, phase) {
       out.push({ key: 'vendors_confirmed', ok: nV === vendors.length, label: 'Vendors confirmed',
                  detail: nV + ' of ' + vendors.length + ' — status on the Vendor &amp; Partner Sourcing card' });
     }
+    var leaving = _jobInvRefs(jobId).filter(function(r){ return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
     if (ctx.isDocJob) {
-      var leaving = _jobInvRefs(jobId).filter(function(r){ return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
       if (leaving.length) {
         var nA = leaving.filter(function(r){ return !!(r.authBy && r.approvalDate); }).length;
         out.push({ key: 'release_authority', ok: nA === leaving.length, label: 'Written release authority on every item leaving',
                    detail: nA + ' of ' + leaving.length + ' — the release approval request is on the Job Admin & Inv tab' });
       }
+    // ⚠⚠ THE PLAN AND THE INVENTORY TAB WERE ABOUT TO DISAGREE ABOUT THE SAME FACT. The desk's
+    // `norecip` chip counts a release with no recipient recorded on EVERY service — it is the
+    // count Anthony's "keep us on track and honest" turns on — and the plan asked the question
+    // only on a decedent job. A SEPARATE line rather than un-gating the one above, because they
+    // are different claims: an estate needs WRITTEN AUTHORITY before property may leave, a living
+    // owner authorised it standing there and what is missing is only the record of who took it.
+    } else if (ctx.hasItemRecord && leaving.length) {
+      var nR = leaving.filter(function(r){ return !!_invRecipient(job, r); }).length;
+      out.push({ key: 'recipients_recorded', ok: nR === leaving.length, label: 'Recipient recorded on everything that left',
+                 detail: nR + ' of ' + leaving.length + ' — name who took it on the Job Admin & Inv tab, or the family\'s record cannot say' });
     }
     var donating = _jobInvRefs(jobId).filter(function(r){ return r.disposition === 'Donate'; });
     if (donating.length) {

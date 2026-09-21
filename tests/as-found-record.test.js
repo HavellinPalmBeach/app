@@ -75,13 +75,14 @@ function rig(over) {
           '_afTime', '_afDate', '_asFoundRows', 'printAsFoundRecord', '_invDocName',
           '_invDocHead', '_invPrintThumb', 'resolveValBasis', 'estateValueDate', '_avdDate',
           'buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+          'invFiduciaryMode', 'isDecedentJob',
           '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs', '_warnPhotoStoreFull',
           'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat'],
-    vars: ['jobPlanStore', 'estimateStore', 'AS_FOUND_COLUMNS', 'INVENTORY_COLUMNS',
+    vars: ['jobPlanStore', 'estimateStore', 'AS_FOUND_COLUMNS', 'INVENTORY_COLUMNS', 'DECEDENT_SERVICES',
            'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'INV_VAL_BASES',
            'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_CAT_GLYPH'],
     stubs: {
-      jobs: [Object.assign({}, JOB)],
+      jobs: [Object.assign({}, JOB, over.job || {})],
       _photoRefs: { 7: over.refs || [] },
       esc: (x) => String(x == null ? '' : x),
       fmtDate2: (d) => String(d || ''),
@@ -334,5 +335,34 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(liveLines(fn('_invDocName')), 'DOC_ACTIONS', 'it joins no registry that carries a file verb');
     printers.forEach((p) => lacks(liveLines(fn(p)), 'docNames(job',
       p + ' is not in the send/file registry'));
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ THE RECORD IS MEANINGFUL ON A LIVING JOB, AND STOPS SAYING "the estate"');
+  {
+    // lockFlag FLAGS and never REFUSES on a living job, deliberately — the owner is alive and
+    // can say what was in the drawer — so the shots exist there, unevenly. The document is
+    // worth having either way; what it must not do is describe an estate that does not exist.
+    // ⚠ ONE PRINTER WITH BRANCHED STRINGS, NOT A SECOND ONE: the spine is identical on both
+    // sides (rooms → shots → file links) and the columns are identical. That is the test this
+    // whole build applies — branch when the spine is shared, fork when it differs, which is
+    // why the Contents Record IS a second printer and this is not.
+    const { ctx, printed } = rig({
+      job: { svc: 'downsizing_move', name: 'Margaret Ellsworth', executor: '', deathDate: '' },
+      refs: [SHOT(1, 'before', 1), SHOT(4, 'before', 1)],
+    });
+    ctx.printAsFoundRecord(7);
+    const h = (printed[printed.length - 1] || {}).html || '';
+    has(h, 'in this job\u2019s Drive folder', '⚠ it points at the job\u2019s folder');
+    lacks(h, 'in the estate\u2019s Drive folder', 'and never at an estate\u2019s');
+    // The half that must survive on both: these are evidence, never inventory lines.
+    has(h, 'evidence of the state of the property', 'the claim the document exists to make is unchanged');
+    has(h, 'nothing here is valued', 'and it still refuses to be read as an inventory');
+
+    // The converse, on the estate arm.
+    const e = rig({ refs: [SHOT(1, 'before', 1)] });
+    e.ctx.printAsFoundRecord(7);
+    const eh = (e.printed[e.printed.length - 1] || {}).html || '';
+    has(eh, 'in the estate\u2019s Drive folder', 'the estate arm still says the estate\u2019s folder');
   }
 };
