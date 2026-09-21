@@ -10,7 +10,7 @@
 
 const { sandbox } = require('./harness');
 
-const INV_FNS = [
+const INV_FNS = [ 'invDocContractBlock', 'docTierProduces',
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
@@ -20,7 +20,7 @@ const INV_FNS = [
   '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks', '_invHasValue',
   'savePhotoRefs', '_warnPhotoStoreFull',
 ];
-const INV_VARS = [
+const INV_VARS = [ 'INV_CONTRACT_DOCS',
   'INV_STICKY_FIELDS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
   'INV_APPRAISAL_THRESHOLD', 'INV_ASSET_TRACKS', 'EXEMPT_CAP_732_402',
 ];

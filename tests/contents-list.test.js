@@ -6,7 +6,7 @@
 // capture tier's own contract says is counsel's and not ours.
 const { sandbox, source, domStub } = require('./harness.js');
 
-const FNS = [
+const FNS = [ 'invDocContractBlock',
   'contentsList', 'printContentsList', '_clFlags',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms',
   '_invFileId', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
@@ -22,7 +22,7 @@ const FNS = [
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis',
 ];
-const VARS = [
+const VARS = [ 'INV_CONTRACT_DOCS',
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
   'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_CATEGORIES', 'INV_TAXONOMY',
@@ -524,9 +524,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(appr, 'printContentsList(7)', 'same');
 
     const none = bar(Object.assign({}, ESTATE, { docTier: 'none' }));
-    has(none, 'printEstateInventoryReport(7)',
-        '⚠ a None-tier estate is NOT offered it either — counsel does the whole inventory');
-    lacks(none, 'printContentsList(7)', 'there is no list of ours to hand over');
+    lacks(none, 'printContentsList(7)',
+          '⚠ a None-tier estate is not offered the Contents List — there is no list of ours');
+    // ⚠ RESTATED FOR STEP 6, NOT DELETED. This asserted the Estate Inventory Report was the
+    // primary at `none`, which was true until the contract gate shipped — and is the defect it
+    // closes: at `none` the agreement says counsel does the whole inventory, so handing over a
+    // page headed *Estate Inventory — Asset Schedule* claims work we contracted not to do.
+    lacks(none, 'printEstateInventoryReport(7)',
+          '⚠⚠ nor the valued schedule — counsel does the whole inventory on that engagement');
+    has(none, 'printApprovalRequest(7)',
+        'the primary is the written release approval, which IS what we issue there');
 
     const legacy = bar(Object.assign({}, ESTATE, { docTier: '', docScope: '' }));
     has(legacy, 'printEstateInventoryReport(7)',
@@ -560,7 +567,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // every one of them only as a STRING, inside a strip assertion — which is exactly how a
     // false sentence on the client / attorney deliverable survived. It is driven here because
     // the defect is this document's twin and the fix is the same shape.
-    const { ctx, last } = rig(ESTATE, [
+    // ⚠ THE FIXTURE IS A `values` ESTATE, and it has to be: step 6 refuses this document on a
+    // `contents` engagement, because the agreement puts the values with counsel. Driving it at
+    // `contents` would measure the refusal rather than the report.
+    const { ctx, last } = rig(Object.assign({}, ESTATE, { docTier: 'values' }), [
       IT('a', { roomIdx: 1, objectName: 'Sargent portrait', fmv: 48000, valSource: 'Appraisal' }),
       IT('b', { roomIdx: 4, objectName: 'Lost lamp', fmv: 200, valSource: 'Comparable',
                 driveFileId: '', driveFileUrl: '' }),

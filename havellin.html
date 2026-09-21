@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 6:28pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 6:57pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -20448,6 +20448,65 @@ function _invPrintThumb(jobId, ref, px) {
   return '<img src="' + src + '" style="' + box + '" alt="">';
 }
 
+// ── THE CONTRACT DECIDES WHICH DOCUMENTS ARE OURS TO ISSUE (2026-09-21) ───────────
+// ⚠⚠ MEASURED BEFORE ANYTHING WAS GATED: NINE OF ELEVEN PRINTERS READ NEITHER THE TIER NOR
+// THE MATTER TYPE, and the strip offered every estate document on every decedent job whatever
+// the agreement said. The two that bite:
+//
+//   · At tier **none** — where the agreement says counsel does the whole inventory and Havellin
+//     sorts, stages and sets aside against THEIR schedule — the PRIMARY button handed over a
+//     page headed *Estate Inventory — Asset Schedule*, i.e. a document we are contracted not to
+//     produce, built from a manifest that is our own working record.
+//   · At tier **contents** the Court Inventory stamped DRAFT, called correct work *"not yet
+//     valued"*, and closed *"a final copy is issued once the outstanding items are valued"* — a
+//     copy Havellin will never issue, because valuation is counsel's under that agreement.
+//     Measured: 2 of 2 lines, and the Estate Inventory Report printed **not stated** in red on
+//     both, flagging the contracted work as a defect.
+//
+// ⚠ ONE PREDICATE, TWO READERS, AND THAT IS THE POINT. The strip withholds the button and the
+// printer refuses with the SAME sentence, so the document cannot be reached around the gate —
+// the rule `docAction` already follows. A gate that lives only on the button is a gate.
+//
+// ⚠ IT GATES ON THE TIER ALONE. The MATTER type is deliberately left where step 2 put it: the
+// Court Inventory renders on a trust matter and refuses on its own face, naming what the estate
+// actually is and that a §733.604 schedule is the wrong instrument for it. That document
+// answers the question a withheld button would leave hanging, so withholding it would remove
+// the explanation. Do not "finish" this by hiding it.
+//
+// ⚠ AND IT GATES EXACTLY TWO DOCUMENTS. Everything else on the strip is produced at every
+// tier and must stay: the Approval Request (nothing of value leaves the property without one,
+// on any engagement), the Disposition Ledger (what left and for how much — a record of our own
+// work, not a valuation), the As-Found Record, the CSV, the Snapshot, and the Appraisal
+// Worklist — which stays because the capture agreement says Havellin *"will give the appraiser
+// access to the property and be present for the visit on request"*, so the per-specialist
+// packet is exactly what we hand the appraiser counsel engaged.
+var INV_CONTRACT_DOCS = {
+  // The valued asset schedule. Ours only where the agreement says we state values.
+  schedule: {
+    needs: 'values',
+    why: 'This engagement does not include valuation — the agreement puts the values and the '
+       + 'filing with the estate attorney, and this schedule states a fair market value on every '
+       + 'line. Hand over the Contents List instead.'
+  },
+  // The §733.604 court schedule. Same test: it is a valued schedule with an adoption block.
+  court: {
+    needs: 'values',
+    why: 'This engagement does not include valuation, so Havellin has no valued schedule to '
+       + 'offer for adoption — the §733.604 inventory is the estate attorney’s to prepare and '
+       + 'file. Hand over the Contents List instead.'
+  }
+};
+// '' when the document is ours to issue; the reason when the contract puts it elsewhere.
+function invDocContractBlock(job, kind) {
+  var d = INV_CONTRACT_DOCS[kind];
+  if (!d) return '';
+  // ⚠ A SERVICE THAT PRICES NO DOCUMENTATION STEP IS NOT GATED HERE. `docTierProduces` answers
+  // false for every living service, and gating on that would withhold these two from a job the
+  // `fid` test already withholds them from — two rules for one outcome, which is how they drift.
+  if (!svcHasDocStep(job && (job.svc || job.serviceType))) return '';
+  return docTierProduces(job, d.needs) ? '' : d.why;
+}
+
 // ── 02a · The Contents List — the capture-tier deliverable ──────────────
 // ⚠⚠ THREE CLIENT-FACING SURFACES PROMISED THIS DOCUMENT AND NOTHING PRODUCED IT. The
 // signed estate agreement says it twice — `_agrProbateCompliance`'s capture arm ("Havellin
@@ -20692,6 +20751,11 @@ function printContentsList(jobId) {
 function printEstateInventoryReport(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  // ⚠ THE SAME PREDICATE THE STRIP READS, so the document cannot be reached around the
+  // withheld button. `docAction`'s rule: a gate beside the action cannot be bypassed by
+  // reaching the action another way.
+  var _blocked = invDocContractBlock(job, 'schedule');
+  if (_blocked) { alert(_blocked); return; }
   var all = _invAssignItemNos(jobId);
   if (!all.length) { alert('There is nothing in the inventory to report yet.'); return; }
 
@@ -21106,6 +21170,8 @@ function invRecordApproval(jobId) {
 
 function printCourtInventory(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
+  var _blocked = invDocContractBlock(job, 'court');
+  if (_blocked) { alert(_blocked); return; }
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
   var items = _invAssignItemNos(jobId);
@@ -21130,6 +21196,14 @@ function printCourtInventory(jobId) {
   // question; arithmetic is not.
   var unvalued = items.filter(function(r){ return _invOnProbateSchedule(r) && !_invHasValue(r); });
   var _draftWhy = [];
+  // ⚠⚠ WHAT UNBLOCKS IT FOLLOWS THE REASON, AND UNTIL 2026-09-21 IT WAS ONE CONSTANT SENTENCE
+  // GLUED ONTO ALL FOUR. The block closed *"a final copy is issued once the outstanding items
+  // are valued"* whichever reason fired — so on an estate with nothing on the probate schedule
+  // it sent the reader off to value items that valuing will not put there, and on a trust
+  // matter it promised a final copy of a schedule that is the wrong instrument and will never
+  // be issued at all. A fix that does not describe the blocker is worse than no fix: it is
+  // read, followed, and wastes the one person who could have corrected it.
+  var _draftFix = [];
   // ⚠⚠ AN EMPTY SCHEDULE IS NEVER FINAL, AND THIS IS THE SAME RULE AS THE FLOOR ABOVE, APPLIED
   // TO THE CARVE-OUT. Measured on a seeded estate holding $19,000 of furniture, every line
   // tracked Trust (and identically for Non-probate and Homestead): the schedule rendered
@@ -21149,8 +21223,16 @@ function printCourtInventory(jobId) {
   if (!onSched.length) _draftWhy.push(items.length
     ? 'no recorded item is on the probate schedule'
     : 'nothing is recorded on this estate yet');
+  if (!onSched.length) _draftFix.push('put the property on the probate schedule, or issue the right instrument for this estate');
   if (formal && guard.length) _draftWhy.push(guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal');
+  // ⚠ WHO FINISHES IT DEPENDS ON THE CONTRACT. At the `appraisals` tier Havellin engages the
+  // specialist; at `values` the agreement puts that with counsel, so promising a final copy
+  // "once the outstanding items are appraised" would promise somebody else's work as ours.
+  if (formal && guard.length) _draftFix.push(docTierProduces(job, 'appraisals')
+    ? 'Havellin engages the specialist and a final copy follows the report'
+    : 'the estate attorney arranges the appraisal on this engagement');
   if (unvalued.length) _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
+  if (unvalued.length) _draftFix.push('a final copy is issued once the outstanding items are valued');
   // ⚠⚠ THE MATTER TYPE IS READ HERE AND NOWHERE ELSE YET, AND IT ONLY EVER SPEAKS WHEN ANSWERED.
   // Every job created before 2026-09-21 carries none; matterTypeOf returns '' for those and for
   // living-client work, and this block does nothing with it — so the document is unchanged on
@@ -21163,6 +21245,7 @@ function printCourtInventory(jobId) {
   var _mt = matterDef(job);
   var _mtOff = !!(_mt && !_mt.onProbate);
   if (_mtOff) _draftWhy.push('this estate is not being administered through probate');
+  if (_mtOff) _draftFix.push('no final copy of THIS schedule will follow — a probate inventory is the wrong instrument for this estate');
   var draft = _draftWhy.length > 0;
   var status = draft ? 'DRAFT — ' + _draftWhy.join(' \u00b7 ') : 'FINAL';
   var basis = resolveValBasis(job);
@@ -21252,7 +21335,7 @@ function printCourtInventory(jobId) {
     + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + (draft
-        ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; a final copy is issued once the outstanding items are valued.</div>'
+        ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; ' + esc(_draftFix.join('; ')) + '.</div>'
         : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
   _printDocument(html, _invDocName(job, 'Court Inventory'));
@@ -22802,10 +22885,18 @@ function _renderInvWorkbar(job, all) {
       // the valuing. The condition reads as the contract: the inventory is ours to
       // produce and the values are not, which is true of the `contents` tier and of
       // nothing else.
+      // ⚠⚠ THE PRIMARY IS WHATEVER THIS ENGAGEMENT ACTUALLY PRODUCES. Three arms on a
+      // decedent job, and the third is the one that was wrong: at tier `none` the agreement
+      // says counsel inventories and Havellin sorts against THEIR schedule, so the document
+      // that matters is the written release approval — not a page headed *Estate Inventory
+      // — Asset Schedule*, which is a claim to have produced the thing we were contracted
+      // not to produce.
       + (fid && docTierProduces(job, 'inventory') && !docTierProduces(job, 'values')
           ? btn('printContentsList(' + jid + ')', 'Contents List', 'The photographed, room-by-room list the agreement promises counsel — description, location and condition, no values', true)
-          : fid
+          : fid && !invDocContractBlock(job, 'schedule')
           ? btn('printEstateInventoryReport(' + jid + ')', 'Estate Inventory PDF', 'The client / attorney asset schedule — photo, description, location, quantity, condition, date-of-death FMV and the valuation source stated', true)
+          : fid
+          ? btn('printApprovalRequest(' + jid + ')', 'Approval Request', 'Counsel prepares the inventory on this engagement. The document Havellin issues is the written, itemised release approval — nothing of value leaves the property without it.', true)
           : btn('printContentsRecord(' + jid + ')', 'Contents Record', 'What stayed, what went, where each piece went and who took it — the record the family keeps', true))
       + btn('exportInventoryCSV(' + jid + ')', 'CSV', 'Every column, as a spreadsheet file to attach to an email')
       + btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
@@ -22817,7 +22908,7 @@ function _renderInvWorkbar(job, all) {
       + '<details style="position:relative;"><summary class="btn-s" style="list-style:none;cursor:pointer;display:inline-block;">More &#9662;</summary>'
         + '<div style="position:absolute;z-index:50;right:0;margin-top:4px;background:var(--paper,#fff);border:1px solid var(--border-md);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px;">'
         + btn('printAsFoundRecord(' + jid + ')', 'As-Found Record', 'Room-by-room index of the property as it was found — every as-found photograph, when it was taken and a link to the file. Names any room in scope that carries none.')
-        + (fid ? btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory') : '')
+        + (fid && !invDocContractBlock(job, 'court') ? btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory') : '')
         + (fid ? btn('printDispositionLedger(' + jid + ')', 'Disposition Ledger', 'Proceeds, fees, net to estate, receipts') : '')
         + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', fid
             ? 'Per-specialist packet of every item flagged for appraisal'
@@ -22830,6 +22921,11 @@ function _renderInvWorkbar(job, all) {
         + btn('invToggleRollups()', (_invShowRoll ? 'Hide' : 'Show') + ' summary &amp; rollups', 'Totals, FMV by category, MAIV aggregate')
         + '</div></details>'
     + '</div>'
+    + (fid && invDocContractBlock(job, 'schedule')
+        ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;"><strong>No valued schedule on this engagement.</strong> '
+          + esc(docTierDef(docTierOf(job)) ? docTierDef(docTierOf(job)).they : 'Counsel values it and prepares the filing.')
+          + ' The Estate Inventory and Court Inventory are withheld for that reason, not because anything is missing here.</div>'
+        : '')
     + (st.total && !st.complete
         ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;">Client documents print with an <strong>IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.</div>'
         : '')

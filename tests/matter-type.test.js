@@ -21,8 +21,8 @@
 
 const { sandbox, domStub, source } = require('./harness');
 
-const BASE_FNS = ['matterTypeOf', 'matterDef', 'invFiduciaryMode', 'isDecedentJob'];
-const BASE_VARS = ['MATTER_TYPES', 'DECEDENT_SERVICES'];
+const BASE_FNS = [ 'invDocContractBlock', 'docTierProduces','matterTypeOf', 'matterDef', 'invFiduciaryMode', 'isDecedentJob'];
+const BASE_VARS = [ 'INV_CONTRACT_DOCS','MATTER_TYPES', 'DECEDENT_SERVICES'];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -202,10 +202,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', '_invHasAppraisal',
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
-                 'matterDef', 'matterTypeOf'];
+                 'matterDef', 'matterTypeOf', 'invDocContractBlock',
+                 'docTierProduces', 'docTierOf', 'svcHasDocStep'];
     const VARS = ['DECEDENT_SERVICES', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-                  'EXEMPT_CAP_732_402', 'MATTER_TYPES'];
+                  'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS'];
     const item = (id, name, fmv, track) => ({ stableId: id, label: 'inventory', jobId: 7,
       objectName: name, category: 'Furniture', fmv: fmv, assetTrack: track, condition: 'Good',
       ts: Number(id.slice(1)) });

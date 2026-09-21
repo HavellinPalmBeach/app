@@ -1,5 +1,105 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ AT THE *NONE* TIER THE PRIMARY BUTTON HANDED OVER AN INVENTORY WE WERE CONTRACTED NOT TO PRODUCE (2026-09-21)
+Step 6 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `invDocContractBlock(job, kind)` is the one predicate;
+the strip withholds the button and the printer refuses with the same sentence.
+
+- **⚠⚠ MEASURED ACROSS THE WHOLE MATRIX BEFORE ANYTHING WAS GATED: NINE OF ELEVEN INVENTORY PRINTERS READ NEITHER
+  THE TIER NOR THE MATTER TYPE**, and the strip offered every estate document on every decedent job whatever the
+  agreement said. Only `printContentsList` (step 5) and `_renderInvWorkbar` read the tier at all. Two consequences,
+  both driven:
+
+  | | before | now |
+  |---|---|---|
+  | primary at tier **none** | **Estate Inventory PDF** — a page headed *Estate Inventory — Asset Schedule* | **Approval Request** |
+  | Court Inventory at **none** · **contents** | offered · offered | **withheld** · **withheld** |
+  | Estate Inventory Report at **contents** | offered, ***not stated*** in red on **2 of 2** lines | withheld |
+  | Court Inventory at **contents** | DRAFT · *"not yet valued"* · *"a final copy is issued once the outstanding items are valued"* | withheld |
+  | tier **values** · **appraisals** · legacy | unchanged | **unchanged** |
+
+  At `none` the agreement says counsel does the whole inventory and Havellin sorts, stages and sets aside against
+  **their** schedule — so the primary button was a claim to have produced the one thing we contracted not to.
+- **⚠⚠ ONE PREDICATE, TWO READERS, AND THAT IS THE POINT.** The strip withholds the button and the printer refuses
+  with the SAME sentence, so the document cannot be reached around the gate — `docAction`'s rule, that a gate beside
+  the action cannot be bypassed by reaching the action another way. Reverting the two printer guards fails 4 each,
+  the two strip gates 3 and 2.
+- **⚠⚠ IT GATES EXACTLY TWO DOCUMENTS, AND THE CONVERSE IS HALF THE TESTS.** Both the Estate Inventory Report and the
+  Court Inventory state a value on every line, so both need `produces.values`. **Everything else is produced at every
+  tier and must stay** — the Approval Request (nothing of value leaves the property without one, on any engagement),
+  the Disposition Ledger (a record of our own work, not a valuation), the As-Found Record, the CSV and the Snapshot.
+  A group asserts all seven are still offered at all four tiers, or this becomes a cull rather than a gate.
+  - **⚠ THE APPRAISAL WORKLIST STAYS, AND THE AGREEMENT IS WHY.** The capture arm says Havellin *"will give the
+    appraiser access to the property and be present for the visit on request"* — so the per-specialist packet is
+    exactly what we hand the appraiser **counsel** engaged. The tier is not a ban on touching appraisals, only on
+    arranging them. A test pins that sentence, so the reasoning survives the next reader.
+- **⚠⚠ THE MATTER TYPE IS DELIBERATELY NOT GATED HERE, AND D7 DOES NOT ASK FOR IT.** On a trust or `neither` matter
+  the Court Inventory still renders and **refuses on its own face** — step 2's block, naming what the estate is and
+  that a §733.604 schedule is the wrong instrument, with the signature block withheld. That document answers the
+  question a withheld button would leave hanging (*"where is the court inventory?"*), so hiding it would remove the
+  explanation. **D7's own text is about the SERVICE axis**, which was closed on 2026-09-21 by the `fid` gate — a
+  living job gets no estate document at all. Driven in both directions.
+- **⚠ IT STANDS DOWN ON A SERVICE THAT PRICES NO DOCUMENTATION STEP**, because `fid` already withholds these two
+  there and two rules for one outcome is how they drift. Reverting that one line fails **34** — every living-job
+  assertion in the suite.
+- **⚠ AN UNRECOGNISED KIND BLOCKS NOTHING.** A typo in a call site must not silently withhold a client document;
+  it fails open, loudly, the way a missing `DOC_TIERS` entry does. Reverting fails 1.
+- **⚠⚠ AND EACH DRAFT REASON NOW CARRIES THE FIX THAT UNBLOCKS IT — one constant sentence was wrong in three of
+  four.** `printCourtInventory` has four reasons to stamp DRAFT and closed *"a final copy is issued once the
+  outstanding items are valued"* whichever fired. So an estate with **nothing on the probate schedule** was sent off
+  to value items that valuing will never put there (the fix is the Asset Track); a **trust matter** was promised a
+  final copy of a schedule that is the wrong instrument and is never coming; and **pending appraisal at the `values`
+  tier** promised Havellin's own engagement of a specialist the agreement puts with counsel. `_draftFix` is a
+  parallel list, one entry per reason. **A fix that does not describe the blocker is worse than no fix** — it is
+  read, followed, and wastes the one person who could have corrected it. Reverting to the constant fails 4.
+- **8878 committed checks** (`tests/doc-contract-gate.test.js` new at 101). **All 13 changes revert-verified
+  individually, ZERO green after the one below was re-done**; baseline 0 before and after.
+  - **⚠ ONE GREEN, AND IT WAS A REASON NO FIXTURE REACHED.** The appraisal arm needs **Strict Mode AND a guardrail
+    item** to fire at all, and every case I had written landed on one of the other three reasons. Re-done with a
+    $48,000 Art & Décor line on a 706 estate, it fails 2 — and the case is worth having twice over, because it is
+    the one arm where the fix depends on the tier rather than on the record.
+  - **⚠ AND MY OWN SLICE ANCHORED ON THE FIX RATHER THAN THE BLOCK**, so an assertion about *which reason fired*
+    could not see the reason text at all and read as the guardrail never firing. Measured by dumping the block
+    rather than reasoned about. The slice starts at *"This schedule is not ready to be adopted"* now.
+  - **⚠ FOUR SUITES BROKE CORRECTLY** — `contents-list`, `inventory`, `living-inventory` and `matter-type` all lift
+    a printer or the strip, which grew a call to `invDocContractBlock`. **Found by searching every suite at once**,
+    and **lifted rather than stubbed**, because the button and the guard read one predicate and a stub is what lets
+    them drift.
+  - **⚠ TWO OF MY OWN STEP-5 ASSERTIONS PINNED THE OLD DECISION AND BROKE CORRECTLY; BOTH RESTATED, NEITHER
+    DELETED.** One drove `printEstateInventoryReport` on a `contents` estate — now correctly refused, so the fixture
+    moves to `values` and **the refusal becomes its own assertion**; the other pinned the Estate Inventory Report as
+    the primary at tier `none`, which is the defect this step closes. The same pair in the step-5 **browser** script.
+- **Verified end to end in headless Chromium on the real page, 28 checks, 0 failed, 0 page errors**, driving the
+  real intake form, the real strip and the real printers:
+
+  | | |
+  |---|---|
+  | tier **none** | primary **Approval Request** · no asset schedule · no court schedule · no contents list · ledger, worklist, as-found and CSV all still there · the strip says why |
+  | tier **contents** | primary **Contents List** · both valued documents withheld · the reason on screen |
+  | tier **values** · **appraisals** | primary **Estate Inventory PDF** · court schedule back · **nothing explained, because nothing is withheld** |
+  | a legacy job with **neither** tier nor scope | **Estate Inventory PDF** — exactly as it behaved before |
+  | calling both printers directly at `contents` | **0 printed · 2 refusals**, naming the engagement and the §733.604 filing |
+  | a trust matter | the court schedule **still renders**, says it is not administered through probate, and closes *"no final copy of THIS schedule will follow"* |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  ⚠ **ONE BROWSER ASSERTION WAS WRONG AND THE CODE WAS RIGHT, AND THE DISTINCTION IS WORTH KEEPING.** My "legacy
+  job" fixture deleted `docTier` and left `docScope: 'none'` — and a job carrying that scope **really was contracted
+  at None**, so reading it as one is correct. A true legacy record carries **neither**. Both cases are asserted now.
+  The step-1 to step-5 browser scripts were re-run as regressions: **59 / 33 / 56 / 47 / 47**, 0 failed. The first
+  `<style>` block is **byte-identical at 93,431 bytes / 1,169 lines / 635 rules** — no CSS — and the diff is
+  **10 hunks**, in `printEstateInventoryReport`, `printCourtInventory`, `_renderInvWorkbar` and one new catalogue.
+- Manual **§10a** (five notes: the gate and the measurement, the primary by tier, what stays and why the Appraisal
+  Worklist is one of them, why the matter type is not gated, and the four DRAFT fixes) and playbook **§e** (a `.stop`
+  that a missing button is the contract rather than a fault, plus **two** symptom→cause rows — the missing Court
+  Inventory, and what to do about a DRAFT stamp). Both `.md` copies hand-edited; **45 claims parity-checked, 0
+  mismatches**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with
+  **0 overflow, 0 page errors**; under `print` **20/47 and 17/17** tables as wide as their container with **0**
+  taking the phone rule — byte-for-byte as HEAD.
+- **⚠ NEXT: step 7 — the trustee's schedule.** Chapter 736 citations, a successor-trustee signature block, the
+  carve-out reversed so trust property is what is listed, and the *supports rather than constitutes a §736.08135
+  accounting* line. It is what makes the Court Inventory's refusal on a trust matter actionable rather than a dead
+  end, and it is the gate on `_invTrack`'s `'Probate'` default, which **must not** follow the matter type until that
+  schedule exists. *Closes D9, D10.*
+
 ## ⚠⚠ THE CONTRACT PROMISED COUNSEL A CONTENTS LIST THREE TIMES AND NOTHING PRODUCED ONE (2026-09-21)
 Step 5 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `contentsList` is the DOM-free derivation and
 `printContentsList` the document; it is the primary button on an estate contracted at the `contents` tier.

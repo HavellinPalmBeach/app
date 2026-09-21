@@ -52,7 +52,7 @@ const ITEM = (id, over) => Object.assign({
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
 
-const PRINT_FNS = [
+const PRINT_FNS = [ 'invDocContractBlock',
   'printContentsRecord', 'dispositionRecord', 'printApprovalRequest', 'printCourtInventory',
   'printDispositionLedger', '_renderInvWorkbar', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
@@ -71,7 +71,7 @@ const PRINT_FNS = [
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection',
 ];
-const PRINT_VARS = [
+const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',
   'DECEDENT_SERVICES', 'MATTER_TYPES', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',
