@@ -57,6 +57,57 @@ provenance fields in §8 — and that a schema carrying any key above fails.
 2. **Firearms: category yes, `flagNFA` never.** §7.
 3. **A button at the desk.** Job Admin & Inv, beside the *Unnamed shots* chip. Nothing fires from
    the field and nothing fires unattended.
+4. **Lot by default, itemize what earns it.** §2a.
+5. **As detailed as the photograph supports, hedged where it is inferring.** §2b.
+6. **Low confidence is named, marked and painted amber.** §2c.
+
+### 2a · LOT BY DEFAULT
+
+A shelf of books, a drawer of flatware, a box of glassware is **one line with `qty:N`**, not thirty.
+
+| | |
+|---|---|
+| **Lot** | books, flatware, glassware, linens, kitchenware, tools, ordinary household goods |
+| **Itemize** | the nine `intrinsic:true` categories (Art & Décor, Antiques, Jewelry & Watches, Silver & Precious Metal, Rugs & Carpets, Collectibles, Firearms, Wine & Spirits, Musical Instruments), anything carrying a readable maker's mark or signature, anything visibly individual |
+
+Target **300–600 lines** on a large estate rather than 3,000. That keeps the desk review human-sized,
+the repaint near 350ms and the manifest well inside quota — the two critical-path items in §11 are
+survivable at this scale and are not at ten lines a frame.
+
+⚠ **The agent is still never told the $100-an-article threshold.** `invLotSplitState` stays the one
+authority and catches a lot that is over the cap once Agent Two values it. §9.
+
+### 2b · NAMING — AS DETAILED AS THE FRAME SUPPORTS
+
+Anthony, overruling a more conservative first draft: *"i liked that the first run you were able to
+guess that my speakers were B&O, because they are. and you flagged the banksy as likely a
+reproduction, which it is. so get as detailed as possible. when we think there is something of value
+we will go out of our way to photograph the artists signature, flip the china over to show the makers
+mark, etc. we can always edit at desk, but more detail is helpful and we will confirm, which is our
+job."*
+
+- Name the **maker, model, period, material and pattern** whenever the frame supports it. A generic
+  name is a wasted line; the desk cannot add detail it was never shown.
+- **⚠ HEDGE IN THE WORDS WHEN INFERRING, AND THAT IS THE WHOLE SAFETY MECHANISM IN THE TEXT ITSELF.**
+  *"Bang & Olufsen Beolab speakers"* when the badge is legible; *"appears to be Bang & Olufsen"* when
+  it is the form. *"Banksy print, likely a reproduction."* **Both of Anthony's own examples were
+  hedged, and the hedge is what made them useful rather than reckless.** A flat assertion is reserved
+  for what is readable in the photograph.
+- The confirming is Havellin's job and the app already carries the state for it: `namedBy:'agent'`
+  plus `reviewed:false` plus the *IN PROGRESS — N of M items reviewed* stamp on every client
+  document. An attribution nobody has confirmed is visibly unconfirmed.
+
+**⚠⚠ THIS MAKES THE DETAIL SHOT A BUILD REQUIREMENT, AND IT IS THE THING THE FIRST DRAFT MISSED.**
+The crew already flips the china over and shoots the maker's mark — `label:'detail'` with a `groupId`
+pointing at its parent, excluded from `_jobInvRefs` so it never becomes its own line. **Agent One must
+be handed those detail frames grouped with the item they belong to**, in the same request, or the one
+photograph in the house that proves the attribution is the one it never sees. The `shots` payload
+in §4 carries a `details: []` array per item for exactly this.
+
+### 2c · LOW CONFIDENCE
+
+Named anyway, `confidence:'low'`, row painted amber on the desk. A blank is indistinguishable from a
+row the agent never reached, and it would leave the *Unnamed shots* chip permanently non-zero.
 
 ---
 
@@ -110,7 +161,12 @@ Properties, identical in shape to `esignSend` / `stripeLink` / `htmlToPdf`.
   "shots": [
     { "stableId": "7_r3_inventory_...", "fileId": "1AbC...", "room": "Kitchen",
       "roomNote": "Family very sensitive about the study",   // walkthrough note, if any
-      "fieldNote": "top shelf is the good china" }           // hold-to-talk note, if any
+      "fieldNote": "top shelf is the good china",            // hold-to-talk note, if any
+      // ⚠ THE DETAIL FRAMES RIDE WITH THEIR PARENT (§2b). These are the maker's mark, the
+      // signature, the hallmark — the one photograph that turns a guess into a reading. Sent
+      // as extra images in the SAME request, never as shots of their own: _jobInvRefs excludes
+      // label:'detail' by design and a detail frame must never mint a line.
+      "details": [ { "fileId": "1XyZ..." } ] }
   ] }
 ```
 
@@ -125,10 +181,12 @@ client's workbook. Same rule here.
   "results": {
     "7_r3_inventory_...": {
       "objects": [
-        { "name": "Rolled-arm sofa, floral chintz upholstery",
-          "category": "Furniture",
-          "qty": 1,
+        { "name": "Bang & Olufsen Beolab 8000 speakers, pair",
+          "category": "Electronics & Appliances",
+          "qty": 2,
           "confidence": "high",           // high | medium | low
+          "basis": "badge legible in detail frame",  // why it named what it named — read by the
+                                                     // desk, never printed on a client document
           "crop": [0.12, 0.30, 0.55, 0.88] // x0,y0,x1,y1 normalised — CAPTURED, NOT YET RENDERED
         }
       ],
@@ -296,7 +354,18 @@ Neither blocks the build. Both want doing in the same stretch.
 
 ---
 
-## 14 · OPEN — NEEDS ANTHONY
+## 14 · OPEN
 
-See the three questions raised alongside this spec: **naming specificity**, **what a low-confidence
-row looks like**, and **whether the crop box is captured now or later**.
+Nothing blocking. Three things to settle by measurement on the first real room rather than by
+argument, and none of them changes the shape of the build:
+
+- **Effort.** Sweep `low` / `medium` / `high` on one room and compare naming quality against cost.
+  `medium` is the starting guess because identification is perception, not reasoning.
+- **The crop box.** Captured from day one because re-running 300 photographs to add it later is the
+  expensive mistake, and it costs a handful of output tokens. **Not rendered yet** — Claude's
+  bounding boxes are coarse, so measure them on real frames before `_invThumbHTML` depends on one.
+- **Whether an unconfirmed attribution should be marked on the printed Court Inventory** as well as
+  on the desk. The app already stamps *IN PROGRESS — N of M items reviewed* on every client
+  document, so the state is disclosed; the question is only whether the individual line wants it
+  too. Cheap either way, and it is what makes *"we will confirm"* enforceable rather than
+  aspirational.
