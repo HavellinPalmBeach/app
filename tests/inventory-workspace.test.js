@@ -336,9 +336,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // disagreed. The requirement was never "this line reads exactly so" — it is that the
     // carve-out covers exempt property AND everything off the probate track, and that it
     // asks the shared definition rather than keeping its own copy of what exempt means.
-    has(body, '_invIsExempt(r)', 'the carve-out asks the one definition of exempt');
-    has(body, '!_invIsProbateAsset(r)', 'and takes everything off the probate track with it');
+    // ⚠ AND IT BROKE A SECOND TIME, 2026-09-21, FOR THE SAME REASON — the two helpers grew a
+    // `job` argument when `_invTrack`'s default started following the matter type, so a pin on
+    // `_invIsExempt(r)` failed over a change it has no opinion about. Stated as the requirement
+    // this time: both definitions are ASKED, with the job, and neither is re-implemented here.
+    has(body, '_invIsExempt(r, job)', 'the carve-out asks the one definition of exempt');
+    has(body, '!_invIsProbateAsset(r, job)', 'and takes everything off the probate track with it');
+    lacks(body, "=== 'Probate'", 'and keeps no private copy of what the probate track is');
     has(body, 'carved out of the probate estate', 'and the section says so plainly');
+    // ⚠⚠ THE CARVE-OUT IS A PROBATE CONCEPT AND STANDS DOWN WHERE THERE IS NO PROBATE ESTATE.
+    // Its own comment says the section exists so a reader can see the property "sits outside the
+    // probate estate" — on a matter recorded `trust` or `neither` there is none to sit outside
+    // of, and once the track default follows the matter type EVERY line would land under a
+    // heading naming three pots it is not in, above an empty Asset Schedule.
+    has(body, 'invProbateRows(job)', 'the partition asks whether this matter has probate in it');
+    lacks(body, "'Homestead, Exempt &amp; Non-Probate Property",
+      'and the heading no longer recites a fixed list of pots over whatever is actually in it');
     // A value with no stated source is what the published promise exists to prevent.
     has(body, 'not stated', 'a missing valuation source is called out, not left blank');
   }

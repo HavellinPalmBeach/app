@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 6:57pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 8:22pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18944,8 +18944,34 @@ function setValBasis(jobId, v) {
 // on the §733.604 court inventory; Trust / Non-probate / Homestead are segregated so
 // the probate schedule doesn't overstate the estate. Exempt overlaps the §732.402 flag.
 var INV_ASSET_TRACKS = ['Probate','Trust','Non-probate','Homestead','Exempt'];
-function _invTrack(ref) { return (ref && ref.assetTrack) || 'Probate'; }
-function _invIsProbateAsset(ref) { var t = _invTrack(ref); return t === 'Probate'; }
+// ⚠⚠ THE DEFAULT FOLLOWS THE MATTER TYPE, AND UNTIL THE TRUSTEE'S SCHEDULE EXISTED IT COULD
+// NOT. `_invTrack` defaulted every unset item to 'Probate', so on a trust matter the person who
+// did nothing put the whole house on a court schedule for a proceeding that does not exist, and
+// the person who did the right thing — setting the track by hand — emptied every document the
+// app could produce. Measured on a seeded trust estate holding $19,000 of furniture: tracked
+// Probate the Court Inventory listed all of it, tracked Trust it totalled $0 and nothing else
+// offered the property anywhere. Both are wrong and there was no third answer, which is exactly
+// why this change was held — moving the default before `printTrustSchedule` existed would have
+// taken a trust matter's contents off the wrong schedule and onto NO schedule at all.
+//
+// ⚠ ONLY AN EXPLICIT `trust` MOVES IT, and it reads `trust`/`onProbate` off the catalogue rather
+// than testing the key. `both` is a pour-over will, whose whole function is that anything NOT
+// already titled into the trust pours in THROUGH probate — so an untracked item there is probate
+// property until somebody says otherwise, which is the conservative answer and the true one.
+// `neither` and an unanswered matter keep 'Probate', so no job recorded before today moves.
+function _invTrackDefault(job) {
+  var d = matterDef(job);
+  return (d && d.trust && !d.onProbate) ? 'Trust' : 'Probate';
+}
+// ⚠⚠ THE JOB IS AN ARGUMENT AND MUST STAY ONE — `ref.jobId` IS NOT AVAILABLE AND LOOKS LIKE IT
+// IS. `jobId` is not on the `savePhotoRefs` whitelist, so it is dropped on every save and a ref
+// read back from localStorage carries none; a version resolving the job off the ref would pass
+// every test whose fixture sets it by hand and answer 'Probate' on every real reload — a fixture
+// handing the code the thing under test. A call site that omits the job silently gets the probate
+// default on a trust matter, the `invNeedsAppraisal` trap exactly, so a test pins that no
+// single-argument call survives.
+function _invTrack(ref, job) { return (ref && ref.assetTrack) || _invTrackDefault(job); }
+function _invIsProbateAsset(ref, job) { return _invTrack(ref, job) === 'Probate'; }
 
 // ⚠⚠ EXEMPT IS A CLAIM AGAINST THE PROBATE ESTATE, NOT A POT OUTSIDE IT — and until
 // 2026-09-11 the app had it both ways, which deleted property off a court filing.
@@ -18966,7 +18992,7 @@ function _invIsProbateAsset(ref) { var t = _invTrack(ref); return t === 'Probate
 //
 // So: exempt is answered in ONE place whichever control was used, and the two genuinely
 // separate pots — Trust / Non-probate / Homestead — are what stays off the schedule.
-function _invIsExempt(ref) { return !!(ref && ref.flagExempt) || _invTrack(ref) === 'Exempt'; }
+function _invIsExempt(ref, job) { return !!(ref && ref.flagExempt) || _invTrack(ref, job) === 'Exempt'; }
 // Does this line carry a value at all? ⚠ A RECORDED ZERO IS AN ANSWER AND A BLANK IS NOT —
 // the same distinction `moneyToNumber('')` exists for, and the reason *Items Awaiting
 // Valuation* counts what it does. Treating blank as 0 silently asserts the item is worthless.
@@ -18974,17 +19000,24 @@ function _invHasValue(ref) { return !isNaN(parseFloat(ref && ref.fmv)); }
 // Names the tracks a set of excluded rows actually carries, rather than reciting a fixed
 // list — the court inventory's footnote used to claim "Trust / Non-probate / Homestead"
 // over a count that could contain none of them.
-function _invExcludedTracks(rows) {
+function _invExcludedTracks(rows, job) {
   var seen = [];
-  (rows || []).forEach(function(r){ var t = _invTrack(r); if (seen.indexOf(t) < 0) seen.push(t); });
+  (rows || []).forEach(function(r){ var t = _invTrack(r, job); if (seen.indexOf(t) < 0) seen.push(t); });
   if (!seen.length) return 'Trust / Non-probate / Homestead';
   return seen.sort().join(' / ');
 }
 
-function _invOnProbateSchedule(ref) {
-  var t = _invTrack(ref);
+function _invOnProbateSchedule(ref, job) {
+  var t = _invTrack(ref, job);
   return t === 'Probate' || t === 'Exempt';
 }
+// ⚠⚠ THE CONVERSE IS ONE TRACK, NOT THE NEGATION OF THE OTHER, and reaching for `!` here is
+// the mistake to avoid. Non-probate property passes by beneficiary designation, joint tenancy or
+// a payable-on-death account — straight to the named beneficiary, never to the trustee — and
+// Florida homestead passes to the heirs outside both. Neither is the trust's, so neither belongs
+// on the trustee's schedule. The two schedules are therefore NOT complementary: together they do
+// not cover everything, deliberately, which is why each one names what it left out.
+function _invOnTrustSchedule(ref, job) { return _invTrack(ref, job) === 'Trust'; }
 // §732.402 protects household furniture, furnishings and appliances up to this value
 // (motor vehicles and the education-savings items are separate allowances and are NOT
 // counted against it). The app cannot tell on its own which flagged items fall inside
@@ -19910,7 +19943,13 @@ function _invInput(jobId, ref, col, job) {
       return '<select ' + on + ' ' + base + '>' + oc + '</select>';
     }
     case 'trackSelect': {
-      var ot = INV_ASSET_TRACKS.map(function(x){ return '<option' + ((v || 'Probate') === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      // ⚠⚠ THE SCREEN AND THE DOCUMENTS MUST AGREE ABOUT WHICH SCHEDULE AN ITEM IS ON, and
+      // this cell held a SECOND COPY of the default (`v || 'Probate'`). Once the default follows
+      // the matter type the two disagree on exactly the matters that matter: the dropdown would
+      // read *Probate* on a trust estate while every document read the same row as Trust, so the
+      // desk would be looking at the one control that answers the question and getting the wrong
+      // answer from it. One definition, read here as everywhere else.
+      var ot = INV_ASSET_TRACKS.map(function(x){ return '<option' + (_invTrack(ref, job) === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
       return '<select ' + on + ' ' + base + '>' + ot + '</select>';
     }
     case 'maivSelect': {
@@ -20191,7 +20230,7 @@ function takeInventorySnapshot(jobId) {
   // cannot rely on — names get corrected, and a corrected name reads as a deletion plus
   // an addition rather than as the same item.
   var snapItems = items.map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) totalFMV += n;
-    return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r) }; });
+    return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r, job) }; });
   if (!job.invSnapshots) job.invSnapshots = [];
   job.invSnapshots.push({ ts: Date.now(), label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: totalFMV, items: snapItems });
   _jobTouch(job, 'invSnapshots', job.invSnapshots[job.invSnapshots.length - 1].ts);
@@ -20494,6 +20533,22 @@ var INV_CONTRACT_DOCS = {
     why: 'This engagement does not include valuation, so Havellin has no valued schedule to '
        + 'offer for adoption — the §733.604 inventory is the estate attorney’s to prepare and '
        + 'file. Hand over the Contents List instead.'
+  },
+  // The Chapter 736 schedule. THE SAME TEST FOR THE SAME REASON, and it is why the trust
+  // variant needed no new axis: it states a carrying value on every line, and a carrying value
+  // is exactly what a capture engagement contracts NOT to state. What differs between the
+  // probate and trust schedules is the instrument, never whether valuation is ours.
+  // ⚠ THE KEY IS `trustee`, NOT `trust`, AND THAT IS NOT A STYLE CHOICE. A standing net asserts
+  // that no live line anywhere in this file carries a quoted `'trust'`, `'both'` or `'neither'` —
+  // the MATTER_TYPES keys are unquoted, so a quoted one is a reader testing the answer by name
+  // instead of asking the catalogue, which is how `both` gets forgotten. A document kind called
+  // `trust` would have collided with that vocabulary and the honest fix was to rename this, not
+  // to carve an exemption into the net. `trustee` also reads the way `court` does: who it is for.
+  trustee: {
+    needs: 'values',
+    why: 'This engagement does not include valuation, so Havellin has no carrying value to '
+       + 'state — the schedule of trust property and the accounting it supports are the '
+       + 'trustee’s, with their counsel. Hand over the Contents List instead.'
   }
 };
 // '' when the document is ours to issue; the reason when the contract puts it elsewhere.
@@ -20762,8 +20817,31 @@ function printEstateInventoryReport(jobId) {
   // Carved out, not omitted: exempt, homestead and non-probate property is reported in
   // its own schedule so a reader can see both that it exists and that it sits outside
   // the probate estate.
-  var carved = all.filter(function(r){ return _invIsExempt(r) || !_invIsProbateAsset(r); });
-  var main   = all.filter(function(r){ return carved.indexOf(r) < 0; });
+  //
+  // ⚠⚠ AND THE CARVE-OUT IS A PROBATE CONCEPT, SO IT STANDS DOWN WHERE THERE IS NO PROBATE
+  // ESTATE FOR ANYTHING TO SIT OUTSIDE OF. Its own reason above says so in as many words. On a
+  // matter recorded `trust` or `neither` the partition answers a question nobody asked — and
+  // once `_invTrack`'s default follows the matter type it answers it catastrophically, putting
+  // EVERY line under a heading naming three pots the property is not in, above an empty Asset
+  // Schedule. `invProbateRows` is the same predicate the workbook already uses, so an unanswered
+  // matter and a `both` matter behave exactly as they do today.
+  var _probateMatter = invProbateRows(job);
+  var carved = _probateMatter ? all.filter(function(r){ return _invIsExempt(r, job) || !_invIsProbateAsset(r, job); }) : [];
+  var main   = _probateMatter ? all.filter(function(r){ return carved.indexOf(r) < 0; }) : all;
+  // ⚠ THE HEADING NAMES THE POTS IT ACTUALLY HOLDS RATHER THAN RECITING A FIXED LIST — the
+  // rule `_invExcludedTracks` already applies to the Court Inventory's footnote, which used to
+  // claim "Trust / Non-probate / Homestead" over a count that could contain none of them. This
+  // one read "Homestead, Exempt & Non-Probate Property" over whatever was in it, so a `both`
+  // matter with an item tracked Trust was already mis-described before today.
+  var _carvePots = function(list) {
+    var seen = [];
+    (list || []).forEach(function(r){
+      var t = _invTrack(r, job);
+      var pot = (t === 'Trust' || t === 'Homestead' || t === 'Non-probate') ? t : (_invIsExempt(r, job) ? 'Exempt' : t);
+      if (seen.indexOf(pot) < 0) seen.push(pot);
+    });
+    return seen.sort().join(', ');
+  };
 
   function itemRow(r) {
     var q = parseInt(r.qty, 10);
@@ -20851,7 +20929,7 @@ function printEstateInventoryReport(jobId) {
     + _invDocHead(job, 'Estate Inventory &mdash; Asset Schedule')
     + _invProgressStamp(all)
     + block(main, 'Asset Schedule')
-    + block(carved, 'Homestead, Exempt &amp; Non-Probate Property &mdash; carved out of the probate estate')
+    + block(carved, esc(_carvePots(carved)) + ' Property &mdash; carved out of the probate estate')
     + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:12px;border-top:2px solid #333;padding-top:6px;">'
       + 'Total estimated ' + esc(resolveValBasis(job).toLowerCase()) + ': &nbsp;' + _invMoney(totalFMV) + '</div>'
     + apprBlock
@@ -21168,6 +21246,37 @@ function invRecordApproval(jobId) {
   renderInventoryTab();
 }
 
+// ⚠⚠ ONE TABLE, TWO SCHEDULES — extracted when the trustee's schedule was built (2026-09-21)
+// rather than copied, because a second renderer beside this one is the drift this file records
+// more often than anything else. The probate schedule and the trust schedule state the same
+// thing about the same objects and must not come to disagree about how a row reads, what a
+// subtotal counts, or whether a quantity is a lot or a unit price. It was a closure inside
+// `printCourtInventory` and carried no closure state, so extracting it changes nothing.
+function _invScheduleSection(title, list) {
+  if (!list.length) return { html: '', total: 0 };
+  var total = 0;
+  var byCat = {};
+  list.forEach(function(r){ var c = r.category || 'General/Household'; (byCat[c] = byCat[c] || []).push(r); });
+  var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + esc(title) + '</div>';
+  Object.keys(byCat).sort().forEach(function(cat){
+    var sub = 0;
+    var rows = byCat[cat].map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) sub += n;
+      // FMV IS THE LINE TOTAL, NOT A UNIT PRICE — that is how every accumulator in the
+      // app reads it. On a document a reader can take "Coin Collection (qty 10,000)"
+      // beside "$500,000" either way, and the two readings differ by four orders of
+      // magnitude on a court filing. Say which it is on the row and in the header.
+      var _q = parseInt(r.qty, 10);
+      return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (_q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' items, valued as a lot)</span>' : '') + '</td>'
+        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
+        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
+    total += sub;
+    h += '<div style="font-size:11px;font-weight:700;color:#555;margin:7px 0 1px;">' + esc(cat) + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;text-align:right;">FMV (total)</th></tr></thead><tbody>' + rows + '</tbody>'
+      + '<tfoot><tr><td colspan="2" style="padding:2px 6px;text-align:right;font-weight:600;">' + esc(cat) + ' subtotal</td><td style="padding:2px 6px;text-align:right;font-weight:600;">' + _invMoney(sub) + '</td></tr></tfoot></table>';
+  });
+  return { html: h, total: total };
+}
+
 function printCourtInventory(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var _blocked = invDocContractBlock(job, 'court');
@@ -21194,7 +21303,7 @@ function printCourtInventory(jobId) {
   // makes the schedule provisional whether or not the estate is on the formal standard —
   // `formal` gates the appraisal half only, because that is a documentation-standard
   // question; arithmetic is not.
-  var unvalued = items.filter(function(r){ return _invOnProbateSchedule(r) && !_invHasValue(r); });
+  var unvalued = items.filter(function(r){ return _invOnProbateSchedule(r, job) && !_invHasValue(r); });
   var _draftWhy = [];
   // ⚠⚠ WHAT UNBLOCKS IT FOLLOWS THE REASON, AND UNTIL 2026-09-21 IT WAS ONE CONSTANT SENTENCE
   // GLUED ONTO ALL FOUR. The block closed *"a final copy is issued once the outstanding items
@@ -21219,7 +21328,7 @@ function printCourtInventory(jobId) {
   //
   // Nothing recorded at all and everything carved out are different facts and say so, because
   // the fix differs: one is "go and do the inventory", the other is "this is the wrong document".
-  var onSched = items.filter(function(r){ return _invOnProbateSchedule(r); });
+  var onSched = items.filter(function(r){ return _invOnProbateSchedule(r, job); });
   if (!onSched.length) _draftWhy.push(items.length
     ? 'no recorded item is on the probate schedule'
     : 'nothing is recorded on this estate yet');
@@ -21257,37 +21366,14 @@ function printCourtInventory(jobId) {
   // fell between the two tests: it rendered inside the Exempt section — on the probate
   // schedule it is excluded from — and was left out of the "excluded" count as well, so
   // nothing on the page said it was there.
-  var excluded = items.filter(function(r){ return !_invOnProbateSchedule(r); });
-  function section(title, list) {
-    if (!list.length) return { html: '', total: 0 };
-    var total = 0;
-    var byCat = {};
-    list.forEach(function(r){ var c = r.category || 'General/Household'; (byCat[c] = byCat[c] || []).push(r); });
-    var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + esc(title) + '</div>';
-    Object.keys(byCat).sort().forEach(function(cat){
-      var sub = 0;
-      var rows = byCat[cat].map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) sub += n;
-        // FMV IS THE LINE TOTAL, NOT A UNIT PRICE — that is how every accumulator in the
-        // app reads it. On a document a reader can take "Coin Collection (qty 10,000)"
-        // beside "$500,000" either way, and the two readings differ by four orders of
-        // magnitude on a court filing. Say which it is on the row and in the header.
-        var _q = parseInt(r.qty, 10);
-        return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (_q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' items, valued as a lot)</span>' : '') + '</td>'
-          + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
-          + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
-      total += sub;
-      h += '<div style="font-size:11px;font-weight:700;color:#555;margin:7px 0 1px;">' + esc(cat) + '</div>'
-        + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;text-align:right;">FMV (total)</th></tr></thead><tbody>' + rows + '</tbody>'
-        + '<tfoot><tr><td colspan="2" style="padding:2px 6px;text-align:right;font-weight:600;">' + esc(cat) + ' subtotal</td><td style="padding:2px 6px;text-align:right;font-weight:600;">' + _invMoney(sub) + '</td></tr></tfoot></table>';
-    });
-    return { html: h, total: total };
-  }
+  var excluded = items.filter(function(r){ return !_invOnProbateSchedule(r, job); });
+  var section = _invScheduleSection;
   // Two sections, two totals. One shared accumulator used to run across both, so the
   // exempt property was folded silently into "Total tangible personal property" and
   // there was no exempt figure anywhere on the document — which is the one number a
   // reader needs in order to test the §732.402 claim at all.
-  var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invOnProbateSchedule(r) && !_invIsExempt(r); }));
-  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invOnProbateSchedule(r) && _invIsExempt(r); }));
+  var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invOnProbateSchedule(r, job) && !_invIsExempt(r, job); }));
+  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invOnProbateSchedule(r, job) && _invIsExempt(r, job); }));
   var exemptTotal = exemptSec.total;
   var overCap = exemptTotal > EXEMPT_CAP_732_402;
   var body = estateSec.html
@@ -21332,13 +21418,145 @@ function printCourtInventory(jobId) {
           + esc(unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
           + (unvalued.length > 6 ? ' and ' + (unvalued.length - 6) + ' more' : '') + '.</div>'
         : '')
-    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
+    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + (draft
         ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; ' + esc(_draftFix.join('; ')) + '.</div>'
         : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
   _printDocument(html, _invDocName(job, 'Court Inventory'));
+}
+
+// ── 02b · The trustee's schedule — the Chapter 736 variant ─────────────────────
+// ⚠⚠ WITHOUT THIS DOCUMENT A TRUST MATTER HAD TWO DEAD ENDS AND NO THIRD ANSWER, and both were
+// measured on a seeded trust estate holding $19,000 of furniture before anything was built.
+// Leave every line on the default track and the Court Inventory lists the whole house on a
+// §733.604 schedule for a proceeding that does not exist. Set the track to Trust — the right
+// answer, and the one both documents tell you to give — and the Court Inventory correctly
+// refuses, totals $0, and NOTHING anywhere lists the property at all. Anthony's own reading is
+// that most Palm Beach homes are in trust, so the common case was the one with no path through.
+//
+// ⚠⚠ IT SUPPORTS THE TRUSTEE'S ACCOUNTING AND IS NOT ONE, AND THAT LINE IS WHAT KEEPS HAVELLIN
+// OUT OF FIDUCIARY ACCOUNTING WORK. It is stated on the document's own face and it NAMES what a
+// §736.08135 accounting contains that this does not — receipts, disbursements, gains and losses
+// on sale, and the identification of beneficiaries. A bare disclaimer is a sentence somebody
+// skims; a list is something a reader can check, and it is the same "state the gap" rule the
+// Court Inventory already follows on an unvalued line.
+//
+// ⚠ WHAT IS THE SAME AS THE PROBATE SCHEDULE, DELIBERATELY: THE NUMBER. Date-of-death fair
+// market value does three jobs at once — the §1014 stepped-up basis, the Form 706 figure, and
+// the CARRYING VALUE the trust's first accounting opens with for assets received from a
+// decedent — and the §1014 step-up reaches revocable trust assets. See MATTER_TYPES: do not add
+// a trust valuation date. What differs is the instrument, the citation, who signs, and the line
+// above. The table itself is `_invScheduleSection`, shared with the probate schedule so the two
+// cannot drift about how a row reads or what a subtotal counts.
+function printTrustSchedule(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  // Same gate, same predicate, same sentence as the other two valued schedules: this one states
+  // a carrying value on every line, so it is ours only where the agreement says we state values.
+  var _blocked = invDocContractBlock(job, 'trustee');
+  if (_blocked) { alert(_blocked); return; }
+  var pt = document.getElementById('print-target');
+  if (!job || !pt) return;
+  var items = _invAssignItemNos(jobId);
+  var formal = isFormalDoc(job);
+  var guard = _invGuardrailItems(jobId);
+  // ⚠ ONE TRACK, NEVER THE NEGATION OF THE PROBATE TEST — see _invOnTrustSchedule. Non-probate
+  // and homestead property is on neither schedule and that is correct, so this document has to
+  // say what it left out just as the probate one does.
+  var onSched = items.filter(function(r){ return _invOnTrustSchedule(r, job); });
+  var unvalued = onSched.filter(function(r){ return !_invHasValue(r); });
+  var excluded = items.filter(function(r){ return !_invOnTrustSchedule(r, job); });
+  var _mt = matterDef(job);
+  var _noTrust = !!(_mt && !_mt.trust);
+  // The same four-reason discipline the probate schedule carries, and each reason brings the fix
+  // that unblocks IT — a fix that does not describe the blocker is read, followed, and wastes the
+  // one person who could have corrected it.
+  var _draftWhy = [], _draftFix = [];
+  if (!onSched.length) {
+    _draftWhy.push(items.length ? 'no recorded item is on the trust schedule' : 'nothing is recorded on this estate yet');
+    _draftFix.push(items.length
+      ? 'set the Asset Track to Trust on the property the trust holds, or issue the right instrument for this estate'
+      : 'the schedule is issued once the contents are recorded');
+  }
+  if (formal && guard.length) {
+    _draftWhy.push(guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal');
+    _draftFix.push(docTierProduces(job, 'appraisals')
+      ? 'Havellin engages the specialist and a final copy follows the report'
+      : 'the trustee or their counsel arranges the appraisal on this engagement');
+  }
+  if (unvalued.length) {
+    _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
+    _draftFix.push('a final copy is issued once the outstanding items are valued');
+  }
+  if (_noTrust) {
+    _draftWhy.push('this estate has no trust in it');
+    _draftFix.push('no final copy of THIS schedule will follow — the estate’s own inventory is the right instrument for it');
+  }
+  var draft = _draftWhy.length > 0;
+  var status = draft ? 'DRAFT — ' + _draftWhy.join(' · ') : 'FINAL';
+  var basis = resolveValBasis(job);
+  var vdate = estateValueDate(job);
+  var vdateStr = vdate ? fmtDate2(vdate) : '—';
+  var vlabel = job.avd ? 'the alternate valuation date' : 'date of death';
+  var sec = _invScheduleSection('Tangible Personal Property Held in Trust', onSched);
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Schedule of Tangible Personal Property Held in Trust</h2>'
+    + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:8px;">Prepared for the successor trustee&rsquo;s use in administering the trust under chapter 736, Florida Statutes.</div>'
+    + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
+    // ⚠ ABOVE THE TABLE. A reader works down this page and takes the schedule as what it says it
+    // is; a caveat under the total has arrived after they read it. Same placement rule the
+    // probate schedule, the release cautions and the as-found gap block all follow.
+    + (_noTrust
+        ? '<div style="margin-bottom:12px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;line-height:1.5;">'
+          + '<strong>This estate has no trust in it.</strong> It is recorded as <em>' + esc(_mt.label) + '</em>. '
+          + 'There is no trustee for this schedule to be prepared for and no accounting for it to support'
+          + (_mt.onProbate ? ' &mdash; the property is administered through the estate, and the &sect;733.604 inventory is the instrument for it' : '')
+          + '. This copy is issued as a working record only.</div>'
+        : '')
+    + ((_mt && _mt.trust && _mt.onProbate)
+        ? '<div style="margin-bottom:12px;font-size:10.5px;color:#8a6d3b;font-style:italic;line-height:1.5;">Recorded as <em>' + esc(_mt.label) + '</em>, so some property probates into the trust rather than being held by it already. Anything tracked Probate or Exempt is excluded from this schedule and belongs on the estate&rsquo;s &sect;733.604 inventory.</div>'
+        : '')
+    // ⚠ AN UNRECORDED MATTER TYPE IS NAMED RATHER THAN GUESSED, AND IT DOES NOT MAKE THIS A
+    // DRAFT. Somebody tracking an item Trust has already answered the question about the
+    // property, which is what this schedule lists; the blank is a gap in the job record and the
+    // note says where to close it.
+    + ((!_mt && onSched.length)
+        ? '<div style="margin-bottom:12px;font-size:10.5px;color:#8a6d3b;font-style:italic;line-height:1.5;">No matter type is recorded on this job, so Havellin cannot confirm from the record that a trust administers this estate &mdash; the property below is listed because it is tracked as the trust&rsquo;s. Answer it on Edit Client.</div>'
+        : '')
+    + sec.html
+    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">'
+      + (unvalued.length ? 'Total recorded so far (' + esc(basis) + ') &mdash; not a complete total: &nbsp;' : 'Total tangible personal property held in trust (' + esc(basis) + '): &nbsp;')
+      + _invMoney(sec.total) + '</div>'
+    + (unvalued.length
+        ? '<div style="font-size:10.5px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">'
+          + unvalued.length + ' item' + (unvalued.length > 1 ? 's are' : ' is') + ' recorded without a value and '
+          + (unvalued.length > 1 ? 'are' : 'is') + ' NOT included above, so this figure is a floor rather than a total: '
+          + esc(unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
+          + (unvalued.length > 6 ? ' and ' + (unvalued.length - 6) + ' more' : '') + '.</div>'
+        : '')
+    // ⚠ THE TWO SCHEDULES ARE NOT COMPLEMENTARY AND THIS SAYS SO. Probate and exempt property is
+    // the estate's; homestead and non-probate property passes to heirs and named beneficiaries
+    // outside both. A reader holding one schedule must not read the other as covering the rest.
+    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this schedule. Probate and exempt property is reported on the estate&rsquo;s &sect;733.604 inventory; homestead and non-probate property passes outside both and is reported on neither.</div>' : '')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, accounts, securities and business interests are administered under the trust instrument and are reported separately by the trustee. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
+    + '<div style="margin-top:14px;font-size:10.5px;border:1px solid #c8bda8;border-radius:4px;padding:10px 12px;color:#5a5046;line-height:1.6;">'
+      + '<strong>This schedule supports the trustee&rsquo;s accounting. It is not itself one.</strong> '
+      + 'It states the tangible personal property held by the trust and its fair market value as of ' + esc(vlabel) + ' &mdash; the carrying value at which property received from a decedent enters the trust&rsquo;s records, and the figure a first accounting under Florida Statute &sect;736.08135 opens with. '
+      + 'It contains no receipts or disbursements, no gains or losses on sale, and no identification of beneficiaries, all of which a &sect;736.08135 accounting requires. '
+      + 'Havellin does not prepare trust accountings and does not act as trustee, co-trustee or fiduciary of the trust. The accounting and the duty to inform and account under &sect;736.0813 remain the trustee&rsquo;s, with their counsel.</div>'
+    + (draft
+        ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be accepted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; ' + esc(_draftFix.join('; ')) + '.</div>'
+        // ⚠ RECEIVED, NOT ADOPTED. A personal representative ADOPTS the probate schedule into a
+        // court filing; a successor trustee files nothing — they take this into the trust's
+        // records and carry its figures into the accounting. Naming the act wrongly on a
+        // signature line is the same class of claim the $0 FINAL was.
+        : '<div style="margin-top:18px;font-size:11px;">Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Successor Trustee</span></div>')
+    + '</div>';
+  _printDocument(html, _invDocName(job, 'Trust Schedule'));
 }
 
 function printDispositionLedger(jobId) {
@@ -22909,6 +23127,13 @@ function _renderInvWorkbar(job, all) {
         + '<div style="position:absolute;z-index:50;right:0;margin-top:4px;background:var(--paper,#fff);border:1px solid var(--border-md);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px;">'
         + btn('printAsFoundRecord(' + jid + ')', 'As-Found Record', 'Room-by-room index of the property as it was found — every as-found photograph, when it was taken and a link to the file. Names any room in scope that carries none.')
         + (fid && !invDocContractBlock(job, 'court') ? btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory') : '')
+        // ⚠ BOTH FILING INSTRUMENTS ARE OFFERED ON EVERY DECEDENT JOB AND NEITHER IS GATED BY
+        // THE MATTER TYPE — the rule step 6 set and the reason it set it. Each refuses on its own
+        // FACE when it is the wrong instrument, naming what the estate is and what to issue
+        // instead; a withheld button would leave "where is the trustee's schedule?" hanging,
+        // which is exactly the dead end this document exists to close. A pour-over will is
+        // genuinely both, and gets both.
+        + (fid && !invDocContractBlock(job, 'trustee') ? btn('printTrustSchedule(' + jid + ')', 'Trust Schedule', 'Chapter 736 schedule of the tangible personal property held in trust, at date-of-death carrying value — prepared to SUPPORT the trustee\'s accounting, never to be one') : '')
         + (fid ? btn('printDispositionLedger(' + jid + ')', 'Disposition Ledger', 'Proceeds, fees, net to estate, receipts') : '')
         + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', fid
             ? 'Per-specialist packet of every item flagged for appraisal'
@@ -22924,7 +23149,7 @@ function _renderInvWorkbar(job, all) {
     + (fid && invDocContractBlock(job, 'schedule')
         ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;"><strong>No valued schedule on this engagement.</strong> '
           + esc(docTierDef(docTierOf(job)) ? docTierDef(docTierOf(job)).they : 'Counsel values it and prepares the filing.')
-          + ' The Estate Inventory and Court Inventory are withheld for that reason, not because anything is missing here.</div>'
+          + ' The Estate Inventory, the Court Inventory and the Trust Schedule are withheld for that reason, not because anything is missing here.</div>'
         : '')
     + (st.total && !st.complete
         ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;">Client documents print with an <strong>IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.</div>'
@@ -31975,31 +32200,114 @@ function _pctWords(rate) {
   return (_PCT_WORDS[n] ? _PCT_WORDS[n] + ' percent (' + n + '%)' : n + '%');
 }
 
-function _agrScopeServices(docScope) {
+// ⚠ THE APPROVER NOUN HERE IS THE SAME DEFECT ONE CLAUSE OVER, and leaving it behind while
+// §5.2 was fixed is the four-verbs-one-out-of-step shape this file records more than anything
+// else. All three arms said "authorized by the Personal Representative" — on a trust matter
+// there is not one.
+function _agrScopeServices(docScope, job) {
   if (docScope === 'none') {
-    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by the estate attorney\'s office; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney; Havellin works from the schedule they provide. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by the estate attorney\'s office; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney; Havellin works from the schedule they provide. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
   }
   if (docScope === 'capture') {
-    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: room-by-room photography and listing of property contents (description, location and condition, without valuation); sorting and staging; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room photography and listing of property contents (description, location and condition, without valuation); sorting and staging; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
   }
-  return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the Personal Representative. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; appraisal coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+  return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; appraisal coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
 }
-function _agrProbateCompliance(docScope) {
-  var first = docScope === 'none'
-    ? 'The inventory required under Florida Statute §733.604 is prepared by the estate attorney\'s office. Havellin does not prepare, value or file it, and works from the schedule counsel provides.'
+// ⚠ WHO APPROVES A DISPOSITION IS A FACT ABOUT THE MATTER, NOT ABOUT THE SERVICE SOLD. The
+// agreement named the Personal Representative in every clause that needed an approver, on every
+// estate form, including the ones where there is no personal representative because there is no
+// probate. One noun, read wherever the contract names that person, so the clauses cannot drift
+// apart the way four verbs and one gate already have in this file.
+function _agrApprover(job) {
+  var d = matterDef(job);
+  if (!d) return 'Personal Representative';           // unanswered — today's wording, unchanged
+  if (d.onProbate && d.trust) return 'Personal Representative or successor trustee';
+  if (d.trust) return 'successor trustee';
+  if (d.onProbate) return 'Personal Representative';
+  return 'Client';                                    // neither: no court, no trust
+}
+// ⚠⚠ THE SENTENCE THAT KEEPS HAVELLIN OUT OF FIDUCIARY ACCOUNTING WORK, and it belongs on the
+// CONTRACT as well as on the schedule's own face. Putting it only on the document would leave
+// the engagement itself silent about the boundary — and the engagement is what a trustee's
+// counsel reads when they ask what Havellin was retained to do.
+var AGR_NOT_AN_ACCOUNTING = 'Havellin does not prepare trust accountings and does not act as trustee, co-trustee or fiduciary of the trust. The schedule of trust property and the disposition records Havellin produces <strong>support</strong> the accounting required of the trustee under Florida Statute §736.08135; they do not constitute one. The duty to inform and account under §736.0813 remains the trustee\'s, with their counsel.';
+// The tier clause, trust side — the same three arms the probate one has, because what Havellin
+// hands over is the tier's question and is identical either way. Only the instrument differs.
+function _agrTrustDeliverable(docScope) {
+  return docScope === 'none'
+    ? 'The schedule of tangible personal property held by the trust is prepared by the trustee or their counsel. Havellin does not prepare, value or certify it, and works from the schedule they provide.'
     : docScope === 'capture'
-    ? 'Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the estate attorney for use in preparing the inventory required under Florida Statute §733.604. Valuation and the court filing are the responsibility of the estate attorney.'
-    : 'Havellin will prepare a documented asset inventory suitable for use in the court-required filing under Florida Statute §733.604. The estate attorney is responsible for the actual court filing.';
-  var out = [first];
-  if (docScope === 'full') {
-    out.push('Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory deadline from Letters of Administration issuance.');
+    ? 'Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the successor trustee for use in the trust\'s records. Valuation is the responsibility of the trustee and their counsel.'
+    : 'Havellin will prepare a documented schedule of the tangible personal property held by the trust, stated at fair market value as of the date of death — the carrying value at which property received from a decedent enters the trust\'s records.';
+}
+// ⚠⚠ THIS SECTION ASSERTED A PROBATE PROCEEDING ON EVERY ESTATE AGREEMENT EVER ISSUED (D10).
+// It took `docScope` and nothing else, so a matter recorded `trust` — which on this book is the
+// COMMON case, not the edge one — signed a contract headed *Florida Probate Compliance*
+// promising an inventory "required under Florida Statute §733.604" and appraisals "within the
+// 60-day inventory deadline from Letters of Administration issuance". A trust administration has
+// no Letters and no 60-day deadline: the clause described a proceeding that does not exist, in
+// writing, on the document the client signs.
+//
+// ⚠ AN UNANSWERED MATTER TYPE KEEPS THE PROBATE WORDING BYTE FOR BYTE, and that is the safe
+// direction and the same one `invProbateRows` takes. Every estate papered before 2026-09-21
+// carries none, and stripping a §733.604 promise off a real probate matter on the strength of a
+// question nobody was asked is the bad failure. A test compares the two, clause for clause.
+function _agrProbateCompliance(docScope, job) {
+  var d = matterDef(job);
+  var onProbate = !d || !!d.onProbate;
+  var trust = !!(d && d.trust);
+  var out = [];
+  if (onProbate) {
+    out.push(docScope === 'none'
+      ? 'The inventory required under Florida Statute §733.604 is prepared by the estate attorney\'s office. Havellin does not prepare, value or file it, and works from the schedule counsel provides.'
+      : docScope === 'capture'
+      ? 'Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the estate attorney for use in preparing the inventory required under Florida Statute §733.604. Valuation and the court filing are the responsibility of the estate attorney.'
+      : 'Havellin will prepare a documented asset inventory suitable for use in the court-required filing under Florida Statute §733.604. The estate attorney is responsible for the actual court filing.');
+    out.push(docScope === 'full'
+      ? 'Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory deadline from Letters of Administration issuance.'
+      : 'Professional appraisals are arranged by the estate attorney. Havellin will give the appraiser access to the property and be present for the visit on request.');
+  } else if (trust) {
+    out.push(_agrTrustDeliverable(docScope));
+    out.push(docScope === 'full'
+      ? 'Havellin will coordinate professional appraisals for all required asset categories.'
+      : 'Professional appraisals are arranged by the trustee or their counsel. Havellin will give the appraiser access to the property and be present for the visit on request.');
   } else {
-    out.push('Professional appraisals are arranged by the estate attorney. Havellin will give the appraiser access to the property and be present for the visit on request.');
+    // `neither` — no court proceeding and no trust. The section KEEPS ITS NUMBER: §5.2 is cited
+    // by nothing, but removing a numbered subsection renumbers everything under it against
+    // agreements already issued, which is the constraint §7.1 and §10 already answer to.
+    out.push(docScope === 'none'
+      ? 'This estate is not being administered through a probate proceeding or a trust, and no statutory inventory is required of it. The schedule of contents is prepared by the Client or their advisers; Havellin works from the schedule they provide.'
+      : docScope === 'capture'
+      ? 'This estate is not being administered through a probate proceeding or a trust, and no statutory inventory is required of it. Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the Client. Valuation is the Client\'s responsibility.'
+      : 'This estate is not being administered through a probate proceeding or a trust, and no statutory inventory is required of it. Havellin will prepare a documented inventory of the property contents, stated at fair market value as of the date of death, for the Client\'s own distribution record.');
+    out.push(docScope === 'full'
+      ? 'Havellin will coordinate professional appraisals for all required asset categories.'
+      : 'Professional appraisals are arranged by the Client. Havellin will give the appraiser access to the property and be present for the visit on request.');
   }
-  out.push('All asset sales will require written Personal Representative approval. Sales of real property require court approval unless the PR holds full authority under Florida Statute §733.613.');
-  out.push('Havellin will maintain complete documentation of all asset dispositions for inclusion in the estate\'s final accounting.');
+  // On a pour-over will both are true at once, so both are stated: the probate clauses above,
+  // and the boundary below. The trust half is not an alternative there, it is an addition.
+  if (trust) out.push((onProbate ? 'Property held in the trust rather than in the probate estate is scheduled separately for the successor trustee. ' : '') + AGR_NOT_AN_ACCOUNTING);
+  out.push('All asset sales will require written ' + _agrApprover(job) + ' approval.'
+    + (onProbate ? ' Sales of real property require court approval unless the PR holds full authority under Florida Statute §733.613.' : ''));
+  out.push('Havellin will maintain complete documentation of all asset dispositions for inclusion in the '
+    + (onProbate ? 'estate\'s final accounting' : trust ? 'trust\'s accountings' : 'Client\'s distribution record') + '.');
   out.push('All project files will be retained for a minimum of 7 years from project close date.');
   return out;
+}
+// §5.2's heading and lead named probate outright. The NUMBER never moves; the words do.
+function _agrComplianceHeading(job) {
+  var d = matterDef(job);
+  if (!d || (d.onProbate && !d.trust)) return '5.2 Florida Probate Compliance';
+  if (d.onProbate && d.trust) return '5.2 Florida Probate &amp; Trust Administration Compliance';
+  if (d.trust) return '5.2 Florida Trust Administration Support';
+  return '5.2 Estate Documentation';
+}
+function _agrComplianceLead(job) {
+  var d = matterDef(job);
+  if (!d || (d.onProbate && !d.trust)) return 'For probate engagements, Havellin will support — but not replace — the estate attorney in meeting Florida probate requirements. Specifically:';
+  if (d.onProbate && d.trust) return 'This estate has property on both sides: some passes through probate and some is held by the trust. Havellin will support — but not replace — the estate attorney and the successor trustee. Specifically:';
+  if (d.trust) return 'For trust administration, Havellin will support — but not replace — the successor trustee and their counsel. Specifically:';
+  return 'This estate is administered without a court proceeding and without a trust. Havellin\'s documentation supports the Client\'s own distribution record. Specifically:';
 }
 // The midpoint payment used to be triggered by the completion of the asset-inventory phase on
 // every estate agreement. On a job that prices no inventory there is no such phase to complete.
@@ -32165,8 +32473,8 @@ function probateAgreementHtml(job, est) {
   content += '</table>';
   // SECTION 2: SCOPE
   content += secHdr(2,'Scope of Services');
-  content += pp(_agrScopeServices(docScope));
-  content += pp('All disposition decisions — including sale, auction, donation, or disposal of any item — require written authorization from the Personal Representative or authorized signatory prior to execution. The specific scope, estimated hours, and projected costs are detailed in Exhibit A (attached estimate), which is incorporated into this Agreement by reference.');
+  content += pp(_agrScopeServices(docScope, job));
+  content += pp('All disposition decisions — including sale, auction, donation, or disposal of any item — require written authorization from the ' + _agrApprover(job) + ' or authorized signatory prior to execution. The specific scope, estimated hours, and projected costs are detailed in Exhibit A (attached estimate), which is incorporated into this Agreement by reference.');
   content += subHdr('2.1 Explicit Exclusions');
   content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney); tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
   // SECTION 3: FEES
@@ -32282,14 +32590,23 @@ function probateAgreementHtml(job, est) {
     'If acting as Personal Representative or Executor, the Client has been duly appointed by the probate court and holds Letters of Administration or equivalent authority.',
     'The Client will promptly provide Havellin with any court orders, restrictions, or legal limitations affecting the disposition of estate assets.',
     'The Client will notify Havellin immediately of any disputes among beneficiaries, legal holds, or changes in legal status that may affect the scope of work.',
-    'All assets identified for sale, donation, or disposal have been authorized for disposition by the Personal Representative or applicable legal authority.'
+    'All assets identified for sale, donation, or disposal have been authorized for disposition by the ' + _agrApprover(job) + ' or applicable legal authority.'
   ];
+  // ⚠ A TRUSTEE WARRANTS A DIFFERENT AUTHORITY AND THE FORM ASKED FOR NONE. Rep 2 is conditional
+  // ("If acting as Personal Representative or Executor…") so it is never false on a trust matter
+  // — it is simply silent, and the contract then records no stated capacity for the person signing
+  // it. That is the gap the 2026-09-18 signature-block fix closed on our own side of the page;
+  // this is the client's side of the same point. ADDED rather than substituted, so no existing
+  // wording moves and a pour-over matter warrants both.
+  if (matterDef(job) && matterDef(job).trust) {
+    reps.splice(2, 0, 'If acting as successor trustee, the Client has accepted the trusteeship and holds authority under the trust instrument to direct the disposition of the property described in this Agreement.');
+  }
   content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
   reps.forEach(function(r){ content += '<li style="margin-bottom:.3rem;">'+r+'</li>'; });
   content += '</ol>';
-  content += subHdr('5.2 Florida Probate Compliance');
-  content += pp('For probate engagements, Havellin will support — but not replace — the estate attorney in meeting Florida probate requirements. Specifically:');
-  var comp = _agrProbateCompliance(docScope);
+  content += subHdr(_agrComplianceHeading(job));
+  content += pp(_agrComplianceLead(job));
+  var comp = _agrProbateCompliance(docScope, job);
   content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
   comp.forEach(function(c){ content += '<li style="margin-bottom:.3rem;">'+c+'</li>'; });
   content += '</ol>';
@@ -32297,16 +32614,21 @@ function probateAgreementHtml(job, est) {
   content += pp('The Client authorizes Havellin to take the following actions on behalf of the estate, subject to the written approval thresholds below:');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Action</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Approval Required</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Threshold</th></tr></thead><tbody>';
+  // ⚠ FIVE ROWS SAID "Written PR approval" ON A FORM THAT ISSUES ON MATTERS WITH NO PR. One
+  // noun, read from the matter, so the table cannot say PR while §5.2 three inches above says
+  // successor trustee.
+  var _appr = 'Written ' + (matterDef(job) ? (matterDef(job).onProbate && matterDef(job).trust ? 'PR / trustee' : matterDef(job).trust ? 'trustee' : matterDef(job).onProbate ? 'PR' : 'Client') : 'PR') + ' approval';
+  var _apprWho = matterDef(job) && !matterDef(job).onProbate && matterDef(job).trust ? 'the trustee\'s counsel' : 'the estate attorney';
   var authRows = [
     ['Document and photograph assets','None required','All assets'],
     ['Sort and stage assets for disposition','Verbal approval','All assets'],
-    ['Donate to qualifying 501(c)(3) organizations','Written PR approval','All donations'],
-    ['Arrange sale through third-party channel','Written PR approval','Any item over $500'],
-    ['Dispose / remove to dumpster','Written PR approval','Any item over $500'],
+    ['Donate to qualifying 501(c)(3) organizations',_appr,'All donations'],
+    ['Arrange sale through third-party channel',_appr,'Any item over $500'],
+    ['Dispose / remove to dumpster',_appr,'Any item over $500'],
     docScope === 'full'
-      ? ['Arrange professional appraisal','Written PR approval','Any item with uncertain FMV']
-      : ['Admit an appraiser engaged by counsel','Counsel\'s instruction','As scheduled by the estate attorney'],
-    ['Move or deliver items to beneficiaries','Written PR approval + signed receipt from recipient','All items']
+      ? ['Arrange professional appraisal',_appr,'Any item with uncertain FMV']
+      : ['Admit an appraiser engaged by counsel','Counsel\'s instruction','As scheduled by ' + _apprWho],
+    ['Move or deliver items to beneficiaries',_appr + ' + signed receipt from recipient','All items']
   ];
   authRows.forEach(function(r){
     content += '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[0]+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[1]+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[2]+'</td></tr>';
@@ -32381,7 +32703,19 @@ function probateAgreementHtml(job, est) {
   // Dispute Resolution and General Provisions — on a contract a court may read, against
   // agreements already issued citing those numbers.
   content += subHdr('7.1 Documentation Media and Project Records');
-  content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, the &sect;733.604 inventory, appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how the estate is accounted for.');
+  // ⚠ THE SAME DEFECT AS §5.2, ONE CLAUSE OVER: this states what the photographs are FOR, and
+  // it named a §733.604 filing on every estate form — including the matters that have no such
+  // filing. It is an affirmative purpose, not a disclaimer, so it is wrong rather than merely
+  // irrelevant on a trust matter. Leaving one behind while five others were fixed is the
+  // four-verbs-one-out-of-step shape this file records more than anything else.
+  var _agrInstrument = (function(){
+    var d = matterDef(job);
+    if (!d || (d.onProbate && !d.trust)) return 'the &sect;733.604 inventory';
+    if (d.onProbate && d.trust) return 'the &sect;733.604 inventory and the trust&rsquo;s own schedule of property';
+    if (d.trust) return 'the trust&rsquo;s schedule of property';
+    return 'the schedule of contents';
+  })();
+  content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, ' + _agrInstrument + ', appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how the estate is accounted for.');
   content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained for seven years as part of the fiduciary record. It is never sold or licensed. It is not shared with any third party except a vendor performing Services on this engagement, or as required by law or court order, and is not published except as Section 7.2 permits.');
   // ⚠⚠ THE SAME CLAUSE AND THE SAME BOX AS THE LIVING-CLIENT FORM'S §10.2, and the flat
   // prohibition this replaces lasted one day — the reasoning for the reversal is written out on
@@ -32410,7 +32744,17 @@ function probateAgreementHtml(job, est) {
   // equivalent must never do. A representative holding a tidy itemized list with recipients
   // against it is exactly the reader who might file it, or treat a delivery recorded on it as
   // proof that a devise was satisfied. Neither is what this document is.
-  content += pp(bb('What the Project Records are and are not.')+'  The Project Records are Havellin&rsquo;s contemporaneous record of work performed at the direction of the Personal Representative. They are not an appraisal or a statement of value, they are not the inventory required by Fla. Stat. &sect;733.604, and they do not evidence that any distribution satisfied a devise or bequest or that title to any item has passed. Responsibility for the estate&rsquo;s inventory, accounting and distributions rests with the Personal Representative and counsel.');
+  // ⚠ A DISCLAIMER IS STILL TRUE WHEN IT CITES THE WRONG STATUTE — and a reader on a trust
+  // matter who is told these are not a §733.604 inventory is entitled to ask whether they are
+  // the accounting. They name the instrument this matter actually has.
+  var _agrNotInstrument = (function(){
+    var d = matterDef(job);
+    if (!d || (d.onProbate && !d.trust)) return 'they are not the inventory required by Fla. Stat. &sect;733.604';
+    if (d.onProbate && d.trust) return 'they are neither the inventory required by Fla. Stat. &sect;733.604 nor a trust accounting under Fla. Stat. &sect;736.08135';
+    if (d.trust) return 'they are not a trust accounting under Fla. Stat. &sect;736.08135';
+    return 'they are not a statutory inventory of any kind';
+  })();
+  content += pp(bb('What the Project Records are and are not.')+'  The Project Records are Havellin&rsquo;s contemporaneous record of work performed at the direction of the ' + _agrApprover(job) + '. They are not an appraisal or a statement of value, ' + _agrNotInstrument + ', and they do not evidence that any distribution satisfied a devise or bequest or that title to any item has passed. Responsibility for the estate&rsquo;s inventory, accounting and distributions rests with the ' + _agrApprover(job) + ' and counsel.');
   content += subHdr('7.2 Marketing &amp; Promotional Use');
   content += _mktClause(pp, '', 'Havellin', '7.2');
   // SECTION 8: TERMINATION

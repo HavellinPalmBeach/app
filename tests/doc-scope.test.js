@@ -96,7 +96,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let calcs = 0;
     const ctx = sandbox({
       fns: ['activeDocScope', 'setEstimateDocScope', 'docScopeDef'],
-      vars: ['EST_TOLERANCE_PCT', 'DOC_SCOPES', '_estimateDocScope'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', '_estimateDocScope'],
       stubs: { calcAll() { calcs++; } },
     });
     eq(ctx.activeDocScope(), 'full', 'a fresh estimate is full');
@@ -127,7 +127,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob'],
-      vars: ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES'],
       stubs: { isFormalDoc: () => true },
     });
     const job = { id: 1, svc: 'probate', executor: 'PR' };
@@ -182,7 +182,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the estate agreement follows the same pin');
   {
-    const ctx = sandbox({ fns: ['_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger'] });
+    const ctx = sandbox({ fns: ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger'],
+                          vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'AGR_NOT_AN_ACCOUNTING'] });
     has(ctx._agrScopeServices('full'), 'room-by-room asset documentation and inventory', 'full scope sells the inventory');
     has(ctx._agrScopeServices('full'), 'appraisal coordination', 'and the appraisal coordination');
     lacks(ctx._agrScopeServices('full'), 'not within this engagement', 'and carves nothing out');
@@ -214,8 +215,40 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const src = source();
     lacks(src, 'Phase 5 (Asset Inventory)', 'no literal inventory trigger survives in the agreement');
-    has(src, 'content += pp(_agrScopeServices(docScope));', 'the agreement scope reads the helper');
-    has(src, 'var comp = _agrProbateCompliance(docScope);', 'the compliance list reads the helper');
+    // ⚠ SAME BYTE-SEQUENCE PIN, SAME TRUE CHANGE: §2 grew the job so it could stop naming a
+    // Personal Representative on a matter that has none. The requirement is that the emit site
+    // asks the helper rather than inlining the paragraph.
+    has(src, 'content += pp(_agrScopeServices(docScope, job));', 'the agreement scope reads the helper');
+    // ⚠⚠ AND NO CLAUSE NAMES THE APPROVER BY HAND ANY MORE — the net, not today's five rows.
+    // Five cells in §5.3 read "Written PR approval" on a form that issues on matters with no PR,
+    // three inches under a §5.2 that now says successor trustee.
+    // ⚠ COMMENT-STRIPPED, AND LINE-BASED ON PURPOSE. The note explaining this fix has to QUOTE
+    // the retired wording to be worth reading, so a raw needle trips on the prose that explains
+    // it — which this project has now paid for a dozen times. A `/\*[\s\S]*?\*/` stripper is the
+    // wrong tool here: `accept="image/*"` makes it swallow ~170KB of the file.
+    const live = String(src).split('\n')
+      .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')); })
+      .join('\n');
+    ok(live.length > src.length * 0.5, 'the comment stripper did not eat the file');
+    has(live, 'function _agrScopeServices(', 'and the function under test is still in it');
+    lacks(live, "'Written PR approval'", 'no authorisation row hardcodes the approver');
+    lacks(live, 'authorized by the Personal Representative', 'and neither does the scope paragraph');
+    // ⚠ THIS PINNED THE CALL'S BYTE SEQUENCE and broke correctly on 2026-09-21, when the helper
+    // grew the job so §5.2 could stop asserting a probate proceeding on a trust matter (D10).
+    // The requirement was never the argument list — it is that the emit site ASKS the helper
+    // instead of inlining the clauses, and that the heading and lead do too rather than staying
+    // hardcoded above a list that has moved underneath them.
+    has(src, 'var comp = _agrProbateCompliance(docScope, job);', 'the compliance list reads the helper');
+    has(src, "content += subHdr(_agrComplianceHeading(job));", 'and so does its heading');
+    has(src, 'content += pp(_agrComplianceLead(job));', 'and its lead');
+    // ⚠⚠ AND THE PROBATE ARM IS BYTE-IDENTICAL TO AN UNANSWERED MATTER, which is the half that
+    // protects every estate papered before the field existed. Stripping a §733.604 promise off a
+    // real probate matter on the strength of a question nobody was asked is the bad failure.
+    for (const sc of ['full', 'capture', 'none']) {
+      eq(ctx._agrProbateCompliance(sc, { svc: 'cleanout', matterType: 'probate' }).join('\u0000'),
+         ctx._agrProbateCompliance(sc, undefined).join('\u0000'),
+         sc + ': an explicit probate answer reads exactly as no answer at all');
+    }
     has(src, "var docScope = est ? estimateDocScope(est) : (svcHasDocStep(job.svc || job.serviceType) ? 'full' : 'none');", 'the agreement reads the pin off the estimate it attaches');
   }
 
@@ -233,7 +266,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['seedDocScopeFromJob', '_docScopeIntakeNote', 'docScopeDef', 'docTierOf', 'docTierDef',
             'docTierScope', 'svcHasDocStep'],
-      vars: ['EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });
     // ⚠ THE FIXTURES CARRY A SERVICE NOW, AND THAT IS THE POINT RATHER THAN A CHORE. The tier is
     // what we hand over, so it only exists on a service that prices a documentation step — the

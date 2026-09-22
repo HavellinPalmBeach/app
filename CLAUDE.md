@@ -1,5 +1,189 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A TRUST MATTER HAD TWO DEAD ENDS AND NO THIRD ANSWER (BUILT 2026-09-21)
+Step 7 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `printTrustSchedule` is the Chapter 736
+instrument, and `_invTrack`'s default follows the matter type — **the two ship together because
+neither is worth anything alone**, which is exactly why the second was held for three builds.
+
+- **⚠⚠ MEASURED IN BOTH DIRECTIONS BEFORE ANYTHING WAS BUILT, ON A SEEDED TRUST ESTATE HOLDING
+  $19,000 OF FURNITURE. BOTH ANSWERS AVAILABLE TO A CONCIERGE WERE WRONG.**
+
+  | every line tracked | HEAD | now |
+  |---|---|---|
+  | **Probate** — i.e. doing nothing, the default | Court Inventory lists all **$19,000** on a §733.604 schedule for a proceeding that does not exist | the default is **Trust**, so it does not arise |
+  | **Trust** — the right answer, and the one both documents told you to give | Court Inventory refuses, **$0**, and **nothing anywhere lists the property** | **Trust Schedule — FINAL, signed, $19,000** |
+
+  `chapter 736` = **0** live occurrences in 33,000 lines, `Rule 5.340` = 0, `736.08135` = 0 live
+  (3 in comments). Anthony: *"most homes will be in trust … the probate cases will be more rare
+  if we stick to our upmarket busienss plan."* **The common case was the one with no path.**
+- **⚠⚠ THE CARVE-OUT IS ONE TRACK, NOT THE NEGATION OF THE PROBATE TEST, and reaching for `!` is
+  the mistake to avoid.** Non-probate property passes by beneficiary designation or joint tenancy
+  **straight to the named beneficiary, never to the trustee**; Florida homestead passes to the
+  heirs outside both. Neither is the trust's. So the two schedules are **NOT complementary** —
+  together they do not cover everything, deliberately — and each names what it left out on its
+  own face. Reverting it to `!_invOnProbateSchedule` fails 6.
+- **⚠⚠ THE NOT-AN-ACCOUNTING LINE NAMES WHAT A §736.08135 ACCOUNTING CONTAINS THAT THIS DOES
+  NOT** — receipts, disbursements, gains and losses on sale, and the identification of
+  beneficiaries — rather than merely disclaiming. **A bare disclaimer is a sentence somebody
+  skims; a list is something a reader can check**, and it is the same *state the gap* rule the
+  Court Inventory already follows on an unvalued line. It is on the document's face **and in the
+  contract**, because the engagement is what a trustee's counsel reads when they ask what
+  Havellin was retained to do. Reverting the document block fails 1, the contract clause **7**.
+- **⚠ RECEIVED, NOT ADOPTED.** A personal representative ADOPTS the probate schedule into a court
+  filing; a successor trustee **files nothing** — they take this into the trust's records and
+  carry its figures into the accounting. Naming the act wrongly on a signature line is the same
+  class of claim the $0 FINAL was. Reverting to the probate block fails 5.
+- **⚠ THE NUMBER IS DELIBERATELY THE SAME AS THE PROBATE SCHEDULE'S — do not add a trust
+  valuation date.** Date-of-death FMV is the §1014 stepped-up basis, the Form 706 figure AND the
+  carrying value a trust's first accounting opens with, and the step-up reaches revocable trust
+  assets. `MATTER_TYPES` already carries this note; the document states it on its face so a
+  trustee can see why the figure is the right one.
+- **⚠⚠ THE TABLE IS EXTRACTED, NOT COPIED.** `_invScheduleSection` was a closure inside
+  `printCourtInventory` carrying no closure state, so pulling it out changed nothing — and a
+  second renderer beside it is the drift this file records more than anything else. The two
+  schedules state the same thing about the same objects and must not come to disagree about
+  whether a quantity is a lot or a unit price. A test counts `items, valued as a lot` at exactly
+  **1**; adding a second copy fails 2.
+- **⚠⚠ ONLY AN EXPLICIT `trust` MOVES THE TRACK DEFAULT, and `both` is the interesting one.**
+  A pour-over will's whole function is that anything NOT already titled into the trust pours in
+  **through probate**, so an untracked item there is probate property until somebody says
+  otherwise — conservative, and true. `neither` and an unanswered matter keep `Probate` too, so
+  **no job recorded before today moves an inch**. It reads `trust`/`onProbate` off the catalogue
+  rather than testing the key, the rule `invProbateRows` already follows. Reverting the whole
+  default fails 5.
+  - **⚠⚠ THE JOB IS AN ARGUMENT AND `ref.jobId` ONLY LOOKS AVAILABLE.** It is **not on the
+    `savePhotoRefs` whitelist**, so it is dropped on every save and a ref read back from
+    localStorage carries none — the obvious implementation would pass every fixture that sets it
+    by hand and answer `Probate` **on every real reload**. That is a fixture handing the code the
+    thing under test. A call site that omits the job silently gets the probate default on a trust
+    matter (the `invNeedsAppraisal` trap), so a net asserts **no single-argument call survives**
+    on any of the six helpers.
+  - **⚠ THE ON-SCREEN DROPDOWN HELD A SECOND COPY OF THE DEFAULT** (`v || 'Probate'`), so the one
+    control that answers *which schedule is this on* would have read **Probate** while every
+    document read the same row as **Trust**. Reverting it fails 2.
+  - **⚠ AND THE ESTATE INVENTORY REPORT'S CARVE-OUT HAD TO STAND DOWN.** Its own comment says the
+    section exists so a reader can see property *"sits outside the probate estate"* — on a trust
+    matter there is none to sit outside of, and with the default moved **every line** would have
+    landed under a heading naming three pots it is not in, above an **empty** Asset Schedule. It
+    asks `invProbateRows(job)` now, so a `both` or unanswered matter is unchanged. The heading
+    also names the pots actually in it rather than reciting a fixed list — a pre-existing
+    inaccuracy that the default change would have made the common case. Fails 2 and 3.
+- **⚠⚠ D10 WAS WORSE THAN ITS OWN TEXT, AND IT IS A SIGNED CONTRACT.** `_agrProbateCompliance`
+  read `docScope` and **nothing else**, so a matter recorded `trust` signed an agreement headed
+  *Florida Probate Compliance* promising an inventory *"required under Florida Statute
+  §733.604"* and appraisals *"within the 60-day inventory deadline from Letters of Administration
+  issuance"*. **There are no Letters on a trust administration and no 60-day deadline.** The
+  heading, the lead, every clause, §5.1's representations, §5.3's authorisation table and §2's
+  scope paragraph all follow the matter type now. Reverting the gate fails **14**.
+  - **⚠ THE PROBATE ARM IS BYTE-IDENTICAL TO AN UNANSWERED MATTER**, clause for clause AND on the
+    whole rendered agreement — that is what protects every estate papered before the field
+    existed, and stripping a §733.604 promise off a real probate matter on the strength of a
+    question nobody was asked is the bad failure. Two tests compare them directly.
+  - **⚠ `both` IS AN ADDITION, NOT AN ALTERNATIVE.** A pour-over will genuinely has both, so it
+    keeps the probate clauses and **gains** the trust boundary beside them.
+  - **⚠ `neither` KEEPS THE SUBSECTION NUMBER.** Removing a numbered subsection renumbers
+    Termination and everything under it against agreements already issued citing them — the
+    constraint §7.1 and §10 already answer to. A test walks all five matter values and asserts
+    5.1 / 5.2 / 5.3 survive on each.
+  - **⚠ ONE APPROVER NOUN, because five cells of §5.3 read *Written PR approval* on a form that
+    issues on matters with no PR** — three inches under a §5.2 that now says successor trustee.
+    A trust matter also gains its own authority warranty in §5.1, which the form asked for
+    nowhere: rep 2 is conditional (*"If acting as Personal Representative or Executor…"*), so on
+    a trust matter it is never false, merely **silent**, and the contract then recorded no stated
+    capacity for the person signing it. Reverting the noun fails 5, the warranty 2.
+- **9078 committed checks** (`tests/trust-schedule.test.js` new at 144, plus a driven §5 group in
+  `agreement-rates`). **All 31 changes revert-verified individually, ZERO green after the one
+  below was re-done**; baseline 0 before and after.
+  - **⚠⚠ ONE GREEN, AND IT FOUND TWO MORE PROBATE ASSERTIONS OUTSIDE §5.2.** Removing the
+    trustee's §5.1 warranty broke nothing — step 7's own suite drove the compliance clauses as
+    **pure helpers** and nothing drove the RENDERED §5. Writing that driven group then failed on
+    `lacks(trust, '733.604')` and surfaced two survivors: **§7.1 said the photographs are taken
+    *"for condition documentation, asset identification, the §733.604 inventory, appraisal
+    support"*** — an affirmative PURPOSE, on a matter with no such filing — and the Project
+    Records disclaimer named the same statute, which is still *true* on a trust matter and leaves
+    a trustee entitled to ask whether the records are the accounting. Both name the instrument the
+    matter actually has now. Re-done, the warranty fails 2 and the two new clauses 2 each.
+  - **⚠ ONE NEEDLE MATCHED x3 AND ONE x0.** The scope paragraph's approver appears in all three
+    arms (correctly — I changed all three), so the revert had to replace all three; and §7.1's
+    needle straddled a line I had reflowed. Both re-anchored, each fails 2. The `NEEDLE xN` guard
+    is what stopped them reading as two green reverts.
+  - **⚠ A STANDING NET CAUGHT MY OWN CODE AND THE NET WAS RIGHT.** `INV_CONTRACT_DOCS` keyed the
+    new document `trust`, which collides with the matter-type vocabulary a test protects (*no live
+    line carries a quoted `'trust'`, `'both'` or `'neither'` — the catalogue's keys are unquoted,
+    so a quoted one is a reader going round the resolver and forgetting `both`*). **Renamed to
+    `trustee` rather than carving an exemption into the net**, which also reads the way `court`
+    does: who it is for.
+  - **⚠ FOUR BYTE-SEQUENCE PINS BROKE CORRECTLY AND ALL FOUR ARE RESTATED, NONE DELETED.**
+    `_invIsExempt(r)` and `!_invIsProbateAsset(r)` (the helpers grew a `job`), `maiv`'s slice from
+    `printCourtInventory` to the next function (the renderer moved a few lines up and out of it),
+    and both agreement emit-site call shapes. Each is now the requirement rather than the
+    spelling — and `maiv`'s restatement gained the half that makes the extraction worth having:
+    there is exactly ONE renderer and both schedules ask it.
+  - **⚠ AND MY OWN COMMENT TRIPPED MY OWN NEEDLE AGAIN**, on `authorized by the Personal
+    Representative` — the note explaining the fix has to QUOTE the retired wording to be worth
+    reading. Comment-stripped, **line-based** (a `/\*[\s\S]*?\*/` stripper eats ~170KB here, because
+    of `accept="image/*"`), with an assertion that the stripper did not eat the file.
+- **Verified end to end in headless Chromium on the real page, 45 checks, 0 failed, 0 page
+  errors**, driving the real intake form, the real strip, the real item panel and the real
+  printers:
+
+  | | |
+  |---|---|
+  | a trust matter, **no asset track set on any line** | Trust Schedule **FINAL, signed, $19,000** · same job's Court Inventory refuses at **$0** |
+  | the Asset Track cells in the expanded panel | **every untouched one reads Trust** — screen and document agree |
+  | the strip | Trust Schedule under More, **beside** the Court Inventory |
+  | tier `contents`, reached directly | **0 printed**, one refusal naming whose the schedule is |
+  | tier `contents`, on the strip | button withheld, and the strip says why |
+  | a probate matter | court schedule **FINAL, signed, $19,000**; Trust Schedule refuses, *has no trust in it* |
+  | the agreement, trust | *5.2 Florida Trust Administration Support* · **no** 60-day Letters deadline · **no** §733.604 · *Written trustee approval* · the trustee's warranty · the accounting boundary |
+  | the agreement, unanswered | **byte-identical to an explicit probate one** |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  **⚠⚠ TWO OF MY OWN BROWSER ASSERTIONS WERE WRONG AND THE CODE WAS RIGHT, AND ONE OF THEM IS A
+  TRAP WORTH KEEPING.** I read the strip off **`document.body.innerHTML`** — and this is a
+  single-file app whose `<script>` lives in the body, so that string carries **the entire
+  JavaScript source**. Every `has()` against it passes on the function declaration and every
+  `lacks()` can never pass at all. It surfaced as a withheld-button assertion failing while the
+  gate was working perfectly; measured rather than reasoned about. **Read the rendered container
+  (`#panel-inventory`), never `document.body`.** Only step7 had it — steps 1–6 read scoped
+  elements. The second was the Asset Track cell, which lives in the **expanded item panel** (the
+  29-column table was deleted on 2026-09-01), so a sweep of the collapsed tab finds nothing and
+  reads as the control being absent.
+  The step-1 to step-6 browser scripts were re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28**,
+  0 failed — **315 checks across the seven**. The first `<style>` block is **byte-identical to
+  HEAD at 92,582 bytes / 1,169 lines / 635 rules** — no CSS — and the diff is **37 hunks**, in the
+  asset-track helpers, `_invInput`'s trackSelect, `takeInventorySnapshot`, `INV_CONTRACT_DOCS`,
+  `printEstateInventoryReport`, `printCourtInventory`, one extracted renderer, one new document,
+  `_renderInvWorkbar` and the agreement's §2 / §5 / §7.
+- Manual **§4** (five readers now, and a note carrying the track default with the only-an-explicit-
+  trust rule) and **§10a** (the Asset Track bullet rewritten, the document in the exports list, the
+  three-not-two gate, both instruments refusing on their own face, and the *not built yet* note
+  replaced by three: what it closed, what differs and what deliberately does not, and the
+  draft-for-counsel flag) plus **§8** (three notes on the compliance section). Playbook **§e** (the
+  trustee's-schedule `.stop` rewritten, the asset-track bullet, the More list, the three-document
+  rule, and **two new `.stop`s** — never call it an accounting, and the two lists are not
+  complementary) and **seven** symptom→cause rows, including the two that will actually happen:
+  *a trust job's items are all tagged Trust and you did not do it* (correct now) and *where is the
+  trustee's schedule?*. Both `.md` copies hand-edited; **49 claims parity-checked, 0 mismatches**
+  — ⚠ three apparent misses were my needle dropping an apostrophe, **verified by dumping the
+  surrounding bytes rather than assumed**. A stale sweep for six retired wordings returns **0
+  across all four files**. Tag balance clean on both HTML files with the stylesheet stripped;
+  rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **20/47 and 17/17** tables
+  as wide as their container with **0** taking the phone rule — as at HEAD.
+- **⚠ DRAFT FOR COUNSEL, AND IT RIDES THE REVIEW BUNDLE ALREADY QUEUED.** The §736.08135
+  carrying-value mechanics were read through **secondary summaries** — the egress proxy blocked
+  flsenate.gov and law.justia.com during the spec pass. Anthony's standing instruction is *"just
+  come up with language and i'll get it reviewed. do your best."*, and every legal text has
+  shipped that way. What needs confirming before a real trust matter signs: the carrying-value
+  mechanics, and whether naming §736.0813 alongside §736.08135 is the right pair.
+- **⚠ NEXT: step 8 — gate the estimate** so Build Estimate will not price until the tier and the
+  matter type are answered (*decision 3*). Small: one gate, two fields that already exist. Then
+  **step 9**, which is a decision rather than a build — `invListingThreshold` has exactly two
+  references (its own definition and the sentence builder `docStandardEffect`), nothing enforces
+  or displays an itemisation floor, and §8 of the spec records that **Florida sets no statutory
+  itemisation floor**: the $100 / $1,000 are Havellin house rules. Retiring it and correcting the
+  sentence is the recommendation; **it is Anthony's call.**
+
 ## ⚠⚠ THE BROWSER REGRESSIONS ARE IN THE REPO NOW, AND THIS FILE SAYS WHY THAT MATTERS (2026-09-21)
 `tests/browser/step1.js` … `step6.js` plus `tests/browser/run.sh`. **270 checks across the six, 0 failed**,
 re-verified from the repo after the move.
@@ -119,11 +303,11 @@ the strip withholds the button and the printer refuses with the same sentence.
   mismatches**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with
   **0 overflow, 0 page errors**; under `print` **20/47 and 17/17** tables as wide as their container with **0**
   taking the phone rule — byte-for-byte as HEAD.
-- **⚠ NEXT: step 7 — the trustee's schedule.** Chapter 736 citations, a successor-trustee signature block, the
-  carve-out reversed so trust property is what is listed, and the *supports rather than constitutes a §736.08135
-  accounting* line. It is what makes the Court Inventory's refusal on a trust matter actionable rather than a dead
-  end, and it is the gate on `_invTrack`'s `'Probate'` default, which **must not** follow the matter type until that
-  schedule exists. *Closes D9, D10.*
+- ~~**⚠ NEXT: step 7 — the trustee's schedule.**~~ **DONE 2026-09-21 — see the entry at the top of this file.**
+  It shipped with `_invTrack`'s default following the matter type in the same commit, because neither half is worth
+  anything alone. *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
+  outstanding work.* **⚠ NEXT is step 8** — gate the estimate so Build Estimate will not price until the tier and
+  the matter type are answered. *Closed D9, D10.*
 
 ## ⚠⚠ THE CONTRACT PROMISED COUNSEL A CONTENTS LIST THREE TIMES AND NOTHING PRODUCED ONE (2026-09-21)
 Step 5 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `contentsList` is the DOM-free derivation and
@@ -505,9 +689,11 @@ merged.
   hand-edited; **30 claims parity-checked, 0 mismatches**; tag balance clean on both HTML files with the stylesheet
   stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **19/45 and 16/16** tables as wide
   as their container, **0 taking the phone rule** — as at HEAD.
-- **⚠ STILL NOT BUILT, AND UNCHANGED BY THIS: `_invTrack` DEFAULTS EVERY UNSET ITEM TO `'Probate'`.** Both documents
-  still say to set the track by hand on a trust matter. It must not follow the matter type until the trustee's
-  schedule exists, or a trust matter's contents move off the wrong schedule and onto no schedule at all.
+- ~~**⚠ STILL NOT BUILT, AND UNCHANGED BY THIS: `_invTrack` DEFAULTS EVERY UNSET ITEM TO `'Probate'`.**~~ **BUILT
+  2026-09-21 with the trustee's schedule — see the entry at the top of this file.** Only an explicit `trust` moves
+  the default; `both`, `neither` and an unanswered matter keep `Probate`, so nothing recorded before that date moved.
+  **The instruction in both documents to set the track by hand on a trust matter is withdrawn.** *Kept rather than
+  deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
 
 ## ⚠⚠ THE APP PRICED THE WORK AND RECORDED NOTHING ABOUT WHAT THE CLIENT WAS PROMISED (BUILT 2026-09-21)
 Step 3 of `ESTATE_SCOPE_SPEC.md`. Anthony, on what Havellin actually sells: *"we claim that our documentation is
@@ -836,10 +1022,11 @@ our upmarket busienss plan."* App-only, no redeploy.
   hand-edited; **33 claims parity-checked, 0 mismatches**; tag balance clean on both HTML files with the stylesheet
   stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **19/42 and 16/16** tables as
   wide as their container (18/41 before — the one new table is §4's).
-- **⚠ NOT DONE, DELIBERATELY, AND IT IS STEP 6/7's TO TAKE: `_invTrack` still defaults every unset item to
-  `'Probate'`.** Making the default follow the matter type is a one-function change with about ten call sites, and
-  **it must not ship before the trustee's schedule exists** — today it would move a trust matter's contents off the
-  wrong schedule and onto no schedule at all. Both documents say to set the track by hand on a trust matter.
+- ~~**⚠ NOT DONE, DELIBERATELY, AND IT IS STEP 6/7's TO TAKE: `_invTrack` still defaults every unset item to
+  `'Probate'`.**~~ **DONE 2026-09-21, in step 7's commit and for exactly the reason stated here** — the trustee's
+  schedule had to exist first. ⚠ The estimate of *"about ten call sites"* was wrong: there are **six**, five of them
+  live, and the real cost was elsewhere — `ref.jobId` is not on the `savePhotoRefs` whitelist, so the job had to be
+  threaded as an argument rather than resolved off the ref. *Kept rather than deleted, per the standing rule.*
 - **⚠ NEXT: step 3 — the engagement tier**, from which `docScope` is derived (Contents list · Inventory with values
   · Inventory + appraisals · None). That is the menu Anthony asked for at the start of this, and it is what makes
   *"as little or as much of the inventory work as required"* a thing the app can actually quote.

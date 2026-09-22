@@ -6,7 +6,7 @@
 // *Estate Inventory — Asset Schedule*.
 const { sandbox, source, domStub } = require('./harness.js');
 
-const FNS = [
+const FNS = ['_invScheduleSection', '_invTrackDefault', 
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   'printEstateInventoryReport', 'printCourtInventory', 'printContentsList', 'contentsList',
   'printContentsRecord', 'printApprovalRequest', 'printAppraisalWorklist', 'printDispositionLedger',
@@ -92,7 +92,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE PREDICATE — the tier decides, and it decides for exactly two documents');
   {
     const p = sandbox({ fns: ['invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
-                        vars: ['INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
+                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
     const B = (tier, kind) => p.invDocContractBlock({ svc: 'probate', docTier: tier }, kind);
     ['schedule', 'court'].forEach((k) => {
       eq(B('values', k), '', k + ': issuable at the values tier');
@@ -112,7 +112,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ A LEGACY JOB WITH NO TIER BEHAVES EXACTLY AS IT DID');
   {
     const p = sandbox({ fns: ['invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
-                        vars: ['INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
+                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
     eq(p.invDocContractBlock({ svc: 'probate' }, 'schedule'), '',
        '⚠⚠ no tier reads as `values` through the migration, so nothing recorded before today loses a document');
     eq(p.invDocContractBlock({ svc: 'probate' }, 'court'), '', 'the court schedule likewise');
@@ -123,7 +123,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ A LIVING SERVICE IS NOT GATED HERE — one rule per outcome, never two');
   {
     const p = sandbox({ fns: ['invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
-                        vars: ['INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
+                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
     ['downsizing', 'downsizing_move', 'home_cleanout', 'prep'].forEach((svc) => {
       eq(p.invDocContractBlock({ svc, docTier: 'contents' }, 'schedule'), '',
          svc + ': answers "not blocked" — the `fid` test already withholds these');
@@ -283,9 +283,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ ONE CATALOGUE, AND THE REASONS LIVE ON IT');
   {
     const p = sandbox({ fns: ['invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
-                        vars: ['INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
+                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
     const keys = Object.keys(p.INV_CONTRACT_DOCS);
-    eq(keys.sort().join(','), 'court,schedule', 'exactly two documents are gated by the contract');
+    // ⚠ THREE SINCE 2026-09-21, and the third is the point rather than an exception: the
+    // trustee's Chapter 736 schedule states a carrying value on every line, so it takes the
+    // SAME test for the SAME reason. What separates the probate and trust variants is the
+    // instrument and who signs, never whether valuation is ours — which is why the trust
+    // schedule needed no new axis here. The count is pinned so a fourth cannot arrive
+    // unnoticed, and the converse group below still asserts everything else stays ungated.
+    eq(keys.sort().join(','), 'court,schedule,trustee', 'exactly three documents are gated by the contract');
+    eq(p.INV_CONTRACT_DOCS.trustee.needs, 'values',
+       'and the trust schedule is gated on values for the same reason the other two are');
     keys.forEach((k) => {
       const d = p.INV_CONTRACT_DOCS[k];
       ok(!!d.needs, k + ' names what it needs …');

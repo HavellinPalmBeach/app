@@ -97,12 +97,12 @@ const FULL_PROPS = {
 };
 
 // ── the app side ──────────────────────────────────────────────────────────────
-const AGR_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
+const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
                  'materialsBasisNote', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent'];
-const AGR_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved',
+const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved',
                   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
                   'ESIGN_REQUIRED_ANCHORS'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -447,7 +447,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // through an envelope asks for a signature on a document with no signature block and starts a
     // poll that can never complete.
     const pv = (key, gmail) => sandbox({
-      fns: ['docProvider', 'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'], vars: ['ESIGN_PROVIDERS'],
+      fns: ['docProvider', 'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS'],
       stubs: { ESIGN_PROVIDER_KEY: key, gmailConfigured: () => gmail } });
     const on = pv('docusign', true);
     eq(on.docProvider({ kind: 'agreement' }), 'docusign', 'the agreement goes to DocuSign');
@@ -464,7 +464,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠⚠ ON AN ESTATE JOB THE NAMED CLIENT IS DECEASED. bestClientEmail correctly falls back to the
     // representative, then counsel — so pairing that address with job.name would put a dead
     // person's name on a signature request for their own estate, sent to their executor's inbox.
-    const c = sandbox({ fns: ['esignSigner'], vars: [] });
+    const c = sandbox({ fns: ['esignSigner'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', ] });
     eq(c.esignSigner({ name: 'Jane Doe', email: 'jane@x.com' }),
        { name: 'Jane Doe', email: 'jane@x.com' }, 'a living client signs for themselves');
 
@@ -494,7 +494,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
             'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp'],
-      vars: ['DOC_SEND_PROVIDERS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
         _appsScriptPost: (url, body, cb) => { posted = body; cb(true, { ok: true, envelopeId: 'env-99', status: 'sent' }); },
@@ -562,7 +562,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'jobTimelineNext', 'docDraftedAt', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
-      vars: ['DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
              'JT_ROW_DOC', 'JT_SHORT'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -654,7 +654,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
-      vars: ['ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
                esignArchiveSigned() {}, ESIGN_PROVIDER_KEY: 'docusign' },
     });
@@ -737,7 +737,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // missing and say so — a person reads it before it goes. An envelope with no document is a
     // signature request for nothing, mailed to the client automatically with nobody in between.
     const mk = (over) => sandbox({
-      fns: ['esignSigner'], vars: ['DOC_SEND_PROVIDERS'],
+      fns: ['esignSigner'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: Object.assign({ SHEETS_SYNC_URL: 'https://script.example/exec',
                              _appsScriptPost: (u, b, cb) => cb(true, { ok: true, envelopeId: 'e' }) }, over) });
     const spec = (job) => ({ job, kind: 'agreement', key: 'agreement',
@@ -782,7 +782,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
             'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
             'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
-      vars: ['ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
       stubs: { ESIGN_PROVIDER_KEY: key } });
     const row = { key: 'agreement_sent', state: 'current' };
     const job = { id: 9, agrSent: false, name: 'Jane', email: 'j@x.com' };
@@ -815,7 +815,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // envelope and never will, so there was nowhere to log the signature when it arrived.
     const c = sandbox({
       fns: ['esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignAvailable', 'esignProviderKey'],
-      vars: ['ESIGN_PROVIDERS'], stubs: { ESIGN_PROVIDER_KEY: 'docusign' } });
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS'], stubs: { ESIGN_PROVIDER_KEY: 'docusign' } });
 
     ok(c.esignAvailable(), 'DocuSign is switched on for the firm');
     eq(c.esignJobWatches({ id: 1, docState: { agreement: { provider: 'gmail', sentAt: 'x' } } }), false,
@@ -843,7 +843,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ docProvider FOLLOWS THE ROUTE CHOSEN FOR THIS SEND');
   {
     const c = sandbox({ fns: ['docProvider', 'esignAvailable', 'esignProviderKey'],
-                        vars: ['ESIGN_PROVIDERS'],
+                        vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS'],
                         stubs: { ESIGN_PROVIDER_KEY: 'docusign', gmailConfigured: () => true } });
     eq(c.docProvider({ kind: 'agreement', via: 'paper' }), 'gmail',
        '⚠⚠ paper forces the email route even with DocuSign on');
@@ -859,7 +859,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const joined = sandbox({
       fns: ['docSpec', 'docProvider', 'esignAvailable', 'esignProviderKey', 'docKeyFor', 'docNames',
             'bestClientEmail', 'approvedEstimateFor'],
-      vars: ['ESIGN_PROVIDERS', 'DOC_ACTIONS', 'DOC_KIND_WORD', 'DOC_STAGE_WORD'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'DOC_ACTIONS', 'DOC_KIND_WORD', 'DOC_STAGE_WORD'],
       stubs: { ESIGN_PROVIDER_KEY: 'docusign', gmailConfigured: () => true,
                estimateStore: {}, currentInvStage: 'final', fmtDate2: (d) => String(d || '') } });
     joined.jobs = [{ id: 12, hvlId: 'HVL-0012', name: 'Jane Doe', email: 'j@x.com' }];
@@ -884,7 +884,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'applyEsignStatus',
             'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature', 'docState',
             '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
-      vars: ['ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
         _appsScriptPost: (url, body, cb) => {
@@ -923,7 +923,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let posts = 0;
     const c = sandbox({
       fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
-      vars: ['ESIGN_RECHECK_MINS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS'],
       // ⚠ applyEsignStatus is STUBBED here on purpose: this group is about how many requests go
       // out, not about what the answer does. The join is driven in the group above.
       stubs: { SHEETS_SYNC_URL: 'u', _appsScriptPost: (u, b, cb) => { posts++; cb(true, { ok: true, status: 'sent' }); },
@@ -952,7 +952,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = [];
     const c = sandbox({
       fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
-      vars: ['ESIGN_RECHECK_MINS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS'],
       stubs: { SHEETS_SYNC_URL: 'u',
                _appsScriptPost: (u, b, cb) => cb(false, { error: 'network died', clientError: true }),
                _docNotice: (kind, msg) => said.push(msg) },
@@ -1370,7 +1370,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
               'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent'],
-        vars: ['DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS'],
+        vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',
           _appsScriptPost: (url, body, cb) => { posted = body; cb(true, { ok: true, envelopeId: 'e1', status: 'sent' }); },
@@ -1517,7 +1517,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['recordAgreementSignature', 'agreementSignature', 'isAgreementSigned', 'docState',
             '_jobTouch', '_actor', 'esignProviderKey', 'esignAvailable', 'applyEsignStatus',
             'esignJobWatches', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
-      vars: ['ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'AGR_SIG_MANUAL_METHODS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'AGR_SIG_MANUAL_METHODS'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
         esignArchiveSigned() {}, agrApprovedBy: 'Anthony Graziano',
@@ -1609,7 +1609,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
               'applyEsignStatus', 'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature',
               'docState', '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey',
               'isAgreementSent', 'docSentAt', 'docKeyFor', '_esignRecordBlockerText'],
-        vars: ['ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
+        vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',
           ESIGN_PROVIDER_KEY: 'docusign',

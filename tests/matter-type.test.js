@@ -120,7 +120,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'docTierScope', 'docTierDef'], vars: ['SVC_LABELS', 'DOC_TIERS'],
+        fns: ['saveIntake', 'docTierScope', 'docTierDef'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d, jobs: [],
           showFB: (el, kind, msg) => said.push({ kind, msg }),
@@ -195,7 +195,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the Court Inventory stops being signed on a matter with no probate in it');
   {
-    const FNS = ['printCourtInventory', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+    const FNS = ['_invScheduleSection', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
                  'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
                  'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invFiduciaryMode',

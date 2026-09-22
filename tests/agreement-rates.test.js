@@ -22,11 +22,11 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const AGR_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
+const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
                  '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor'];
-const AGR_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved', 'HAVELLIN_OFFICE_PHONE',
+const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved', 'HAVELLIN_OFFICE_PHONE',
                   'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS'];
 
 const EST = {
@@ -55,6 +55,67 @@ const standardDoc = (job, e) => text(ctx().agreementHtml(job, e));
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ SECTION 5 FOLLOWS THE MATTER TYPE — it asserted a probate proceeding on every estate');
+  {
+    // ⚠ THIS GROUP EXISTS BECAUSE A REVERT CAME BACK GREEN. Step 7's own suite drives the
+    // compliance CLAUSES as pure helpers, and nothing drove the RENDERED §5 — so removing the
+    // trustee's authority warranty from §5.1 broke no check at all. The warranty is the client's
+    // side of the stated-capacity point the 2026-09-18 signature-block fix made on ours, and §5.1
+    // asked for it nowhere: rep 2 is conditional ("If acting as Personal Representative or
+    // Executor…"), so on a trust matter it is never false, merely silent.
+    const at = (m) => probateDoc(Object.assign({}, PROBATE, { svc: 'cleanout', matterType: m }), est());
+    const trust = at('trust'), probate = at('probate'), both = at('both'),
+          neither = at('neither'), blank = at('');
+
+    has(trust, 'If acting as successor trustee, the Client has accepted the trusteeship',
+        'a trust matter warrants the authority it actually holds');
+    has(both, 'If acting as successor trustee', 'and so does a pour-over matter, which has both');
+    lacks(probate, 'If acting as successor trustee', 'a probate matter does not');
+    lacks(neither, 'If acting as successor trustee', 'nor a family distribution');
+    lacks(blank, 'If acting as successor trustee', 'nor an unanswered one');
+    has(trust, 'duly appointed by the probate court',
+        '⚠ and the existing representation is ADDED TO rather than replaced, so no wording moves');
+
+    // §5.3's authorisation table named a PR on forms that issue on matters with no PR.
+    has(trust, 'Written trustee approval', '§5.3 names the trustee on a trust matter');
+    has(trust, 'Written trustee approval + signed receipt from recipient', 'including the delivery row');
+    lacks(trust, 'Written PR approval', 'and the PR appears in none of the five cells');
+    has(both, 'Written PR / trustee approval', 'a pour-over matter names either');
+    has(neither, 'Written Client approval', 'and a family distribution names the client');
+    has(probate, 'Written PR approval', 'a probate matter is unchanged');
+
+    // ⚠ THE NUMBERS NEVER MOVE. Removing or renumbering a subsection renumbers Termination and
+    // everything under it against agreements already issued citing them — the constraint §7.1 and
+    // §10 already answer to.
+    [['trust', trust], ['probate', probate], ['both', both], ['neither', neither], ['blank', blank]]
+      .forEach(([name, doc]) => {
+        ['5.1 Client Representations', '5.3 Asset Disposition Authorization'].forEach((n) =>
+          has(doc, n, name + ': ' + n + ' keeps its number'));
+        has(doc, '5.2 ', name + ': and so does the compliance subsection');
+      });
+    // ⚠⚠ AN UNANSWERED MATTER IS THE PROBATE FORM, BYTE FOR BYTE — every agreement papered
+    //    before the field existed.
+    eq(blank, probate, 'an unanswered matter renders the whole agreement identically to an explicit probate one');
+    // And the heading a trust matter actually signs under.
+    has(trust, '5.2 Florida Trust Administration Support', 'the trust matter signs a trust compliance section');
+    lacks(trust, 'Letters of Administration issuance', '⚠⚠ with no 60-day Letters deadline on a trust administration');
+    // ⚠⚠ THIS ASSERTION FOUND TWO MORE, OUTSIDE §5.2, AND ONE OF THEM WAS AN AFFIRMATIVE
+    // MISSTATEMENT. §7.1 said the photographs are taken "for condition documentation, asset
+    // identification, the §733.604 inventory, appraisal support" — a PURPOSE, on a matter with
+    // no such filing. The Project Records disclaimer named the same statute; that one was still
+    // true on a trust matter, and a trustee told these are not a §733.604 inventory is entitled
+    // to ask whether they are the accounting. Both name the instrument the matter actually has.
+    lacks(trust, '733.604', 'and no probate inventory statute anywhere in it');
+    has(trust, 'the trust&rsquo;s schedule of property, appraisal support',
+        '§7.1 names what the photographs are actually for on a trust matter');
+    has(trust, 'they are not a trust accounting under Fla. Stat. &sect;736.08135',
+        'and the Project Records disclaimer names the instrument it is not');
+    has(both, '733.604', 'a pour-over matter still names the probate filing …');
+    has(both, '736.08135', '… and the accounting beside it, because it genuinely has both');
+    has(probate, 'the &sect;733.604 inventory, appraisal support', 'a probate matter is unchanged');
+  }
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
   // ───────────────────────────────────────────────────────────────────────────

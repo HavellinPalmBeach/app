@@ -215,7 +215,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('court inventory: exempt property');
   {
     const COURT_FNS = INV_FNS.concat([
-      '_invMoney', '_invDocName', 'printCourtInventory', 'isFormalDoc', 'resolveDocLevel',
+      '_invMoney', '_invDocName', 'printCourtInventory', '_invScheduleSection', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
@@ -558,8 +558,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ("Print job plan is useless. Too long printing all the cards."). Removed rather than
     // left to the `if (at < 0) return` guard below, which would silently vouch for a printer
     // that no longer exists.
-    const printers = ['printCourtInventory', 'printDispositionLedger', 'printAppraisalWorklist',
-                      'printInventorySnapshot'];
+    const printers = ['printCourtInventory', 'printTrustSchedule', 'printDispositionLedger',
+                      'printAppraisalWorklist', 'printInventorySnapshot'];
     printers.forEach((name) => {
       const at = src.indexOf('function ' + name + '(');
       if (at < 0) return;                       // renamed upstream; the lacks() above still guards

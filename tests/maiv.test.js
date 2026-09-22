@@ -9,7 +9,7 @@
 // passing the first on every single item, and before this it produced an empty appraisal
 // worklist and the app said nothing at all.
 
-const { sandbox } = require('./harness');
+const { sandbox, fn } = require('./harness');
 
 const FNS = [
   'invCatMeta', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'invAppraisalThreshold',
@@ -232,11 +232,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // "Coin Collection (qty 10,000)" next to "$500,000" reads either way, and the two
     // readings differ by four orders of magnitude on a court filing. FMV is the LINE
     // TOTAL everywhere in the app; the document now says so.
+    // ⚠ THIS SLICED FROM `printCourtInventory` TO THE NEXT FUNCTION and broke correctly on
+    // 2026-09-21, when the table renderer was EXTRACTED so the trustee's schedule could share it
+    // — the rows moved a few lines up and out of the slice. It was a pin on where the code lives
+    // rather than on what it says. Stated against the renderer itself now, plus the half that
+    // makes the extraction worth having: there is exactly ONE of it, so the probate schedule and
+    // the trust schedule cannot come to disagree about whether a quantity is a lot or a unit price.
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
-    const f = src.slice(src.indexOf('function printCourtInventory('));
-    const body = f.slice(0, f.indexOf('\nfunction printDispositionLedger'));
+    const body = fn('_invScheduleSection');
     has(body, 'items, valued as a lot', 'the row says the value covers the whole lot');
     has(body, 'FMV (total)', 'and the column header says total');
     lacks(body, "'(qty '", 'the bare qty label is gone');
+    eq((src.match(/items, valued as a lot/g) || []).length, 1,
+       'and exactly one renderer says it, shared by both schedules');
+    ['printCourtInventory', 'printTrustSchedule'].forEach(function (name) {
+      has(fn(name), '_invScheduleSection', name + ' asks the shared renderer rather than keeping a copy');
+    });
   }
 };

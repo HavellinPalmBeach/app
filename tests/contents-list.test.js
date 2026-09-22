@@ -6,7 +6,7 @@
 // capture tier's own contract says is counsel's and not ours.
 const { sandbox, source, domStub } = require('./harness.js');
 
-const FNS = [ 'invDocContractBlock',
+const FNS = ['matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault',  'invDocContractBlock',
   'contentsList', 'printContentsList', '_clFlags',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms',
   '_invFileId', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
@@ -22,7 +22,7 @@ const FNS = [ 'invDocContractBlock',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis',
 ];
-const VARS = [ 'INV_CONTRACT_DOCS',
+const VARS = ['MATTER_TYPES',  'INV_CONTRACT_DOCS',
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
   'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_CATEGORIES', 'INV_TAXONOMY',
