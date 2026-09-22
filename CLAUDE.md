@@ -1,5 +1,130 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE HOUSE READ 4,235px BELOW THE QUESTIONS ON A PHONE (2026-09-22)
+Anthony, off the intake form: *"there is still a drop down asking for the type of documentation. And I think
+that's now superfluous … you have the client name on the left side, but then the home details and everything
+are in the right column. So when this renders in field mode on a cell phone, that client intake information
+renders below the critical questions … I just think it would flow better."* App-only, no redeploy. The reflow
+is the ask; the dropdown is **not** superfluous and the measurement says why.
+
+- **⚠⚠ HE IS RIGHT AND IT IS WORSE THAN IT SOUNDS. MEASURED ON THE REAL PAGE BEFORE ANYTHING MOVED**, a probate
+  intake at 390px, y in document pixels:
+
+  | | before | after |
+  |---|---|---|
+  | client name · address | 329 · 673 | 329 · 690 |
+  | **property type · sqft** | **4,235 · 4,388** | **1,020 · 1,173** |
+  | walkthrough date · target start | 4,653 · 4,790 | 1,438 · 1,575 |
+  | Q1 must-find · house flags | 3,282 · 3,528 | 2,106 · 2,352 |
+  | authorized rep · attorney · court case | 1,015 · 1,891 · 2,913 | 3,061 · 3,938 · 5,167 |
+
+  `.grid2` collapses to one column under 820px and renders the **left card whole** before the right, so
+  *everything* in the right-hand column lands below *everything* in the left. **On the call, you scrolled past
+  the entire estate block, the attorney and the court record before reaching "how big is the house".**
+- **THE SPLIT IS STANDING FACTS vs THE CONVERSATION, and that is his model rather than mine.** LEFT: service
+  type, the client or estate contact, the address, then the whole property block through to the move
+  destination. RIGHT: the two *What's In The House* questions and the tick list, Notes, then on a decedent job
+  the representative, the estate details, the attorney, the two gates and the documentation level, with the
+  court record under them.
+  - **⚠ NOTHING MOVED BETWEEN FORMS AND NOTHING CHANGED ABOUT WHAT IS SAVED.** `toggleIntakeFields`,
+    `saveIntake` and `resetIntakeFields` all address by **id**, so the blocks are free to move; a test drives a
+    full probate intake through both columns and reads all thirteen fields back off the saved job.
+  - **⚠ TWO STRINGS POINTED "BELOW" AT A BLOCK THAT IS NOW IN THE OTHER COLUMN** — the deceased-client note and
+    the disabled phone placeholder both said *use rep contact below*. The positional word is gone rather than
+    reworded, because on a desk it is beside and on a phone it is 2,000px down.
+- **⚠⚠ THE DROPDOWN IS NOT SUPERFLUOUS, AND THE MEASUREMENT IS THE ANSWER TO HIS QUESTION.** Driven on the real
+  gate chain:
+
+  | service | fresh intake | 706 answered No |
+  |---|---|---|
+  | the four **living** services | **usable** | usable (never asked) |
+  | Estate Settlement · Probate | forced Formal, **disabled** | **usable** |
+  | Contested Probate | forced Formal, disabled | **still forced** |
+
+  The 706 defaults to Unknown and unknown counts as yes, so **every new estate job opens with it greyed out**.
+  But on the four living services no gate ever fires and **it is the only route to Formal there** — which is
+  what puts *Chain of custody is mandatory on this job* on the Job Plan header (`renderJobPlan`:
+  `custodyMandatory = formal || isProbate`) and turns `_renderAppraisalGuardrail` from `a-warn` into `a-err`.
+  **So it stays OUTSIDE `#estate-fields`**, and a test states that against all three conditionally-hidden
+  blocks. It is close to superfluous and it is not superfluous: on the services where *court & attorney grade*
+  means anything it is almost always decided for you, and on the services where you can set it there is no
+  court. **If it is ever retired, those two behaviours go with it and there is no other switch.**
+  - **⚠ THERE ARE TWO DOCUMENTATION DROPDOWNS AND ONLY ONE IS THIS ONE.** `i-doc-tier` (*What are we contracted
+    to produce?*, 2026-09-21) is the **deliverable** and is load-bearing across pricing, the agreement, the desk
+    checklist, the document gate, the estimate commit gate and the Summary on both surfaces. `i-doclevel` is
+    **how strictly**. The tell that he meant the second: *"still"*, and that he was describing the right-hand
+    column, where it sat. It moves under the gate readout beside the tier, so the two now read as one question
+    asked twice rather than as a property fact buried in Job Details.
+- **⚠⚠ THREE DEFECTS ON THAT CONTROL, ALL FOUND BY MEASURING WHETHER IT STILL EARNED ITS PLACE.**
+  - **ITS GUIDANCE NAMED THE THREE CASES IN WHICH IT IS DISABLED.** *"Choose Formal when the job needs
+    court-grade records — a contested estate, a large estate that may owe estate tax, or when the attorney or
+    trust officer asks for it."* All three set the floor automatically as of 2026-08-24. **The only guidance on
+    the form told you to use the dropdown in exactly the cases where it is greyed out.**
+  - **⚠⚠ THE GATES WROTE `formal` IN AND NEVER GAVE THE BOX BACK.** Answering the 706 *No* afterwards released
+    the control with the forced value still in it, and the readout then announced **"Formal documentation, set
+    by hand"** — a choice attributed to a person who never made one, on a setting that makes chain of custody
+    mandatory. They **borrow** it now (`dataset.preGate`, captured **once** because the handler re-runs on every
+    gate change and from `toggleIntakeFields`), so a genuinely hand-set Formal survives being borrowed and a
+    forced one does not. A blanket clear would have lost the first.
+  - **IT HAD NO `onchange`**, so hand-setting Formal left the readout directly beneath it still reading
+    *Standard documentation* — the one line on the form that explains the level, contradicting the control it
+    explains.
+  - **⚠ AND FIXING THE FIRST TWO EXPOSED AN ORDERING BUG IN MY OWN FIX.** `draft` was built from the control
+    **before** the control was corrected, so the pass that handed the blank back still reported *set by hand*.
+    `docLevelFloor` / `docLevelFloorReason` read svc / gate706 / gateDispute / docTier and **never** `docLevel`,
+    so the floor is resolved from the gates first, the control is put right, and only then is the draft built —
+    the readout now always describes the control as it reads.
+- **9395 committed checks** (+21). **All five changes revert-verified individually, ZERO green after the one
+  below was re-done** — the questions back in the left card fails **11**, the level out of the documentation
+  block 9, the retired hint 3, a court fact leaked into the estate block 2, the level moved inside
+  `#estate-fields` 1. Baseline 0 before and after.
+  - **⚠⚠ SIX PRE-EXISTING ASSERTIONS PINNED THE SOURCE **ORDER** OF THE INTAKE BLOCKS AND BROKE CORRECTLY.**
+    `estate-intake` located the probate block as *between `#estate-fields` and "What's In The House"* — three
+    source indices with an arbitrary third landmark. The requirement was never the order; it is that a decedent
+    fact sits inside the decedent block and a court fact inside the court block. **Restated as CONTAINMENT**, by
+    walking back to each id's enclosing block, so the next layout change cannot fail an assertion about
+    something else. The twenty-first time this file records a positional pin breaking on a true change.
+  - **⚠⚠ ONE CAME BACK GREEN AND THE ASSERTION WAS THE PROBLEM.** My depth walk started at the **id inside the
+    opening tag**, so depth was 0 *within* the block and the first inner `</div>` closed it — every later
+    element then read as outside, and the revert that moved the control INTO `#estate-fields` passed. Re-anchored
+    on `lastIndexOf('<div', …)`; re-done it fails 1, and the browser catches it eight ways.
+  - **⚠ THE SWEEP WAS RUN IN THE BACKGROUND AND NOTHING ELSE TOUCHED THE APP WHILE IT RAN.** The documentation
+    pass went on in parallel because it is different files — this file records what running a suite against a
+    file a sweep is mutating costs.
+- **Verified end to end in headless Chromium, 152 checks, 0 page errors**, driving the real nav, the real
+  `toggleIntakeFields`, the real controls and the real Save:
+
+  | | |
+  |---|---|
+  | every intake control still in the DOM | **61 of 61** |
+  | the column split | LEFT service · client · address · property type · sqft · move dest; RIGHT both questions · flags · notes · rep · date of death · tier · attorney · gates · **level** · court case · Save |
+  | overflow 1440 · 390, all seven services | **0 · 0** |
+  | the level control, by service | on screen on **all seven**; disabled on exactly the three decedent ones |
+  | a full probate intake, saved | thirteen fields read back off the job, both columns, **form cleared after** |
+  | 706 = No, then raise by hand | releases · reports *set by hand* · borrowed by the appraisals tier · **returns the Formal the person chose** |
+  | browser regressions 1–10 | **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61**, 0 failed |
+
+  ⚠ `tests/browser/run.sh` needs `NODE_PATH=/tmp/node_modules` in this container — without it every step exits
+  on *Cannot find module 'playwright'* and the runner's own `exit $rc` is swallowed by a `| tail` in the caller,
+  so it reads as a clean pass. **Read the step lines, not the exit code.** The first `<style>` block is
+  **byte-identical to HEAD at 93,431 bytes / 1,169 lines / 635 rules** — no CSS, and the diff is three hunks,
+  all inside the intake panel.
+- Manual **§4** (the two columns with the measurement, where the level now sits, the usability table, and the
+  three corrections) and playbook **Step 1** (the phone reading order in field language) plus **four**
+  symptom→cause rows — including the two that will actually happen: *where did the dropdown go* and *why are
+  there TWO documentation dropdowns*. Both `.md` copies hand-edited; **42 claims parity-checked, 0 mismatches**
+  — ⚠ five apparent misses were a tag-strip leaving a space before punctuation (`</strong>,`), **verified by
+  dumping the surrounding bytes rather than assumed**. A stale sweep for the retired hint returns **0 in the
+  app** and one hit in each manual file, both inside the sentence that corrects it. Tag balance clean on both
+  HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under
+  `print` **20/49 and 17/17** tables as wide as their container with **0** taking the phone rule — the manual
+  gained exactly one table, the usability one, and it sits inside a `.note`.
+- **⚠ THE SHAPE TO COPY: when somebody says a control is superfluous, measure what it still does before
+  removing it — and measure what it does on the services they were NOT looking at.** On the three estate
+  services this dropdown really is all but dead. On the four living ones it is the only switch for a crew
+  safety rule. Deleting it on the strength of the first half would have been a silent capability loss dressed
+  as tidying.
+
 ## ⚠⚠ THE WORKBOOK ASSERTED A VALUATION THE ENGAGEMENT CONTRACTED NOT TO PRODUCE (2026-09-22)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs`, `BACKEND_VERSION 2026-09-22a`. **⚠ ANTHONY HAS
 DEPLOYED `-a` ONLY**, so `-21b` (the trust fix) and this one both ride the next deployment. Anthony: *"Go for
