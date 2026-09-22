@@ -280,7 +280,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rowCtx = sandbox({
       fns: ['_renderInvRow', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs', '_invPhotoSiblings',
             '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo'],
-      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick'],
+      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],
       stubs: {
         _invInput: () => '', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Entry & Living',
         invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,
@@ -306,7 +306,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const loneCtx = sandbox({
       fns: ['_renderInvRow', '_invRecipientInput', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource',
             '_invDerivedRefs', '_getPhotoRef', '_invItemNo'],
-      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick'],
+      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],
       stubs: {
         _invInput: () => '', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Entry & Living',
         invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,

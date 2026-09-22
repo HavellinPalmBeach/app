@@ -1,5 +1,116 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE CREDENZA SHOT TWICE CAME BACK AS TWO OF EVERYTHING (BUILT 2026-09-22)
+Anthony, reading the Agent One build: *"What will happen if we take multiple pictures of the same item?
+Do we have some logic in there to combine them? … or we take two pictures of that bar … it's not going
+to think it's more of the same items is it"*. Then, on the answer: *"okay, go for it. And then I think
+what we really need is an updated manual with all of this specifically laid out so we know how to do
+this properly and we're our own first line of defense."* App-only, no redeploy — `dupOK` rides the
+existing per-item manifest merge.
+
+- **⚠⚠ HIS QUESTION CONFLATES TWO CASES AND THEY LAND OPPOSITE WAYS. Answering it honestly was
+  half the work.** The close-up is solved and the second Items shot was not:
+
+  | what you shoot | what comes back |
+  |---|---|
+  | the cabinet, then **Detail of last** on the maker's mark | **one line** — `_agDetailRefs` sends that frame as an extra IMAGE inside its parent's request and `_jobInvRefs` never lets a `label:'detail'` mint a line |
+  | the cabinet, then the mark as an ordinary Items shot | **two lines** — nothing knows they are the same plate |
+  | the credenza shot twice on the Items pass | **double** — four objects in the frame become eight lines |
+
+  **`agentShotGroups` keys on `derivedFrom || stableId`, i.e. on the PHOTOGRAPH**, so every frame is its
+  own request and the model carries no memory between them. Only the system prompt is shared. That is
+  not a defect in the agent — it is correctly naming what is in front of it, twice.
+- **⚠⚠ IT FLAGS AND NEVER MERGES, AND THAT IS NOT CAUTION — THE APP CANNOT KNOW.** Two rows reading
+  *Nightstand* in one bedroom are either a duplicated frame or a matching pair, and only somebody who
+  can see both photographs can say which. **Auto-merging would silently delete a real object off a
+  schedule a court may read.** Two answers on the block, and it will not choose: **Remove** (that line)
+  or **Not duplicates** (the pair is real). Reverting the pair-clearing to one row fails 1.
+- **⚠⚠ THE ROWS MUST COME FROM DIFFERENT PHOTOGRAPHS, AND THAT IS THE LOAD-BEARING HALF.** Two
+  matching lamps **split off ONE frame** are two real objects the agent saw at once — the row already
+  reads *1 of 2 in this photo* — so flagging them would make this block contradict the cue two inches
+  away on the same row. Reverting that one filter fails 3.
+- **⚠ REMOVE TOMBSTONES AND NEVER TOUCHES DRIVE.** `discardShot` trashes the photograph; this must
+  not, because the frame is real evidence of the room whatever the desk decides about the LINE. The row
+  keeps every value and *Removed items* gives it back whole. Splicing instead fails 2, trashing the
+  photograph fails 2. ⚠ Freeing the `seq` number is pre-existing and harmless — the filename carries a
+  timestamp, so there is no collision; `discardShot` has done the same since it shipped.
+- **⚠ ELIGIBLE ONLY WHILE THE GUESS IS THE ONLY THING ON THE ROW** — `namedBy === 'agent'`, unreviewed,
+  uncleared. A desk edit sets `namedBy:'desk'` and a tick sets `reviewed`; both mean a person has looked
+  and had the chance to say, so flagging past that is nagging rather than catching. Reverting the three
+  arms fails 4 / 1 / 2.
+- **⚠ `_agNameKey` IS DELIBERATELY NOT `_mustFindKey`, although the rule is identical today.** That one
+  is a **STORED** key — a Found tick is filed against it and rewording the line orphans the tick — so it
+  can never be tuned. This one is recomputed every paint and nothing is filed under it. Reverting the
+  normalisation fails 2.
+- **⚠ COMPUTED ONCE PER PAINT, READ PER ROW.** `_agDupIndex` is built in `renderInventoryTab` **before**
+  the rows and over **every** row rather than the filtered ones — a filter hiding one half of a pair
+  must not make the other half read as settled. A test `lacks()` the grouper in `_renderInvRow`: an O(n)
+  pass inside an O(n) loop, on the tab this file records repainting in **1,420 ms at 3,000 rows**.
+  Computing it after the rows fails 1; not computing it at all fails 2.
+- **⚠ BASE64 HANDLE, the `_custodyHandle` / `_mfHandle` shape** — the key carries a free-text object
+  name and a party named *O'Hara & Sons* broke out of an onclick string here once already. Raw text
+  fails 1. A stale handle (the list moved between paint and tap) repaints and **writes nothing**; fails 1.
+- **9,729 committed checks (+64).** **All 19 changes revert-verified individually, ZERO green after the
+  two below were re-done**; baseline 0 before and after, on a **full tar copy of the tree** so the browser
+  could drive the real `havellin.html` at the same time, `python3 -u` straight to a file with no pipe.
+  - **⚠⚠ THE THIRD GREEN IS THE SHAPE THIS FILE RECORDS MORE THAN ANY OTHER, AND I WROTE IT AGAIN.**
+    My chip checks were `has(rowSrc, 'possible duplicate')` over the function's SOURCE — and
+    `if (false) { warn.push(… 'possible duplicate' …) }` leaves every string in the file, so **switching
+    the chip off entirely came back green**. A source check cannot tell a rendered control from a
+    disabled one. It drives the real `_renderInvRow` now and reads the markup back; re-done it fails 2,
+    and the driven rig also covers the *agent* badge, which had been source-only since the morning.
+  - **⚠ A SECOND GREEN WAS A REAL REQUIREMENT NOTHING ASSERTED.** Dropping `r.roomIdx != null` changed
+    nothing, because no fixture had two roomless rows. `_invRoomName(null)` reads *Unassigned /
+    estate-wide*, which is a filing state rather than a place — two objects both filed nowhere are no
+    evidence of being in the same room. Driven now; re-done it fails 1.
+  - **⚠ THE THIRD IS BELT-AND-BRACES AND IS RECORDED AS SUCH RATHER THAN COVERED BY A CHECK THAT COULD
+    NOT FAIL.** `g.rows.length < 2` cannot change an answer — two distinct source photographs already
+    imply two rows — it is a cheap early-out that skips building the map for the single-row case, which
+    on a 3,000-row manifest is almost every group. Said at the source AND in the test.
+  - **⚠ THREE SANDBOXES LIFT `_renderInvRow` AND ALL THREE NEEDED THE NEW VAR** — found by searching
+    every suite at once, which this file records costing a round when it is not. **Lifted, never
+    stubbed:** a stub of the grouping rule is what would let the block and the chip disagree about which
+    lines are contested. The `renderInventoryTab` references in three other suites are source reads and
+    needed nothing.
+- **Verified end to end in headless Chromium, 30 checks, 0 failed, 0 page errors**, driving the real
+  tab, the real block and the real buttons:
+
+  | | |
+  |---|---|
+  | two frames of one credenza | the block names it, the room, **#1 and #3**, and carries **both photographs** |
+  | two lamps split off ONE frame | **absent from the block** — two real objects, never flagged |
+  | the rows | **2 chips**, `rgb(166, 124, 69)` — bronze, never red |
+  | **Remove** | 5 lines → 4 · tombstoned · **`driveTrashed` false** · still points at `F2` · *Removed items* offers it back |
+  | **Not duplicates** | **0 removed** · `dupOK` on **both** · block and chips gone |
+  | correcting one name by hand | settles it without touching the flag |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  Steps 1–11 re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48**, 0 failed —
+  **512 checks across the twelve**, and `tests/browser/step12.js` is committed with `run.sh`'s default
+  list now 1–12. The first `<style>` block is **byte-identical to HEAD at 93,438 bytes / 1,169 lines /
+  635 rules** — no CSS — and the app diff is **161 insertions against 0 deletions**.
+  - **⚠ ONE OF MY OWN BROWSER ASSERTIONS WAS WRONG AND THE CODE WAS RIGHT, AND IT IS THE TRAP THE
+    RUNNER'S OWN HEADER ALREADY WARNS ABOUT.** The *Removed items* check read `innerText`, which applies
+    CSS `text-transform` — `.sec` is uppercase, so a case-sensitive match found nothing. `textContent`.
+- Manual **§10a** (two notes: the three-case table with the field rule, and the desk catch with the
+  two-button table, the never-merges rule and the split-frame exemption). Playbook **Step 10a** (a
+  `.stop` — one Items shot per object or shelf, *Detail of last* for every second angle, and that the
+  room is the cheapest place to get it right) and **§e** (a note with the two buttons and a `.stop` that
+  two matching nightstands are not a duplicate), plus **three** symptom→cause rows — including the two
+  that will actually happen: *an amber Possible duplicates block* and *is the photograph gone?*. Both
+  `.md` copies hand-edited; **30 claims parity-checked, 0 mismatches** — ⚠ three apparent misses were
+  the HTML's `&rsquo;` against the `.md`'s ASCII apostrophe, **verified by dumping the bytes rather than
+  assumed**, and the `.md` matches its own existing style. Tag balance clean on both HTML files with the
+  stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **20/52 and
+  17/18** tables as wide as their container with **0** taking the phone rule — ⚠ the playbook's 18th is
+  the new two-button table and it sits **inside a `.note`**, measured at 706px in a 739px parent and
+  **not clipped**, which is exactly how the manual's twenty-six note tables have always behaved; it is
+  the first note table that document has had.
+- **⚠ THE SHAPE TO COPY: when somebody asks "will it do X", reproduce BOTH readings of the question
+  before answering.** His sentence covered the maker's-mark close-up and a second Items shot of one
+  object, and the app handles those oppositely. Answering the half I had built would have been true and
+  would have left the failure in place.
+
 ## ⚠⚠ AGENT ONE IS BUILT — THE DESK'S HALF OF "THE FIELD TYPES NOTHING" (2026-09-22)
 **⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-22b`, **and
 `ANTHROPIC_API_KEY` in Script Properties**. Anthony has deployed `-21b` and `-22a`; this is a third.

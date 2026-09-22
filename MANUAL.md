@@ -1351,6 +1351,25 @@ A **Name N shots** button sits first on the Inventory Review bar, because on a f
 
 > **⚠⚠ Photograph the maker's mark — it is read.** A close-up taken with the *Detail of last* toggle is sent to the agent *with the object it belongs to*, in the same look, which is the entire reason those shots exist. Flip the china over, zoom in on the signature, photograph the hallmark, and the name that comes back is a reading rather than a guess. A detail shot is still never a line of its own and is never numbered.
 
+> **⚠⚠ Two photographs of one object: the close-up is handled, a second Items shot is NOT.** Anthony asked the question outright — *"we take two pictures of that bar … it's not going to think it's more of the same items is it"* — and the honest answer is that it depends entirely on which button was used. **Every photograph is its own separate look and the agent carries no memory between them**, so it cannot know it has seen the credenza already.
+
+| What you shoot | What comes back |
+| --- | --- |
+| The cabinet, then **Detail of last** on the maker's mark | **One line.** The close-up rides in the same look as its parent and is never a line of its own. This is the case the toggle exists for |
+| The cabinet, then the maker's mark as an ordinary Items shot | **Two lines.** Nothing knows they are the same plate |
+| The credenza shot twice on the Items pass | **Double.** Four objects in the frame come back as eight lines |
+
+> **So the field rule is one Items shot per object or shelf, and *Detail of last* for every second angle.** The toggle resets after each shot, so it is one deliberate tap per close-up.
+
+> **⚠ And the desk catches what the field missed: *Possible duplicates*.** Any two agent-named lines in the same room carrying the same name, **off different photographs**, are flagged in a block above the rows with both thumbnails side by side, and each row wears a bronze *possible duplicate* chip. Two answers, and the block will not choose for you:
+
+| Button | What it does |
+| --- | --- |
+| **Remove** | Takes that line off the inventory. **The photograph is untouched in Google Drive** — only the line goes — and *Removed items* at the foot of the tab gives it back whole |
+| **Not duplicates** | They really are two objects. Clears the pair and stops flagging them |
+
+> **It flags and never merges, and that is not caution — the app cannot know.** Two rows reading *Nightstand* in one bedroom are either a duplicated frame or a matching pair, and only somebody who can see both photographs can say which. Merging automatically would silently delete a real object off a schedule a court may read. **Lines split off ONE frame are never flagged** — two matching lamps in one photograph are two real objects the agent saw at once, and the row already says *1 of 2 in this photo*. Correcting either name, or ticking the row reviewed, settles it on its own.
+
 > **Two things it raises that are not about naming at all.** Both render above the rows, and neither is ticked or acted on by the app. **Must find** — it checks every frame in the house, the as-found wide shots included, against the intake answers, and says when it sees the item or somewhere one would be kept (a safe, a strongbox, a locked drawer). Nothing else in the app has ever read those answers against the photographs. **Firearms and possible NFA items** — a suppressor reads as a plain metal tube, and never being categorised as a firearm at all is the real risk the protocol names. It sets the *Firearms* category and raises a notice; it never sets the NFA flag. **Read off the photographs, not off the house** — a notice is a prompt to go and look, never a clearance.
 
 > **A frame with nothing in it is a real answer.** A wall, an empty room, a misfire comes back with no name and no line invented for it — but it is stamped, so the desk can tell it from a photograph the agent never reached. It stays on the *Unnamed shots* count for a person to deal with.

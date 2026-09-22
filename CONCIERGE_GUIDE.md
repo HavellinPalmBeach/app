@@ -648,6 +648,12 @@ The manifest assembles from three places: the shots you took on the Items pass i
 
 > **⚠ Every row it names is marked unchecked, and checking them is your job.** A row reads **agent** in bronze, or **agent · unsure** where it was guessing; hover it for why it named what it named. Edit the name or the category and the badge clears. Client documents keep printing *IN PROGRESS — N of M items reviewed* until you have been through them, so nothing is hidden from the client and nothing is claimed either. **Work the unsure ones first** — that is what the badge is for.
 
+> **⚠⚠ One Items shot per object or shelf. Shoot the same credenza twice and you get two of everything.** Anthony asked this outright: *"we take two pictures of that bar … it's not going to think it's more of the same items is it"*. It does. **Every photograph is a separate look and the agent has no memory of the last one**, so it cannot know it has already named that console. Four objects in the frame, shot twice, come back as eight lines.
+>
+> **The second angle is what *Detail of last* is for, and it is a different button.** Shoot the object, press *Detail of last*, shoot the mark or the back or the damage — that close-up goes to the agent *with* the object and never becomes a line. Miss the toggle and it is an ordinary Items shot, which is the same double again. **The toggle resets after every shot**, so it is one tap per close-up, every time.
+>
+> This is the cheapest place to get it right. Fixing it in the room is one tap; fixing it at the desk is reading two photographs and deleting a line.
+
 > **⚠ Photograph the maker's mark and it gets read.** Use *Detail of last* on the signature, the hallmark, the stamp on the back of the china — those close-ups go to the agent **with** the object they belong to, which is the whole reason to take them. It is the difference between *"appears to be"* and a flat reading. Takes five seconds in the room and saves an argument later.
 
 > **It also tells you two things that are not about naming.** Above the rows you may see **Must find** — it checks every photograph in the house against what the family asked you to find, and says when it spots the item or somewhere one would be kept, like a safe or a locked drawer. And **Firearm** or **Possible NFA item** — a suppressor looks like a plain metal tube and the real risk is nobody recognising it. **Go and look.** A notice is read off a photograph, not off the house, so it is a prompt and never an all-clear — and it never ticks *Found it* for you.
@@ -693,6 +699,17 @@ The manifest assembles from three places: the shots you took on the Items pass i
 > **⚠⚠ One photo, several items — you do not have to shoot each object (new 2026-09-20).** Anthony's own words about a bar console: *"this same picture is going to serve as reference to multiple items — four bottles of booze, a Banksy, a hutch."* Shoot the shelf once in the house. At the desk, open that line and press **➕ Another item in this photo** for each additional object; each becomes its own line with its own number, name, value and disposition, all sharing the one picture. The row says *1 of 4 in this photo* so you can see at a glance why four rows look the same.
 >
 > **Shoot a second photograph only when the object earns one** — something valuable enough to want front and back, a signature to zoom in on, a maker's mark on the underside of a plate. That is what **Detail of last** is for in the house, and it is a different thing: a detail is another picture of ONE object and never becomes a line of its own.
+
+> **⚠⚠ *Possible duplicates* — the desk's catch for the credenza shot twice (new 2026-09-22).** Two agent-named lines in the same room with the same name, **off different photographs**, are flagged in an amber block above the rows with both pictures side by side, and each row wears a bronze *possible duplicate* chip so you see it while scrolling too. **Open both photographs before you press anything.**
+
+| Press | What happens |
+| --- | --- |
+| **Remove** (on the line you do not want) | That line comes off the inventory. **The photograph stays in Google Drive** — only the line goes — and *Removed items* at the foot of the tab gives it back whole if you were wrong |
+| **Not duplicates** | They really are two objects. Clears the pair and stops flagging them |
+
+> Correcting either name, or ticking the row reviewed, settles it on its own — the flag is only ever asking about a name nobody has looked at yet.
+
+> **⚠ Two matching nightstands are not a duplicate, and the app will never guess which you have.** It flags and it never merges, on purpose: *Nightstand* twice in one bedroom is either one nightstand shot twice or a real pair, and only somebody who can see both photographs can say. Merging automatically would quietly delete a real object off a schedule a court may read. **And two lines split out of ONE picture are never flagged** — that is the *1 of 2 in this photo* case and it is correct; the block only ever pairs lines that came off different frames.
 
 > **⚠ Binning the photograph bins every line you split out of it.** The confirmation names them — read it. If you split a shelf into six objects and then delete the picture, all six go. **Restore on the Job Admin & Inv tab brings the whole set back**, so it is recoverable, but it is easier not to. And a shot that has not finished uploading cannot be split at all: press Retry on it first, or the lines would have no picture and never get one.
 
@@ -931,6 +948,9 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | **Rows say *agent* or *agent · unsure* in bronze** | Working as intended — it named them and nobody has checked them yet. Read it, correct it if it is wrong, and the badge clears. Start with the *unsure* ones. |
 | **It named something wrongly — a maker it got wrong, a reproduction it called original** | Correct it on the row. That is the job, and it is why every row comes back unchecked. If it is getting a whole category wrong on one house, tell Anthony — that is worth knowing. |
 | **One photograph turned into four rows** | Correct, and not a duplicate. Four objects in one frame is four inventory lines sharing one picture — the row says *1 of 4 in this photo*. Do not delete three of them. |
+| **An amber *Possible duplicates* block, or a bronze *possible duplicate* chip on a row** | The agent gave the same name to two lines in one room, **off different photographs** — usually because the object was shot twice on the Items pass. Open both pictures. If it is one object, press **Remove** on the line you do not want; if it really is two, press **Not duplicates**. Nothing is merged or deleted for you. |
+| **It flagged two matching nightstands, and there really are two** | Expected — it cannot tell a duplicated frame from a real pair, so it asks. Press **Not duplicates** and it stops. Correcting either name or ticking the row reviewed does the same thing. |
+| **You pressed Remove on a duplicate — is the photograph gone?** | **No.** Only the line comes off; the photograph stays in Google Drive, and *Removed items* at the foot of the tab gives the line back whole. That is different from binning a shot in the room, which does trash the picture. |
 | **Thirty books came back as one line** | Correct. Ordinary household goods are recorded as a lot with a quantity; art, antiques, silver, jewellery, rugs, firearms and anything with a readable mark get their own line. Split it by hand if this particular lot warrants it. |
 | **A row came back with no name at all** | The agent looked and found nothing inventoriable — a wall, an empty room, a shot that did not come out. It deliberately does not invent a line. Name it or bin the photo. |
 | **A *Must find* notice appeared** | Go and look. It saw the item, or somewhere one would be kept, in a photograph. It has not ticked *Found it* and it is not telling you the thing is definitely there — you confirm. |

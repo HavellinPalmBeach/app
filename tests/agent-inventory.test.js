@@ -123,8 +123,13 @@ function rig(refs, over) {
     fns: ['agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext',
           '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', '_agStateHtml',
           'invSplitItemN', 'invSplitItem', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
-          '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDerivedRefs'],
-    vars: ['_agRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS',
+          '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDerivedRefs',
+          // The duplicate flag. ⚠ LIFTED, NEVER STUBBED — a stub of the grouping rule is
+          // exactly what would let the block above the rows and the chip on the row come to
+          // disagree about which lines are contested.
+          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_agDupIndex', '_agDupHtml',
+          '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo'],
+    vars: ['_agRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
@@ -140,6 +145,9 @@ function rig(refs, over) {
       matterTypeOf: () => 'probate',
       esc: (x) => String(x == null ? '' : x),
       document: { getElementById: () => null },
+      _invThumbHTML: () => '<div data-thumb-id="T"></div>',
+      showSyncBadge() {},
+      window: { confirm: () => true },
     }, over.stubs || {}),
   });
   return { ctx, saved, synced };
@@ -614,6 +622,218 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(lines.every((r) => r.fmv === undefined), true, 'and neither carries a value');
     eq(ctx._getPhotoRef(7, 's1').agentNotices[0].kind, 'mustfind', 'and the safe is on the record');
     ok(saved.length >= 1, 'written to the manifest');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ⚠⚠ POSSIBLE DUPLICATES (2026-09-22). Anthony: *"we take two pictures of that bar ... it's
+  // not going to think it's more of the same items is it"*. It does. `agentShotGroups` keys on
+  // the PHOTOGRAPH, so every frame is its own request and the model carries no memory between
+  // them — two Items-pass frames of one credenza come back as two complete sets of lines.
+  // The close-up case is a DIFFERENT thing and is already solved by `Detail of last`; the
+  // groups below pin that the two must not be confused with each other.
+  group('⚠⚠ THE DUPLICATE FLAG — TWO FRAMES, NOT TWO OBJECTS');
+  {
+    const two = () => rig([
+      ROW({ stableId: 'a', objectName: 'Walnut bar console', namedBy: 'agent', itemNo: 1 }),
+      ROW({ stableId: 'b', objectName: 'Walnut bar console.', namedBy: 'agent', itemNo: 2 }),
+    ]);
+    const { ctx } = two();
+    const g = ctx.agentDuplicateGroups(7);
+    eq(g.length, 1, 'two frames of one credenza are flagged');
+    eq(g[0].rows.length, 2, 'both lines are in the group');
+    eq(g[0].roomIdx, 4, 'and it carries the room it is about');
+    // ⚠ `g.rows.length < 2` in the grouper is BELT AND BRACES and is not asserted here: two
+    // distinct source photographs already imply two rows, so removing it changes no answer.
+    // It is a cheap early-out. Recorded rather than covered by a check that could not fail.
+    // ⚠ THE NAME KEY IS NORMALISED — a trailing full stop is not a second object.
+    eq(ctx._agNameKey('  Walnut  Bar Console. '), 'walnut bar console', 'case, spacing and trailing punctuation');
+
+    const ix = ctx._agDupIndex(7);
+    eq(ix.a, 2, 'the index marks the first row');
+    eq(ix.b, 2, 'and the second');
+  }
+
+  // ⚠⚠ THE CONVERSE, AND IT IS THE LOAD-BEARING HALF. Two matching lamps SPLIT off one frame
+  // are two real objects the agent saw at once — the row already reads *1 of 2 in this photo*
+  // — so flagging them would make this block contradict the cue two inches away on the row.
+  {
+    const { ctx } = rig([
+      ROW({ stableId: 'a', objectName: 'Brass table lamp', namedBy: 'agent' }),
+      ROW({ stableId: 'a2', derivedFrom: 'a', objectName: 'Brass table lamp', namedBy: 'agent' }),
+    ]);
+    eq(ctx.agentDuplicateGroups(7).length, 0, 'one photograph, two objects: never flagged');
+    eq(Object.keys(ctx._agDupIndex(7)).length, 0, 'so neither row gets a chip');
+    eq(ctx._agDupHtml(7, ctx._jobInvRefs(7)), '', 'and the block says nothing about them');
+    eq(ctx._jobInvRefs(7).length, 2, 'both lamps are still on the list');
+
+    // And the converse in the same fixture: give the SECOND lamp its own photograph and it
+    // does flag — so the test above is about where the frames came from, not about the name.
+    const two2 = rig([
+      ROW({ stableId: 'a', objectName: 'Brass table lamp', namedBy: 'agent' }),
+      ROW({ stableId: 'b', driveFileId: 'F2', objectName: 'Brass table lamp', namedBy: 'agent' }),
+    ]).ctx;
+    eq(two2.agentDuplicateGroups(7).length, 1, 'two frames of one lamp IS flagged');
+    eq(Object.keys(two2._agDupIndex(7)).sort(), ['a', 'b'], 'and both rows are chipped');
+  }
+
+  {
+    // Every other way out of the pool, each for its own reason.
+    const one = (over) => rig([
+      ROW({ stableId: 'a', objectName: 'Nightstand', namedBy: 'agent' }),
+      ROW(Object.assign({ stableId: 'b', objectName: 'Nightstand', namedBy: 'agent' }, over)),
+    ]).ctx.agentDuplicateGroups(7).length;
+    eq(one({ roomIdx: 9 }), 0, 'a different room is a different object');
+    eq(one({ reviewed: true }), 0, 'a reviewed row has already been looked at');
+    eq(one({ namedBy: 'desk' }), 0, 'and so has one a person renamed');
+    eq(one({ dupOK: 1 }), 0, 'and one already confirmed as its own object');
+    eq(one({ objectName: '' }), 0, 'a blank row is not a duplicate of anything');
+    eq(one({ deletedAt: 1 }), 0, 'nor is a removed one');
+    eq(one({}), 1, 'and the control case still fires');
+
+    // ⚠ TWO ROOMLESS ROWS ARE NOT A PAIR. `_invRoomName(null)` reads *Unassigned /
+    // estate-wide*, which is a filing state rather than a place — two objects both filed
+    // nowhere are no evidence of being in the same room, so the claim this block makes
+    // everywhere else cannot be made about them. Unreachable through the camera today (every
+    // captured shot carries a room and a split copies it), so it is the guard that keeps it
+    // unreachable if a roomless writer is ever added.
+    const roomless = rig([
+      ROW({ stableId: 'a', roomIdx: null, objectName: 'Sideboard', namedBy: 'agent' }),
+      ROW({ stableId: 'b', roomIdx: null, objectName: 'Sideboard', namedBy: 'agent' }),
+    ]).ctx;
+    eq(roomless.agentDuplicateGroups(7).length, 0, 'two roomless rows are never paired');
+    eq(roomless._jobInvRefs(7).length, 2, 'and both are still on the list');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('⚠ IT FLAGS AND NEVER MERGES — THE TWO ACTIONS');
+  {
+    const { ctx, saved, synced } = rig([
+      ROW({ stableId: 'a', objectName: 'Walnut bar console', namedBy: 'agent', itemNo: 1 }),
+      ROW({ stableId: 'b', objectName: 'Walnut bar console', namedBy: 'agent', itemNo: 2 }),
+    ]);
+    ctx.agentDropDuplicate(7, 'b');
+    const live = ctx._jobInvRefs(7);
+    eq(live.length, 1, 'the duplicate line comes off the inventory');
+    eq(live[0].stableId, 'a', 'and the one you kept is the one that stays');
+    const gone = ctx._getPhotoRef(7, 'b');
+    ok(gone && gone.deletedAt, 'tombstoned rather than spliced, so a merge cannot undo it');
+    eq(gone.objectName, 'Walnut bar console', 'every value is still on the row for Restore');
+    // ⚠⚠ AND THE PHOTOGRAPH IS UNTOUCHED. `discardShot` trashes the Drive file; this must not,
+    // because the frame is real evidence of the room whatever the desk decides about the LINE.
+    eq(gone.driveTrashed, undefined, 'the photograph is NOT trashed in Drive');
+    eq(gone.driveFileId, 'FID', 'and the row still points at it');
+    ok(saved.length >= 1 && synced.length >= 1, 'written and queued for the sheet');
+  }
+
+  {
+    const { ctx } = rig([
+      ROW({ stableId: 'a', objectName: "O'Hara & Sons nightstand", namedBy: 'agent' }),
+      ROW({ stableId: 'b', objectName: "O'Hara & Sons nightstand", namedBy: 'agent' }),
+    ]);
+    const g = ctx.agentDuplicateGroups(7)[0];
+    // ⚠ BASE64, the `_custodyHandle` / `_mfHandle` shape. The key carries a free-text object
+    // name, and a party named O'Hara & Sons broke out of an onclick string here once already.
+    const h = ctx._agDupHandle(g.key);
+    eq(/['"<>&]/.test(h), false, 'the handle is safe inside an attribute');
+    eq(ctx._agDupUnhandle(h), g.key, 'and round-trips exactly');
+
+    ctx.agentNotDuplicate(7, h);
+    eq(ctx._getPhotoRef(7, 'a').dupOK, 1, 'the first row is cleared');
+    eq(ctx._getPhotoRef(7, 'b').dupOK, 1, 'and so is the second — the pair goes quiet as a pair');
+    eq(ctx.agentDuplicateGroups(7).length, 0, 'so it stops flagging');
+    eq(ctx._jobInvRefs(7).length, 2, 'and NOTHING was removed — both objects are real');
+  }
+
+  {
+    // The list can move between paint and tap. Repaint rather than clear a flag on rows
+    // nobody meant.
+    const { ctx, saved } = rig([ROW({ stableId: 'a', objectName: 'Sideboard', namedBy: 'agent' })]);
+    ctx.agentNotDuplicate(7, ctx._agDupHandle('4\u0000nothing here'));
+    eq(saved.length, 0, 'a stale handle writes nothing');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('⚠ WHAT THE DESK ACTUALLY SEES');
+  {
+    const { ctx } = rig([
+      ROW({ stableId: 'a', objectName: 'Walnut bar console', namedBy: 'agent', itemNo: 11 }),
+      ROW({ stableId: 'b', objectName: 'Walnut bar console', namedBy: 'agent', itemNo: 12 }),
+    ]);
+    const all = ctx._jobInvRefs(7);
+    const html = ctx._agDupHtml(7, all);
+    has(html, 'Possible duplicates', 'the block is headed for what it is');
+    has(html, 'Walnut bar console', 'and names the object');
+    has(html, 'Kitchen', 'and the room');
+    has(html, '#11', 'both item numbers are on it');
+    has(html, '#12', 'so the desk can find each line');
+    has(html, 'data-thumb-id', 'with the photographs, which is the whole point of the block');
+    has(html, "agentDropDuplicate(7,'a')", 'Remove is offered per line');
+    has(html, "agentDropDuplicate(7,'b')", 'on both of them');
+    has(html, 'agentNotDuplicate(7,', 'and one Not duplicates for the pair');
+    has(html, 'Look at both photographs before you choose', 'and it says so outright');
+    // ⚠ A NOTHING-TO-SAY CASE SAYS NOTHING. An empty warning block above the rows is how a
+    // person learns to scroll past the one that matters.
+    const quiet = rig([ROW({ stableId: 'a', objectName: 'Sideboard', namedBy: 'agent' })]);
+    eq(quiet.ctx._agDupHtml(7, quiet.ctx._jobInvRefs(7)), '', 'and nothing renders when nothing is flagged');
+  }
+
+  {
+    // ⚠⚠ DRIVEN, NOT GREPPED. The first cut of this asserted the two strings were present in
+    // `_renderInvRow`'s body — and `if (false) { warn.push(... 'possible duplicate' ...) }`
+    // leaves both of them in the file, so the revert that switches the chip OFF came back
+    // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
+    // markup the function actually returns. CLAUDE.md records that shape more than any other.
+    const rowRig = (dupSet, over) => sandbox({
+      fns: ['_renderInvRow', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
+            '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
+            '_invNamed', '_invItemNo'],
+      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],
+      stubs: {
+        _invInput: () => '', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Entry & Living',
+        invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,
+        custodyEvents: () => [], _invPanelCols: () => [], INV_PANEL_SECTIONS: [],
+        esc: (x) => String(x == null ? '' : x),
+        _photoRefs: { 1: [Object.assign({ stableId: 'p', label: 'inventory', objectName: 'Walnut bar console',
+          itemNo: 12, driveFileId: 'F', roomIdx: 1, ts: 1, namedBy: 'agent', agentConf: 'high' }, over || {})] },
+      },
+    });
+    const flagged = rowRig(); flagged._agDupSet = { p: 2 };
+    const html = flagged._renderInvRow({ id: 1 }, flagged._photoRefs[1][0]);
+    has(html, 'possible duplicate', 'a contested row really RENDERS the chip');
+    has(html, 'var(--bronze)', 'in bronze — red on this strip is a held firearm');
+    has(html, 'off different photographs', 'and the tooltip says what it is about');
+    has(html, '>agent<', 'beside the unchecked agent badge, which is a different claim');
+
+    const quiet = rowRig(); quiet._agDupSet = {};
+    const html2 = quiet._renderInvRow({ id: 1 }, quiet._photoRefs[1][0]);
+    lacks(html2, 'possible duplicate', 'and an uncontested row renders none');
+    has(html2, '>agent<', 'while still carrying its own unchecked badge');
+
+    const rowSrc = liveLines(fn('_renderInvRow'));
+    // ⚠⚠ O(n) INSIDE O(n). The grouper is a full pass over the manifest; calling it per row on
+    // the one tab this file records repainting in 1,420 ms at 3,000 rows would be quadratic.
+    lacks(rowSrc, 'agentDuplicateGroups', 'and never computes the grouping itself');
+    lacks(rowSrc, '_agDupIndex', 'nor the index');
+
+    const tab = fn('renderInventoryTab');
+    has(tab, '_agDupSet = _agDupIndex(jobId, all)', 'the tab computes it once');
+    ok(tab.indexOf('_agDupSet = _agDupIndex') < tab.indexOf('_invGroupItems'),
+       'BEFORE the rows are built, or every chip reads the previous paint');
+    has(tab, '_agDupHtml(jobId, all)', 'and renders the block');
+    ok(tab.indexOf('_agDupHtml(jobId, all)') < tab.indexOf('+ body'),
+       'above the rows, beside the duplicate-import notice it is the twin of');
+    // The index is built over EVERY row, not the filtered ones — a filter hiding one half of a
+    // pair must not make the other half read as settled.
+    has(tab, '_agDupIndex(jobId, all)', 'over all of them, never the filtered list');
+
+    // ⚠ THE DROP MUST NEVER REACH DRIVE.
+    const drop = liveLines(fn('agentDropDuplicate'));
+    lacks(drop, 'discardShot', 'it never routes through the shot binner');
+    lacks(drop, 'driveTrashed', 'and never marks the photograph trashed');
+    has(drop, 'deletedAt', 'it tombstones');
+    has(drop, '_invTouch', 'and stamps it so the removal wins the merge');
+
+    has(src, 'dupOK:r.dupOK', 'and dupOK is on the savePhotoRefs whitelist, or it is dropped on every save');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

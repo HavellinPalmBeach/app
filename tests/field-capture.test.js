@@ -669,7 +669,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rowCtx = sandbox({
       fns: ['_renderInvRow', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed'],
-      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick'],
+      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],
       stubs: { _invInput: () => '', _invThumbHTML: (j, r, px) => '<div data-thumb-id="' + (r.driveFileId || '') + '" style="w:' + px + '"></div>',
                _invItemNo: () => '3', _invRoomName: () => 'Kitchen', invIsFirearm: () => false, invReleaseBlocked: () => false,
                invAwaitingAppraisal: () => false, custodyEvents: () => [], _invPanelCols: () => [], INV_PANEL_SECTIONS: [],
