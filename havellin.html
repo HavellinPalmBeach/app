@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 4:09pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 4:57pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1266,13 +1266,13 @@ body.no-smf .smf-col{display:none;}
       <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span></label>
       <select id="i-svc" onchange="toggleIntakeFields()">
         <option value="">Select service type</option>
+        <option value="prep">Home Prep for Sale</option>
         <option value="downsizing">Home Editing</option>
         <option value="downsizing_move">Home Transition</option>
         <option value="home_cleanout">Home Cleanout</option>
         <option value="cleanout">Estate Settlement</option>
         <option value="probate">Probate Estate Settlement</option>
         <option value="contested_probate">Contested Probate Estate Settlement</option>
-        <option value="prep">Home Prep for Sale</option>
       </select>
       <div class="divider" style="margin:14px 0 10px;"></div>
       <div id="i-client-hdr" class="sec" style="margin-bottom:6px;">Client Information</div>
@@ -1449,12 +1449,16 @@ body.no-smf .smf-col{display:none;}
         recorded here prints on the Job Plan as <strong>standing job flags</strong> &mdash; it is what
         the crew is read before Day 1. A blank answer is a question nobody gets to ask twice.
       </div>
+      <div id="i-house-find">
       <label>1. Is there anything in the house you need us to find?<span class="lbl-hint"> &mdash; something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of</span></label>
       <textarea id="i-mustfind" rows="2" placeholder="One line per item: what it is, and where they think it might be."></textarea>
-      <label style="margin-top:10px;">2. Is there anything we need to be aware of for safety, or that needs special handling?</label>
+      </div>
+      <label id="i-safety-label" style="margin-top:10px;">2. Is there anything we need to be aware of for safety, or that needs special handling?</label>
       <textarea id="i-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, medical sharps, chemicals, a family member who will be difficult on site &mdash; anything the crew should know before they walk in."></textarea>
+      <div id="i-house-ticks">
       <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:13px 0 5px;">What&rsquo;s in the house &mdash; tick if yes, then say what you know</div>
       <div id="i-houseflags"></div>
+      </div>
       <div class="divider"></div>
       <label>Notes <span class="lbl-hint">&mdash; anything the two questions above did not cover</span></label>
       <textarea id="i-notes" placeholder="Family situation, urgency, who actually makes the decisions, etc."></textarea>
@@ -1588,7 +1592,11 @@ body.no-smf .smf-col{display:none;}
            never fire, so this is the ONLY way to reach Formal there — and Formal is what makes
            chain of custody mandatory on the Job Plan (renderJobPlan: custodyMandatory) and
            turns the appraisal guardrail from an amber prompt into a red block. Move it inside
-           and those two go with it. -->
+           and those two go with it.
+           ⚠ HIDDEN ON HOME PREP (2026-09-22): a prep job inventories nothing and its Job Plan
+           is renderPrepJobPlan, which reads neither custody nor the guardrail — the level
+           decides nothing there. saveIntake stores '' for it on prep. -->
+      <div id="i-doclevel-block">
       <div class="divider"></div>
       <div>
         <label>Documentation level <span class="lbl-hint">&mdash; how strictly, not what we hand over</span></label>
@@ -1598,6 +1606,7 @@ body.no-smf .smf-col{display:none;}
           <option value="formal">Formal &mdash; court &amp; attorney grade</option>
         </select>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">On an estate the answers above decide this and grey it out &mdash; a Form 706, a recorded dispute, a contest or the <em>Inventory + appraisals</em> tier each force <strong>Formal</strong>, with the reason printed beside them. What is left here is the case they do not cover: raising an otherwise-standard job by hand. Formal makes <strong>chain of custody mandatory</strong> and turns the item-appraisal guardrail from a prompt into a block. It can never be set <em>lower</em> than the answers above require.</div>
+      </div>
       </div>
       <div id="probate-fields" style="display:none;">
         <div class="divider"></div>
@@ -5812,7 +5821,7 @@ function invProbateRows(job) {
 // still resolves so an old job renders its name, but it must never be offered as a new
 // choice. svcFamily still PLACES it (decedent), so a legacy job gets the right picker and
 // switching off it quietly repairs the key.
-var SVC_ORDER = ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate', 'prep'];
+var SVC_ORDER = ['prep', 'downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate'];
 
 // Derived from DECEDENT_SERVICES rather than listed a second time. Two copies of one
 // taxonomy is how the fee table and the room grid drifted apart, and how PRICING_REF and
@@ -7929,6 +7938,10 @@ function computeInventoryDeadline(){
   if(fb) fb.textContent='Inventory due '+iso+' ('+days+' days from today).';
 }
 
+// One rule: does intake ask what is IN the house (must-find + the tick list)? Every
+// service but Home Prep — a prep job empties nothing.
+function intakeAsksHouseContents(svc) { return svc !== 'prep'; }
+
 function toggleIntakeFields() {
   var svc = document.getElementById('i-svc') ? document.getElementById('i-svc').value : '';
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
@@ -7960,6 +7973,19 @@ function toggleIntakeFields() {
   document.querySelectorAll('.req-probate').forEach(function(el){
     el.style.display = isProbate ? 'inline' : 'none';
   });
+  // Home Prep for Sale: nothing leaves the house, so there is nothing to find and no
+  // contents to tick. The SAFETY question stays — vendors still walk in, and the prep Job
+  // Plan prints the standing flags for exactly that reason. Hidden, never wiped: switching
+  // the service back must not lose what was typed; saveIntake drops it on a prep save.
+  var asksHouse = intakeAsksHouseContents(svc);
+  var hfFind = document.getElementById('i-house-find');
+  if (hfFind) hfFind.style.display = asksHouse ? '' : 'none';
+  var hfTicks = document.getElementById('i-house-ticks');
+  if (hfTicks) hfTicks.style.display = asksHouse ? '' : 'none';
+  var dlBlock = document.getElementById('i-doclevel-block');
+  if (dlBlock) dlBlock.style.display = (svc === 'prep') ? 'none' : '';
+  var sfLbl = document.getElementById('i-safety-label');
+  if (sfLbl && sfLbl.firstChild) { sfLbl.style.marginTop = asksHouse ? '10px' : '0'; sfLbl.firstChild.nodeValue = asksHouse ? '2. Is there anything we need to be aware of for safety, or that needs special handling?' : 'Is there anything we need to be aware of for safety, or that needs special handling?'; }
   // Downsizing destination
   var df = document.getElementById('downsizing-dest-fields');
   if (df) df.style.display = (svc === 'downsizing_move') ? 'block' : 'none';
@@ -8095,9 +8121,12 @@ function saveIntake() {
     // as JSON (the Jobs sheet stores JSON.stringify(job) in its Data column, so a nested
     // object survives the round trip and no backend change is needed) and are re-read by
     // standingFlagLines on the Job Plan.
-    mustFind:    (document.getElementById('i-mustfind')||{}).value||'',
+    // ⚠ On Home Prep the must-find box and the tick list are HIDDEN, not wiped, so an
+    // answer typed before the service was switched is still in them — and must not ride
+    // onto a job whose screen never showed it.
+    mustFind:    intakeAsksHouseContents(svc) ? ((document.getElementById('i-mustfind')||{}).value||'') : '',
     safetyNotes: (document.getElementById('i-safety')||{}).value||'',
-    houseFlags:  readHouseFlagInputs('i'),
+    houseFlags:  intakeAsksHouseContents(svc) ? readHouseFlagInputs('i') : houseFlagsOf(null),
     destAddr:destAddr, destCity:destCity, destSqft:destSqft,
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
     probateDeadline: document.getElementById('i-probate-deadline') ? document.getElementById('i-probate-deadline').value : '',
@@ -8137,7 +8166,7 @@ function saveIntake() {
     priority:document.getElementById('i-pri').value,
     re:document.getElementById('i-re').value,
     premium:document.getElementById('i-prem').value==='yes',
-    docLevel:(document.getElementById('i-doclevel')||{}).value||'',
+    docLevel:(svc === 'prep') ? '' : ((document.getElementById('i-doclevel')||{}).value||''),
     gate706:            (document.getElementById('i-gate-706')||{}).value||'',
     gateDispute:        (document.getElementById('i-gate-dispute')||{}).value||'',
     // ⚠ THE TIER IS THE TRUTH AND docScope IS THE MIRROR, written alongside it so the twenty-odd

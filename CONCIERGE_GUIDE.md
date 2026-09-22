@@ -88,6 +88,8 @@ Fill in everything marked *. The Job ID (`HVL-YYMM-XXXX`) and the client's Drive
 
 New 2026-09-10. This replaced the old single *Notes* box as the main thing intake asks about the property. Two questions, in these words, then the checklist:
 
+> **On a Home Prep for Sale call, ask only question 2 (safety).** The app hides the must-find question, the checklist and the documentation level on prep — nothing leaves the house. Pets, the alarm code, a gate, anything a painter or stager needs to know still goes in.
+
 1. **"Is there anything in the house you need us to find? Something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of?"**
 2. **"Is there anything in the house we need to be aware of for safety, or that needs special handling?"**
 

@@ -406,7 +406,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, INTAKE, auth === undefined ? {} : { 'i-executor-auth': auth }));
       const said = [];
       const cc = sandbox({
-        fns: ['saveIntake', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef',
+        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef',
               'jobActivationBlockers'],
         vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
         stubs: { document: d, jobs: [], showFB: (el, k, m) => said.push({ k, m }),

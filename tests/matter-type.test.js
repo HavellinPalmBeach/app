@@ -120,7 +120,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'], vars: ['EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
+        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'], vars: ['EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d, jobs: [],
           showFB: (el, kind, msg) => said.push({ kind, msg }),

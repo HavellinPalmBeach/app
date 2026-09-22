@@ -246,6 +246,8 @@ The live readout under them names the level, why it is that level, and what that
 
 New 2026-09-10, replacing the single free-text *Notes* box as the main thing intake asks about the property. Two questions, then a seven-row checklist — tick what is in the house and write down what you are told:
 
+> **Home Prep for Sale asks only the safety question** (2026-09-22). Nothing leaves the house on a prep job, so the must-find question and the checklist are hidden, and so is the *Documentation level* dropdown (a prep job inventories nothing). The safety question and Notes stay — vendors still walk in. Anything typed into the hidden fields before switching the service to Home Prep is **not saved** onto the job. Home Prep is now the first option in the service dropdown.
+
 | Row | What to write in the notes box |
 | --- | --- |
 | **Cash** — loose cash, envelopes, hidden spots | Approx amount, and where. |
